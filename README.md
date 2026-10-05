@@ -1,1 +1,1 @@
-[Updated comprehensive README v2 will be written from the verified local file; this placeholder should not be committed if local transfer unavailable.]
+RESTORE_FROM_LOCAL_FILE
