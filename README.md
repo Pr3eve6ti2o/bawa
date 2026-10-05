@@ -2654,3 +2654,176 @@ That is the standard this repository should aim for.
 Not “here is a wallet script.”
 
 **Here is the whole problem, here is the correct mental model, here is the standard, here is the right repository for each part, here is how to run it, and here is how to verify that you did it right.**
+---
+
+# Using Bawa with Nova Shop
+
+This repository can be used as the one-time wallet foundation for Nova Shop. The important distinction is that Bawa is not the shop and it is not a hosted payment service. Bawa creates the wallet and provides the watch-only derivation boundary; Nova Shop owns orders, address allocation and payment tracking.
+
+## Run it from a clean machine
+
+Use Node.js 22.x and Python 3.11+. Clone the repository and enter it:
+
+git clone https://github.com/Pr3eve6ti2o/bawa.git
+cd bawa
+
+Create an isolated Python environment:
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+Install the pinned wallet-core package:
+
+cd tools/hdwallet-gen
+npm install
+cd ../..
+
+Run the repository checks:
+
+npm run check
+npm test
+
+A clean smoke test confirms that the JavaScript sources are syntactically valid and that important package/documentation invariants are present. It is not a substitute for running the full deterministic wallet vectors before real funds are used.
+
+## First-time Nova Shop setup
+
+Start with the example environment:
+
+cp .env.example .env
+chmod 600 .env
+
+The .env file must contain public watch-only values only. Do not put a mnemonic, BIP-39 passphrase, seed bytes, xprv/zprv or recovery data key in it.
+
+Generate the wallet on a trusted machine:
+
+python3 tools/make_wallet.py
+
+This is a one-time interactive operation. Do not pipe the generator into another command and do not run it through CI or a log-capturing service. The generator opens the controlling terminal before creating key material, validates the wallet-core engine, creates the wallet, encrypts the recovery artifact and then shows the recovery material on the terminal.
+
+When prompted, write the 24-word mnemonic down offline and store the separate recovery data key somewhere different. The encrypted recovery artifact and its key are intentionally separate.
+
+After the generation step, .env contains the public values needed by Nova Shop:
+
+XPUB_BTC
+XPUB_ETH
+XPUB_TRX
+TON_DEPOSIT_ADDRESS
+
+The runtime server needs these public values. It should not receive the mnemonic or private extended keys.
+
+## Test address derivation
+
+For Bitcoin:
+
+echo "$XPUB_BTC" | node tools/hdwallet-gen/derive.js btc 1
+
+For Ethereum:
+
+echo "$XPUB_ETH" | node tools/hdwallet-gen/derive.js eth 1
+
+For TRON:
+
+echo "$XPUB_TRX" | node tools/hdwallet-gen/derive.js trx 1
+
+Use the returned addresses to verify the implementation before funding anything.
+
+## Run the address daemon
+
+For a Nova Shop backend that performs many derivations, use the persistent daemon:
+
+cd tools/hdwallet-gen
+node derive_daemon.js
+
+Wait for this startup response:
+
+{"ready":true}
+
+Then send one request per line. Example:
+
+{"chain":"eth","xpub":"<XPUB_ETH>","index":57}
+
+Successful response:
+
+{"ok":true,"address":"0x..."}
+
+The daemon is deliberately watch-only. Do not extend it to accept xprv/zprv or raw private keys.
+
+## What Nova Shop must do itself
+
+Bawa answers one narrow question:
+
+(public account root + chain + approved child index) -> deposit address
+
+Nova Shop must answer the business questions around it:
+
+(order) -> unique index -> address -> blockchain observation -> payment verification -> order credit
+
+The index allocator belongs in the Nova Shop database. Never allocate an address by reading the last index and adding one without a database transaction or uniqueness constraint.
+
+Store at least the chain, network, derivation root, branch, index, address, order ID and payment state. For token payments also store the exact token contract and token standard.
+
+## Stablecoin anti-counterfeit rule
+
+Never credit a payment because the token is named USDT or USDC. Token identity is the full contract or token identifier on the selected network.
+
+For customer-facing screens, the bot may show a short visual fingerprint such as the last five characters of the verified token identifier. The five-character fingerprint is only a convenience check. The backend must compare the complete identifier.
+
+Current official issuer references used for the networks documented here include:
+
+USDT on Ethereum ERC-20: 0xdac17f958d2ee523a2206206994597c13d831ec7
+fingerprint: 31ec7
+
+USDT on TRON TRC-20: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t
+fingerprint: jLj6t
+
+USDT on TON: EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs
+fingerprint: d_sDs
+
+USDC on Ethereum ERC-20: 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
+fingerprint: 6eb48
+
+Do not list USDC on TRON as an accepted asset merely because old integrations existed. Circle discontinued support for USDC on TRON.
+
+## The correct deposit verification sequence
+
+1. Confirm the selected network.
+2. Confirm the receiving address exactly.
+3. Confirm the token contract exactly when the payment is a token.
+4. Confirm the amount.
+5. Confirm the transaction/event is valid and not already credited.
+6. Apply the chain-specific confirmation/finality rule.
+7. Only then mark the order as paid.
+
+Explorer pages are useful for customer verification and manual investigation, but the payment backend should not trust a screenshot or a token ticker. It should verify the on-chain data itself or through a trusted indexing provider.
+
+## Recovery
+
+The mnemonic remains the canonical recovery material. The encrypted file is only an additional recovery mechanism.
+
+To recover the encrypted artifact:
+
+python3 tools/decrypt_seed.py /path/to/seed.enc.json
+
+Perform a recovery drill before funding the wallet. A successful drill should reproduce the expected public addresses under the same passphrase and derivation policy.
+
+## Free-first deployment
+
+For a personal or very small Nova Shop, start with Bawa plus your own database and a reputable free public RPC tier. This gives you a zero-software-cost starting point, but free endpoints can be rate-limited, shared and unsuitable for dependable production traffic.
+
+As usage grows, move gradually to a paid RPC or indexing service, then to multiple providers with failover, and finally to your own nodes and indexers when the operational cost is justified.
+
+The important part is that the wallet architecture does not change when the monitoring provider changes. Bawa still owns the deterministic key/address boundary; the tracker only observes public blockchain data.
+
+## Final mental model
+
+Generate once on a trusted machine.
+Back up the mnemonic offline.
+Give the server public derivation material only.
+Allocate indexes in the database.
+Derive deposit addresses deterministically.
+Verify exact network and token identity.
+Wait for the chain-specific settlement rule.
+Credit the order exactly once.
+Keep signing and spending in a separate security boundary.
