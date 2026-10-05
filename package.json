@@ -1,0 +1,12 @@
+{
+  "name": "bawa-hd-wallet-generator",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Bawa HD wallet generator and watch-only derivation toolkit.",
+  "engines": {"node": ">=22 <23", "python": ">=3.11"},
+  "scripts": {
+    "check": "npm --prefix tools/hdwallet-gen run check",
+    "test": "npm --prefix tools/hdwallet-gen test"
+  },
+  "license": "MIT"
+}

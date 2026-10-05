@@ -257,6 +257,18 @@ Add chain nodes and self-hosted indexers where the privacy/independence requirem
 
 ---
 
+# Independent differential verification
+
+The repository includes `test/differential_test.py`, which uses the pinned `bip_utils` package to independently reproduce the shared BTC BIP-84 and ETH BIP-44 public fixtures.
+
+Run after installing `requirements.txt`:
+
+~~~
+python3 test/differential_test.py
+~~~
+
+This test is intentionally separate from the Trust Wallet Core runtime. Extend it only when both implementations use the same explicitly documented standard and path.
+
 # Testing a wallet properly
 
 A professional wallet test plan is much larger than “the code runs and generated an address”.
@@ -463,3 +475,16 @@ recovery drill
 artifact/checksum
 tagged release
 ```
+
+---
+
+# Trust Wallet registry and asset metadata
+
+Before adding a chain, inspect the Wallet Core registry and record the derivation path, curve, public-key type, address prefix/HRP, network identifier and any alternate derivations explicitly.
+
+Use Trust Wallet Assets for token/asset metadata and presentation, not as a wallet engine or payment-settlement source.
+
+References:
+- [Wallet Core registry](https://github.com/trustwallet/wallet-core/blob/master/registry.json)
+- [Registry fields](https://github.com/trustwallet/wallet-core/blob/master/docs/registry-fields.md)
+- [Trust Wallet Assets](https://github.com/trustwallet/assets)
