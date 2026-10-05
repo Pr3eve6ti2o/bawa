@@ -1,8 +1,8 @@
 # Bawa Documentation
 
-NaN
+Each README is organized around a job. Read only what you need, then follow the links when you need to go deeper.
 
-## Map
+## Guide map
 
 - [01 — Fundamentals](01-fundamentals/README.md)
 - [02 — Chain Guides](02-chains/README.md)
@@ -17,6 +17,6 @@ NaN
 
 ## Recommended reading order
 
-NaN
+Fundamentals → Chains → Tool Map → Generation → Watch-Only → Tracking → Payment Tracking → Security/Recovery → Signing → Operations/Testing.
 
-NaN
+The order is deliberate: first understand the rule, then choose software, then run it, then watch the network, then build application logic around what the network reports.
