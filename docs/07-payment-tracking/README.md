@@ -543,3 +543,23 @@ requested → address/memo assigned → observed → matched → underpaid/suffi
 ```
 
 An on-chain observation is evidence to validate. It is not automatically authorization to fulfill an application order.
+
+# Asset identity and Trust Wallet metadata
+
+For token payments, a symbol alone is not an identity.
+
+Persist at least:
+
+~~~
+network / chain ID
+asset type
+token contract / chain-specific address
+expected decimals
+recipient
+amount in atomic units
+memo/tag where required
+~~~
+
+Trust Wallet Assets can be a useful metadata source for presentation, token lists and logos, but it is not the source of truth for observed payment settlement. The payment matcher must verify the actual chain event against the application's requested network and asset identity.
+
+See [Chain Registry & Asset Metadata](../12-chain-registry-and-assets/README.md).
