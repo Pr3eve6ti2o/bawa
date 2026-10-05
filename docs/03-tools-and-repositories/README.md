@@ -113,7 +113,7 @@ The table below is intentionally practical. “Recommended” does not mean “t
 | Read the wallet standards | BIPs / SLIPs | Normative derivation rules | Never replace standards with a blog post | Free |
 | BIP-39 implementation | `paulmillr/scure-bip39` | Small focused BIP-39 implementation | Do not assume BIP-39 defines chain-specific paths | Open source |
 | BIP-32 implementation | `paulmillr/scure-bip32` | Focused HD derivation | Not a blockchain SDK | Open source |
-| Broad multi-chain wallet crypto | `trustwallet/wallet-core` | Keys, derivation, address/tx primitives across many chains | Not an RPC/indexing layer | Open source; NPM integration is documented as beta |
+| Broad multi-chain wallet crypto | `trustwallet/wallet-core` | Keys, derivation, addresses and signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.8.4 in its reference runtime |
 | Bitcoin app library | `bitcoinjs/bitcoinjs-lib` | Bitcoin transaction/address tooling | Not a universal wallet SDK | Open source |
 | Bitcoin full node | `bitcoin/bitcoin` | Full chain validation + node/wallet | Heavy for a simple personal tracker | Open source; storage/bandwidth required |
 | Bitcoin indexed API | `Blockstream/esplora` | Address/UTXO/tx history | Bitcoin/Liquid-centric | Open source; can self-host |
@@ -173,3 +173,23 @@ This is a dated snapshot. Verify the live provider page before purchasing.
 - Moralis: Starter $149/month billed annually; Pro $249/month; Business $749/month.
 
 Prices, quotas and supported networks change.
+
+## Independent verification: bip_utils
+
+Use [bip_utils](https://github.com/ebellocchia/bip_utils) as an independent reference implementation for overlapping derivation schemes and public test vectors. It supports BIP-32, BIP-39, BIP-44, BIP-49, BIP-84, BIP-86, SLIP-0010 and CIP-1852 among many chain-specific systems.
+
+It belongs in the test/reference layer, not beside Wallet Core as a second production wallet engine. See [Trust Wallet Core & Independent Verification](../11-trust-wallet-and-independent-verification/README.md).
+
+
+## Trust Wallet Assets is a metadata repository, not a wallet
+
+[trustwallet/assets](https://github.com/trustwallet/assets) is useful for token metadata, logos and token lists. It does not provide wallet derivation, key management, signing or transaction handling.
+
+For a production application keep these boundaries explicit:
+
+~~~
+Wallet Core → keys / derivation / signing
+Assets      → token metadata / logos / token lists
+RPC/indexer → blockchain state / history
+Application → allocation / orders / payment reconciliation
+~~~
