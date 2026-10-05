@@ -229,3 +229,19 @@ Start from:
 mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration.
 
 Encryption at rest protects a stored artifact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics.
+
+# Independent verification and supply-chain discipline
+
+The production wallet path uses the pinned Trust Wallet Core runtime. Independent verification uses bip_utils where the standards and derivation policy overlap.
+
+~~~
+production
+  Trust Wallet Core
+
+verification
+  bip_utils + official vectors
+~~~
+
+The two paths should not share the same Bawa adapter logic.
+
+Before a real-money release, commit the dependency lockfile from a clean install and add secret scanning, dependency scanning, reproducible release metadata and an external security review.
