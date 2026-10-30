@@ -265,4 +265,164 @@ The serialization tells compatible software how to interpret the downstream addr
 - [BIP-84](https://bips.dev/84/)
 - [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
 - [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
+## 01 Fundamentals — checked boundaries
+
+Keep the stages separate: **BIP-39 is not the HD tree**. It encodes entropy as words and derives a seed; BIP-32 defines the secp256k1 HD tree. That seed is root material, not a Bitcoin private key.
+
+```text
+OS/library CSPRNG
+        │
+        ▼
+entropy
+        │ BIP-39: add checksum; encode as words
+        ▼
+mnemonic
+        │ PBKDF2-HMAC-SHA512
+        ▼
+64-byte seed
+        │ BIP-32: HMAC-SHA512
+        ▼
+master key + chain code
+        │
+        ▼
+HD tree
+```
+
+### 1 · Entropy intake
+
+For the 24-word case, BIP-39 requires **256 bits** of entropy from a cryptographically secure random source. Use your operating system or a cryptographically secure library random number generator (CSPRNG). Do not build your own generator or substitute timestamps, usernames, mouse movements, “random” strings or human-chosen words.
+
+**You should see:** an OS/library CSPRNG source and a 256-bit (32-byte) entropy input. Check the source and the returned length separately. Bawa does not name a concrete RNG API here.
+
+### 2 · Worked checksum layout — placeholders only
+
+This example works through **sizes and bit boundaries** only. It does not give a byte-for-byte test vector, a checksum byte, actual words or a checksum check result.
+
+[BIP-39](https://bips.dev/39/) defines the checksum as the first `ENT / 32` bits of `SHA-256(entropy)`. For 256 bits of entropy, take the first eight bits of that hash and append them to the entropy.
+
+`E1` … `E256` and `C1` … `C8` are symbolic placeholders, labelled from 1. They are not usable wallet material.
+
+```text
+entropy length, ENT           256 bits
+checksum length, ENT / 32       8 bits
+                              ────────
+combined                      264 bits
+
+264 / 11 = 24 word slots
+```
+
+Split the symbolic entropy-plus-checksum layout into 11-bit groups:
+
+```text
+combined: E1 … E256 │ C1 … C8
+
+slot 01:  E1   … E11
+   ⋮
+slot 23:  E243 … E253
+slot 24:  E254 E255 E256 │ C1 … C8
+          └─ 3 bits ──┘   └ 8 bits ┘
+          └──────── 11 bits ────────┘
+```
+
+Each 11-bit group selects a word from the 2048-word list. For the actual word-list entries, use the word list referenced by the BIP-39 specification.
+
+**You should see:** 24 groups of 11 bits. The final group contains **three entropy bits and eight checksum bits**—not a separate “checksum word”.
+
+### 3 · Mnemonic → PBKDF2 seed
+
+Use the parameters defined by BIP-39 for the mnemonic-to-seed step. Angle-bracketed fields are placeholders, not literal inputs. This table describes the required parameters, not an SDK call.
+
+| Parameter | Required boundary |
+|---|---|
+| Function | PBKDF2-HMAC-SHA512 |
+| Input | Normalised `<MNEMONIC>` |
+| Salt | Literal `mnemonic` followed by `<PASSPHRASE>`; the passphrase is optional and is empty if omitted |
+| Iterations | 2048 |
+| Output length | 64 bytes |
+
+**You should see:** a 64-byte seed at the output boundary, followed by a distinct BIP-32 stage. The length check is not a byte-for-byte vector match.
+
+### Integration gaps
+
+Bawa does not name concrete CSPRNG, mnemonic or PBKDF2 APIs, or document the exact normalisation and text-encoding rules, in this section. Use your operating system or library CSPRNG and check that it returns the required byte length.
+
+This section does not include byte-for-byte test-vector inputs and outputs, an executable end-to-end example or an expected seed value. Follow the [BIP-39 specification](https://bips.dev/39/) for normalisation and text encoding, and check your implementation against the published test vectors in the specification itself.
+
+---
+
 - [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md)
+
+### BIP-32: from seed to master, then children
+
+BIP-39 produces a **64-byte seed**, not a Bitcoin private key. [BIP-32](https://bips.dev/32/) defines the hierarchical deterministic tree for secp256k1 wallets.
+
+Under BIP-32, the master step uses HMAC-SHA512 with `"Bitcoin seed"` as the HMAC key and the seed as input:
+
+```text
+64-byte BIP-39 seed
+         │
+         ▼
+HMAC-SHA512
+HMAC key: "Bitcoin seed"
+         │
+         ▼
+master node
+    private key: left 32 bytes
+    chain code: right 32 bytes
+         │
+         ▼
+child key derivation (CKD)
+         │
+         ▼
+child nodes
+```
+
+For child key derivation (CKD), BIP-32 uses the parent chain code as the HMAC-SHA512 key, with the parent key data and child index as input. The choice of parent key data depends on whether the child is hardened.
+
+**Self-check — trace the hand-off between standards.**  
+**You should see:** BIP-39 produces the seed; BIP-32 uses it to obtain a master private key and chain code. The seed and the master key are not interchangeable labels.
+
+### The hardened boundary
+
+BIP-32 defines the hardened threshold as **index ≥ 2³¹**:
+
+```text
+child index
+    │
+    ├── < 2^31
+    │   non-hardened side
+    │
+    └── >= 2^31
+        hardened side
+        ▲
+        boundary included
+```
+
+In BIP-44-style paths, the **purpose, coin and account** levels are hardened. Bawa does not document a complete derivation path here; check your wallet’s documentation for the path it uses.
+
+**Self-check — classify an index exactly equal to 2³¹.**  
+**You should see:** hardened. The rule is `>=`, not `>`.
+
+The threshold classifies an index. It does **not**, by itself, explain what a public-only key can derive. BIP-32 defines those rules separately:
+
+- Hardened derivation requires the parent private key and cannot be done from a public key.
+- Non-hardened public children can be derived from the parent public key and its chain code.
+
+### Extended keys: xprv and xpub
+
+An extended key stores a node’s key and chain code, together with information about its place in the tree. BIP-32 defines the formats and derivation rules below.
+
+| Required detail | Definition, rule or next step |
+|---|---|
+| `xprv`: definition and contents | An extended private key: the private key and chain code, with version, depth, parent fingerprint and child number fields. |
+| `xpub`: contents and relationship to `xprv` | An extended public key for the same node: the corresponding compressed public key and the same chain code, depth, parent fingerprint and child number as the `xprv`, with public-key version bytes instead. It contains no private key. |
+| Can an `xpub` derive non-hardened public children? | Yes — children with indices below 2³¹. |
+| Can an `xpub` derive hardened children? | No — indices at or above 2³¹ require the parent private key. |
+| Can an `xpub` derive private keys? | No. |
+| Extended-key serialisation and version bytes | `xprv` field order: `0x0488ADE4` + depth + parent fingerprint + child number + chain code + `0x00` + private key. `xpub` field order: `0x0488B21E` + depth + parent fingerprint + child number + chain code + compressed public key. |
+| Watch-only workflow and limitations | A wallet holding only an `xpub` can derive non-hardened public children but has no private key for signing. It cannot derive hardened children. Bawa does not document a watch-only setup workflow; follow your wallet’s watch-only setup instructions. |
+
+**Self-check — can we fill in an xpub “can/cannot derive” matrix?**  
+**You should see:** yes. An `xpub` can derive non-hardened public children, but it cannot derive hardened children or private keys. These permissions come from BIP-32, not from the index threshold alone.
+
+Bawa does not document an API or runnable workflow for derivation or signing here, or the expected outputs for one. Before building a runnable walkthrough, follow the full BIP-32 procedure, choose a documented API and check the derivation against published BIP-32 test vectors. No executable derivation or signing example is included in this section.

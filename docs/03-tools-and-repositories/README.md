@@ -193,3 +193,52 @@ Assets      → token metadata / logos / token lists
 RPC/indexer → blockchain state / history
 Application → allocation / orders / payment reconciliation
 ~~~
+## 03 Tool map — ownership and limits
+
+Use one owner per job; do not treat any tool as a complete wallet backend. **These boundaries are maintainer policy, not verified isolation.** Enforce them by reviewing the call sites.
+
+```text
+SCHEME AUTHORITY   BIP / SLIP texts
+PRIMITIVES         Wallet Core
+INDEPENDENT CHECK  bip_utils
+```
+
+```text
+PROPOSED DATA OWNERS — maintainer policy
+metadata             Trust Wallet Assets
+network data         RPC / indexer
+application records  Application DB
+```
+
+### Job → tool → boundary → exclusion
+
+| Job | Tool | Required trust boundary | What it does NOT do |
+|---|---|---|---|
+| Keys, derivation, addresses, signing primitives | **Wallet Core** | Handles secret material; review the code before claiming isolation. | No node communication, balance retrieval or transaction broadcasting, as stated in Wallet Core’s official usage guide. |
+| Independent scheme verification | **bip_utils** | Separate differential/reference test harness; published vectors or clearly marked placeholders only. | Not a second production engine. |
+| Token and asset metadata, logos and token lists | **Trust Wallet Assets** | Metadata input, not signing authority; calls must receive no secret material. | Not a wallet or signing library, according to Trust Wallet Assets’ documentation. Not an authority on balances here. |
+| Balances/history; submission through an RPC | **RPC / indexer** | Application service/data boundary; calls must receive no secret material. | No key custody or signing role here. Check the provider’s supported operations; do not assume an indexer supports broadcasting. |
+| Application records | **Application DB** | Application storage boundary; calls must receive no secret material. | Not a signing engine or an authority on chain state in this design. |
+
+**Evidence limit:** Bawa does not document an Assets metadata schema or API for using it, an RPC/indexer provider with supported operations and guarantees, or an application database model. Check the Assets documentation, choose a network provider and confirm its capabilities and guarantees, and define your application’s record model. RPC/indexer services and the application database are application infrastructure, not Bawa code. The table assigns responsibilities; it does not verify service capabilities.
+
+### Authority stays with the scheme
+
+Bawa names **BIPs 32, 39, 43, 44, 49, 84** and **SLIPs 0010, 0044, 0132** as the sources of truth for these schemes. The standards, not the implementations, define the rules.
+
+The bip_utils documentation lists support for **BIPs 32, 39, 44, 49, 84, 86**, **SLIP-0010** and **CIP-1852**. Bawa uses bip_utils only for independent differential/reference testing. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond this list; review the relevant standards and tests before relying on additional coverage.
+
+### Invocation / code audit
+
+`tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` version `4.8.4`; `requirements.txt` lists `bip_utils` version `2.12.2`.
+
+This section is a decision table, not a runnable recipe. Check each tool’s own documentation and the relevant Bawa call site before using it. These checks are review criteria, not reported execution results.
+
+1. **Trace each proposed invocation to a table row**, including the data crossing its boundary.  
+   **You should see:** an identified owner, call site and data category—or a clear record of what still needs tracing. Do not mark isolation as verified without code evidence.
+
+2. **Review boundary enforcement at the call sites.**  
+   **You should see:** evidence that metadata, network and application-record calls receive no secret material under this policy—or a recorded violation or unresolved review item. Do not assume the boundary is enforced.
+
+3. **Review verification and signing examples.**  
+   **You should see:** cited published vectors or clearly marked placeholders; bip_utils confined to independent checking; signing examples limited to testnet or conceptual use, never real funds. Only claim a successful comparison when both the vector and the observed result are recorded.

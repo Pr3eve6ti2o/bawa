@@ -614,4 +614,191 @@ indexed wallet/token/NFT API
 self-hosted nodes + indexers
 ```
 
-Move upward only when the workload demands higher throughput, deeper history, richer data, privacy, reliability or operational control.
+## 06 — Tracking: a stand-alone, read-only build
+
+Move to a more capable setup only when your workload needs higher throughput, deeper history, richer data, more privacy, better reliability or more operational control.
+
+Keep the $0 target personal: public addresses, no-cost reads where available, local storage and a local dashboard. The design does not depend on external nova-shop code.
+
+**Spending boundary:** keep mnemonics, seeds, private or data keys, and signing or spending interfaces out of this tracker.
+
+**Costs and availability:** free public endpoints have provider quotas and no uptime guarantee. Check your chosen provider’s current limits and costs. Treat $0 as a target, not a promise of a free tier. Bawa does not document hardware or network costs; work these out for your own setup.
+
+### Component contract
+
+```text
+Public addresses + explicit chain/network
+↓
+Free RPC / public Esplora
+↓
+Local DB
+↓
+Cron / scheduled poll
+↓
+Local dashboard
+```
+
+```text
+Each collection cycle
+↓
+fetch
+↓
+preserve raw chain facts
+├─ retain chain/network
+└─ retain reorg/finality state
+↓
+normalise
+↓
+dashboard
+```
+
+This is a design for a local build, not a ready-to-run tracker.
+
+| Component | Responsibility |
+|---|---|
+| Address list | Hold the public addresses to watch, with chain/network recorded explicitly. |
+| Reader | Fetch through public RPC or Esplora, using no-cost access where available. |
+| Local DB | Preserve raw chain facts before normalisation; retain reorg/finality state. |
+| Poller | Schedule reads and handle indexer lag, RPC outages, retries, duplicates and chain reorganisations (reorgs). |
+| Dashboard | Present the stored view locally, including its chain/network, freshness and reorg/finality state. |
+
+**Implementation choices:** Bawa does not document a database engine or schema, reader code, polling interval, retry policy, rules for identifying duplicates, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code. These are your implementation decisions, not Bawa features.
+
+SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff, and choose a stable fact identity such as `(watch, transaction id, output index)`. Configure a finality rule for each chain—for example, requiring a chosen number of Bitcoin confirmations—and only mark facts as settled once they meet that rule. Until a finality rule is configured, freshness and finality are **unknown**.
+
+### Bitcoin: Esplora read inventory
+
+The Esplora API documentation linked by Bawa defines these read routes. The paths below include the `/api` prefix used by the Blockstream endpoint.
+
+| Read surface | Request |
+|---|---|
+| Address state | `GET /api/address/<address>` |
+| UTXOs | `GET /api/address/<address>/utxo` |
+| Confirmed/mempool history | `GET /api/address/<address>/txs`, with documented chain and mempool variants. |
+| Transaction details | `GET /api/tx/<txid>` |
+
+Reference: [Esplora API documentation](https://github.com/Blockstream/esplora/blob/master/API.md), linked by Bawa. Use it for response schemas, history pagination and the chain/mempool variants.
+
+For **EVM**, Bawa lists the standard JSON-RPC read methods `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`.
+
+**EVM setup:** Bawa does not choose a no-cost endpoint or document request bodies, a collection strategy or complete wallet, token and NFT coverage. Choose a provider for your chain/network, check its current limits and costs, follow its JSON-RPC documentation to build requests, and verify the coverage your tracker needs.
+
+### Run the sourced read probe
+
+With `curl` already available, replace `<BITCOIN_ADDRESS>` completely, including the angle brackets, with a real public Bitcoin address for the endpoint’s network **before running**. The unchanged placeholder is not shell-ready.
+
+```bash
+curl https://blockstream.info/api/address/<BITCOIN_ADDRESS>
+```
+
+**You should see:** address-state data from Esplora. Bawa does not document the exact JSON fields or give an example response; use the Esplora API documentation for field definitions.
+
+### Runnable-setup boundary
+
+Once you replace the address placeholder, the probe above is an executable starting point—not a complete tracker installation.
+
+**Remaining setup:** Bawa does not document endpoint/network mapping, dependency installation, database creation, ingestion code, cron configuration, dashboard code or launch commands. Build, configure and document these pieces for your chosen setup.
+
+Bawa also does not document reliability tests for indexer lag, outages, retries, duplicates or reorgs. Add and run these tests before relying on the tracker.
+
+The architecture is independent of nova-shop. Treat the setup as runnable end to end only after you have implemented the remaining pieces and tested them together.
+
+---
+## Persist first; reconcile later
+
+Personal, read-only scope: public addresses only, with a $0 budget target. Signing and spending stay outside this tracker. Free public endpoints have provider quotas and no uptime guarantee; check your chosen provider’s current limits and costs. A free tier is not guaranteed.
+
+```text
+public address
+↓
+RPC / Esplora
+↓
+local DB
+↓
+poll
+↓
+dashboard
+```
+
+```text
+poll
+↓
+raw capture
+↓
+normalise
+↓
+reconcile
+↓
+commit
+
+uncertainty
+↓
+retain last good view with a warning
+```
+
+### Logical schema — proposal
+
+Bawa does not document a schema, field mappings or a database/poller implementation for this tracker. Treat this table as a proposed local design, not Bawa behaviour. Choose and record your local database—SQLite is a common choice for personal use—and implement the mappings and poller.
+
+| Table | Key / retained data |
+|---|---|
+| `watches` | ID; unique `(chain, network, address)` |
+| `observations` | ID; watch; source; read time; raw payload if available; request outcome |
+| `facts` | Unique `(watch, fact identity)`; raw-observation link; block reference if available; confirmation/reorg/finality state |
+| `sync` | `(watch, source)`; last attempt/success; checkpoint; source anchor if available; freshness |
+
+Keep raw observations unchanged so dashboard facts can be rebuilt. Each fact’s watch reference keeps its chain and network explicit.
+
+### Esplora read inventory
+
+The [Esplora API documentation](https://github.com/Blockstream/esplora/blob/master/API.md), linked in Bawa, defines these reads:
+
+- Address state: `GET /api/address/<address>`.
+- UTXOs: `GET /api/address/<address>/utxo`.
+- Address transactions, including confirmed and mempool history: `GET /api/address/<address>/txs`, with chain and mempool variants.
+- Transaction details: `GET /api/tx/<txid>`.
+
+Bawa does not document response-field mappings or pagination handling for this tracker. Use the Esplora API documentation to map the fields and implement paginated history reads.
+
+1. Replace `<BITCOIN_ADDRESS>` with a real public Bitcoin address before running. Do not run the command with the placeholder unchanged:
+
+```bash
+curl 'https://blockstream.info/api/address/<BITCOIN_ADDRESS>'
+```
+
+**You should see:** address state on success. Bawa does not document exact JSON responses or failure output; check the API documentation before implementing response and error handling.
+
+### Worked observation flow — conceptual
+
+`FACT_A` and `BLOCK_A` are placeholders for a test fact and a block reference. These checks are proposed acceptance criteria for your local tracker, not API output. Bawa does not document database or replay commands; write them for your chosen database so you can run and repeat these tests.
+
+**2. Successful poll.** Model a complete response containing test fact `FACT_A`, anchored to `BLOCK_A`. Retain the raw data before normalisation. Commit facts and the checkpoint together, only after reconciliation.
+
+**You should see:** chain- and network-scoped facts linked to raw observations; no checkpoint advance after an incomplete write. Freshness and finality remain unknown until the required checks and a per-chain finality rule are in place.
+
+**3. Repeat poll.** Model overlapping data from the next poll; update or insert using the same stable fact identity.
+
+**You should see:** observation history retained without duplicate dashboard facts.
+
+**4. Lag, then outage.** Compare the source’s progress with a current chain view where available; otherwise freshness is unknown. Retain the last good view and use bounded back-off retries.
+
+**You should see:** attempts recorded separately from successful polls; stale or unknown values labelled, rather than treated as zero balances. A successful request alone is not a freshness check.
+
+**5. Possible reorg.** Model a changed block reference. Recheck against a current chain view: missing history alone does not prove a chain reorganisation. On a verified reorg, deactivate displaced facts, rewind to a verified checkpoint and replay.
+
+**You should see:** raw history preserved and reconciled totals excluding displaced facts. Unverified changes remain flagged; the dashboard does not silently present them as settled.
+
+### Gaps before automation
+
+Bawa does not document the following tracker-specific choices or setup. Choose and record them, then implement and test them before automating:
+
+- Stable fact identity, block-reference mappings and checkpoint mappings. For an output-level fact, a full stable key could be `(watch, transaction id, output index)`.
+- Reads for comparing source progress with a current chain view to detect lag.
+- A polling interval and bounded retry/back-off limits that fit the chosen provider’s quotas.
+- Overlap and rescan depth.
+- A finality rule for each chain. For example, choose a Bitcoin confirmation count and treat facts as settled only once that count is reached.
+- Executable database, cron and dashboard setup, including database and replay commands for the checks above.
+
+These are your implementation choices, not Bawa features.
+
+Until the relevant evidence and mappings are in place and a finality rule is configured for the chain, freshness and finality remain **unknown**, not assumed.

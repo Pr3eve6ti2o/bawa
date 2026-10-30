@@ -563,3 +563,183 @@ memo/tag where required
 Trust Wallet Assets can be a useful metadata source for presentation, token lists and logos, but it is not the source of truth for observed payment settlement. The payment matcher must verify the actual chain event against the application's requested network and asset identity.
 
 See [Chain Registry & Asset Metadata](../12-chain-registry-and-assets/README.md).
+## From payment request to allocation
+
+Wallet tracking asks what an address owns. Payment tracking asks whether an observed blockchain event satisfies a particular request. **Holdings are not payments, and allocation is not payment evidence.**
+
+```text
+request
+  ↓
+allocation
+  ↓
+observation
+  ↓
+confirmation
+  ↓
+reconciliation
+```
+
+```text
+Bawa wallet/derivation layer
+           │
+watch-only public roots
+           │
+           ▼
+Application backend
+  address allocation
+  blockchain data
+           │
+           ▼
+payment matcher
+           │
+           ▼
+confirmation policy
+           │
+           ▼
+idempotent finalisation
+           │
+           ▼
+application/database
+```
+
+The [Telegram bot example](https://github.com/Pr3eve6ti2o/nova-shop-assets) illustrates an application above the wallet layer. It is **not a Bawa dependency** and does not turn Bawa into a service.
+
+### Required request information
+
+The payment-tracking design rules require your application to represent all six fields before allocation. These are conceptual fields, **not documented Bawa API keys**. Bawa does not define a payment API.
+
+| Field | Information to represent |
+|---|---|
+| Network | The request’s network |
+| Asset | The requested asset |
+| Recipient | The intended recipient |
+| Amount | The requested amount **in atomic units** |
+| Memo/tag | The request’s memo or tag information, where the chain supports one |
+| Expiry | The request’s expiry |
+
+**You should see:** all six represented in the request design, with the amount expressed in atomic units.
+
+**Request schema:** Bawa does not document field types, network/asset identifier formats, amount validation or conversion, memo/tag optionality or how to represent its absence, or expiry format and exact boundary rules. Define these in your application before accepting payments. Represent the memo/tag field explicitly even when it does not apply.
+
+**Recipient selection:** Bawa does not document whether the caller provides the recipient or the application assigns it. Define who selects it and how selection relates to address allocation. The recipient must be represented unambiguously in the request before allocation.
+
+### Allocation decision table
+
+The payment-tracking design rules below are application policy, not Bawa features. Put these policies in place before accepting payments.
+
+| Situation | Decision or unresolved rule |
+|---|---|
+| Request information is represented | Validate the request using the application’s schema, then allocate. Allocation is the next application stage, not a payment conclusion. |
+| A field is missing or ambiguous | Reject the request rather than choosing a default. Bawa does not document correction behaviour; define how callers can correct and resubmit requests. |
+| The recipient already has holdings | Holdings alone do not establish that an event satisfies this request. |
+| A recipient is shared or previously allocated | Use one address per request where possible. If a recipient is shared, distinguish requests with a memo/tag or use a unique address; never use holdings alone. Define any further address-reuse and exclusivity rules in the application. |
+| Allocation is retried or attempted concurrently | Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation. |
+| Expiry has been reached | Treat events after expiry as late payments for manual review, not automatic finalisation. Bawa does not document an allocation cut-off; define it in the application. |
+| A blockchain event is observed | Match the event to the request and apply the chain’s confirmation policy before idempotent finalisation. Configure that policy for each chain before accepting payments. Allocation alone cannot replace matching or confirmation. |
+| An event is duplicated or a temporary outage occurs | Count each distinct matched event once, not each watcher delivery. Reconciliation must not double-count or lose a payment. Bawa does not document persistence, replay or recovery mechanics; define these in the application. |
+| The confirmed amount differs from the request | Treat the difference as a discrepancy. Accumulate top-ups only if the application’s own policy allows it. |
+| A payment is ready for finalisation | Compare the request terms, distinct accepted events and stored outcome under the chain’s confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
+
+**You should see:** allocation owned by the application backend, followed by event matching, confirmation and idempotent finalisation. These policies and implementation choices must be defined in the application before accepting payments; they are not implied Bawa features.
+
+---
+## Observation → confirmation → reconciliation
+
+Holdings are not payments. We need evidence that satisfies a particular request, not merely a balance change.
+
+The Telegram bot is an external example, **not a Bawa dependency**; it does not turn Bawa into a service.
+
+```text
+observation
+↓
+match request + allocation
+↓
+confirmation policy
+```
+
+```text
+confirmed evidence
+↓
+reconciliation
+↓
+idempotent finalisation
+
+reconciliation
+↕
+application/database
+```
+
+### Decision gate
+
+These are **proposed application checks**, not software output or claims about the bot’s implementation.
+
+The payment-tracking rules are application policy, not Bawa features. Bawa does not define a payment API. Define the application’s policy before accepting payments.
+
+| Situation | You should see: |
+|---|---|
+| Only holdings are known | No payment conclusion from the balance alone. |
+| Event does not match, or allocation is ambiguous | No automatic attachment to a request. |
+| Match established; confirmation policy not satisfied | Evidence retained, but no finalisation. |
+| The same event arrives again | At most one contribution from that event. |
+| Confirmed amount differs, or timing is unresolved | A discrepancy, not automatic acceptance. Events after expiry are late payments for manual review, not automatic finalisation. Top-ups accumulate only if the application’s own policy allows them. |
+| Match, confirmation and amount agree | Comparison with the stored outcome before any new finalisation effect. |
+| Chain data is unavailable | Uncertainty, not proof of non-payment; recovery must account for the missing interval. |
+
+### What reconciliation compares
+
+The proposed comparison has three sides:
+
+```text
+request terms
+↕
+distinct, matched events accepted by the confirmation policy
+↕
+stored finalisation outcome
+```
+
+The confirmed amount comes from distinct accepted events, in atomic units—not from counting watcher deliveries. Repeating reconciliation must not add another credit. A stored outcome that disagrees with the evidence remains a discrepancy rather than being silently overwritten.
+
+### Worked example — placeholders only
+
+Conceptual only; no signing or funds. Assume `<EVENT>` is the only distinct matching event and meets an explicitly defined application timing rule.
+
+```text
+<REQUEST>:
+  network     <NETWORK>
+  asset       <ASSET>
+  recipient   <RECIPIENT>
+  amount      <AMOUNT_ATOMIC>
+  memo/tag    <MEMO_OR_TAG>
+  expiry      <EXPIRY>
+
+<REQUEST>
+↓
+<ALLOCATION>
+↓
+<RECIPIENT>
+
+<EVENT>
+↓
+matching transfer of <AMOUNT_ATOMIC>
+```
+
+| Review step | You should see: |
+|---|---|
+| Observe `<EVENT>` for `<REQUEST>`. | Matching evidence, not yet a finalised payment. |
+| Receive `<EVENT>` again before confirmation. | One evidence item; the duplicate adds no amount. |
+| Lose the chain feed, then resume observation. | Recovery accounts for the unavailable interval, including missed observations; the outage alone does not discard the payment. |
+| Recheck `<EVENT>` against `<CONFIRMATION_POLICY>`; reconcile only if satisfied. | One accepted contribution of `<AMOUNT_ATOMIC>`, agreeing with the request and checked against the stored outcome. |
+| Finalise, lose the response, then retry. | The stored outcome is resolved first; no second credit or repeated finalisation effect. |
+
+This covers two different uncertainties: missing chain evidence during an outage, and not knowing whether an application update completed after a lost response. Neither should be treated as a fresh payment.
+
+### Gaps before implementation
+
+The application payment-tracking design rules also require the following before accepting payments:
+
+- Every request must carry network, asset, recipient, amount in atomic units, memo/tag where the chain supports one, and expiry. Represent all six fields before allocation. Reject requests with missing or ambiguous fields rather than using defaults.
+- Use one address per request where possible. When requests share a recipient, distinguish them with a memo/tag where supported or assign a unique address. Never rely on holdings alone.
+- Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation.
+- Configure a confirmation policy for each chain before finalising.
+
+Bawa does not document stable event identity, confirmation thresholds, reversal handling, durable storage, atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook. No commands or implementation guarantees are implied here.

@@ -945,3 +945,49 @@ The setup is ready for the reference workflow when every grounded gate passes, a
 
 ## 19. About this guide
 This guide was written with GPT-6-Astra. The repo files and the checks in sections 10 and 11 remain the authority if anything here disagrees with them.
+
+---
+
+## Learn from scratch
+
+Start with the wallet model, then learn the chain rules before choosing tools. Read these five guides in order, using each check to confirm your understanding before moving on.
+
+| Guide | Entry gate | You should see: |
+|---|---|---|
+| [01 — Fundamentals](docs/01-fundamentals/README.md) | No earlier Bawa guide required—start here. | You can distinguish entropy, a BIP39 mnemonic and the seed; explain BIP32 master and child keys; and describe extended keys and the hardened boundary. |
+| [02 — Chain Guides](docs/02-chains/README.md) | You understand the mnemonic-to-seed relationship and BIP32 key derivation. | You can recognise the derivation paths and address formats for a chain, and explain how chain families differ in curves and address models. |
+| [03 — Tool & Repository Map](docs/03-tools-and-repositories/README.md) | You understand the chain family, paths and address model relevant to your work. | You can choose a repository or tool for each job and explain both its purpose and what it does not do. |
+| [04 — Wallet Generation](docs/04-wallet-generation/README.md) | You know which repository or tool handles generation and understand its limits. | You can explain the one-time trusted generation operation, including recording recovery data, verifying the result and then moving public material online. |
+| [05 — Watch-Only Derivation](docs/05-watch-only/README.md) | You understand the generation and verification sequence, and can distinguish public material from the seed. | You can explain how receiving addresses are derived from public material only, without the seed. |
+
+### Learn from scratch — continued
+
+- **[06 — Wallet Tracking](docs/06-tracking/README.md)**
+  - **Entry gate:** You understand watch-only derivation and the role of public addresses.
+  - **You should see:** You can explain how public-address tracking combines free RPC or an explorer with a local database, scheduled polling and a dashboard.
+
+- **[07 — Payment Tracking](docs/07-payment-tracking/README.md)**
+  - **Entry gate:** You understand how wallet tracking observes network activity.
+  - **You should see:** You can distinguish allocation, observation, confirmation and reconciliation, and explain how they establish whether an observed event satisfies a payment request.
+
+- **[08 — Security & Recovery](docs/08-security-recovery/README.md)**
+  - **Entry gate:** You understand wallet generation and the public-only scope of watch-only derivation.
+  - **You should see:** You understand how to protect recovery capability and xpub privacy, and how backups and a passphrase relate to reproducing the wallet after failure.
+
+- **[09 — Signing & Hardware](docs/09-signing-and-hardware/README.md)**
+  - **Entry gate:** You understand recovery protection and the tracker’s public-only role.
+  - **You should see:** You can explain the roles of PSBT, descriptors and hardware wallets in authorising transactions, and why the signer stays separate from the tracker.
+
+- **[10 — Operations & Testing](docs/10-operations-and-testing/README.md)**
+  - **Entry gate:** You know the tool and repository map and understand the generation, tracking and signing workflows.
+  - **You should see:** You can describe how to install, run, test, troubleshoot and release the tooling.
+
+- **[11 — Trust Wallet and Independent Verification](docs/11-trust-wallet-and-independent-verification/README.md)**
+  - **Entry gate:** You understand Bawa’s tool map and the testing guidance in 10.
+  - **You should see:** You can explain how Bawa uses Trust Wallet Core and why `bip_utils` belongs in the verification layer.
+
+- **[12 — Chain Registry and Assets](docs/12-chain-registry-and-assets/README.md)**
+  - **Entry gate:** You understand the roles of Trust Wallet Core and `bip_utils` in Bawa.
+  - **You should see:** You can distinguish chain compatibility metadata from asset metadata and explain why both are kept separate from the cryptographic engine.
+
+Wallet Core does not handle node communication, balance retrieval or transaction broadcasting. Keep signing exercises testnet-only or conceptual—never use real funds.

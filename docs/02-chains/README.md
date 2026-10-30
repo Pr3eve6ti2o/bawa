@@ -417,4 +417,150 @@ For a multi-chain library, this is exactly where a mature library such as Trust 
 - [Cosmos Chain Registry](https://github.com/cosmos/chain-registry)
 - [Cardano CIP-1852](https://cips.cardano.org/cip/CIP-1852)
 - [polkadot.js](https://polkadot.js.org/docs/api/start/keyring/)
+### Bitcoin formats: one coin type, four choices
+
+Bitcoin is coin type `0` in Bawa’s mapping. That does **not** choose the address format. Match an explicit format requirement. Bawa does not document wallet-compatibility guarantees, so check the target wallet’s documentation before choosing a format.
+
+```text
+Bitcoin — coin type 0
+↓
+format choice still required
+├─ legacy
+├─ nested SegWit
+├─ native SegWit
+└─ Taproot
+```
+
+```text
+Bawa's intended selection
+↓
+BIP-84
+↓
+native SegWit
+↓
+P2WPKH
+
+account:                m/84'/0'/0'
+receiving:              m/84'/0'/0'/0/i
+account serialisation:  zpub under SLIP-0132
+```
+
+#### Per-format reference
+
+The paths, address types and prefixes below follow [BIP-44](https://bips.dev/44/), [BIP-49](https://bips.dev/49/), [BIP-84](https://bips.dev/84/) and [BIP-86](https://bips.dev/86/). For these Bitcoin reference patterns, the account level is `m/purpose'/0'/0'`.
+
+Compare the requested format with the table. **You should see:** the corresponding purpose and prefix pairing below. These are reference patterns, not complete addresses or command output.
+
+| Format | Purpose | Full receiving path | When to select | You should see: |
+|---|---:|---|---|---|
+| Legacy (P2PKH) | `44` | `m/44'/0'/0'/0/i` | An explicit legacy-format requirement | `1...` prefix |
+| Nested SegWit (P2SH-P2WPKH) | `49` | `m/49'/0'/0'/0/i` | An explicit nested-SegWit requirement | `3...` prefix |
+| Native SegWit (P2WPKH) | `84` | `m/84'/0'/0'/0/i` | Bawa’s intended Bitcoin format | `bc1q...` prefix |
+| Taproot (P2TR) | `86` | `m/86'/0'/0'/0/i` | An explicit Taproot requirement | `bc1p...` prefix |
+
+Only the native SegWit row describes Bawa’s intended format. The other three rows are BIP reference patterns to help you recognise a format requirement, not Bawa defaults. Bawa does not document compatibility, fee or migration comparisons; check the target wallet’s documentation and current fee information before making those decisions.
+
+#### Maintainer checks
+
+1. **Compare the intended Bawa configuration with the BIP-84 paths above.**  
+   **You should see:** account `m/84'/0'/0'` and receiving template `m/84'/0'/0'/0/i`. `zpub` belongs to the account serialisation under SLIP-0132; `bc1q...` is the address-prefix pattern.
+
+2. **Review any format selection based only on coin type.**  
+   **You should see:** the same Bitcoin coin type, `0`, associated with all four purposes and their different prefixes. Coin type alone leaves the format unresolved.
+
+3. **Check the relevant standard before using another full path.**  
+   **You should see:** the legacy, nested SegWit and Taproot paths identified as BIP-44, BIP-49 and BIP-86 reference patterns, not Bawa defaults. Do not assume that replacing `84` also changes the address encoder or account serialisation. Check the implementation’s documented support before using another format.
+
+#### Evidence boundary
+
+| Specification | Status |
+|---|---|
+| Full account and receiving paths for purposes `44`, `49` and `86` | BIP-44, BIP-49 and BIP-86 define these reference patterns. The corresponding accounts are `m/44'/0'/0'`, `m/49'/0'/0'` and `m/86'/0'/0'`; the receiving paths are in the table above. These are not Bawa defaults. |
+| Network labels and testnet paths/prefixes | Bawa does not document these. Check the relevant Bitcoin network specifications and the target wallet’s documentation before using a test network. |
+| Address-encoder/checksum rules and script details beyond identifying Bawa’s format as P2WPKH | Bawa does not document these rules. Consult the relevant BIP and its referenced specifications before implementing address encoding or script handling. |
+| Account serialisations for the other formats | Bawa documents `zpub` for its BIP-84 account, but not serialisations for the other formats. Check the relevant BIP, SLIP-0132 and the target wallet’s documentation rather than assuming `zpub` applies. |
+| Wallet support, fee trade-offs and migration guidance | Bawa does not document these. Check the target wallet’s support and migration documentation, along with current fee information. |
+| Executable derivation or signing procedure | Bawa does not document an executable procedure here. Follow your chosen implementation’s documented procedure and verify its behaviour against published test vectors before relying on it. |
+
+A shared Bitcoin coin type does not make paths, address encoders or account serialisations interchangeable. Follow the standard for the chosen format. This section is a format reference, not a signing recipe, fee comparison or migration guide.
+
+---
+
 - [XRPL.js](https://github.com/XRPLF/xrpl.js)
+
+## 02 Chains — support is not just a coin type
+
+Bawa supports watch-only address derivation for BTC, ETH and TRX; TON support is limited to generating one deposit address per wallet.  
+**Reference-only — not Bawa-supported:** Solana (SOL), Cardano (ADA).
+
+Listing a chain in the comparison table does not mean Bawa implements it. The paths below are references, **not confirmed Bawa defaults** or signing instructions.
+
+```text
+Common outline
+secure secret
+    ↓
+deterministic key material
+```
+
+```text
+Chain-specific decisions — conceptual, not Bawa syntax
+curve + derivation scheme
+    ↓
+key format + UTXO / account / contract semantics
+    ↓
+address format + encoder
+```
+
+### Reference comparison
+
+| Chain | Bawa scope | Coin type | Derivation reference |
+|---|---|---:|---|
+| EVM | Supported | 60 | `m/44'/60'/0'/0/x` |
+| TRX | Supported | 195 | `m/44'/195'/0'/0/x` |
+| TON | Generation only: one deposit address per wallet; no xpub derivation | 607 | Recorded as `ton_path` from `CoinTypeExt.derivationPath(CoinType.ton)` |
+| SOL | Reference-only | 501 | Phantom/Solflare: `m/44'/501'/x'/0'`<br>Trust/Sollet: `m/44'/501'/x'` |
+| ADA | Reference-only | 1815 | CIP-1852 payment: `m/1852'/1815'/0'/0/0`<br>Staking: `m/1852'/1815'/0'/2/0` |
+
+The EVM and TRX reference paths have the same shape, with different coin types. SOL has two wallet-specific forms; ADA distinguishes payment and staking. A single “change the coin type” template does not cover these differences.
+
+`generate.js` creates and validates one TON address per wallet. It records `ton_address`, `ton_path` and `ton_note` (`single address per wallet; no xpub exported`), and exports no TON xpub or zpub. `make_wallet.py` maps `ton_address` to `TON_DEPOSIT_ADDRESS` in `.env`. There is no TON xpub watch-only derivation flow in Bawa: neither `derive.js` nor `derive_daemon.js` supports TON, so you cannot derive TON addresses from a TON xpub with these tools.
+
+### Curves, schemes and address models
+
+Keep these distinctions clear:
+
+- secp256k1 with BIP-style paths versus schemes using other curves;
+- shared cryptographic building blocks versus chain-specific mnemonic or derivation schemes;
+- UTXO models versus account models, including accounts defined by smart contracts;
+- key and address formats, which can differ for the same underlying key.
+
+According to BIP/SLIP standards and the chains’ own documentation:
+
+- **BTC** uses secp256k1 and a UTXO model.
+- **ETH/EVM chains** use secp256k1 and an account model.
+- **TRX** uses secp256k1 and an account model.
+- **SOL** uses Ed25519 and an account model.
+- **ADA** uses Ed25519 and an extended-UTXO model, with paths defined by CIP-1852.
+- **TON** uses Ed25519 and smart-contract wallet accounts. One mnemonic can correspond to more than one account, depending on the wallet contract and wallet ID.
+
+Bawa does not document complete derivation algorithms, public-key serialisation rules, address encoders or the cryptographic details behind ADA’s CIP-1852 paths. Consult the relevant BIP/SLIP standards, CIP-1852 for ADA, and the chain’s own documentation or reference implementation for those details.
+
+For any chain, a path string alone does not establish the curve, encoder, address format, wallet compatibility or compatibility with another chain. Check the chain’s own reference for each of these.
+
+### Reuse and configuration boundaries
+
+Reuse cryptographic building blocks **only where the relevant standard permits it**. Where chains follow different rules, use the chain’s own reference implementation rather than treating a new coin type as the only change.
+
+Use the second diagram as a review checklist for a proposed chain profile. It is not a Bawa configuration schema. The curve and derivation scheme, path, key format, account or contract rules, and encoder remain separate decisions.
+
+Bawa does not document configuration syntax, encoder APIs, per-network settings or verified address outputs for proposed chain profiles. EVM is a family, not a single network; Bawa does not document per-network EVM configuration. Check the target network’s documentation and reference implementation, and review the relevant Bawa code before configuring a profile.
+
+**Review checkpoint:** compare a proposed profile with the table.
+
+**You should see:** EVM/TRX labelled supported; SOL/ADA still reference-only; TON labelled as single-deposit-address generation only, coin type `607`, its path recorded in `ton_path`, and `TON_DEPOSIT_ADDRESS` set in `.env`; no TON xpub export or watch-only derivation flow; no encoder selected merely from a coin type.
+
+### What is not in Bawa scope
+
+**SOL and ADA implementations are outside the Bawa-supported scope here.** Their reference paths do not imply Bawa derivation, address generation or signing support.
+
+For EVM/TRX/TON, Bawa does not document runnable commands, RPC behaviour, transaction building or signing capabilities for these reference profiles, nor an executable wallet workflow or signing example. This does not confirm that those capabilities are absent. Check the relevant Bawa tool documentation and code before attempting a wallet workflow or signing.
