@@ -991,3 +991,29 @@ Start with the wallet model, then learn the chain rules before choosing tools. R
   - **You should see:** You can distinguish chain compatibility metadata from asset metadata and explain why both are kept separate from the cryptographic engine.
 
 Wallet Core does not handle node communication, balance retrieval or transaction broadcasting. Keep signing exercises testnet-only or conceptual—never use real funds.
+
+## Deep-dive guides
+
+The deep pass expands the run guide above into detailed sections. Start with the
+fundamentals, then follow the section you need:
+
+- [01 — Fundamentals](docs/01-fundamentals/README.md)
+- [02 — Chain Guides](docs/02-chains/README.md)
+- [03 — Tool and Repository Map](docs/03-tools-and-repositories/README.md)
+- [04 — Wallet Generation](docs/04-wallet-generation/README.md)
+- [05 — Watch-Only Derivation](docs/05-watch-only/README.md)
+- [06 — Wallet Tracking](docs/06-tracking/README.md)
+- [07 — Payment Tracking](docs/07-payment-tracking/README.md)
+- [08 — Security and Recovery](docs/08-security-recovery/README.md)
+- [09 — Signing and Hardware](docs/09-signing-and-hardware/README.md)
+- [10 — Operations and Testing](docs/10-operations-and-testing/README.md)
+- [11 — Trust Wallet and Independent Verification](docs/11-trust-wallet-and-independent-verification/README.md)
+- [12 — Chain Registry and Assets](docs/12-chain-registry-and-assets/README.md)
+- [13 — Wallet App Architecture](docs/13-wallet-app-architecture/README.md)
+- [14 — Wallet App Implementation](docs/14-wallet-app-implementation/README.md)
+- [15 — Threat Model and Theft Prevention](docs/15-threat-model-and-theft-prevention/README.md)
+- [16 — Security Decision Guide](docs/16-security-decision-guide/README.md)
+- [Recovery procedure](docs/RECOVERY.md)
+- [Glossary](docs/GLOSSARY.md)
+- [FAQ](docs/FAQ.md)
+- [Further reading](docs/FURTHER-READING.md)

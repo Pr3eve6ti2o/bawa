@@ -14,7 +14,7 @@ These are the primary specifications and upstream projects Bawa relies on. Re-ch
 - SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
 - SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 - SLIP-0132 — https://github.com/satoshilabs/slips/blob/master/slip-0132.md
-- TON TEP-3 — https://github.com/ton-blockchain/TEPs/blob/master/text/0003-guidelines-and-standards.md
+- TON TEP-3 — https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md
 - Cardano CIP-1852 — https://cips.cardano.org/cip/CIP-1852
 
 ## Trust Wallet ecosystem

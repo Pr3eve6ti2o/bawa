@@ -426,3 +426,542 @@ An extended key stores a node’s key and chain code, together with information 
 **You should see:** yes. An `xpub` can derive non-hardened public children, but it cannot derive hardened children or private keys. These permissions come from BIP-32, not from the index threshold alone.
 
 Bawa does not document an API or runnable workflow for derivation or signing here, or the expected outputs for one. Before building a runnable walkthrough, follow the full BIP-32 procedure, choose a documented API and check the derivation against published BIP-32 test vectors. No executable derivation or signing example is included in this section.
+
+## Entropy and the BIP-39 mnemonic
+
+### Start with unpredictable entropy
+
+For a new wallet, use a cryptographically secure random-number generator (CSPRNG) provided by the operating system or a trusted cryptographic library. Its output must be unpredictable to an attacker.
+
+Do not replace it with a home-made generator, timestamps, usernames, mouse movements, arbitrary “random” strings or human-chosen words. Weak entropy gives attackers fewer possibilities to search and can let them reconstruct the wallet’s keys and steal its funds. Encoding predictable bits as a long mnemonic does not make them safer.
+
+### Entropy length determines word count
+
+[BIP-39](https://bips.dev/39/) accepts entropy lengths from 128 to 256 bits, in steps of 32 bits:
+
+- `ENT`: entropy length in bits.
+- `CS = ENT / 32`: checksum length in bits.
+- `MS = (ENT + CS) / 11`: mnemonic word count.
+
+| ENT: entropy bits | CS: checksum bits | Combined bits | MS: words |
+|---:|---:|---:|---:|
+| 128 | 4 | 132 | 12 |
+| 160 | 5 | 165 | 15 |
+| 192 | 6 | 198 | 18 |
+| 224 | 7 | 231 | 21 |
+| 256 | 8 | 264 | 24 |
+
+Each 11-bit group selects an entry from a 2,048-word list, using indices numbered from 0 to 2,047. A 24-word mnemonic therefore contains 256 entropy bits and eight checksum bits—not 264 bits of randomness.
+
+### Work through the published checksum test
+
+The [published English test vector](https://github.com/trezor/python-mnemonic/blob/master/vectors.json) uses 128 zero bits: 16 zero bytes. This is test data, not wallet material.
+
+Hash the raw bytes, not the hexadecimal text used to display them.
+
+```text
+Entropy (hex): 00000000000000000000000000000000
+    ↓ SHA-256 of the 16 bytes
+Digest begins 374708ff… (binary begins 00110111…)
+    ↓ Keep the first 128 / 32 = 4 bits
+Checksum: 0011
+```
+
+Append `0011` after the entropy. The result contains `128 + 4 = 132` bits, which split into `132 / 11 = 12` groups.
+
+The first eleven groups consume 121 zero entropy bits. That leaves seven entropy bits for the last group, followed by the four checksum bits. Using the English wordlist:
+
+```text
+Groups 1–11: 00000000000
+    ↓
+Index 0: abandon, repeated eleven times
+
+Group 12: 0000000 | 0011
+    ↓ Join the seven entropy bits and four checksum bits
+00000000011
+    ↓
+Index 3: about
+```
+
+The `|` marks the boundary between entropy and checksum; it is not part of the bitstream. The last word carries both kinds of bits. It is not a separate checksum word.
+
+### Understand what the words represent
+
+The mnemonic is a reversible encoding of the entropy and checksum, not an HD private key or the HD tree.
+
+Seed derivation is a separate operation. BIP-39 uses the mnemonic and an optional passphrase, NFKD-normalised and encoded as UTF-8, with PBKDF2-HMAC-SHA512. After 2,048 iterations, the result is a 64-byte seed from which the wallet derives its keys. Treat a real mnemonic as secret recovery material.
+
+A word outside the selected wordlist fails wordlist validation. A mistyped word that remains a valid list entry usually makes the checksum inconsistent.
+
+The checksum cannot identify the phrase you intended to enter. For a 12-word mnemonic, it has only four bits: one in sixteen uniformly random 12-word sequences passes. A wrong phrase with a valid checksum passes this check and can lead to a different wallet. Checksum validity establishes internal consistency, not that a backup is correct.
+
+### Keep published vectors unfunded
+
+The example’s entropy, mnemonic and documented seed are public. **Published vectors must never be funded.** Keep them in tests; create real wallets from fresh CSPRNG entropy.
+
+**You should see:**
+- Checksum `0011`.
+- A 132-bit sequence split into twelve 11-bit groups.
+- Eleven indices of `0`, followed by index `3`, producing this **test-only** mnemonic:
+
+```text
+abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
+```
+
+## From mnemonic to seed: PBKDF2, normalisation, and the passphrase
+
+### The fixed PBKDF2 parameters
+
+BIP-39 derives a binary seed from the recovery sentence. These settings are compatibility requirements, not values to tune.
+
+| Parameter | Required value | Why it matters |
+|---|---|---|
+| Password | Mnemonic sentence, NFKD-normalised then UTF-8-encoded | PBKDF2 receives the sentence itself, not the original entropy or numeric word positions. |
+| Salt | Literal `"mnemonic"` + passphrase, NFKD-normalised then UTF-8-encoded | The lower-case prefix is fixed. Append the passphrase without adding a separator. Changing the salt changes the resulting seed. |
+| Iterations | `2048` | Sets the repeated work and the cost of testing each guess. Another count will not reproduce the BIP-39 result. |
+| Pseudo-random function | `HMAC-SHA512` | This exact keyed-hash construction is required; plain SHA-512 is not interchangeable with it. |
+| Output length | `64 bytes` (`512 bits`) | The complete output is the seed. Do not truncate it before wallet derivation. |
+
+### What NFKD means when typing
+
+NFKD is Unicode compatibility decomposition. Software normalises the text first, then encodes it as UTF-8, for both PBKDF2 inputs.
+
+For example, `é` entered as one character and `e` followed by a combining acute accent normalise to the same sequence. The accent remains: NFKD is not accent removal. It also does not correct spelling, translate words, ignore capitalisation or trim accidental spaces. Enter the recorded words and passphrase faithfully.
+
+PBKDF2 consumes the normalised sentence bytes, not a language identifier or wordlist indices. Similar-looking words from different language wordlists can contain distinct characters that remain different after NFKD; those different bytes produce different seeds. Representing the same original entropy with another language’s wordlist also normally changes the sentence and therefore the seed.
+
+The boundary is byte equality, not appearance: identical normalised inputs produce the same seed, regardless of the wordlist label.
+
+Mnemonic validation is a separate operation. Software must check the phrase’s checksum using its selected wordlist and warn when the checksum fails.
+
+### Empty passphrase or supplied passphrase
+
+An omitted passphrase is treated as `""`, leaving the salt as exactly `mnemonic`. Supply a non-empty passphrase with the same 24 words and you derive a wholly different wallet, with different keys. These are separate wallets, not locked and unlocked views of one wallet.
+
+BIP-39 never returns a “wrong passphrase” error. Every passphrase is accepted as input and produces a valid seed. A typo that changes the normalised input silently selects another wallet, usually with none of the expected addresses, history or funds.
+
+A forgotten, unrecorded passphrase has no recovery mechanism in BIP-39. The mnemonic alone cannot restore the intended wallet; treat the missing passphrase as unrecoverable.
+
+### Why this is not an unlock password
+
+A device PIN controls local access. A wallet-encryption password unlocks stored data. The BIP-39 passphrase instead contributes to creating the seed; it does not decrypt an otherwise unchanged wallet.
+
+It is also not a second factor with a reset path. BIP-39 provides no separate verifier or reset authority. Choosing a replacement passphrase derives different keys rather than restoring access to the previous wallet.
+
+### One-way derivation, before private keys
+
+PBKDF2 is a one-way derivation, not a reversible text encoding. The seed cannot be decoded back into the original words or passphrase.
+
+The seed is not itself a signing private key. In a BIP-32 wallet, it supplies the starting material for a key hierarchy:
+
+```text
+Mnemonic sentence + passphrase
+    ↓ BIP-39 seed derivation
+64-byte seed
+    ↓ BIP-32 master-key derivation
+Master private key + chain code
+    ↓ Child-key derivation
+Derived private keys
+```
+
+A derived private key normally permits spending for its corresponding key or account. Possession of the seed can expose the entire derived hierarchy, so the seed remains highly sensitive.
+
+### Recording and entry rules
+
+- Record the words in their exact order. Record the passphrase exactly, including capitalisation and spaces; explicitly note if it is empty.
+- Keep the words and passphrase in separate offline records, stored in different locations. Never keep them together.
+- Never photograph either record.
+- Never type real-wallet words or passphrases into a connected device. Use a trusted offline device for secret entry.
+- Keep real recovery data out of guides, support tickets, repositories and chats.
+
+Run the following check only with disposable test inputs in an offline BIP-39 implementation.
+
+**You should see:**
+- Repeating identical normalised inputs reproduces the same **64-byte seed**.
+- Keeping the words unchanged while switching between an empty and a non-empty passphrase produces different seeds.
+- A test-passphrase typo that changes its normalised bytes produces another valid seed, without a “wrong passphrase” error.
+
+## BIP-32 derivation and the hardened boundary
+
+### 1. Derive the master node
+
+Start with Bawa’s **64-byte seed**, `S`. [BIP-32](https://bips.dev/32/) transforms it into the root of a secp256k1 key tree.
+
+1. Calculate `I = HMAC-SHA512(key = "Bitcoin seed", data = S)`. The HMAC key is the ASCII encoding of that literal string; the seed supplies the data.
+2. Divide the 64-byte result into two 32-byte halves: `I_L` and `I_R`.
+3. Read `I_L` as an unsigned, big-endian integer. This is the candidate master private scalar, `k_m`. It must satisfy `1 <= k_m < n`, where `n` is the secp256k1 group order. Reject an invalid result; do not reduce it modulo `n`.
+4. Assign `I_R` to the master chain code, `c_m`.
+5. Calculate the master public key, `K_m = point(k_m)`, where `point(x)` means multiplying the curve generator by `x`.
+
+```text
+64-byte seed S
+  |
+  v
+HMAC-SHA512 with key "Bitcoin seed"
+  |
+  v
+64-byte result I_L || I_R
+  |
+  v
+Validated master private node (k_m, c_m)
+```
+
+The seed and the master private key are different objects: the seed is the input material; the private key is a derived 32-byte scalar. The **extended private node** pairs that scalar with its chain code. Its public counterpart contains `(K_m, c_m)` instead.
+
+Serialised extended keys also record depth, parent fingerprint and child number. An xprv is not another encoding of the original seed.
+
+### 2. Derive children with CKDpriv and CKDpub
+
+Write the parent private node as `(k_p, c_p)` and its public counterpart as `(K_p, c_p)`.
+
+In the formulas below:
+
+- `||` joins byte strings.
+- `ser256(k)` encodes a private scalar as 32 big-endian bytes.
+- `ser32(i)` encodes a child index as four big-endian bytes.
+- `serP(K)` encodes a public key in its 33-byte compressed form.
+- `parse256` reads 32 bytes as an unsigned, big-endian integer.
+
+#### CKDpriv: private parent, private child
+
+Choose the HMAC data according to the child type:
+
+```text
+Normal:
+D = serP(K_p) || ser32(i)
+
+Hardened:
+D = 0x00 || ser256(k_p) || ser32(i)
+
+Both:
+I = HMAC-SHA512(key = c_p, data = D)
+I_L = first 32 bytes of I
+I_R = last 32 bytes of I
+t = parse256(I_L)
+
+k_child = (k_p + t) mod n
+c_child = I_R
+```
+
+The parent chain code is the HMAC key. The left output half supplies a numerical tweak, which is added to the parent private scalar modulo `n`. The right half becomes the child chain code.
+
+For hardened derivation, **`0x00` is one padding byte before the 32-byte private key**. That makes the key portion of the input 33 bytes long, matching the length used for a compressed public key. The padding belongs to the HMAC data, not to the private scalar.
+
+#### CKDpub: public parent, public child
+
+For a non-hardened child:
+
+```text
+I = HMAC-SHA512(key = c_p, data = serP(K_p) || ser32(i))
+I_L = first 32 bytes of I
+I_R = last 32 bytes of I
+t = parse256(I_L)
+
+K_child = point(t) + K_p
+c_child = I_R
+```
+
+This uses the same tweak as normal private derivation, but adds its curve point to the parent public key. The result matches the public key obtained from the corresponding private child.
+
+**CKDpub rejects hardened indices.** Constructing the hardened HMAC input requires `k_p`, which an xpub does not contain. An xpub alone cannot produce a private child of either type.
+
+Invalid children must also be rejected: `t >= n`, a zero private result or a public result at infinity requires trying the next index.
+
+### 3. Put the boundary at exactly `2^31`
+
+Child indices are unsigned 32-bit integers:
+
+```text
+0 <= i <= 2^31 - 1       normal / non-hardened
+2^31 <= i <= 2^32 - 1    hardened
+```
+
+**Index `2^31` itself is hardened.** Its decimal value is `2147483648`, and its hexadecimal value is `0x80000000`.
+
+The notation `0'`, also written `0H`, means this first hardened index. More generally, `j'` represents `j + 2^31`; the apostrophe is not part of the encoded index.
+
+### 4. Apply the precise leak rule
+
+**Rule: a parent extended public key plus any one descendant private key reached through an entirely non-hardened path reveals the parent private key, given that derivation path. This compromises the whole subtree rooted at that parent, including hardened children below it.**
+
+For an immediate non-hardened child, the parent xpub supplies everything needed to calculate `t`:
+
+```text
+k_child  = (k_parent + t) mod n
+k_parent = (k_child - t) mod n
+```
+
+For a deeper descendant, derive the intermediate public nodes and calculate each tweak. Undo the additions along the path to recover the original parent scalar. Its chain code is already present in the parent xpub, completing the recovered extended private node.
+
+A hardened edge breaks this recovery link because its HMAC input contains the **parent private key**. The parent xpub cannot supply that input, so the attacker cannot calculate the tweak for the subtraction.
+
+Hardening blocks recovery *across that edge*. It does not protect children beneath a parent whose extended private key has already been recovered.
+
+### 5. Keep the address server on the public side
+
+For the BIP-44 path `m/44'/60'/0'/0/i`, the purpose, coin-type and account steps are hardened. The remaining steps are non-hardened.
+
+```text
+m
+  | 44' — hardened
+  v
+m/44'
+  | 60' — hardened
+  v
+m/44'/60'
+  | 0' — hardened
+  v
+m/44'/60'/0'       export the account xpub here
+  | 0 — non-hardened
+  v
+m/44'/60'/0'/0
+  | i — non-hardened
+  v
+m/44'/60'/0'/0/i
+```
+
+The server can use the account xpub to derive public nodes at `/0/0`, `/0/1`, `/0/2` and onwards, then generate deposit addresses. This is safe for address generation without granting signing authority. Keep the xprv on the signing side; fix derivation code rather than giving the server private keys.
+
+That arrangement becomes unsafe if **any private key on the non-hardened branch is exposed to someone holding the account xpub**. One leaked address private key is enough to recover the account private key and compromise every branch within that account.
+
+BIP-44 hardens account levels to contain this damage. An account compromise cannot be reversed through the hardened account edge to recover the coin-type parent and sibling accounts. It does not spare the compromised account’s own descendants.
+
+### 6. Check against published test material
+
+Use [SLIP-0010’s secp256k1 test vector 1](https://github.com/satoshilabs/slips/blob/master/slip-0010.md). **This is published test material. Never fund these keys or any wallet derived from this seed.**
+
+The fixture uses a **16-byte seed**, not a 64-byte wallet seed. The master-derivation procedure is unchanged. Decode the hexadecimal seed into bytes and use it unchanged; do not pad or pre-hash it.
+
+```text
+Seed (hex):
+000102030405060708090a0b0c0d0e0f
+```
+
+**You should see:**
+
+```text
+m
+  chain code:
+    873dff81c02f525623fd1fe5167eac3a55a049de3d314bb42ee227ffed37d508
+  private key:
+    e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35
+  compressed public key:
+    0339a36013301597daef41fbe593a02cc513d0b55527ec2df1050e2e8ff49c85c2
+
+m/0H, equivalent to m/0'
+  child index:
+    2147483648 (0x80000000)
+  chain code:
+    47fdacbd0f1097043b78c63c20c34ef4ed9a111d980047ad16282c7ae6236141
+  private key:
+    edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea
+
+CKDpub from the master public node at index 2147483648:
+  failure — hardened derivation requires the parent private key
+```
+
+## Paths, accounts and extended keys
+
+### Read a BIP-44 path level by level
+
+BIP-43 and BIP-44 give agreed meanings to levels in a BIP-32 tree. The classic BIP-44 layout is `m/purpose'/coin_type'/account'/change/address_index`. These meanings are interoperability conventions, not rules imposed by every blockchain.
+
+Read `m/44'/60'/0'/0/0` as:
+
+```text
+m — master node
+↓
+44' — purpose: BIP-44
+↓
+60' — coin type: Ethereum
+↓
+0' — account: 0
+↓
+0 — branch: external / receiving
+↓
+0 — address index: 0
+```
+
+The apostrophe marks a **hardened** derivation. Computing that child requires the parent’s private key; an extended public parent is insufficient.
+
+The unmarked change and address-index components use non-hardened BIP-32 derivation. Their public nodes can therefore be derived from an extended public parent. Removing an apostrophe changes the derivation: `0'` and `0` select different children.
+
+### Accounts separate activity, not backups
+
+Changing the account component from `0'` to `1'` creates another logical account under the same seed. Use this separation to organise activity without mixing address trees.
+
+For backup purposes, these are not independent wallets. The same seed is the recovery secret for both accounts, and anyone who obtains it can recover both. Keep the account numbers and path conventions in your recovery records; separate account labels do not provide separate recovery secrets.
+
+### Branches and address allocation
+
+Traditional BIP-44 assigns two meanings to the change component:
+
+- `0`: external addresses used for receiving.
+- `1`: internal addresses used for change returned by a spend.
+
+Ethereum tools commonly leave this component at `0` and increase the final address index. Under that convention, the next address after the example is `m/44'/60'/0'/0/1`, not `m/44'/60'/0'/1/0`.
+
+The final, non-hardened address index selects another address within the same account branch.
+
+For a payment application, persist the last-used index and the next index to allocate, separately for each account and branch. Record address allocations even before payment arrives. An unpaid address can appear unused, and an empty stretch in a scan does not prove that higher indexes were never issued. Resume from application records rather than guessing the counter from a handful of addresses.
+
+### Extended-key serialisation
+
+A serialised extended key carries an HD node’s key material, chain code and derivation metadata.
+
+The [BIP-32](https://bips.dev/32/) payload occupies **78 bytes**, in this order:
+
+| Field | Bytes | Contents |
+|---|---:|---|
+| Version | 4 | Version identifying the network and key serialisation |
+| Depth | 1 | Distance from the master node; `0x00` at the master |
+| Parent fingerprint | 4 | Fingerprint of the parent’s public key; `0x00000000` at the master |
+| Child number | 4 | Child index, including its hardened status |
+| Chain code | 32 | Material required for child derivation |
+| Key data | 33 | Compressed public key, or `0x00` followed by the 32-byte private key |
+
+Calculate `SHA256(SHA256(payload))` and append its first four bytes as the checksum. Encode the resulting **82 bytes** in Base58. The checksum is additional to the 78-byte payload.
+
+The standard Bitcoin BIP-32 version bytes produce these prefixes:
+
+| Network | Key type | Version bytes | Prefix |
+|---|---|---|---|
+| Mainnet | Public | `0x0488B21E` | `xpub` |
+| Mainnet | Private | `0x0488ADE4` | `xprv` |
+| Testnet | Public | `0x043587CF` | `tpub` |
+| Testnet | Private | `0x04358394` | `tprv` |
+
+For Bitcoin account imports, SLIP-0132 associates public-key serialisations with address schemes:
+
+| Prefix | Address-scheme convention |
+|---|---|
+| `xpub` | BIP-44 legacy |
+| `ypub` | BIP-49 nested SegWit |
+| `zpub` | BIP-84 native SegWit |
+
+These prefixes are not interchangeable labels. A legacy-only `xpub` importer may reject a `zpub`. If forced to interpret that node as a legacy `xpub`, it can derive the same child public keys but construct legacy addresses instead of the intended native-SegWit addresses.
+
+The importer must use the correct address scheme as well as the correct derivation. Changing the serialisation does not make an incompatible importer safe to use.
+
+### What an xpub exposes
+
+An xpub is more than a public key: its chain code enables non-hardened public-child derivation. This makes an account-level xpub useful for watch-only operation.
+
+For a standard BIP-44 account, anyone holding its xpub can derive **every receiving and change address below that account**, including addresses you have not issued yet. The holder can link those addresses and their on-chain activity to the same account.
+
+That reach stops at hardened boundaries. The xpub cannot recover the hardened private ancestors above it, nor can it authorise a spend by itself.
+
+Treat it as sensitive wallet data despite that spending restriction. Sharing an account xpub shares an address graph, not one receiving address. Keep it out of public logs and unrestricted exports. The same privacy concern applies to equivalent public-node serialisations such as ypub and zpub.
+
+### SLIP-0010 curves
+
+[SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) separates curves during master-key generation. The seed is the HMAC input message; a curve-specific string supplies the HMAC key—the curve’s “salt”. Using the same seed with these different strings produces separate master-key material for each curve.
+
+| Curve | HMAC key |
+|---|---|
+| secp256k1 | `Bitcoin seed` |
+| NIST P-256 | `Nist256p1 seed` |
+| ed25519 | `ed25519 seed` |
+| curve25519 | `curve25519 seed` |
+
+The secp256k1 variant remains compatible with BIP-32.
+
+An ed25519 or curve25519 child under SLIP-0010 requires a hardened step from a private parent. Neither curve has a non-hardened derivation operation in this scheme, so public-parent-to-public-child derivation is unavailable.
+
+An exported public node for either curve therefore cannot generate a watch-only sequence of new addresses. Every supported child step needs private parent material; the non-hardened suffix in the Ethereum example cannot be carried over unchanged.
+
+**You should see:**
+
+- Three hardened levels in `m/44'/60'/0'/0/0`, followed by branch `0` and address index `0`.
+- A recorded allocation counter when advancing to `m/44'/60'/0'/0/1`.
+- A 78-byte extended-key payload plus a four-byte checksum, with the expected network prefix and Bitcoin address scheme.
+- No public-child derivation for ed25519 or curve25519 under SLIP-0010.
+
+## Beginner mistakes 1–4
+
+BIP-39 represents entropy as recovery words and derives a seed from those words and an optional passphrase. BIP-32 uses that seed to construct the secp256k1 HD key tree. The seed feeds key derivation; it is not an individual Bitcoin private key.
+
+```text
+CSPRNG-generated entropy
+  ↓ BIP-39 encoding
+Recovery words
+  ↓ BIP-39 seed derivation, with optional passphrase
+Seed
+  ↓ BIP-32 derivation
+secp256k1 HD key tree
+```
+
+| # | Mistake | What goes wrong | Fix |
+|---|---|---|---|
+| **1** | **Choosing your own words or a short, memorable phrase — a brainwallet.** | Human choices follow searchable patterns. Attackers can enumerate quotations, familiar word combinations and predictable substitutions instead of searching the enormous space of securely generated entropy. Choosing words from the BIP-39 vocabulary does not make them unpredictable. | Use an established wallet implementation backed by a **cryptographically secure random-number generator (CSPRNG)**. Let it generate entropy and encode the result as words. Avoid home-made generators, timestamps, usernames, mouse movements and hand-written “random-looking” strings. Replace an existing brainwallet with a freshly generated wallet. |
+| **2** | **Photographing or cloud-storing recovery words, or entering a real phrase into a website, chat or connected computer.** | Cameras, synchronisation and online input can create copies outside your control. Documentation, support tickets and source-control repositories are unsuitable places for live recovery words. Removing the visible copy cannot establish that every copy is gone. | Keep a secure physical backup offline. Enter real recovery words only through a trusted offline recovery device. **If exposure has already happened, treat the wallet as compromised:** generate a replacement from fresh entropy on a trusted offline device, move any remaining funds through a secure transfer procedure, and retire the old wallet. Another address or account under the exposed phrase does not repair the compromise. |
+| **3** | **Setting a passphrase, then forgetting it or expecting a password reset.** | A BIP-39 passphrase participates in seed derivation. It does a different job from a device PIN or wallet-file encryption password. There is no reset that restores the original keys. A typo remains valid derivation input: it silently selects a different wallet, which appears empty because it is not the wallet you intended to recover. | Keep an exact offline record of the passphrase, stored separately from the recovery words. Preserve case and spaces. Practise recovery with disposable testnet data. If the passphrase is already lost but an existing device can still sign, migrate to a freshly generated wallet while that access remains. |
+| **4** | **Using one address for everything, or publishing an account xpub.** | Address reuse visibly connects separate payments. An account xpub lets its holder derive and link every receiving and change address in its non-hardened subtree, including unused ones. It cannot spend by itself, but combining it with a leaked private key from that subtree can expose the account’s extended private key, or xprv. | Use a fresh receiving address for each payment and **one account per purpose**. Give an account xpub only to the specific service that needs that account’s visibility; keep it out of public pages, repositories and posts. Do not provide descendant private keys to an xpub recipient. Fresh addresses do not conceal activity from someone who already holds that account’s xpub. |
+
+### Unfunded testnet recovery check
+
+Generate a disposable testnet wallet locally and leave it unfunded. Record its first receiving address. Restore using the same recovery words and exact passphrase, then repeat with a deliberately altered passphrase. Keep the derivation path, receiving index and address type unchanged.
+
+**You should see:**
+- The exact restore reproduces the recorded address.
+- The altered passphrase produces a different address, although both wallets look empty. Compare addresses, not balances.
+- Recovery records remain offline, and no account xpub has been published.
+
+## Beginner mistakes 5–8
+
+| No. | Mistake | Fix |
+|---|---|---|
+| **5** | Giving an address server an `xprv` for convenience, or importing a child private key alongside a shared `xpub`. | Keep the server watch-only, using the appropriate account extended public key. Leave private keys with the offline signer. Anyone holding an account `xpub`, a matching descendant private key and the known intervening path can recover the account extended private key **if every intervening step is non-hardened**. The common BIP-44 layout hardens purpose, coin type and account, but not change or address index. That hardened boundary blocks recovery into higher ancestors; it does not protect the rest of the compromised account. |
+| **6** | Restoring with the wrong path, coin type or wordlist language, then treating an empty view as proof of loss. | Check the original words and wordlist language, exact passphrase, network, `coin_type`, account path, receiving/change branch and index range. Do not translate the mnemonic. For a testnet legacy BIP-44 example, `m/44'/1'/0'/0/0` identifies account 0’s first receiving address; `'` marks hardened derivation. Match the script/address type too. `xpub` and `zpub` have different version bytes associated with different address conventions; they are not interchangeable labels. Restore with the recorded settings and scan the recorded range before concluding that funds are missing. |
+| **7** | Treating a mnemonic, seed, master key and account private key as equivalent backups. | An account **extended** private key recovers only its subtree. A seed or master extended private key provides root-level recovery. A mnemonic reproduces the intended seed only with the same BIP-39 passphrase choice. A complete mnemonic-based backup needs the ordered words, wordlist language, exact passphrase—or an explicit empty-passphrase decision—plus network/coin type, all account paths, script types and per-branch index records. Keep any non-empty passphrase in a separately secured backup. A bare private key lacks the chain code needed for HD derivation. |
+| **8** | Sending real bitcoin to check whether derivation works. | Rehearse with disposable testnet secrets, or compare derivations without making transactions. Published test-vector secrets are public: compare their outputs, but never send coins to their addresses. Do not reuse rehearsal keys for a real wallet. |
+
+## From scratch, without Bawa code
+
+Use a reviewed BIP-39/BIP-32 tool that runs offline. Keep any address viewer in testnet mode throughout the rehearsal.
+
+BIP-39 handles the entropy-to-words encoding and seed derivation. BIP-32 constructs the secp256k1 HD tree. The seed supplies root material; it is not a Bitcoin signing key.
+
+```text
+Entropy
+    ↓ BIP-39 checksum and word encoding
+Mnemonic
+    ↓ BIP-39 seed derivation with the chosen passphrase
+Seed
+    ↓ BIP-32 master-key generation
+Master extended private key
+    ↓ Recorded account derivation path
+Account extended private key
+```
+
+1. **Generate entropy offline.**  
+   Use a cryptographically secure random generator on a trusted, disconnected device. Generate fresh material for this rehearsal. Do not invent a phrase or select words yourself.
+
+2. **Write the words by hand.**  
+   Have the offline tool encode that entropy using your chosen BIP-39 wordlist. Number the words in order and record the language. Avoid photographs, screenshots and cloud notes.
+
+3. **Verify the checksum.**  
+   Re-enter the handwritten words into the offline checker using the same wordlist. Confirm that the checksum passes and the words reproduce the original entropy. A passing checksum does not establish that the passphrase or derivation path is correct.
+
+4. **Derive the seed and record the passphrase decision.**  
+   Choose either an empty BIP-39 passphrase or an exact non-empty one. Record which choice you made; preserve any non-empty passphrase separately and securely. Derive the seed offline. A mistyped passphrase produces a different valid seed rather than a “wrong passphrase” warning.
+
+5. **Derive the account.**  
+   Choose a documented testnet account path for the intended address type. Derive the BIP-32 master extended private key, then the account key at that path. Derive a receiving address using the intended script type. Give any address-only application only the appropriate account extended public key—not the seed or an `xprv`.
+
+6. **Record the path and index state.**  
+   Record the network, coin type, account path and script convention. Keep separate last-used indices for receiving and change, together with the highest allocated index so that an unpaid address is not accidentally reissued. Mark untouched branches as “none issued”. A written ledger works for this rehearsal; a payment application must persist allocations atomically before presenting addresses. Do not estimate its position from a few visible addresses.
+
+7. **Check published test vectors before real use.**  
+   In a separate disposable session, reproduce published BIP-39 and BIP-32 test cases using each case’s stated inputs and settings. Compare the specified mnemonic, seed and extended-key outputs as applicable. These are public test inputs, never receiving wallets. Then rehearse restoring your separately generated testnet wallet from its backup and confirm that the expected addresses reappear.
+
+8. **Only after those checks, consider a real wallet.**  
+   Proceed only when the vector comparisons and testnet restoration agree. If you choose to create a real wallet, start with fresh entropy and a new backup using trusted wallet software or hardware. Verify recovery without making a payment. Carry over none of the rehearsal or vector secrets.
+
+**Exposure rule:** If mnemonic words, the passphrase or any private key are exposed, retire that wallet and move any existing funds to a fresh wallet generated from independent entropy on a trusted device. Another address or account beneath the old seed is not a fresh wallet.
+
+**You should see:**
+- [ ] A valid mnemonic checksum and exact matches for the published test-vector outputs.
+- [ ] The expected testnet addresses reproduced after an offline restore.
+- [ ] Recorded recovery settings, passphrase decision and receiving/change index state.
+- [ ] An address-only service containing no mnemonic, seed, passphrase or private keys.

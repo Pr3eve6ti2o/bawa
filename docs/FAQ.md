@@ -113,3 +113,23 @@ The conceptual PSBT flow keeps those roles separate:
 3. Finalise and broadcast.
 
 See [Signing & hardware](09-signing-and-hardware/README.md).
+
+## Can I build a wallet app from Bawa?
+
+Yes, but it is a development reference, not a ready-to-use wallet app. Bawa demonstrates wallet generation on a trusted computer, public-address derivation without the seed, and checking results against an independent implementation. Wallet Core handles derivation and signing, not connections to blockchain networks. You still need access to your own node or an external provider, code for balances and past transactions, transaction construction, an interface, backup procedures and a security review. The tracker must remain watch-only; use a dedicated signer or hardware wallet for signatures. Bawa does not hold funds or offer a hosted wallet service. Test the complete workflow on testnet, with no real funds.
+
+## Free or paid security — what am I actually buying?
+
+Free, open-source coordination software can support air-gapped signing through PSBT files or QR codes. Self-managed choices also include metal seed backups and running your own multisig. You handle all the work and checking yourself. Paid routes include hardware wallets, assisted multisig memberships, and institutional custody or hardware security module (HSM) services. An assisted vault might use a 2-of-3 arrangement, with the provider holding one key for recovery. Look up its published fees again before committing, because prices change. Paying may get you guidance, support and recovery assistance; it does not guarantee that your funds cannot be stolen.
+
+## My seed may be stolen — what now?
+
+Assume someone else can spend the funds, even if nothing appears to be missing. On a fresh, trusted device, generate a wallet with a new seed and promptly transfer all assets, including every token, into it. Do not wait for a theft to confirm your suspicion. Do not try to rescue the old wallet by altering its seed or adding a passphrase; it cannot be repaired. Avoid any trial payment from that wallet, as it could alert the thief. Once everything has been moved, retire it for good and stop using its addresses for incoming payments.
+
+## Testnet or mainnet — what changes?
+
+Use testnet for experiments: its coins carry no market value, so errors do not put real funds at risk. Mainnet uses real assets, and errors there cannot be undone. Testnets follow the same derivation rules but may use different coin-type values and address prefixes. Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the network of the destination address, RPC endpoint and explorer. For EVM networks, also verify the chain ID, network name and native currency; the same address can appear on several networks. When checking a backup restore, use a tiny testnet amount, not real funds.
+
+## Why do two wallets show different addresses for the same seed?
+
+The usual explanation is a difference in settings, not a faulty wallet. Start with the mnemonic words, then check the BIP-39 passphrase, including whether one was used. Next compare the curve, coin-type value, derivation purpose, account number, branch and address index. After that, check the network and address encoding; legacy and native SegWit are different formats. Finally, compare the wallet implementations and their settings. For TON, include the wallet contract, its version and the wallet-ID configuration. Put the complete derivation paths and address formats side by side before deciding either wallet is wrong.

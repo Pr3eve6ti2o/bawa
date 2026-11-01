@@ -1,68 +1,45 @@
-## Further reading — by authority
+# Further reading
 
-Use **Canonical References** for links. The table below explains what each specification covers without repeating the URLs.
+## Primary specifications
 
-**Re-check current implementation behaviour before production releases.**
+Use these as the authority on requirements, not as evidence of what Bawa implements.
 
-```text
-Primary specifications → requirements, not implementation proof
-Upstream references    → guidance, not Bawa guarantees
-```
+| Source | What it covers |
+| --- | --- |
+| [BIP-32](https://bips.dev/32/) | Defines how to derive a deterministic tree of wallet keys from a seed. |
+| [BIP-39](https://bips.dev/39/) | Specifies how entropy becomes a mnemonic phrase and how the words, with an optional passphrase, produce a seed. |
+| [BIP-44](https://bips.dev/44/) | Organises multi-account wallets into five path levels: purpose, coin type, account, change and address index. |
+| [BIP-174](https://bips.dev/174/) | Defines PSBT’s structure for carrying unsigned transactions, signing data and partial signatures between wallet tools. |
+| [SLIP-39](https://github.com/satoshilabs/slips/blob/master/slip-0039.md) | Specifies Shamir-based mnemonic shares with 20 words for 128-bit secrets and 33 words for 256-bit secrets. |
+| [Bitcoin Core descriptors](https://raw.githubusercontent.com/bitcoin/bitcoin/master/doc/descriptors.md) | Defines notation for output scripts, covering script types, ways to express keys and checksum rules. |
 
-```text
-Bawa code              → local evidence, once inspected
-Community experience   → investigation leads, not guarantees
-```
+## Bawa and upstream Wallet Core
 
-### Primary specifications
+These provide integration guidance, not a guarantee of Bawa’s behaviour.
 
-These specifications set the requirements. They do not prove that Bawa implements them, and this list does not assess Bawa’s conformance.
+| Source | What it covers |
+| --- | --- |
+| [Wallet Core repository](https://github.com/trustwallet/wallet-core) | Contains the upstream, cross-platform wallet library on which Bawa’s tools depend. |
+| [Wallet Core usage guide](https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage) | Shows multi-coin wallet creation and import, deriving addresses and signing; Wallet Core itself does not handle network communication. |
 
-| Source | Safe use |
-|---|---|
-| BIP-32 | Defines hierarchical deterministic (HD) key derivation. |
-| BIP-39 | Defines how to create mnemonic phrases and derive seeds from them. |
-| BIP-43 | Defines the purpose field in HD wallet derivation paths. |
-| BIP-44 | Defines the multi-account hierarchy for deterministic wallets. |
-| BIP-84 | Defines key derivation for native SegWit accounts. |
-| BIP-174 / PSBT | Defines the Partially Signed Bitcoin Transaction (PSBT) format; it does not establish Bawa support. |
-| BIP-371 / Taproot PSBT | Defines Taproot extensions to PSBT; it does not establish Bawa support. |
-| SLIP-0010 | Defines HD key derivation for supported elliptic curves. |
-| SLIP-0044 | Lists registered coin types for wallet derivation paths. |
-| SLIP-0132 | Registers version bytes for serialised extended keys. |
-| TON TEP-3 | Sets out TON guidelines and standards. |
-| Cardano CIP-1852 | Defines Cardano’s HD wallet derivation structure. |
+## Vendor documentation
 
-### Upstream Wallet Core docs and ecosystem
+These describe the vendors’ own products and claims; they are not independent verification.
 
-Bawa’s `docs/REFERENCES.md` records these links. Upstream documentation is guidance, not a guarantee of Bawa’s behaviour or a substitute for checking its implementation.
+| Source | What it covers |
+| --- | --- |
+| [Coldcard MicroSD signing](https://coldcard.com/guides/using-coldcard/coldcard-microsd-signing) | Coldcard describes moving a Sparrow PSBT by MicroSD for air-gapped signing, then returning the signed file to Sparrow. |
+| [Trezor multi-share backup](https://trezor.io/guides/backups-recovery/advanced-wallets/create-a-wallet-with-multi-share-backup) | Trezor explains how to create a wallet whose backup is divided into shares on Safe devices and Model T. |
+| [Trezor multisig guide](https://trezor.io/learn/supported-assets/bitcoin/multisig-wallets-how-multi-key-security-protects-your-bitcoin) | Trezor explains multisig signing with 2-of-3 and 3-of-5 setups, discusses rotating keys and contrasts multisig with Shamir backup. |
+| [Casa vaults](https://casa.io/vault) | Casa outlines its assisted multisig vaults, replacing keys and recovering without its service through open-source tools. |
+| [BitBox02 multisig](https://blog.bitbox.swiss/en/bitbox02-electrum-bitcoin-multisig/) | BitBox discusses what can go wrong with multisig, backing up co-signer details and registering the setup on a BitBox02. |
 
-| Source | Safe use |
-|---|---|
-| [Trust Wallet organisation](https://github.com/trustwallet) | Upstream project discovery, not compatibility proof. |
-| [Wallet Core](https://github.com/trustwallet/wallet-core) | Upstream project reference. Inspect the relevant code before relying on implementation details, and check whether Bawa behaves the same way. |
-| [Wallet Core Usage Guide](https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage) | Upstream usage guidance; check Bawa’s implementation before applying it. |
-| [Wallet Core HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) | Upstream API reference; verify the relevant behaviour in Bawa’s local code. |
-| [Wallet Core registry fields](https://github.com/trustwallet/wallet-core/blob/master/docs/registry-fields.md) | Look up upstream registry-field definitions. Check Bawa’s handling of a field before relying on it. |
-| [Wallet Core registry](https://github.com/trustwallet/wallet-core/blob/master/registry.json) | Look up upstream registry data. Verify individual entries and Bawa’s handling before relying on them. |
-| [Trust Wallet Assets](https://github.com/trustwallet/assets) | Asset-project reference, not signing authority. |
-| [Assets repository overview](https://github.com/trustwallet/assets/blob/master/knowledge/architecture/repo-overview.md) | Overview of the Assets repository; use it for project context. |
+## Community research
 
-### Bawa code and companion material
+Use this for experience and explanation, not as a specification.
 
-| Source | Safe use |
-|---|---|
-| Bawa code | Review the local repository’s `tools/`, `docs/` and `IMPLEMENTATION.md` at the revision you are using. Base implementation claims on code you have inspected. |
-| Companion guides / `IMPLEMENTATION.md` | The companion material is this repository’s own `docs/` and `IMPLEMENTATION.md`, not a separate download. Check detailed implementation claims against the local code. |
-| Bawa fixtures | Public-output comparison anchors only—not a derivation or signing recipe. |
+| Source | What it covers |
+| --- | --- |
+| [MPC wallets explainer](https://www.bitcoin.com/wallet/what-is-an-mpc-wallet/) | Contrasts MPC threshold signing with Shamir secret sharing and multisig, explaining why custody depends on who owns and controls the shares. |
 
-### Community experience and independent verification
-
-A public-output comparison is an independent check, not a community experience report.
-
-| Source | Safe use |
-|---|---|
-| [bip_utils](https://github.com/ebellocchia/bip_utils) ([PyPI](https://pypi.org/project/bip-utils/)) | Bawa’s `test/differential_test.py` uses **bip_utils 2.12.2** as the independent reference for comparisons against Wallet Core. It compares public outputs only. Read that test for the comparison procedure. |
-| Community reports | Bawa does not cite a community report or URL here, so these references do not support an experience-based recommendation. Treat reports you find as investigation leads only and verify their claims against Bawa’s local code. |
-
-Differential verification uses **known public test material** and compares **public outputs**. Never put a real mnemonic, seed or xprv in CI.
+Before relying on anything here, re-check current implementation behaviour and vendor prices. Never put a real mnemonic, seed or private key into any example or test.
