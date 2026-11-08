@@ -1,6 +1,23 @@
-# 13 Wallet app architecture
+---
+title: Wallet App Architecture
+description: Separate key management, watch-only derivation, signing and the user interface into layers with explicit boundaries; keep private material out of the watch-only runtime and review every spend on the signer.
+last-updated: 2026-11-08
+---
 
-## 13 Wallet app architecture — overview and layers
+# Wallet App Architecture
+
+How-to guide.
+
+## Contents
+
+- [Wallet app architecture: overview and layers](#wallet-app-architecture-overview-and-layers)
+- [Key management layer](#key-management-layer)
+- [Public does not mean unrestricted](#public-does-not-mean-unrestricted)
+- [Key lifecycle: generation, storage, backup, recovery, deletion](#key-lifecycle-generation-storage-backup-recovery-deletion)
+- [Signing layer and network/indexer layer](#signing-layer-and-networkindexer-layer)
+- [UI flows](#ui-flows)
+
+## Wallet app architecture: overview and layers
 
 A wallet app combines three roles: **key manager, viewer and signer**. It manages access to keys, presents chain activity and authorises transactions. It is neither a custodian nor a node: the key holder retains signing authority, while nodes provide chain state. Assets are recorded on-chain, not held inside the app’s interface or database.
 
@@ -24,7 +41,7 @@ Wallet views and observed payments
 Application records and order reconciliation
 ```
 
-| Layer or component | Responsibility | Boundary — what it must never do |
+| Layer or component | Responsibility | Boundary, what it must never do |
 | --- | --- | --- |
 | Standards | Define shared rules for keys, derivation, addresses and transaction formats. | Perform live chain queries or make application-specific payment decisions. |
 | Per-chain policy | Select the appropriate key scheme, derivation paths, address encoding and transaction rules for each supported network. | Fetch chain state or determine whether an order has been settled. |
@@ -38,7 +55,7 @@ Application records and order reconciliation
 
 [Trust Wallet Core](https://github.com/trustwallet/wallet-core) is the low-level, multi-chain library within this architecture, not the whole wallet application. The open-source project reports coverage of over 130 blockchains. Its cross-platform C++ implementation has bindings for iOS, Android and WebAssembly.
 
-Internally, it separates the public API, core wallet types (`HDWallet`, `Mnemonic`, `StoredKey`, `Account`), multi-chain interfaces (`AnyAddress`, `AnySigner`, `CoinType`), cryptographic algorithms and individual chain modules. These implementation layers are described in [DeepWiki — Trust Wallet Core](https://deepwiki.com/trustwallet/wallet-core) and [DeepWiki — Core Wallet Architecture](https://deepwiki.com/vultisig/walletcore-spm/2.1-core-wallet-architecture). They provide key, address and transaction machinery; they do not replace chain observation or application reconciliation.
+Internally, it separates the public API, core wallet types (`HDWallet`, `Mnemonic`, `StoredKey`, `Account`), multi-chain interfaces (`AnyAddress`, `AnySigner`, `CoinType`), cryptographic algorithms and individual chain modules. These implementation layers are described in [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) and [Core Wallet Architecture repository](https://github.com/vultisig/walletcore-spm). They provide key, address and transaction machinery; they do not replace chain observation or application reconciliation.
 
 ### Keep private material outside the watch-only runtime
 
@@ -70,87 +87,75 @@ Assume the online host will be monitored, logged, restarted and potentially comp
 
 An observed transfer is evidence, not an automatic “paid” result. Reconciliation must check the network, asset, recipient, amount and applicable confirmation or finality policy before accepting it against an order.
 
-You should see:
+Expected result:
 
 - [ ] Key generation and signing confined to the trusted environment.
 - [ ] Public-only inputs throughout the watch-only runtime.
 - [ ] Wallet Core kept separate from node access and history indexing.
 - [ ] Chain observations distinguished from order-settlement decisions.
 
-### Key management layer
+## Key management layer
 
-Keep recovery material and signing authority inside the key-management component. Parts of Bawa that discover addresses, track balances or allocate deposit addresses should use account-scoped public material instead.
+Keep recovery material and signing authority inside the key-management component. Use account-scoped public material for address discovery, balance tracking and deposit-address allocation wherever the policy supports public derivation.
 
-#### From entropy to account keys
+### From entropy to account keys
 
-```text
-<cryptographically secure random entropy>
-  ↓ BIP-39 checksum and word encoding
-<recovery mnemonic>
-  ↓ BIP-39 derivation with <passphrase-or-empty-string>
-<64-byte seed>
-  ↓ BIP-32 master-node generation
-<master extended private key>
-  ↓ hardened purpose, coin-type and account derivation
-<account extended private key>
-  ↓ non-hardened branch and address-index derivation
-<individual signing keys>
-```
+Keep entropy, mnemonics, passphrases, seeds and private keys distinct. Do not give them an ambiguous shared label such as “wallet key”.
 
-These values have different roles and must not share an ambiguous label such as “wallet key”.
+Generate BIP-39 entropy with a cryptographically secure random generator, using 128 to 256 bits in 32-bit increments. Do not use timestamps, user-chosen words or ordinary application randomness. Treat entropy as recovery-sensitive material, not as a signing key.
 
-- **Entropy** supplies the initial randomness. [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) accepts 128–256 bits in 32-bit increments. Generate it with a cryptographically secure random generator, not timestamps, user-chosen words or ordinary application randomness. It is recovery-sensitive material, but not a signing key.
+Encode the entropy and its checksum using BIP-39’s prescribed word list. Use a permitted mnemonic length of 12, 15, 18, 21 or 24 words. For a 24-word mnemonic, encode 256 random bits plus 8 checksum bits. Do not treat word count as presentation: changing the word count changes the seed. Use the checksum to detect some transcription errors, not to conceal the entropy. Do not mistake the mnemonic for a single account’s private key or for the seed itself.
 
-- **The mnemonic** represents that entropy together with a checksum, using a prescribed word list. The permitted lengths are 12, 15, 18, 21 and 24 words. The checksum helps detect some transcription errors; it does not conceal the entropy. The phrase is neither a single account’s private key nor the BIP-39 seed itself.
+Use the BIP-39 passphrase as an additional seed-derivation input, with an empty string when none is configured. Keep it separate from a device PIN and the passphrase used to unlock locally stored wallet data. Treat a change to this input as a change of wallet, even when the mnemonic stays the same. Do not expect a “wrong password” result from a mistyped BIP-39 passphrase; it produces different keys instead.
 
-- **The BIP-39 passphrase** is an additional seed-derivation input, with an empty string used when none is configured. Holding the words constant while changing this input produces a different wallet. A mistyped passphrase therefore leads to different keys rather than a “wrong password” result. It is not a device PIN or the password used to decrypt locally stored wallet data.
+NFKD-normalise both the BIP-39 mnemonic and passphrase. Encode the normalised mnemonic as UTF-8 for the password input, and encode the literal string "mnemonic" concatenated with the normalised passphrase as UTF-8 for the salt. Apply PBKDF2-HMAC-SHA512 with 2,048 iterations to produce the 64-byte seed. Treat this process as byte derivation, not mnemonic encryption. Protect the seed as sufficient material to regenerate the HD tree without the words or passphrase.
 
-- **The seed** is the 64-byte output of PBKDF2-HMAC-SHA512 with 2,048 iterations. The mnemonic supplies the password input; the salt combines the literal prefix `mnemonic` with the passphrase. Apply BIP-39’s NFKD normalisation before UTF-8 encoding. This process derives bytes rather than encrypting the phrase. Possession of the resulting seed is sufficient to regenerate the HD tree without knowing the words or passphrase.
+For BIP-32 derivation, use its HMAC-SHA512 master-node procedure to obtain a master private scalar and a 32-byte chain code from the seed. Treat those values, together with the serialisation metadata, as the master extended private key. Use the chain code for child derivation, not as another signing key. Do not treat a private scalar without its chain code as a complete extended private node.
 
-- **The master extended private key** is the root of that tree. [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) defines the HMAC-SHA512 procedure that obtains a master private scalar and a 32-byte chain code from the seed. Those values, with the serialisation metadata, form the root extended private key. The chain code supports child derivation; it is not another signing key. A private scalar without its chain code is not a complete extended private node.
-
-- **Account and leaf private keys** have different scope. An account extended private key can derive the private descendants belonging to that account. A leaf private key supplies signatures for its own keypair, not an entire account tree. Where that key alone satisfies the spending policy, its holder can normally spend the associated funds.
+Distinguish account extended private keys from leaf private keys. Use an account extended private key to derive that account’s private descendants, and a leaf private key to sign for its own keypair. Treat possession of a leaf private key as normally sufficient to spend the associated funds where that key alone satisfies the spending policy.
 
 Keep storage-encryption keys separate from recovery and signing material. Never record entropy, mnemonics, passphrases, seeds or private keys in documentation, logs, issue reports, repositories or chat. Use placeholders such as `<mnemonic>` and `<account-extended-private-key>`.
 
-#### Paths and the hardened boundary
+### Paths and the hardened boundary
 
-[BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) assigns meaning to the path components:
+Read BIP-44 path components in order as the private root, purpose, coin type, account, change branch and address index. Interpret `m` as the private root, `44'` as the BIP-44 purpose and each apostrophe as a hardened step. Use the coin type to separate coin-specific branches and the account index to separate groups of keys. Do not equate an account with a single on-chain address.
 
-```text
-m / purpose' / coin_type' / account' / change / address_index
-```
+Recognise branch 0 as external receiving and branch 1 as internal change. For account-based networks without UTXO change, document the supported branch policy rather than inventing change behaviour.
 
-Here, `m` denotes the private root. Purpose `44'` selects the BIP-44 convention. The coin type separates coin-specific branches, and the account index separates groups of keys. A BIP-44 account is therefore not necessarily one on-chain address.
+Keep hardened purpose, coin-type and account derivation inside key management. Never attempt to cross a hardened step with public-only derivation. Use an exported account public key to derive only non-hardened children below it. Restrict non-hardened child indices to 0 through 2³¹ minus 1.
 
-The `change` component selects the external receiving branch with `0`, or the internal change branch with `1`. The final index selects a key within that branch. For account-based networks without UTXO change, document the supported branch policy rather than inventing change behaviour.
+Apply the fixed `bawa-derivation-policy-v1` policy. This policy covers Bawa-generated wallets; external hardware-signer exports follow the signer's own origin.
 
-BIP-32 divides its 32-bit child-index space into:
+Use account 0 and receiving branch 0 only for BTC, ETH and TRX, with `i` denoting the address index:
 
-- **Non-hardened:** `0` through `2^31 − 1`.
-- **Hardened:** `2^31` through `2^32 − 1`.
+- For BTC, use `m/84'/0'/0'/0/i`.
+- For ETH, use `m/44'/60'/0'/0/i`.
+- For TRX, use `m/44'/195'/0'/0/i`.
 
-An apostrophe indicates a hardened step: the displayed index is encoded with `2^31` added. Deriving a hardened child requires the parent’s private node, even when only the child’s public key is wanted. Non-hardened public descendants can instead be calculated from a parent extended public node.
+Keep TON generation-only from `m/44'/607'/0'` using ed25519. Provide a single deposit address and no xpub. Treat compatibility with any specific wallet as unverified.
 
-For a conceptual Bitcoin testnet policy, a receiving-key template is:
+### Vault protection and unlock policy
 
-```text
-m/44'/1'/0'/0/<address-index>
-```
+Keep local vault protection separate from BIP-39 seed construction. Treat the Web validation draft’s PBKDF2-600k vault as a draft implementation choice, not a repo requirement. Do not substitute its work factor for BIP-39’s fixed 2,048 iterations.
 
-Coin type `1'` is the testnet allocation recorded in [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md). The purpose, coin-type and account steps are hardened. Key management must therefore derive `m/44'/1'/0'` privately before exporting its public counterpart. A root public node cannot substitute for that account export because it cannot traverse those hardened steps.
+Use the OWASP Password Storage Cheat Sheet’s FIPS-140 option as the basis for the 600,000-iteration PBKDF2-HMAC-SHA-256 figure. Match the rationale to its wording: “use PBKDF2 with a work factor of 600,000 or more and set with an internal hash function of HMAC-SHA-256” (verified live 2026-11-08). Treat 600,000 iterations as a defensible floor for that FIPS-140 branch, not as OWASP’s top recommendation. Recognise Argon2id as OWASP’s primary recommendation.
 
-```text
-Key management: <account extended private node>
-  ↓ export public key, chain code and node metadata only
-Watch-only runtime: <account extended public node>
-  ↓ derive non-hardened receiving and change descendants
-<public keys and addresses>
-```
+Choose and record a minimum length for the vault unlock passphrase, because the repo specifies none. Enforce weak-passphrase rejection and record the unlock-time measurement. Keep the recorded policy distinct from the secret passphrase itself.
 
-From the exported account node, the runtime can derive relative paths such as `0/<address-index>` and `1/<address-index>`. These are suffixes beneath the account, not paths starting at `m`.
+### Adapter network identity and endpoint trust
 
-Only public derivation material crosses this runtime boundary because address generation does not require spending authority. An inconvenient address API is not a reason to export an xprv or a leaf private key. Signing should remain a policy-checked operation inside the secret-holding component, returning a signature or signed transaction rather than a key. Hardened derivation provides a cryptographic limit; component isolation must enforce the operational separation.
+Verify the configured endpoint’s network identity separately for each adapter. Consult `docs/10` for the endpoint URLs and their verification commands.
+
+- For the BTC adapter, require testnet4.
+- For the ETH adapter, require Sepolia with chain ID `11155111`.
+- For the TRON adapter, require Nile.
+- For the TON adapter, require testnet.
+
+> **Expected result:** The verified network identity matches the adapter’s intended testnet.
+
+Fail closed on any mismatch.
+
+Treat these checks as authenticating the network identity, not the provider. Do not interpret an ETH chain-ID check as authentication of RPC responses generally. Continue to rely on provider honesty for the data itself.
 
 #### Public does not mean unrestricted
 
@@ -162,7 +167,7 @@ There is also a key-compromise hazard: an account xpub combined with a leaked de
 
 Keep the full account path, network and address-format policy alongside each public export. The xpub’s embedded metadata is not a complete wallet description.
 
-You should see:
+Expected result:
 
 - [ ] Recovery tests covering normalisation and empty/non-empty passphrases.
 - [ ] Matching public derivations on the signer and watch-only sides.
@@ -170,9 +175,9 @@ You should see:
 - [ ] Account-scoped public exports with explicit network and path policy.
 - [ ] No recovery or signing secrets in diagnostics or examples.
 
-### Key lifecycle — generation, storage, backup, recovery, deletion
+### Key lifecycle: generation, storage, backup, recovery, deletion
 
-Generation establishes a new wallet identity. It is a one-time provisioning operation, not an application startup task or a recovery mechanism. Keep the recovery phrase and signing capability outside components that only need public address-derivation data.
+Generation establishes a new wallet identity. It is a one-time provisioning operation, not an application startup task or a recovery mechanism. Keep the mnemonic and signing capability outside components that only need public address-derivation data.
 
 #### Generation
 
@@ -180,7 +185,7 @@ Run `tools/hdwallet-gen/generate.js` on a trusted machine with verified dependen
 
 An existing `seed.enc.json` must cause refusal, not replacement. Check this before generating another wallet and enforce it when publishing the file: an ordinary rename can overwrite its destination, so it is not itself a no-clobber safeguard. Never delete an established seed file simply to make another generation attempt succeed.
 
-The 24-word recovery phrase and independently generated data key are disclosed once through `/dev/tty`. Neither belongs on stdout, stderr, in application logs, or in clipboard and screenshot workflows. If a controlling terminal is unavailable, stop rather than falling back to ordinary output streams. TTY-only handling prevents ordinary output redirection from collecting secrets; it does not protect against terminal recording or a compromised host.
+The 24-word mnemonic and independently generated data key are disclosed once through `/dev/tty`. Neither belongs on stdout, stderr, in application logs, or in clipboard and screenshot workflows. If a controlling terminal is unavailable, stop rather than falling back to ordinary output streams. TTY-only handling prevents ordinary output redirection from collecting secrets; it does not protect against terminal recording or a compromised host.
 
 Before writing the encrypted seed file, the operator must:
 
@@ -191,7 +196,7 @@ A mismatch or interrupted input must abort without publishing the seed file, and
 
 #### Storage
 
-The encrypted payload is the recovery phrase itself. Bawa encrypts it in-process using AES-256-GCM, a fresh 32-byte random data key and a 12-byte nonce. The key is not derived from a password: there is no password KDF or password-reset route.
+The encrypted payload is the mnemonic itself. Bawa encrypts it in-process using AES-256-GCM, a fresh 32-byte random data key and a 12-byte nonce. The key is not derived from a password: there is no password KDF or password-reset route.
 
 The JSON envelope retains the nonce, encryption metadata and ciphertext followed by its authentication tag. Preserve the whole envelope. In particular, the AAD value `nova-shop-seed-v1` is an authentication input, not a display label that can be renamed during documentation or branding changes. Recovery must authenticate the payload before using any plaintext; see the [Node.js Crypto documentation](https://nodejs.org/api/crypto.html) for GCM API behaviour.
 
@@ -241,7 +246,7 @@ Unlinking a file is not proof of physical erasure, especially on SSDs, journalle
 
 Record any retained recovery route as an explicit exception, not completed destruction. Local deletion neither removes blockchain history nor revokes credentials already copied by someone else; suspected disclosure requires migration to a newly generated wallet.
 
-**You should see:**
+**Expected result:**
 
 - [ ] Repeat generation leaves an existing seed file untouched.
 - [ ] TTY-only disclosure and both confirmations before publication.
@@ -249,305 +254,145 @@ Record any retained recovery route as an explicit exception, not completed destr
 - [ ] A tested recovery procedure that reproduces recorded public identities.
 - [ ] Deletion covering keys, caches and backups, with retention exceptions recorded.
 
-### Watch-only layer
+## Signing layer and network/indexer layer
 
-Keep address generation separate from signing. Bawa’s watch-only process receives account extended public keys, usually called xpubs. It must not hold a mnemonic, raw private key or extended private key. Export each account xpub inside the signing boundary, then register it against a stable account identifier, chain, network and trusted derivation origin.
+Keep address derivation, transaction preparation, signing and chain access as separate responsibilities. Keep screens and navigation separate from wallet services; never let a screen controller become the network client and signing authority.
 
-#### Derive below the account boundary
+### Watch-only boundary
 
-`derive.js` supports three chain selectors. Its configured account origins and receiving suffixes are:
+Restrict the watch-only runtime to public material only (xpubs, zpubs and addresses). Use it to derive and watch addresses; it cannot spend. Use watch-only derivation in Bawa’s `tools/hdwallet-gen` only for its supported chains, `btc`, `eth` and `trx`. Treat TON as generation-only.
 
-| Selector | Expected account origin | Public receiving suffix |
-|---|---|---|
-| `btc` | `m/84'/0'/0'` | `0/<index>` |
-| `eth` | `m/44'/60'/0'` | `0/<index>` |
-| `trx` | `m/44'/195'/0'` | `0/<index>` |
+Treat xpubs and zpubs as **sensitive public material**: an xpub cannot sign, but exposing it discloses an ongoing address catalogue, balances, payment history and relationships. Never upload an extended public key to a remote service. Treat fallback providers and multi-provider comparisons as additional disclosures.
 
-The hardened account prefix must already have been derived by the signer. Although the helper passes a full path to Wallet Core, public derivation below the account uses the non-hardened receiving suffix. An xpub cannot traverse the hardened ancestry described by that prefix; this boundary follows [BIP 32](https://bips.dev/32/).
+Reject private material at every public-only boundary, including the derivation worker’s JSONL channel. Contain diagnostics so that no secret reaches logs.
 
-Each selector needs the corresponding account export. Changing the selector does not transform a Bitcoin account xpub into an Ethereum or TRON account xpub. The wrapper does not check account depth or prove the export’s origin. Establish those properties during enrolment; a correctly formatted address is not proof that the intended account was used.
+Keep `tools/hdwallet-gen/derive_daemon.js` on the watch-only side: it uses Trust Wallet Core to derive and validate addresses, but does not establish ownership, find funds or authorise spending. Handle its startup readiness record separately from derivation replies. Allow only one outstanding request per worker because replies have no request identifier, and keep the request context alongside each returned address.
 
-The Bitcoin configuration follows the native-SegWit hierarchy in [BIP 84](https://bips.dev/84/) and is mainnet-oriented. There is no network argument. Keep demonstrations conceptual or offline; testnet integration requires explicit network configuration, matching exports and separate allocation state. A different extended-key prefix alone is not a network switch.
+Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do not rely on additional properties to select another network or derivation branch. Require explicit, tested network-aware derivation for a testnet integration, rather than adding a property that the worker ignores.
 
-The helper reads the xpub from standard input, while the chain and index are command-line arguments. It limits input to 200 characters before trimming and requires a non-empty value and an integer index from `0` to `2147483647`, the non-hardened range.
+### Signing boundary
 
-After WebAssembly initialisation, [Trust Wallet Core](https://github.com/trustwallet/wallet-core) derives the child public key through `HDWallet.getPublicKeyFromExtended`. `CoinTypeExt.deriveAddressFromPublicKey` constructs the address, and `CoinTypeExt.validate` checks it before output. The temporary public-key object is released after address conversion, including when conversion fails. Success writes one address to standard output; diagnostics go to standard error.
+Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2. Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
-#### Reject private material and contain diagnostics
+Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 
-Before initialising Wallet Core, the private-key guard decodes Base58, verifies the Base58Check checksum and compares the version bytes against known extended-private-key versions. This covers recognised mainnet, testnet and alternative serialisations rather than relying only on a visible prefix.
+Keep account discovery, balance fetching, coin selection, fee selection, final transaction assembly and broadcasting outside the signer.
 
-That guard is deliberately narrower than complete input validation. Passing it means that a recognised, checksummed private encoding was not detected; it does not establish that the input is a valid account xpub. Wallet Core still has to parse the extended key. Enrolment should accept only supported public serialisations, and there must be no fallback that imports private material to manufacture an xpub inside this process.
+Build the review from the payload the signer will actually sign, rather than an application-generated description:
 
-Input-read and preflight rejections use exit status `2`; Wallet Core, address-conversion and validation failures use status `1`.
+- **Identity and destination:** show the intended chain and network, sending account, complete recipient addresses and asset identity. Treat friendly address-book or token labels as supporting information, not authority.
+- **Amounts and costs:** show transferred amounts, fees or maximum fee exposure, and distinguish estimates from limits. For Bitcoin, verify previous-output values before calculating the fee. Recognise change using the signer’s own wallet policy, not a caller-provided change label.
+- **Signing scope:** check which fields the signature commits to. Account for Bitcoin signature flags that can weaken that commitment, and reject unsupported signing modes in ordinary transfer flows. Apply chain-specific replay protection where available.
+- **Contract effects:** decode supported calls, including spenders and allowances for approvals. Expose the complete encoded payload for inspection. Refuse an operation the signer cannot explain reliably, rather than asking for approval of an opaque hash.
 
-The error redactor masks recognised extended-key strings and uninterrupted Base58 sequences of at least 100 characters. Apply the same boundary to surrounding application diagnostics: never capture stdin, unredacted exception messages or key-bearing request bodies in logs, traces or analytics. Use an opaque account identifier, chain and index when recording operational events.
+Bind approval to the frozen transaction. Require another review after any change to an approved field. Leave no usable signature after cancellation, invalid evidence or an unsupported operation.
 
-Redaction is not a general secret detector. It does not reliably remove mnemonic phrases, raw private-key encodings or every fragment of a damaged key. Nor does it remove ordinary addresses. Standard input keeps the xpub out of the child process’s argument list, but pasting a literal value into a shell command can still leave it in shell history.
+Return **signature material only**, including the required input signatures where a transaction needs several. Do not return key material or a completed transaction. Verify the signatures in the application against the approved payload, attach them without changing approved fields, then pass the assembled transaction to the network adapter for broadcast.
 
-#### Allocate durably and discover beyond gaps
+Keep keys and approval within the chosen signing trust boundary. Use [Cryptograph’s security model](https://cryptograph.watch/security) to illustrate separating the device that prepares a request from the authority that permits signing. To protect against a compromised phone, require an approval path and key boundary that the phone cannot control. Do not treat an in-process module or OS Keychain storage alone as that guarantee.
 
-`derive.js` is stateless. It does not choose the next address, remember deposit requests or search chain history. Those responsibilities belong to the calling service.
+### Network/indexer boundary
 
-Maintain a durable allocation registry scoped by network, chain, account and branch. Reserve indices atomically and monotonically, with a uniqueness constraint on that scope plus the index. Associate each reservation with an idempotent deposit-request identifier, then persist the validated address before returning it. Parallel workers must not allocate the same index to different requests, and retries must retrieve the original reservation rather than consume another index.
+Derive addresses locally. Treat an address as a lookup target, not a balance. Build wallet state from discovered addresses and chain observations, rather than from derivation results alone.
 
-Do not recycle an issued address because it remains unpaid: a deposit may arrive later. Back up request mappings and allocation high-water marks. The xpub can reconstruct addresses, but cannot reconstruct which customer or request received each one. Never wrap an exhausted index counter.
+Inspect both receiving and change branches for Bitcoin, and apply a documented gap policy. Do not treat a completed bounded scan as proof that nothing exists beyond it.
 
-Discovery needs a separate, explicit policy. [BIP 44](https://bips.dev/44/) specifies an external-address gap of 20 consecutive unused addresses as a recovery convention. This is neither implemented by the helper nor enforced by a chain. Do not assume that Ethereum or TRON tooling follows it.
+Track confirmations and chain reorganisations (reorgs). Account for the possibility that a transaction which looked confirmed can drop out.
 
-For an xpub-only recovery, scan receiving indices in order and reset the unused-address counter whenever history is found. “Used” means historical activity, not a positive current balance. A fully spent Bitcoin address still counts; Ethereum and TRON discovery must include relevant token activity, even where the native balance is zero. Treat failed or incomplete history queries as unknown, not unused.
+## UI flows
 
-Known allocations take precedence over an early gap. Scan through the highest reserved or issued index, even across long unused runs, and maintain a configured lookahead beyond the furthest known allocation or observed activity. Continue monitoring older issued addresses for late deposits. Without allocation records, a finite gap can miss funds beyond a long run of abandoned deposit requests; either constrain issuance to the recovery policy or preserve enough allocation state to extend the scan reliably.
+### Canonical screen contract
 
-#### Treat an xpub as confidential
+Adopt the Android guide's 14 numbered screens, H.1 to H.14, as the wallet app's single canonical screen list:
 
-An xpub contains a public key and chain code, not signing authority. Nevertheless, it enables reconstruction of that account’s non-hardened receiving and change addresses, including addresses this helper has not issued. Disclosure can link payments, balances and future activity to one account.
+1. **Welcome** (H.1)
+2. **Create wallet** (H.2)
+3. **Import wallet** (H.3)
+4. **Mnemonic backup** (H.4)
+5. **Portfolio dashboard** (H.5)
+6. **Asset list** (H.6)
+7. **Asset detail** (H.7)
+8. **Receive** (H.8)
+9. **Send** (H.9)
+10. **Transaction history** (H.10)
+11. **Transaction details** (H.11)
+12. **Network selection** (H.12)
+13. **Wallet management** (H.13)
+14. **Security and backup settings** (H.14)
 
-BIP 32 also describes a more serious combination: an account xpub together with a corresponding descendant private key can expose the account private key when the known intervening path is entirely non-hardened. Keep derived private keys outside the watch-only boundary as well.
+Reconcile the Web guide's 14-screen inventory and docs/14's seven screen groups against this list, rather than maintaining competing screen lists. Treat **Review** as a required state of the **Send** flow, not a separate screen. Treat **Lock** as a required state, not a separate screen. Interpret the Web guide's **Review** and **Lock screen** entries as descriptions of those states, and align the Web guide's wording with this list during the merger.
 
-Restrict xpub access, encrypt storage and transport, and protect the account-to-xpub mapping against unauthorised replacement. Exclude xpubs from public APIs, URLs and routine telemetry. Moving future deposits to a new account does not undo the visibility created by an earlier leak.
+Use docs/14 section 5.1 as the shared reference for the full screen list with permitted data. Point both platform guides at that single list, and do not restate it in either platform guide.
 
-**You should see:**
+### Backup gate and mnemonic handling
 
-- [ ] Offline or explicitly testnet-configured fixtures reproduce the expected addresses.
-- [ ] Invalid selectors, out-of-range indices and recognised private extended keys are refused.
-- [ ] Extended-key diagnostics are redacted, with no captured stdin or key-bearing arguments.
-- [ ] Concurrent requests and retries preserve unique, durable address assignments.
-- [ ] Recovery crosses known allocation gaps and recognises spent or token-only address history.
+Keep wallet actions behind a persisted **backup pending** gate until backup confirmation succeeds. Do not let navigation, skipping or restarting bypass the gate.
 
-### Signing layer and network/indexer layer
+Do not offer copying, sharing or QR export of recovery words. Exclude analytics from the create, import and backup-confirmation flows. Never include recovery words in logs or error reports.
 
-Keep address derivation, transaction preparation, signing and chain access as separate responsibilities. A watch-only session should be able to discover addresses and inspect activity without access to signing authority.
+### Create wallet
 
-`tools/hdwallet-gen/derive_daemon.js` belongs on that watch-only side. It uses Trust Wallet Core to derive and validate addresses; it does not establish ownership, find funds or authorise spending. Handle its startup readiness record separately from derivation replies, and allow only one outstanding request per worker because replies have no request identifier. Keep the request context alongside each returned address.
+Generate and validate the mnemonic through Wallet Core. Use a reviewed cryptographic library and the operating system's cryptographic random source for generation. On a generation or validation failure, discard partial state and offer a retry.
 
-Do not add signing material to its JSONL channel. Its recognised request fields are `chain`, `xpub` and `index`; additional properties do not select another network or derivation branch. A testnet integration needs explicit, tested network-aware derivation, not an extra property that the worker ignores.
+Continue to Mnemonic backup for the single offline phrase reveal and confirmation. Do not reveal the phrase again when retrying within the same creation attempt.
 
-#### The signing boundary
+Ask the user to check that their private, offline copy contains every word in the displayed order and is readable. Do not treat that acknowledgement as backup confirmation or enable wallet actions. If the copy is lost, offer explicit discard-and-restart only for a newly generated, unused wallet. On leaving or skipping before confirmation, warn the user and retain the backup-pending gate.
 
-Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, that includes previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
+### Import wallet
 
-The signer should not discover accounts, fetch balances, select coins, choose fees, assemble the final transaction or broadcast it.
+Keep mnemonic entry masked throughout entry and correction. Never retain import text in persisted forms or navigation state.
 
-```text
-Transaction preparer: <UNSIGNED_TRANSACTION>
-    ↓
-Signer: decode, review, obtain approval, sign
-    ↓
-<SIGNATURE>
-    ↓
-Transaction assembler: attach signature to the approved payload
-    ↓
-Network adapter: broadcast
-```
+Apply Unicode normalisation and handle accidental spacing without changing words or their order. Validate the supported word count and wordlist, then the checksum, through Wallet Core. Reject unsupported word counts, including any counts the application does not support among the BIP-39 standard lengths of 12, 15, 18, 21 and 24 words.
 
-The review must come from the payload the signer will actually sign, rather than an application-generated description:
+For an unsupported count, unrecognised word or checksum mismatch, identify the failed check without echoing the phrase. Keep the input editable, disable confirmation and do not commit an imported wallet. Let the user correct the input and run all checks again. Never guess replacement words.
 
-- **Identity and destination:** show the intended chain and network, sending account, complete recipient addresses and asset identity. A friendly address-book or token label is supporting information, not authority.
-- **Amounts and costs:** show transferred amounts, fees or maximum fee exposure, and distinguish estimates from limits. For Bitcoin, verify previous-output values before calculating the fee. Recognise change using the signer’s own wallet policy, not a caller-provided “change” label.
-- **Signing scope:** check which fields the signature commits to. Bitcoin signature flags can weaken that commitment; ordinary transfer flows should reject unsupported signing modes. Apply chain-specific replay protection where available.
-- **Contract effects:** decode supported calls, including spenders and allowances for approvals. Expose the complete encoded payload for inspection. If the signer cannot explain an operation reliably, refuse it rather than asking the maintainer to approve an opaque hash.
+After all checks pass, present a read-only public-address preview. Ask the user to check that the phrase belongs to the intended wallet, that its word order is correct, and that the selected network and previewed address match their expectations where known. Do not treat a valid checksum as proof of wallet identity. On an unexpected address, stop and review the recovery settings.
 
-Approval belongs to that frozen transaction. Any change to an approved field requires another review. Cancellation, invalid evidence or an unsupported operation must leave no usable signature.
+After explicit confirmation, import the wallet through Wallet Core and open Mnemonic backup without lifting the backup-pending gate.
 
-On success, return **signature material only**—including the required input signatures where a transaction needs several. Do not return key material or a completed transaction. The application verifies the signatures against the approved payload, attaches them without changing approved fields, then hands the result to the network adapter.
+### Mnemonic backup and confirmation
 
-Keep keys and approval within the chosen signing trust boundary. [Cryptograph’s security model](https://cryptograph.watch/security) illustrates separating the device that prepares a request from the authority that permits signing. Achieving protection against a compromised phone requires an approval path and key boundary the phone cannot control. An in-process module or OS Keychain storage alone does not provide that guarantee.
+Show the mnemonic once, offline. For creation, use the single reveal described in the Create wallet flow, not an additional display. Do not redisplay the mnemonic on a confirmation retry.
 
-#### Network access and its assumptions
+Verify selected words from the saved copy using protected entry. Ask the user to consult that copy rather than rely on memory. Compare each entered word with the corresponding position in the generated or imported mnemonic. Do not substitute successful checksum validation for backup confirmation.
 
-Put provider-specific behaviour behind chain-aware adapters. Results should carry their network, observation time, block context where available, synchronisation status and any completeness limitations. Network adapters receive public query material and signed transactions, never signing keys.
+On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all selected words match their requested positions.
 
-| Route | Useful capabilities | Trust and privacy trade-offs |
-|---|---|---|
-| **Own validating node** | Locally checked chain state and transaction submission. | Requires storage, maintenance and synchronisation. A node is not automatically an address-history service: wallet imports, rescans or a separate index may still be needed. It reduces disclosure to wallet-data providers, but hosting arrangements and peer traffic can still reveal metadata. |
-| **Hosted RPC** | Chain-native queries and submission without operating a node. | The operator can observe queried accounts, timing and connection metadata, and can return stale or misleading results. RPC access alone does not promise complete wallet history. |
-| **Indexer or explorer API** | Searchable activity, token records and convenient wallet summaries. | Its indexing rules, pagination, lag and omissions affect the answer. Summaries are provider assertions, not consensus evidence. Queries can reveal which addresses belong to the same wallet. |
-| **Electrum-style server** | Bitcoin script-based history, unspent-output queries, subscriptions and submission. | The server sees queried script hashes and their association with a client; hashing does not make those queries anonymous. Validating headers and inclusion proofs improves inclusion assurance, but does not establish complete history, current unspent status or full block validity. |
+After the user explicitly confirms, persist the confirmed backup status, clear temporary buffers and lift the backup-pending gate.
 
-A privately operated Electrum index backed by an own node can combine a convenient wallet API with local validation. Transport encryption protects a connection from interception; it does not make the endpoint’s answers correct.
+On a skip, show the following warning and keep wallet actions blocked:
 
-Derive addresses locally rather than uploading an extended public key to a remote service. An xpub cannot sign, but exposing it can disclose an ongoing address catalogue. Individual queries still create links between addresses. Treat fallback providers and multi-provider comparisons as additional disclosures, not invisible implementation details. Agreement between providers can reveal fewer inconsistencies, but is not a substitute for validation.
+> Without a usable recovery copy, losing this device could mean losing access permanently. Wallet actions stay locked until you confirm the backup.
 
-[WALL-ET](https://github.heygears.com/ThalesMMS/WALL-ET) provides an iOS reference for separating screens and navigation from wallet services through MVVM-C and Clean Architecture, with Electrum-backed chain access, address discovery and Keychain-protected storage. Keep those responsibilities distinct rather than letting a screen controller become the network client and signing authority.
+Do not let dismissing the warning change backup status. Retain a clear **Resume backup** route, subject to the Lock-state restrictions below.
 
-#### Deriving balances and history
+> **Expected result:**
+> - One offline phrase reveal per creation attempt, with no repeat reveal on retry.
+> - Masked, editable input for invalid imports, with confirmation disabled and no imported wallet committed.
+> - Backup-pending status preserved after mismatches, skips, navigation and restarts.
+> - Removal of the backup-pending gate only after selected-word verification and explicit confirmation, followed by temporary-buffer clearing.
 
-An address is a lookup target, not a balance. Build wallet state from discovered addresses and chain observations:
+### Receive
 
-1. **Discover addresses within an explicit scope.** Persist the chain, network, key origin, branch and index associated with each address. For Bitcoin, inspect both receiving and change branches. The current daemon uses a fixed external-branch path for BTC and has no branch selector; increasing `index` cannot discover change. Complete wallet discovery therefore needs separately supported change derivation.
-2. **Apply a documented gap policy.** Consecutive addresses with no transaction history can terminate a bounded scan. A previously used address remains used even after its balance reaches zero. Retain known issued indices, extend discovery when activity appears, and provide a wider recovery scan for wallets that may have exceeded the assumed gap. A completed bounded scan is not proof that nothing exists beyond it.
-3. **For Bitcoin, account from outputs.** Track received outputs and their spends, then derive balances from the remaining UTXOs. Separate confirmed funds, pending effects and spendable funds. Local input reservations, maturity rules and pending spends matter; a server’s headline balance is insufficient for coin selection.
-4. **For account chains, read state and activity separately.** Obtain native and token balances through chain-appropriate state queries. History may require indexed transactions, receipts, logs or traces. Adding transfer rows is not a reliable replacement for account state, especially where fees or contract execution affect value.
-5. **Preserve consistency and uncertainty.** Anchor paginated results to a stable block context where supported, remove duplicates and retain scan checkpoints. Label partial, stale or unanchored results. A timeout means “not refreshed”, not “zero balance”.
+In Receive, show the full address and chain/testnet as text, and display a QR code for the receive address. Follow docs/14 section 5.3 for the shared clipboard rule. Use the Receive QR payloads table in docs/07. Construct the payload for the selected chain and network using only its approved forms. Do not encode a bare address except for TRX Nile. Keep request information not carried by the payload outside the QR. Use `P.renderAndVerifyQr` for generated receive QRs. Decoded generated or scanned requests must pass through `E.parsePaymentRequest` and `E.verifyPaymentRequest`, using the shared and per-chain checks in docs/07.
 
-Treat externally supplied token names, decimals and classifications as untrusted metadata. Asset identity must remain tied to the intended network and contract or native-asset definition.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). Receive-QR exists today only in the Android draft Receive screen (ZXing core 3.5.3, display-only, never runtime-verified); it still lacks the guide's decode-verification step, payment-request fields and Stale/Error states, and the Web draft has no QR of any kind. Scanning exists nowhere yet in either draft. The Web guide's scanning specification is in its Section F; the Android verification half remains to be built. Add the web encoder and the Android verification half before treating either half as implemented.
 
-#### Confirmation handling
+### Send and Review
 
-Track transaction progress as observations, not as a single success flag. Derive the expected transaction identifier locally using the chain’s rules. A broadcast acknowledgement means that an endpoint accepted the submission; it does not establish propagation, inclusion or finality.
+Collect the recipient, asset and amount in Send. Estimate fees and prepare a reviewable action, not a signature. Present the collected values and estimated fees in the required Review state within Send. Do not treat action preparation or entry into Review as signing.
 
-Keep submission state, pending observations, inclusion and execution outcome distinct. Record the containing block’s identity and position, then derive confirmation status against the current canonical chain. Bitcoin confirmation counts express increasing confidence, not absolute finality. Where a chain exposes finality information, use it according to that chain’s rules rather than importing a Bitcoin-style threshold.
+### History, empty and locked states
 
-Define confirmation policy per chain and network. Do not increase confirmations merely because time has passed, and show when the observing backend is behind or unavailable. An included contract transaction can still have failed execution and incurred fees.
+Distinguish pending, included, confirmed, failed and replaced transactions in Transaction history and Transaction details. Keep included and confirmed visibly distinct.
 
-Reorganisations must be reversible application events: invalidate affected inclusions, restore the relevant discovery checkpoint, replay activity and recalculate balances. Previously displayed confirmations may fall. Handle replacement, expiry and dropped transactions explicitly; absence from one server is not sufficient evidence that a transaction has disappeared everywhere.
+Provide explicit empty states when there are no assets or transactions to display.
 
-**You should see:**
+In the required Lock state, reveal no wallet screens until unlocked. Keep Lock separate from the backup-pending gate, and do not let unlocking confirm a backup or enable actions while backup remains pending. Retain a clear Resume backup route for a pending backup, but do not expose the backup screen through that route before unlocking.
 
-- [ ] Watch-only operation works without starting or accessing a signer.
-- [ ] Approval matches the frozen payload; success returns only signatures.
-- [ ] Backend choice exposes its network, freshness and trust assumptions.
-- [ ] Discovery covers receiving and change addresses, with incomplete scans clearly labelled.
-- [ ] A conceptual or testnet transaction progresses through distinct states, and a simulated reorganisation rolls them back.
+> **Expected result:**
+> - The full Receive address and chain/testnet displayed as text, with a QR code for the receive address.
+> - A reviewable Send action rather than a signature.
+> - Distinct transaction statuses and explicit empty states.
+> - No wallet screens exposed while locked, and no bypass of backup confirmation through unlocking.
 
-### UI flows — create, import, backup confirmation
-
-Keep wallet actions behind a persisted **backup pending** gate until backup confirmation succeeds. Navigating away or restarting must not bypass it. Never include recovery words in logs, analytics or error reports.
-
-#### Create
-
-```text
-Entry: Add wallet / Create
-↓
-Generate securely; validate the resulting phrase
-↓
-Show the recovery phrase once
-↓
-User checks their saved, ordered copy
-↓
-Continue to backup confirmation; remain locked
-
-Generation/check failure → discard partial state; offer retry
-Leave or skip → show warning; remain locked
-```
-
-Use a reviewed cryptographic library and the operating system’s secure random source. Display the phrase once per creation attempt; retries must not reveal it again.
-
-Before continuing, the user verifies that their private, offline copy contains every word in the displayed order and is readable. Acknowledging this does **not** confirm the backup or enable wallet actions. If the copy is lost, offer explicit discard-and-restart only for a newly generated, unused wallet.
-
-#### Import
-
-```text
-Entry: Add wallet / Import
-↓
-Enter an existing recovery phrase
-↓
-Normalise input; check count, wordlist and checksum
-↓
-Checks pass: review a read-only public-address preview
-↓
-Confirm import; open backup confirmation; remain locked
-
-Any check fails → keep input editable; disable confirmation
-Unexpected address → stop; review recovery settings
-```
-
-Apply Unicode normalisation and handle accidental spacing without changing words or their order. Validate the supported wordlist and word count, then the checksum. [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) defines standard lengths of 12, 15, 18, 21 and 24 words; reject lengths the application does not support.
-
-For an unsupported count, unrecognised word or checksum mismatch, identify the failed check without echoing the phrase. Do not commit an imported wallet. Let the user correct the input and run all checks again; never guess replacement words.
-
-Before confirming, the user verifies that the phrase belongs to the intended wallet, its word order is correct, and the selected network and previewed address match their expectations where known. A valid checksum alone does not establish wallet identity.
-
-#### Backup confirmation
-
-```text
-Entry: Backup confirmation
-↓
-Re-enter every word from the saved copy, in order
-↓
-Compare the complete ordered sequence
-↓
-Match: enable Confirm backup
-↓
-Confirm: persist verified state; enable wallet actions
-
-Mismatch → generic error; remain locked; allow edit and retry
-Skip → warning; locked screen with Resume backup
-```
-
-Compare every word against the generated or imported phrase, not merely against a valid checksum. A different, checksum-valid phrase must fail. After a mismatch, confirmation stays disabled until a complete retry matches.
-
-Before confirming, the user verifies that they recovered the sequence from their saved copy rather than relying on memory.
-
-**Skip warning:** “Without a usable recovery copy, losing this device could mean losing access permanently. Wallet actions stay locked until you confirm the backup.”
-
-The locked screen must retain a clear route back to confirmation. Dismissing the warning must not change backup status.
-
-You should see:
-- [ ] One phrase reveal per creation attempt.
-- [ ] Invalid imports remain editable and cannot be confirmed.
-- [ ] Backup mismatches and skips remain locked, including after restart.
-- [ ] Only an exact ordered match followed by confirmation enables wallet actions.
-
-### UI flows — receive, send, history, empty and locked states
-
-#### Receive
-
-```text
-Receive → Check app access, wallet policy and selected test network
-Allocate → Commit the address reservation before display
-Display together → <TESTNET_ADDRESS>, matching QR and <TESTNET_NETWORK> label
-Allocation/QR error → Retain mappings; block sharing; offer retry
-Before sharing → Verify wallet/order, network and decoded QR/address match
-```
-
-Retain an address’s mapping permanently once displayed or assigned to an order; reuse requires an explicit safe-reuse policy. Allocate each new address by advancing a locked per-branch cursor and recording its mapping in one database transaction, protected by `UNIQUE(wallet_root, chain, branch, index)`. Never derive the next allocation from `MAX(index) + 1`.
-
-An xpub normally cannot authorise spending, yet may disclose account layout, reused addresses, payment activity and balances; see [BIP 32: Hierarchical Deterministic Wallets](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). Keep these watch-only secrets away from publicly visible trackers, analytics services you cannot trust, arbitrary checking sites and extensions without review. Do not include them in chats unless strictly necessary.
-
-#### Send
-
-```text
-Send → Check access; enter <TESTNET_ADDRESS>; validate format/network compatibility
-Amount → Enter <AMOUNT>; check spendable funds; display estimated <FEE>
-Review → Show full recipient, network, amount, fee and total debit
-Confirm → Revalidate funds/fee; route a locked signer to Unlock
-Confirmed and unlocked → Sign the reviewed transaction; broadcast
-Address/funds/fee error → Preserve edits; explain correction; block signing
-Broadcast timeout → Show status unknown; reconcile before retry
-```
-
-The user must verify every review field before confirming. Any changed value requires another review and confirmation. An address’s appearance alone does not establish the intended network.
-
-#### History
-
-```text
-History → Check wallet, network and synchronisation
-Accepted, awaiting inclusion → Pending label; zero confirmations
-Included in a block → Confirmed label; confirmation count
-Sync error → Mark information stale; offer refresh
-Reorganisation → Recalculate status, including possible return to Pending
-Details → Verify transaction identity, recipient, amount and network
-```
-
-Viewing history needs no signing confirmation. Use text labels rather than colour alone. Retain rejected or conflicted entries with an explanation; never resend merely because an entry remains pending.
-
-#### Empty states
-
-```text
-Open wallet → Check wallet/network and completed synchronisation
-No transactions → Show “No activity”; offer Receive
-No funds → Show zero available balance; offer Receive; disable Send
-Sync failure → Show retry, not an empty wallet
-```
-
-Explain pending or reserved funds separately from spendable funds. Let users correct wallet/network selection before funding. Verify the receiving wallet and network before continuing; neither empty state requires signing.
-
-#### Locked states
-
-```text
-App locked → Hide wallet information; request local authentication
-Wallet locked, app open → Allow authorised watch-only views; block signing
-Before unlocking → Verify intended wallet and expected local request
-Failed/cancelled authentication → Remain locked; offer retry or recovery
-Unlocked → Recheck transaction; return to review before signing
-```
-
-Offer configured app-authentication recovery for an app lock, and documented local backup restoration for a wallet lock. Recovery requires a usable credential, backup or supported recovery method; do not promise that resetting restores access. Warn before any reset that erases data.
-
-**You should see:**
-- Matching address, QR and network label.
-- Explicit review before every signature.
-- Distinct pending, confirmed and stale labels.
-- Clear empty-state actions and lock recovery.

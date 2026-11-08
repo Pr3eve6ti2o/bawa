@@ -1,6 +1,40 @@
+---
+title: Trust Wallet Core and Independent Verification
+description: Use Trust Wallet Core 4.9.2 as the reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
+last-updated: 2026-11-08
+---
+
 # Trust Wallet Core & Independent Verification
 
-This guide defines how Bawa uses Trust Wallet Core, how the Trust Wallet repositories fit together, and why an independent implementation such as `bip_utils` belongs in the verification layer.
+How-to guide.
+
+> **Verified on:** 2026-11-08  
+> **Verification status:** Partially verified  
+> **Scope:** repo guide docs/11 against the pinned repo at 082f7915 plus live link checks  
+> **Repository commit:** e3b65fb0  
+> **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
+> **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
+> **Not run:** no live testnet spend. The Wallet Core side of the differential comparison for the xpub mapping is now captured (D31, 2026-11-08).
+
+Mark the checks listed as not run above `blocked-unverified`.
+
+## Contents
+
+- [Trust Wallet Core](#trust-wallet-core)
+- [Why Bawa uses an independent verifier](#why-bawa-uses-an-independent-verifier)
+- [What should be compared](#what-should-be-compared)
+- [Trust Wallet registry](#trust-wallet-registry)
+- [`@hdwallet/core`](#hdwalletcore)
+- [Release rule](#release-rule)
+- [Verification, differential fixtures](#verification-differential-fixtures)
+- [Published anchors and negative fixtures](#published-anchors-and-negative-fixtures)
+- [Verification and testing](#verification-and-testing)
+- [Independent verification and chain fixtures](#independent-verification-and-chain-fixtures)
+- [Negative and security testing](#negative-and-security-testing)
+- [Integration testing](#integration-testing)
+- [CI discipline, reproducible checks and build verification](#ci-discipline-reproducible-checks-and-build-verification)
+- [Compare release bytes as well as test results](#compare-release-bytes-as-well-as-test-results)
+- [Reader checklist](#reader-checklist)
 
 ## Trust Wallet Core
 
@@ -18,7 +52,6 @@ It explicitly states that blockchain-node communication, balance retrieval and t
 References:
 
 - [Wallet Core](https://github.com/trustwallet/wallet-core)
-- [Usage Guide](https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage)
 - [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/)
 
 ## Why Bawa uses an independent verifier
@@ -61,7 +94,7 @@ The registry is useful for implementation metadata such as:
 
 - coin IDs and optional SLIP-44 values;
 - derivation paths and alternate derivations;
-- xpub/xprv serialization variants;
+- xpub/xprv serialisation variants;
 - curves and public-key types;
 - address prefixes and HRPs;
 - chain IDs;
@@ -90,270 +123,223 @@ clean-install CI
 ```
 
 Where no independent implementation or published vector exists, document the limitation instead of implying equivalent assurance.
-## 11 Verification — differential fixtures
+## Verification, differential fixtures
 
-Keep Wallet Core **4.8.4** as Bawa’s reference engine and `bip_utils` in the test layer. Under Bawa’s differential-verification rule, a fixture is eligible only when both implementations document the same standard, exact derivation path, chain, network and output format. A match supports that one fixture, not blanket equivalence across chains or paths.
+Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). Treat the **4.8.4** pin as superseded and keep bip-utils in the test layer.
 
-```text
-Both implementations’ documentation
-|
-Check standard, exact path, chain, network and output format
-|
-+-- Unresolved or different: blocked
-|
-+-- Documented match: fixture preparation
-```
+The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 
-```text
-Published test vector and shared settings
-|
-+-- Wallet Core
-|   |
-|   +-- Independently captured public outputs
-|
-+-- bip_utils
-    |
-    +-- Independently captured public outputs
+Apply Bawa’s differential-verification rule: document both implementations’ support for the same standard, exact derivation path, chain, network and output format. Keep a fixture blocked if any setting is unresolved or differs. Capture both implementations’ public outputs and diff them before marking the fixture eligible. Treat a match as evidence for that fixture only, not blanket equivalence across chains or paths.
 
-Both public-output records
-|
-Diff and evidence
-```
+### Ripple fixture and shared settings
 
-### Current evidence
+Use this 15-word fixture mnemonic from Trust Wallet Core’s own published HDWallet test example, `swift/Tests/HDWalletTests.swift` in the `wallet-core` repository:
 
-Bawa’s `test/differential_test.py` uses `bip_utils` **2.12.2** with a published test mnemonic. It defines these derivations and their expected addresses:
+`ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal`
 
-- **BTC:** `Bip84`, account 0, external chain, index 0 — `m/84'/0'/0'/0/0`.
-- **ETH:** `Bip44`, account 0, external chain, index 0 — `m/44'/60'/0'/0/0`.
+Use an **empty BIP-39 passphrase** and record the entropy as `ba5821e8c356c05ba5f025d9532fe0f21f65d594`.
 
-| Chain | Published expected address | Wallet Core observed | `bip_utils` observed |
+Do not copy the passphrase `TREZOR` from Core’s own test table. It gives a different seed and different addresses; Bawa uses the empty passphrase.
+
+Keep this word-count rule explicit: the fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+
+### Provisional public nodes and TRX anchor
+
+Use these ripple-fixture account-0 public nodes, derived with **bip-utils 2.12.2**, as the provisional xpub-to-vector mapping for the helper’s `.env`.
+
+| Chain and format | Account path | Public node | Status |
 |---|---|---|---|
-| BTC | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` | No captured result | No captured result |
-| ETH | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` | No captured result | No captured result |
+| BTC zpub | `m/84'/0'/0'` | `zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9` | Core-confirmed (D31, 2026-11-08) |
+| ETH xpub | `m/44'/60'/0'` | `xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc` | Core-confirmed (D31, 2026-11-08) |
+| TRX xpub | `m/44'/195'/0'` | `xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF` | Core-confirmed (D31, 2026-11-08) |
 
-On success, the test prints `bip_utils reference checks: PASS`. That message confirms the `bip_utils` reference checks, not a completed comparison with Wallet Core.
+Treat this derivation as confirmation of reproducibility, not independence: bip-utils is the same library used by `test/differential_test.py`. Every public node was confirmed against Core’s `getExtendedPublicKeyAccount` in a recorded **4.9.2** run using the ripple mnemonic and empty passphrase (D31, 2026-11-08); treat them as canonical.
 
-The Wallet Core side is Bawa’s `tools/hdwallet-gen/compare.js`. This public-only helper reads xpubs from `.env` and derives these paths for `i = 0, 1, 2`:
+Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/195'/0'/0/0` as the TRX anchor. It was derived with bip-utils **2.12.2** and confirmed by Trust Wallet Core 4.8.4 (V3 live verification, 8 November 2026: `getAddressForCoin(tron)` returns this address) and re-confirmed on Core 4.9.2 (D31, 2026-11-08).
 
-- **BTC:** `m/84'/0'/0'/i`.
+Do not count this separate derivation as repository-test coverage.
+
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
+
+### Agreed comparison paths
+
+Use the paths verified first-hand in the actual `tools/hdwallet-gen/compare.js` file. Use this public-only helper with the extended public nodes in `.env` to derive indices `i = 0, 1, 2`:
+
+- **BTC:** `m/84'/0'/0'/0/i`.
 - **ETH:** `m/44'/60'/0'/0/i`.
 - **TRX:** `m/44'/195'/0'/0/i`.
 
-The documented BTC paths differ. The ETH paths match at `i = 0`, but a matching path alone does not make a fixture eligible.
+Remove the stale path-difference blocker: the BTC and ETH paths agree with the repository reference checks at `i = 0`.
 
-Bawa does not document the complete shared settings or how the helper’s `.env` xpubs map to the published test vector for these comparisons. Resolve the BTC path difference, collect both implementations’ support references and confirm the shared settings and xpub-to-vector mapping before marking either fixture eligible.
+The xpub-to-vector mapping is supplied by the values above and is Core-confirmed (D31, 2026-11-08: recorded `getExtendedPublicKeyAccount` run). The TRX address anchor is separately Core-confirmed (see above). Continue to require both implementations’ support references and confirmed shared settings.
 
-The table records expectations, not a run of either implementation. **Without captured results, neither a match nor a mismatch is established.**
+### Captured evidence and pending Core run
 
-### Walkthrough: add one eligible chain fixture
+Preserve the captured reference run with the following record:
 
-This is a proposed checklist. Bawa does not document where to store new paired fixtures, their schema, or the API calls and common runner for adding them. Confirm these details with the maintainers before adding a runnable test.
+| Run detail | Captured evidence |
+|---|---|
+| Command | `python3 test/differential_test.py` |
+| Environment procedure | Documented venv procedure |
+| Dependencies | bip-utils **2.12.2**, cryptography **50.0.2** |
+| Date | **2026-11-08** |
+| Host | `muse-vm` |
+| Reported output | `bip_utils reference checks: PASS` |
+| Exit code | **0** |
 
-1. **Prove overlap.** Collect references from both implementations documenting the same standard and exact derivation path. Confirm the same chain, network and output format too. Do not infer a path from an address.
+Retain the captured addresses against their published expectations. The Wallet Core column is now recorded (D31, 2026-11-08).
 
-   **You should see:** explicit matching evidence from both implementations. Otherwise stop and mark the candidate **blocked**.
+| Chain and reference path | Published expected address | Wallet Core 4.9.2 observed | bip-utils 2.12.2 observed |
+|---|---|---|---|
+| BTC BIP-84, `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (Core-confirmed, D31, 2026-11-08) | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
+| ETH BIP-44, `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` (Core-confirmed, D31, 2026-11-08) | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
 
-2. **Prepare the fixture.** After the eligibility check passes and the repository location and schema are confirmed, add a record containing the shared settings, published test-vector source, exact implementation versions and expected public outputs with their sources. For the addresses above, Bawa’s `test/differential_test.py` establishes the vector-to-address expectations. Confirm that the Wallet Core helper’s xpubs come from that same vector at the documented derivation level before using them in the comparison.
+Keep the captured pass together with its coverage boundary:
 
-   **You should see:** an auditable fixture with resolved inputs and expectations. Clearly marked placeholders keep it a draft, not a runnable test.
+> **Expected result:**
+>
+> `bip_utils reference checks: PASS`
+>
+> At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1-2.
 
-3. **Execute independently.** Once the API calls and runner are confirmed, run each implementation through documented APIs using the same published vector and shared settings. For the public-only Wallet Core helper, use xpubs tied to that vector; do not pass it a mnemonic or seed. Compare receiving addresses, and include other public outputs only where both implementations document a compatible representation. Do not populate one implementation’s result from the other.
+Do not interpret this pass as a completed comparison with Wallet Core.
 
-   **You should see:** two separately captured public-output records and a diff. Missing output, errors or differences do not pass. Do not silently alter case or encoding to manufacture agreement.
+To capture the Core side, run `node generate.js` from `tools/hdwallet-gen` on a TTY and record its self-checks. Build the helper’s `.env` from the three ripple-fixture account-0 public nodes above, then run `node compare.js` from the same directory and capture its public outputs. Include the recorded `getExtendedPublicKeyAccount` confirmations and the `getAddressForCoin(tron)` anchor confirmation in the Core evidence.
 
-4. **Attach evidence and submit.** Keep the actual invocation, versions, both support references, vector source, public results and diff with the fixture. Under this proposed check, mark it verified only when both results match the sourced expectation using the documented shared settings.
+Keep the fixtures **ineligible** until both sides are captured and diffed under the documented shared settings. Do not claim either a match or a mismatch with Wallet Core while its results remain uncaptured.
 
-   **You should see:** enough evidence for another maintainer to repeat the comparison. Unresolved cases remain blocked; a skipped comparison is not a pass.
+## Published anchors and negative fixtures
 
-### Safety and scope
+Use these published fixtures only as test vectors, never for funds. Keep each mnemonic, passphrase, path, address (or extended key) and source together. Never pair one fixture's words with another fixture's address.
 
-Use only published test vectors or clearly marked placeholders. Never put a real mnemonic, seed, xprv, private key or data key in CI or logs.
+Treat the three fixture mnemonics as deliberate anchors for different published standards (BIP-84, Hardhat and Core), not as three phrases used by the wallet. For the Core anchor, retain the complete mnemonic, passphrase, path and address recorded in the preceding ripple-fixture section, with the repo's own fixture and Trust Wallet Core's published test vector as its source.
 
-This checks public outputs from wallet cryptography, not signing. Node communication, balance retrieval and broadcasting are outside Wallet Core and outside this comparison. No signing or real-funds workflow is included.
+Prefer unifying repo fixtures on the ripple mnemonic as the single canonical set of words, because it is both the repo's own fixture and Trust Wallet Core's published test vector. Treat this as a recommendation, not a requirement. Preserve the original inputs and outputs of the independently published BIP-84 and Hardhat anchors below.
 
-## 11. Verification and testing
+### BIP-84 anchors
 
-### A. Require independent agreement
+Use the mnemonic `abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about` with an empty passphrase for all four anchors below. Use the [BIP-84 specification](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) as their published source.
 
-Do not trust a derivation merely because the wallet can reproduce its own answer. Generation and a self-check may both choose the same wrong derivation path. Their addresses will match, but neither will be the address requested. The test has repeated the mistake rather than detected it.
+- Derive the first BTC receiving address at `m/84'/0'/0'/0/0`.
 
-For the standards and paths covered by Bawa’s differential tests, Wallet Core and `bip_utils` must independently produce matching public outputs before the tested result is accepted. This is a test-suite requirement, not a second derivation service for live wallets.
+  > Expected result: `bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu`, identical to the first receiving address in the BIP-84 specification test vector.
 
-#### The engine and the verifier
+- Derive the account-0 public extended key at `m/84'/0'/0'` from the same abandon mnemonic and empty passphrase.
 
-[Wallet Core](https://github.com/trustwallet/wallet-core) **4.8.4**, packaged as `@trustwallet/wallet-core`, is Bawa’s reference engine for wallet cryptography. Its responsibilities include wallet creation and import, receiving-address derivation, custom derivation paths and transaction signing. These operations are documented in the [Wallet Core Usage Guide](https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage) and [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/).
+  > Expected result: `zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs`, byte-identical to the account-0 zpub in the BIP-84 specification.
 
-Wallet Core does **not** communicate with blockchain nodes, fetch balances or broadcast transactions. Those tasks belong to Bawa’s application and infrastructure code.
+- Derive the second BTC receiving address at `m/84'/0'/0'/0/1`.
 
-The independent verifier is pinned to `bip-utils==2.12.2`. It has separate implementations of HD-wallet standards and chain-specific key and address schemes; the [bip_utils documentation](https://pypi.org/project/bip-utils/) defines its coverage. Use it only for standards and paths supported by both implementations.
+  > Expected result: `bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g`.
 
-`bip_utils` belongs in the test layer because its job is to challenge the reference engine’s result on fixed fixtures. It is not imported by runtime wallet-generation code and must not become a production alternative or fallback. Switching engines after a disagreement would hide a failure, not resolve it. Keeping one production engine also keeps live wallet behaviour separate from the verification machinery.
+- Derive the first BTC change address at `m/84'/0'/0'/1/0`.
 
-#### Keep the comparison boundary public
+  > Expected result: `bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el`.
+
+### Hardhat anchor
+
+Use the mnemonic `test test test test test test test test test test test junk`, an empty passphrase and the path `m/44'/60'/0'/0/0`. Use Hardhat account #0 as the published source.
+
+> Expected result: ETH `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`.
+
+### Published negative test vectors
+
+Use the account-0 rejection vector from [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and the three BIP-32 rejection vectors from [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). Distinguish private extended-key rejection from bad-checksum and wrong-version rejection.
+
+- **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
+
+  > Expected result: Reject the private extended key where a public extended key is required.
+
+- **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
+
+  > Expected result: Reject the private extended key where a public extended key is required.
+
+- **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
+
+  > Expected result: Reject for a bad checksum.
+
+- **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
+
+  > Expected result: Reject for a wrong version.
+
+### Fixture and parity gaps
+
+#### TON fixture (V3, 2026-11-08)
+
+Demand reproduction of the TON fixture in every applicable check (Android D.7 check 6 is now executable with it): derive at the recorded `ton_path`, build Wallet V4 R2 with the recorded wallet ID, compare the address and run `validate`.
+
+- mnemonic: `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` (15-word published test vector; production creation is 24 words, do not mix them)
+- BIP-39 passphrase: empty
+- `ton_path`: `m/44'/607'/0'`
+- coin: CoinType.TON = 607
+- ed25519 public key (at `m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`
+- contract: Wallet V4 R2
+- wallet ID / subwallet: `698983191` (0x29A9A317; the @ton/ton V4 default)
+- workchain: `0`
+- seqno at derivation: `0`
+- address (raw): `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`
+- address (non-bounceable, mainnet): `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` (what Core returns)
+- address (bounceable, mainnet): `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi`
+- address (bounceable, testnet): `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`
+- address (non-bounceable, testnet): `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`
+
+Verified two independent ways (V3, 8 November 2026): Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent derivation (pure-stdlib SLIP-0010 plus PyNaCl for the key; @ton/ton for the contract and address). Wallet V4 R2 with wallet ID 0 gives a different address (`0:7bd45095...`); the wallet ID was the missing configuration parameter. Core returns mainnet presentation with no TON testnet selector; the testnet forms are encodings of the same account. The address is a derived, not-yet-deployed account.
+
+The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 files). Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08); the in-browser run on 4.9.2 remains open.
+
+Do not require a separate Sepolia address fixture, because ETH addresses are network-agnostic. The BTC testnet fixture is the re-encoded Bawa address `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`, from `m/84'/0'` index 0); the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08). With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
+
+## Verification and testing
+
+Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+
+Use this file as verification guidance for public outputs, not as a signing capability.
+
+### Require independent agreement
+
+Do not trust a derivation merely because the wallet can reproduce its own answer. Generation and a self-check can choose the same wrong derivation path, producing matching addresses that are not the address requested. The test then repeats the mistake rather than detecting it.
+
+For the standards and paths covered by Bawa’s differential tests, require Wallet Core and bip-utils to independently produce matching public outputs before accepting the tested result. Treat this as a test-suite requirement, not a second derivation service for live wallets.
+
+### Use the reference engine and independent verifier
+
+Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 200 and redirects to the Trust Wallet marketing homepage (checked live 2026-11-08). Link it only as the vendor's home page, not as documentation.
+
+Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
+
+Do not expect Wallet Core to communicate with blockchain nodes, fetch balances or broadcast transactions. Keep those tasks in Bawa’s application and infrastructure code.
+
+Keep the independent verifier pinned to [bip-utils](https://pypi.org/project/bip-utils/) 2.12.2. Consult its documentation for coverage of its separate implementations of HD-wallet standards and chain-specific key and address schemes. Use it only for standards and paths supported by both implementations.
+
+Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failure to investigate, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
+
+### Keep the comparison boundary public
 
 Use this order:
 
-1. **Choose published test material.** Suitable sources include the vectors linked by [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) and those included in [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki). Record the fixture, chain, network and derivation path explicitly. The specifications define the standards; library agreement does not replace them.
-2. **Derive and capture independently.** Give each implementation the same published fixture inputs and declared parameters. Each must perform its own derivation. Do not pass computed intermediates from one engine to the other. Capture each result separately, retaining only public outputs such as receiving addresses and public keys.
-3. **Compare after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failure to investigate.
+1. **Choose published test material.** Use the vectors linked by [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) or those included in [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki). Record the fixture, chain, network and derivation path explicitly. Follow the specifications that define the standards; do not substitute library agreement for them.
+2. **Derive and capture independently.** Give each implementation the same published fixture inputs and declared parameters. Require each to perform its own derivation. Do not pass computed intermediates from one engine to the other. Capture each result separately, retaining only public outputs such as receiving addresses and public keys.
+3. **Compare only after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failure to investigate.
 
-Comparison artefacts must not contain mnemonics, seeds, private keys or data keys, even from published fixtures. Tests must never use real-wallet secrets or backups, including xprvs and hardware-wallet secrets.
+Exclude mnemonics, seeds, private keys and data keys from comparison artefacts, even when they come from published fixtures. Never use real-wallet secrets or backups in tests, including xprvs and hardware-wallet secrets.
 
-Agreement is necessary, but its meaning is limited: it supports that fixture, network and path only. Two implementations can still share a mistaken configuration. A matching address does not establish correctness for every coin or path, and it does not test signing, balance retrieval or broadcasting.
+Treat agreement as necessary, but limit its support to that fixture, network and path only. Account for the possibility that both implementations share a mistaken configuration. Do not treat a matching address as evidence of correctness for every coin or path, or as a test of signing, balance retrieval or broadcasting.
 
-Run:
+Do not require a “checked-in reference corpus” for WASM parity. That corpus does not exist, and WASM parity has no reference corpus yet. Do not make any check depend on it.
+
+Run the differential tests:
 
 ```sh
 python3 test/differential_test.py
 ```
 
-**You should see:**
+**Expected result:**
+
 - No mismatches between independently captured public outputs for the covered fixtures.
 - Only public outputs in the comparison artefacts.
-- `bip_utils` confined to tests, with no runtime wallet-generation import.
+- bip-utils confined to tests, with no import by runtime wallet-generation code.
 
-### B. Differential public-output checks
-
-This comparison checks public outputs from wallet cryptography, not signing. Node communication, balance retrieval and broadcasting are outside its scope.
-
-Bawa currently has no captured result from either `bip_utils` or Wallet Core. Neither a match nor a mismatch has been established.
-
-#### 1. Prove that the implementations overlap
-
-Create a candidate record for each fixture. Before accepting it, collect versioned support references showing that **both implementations document the same**:
-
-- derivation standard;
-- exact derivation path, including the change branch and address index;
-- chain;
-- network;
-- public-output format and encoding.
-
-A difference or an undocumented setting blocks the candidate. Similar-looking addresses are not evidence of compatible settings.
-
-The Wallet Core side is `tools/hdwallet-gen/compare.js`. It is a public-only helper: it reads xpubs from `.env` and documents these derivations for `i = 0, 1, 2`:
-
-| Chain | `bip_utils` reference fixture | Documented Wallet Core helper path |
-|---|---|---|
-| BTC | BIP84, `m/84'/0'/0'/0/0` | `m/84'/0'/0'/i` |
-| ETH | BIP44, `m/44'/60'/0'/0/0` | `m/44'/60'/0'/0/i` |
-| TRX | No sourced fixture in this test | `m/44'/195'/0'/0/i` |
-
-The BTC paths differ: at `i = 0`, the helper’s documented path has one fewer component than the reference path. Do not silently add a branch, omit a component or reinterpret `i`.
-
-The ETH paths agree at `i = 0`, but that alone does not establish eligibility. The standard, chain, network, output format and input mapping must also agree. An Ethereum address alone does not identify a network.
-
-Bawa does not yet document all shared settings or how the helper’s `.env` xpubs relate to the published test vector. Keep both candidates blocked until the BTC path discrepancy is resolved, both implementations’ support references are collected, and the shared settings and xpub-to-vector mapping are confirmed.
-
-This vector supplies no TRX expectation and no expectations for indices 1 or 2.
-
-**You should see:** BTC and ETH currently marked **blocked**, with the reasons recorded. An eligible fixture must have documented agreement across every required field, not merely a matching path.
-
-#### 2. Prepare and freeze the fixture
-
-Once the overlap checks are complete, write a fixture manifest before running either implementation. Record:
-
-- **Vector source:** `test/differential_test.py`, identified by the exact Bawa repository commit. Use its published test material without substituting wallet data.
-- **Shared derivation settings:** standard, complete path, account, change branch, index, chain, network and output format. Both reference fixtures use account 0, the external branch and address index 0.
-- **Seed-generation settings:** the reference calls `Bip39SeedGenerator(...).Generate()` without an explicit passphrase. Record the documented behaviour of that call for the pinned version rather than assuming a setting.
-- **Public-input mapping:** which test-vector xpub belongs in each helper input, its origin path and serialisation, and the relative derivation performed below it. This must establish the full path; it must not merely assert that an xpub “looks right”.
-- **Exact versions:** `bip_utils` **2.12.2**, the Wallet Core version or build actually loaded by the helper, the helper’s repository revision, and the Python and JavaScript runtime versions. A dependency range is not an exact version.
-- **Support references:** the documentation used to establish each implementation’s supported standard, path handling, network and output format.
-
-The helper starts from xpubs. Its source-to-xpub mapping is therefore a prerequisite; this comparison does not independently check mnemonic-to-xpub generation on that side.
-
-Create a capture directory:
-
-```sh
-mkdir -p verification-11b
-```
-
-Store each sourced expectation as one unchanged address on one line in the indicated file:
-
-| Fixture | Expected-address file | Expected public address |
-|---|---|---|
-| BTC | `verification-11b/btc.expected.txt` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
-| ETH | `verification-11b/eth.expected.txt` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
-
-These values come from the reference fixture, not from a new run. Do not replace them with whichever address an implementation returns.
-
-Use only the published test inputs. Do not put a real mnemonic, seed, private key, data key or real-wallet `.env` into the fixture or evidence bundle.
-
-**You should see:** A fixed manifest containing the vector source, exact versions, shared settings, documented xpub mapping and expected public outputs. Any unresolved item leaves the fixture blocked.
-
-#### 3. Run independently, capture separately, then diff
-
-Run each eligible fixture through each implementation’s documented API. Do not copy derivation code between implementations or use one implementation’s returned address as the other’s input.
-
-For the Python reference, use the pinned environment with assertions enabled. Do not use `-O` or enable `PYTHONOPTIMIZE`.
-
-```sh
-python3 test/differential_test.py \
-  > verification-11b/bip_utils.stdout \
-  2> verification-11b/bip_utils.stderr
-printf '%s\n' "$?" > verification-11b/bip_utils.exit
-```
-
-This file checks **`bip_utils` only**. A successful run prints:
-
-```text
-bip_utils reference checks: PASS
-```
-
-That message confirms the `bip_utils` reference checks. It does not confirm a completed comparison with Wallet Core. Running this reference check alone does not remove the comparison’s blocked status.
-
-Run `tools/hdwallet-gen/compare.js` separately, using the documented invocation and working-directory rules for the recorded version. Use only the confirmed public test-vector xpub inputs in `.env`. Save its invocation, stdout, stderr and exit status separately from the Python run. Do not guess input names or fill the file with unrelated xpubs.
-
-For each eligible fixture:
-
-1. Retain the original output from each run.
-2. Extract the address for the exact fixture path into its own one-address result file:
-   - `btc.bip_utils.txt` and `btc.wallet-core.txt`;
-   - `eth.bip_utils.txt` and `eth.wallet-core.txt`.
-3. Link each result file to its fixture manifest. Do not relabel a result from another path as the target result.
-4. Preserve the returned address exactly. Never lowercase it, change checksum case, remove a prefix or convert its encoding to manufacture agreement.
-
-For an eligible BTC fixture, run these three comparisons:
-
-```sh
-diff -u verification-11b/btc.bip_utils.txt verification-11b/btc.wallet-core.txt \
-  > verification-11b/btc.pair.diff
-printf '%s\n' "$?" > verification-11b/btc.pair.exit
-
-diff -u verification-11b/btc.expected.txt verification-11b/btc.bip_utils.txt \
-  > verification-11b/btc.bip_utils.diff
-printf '%s\n' "$?" > verification-11b/btc.bip_utils.diff.exit
-
-diff -u verification-11b/btc.expected.txt verification-11b/btc.wallet-core.txt \
-  > verification-11b/btc.wallet-core.diff
-printf '%s\n' "$?" > verification-11b/btc.wallet-core.diff.exit
-```
-
-Repeat for an eligible ETH fixture by replacing `btc` with `eth`.
-
-For `diff`, status `0` means identical files, `1` means a difference, and a value above `1` means the comparison failed to run properly. An empty diff file without a successful exit status is not a pass.
-
-**You should see:** Two independently captured public-output records and three diffs per eligible fixture. Successful checks have empty diffs and status `0`. The Python PASS message is only the reference-side result; without a captured helper result, there is still no differential result.
-
-#### 4. Attach the evidence and assign the result
-
-Attach the following to the test record:
-
-- exact invocations, working directories and exit statuses;
-- exact library, helper, repository and runtime versions;
-- both implementations’ support references;
-- the vector source and fixed fixture manifest;
-- the confirmed public xpub-to-vector mapping;
-- both original run outputs and their separate public-address records;
-- the sourced expectations, all three diffs and their exit statuses.
-
-Mark a fixture **verified** only when the overlap checks passed, both independent runs succeeded, and **both returned public outputs exactly match the sourced expectation**.
-
-Agreement between the implementations is insufficient if both disagree with that expectation. Record that as an expectation failure, not verification. Record a differential mismatch only when eligible, captured outputs differ. Missing output, setup failure or a diff error is an incomplete test, not evidence of a cryptographic mismatch.
-
-**You should see:** A reviewable record supporting the status of each fixture. Bawa’s current record remains blocked and unverified: neither side has a captured result, and no completed Wallet Core comparison can be claimed.
-
-### 11.C Independent verification and chain fixtures
+### Independent verification and chain fixtures
 
 `bip_utils` is pinned to **2.12.2** for verification tests. It provides a separate implementation against which to check the Trust Wallet Core generator. The runtime generation code does **not** import it.
 
@@ -389,7 +375,7 @@ These gates remain open:
 
 2. **Chain-specific fixtures.** Every supported chain needs published expectations for its claimed configurations, with documented overlap between the generator and an independent verifier. Generic BIP support does not establish chain coverage.
 
-3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account.
+3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account. The TON fixture in "Fixture and parity gaps" records all of these fields.
 
 #### Adding one eligible chain fixture
 
@@ -409,7 +395,7 @@ To add a case:
 
 If no compatible independent implementation is documented, describe any published-vector test as a published-vector test, not a two-implementation comparison. If no published vector is available, record that limitation rather than generating expected values locally and calling them published evidence. A wallet-core-only regression or an address-format check offers narrower assurance and does not close the corresponding release gate.
 
-**You should see:**
+**Expected result:**
 
 - [ ] One named fixture with a published source and documentation establishing identical rules in both implementations.
 - [ ] Both implementations independently matching the stored expected key and address from the same mnemonic, path and declared configuration.
@@ -417,7 +403,7 @@ If no compatible independent implementation is documented, describe any publishe
 - [ ] Runtime generation still free of `bip_utils` imports.
 - [ ] A coverage record limited to this case, without marking the full-vector, chain-wide or TON release gates complete.
 
-### 11.D1a — Negative and security testing
+### Negative and security testing
 
 Work in a disposable directory, away from live wallets. Use published [BIP-32 vectors](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#test-vectors), [BIP-39 reference tests](https://github.com/trezor/python-mnemonic/tree/master/tests) and [NIST AES-GCM vectors](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes#GCMVS), plus published recovery fixtures in the supported format. Use published invalid vectors where available; otherwise corrupt disposable copies without generating new secrets. Obtain replacement credentials only from published vectors. Never print secret fields.
 
@@ -465,9 +451,9 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Missing `.env`:** For a command requiring environment configuration, remove `.env` and unset its required variables in the child process. Expect a clear configuration error, not default credentials. When supported environment variables already provide the configuration, absence of `.env` alone need not fail.
 
-**You should see:** a completed expected-versus-actual record for every run, safe rejection of invalid inputs, the BIP-39 passphrase exception recorded correctly, unchanged protected files and no disclosed secrets or unauthenticated plaintext. Unrun cases remain unverified.
+**Expected result:** a completed expected-versus-actual record for every run, safe rejection of invalid inputs, the BIP-39 passphrase exception recorded correctly, unchanged protected files and no disclosed secrets or unauthenticated plaintext. Unrun cases remain unverified.
 
-### D1b — Integration testing
+### Integration testing
 
 Run the allocator, provider adapter, tracker and database together, including background workers where enabled. Use an isolated database, a controlled clock and replay at the RPC/indexer boundary, rather than replacing internal components. A production tracker is a distributed system as well as a blockchain client.
 
@@ -481,7 +467,7 @@ Use only published test material. Pin fixture sources, network, public account d
 
 3. **Inspect the database record.** Check address ownership, request linkage, amount, transaction identity, pending state and observation metadata. Use the chain’s transfer identity for deduplication; for UTXO payments, include network, transaction ID and output index. Separate outputs must not collapse into one payment. The recovery cursor must not advance beyond work durably recorded for recovery.
 
-4. **Update confirmations.** Replay canonical block progress. Assert the stored block hash, height and confirmation count, then the status transition at the configured threshold—not before it. If this transition triggers credit or fulfilment, inspect its durable instruction too.
+4. **Update confirmations.** Replay canonical block progress. Assert the stored block hash, height and confirmation count, then the status transition at the configured threshold, not before it. If this transition triggers credit or fulfilment, inspect its durable instruction too.
 
 Use bounded waits for recorded state rather than fixed sleeps. Inspect both database results and downstream business effects.
 
@@ -501,7 +487,7 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 
 - **Late payment.** Set invoice deadlines relative to fixture payment times. Test a genuinely late transfer and a timely transfer discovered only after an outage. Apply the documented expiry rule rather than confusing observation time with payment time. Continue recognising the original address association and record late funds for reconciliation. Do not silently ignore the transfer or reopen a cancelled order.
 
-**You should see:**
+**Expected result:**
 
 - [ ] A stable allocation and one canonical payment record per transfer.
 - [ ] Amounts, request linkage and confirmation transitions matching the published fixtures.
@@ -509,56 +495,53 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 - [ ] Provider recovery catching up to the expected chain state.
 - [ ] Auditable reorg handling and explicit late-payment outcomes.
 
-## 11. Verification and testing
-### D2. CI discipline, reproducible checks and build verification
+### CI discipline, reproducible checks and build verification
 
-#### Keep CI claims narrow
+Use Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) in place of the superseded 4.8.4 pin.
 
-CI must use published public fixtures only. Record their origin and revision so changes to upstream test data cannot silently change a run. Never generate a real wallet in CI, even as a throwaway test. Keep private wallet material out of job inputs, environment variables, logs, caches and artefacts.
+The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. Do not carry that demonstration forward as proof of the in-browser flow.
 
-A successful installation in a fresh environment shows that the dependencies installed on the recorded operating system, architecture and toolchain. It does not establish wallet correctness. Save the source revision, interpreter and installer versions alongside the installation log.
+Use only published public fixtures in CI. Record their origin and revision so changes to upstream test data cannot silently change a run. Never generate a real wallet in CI, even as a throwaway test. Keep private wallet material out of job inputs, environment variables, logs, caches and artefacts.
 
-Commit the lockfile actually used by the tests, install from it, and reject unexpected changes during installation. That file records the dependency graph exercised by the checks. It is not a security assessment of those dependencies, nor a guarantee of byte-identical build output.
+Treat a successful installation in a fresh environment only as evidence that the dependencies installed on the recorded operating system, architecture and toolchain, not as evidence of wallet correctness. Save the source revision, interpreter and installer versions alongside the installation log.
 
-A network-enabled CI run provides no evidence that the documented workflow works offline. It also does not validate interactive generation through `/dev/tty`. Keep separate records for offline operation and terminal behaviour. Where those checks have not been completed, mark them `blocked-unverified`; do not generate a real wallet in CI to fill in the terminal result.
+Commit the lockfile actually used by the tests, install from it, and reject unexpected changes during installation. Treat that file as a record of the dependency graph exercised by the checks, not as a security assessment of those dependencies or a guarantee of byte-identical build output.
 
-#### Give every release gate its own record
+Treat a network-enabled CI run as providing no evidence of offline operation and no validation of interactive generation through `/dev/tty`. Keep separate records for offline operation and terminal behaviour. Where those checks have not been completed, mark them `blocked-unverified`; do not generate a real wallet in CI to fill in the terminal result.
 
-For each candidate revision, record each gate’s result and link its evidence. Preserve failures as failures. Missing evidence means `blocked-unverified`, not an assumed pass.
+### Give every release gate its own record
+
+For each candidate revision, record each gate’s result and link its evidence. Preserve failures as failures. Mark missing evidence `blocked-unverified`, not as an assumed pass.
 
 | Release gate | Evidence to retain | Without that evidence |
 |---|---|---|
-| Committed lockfile | The tracked lockfile at the candidate revision, its digest, the locked-install log and the recorded environment. | `blocked-unverified` |
-| Full BIP-32/BIP-39 vector coverage | The identified published vector suites, a vector-to-test mapping and results for every vector in both suites. A passing subset is not full coverage. | `blocked-unverified` |
-| Differential testing | The independent comparison’s command, complete output, exit status, reference-library version and scope of comparisons. | `blocked-unverified` |
-| Chain-specific fixtures | Published fixtures and test results for every claimed chain, network and supported derivation/address format. | `blocked-unverified` |
-| Secret and dependency scanning | Separate scan reports, scanner versions, rules or vulnerability-database versions, and the handling of findings. | `blocked-unverified` |
-| Reproducible artefacts | The published build procedure, recorded build inputs, independent rebuild logs and byte comparisons against the release files. | `blocked-unverified` |
-| External security review | An independent report identifying the reviewed revision and scope, with the resolution of release-blocking findings. | `blocked-unverified` |
+| Committed lockfile | Retain the tracked lockfile at the candidate revision, its digest, the locked-install log and the recorded environment. | `blocked-unverified` |
+| Full BIP-32/BIP-39 vector coverage | Identify the published vector suites and retain a vector-to-test mapping and results for every vector in both suites. Do not count a passing subset as full coverage. | `blocked-unverified` |
+| Differential testing | Retain the independent comparison’s command, complete output, exit status, reference-library version and scope of comparisons. | `blocked-unverified` |
+| Chain-specific fixtures | Retain published fixtures and test results for every claimed chain, network and supported derivation/address format. | `blocked-unverified` |
+| Secret and dependency scanning | Retain separate scan reports, scanner versions, rules or vulnerability-database versions, and records of the handling of findings. | `blocked-unverified` |
+| Reproducible artefacts | Retain the published build procedure, recorded build inputs, independent rebuild logs and byte comparisons against the release files. | `blocked-unverified` |
+| External security review | Retain an independent report identifying the reviewed revision and scope, with the resolution of release-blocking findings. | `blocked-unverified` |
 
-An install job may contribute an installation log. Its green status must not propagate to the other gates. Likewise, a clean scanner report describes what that scanner checked; it does not certify that every dependency is safe.
+Retain an install job’s installation log as evidence of installation. Do not let its green status propagate to the other gates. Treat a clean scanner report only as a record of what that scanner checked, not as certification that every dependency is safe.
 
 Do not describe a release as fully verified while a required gate remains failed or `blocked-unverified`.
 
-#### Record Bawa’s differential check accurately
+### Record Bawa’s differential check accurately
 
-Bawa’s independent check is `test/differential_test.py`. Run it in the recorded test environment:
+Run Bawa’s independent check, `test/differential_test.py`, in the recorded test environment:
 
 ```sh
 python3 test/differential_test.py
 ```
 
-On success, it prints:
+> **Expected result:** On success, the check prints "bip_utils reference checks: PASS".
 
-```text
-bip_utils reference checks: PASS
-```
+Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence**. Do not substitute it for the Wallet Core side of the comparison (now captured, D31, 2026-11-08).
 
-Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence**.
+Limit the claim supported by that line to the comparisons the script actually performed. Do not treat it, by itself, as establishing complete BIP-32/BIP-39 vector coverage, chain coverage, offline operation, reproducibility or security review. Do not change any of those records merely because the reference check passed.
 
-That line supports the comparisons the script actually performed. It does not, by itself, establish complete BIP-32/BIP-39 vector coverage, chain coverage, offline operation, reproducibility or security review. None of those records should change merely because the reference check passed.
-
-#### Compare release bytes, not just test results
+#### Compare release bytes as well as test results
 
 In community build practice, reproducibility means that independent builders following the same instructions from the same source obtain byte-identical output. Anyone should be able to rebuild the release and compare it with the published artefact. This is release-engineering practice, not a guarantee provided by BIP-32 or BIP-39.
 
@@ -582,7 +565,7 @@ When comparing projects, explicitly record **“no documented reproducible-build
 - [ ] **Read the individual gate records.** Check their revisions and scope rather than relying on a green installation badge.
 - [ ] **Name the remaining trust honestly.** If a binary cannot be reproduced from its published source, using it means trusting its publisher. Treat it as publisher-trusted code, not verified code.
 
-You should see:
+Expected result:
 
 - The intended full commit ID in the checkout record and the corresponding test and build evidence.
 - A successful signature check against an independently authenticated key, or an explicit unverified status.

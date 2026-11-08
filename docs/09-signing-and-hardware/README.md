@@ -1,8 +1,30 @@
+---
+title: Signing, Descriptors, PSBT and Hardware
+description: Keep signing in a separate trust domain from tracking; use output descriptors and PSBT to hand unsigned transactions to a hardware signer, and verify the signed result before broadcast.
+last-updated: 2026-11-08
+---
+
 # Signing, Descriptors, PSBT & Hardware
 
-Use this when you need to authorize transactions. The signing environment should be a separate trust domain from the online tracker.
+How-to guide.
 
-# Signing: keep it separate from tracking
+## Contents
+
+- [Signing: keep it separate from tracking](#signing-keep-it-separate-from-tracking)
+- [The fixed derivation policy](#the-fixed-derivation-policy)
+- [Hardware wallets](#hardware-wallets)
+- [Bitcoin Descriptors & PSBT](#bitcoin-descriptors--psbt)
+- [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt)
+- [A test-only hardware-signing rehearsal](#a-test-only-hardware-signing-rehearsal)
+- [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer)
+- [Watch-only hand-off: combine, finalise, extract, broadcast](#watch-only-hand-off-combine-finalise-extract-broadcast)
+- [Output descriptors: make the watch target explicit](#output-descriptors-make-the-watch-target-explicit)
+- [Checksums, multipath and a verified import](#checksums-multipath-and-a-verified-import)
+- [Hardware signing: transfer routes and screen review](#hardware-signing-transfer-routes-and-screen-review)
+
+Use this when you need to authorise transactions. The signing environment should be a separate trust domain from the online tracker.
+
+## Signing: keep it separate from tracking
 
 A very useful architecture is:
 
@@ -32,7 +54,62 @@ For high-value systems, move signing into an offline or hardware-backed trust do
 
 ---
 
-# Hardware wallets
+**Open item:** The live EIP-1559 signing proof was demonstrated on Core 4.8.4. Re-run it against Core 4.9.2 before publication.
+
+## The fixed derivation policy
+
+Identify this policy as `bawa-derivation-policy-v1` so a future change is detectable. Read the paths below in [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) notation.
+
+| Asset or setting | Fixed policy |
+|---|---|
+| BTC | [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki), `m/84'/0'/0'/0/i`, account `0`, receiving branch `0` |
+| ETH | [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), `m/44'/60'/0'/0/i` |
+| TRX | BIP-44, `m/44'/195'/0'/0/i` |
+| TON | Generation-only from `m/44'/607'/0'`, single deposit address, no xpub |
+| BIP-39 mnemonic | [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki), 256-bit entropy, 24 words |
+| BIP-39 passphrase | Empty, zero characters |
+
+Changing these values can produce different addresses. Do not add alternative paths, and never change this policy in a wallet built from this guide. Check every derivation setting against this versioned table.
+
+### Why each choice, and what breaks if you change it
+
+Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce different addresses. The wallet can look empty: the funds are not lost, but are unreachable from this policy. Keep the policy fixed and check the original derivation inputs when investigating a mismatch.
+
+**BTC.** A different BTC path changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep native SegWit receiving addresses on the fixed BIP-84 account and branch. Check account `0`, receiving branch `0` and the complete path.
+
+**ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Check the complete path, including coin type `60`.
+
+**TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Check the complete path, including coin type `195`.
+
+**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the generation-only model with a single deposit address and no xpub. Check the generation path and the single deposit address requirement.
+
+**BIP-39 mnemonic.** Changing the word count changes the seed and addresses. Use a 24-word mnemonic to encode the required 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. Check the 256-bit entropy requirement and the 24-word count.
+
+**BIP-39 passphrase.** A non-empty BIP-39 passphrase changes the seed and addresses. Use the fixed empty BIP-39 passphrase, which contributes no additional secret, to keep the seed determined by the mnemonic alone. Check that the value contains zero characters.
+
+NFKD-normalise the BIP-39 mnemonic and BIP-39 passphrase. Derive the 64-byte seed from the normalised mnemonic using PBKDF2-HMAC-SHA512 with 2,048 iterations and a salt of `"mnemonic"` plus the normalised BIP-39 passphrase. Assess seed-guessing resistance separately from randomness quality, implementation security and device compromise.
+
+### Derivation policy versus the standards
+
+Distinguish Bawa's fixed policy from the testnet standards. Bawa gives Bitcoin testnet4 the mainnet derivation `m/84'/0'/0'/0/i`. [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) reserves coin type `1` for testnet, and [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) gives testnet native SegWit the `vpub` prefix `0x045f1cf6` with path `m/84'/1'`.
+
+Importing a Bawa mnemonic into a standard testnet wallet derives a different account. Keep the Bawa policy unchanged and treat this as a documented deviation, not an alternative path to adopt. Check that Bawa derivation still uses `m/84'/0'/0'/0/i`.
+
+Bawa's own tools emit `zpub` for the BTC testnet4 account because the code pins `HDVersion.zpub`. This was verified by running the repaired `derive.js` with the published ripple-fixture zpub, which derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
+
+The resulting export differs from a standard testnet BIP-84 export, which would be `vpub`. Do not relabel an extended key by hand. Check the prefix against this documented behaviour:
+
+> **Expected result:** A prefix-checking tool sees `zpub` for Bawa's BTC testnet4 account.
+
+Using the published 15-word ripple fixture mnemonic for wallet creation violates the 24-word policy. Use it only as a published test vector, not a creation example, and never mix a 15-word test mnemonic into a 24-word wallet flow. Check that real wallets created by this guide use 24 words.
+
+### The descriptor convention is different
+
+Read the descriptor examples in this file as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
+
+Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins: a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
+
+## Hardware wallets
 
 Hardware wallets make the security boundary physical rather than merely architectural.
 
@@ -46,7 +123,7 @@ https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.
 
 ### Ledger
 
-Ledger's developer documentation separates device apps, signing flows and wallet integration. Its current documentation also emphasizes user review and clear transaction presentation on the signing device.
+Ledger's developer documentation separates device apps, signing flows and wallet integration. Its current documentation also emphasises user review and clear transaction presentation on the signing device.
 
 See:
 
@@ -58,11 +135,11 @@ That distinction should remain intact.
 
 ---
 
-# Bitcoin Descriptors & PSBT
+## Bitcoin Descriptors & PSBT
 
 An xpub can be ambiguous for serious Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
 
-[Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://bips.dev/174/) for offline and hardware-backed transaction workflows.
+[Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) for offline and hardware-backed transaction workflows.
 
 ```
 online watch-only system
@@ -78,14 +155,14 @@ broadcast node / RPC
 
 ## Primary references
 
-- [BIP-174 / PSBT](https://bips.dev/174/)
-- [BIP-371](https://bips.dev/371/)
+- [BIP-174 / PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
+- [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)
 - [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md)
 - [Bitcoin Core PSBT](https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md)
 - [Trezor](https://github.com/trezor/trezor-firmware)
 ## Watch-only hand-off: descriptors and PSBT
 
-**Conceptual only — testnet/signet/regtest; never real funds.**
+**Conceptual only, testnet/signet/regtest; never real funds.**
 
 Tracking and authorisation belong in separate trust domains. Private keys and seeds never leave the signing domain. Signing inconvenience is not a reason to load a seed onto the web server.
 
@@ -158,17 +235,17 @@ ONLINE — WATCH-ONLY TRACKER
 
 The PSBT flow follows BIP-174/371. These checks describe the stages, **not literal tool output**.
 
-1. **Prepare on watch-only.** Build the unsigned PSBT.  
-   **You should see:** an unsigned PSBT on the tracking side; signing stays in the separate signer domain.
+1. **Prepare on watch-only.** Build the unsigned PSBT. 
+  **Expected result:** an unsigned PSBT on the tracking side; signing stays in the separate signer domain.
 
-2. **Review on the signer.** Transfer the PSBT using QR, a file or an SD card, as supported by your device. Verify the address and amount on the signing device’s own screen. Bawa does not document device-specific transfer and review steps; follow your device’s instructions.  
-   **You should see:** the intended test address and amount on that screen. **Stop if the device screen does not show the intended address and amount.**
+2. **Review on the signer.** Transfer the PSBT using QR, a file or an SD card, as supported by your device. Verify the address and amount on the signing device’s own screen. Bawa does not document device-specific transfer and review steps; follow your device’s instructions. 
+  **Expected result:** the intended test address and amount on that screen. **Stop if the device screen does not show the intended address and amount.**
 
-3. **Authorise separately.** Sign in the offline or hardware environment and return the signed PSBT to the watch-only side.  
-   **You should see:** a signed PSBT returning across the boundary, not private-key or seed material.
+3. **Authorise separately.** Sign in the offline or hardware environment and return the signed PSBT to the watch-only side. 
+  **Expected result:** a signed PSBT returning across the boundary, not private-key or seed material.
 
-4. **Finalise and broadcast online.** The watch-only side finalises the signed PSBT and broadcasts the transaction.  
-   **You should see:** the signed transaction handed to the test network. Bawa does not document exact broadcast-success or confirmation output. Use the transaction ID to verify the broadcast on an explorer for that test network.
+4. **Finalise and broadcast online.** The watch-only side finalises the signed PSBT and broadcasts the transaction. 
+  **Expected result:** the signed transaction handed to the testnet. Bawa does not document exact broadcast-success or confirmation output. Use the transaction ID to verify the broadcast on an explorer for that testnet.
 
 ### Trezor reference ≠ onboarding recipe
 
@@ -186,7 +263,7 @@ Those path notes do not replace device-specific descriptor/PSBT setup instructio
 - [Ledger developers](https://developers.ledger.com/)
 
 ---
-## 09 — A test-only hardware-signing rehearsal
+## A test-only hardware-signing rehearsal
 
 **Conceptual only: testnet, signet or regtest; never real funds.** These are workflow checks, not guarantees of particular device messages or tool output.
 
@@ -232,33 +309,33 @@ finalise
 broadcast
 │
 ▼
-TEST NETWORK ONLY
+TESTNET ONLY
 ```
 
 ### Walkthrough
 
 The steps follow the **BIP-174/371 PSBT flow**.
 
-1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise.  
-   **You should see:** xpub/addresses on the tracking side, with the private key confined to the signing domain—not loaded into the web server.
+1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise. 
+  **Expected result:** xpub/addresses on the tracking side, with the private key confined to the signing domain, not loaded into the web server.
 
-2. **Build on the watch-only side.** Prepare an unsigned PSBT for the intended test payment. Bawa does not document construction commands or wallet-specific controls; use your watch-only wallet’s documentation.  
-   **You should see:** an **unsigned PSBT**, ready for the separate signer.
+2. **Build on the watch-only side.** Prepare an unsigned PSBT for the intended test payment. Bawa does not document construction commands or wallet-specific controls; use your watch-only wallet’s documentation. 
+  **Expected result:** an **unsigned PSBT**, ready for the separate signer.
 
-3. **Transfer and review.** Pass the PSBT to the signer using a supported QR, file or SD-card route. Bawa does not document device-specific transfer support; check your wallet and signer documentation before choosing a route. Compare the address and amount on the **signing device’s screen** with the intended test payment. Stop if either differs or cannot be reviewed.  
-   **You should see:** the intended address and amount on the signing device itself. The online display alone is not this check.
+3. **Transfer and review.** Pass the PSBT to the signer using a supported QR, file or SD-card route. Bawa does not document device-specific transfer support; check your wallet and signer documentation before choosing a route. Compare the address and amount on the **signing device’s screen** with the intended test payment. Stop if either differs or cannot be reviewed. 
+  **Expected result:** the intended address and amount on the signing device itself. The online display alone is not this check.
 
-4. **Authorise and return.** Only after that review, authorise test-only signing and return the signed PSBT to the watch-only side. Bawa does not document exact device messages or signing controls; follow your device’s signing instructions.  
-   **You should see:** a **signed PSBT** crossing back to the online side; signing remains in its separate trust domain.
+4. **Authorise and return.** Only after that review, authorise test-only signing and return the signed PSBT to the watch-only side. Bawa does not document exact device messages or signing controls; follow your device’s signing instructions. 
+  **Expected result:** a **signed PSBT** crossing back to the online side; signing remains in its separate trust domain.
 
-5. **Finalise, then broadcast.** The watch-only side finalises and broadcasts solely to the verified test network. This is a separate stage from authorisation. Bawa does not document wallet-specific broadcast success messages or confirmation procedures; consult your wallet’s documentation.  
-   **You should see:** the **signed transaction** passed to the network from the online side. Verify the broadcast by looking up its transaction id on an explorer for the chosen test network.
+5. **Finalise, then broadcast.** The watch-only side finalises and broadcasts solely to the verified testnet. This is a separate stage from authorisation. Bawa does not document wallet-specific broadcast success messages or confirmation procedures; consult your wallet’s documentation. 
+  **Expected result:** the **signed transaction** passed to the network from the online side. Verify the broadcast by looking up its transaction id on an explorer for the chosen testnet.
 
 ### Reference, not an integration promise
 
 The [Trezor firmware path reference](https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md) documents per-coin derivation paths. Paths differ by curve and blockchain family; public nodes are possible only where the derivation rules support them.
 
-Bawa does not ship a device integration. The Trezor reference is not a Bawa–Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path.
+Bawa does not ship a device integration. The Trezor reference is not a Bawa-Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path.
 
 ### What the runbook still needs
 
@@ -280,7 +357,7 @@ The PSBT workflow comes from **BIP-174/371**, not a Bawa device integration. Baw
 
 ## PSBT hand-off: Creator, Updater and Signer
 
-**Conceptual workflow — testnet, signet or regtest only; never real funds.**
+**Conceptual workflow, testnet, signet or regtest only; never real funds.**
 
 Bawa does not include a device integration. Use your chosen watch-only wallet as coordinator and follow its and the signer’s documentation. Keep seeds and private keys in the signing domain, never on the tracker or web server.
 
@@ -305,28 +382,28 @@ OFFLINE / HARDWARE SIGNER
   Signer: add signatures
 ```
 
-### 1. Creator — build the unsigned transaction
+### 1. Creator, build the unsigned transaction
 
 Select inputs by `<TXID>` and output index. Set recipient amounts and output scripts using `<TESTNET_ADDRESS>`, include change where needed, and choose input sequences and locktime deliberately. The fee is the difference between total input and output values, not another output.
 
 No keys are needed to construct this proposal from known outpoints and output scripts. In BIP-174’s PSBT v0 format, the global unsigned transaction has empty `scriptSig` fields and no witness data. Signatures belong in separate PSBT fields; the input and output metadata can still be sparse.
 
-**You should see:** an unsigned PSBT containing the expected inputs and outputs, with no signatures and no private keys on the coordinator.
+**Expected result:** an unsigned PSBT containing the expected inputs and outputs, with no signatures and no private keys on the coordinator.
 
-### 2. Updater — supply the spending context
+### 2. Updater, supply the spending context
 
 The coordinator adds information that the signer needs to validate the proposal:
 
-- **UTXOs — unspent transaction outputs:** legacy inputs need `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they must agree.
+- **UTXOs, unspent transaction outputs:** legacy inputs need `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they must agree.
 - **Key origins:** attach public keys, `<fingerprint>` and derivation paths from the descriptor. Include output derivations to help identify change, without treating those claims as proof.
 - **Scripts:** include required redeem scripts and witness scripts. For Taproot, use BIP-371’s internal-key and derivation fields, plus leaf scripts and control blocks where needed for script-path spending.
 - **Sighash:** record the intended signature-hash mode, or agree the signer’s default. Ordinary `SIGHASH_ALL` and Taproot’s `SIGHASH_DEFAULT` commit to all outputs. Other modes can leave transaction parts changeable. An explicitly requested mode must be honoured or signing refused.
 
 Adding these fields does not approve the transaction. They give the signer evidence to check, not instructions it must trust.
 
-**You should see:** an unsigned, populated PSBT with enough UTXO, script and key-origin information for your signer to verify the spend and calculate the fee.
+**Expected result:** an unsigned, populated PSBT with enough UTXO, script and key-origin information for your signer to verify the spend and calculate the fee.
 
-### 3. Signer — verify on device, then sign
+### 3. Signer, verify on device, then sign
 
 Transfer the PSBT using QR, a file or an SD card, as supported by your signer.
 
@@ -342,18 +419,18 @@ Before approving, check on the device’s own trusted screen:
 
 Only after these checks and on-device approval may the signer add partial signatures or BIP-371 Taproot signatures. Return the PSBT with unknown fields preserved. It may still need other signatures; finalisation and broadcast are later stages.
 
-**You should see:** the intended test address and amount on the signer’s screen, followed by a signature-bearing PSBT; private keys remain in the signing domain.
+**Expected result:** the intended test address and amount on the signer’s screen, followed by a signature-bearing PSBT; private keys remain in the signing domain.
 
 ### Sources
 
-- BIP-174: https://bips.dev/174/
-- BIP-371: https://bips.dev/371/
+- BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+- BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
 - Community worked example, not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
 
 ## Watch-only hand-off: combine, finalise, extract, broadcast
 
-**Conceptual workflow — testnet, signet or regtest only; never real funds.**
+**Conceptual workflow, testnet, signet or regtest only; never real funds.**
 
 The watch-only coordinator normally performs the Combiner, Finalizer and Extractor roles, then requests broadcast from a node. Only the signer creates spending signatures, after reviewing the destination, amount, change and fee. Private keys and seeds stay in the signing domain. These are roles, not fixed device types: a signer may also finalise.
 
@@ -390,7 +467,7 @@ SEPARATE BROADCAST STEP
   validation and possible relay
 ```
 
-### Combiner — merge signed copies
+### Combiner, merge signed copies
 
 Merge only PSBTs for exactly the same unsigned transaction. In multisig, different signers may return separate copies containing their partial signatures. The Combiner brings those signatures and supporting fields together without changing the transaction.
 
@@ -398,9 +475,9 @@ Count distinct valid signatures against each input’s spending policy, not the 
 
 Reject mismatched transactions. If fields conflict, stop and investigate rather than silently choosing a value. Combining creates no signatures and is not a cryptographic signature-aggregation protocol.
 
-**You should see:** one PSBT with the transaction unchanged, supporting metadata retained and returned signatures associated with the correct inputs. More signatures may still be needed.
+**Expected result:** one PSBT with the transaction unchanged, supporting metadata retained and returned signatures associated with the correct inputs. More signatures may still be needed.
 
-### Finalizer — build the final input scripts
+### Finalizer, build the final input scripts
 
 Finalisation works input by input. Using sufficient signatures and the required script data, the finaliser constructs the final `scriptSig`, witness, or both, as appropriate. Script-based multisig needs signatures arranged as its spending script requires.
 
@@ -410,9 +487,9 @@ Finalisation also performs the PSBT rules’ clean-up of recognised intermediate
 
 Finalising needs no private keys, but it cannot repair missing signatures or an unsupported spending path.
 
-**You should see:** the required final `scriptSig` and/or witness for each completed input. Continue to extraction only when every input is finalised.
+**Expected result:** the required final `scriptSig` and/or witness for each completed input. Continue to extraction only when every input is finalised.
 
-### Extractor — produce the network-format transaction
+### Extractor, produce the network-format transaction
 
 The Extractor takes the completed PSBT and assembles a serialised Bitcoin transaction, including the final input scripts and witnesses. Its output is transaction bytes, commonly displayed as hexadecimal, rather than another PSBT.
 
@@ -420,22 +497,22 @@ PSBT key origins and proprietary metadata are not transaction fields: they remai
 
 Bitcoin Core’s `finalizepsbt` can perform finalisation and extraction together. That convenience does not make extraction a broadcast operation.
 
-**You should see:** a decodable raw transaction matching the reviewed spend. Check outputs and, using the retained UTXO amounts, the fee. A calculable `<TXID>` is not evidence of network acceptance.
+**Expected result:** a decodable raw transaction matching the reviewed spend. Check outputs and, using the retained UTXO amounts, the fee. A calculable `<TXID>` is not evidence of network acceptance.
 
-### Broadcast — relay, not authorise
+### Broadcast, relay, not authorise
 
-Submit the extracted transaction, not the PSBT, to a node configured for the intended test network. The coordinator needs no private keys for this. Anyone holding the completed transaction can attempt broadcast; the signatures already carry the relevant authorisation.
+Submit the extracted transaction, not the PSBT, to a node configured for the intended testnet. The coordinator needs no private keys for this. Anyone holding the completed transaction can attempt broadcast; the signatures already carry the relevant authorisation.
 
 Nodes still apply consensus checks and mempool policy. Extraction does not guarantee acceptance, and acceptance or relay does not mean confirmation.
 
 Verify `<TXID>` through your node or an explorer for that same test chain. For regtest, use your local node rather than a public explorer.
 
-**You should see:** `<TXID>` recognised in the chosen node’s mempool or a block. Check confirmations separately; do not infer them from a successful submission.
+**Expected result:** `<TXID>` recognised in the chosen node’s mempool or a block. Check confirmations separately; do not infer them from a successful submission.
 
 ### Sources
 
-- BIP-174: https://bips.dev/174/
-- BIP-371: https://bips.dev/371/
+- BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+- BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
 - Coldcard community worked example, not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
 
@@ -455,29 +532,31 @@ A descriptor makes the output construction and derivation rule explicit. Its opt
 
 ### Key-expression anatomy
 
-For a ranged public-key descriptor, read the key expression as an optional bracketed origin, the exported key, a derivation suffix and a final wildcard:
+Read a ranged public-key descriptor as an optional bracketed origin, the exported account extended public key, a derivation suffix and a final wildcard:
 
 `[<fingerprint>/84'/1'/0']<xpub>/0/*`
 
 | Part | Meaning |
 | --- | --- |
-| `<fingerprint>` | The master key’s four-byte fingerprint, written as eight hexadecimal characters. |
+| `<fingerprint>` | The master key's four-byte fingerprint, written as eight hexadecimal characters. |
 | `/84'/1'/0'` inside brackets | Full origin path from the master to this account key. |
 | `<xpub>` | The signer-exported account extended public key. |
 | `/0` after the key | Non-hardened receiving branch. |
 | `/*` | Non-hardened child index, varied across the address range. |
 
-Here, `84'` is BIP-84’s native-SegWit purpose, `1'` is the testnet coin type, and `0'` is account zero. Mainnet uses coin type `0`, which is outside this guide.
+Read `84'` as [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)'s native SegWit purpose and the final `0'` as account zero. Treat the apostrophe as a hardened-derivation marker.
 
-The apostrophe marks hardened derivation. The bracketed path describes work already done by the signer; do not apply it again to the xpub. Public-only derivation after the xpub cannot cross a hardened step.
+Mixing origins misrepresents the wallet's derivation policy: these external hardware-signer templates use `m/84'/1'/0'`, with testnet coin type `1` under [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md), whereas Bawa's fixed `bawa-derivation-policy-v1` uses `m/84'/0'` for Bitcoin on testnet4, a documented deviation from the standards. **Never mix origins:** use `m/84'/0'` for a Bawa-generated wallet and the signer's own origin for an external export. Always take the fingerprint and origin from the signer's own export; if unsure, re-export. Changing an extended-key prefix re-encodes the same node; it does not move it onto another derivation path. For the extended-key prefix list, see docs/05.
 
-**Never guess the fingerprint or origin.** Copy both from the signer’s own export; do not assume account zero or substitute the xpub’s parent fingerprint for the master fingerprint. If unsure, re-export.
+Public-only derivation after the extended public key cannot cross a hardened step. Treat the bracketed path as work already done by the signer; do not apply it again to the extended public key. Check the origin against the signer's export.
 
-This metadata can also populate BIP-174 PSBT derivation records, helping an offline or hardware signer locate its keys without giving Bawa signing capability.
+Incorrect origin metadata can misdirect a signer. **Never guess the fingerprint or origin.** Do not assume account zero or substitute the extended public key's parent fingerprint for the master fingerprint. If unsure, re-export.
+
+Use this metadata to populate BIP-174 PSBT derivation records, helping an offline or hardware signer locate its keys without giving Bawa signing capability.
 
 ### Choose the script wrapper
 
-BIP-380 defines the shared syntax. BIP-381 covers legacy constructions such as `pkh` and `sh`; BIP-382 covers SegWit constructions such as `wpkh`. Core also documents Taproot’s separate `tr` extension.
+Use BIP-380's shared syntax. Refer to BIP-381 for legacy constructions such as `pkh` and `sh`, and to BIP-382 for SegWit constructions such as `wpkh`. Consult [Bitcoin Core's descriptor documentation](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) for Taproot's separate `tr` extension.
 
 | Form | Output policy |
 | --- | --- |
@@ -486,25 +565,37 @@ BIP-380 defines the shared syntax. BIP-381 covers legacy constructions such as `
 | `sh(wpkh)` | P2SH-wrapped SegWit; not native SegWit. |
 | `tr` | Taproot, P2TR, built from an internal key and an optional script tree. |
 
-Changing the wrapper changes the output script and address, even with the same key. Follow the signer’s exported policy rather than choosing a wrapper by preference.
+Changing the wrapper changes the output script and address, even with the same key. Follow the signer's exported policy rather than choosing a wrapper by preference, then check the wrapper against that export.
 
 ### Testnet receiving and change
 
-For a signer exporting the BIP-84, testnet, account-zero origin shown above:
+For an external hardware signer exporting the BIP-84 testnet account-zero origin shown above, use these templates:
 
 - **Receiving:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
 - **Change:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
 
-These use the BIP-44-style account hierarchy. `/0/*` conventionally tracks external receiving addresses; `/1/*` tracks internal change addresses. Watch both, otherwise change can disappear from the tracker’s view after a spend.
+Read these as the BIP-44-style account hierarchy: `/0/*` conventionally tracks external receiving addresses, and `/1/*` tracks internal change addresses.
 
-`<xpub>` is a generic placeholder, not a required prefix: Core-compatible test-network exports normally start with `tpub`. Do not relabel an extended key by hand. Select testnet, signet or regtest explicitly in the wallet and node; origin coin type `1` does not switch networks.
+Change can disappear from the tracker's view after a spend if you omit the change branch. **Watch both branches, receiving `/0/*` and change `/1/*`.** Check that the tracker includes both.
 
-These templates omit checksums. After replacing placeholders with public test-wallet export values, use Core’s `getdescriptorinfo` to obtain the checksummed descriptor. Never invent a checksum. It catches many copying errors; it does not prove that the origin or selected network is correct.
+Treat `<xpub>` as a generic placeholder, not a required prefix. A generic test-network export may carry `tpub`, but a BIP-84 testnet account export uses `vpub` (`0x045f1cf6`), assigned by [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) to testnet native SegWit under `m/84'/1'`.
+
+Expect Bawa's own tools to emit `zpub` for the Bitcoin testnet4 account because the code pins `HDVersion.zpub`. Note the verified result from running the repaired `derive.js` with the published ripple-fixture `zpub`:
+
+> **Expected result:**
+>
+> Derived address: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
+
+Hand-edited prefixes no longer match the signer's export. **Do not relabel an extended public key by hand.** Check the extended public key against the signer's own export; if unsure, re-export.
+
+Origin coin type `1` does not switch networks. Select testnet, signet or regtest explicitly in the wallet and node, then confirm that both use the intended network.
+
+These templates omit checksums. A checksum catches many copying errors, but even a valid checksum does not authenticate the export or prove that the origin or selected network is correct. **Never invent a checksum.** After replacing placeholders with public test-wallet export values, use Core's `getdescriptorinfo` to obtain the checksummed descriptor. Check the extended public key, fingerprint and origin against the signer's own export and confirm the selected network.
 
 ### Sources
 
 - Bitcoin Core descriptor reference, including BIP-380/381/382: https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md
-- BIP-174, PSBT key-origin and derivation fields: https://bips.dev/174/
+- BIP-174, PSBT key-origin and derivation fields: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 
 ## Checksums, multipath and a verified import
 
@@ -563,9 +654,9 @@ If anything differs, stop. Check network, policy, account, branch and index agai
 ### Sources
 
 - https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md
-- https://bips.dev/174/
+- https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 
-# Hardware signing: transfer routes and screen review
+## Hardware signing: transfer routes and screen review
 
 **Use testnet, signet or regtest only. Never use real funds.**
 
@@ -596,25 +687,25 @@ USB hardware can keep keys inside the device without being air-gapped. QR and ca
 
 ## Choose a transfer route
 
-Confirm that the particular device, firmware and external wallet support your chosen test network and transfer format. Bitcoin file and QR workflows commonly carry a partially signed Bitcoin transaction (PSBT); USB may use a device-specific signing protocol.
+Confirm that the particular device, firmware and external wallet support your chosen testnet and transfer format. Bitcoin file and QR workflows commonly carry a partially signed Bitcoin transaction (PSBT); USB may use a device-specific signing protocol.
 
 | Route | Convenience and trust trade-off |
 |---|---|
 | **USB** | Interactive exchange with little manual handling. Keys should remain inside the signer, but the host has a live communications path into its USB and signing-protocol parsers. Treat the host as potentially hostile. This is not an air-gapped route. |
 | **Animated QR** | Scanned frames move signing data between screens and cameras without a cable or mounted storage. Decoders and transaction parsers still process potentially malicious input. An animation being scanned successfully says nothing about whether the payment is correct. |
-| **SD/microSD file** | Asynchronous file exchange without a continuous host connection; convenient for larger requests. Trust shifts towards removable media, filesystem handling and transaction parsing. Stale or substituted files remain possible. Transfer transaction data only—never seeds or secret-key backups. |
+| **SD/microSD file** | Asynchronous file exchange without a continuous host connection; convenient for larger requests. Trust shifts towards removable media, filesystem handling and transaction parsing. Stale or substituted files remain possible. Transfer transaction data only, never seeds or secret-key backups. |
 
 The return transfer carries signatures or a signed transaction, not signing secrets. None of these routes replaces device-screen review.
 
 ## Make the device screen the approval gate
 
-The transaction check that matters is on the signer’s own screen—not Bawa, the desktop preview, a QR viewer or a filename. Compare it with independently confirmed test-payment instructions, rather than merely checking that two potentially compromised host views agree.
+The transaction check that matters is on the signer’s own screen, not Bawa, the desktop preview, a QR viewer or a filename. Compare it with independently confirmed test-payment instructions, rather than merely checking that two potentially compromised host views agree.
 
 Before approving:
 
 - [ ] **Address:** read every recipient’s complete `<TESTNET_ADDRESS>`, paging through it if necessary. Matching only the beginning and end is insufficient.
 - [ ] **Amount:** verify each recipient’s amount and the displayed unit.
-- [ ] **Fee:** confirm the total transaction fee, not just a rate. Check the rate too when available.
+- [ ] **Fee:** confirm the total transaction fee as well as a rate. Check the rate too when available.
 - [ ] **Change:** inspect every change output, separately labelled as change, with its full address and amount. If there is no change, confirm that explicitly.
 
 **Stop without signing if anything differs, an output is unexpected, or any required detail cannot be reviewed on-device.** Do not accept blind signing. A device that hides change without an on-device review option does not meet this guide’s rule.
@@ -623,11 +714,11 @@ Before approving:
 
 A coordinator calling an output “change” proves nothing. An attacker can apply that label to their own destination.
 
-During watch-only setup, verify the signer’s public account export. Record `<xpub>` and `<fingerprint>` with the correct test network, account, script type and derivation scheme. A fingerprint is an identifier, not proof of ownership.
+During watch-only setup, verify the signer’s public account export. Record `<xpub>` and `<fingerprint>` with the correct testnet, account, script type and derivation scheme. A fingerprint is an identifier, not proof of ownership.
 
 Do not assume derivation paths are interchangeable between coins or curves. An exported public node cannot cross a hardened derivation step; public-child derivation also depends on the curve and scheme.
 
-Require the signer to derive and recognise the proposed change address using its own keys, the internal/change branch of that verified account, and the expected wallet policy. Match the full device-derived address to the separately labelled change output on its screen. For multisignature, the complete co-signer and script policy must match—not merely one key.
+Require the signer to derive and recognise the proposed change address using its own keys, the internal/change branch of that verified account, and the expected wallet policy. Match the full device-derived address to the separately labelled change output on its screen. For multisignature, the complete co-signer and script policy must match, not merely one key.
 
 If that ownership check cannot be completed, stop. Do not substitute the desktop wallet’s reassurance.
 
@@ -635,12 +726,12 @@ If that ownership check cannot be completed, stop. Do not substitute the desktop
 
 Authoritative documentation:
 
-- Trezor — derivation paths and curve constraints: https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md
-- Ledger — device applications and signing integration: https://developers.ledger.com/
+- Trezor: derivation paths and curve constraints: https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md
+- Ledger: device applications and signing integration: https://developers.ledger.com/
 
 Community experience and product context, not protocol specifications:
 
-- Keycard Shell: https://keycard.tech/products/keycard-shell
+- Keycard Shell: https://keycard.tech/products/keycard-shell (checked 8 November 2026; the site returns HTTP 429 to automated checks)
 - Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q
 
 ### Firmware discipline, PINs and passphrases
@@ -651,11 +742,11 @@ Keep this workflow on **testnet, signet or regtest only**, using separate test-o
 
 **Bawa ships no device integration and does not document a device-specific setup procedure.** Trezor’s derivation-path reference explains curve- and chain-dependent conventions, including limits on public-only derivation. It is not an onboarding recipe.
 
-Use your signer’s and watch-only wallet’s current documentation for descriptor exports and imports, address ranges, PSBT tools and transfer validation. Confirm that the exact model, firmware and wallet software support your chosen test network, script type and transfer route. Do not assume QR, file or SD-card support.
+Use your signer’s and watch-only wallet’s current documentation for descriptor exports and imports, address ranges, PSBT tools and transfer validation. Confirm that the exact model, firmware and wallet software support your chosen testnet, script type and transfer route. Do not assume QR, file or SD-card support.
 
 #### Check firmware before test funds move
 
-- Check current supported releases and security notices for the exact model. Obtain firmware—or a stateless signer’s boot image—through the maker or project’s official release channel.
+- Check current supported releases and security notices for the exact model. Obtain firmware, or a stateless signer’s boot image, through the maker or project’s official release channel.
 - Confirm the running version and complete the documented signature or boot-verification checks available for that model. A version label alone is not proof, nor is a checksum fetched beside an untrusted download. Stop on unexplained mismatches or authenticity warnings.
 - Before updating, understand any reset, recovery and compatibility implications. Keep test recovery material securely available offline. Record the verified release; afterwards, repeat wallet-identity and receive-address checks.
 
@@ -678,11 +769,11 @@ Do this before trusting exports, loading test recovery material or funding a tes
 
 #### Finish with independent checks
 
-Use the signer’s own public export—`<xpub>`, `<fingerprint>` and key-origin information—with applicable BIP-380/381/382 descriptor rules. A fingerprint alone is not proof of wallet identity. Compare `<TESTNET_ADDRESS>` with the signer’s display before funding.
+Use the signer’s own public export, `<xpub>`, `<fingerprint>` and key-origin information, with applicable BIP-380/381/382 descriptor rules. A fingerprint alone is not proof of wallet identity. Compare `<TESTNET_ADDRESS>` with the signer’s display before funding.
 
 Follow your tools’ BIP-174 PSBT flow, with BIP-371 support when using Taproot. Bawa does not document construction, signing or finalisation commands. Confirm the chosen network in your tools; an address alone cannot distinguish testnet from signet. On the signer, check destinations, change, amounts and fee before signing.
 
-After broadcast, verify `<TXID>` and its status through a node or explorer on that test network; use your local node for regtest. Submission is not confirmation.
+After broadcast, verify `<TXID>` and its status through a node or explorer on that testnet; use your local node for regtest. Submission is not confirmation.
 
 #### Sources
 
@@ -697,7 +788,7 @@ After broadcast, verify `<TXID>` and its status through a node or explorer on th
 - Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q
 - SeedSigner: https://thebitcoinhole.com/hardware-wallets/seedsigner
 
-## 09 — Practise test funding, fees and change
+## Practise test funding, fees and change
 
 **This rehearsal stays on testnet, signet or regtest. Never use real funds.** We’ll fund a separate Bawa test wallet and prepare an unsigned PSBT for device review. Stop before signing: these are workflow checks, not guarantees of particular screens or tool output.
 
@@ -722,7 +813,7 @@ pause before authorising
 
 ### 1. Fund the test wallet
 
-Check that the wallet and node use the intended test chain and that the signer supports the chosen setup. Address prefixes alone do not distinguish every test network.
+Check that the wallet and node use the intended test chain and that the signer supports the chosen setup. Address prefixes alone do not distinguish every testnet.
 
 Set up watch-only tracking using public descriptors containing `<xpub>` and key-origin information such as `<fingerprint>`, with the correct derivation paths. Signing secrets stay on the signing side. Use paired descriptors: external `/0/*` for receiving and internal `/1/*` for change.
 
@@ -732,7 +823,7 @@ On regtest, locally generated coins are another option, but generated coinbase o
 
 ### 2. Estimate and reconcile the fee
 
-Build a small payment to another test address you control, leaving room for both fee and change. Inspect the selected inputs and proposed outputs, not just the wallet’s balance.
+Build a small payment to another test address you control, leaving room for both fee and change. Inspect the selected inputs and proposed outputs as well as the wallet’s balance.
 
 `fee = total input value − total output value`
 
@@ -760,12 +851,12 @@ If your setup cannot support those checks, or any amount remains unexplained, st
 
 ### Sources
 
-- BIP-174: https://bips.dev/174/
-- BIP-371: https://bips.dev/371/
+- BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+- BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - Bitcoin Core descriptors: https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md
 - Bitcoin Core PSBT workflow: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
 
-## 09 — Finish the test-only signing rehearsal
+## Finish the test-only signing rehearsal
 
 **Stay on testnet, signet or regtest; never use real funds.** Generate disposable test keys on a dedicated signer, separate from any real-fund wallet. This checks the workflow, not a promised sequence of device messages or tool results.
 
@@ -789,7 +880,7 @@ TRACKER — finalise and extract
 BROADCASTER — submit unchanged
 │
 ▼
-CHOSEN TEST NETWORK
+CHOSEN TESTNET
 ```
 
 ### Diagnose before retrying
@@ -802,7 +893,7 @@ For each failure, identify which role must correct it before continuing. Never a
 | Device shows a different amount | Unit mismatch, payment/total confusion, or unexpected fee/change. | Compare every output in the same units. Recalculate the fee from verified input amounts minus all output amounts. |
 | PSBT will not finalise | Missing signatures, unmet threshold, absent scripts or incompatible Taproot handling. | Check threshold, key derivations and required scripts. For Taproot, check BIP-371 support and required key-path or script-path fields, including leaf/control-block data where applicable. |
 | Missing UTXO data | Spent-output information absent or inconsistent. | Verify funding `<TXID>` and output index against the test node. Legacy inputs need the full previous transaction; witness inputs need spent-output amount/script, plus any previous transaction required by signer policy. |
-| Wrong network | Wallet or node uses another chain. | Check all chain settings and funding UTXOs. A PSBT is not a chain selector; test networks can share address/key prefixes. |
+| Wrong network | Wallet or node uses another chain. | Check all chain settings and funding UTXOs. A PSBT is not a chain selector; testnets can share address/key prefixes. |
 | Checksum failure | Descriptor/address mistyped, truncated or edited. | Re-export from the verified source and compare the whole value. Do not replace a checksum to conceal an unexplained mismatch; checksums do not authenticate ownership. |
 | Broadcast rejected | Unknown/spent inputs, fee policy, invalid transaction or wrong chain. | Read the node’s rejection reason; distinguish policy refusal from invalidity. Check chain, UTXOs/mempool and whether `<TXID>` is already known. Any transaction change returns to review and signing. |
 
@@ -817,7 +908,7 @@ Keep the roles separate even if two run on one machine. The broadcaster can with
 | **Broadcaster** | Final transaction only; no keys. Cannot alter its committed contents without invalidating signatures under the policy above. | Seeds, private/data keys, wallet-wide xpubs/descriptors or PSBT metadata. |
 
 Sources:
-- https://bips.dev/174/
-- https://bips.dev/371/
+- https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+- https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md
 - https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md

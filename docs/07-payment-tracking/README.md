@@ -1,855 +1,491 @@
-# Payment Tracking
+# Payment tracking
 
-Wallet tracking asks what an address owns. Payment tracking asks whether an observed blockchain event satisfies a particular payment request.
+## 1. Wallet tracking vs payment tracking
 
-# A real payment-tracking example: how this maps to a Telegram bot
+Use wallet tracking to answer what an address owns: its balance, history, tokens and NFTs.
 
-The wallet part and the payment part are different layers. A useful real-world example is the Telegram bot code in [Pr3eve6ti2o/nova-shop-assets](https://github.com/Pr3eve6ti2o/nova-shop-assets), especially [`bot/crypto_watcher.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_watcher.py) and [`bot/crypto_payments.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_payments.py).
+Use payment tracking to decide whether an observed blockchain event satisfies a particular payment request. Check what was asked for, where to pay, which asset and network were specified, and when the request expired. Then check which on-chain event matched, whether the amount was sufficient, whether it reached the required finality and whether you have already fulfilled the order.
 
-That code is **not a dependency of Bawa** and it does not turn Bawa into a service. It is simply a concrete example of what someone might build on top of the wallet/derivation layer.
+Treat payment tracking as the broader problem: it includes wallet tracking, then adds an application state machine around it.
 
-The important architecture is:
+## 2. A generic payment-tracking example
 
-```text
-Bawa
-  │
-  ├── creates/derives wallet material
-  └── exposes watch-only public roots
-              │
-              ▼
-        application backend
-              │
-      ┌───────┴────────┐
-      ▼                ▼
-address allocation   blockchain data
-      │                │
-      └───────┬────────┘
-              ▼
-        payment matcher
-              │
-              ▼
-        confirmation policy
-              │
-              ▼
-      idempotent finalization
-              │
-              ▼
-       application/database
-```
+### Architecture and watcher loop
 
-The current Telegram example runs a periodic watcher and separates several payment states instead of treating “transaction seen” as equivalent to “order paid”.
-
-It handles direct chain payments, underpayment/top-ups, expiry and late-payment review, CryptoBot invoice recovery, and a TON Connect slow path. That is exactly the sort of application-level logic that belongs **above** wallet derivation.
-
-## What the watcher is doing
-
-The current watcher is a 60-second background loop. Each cycle has separate error boundaries so a failure while checking one deposit does not terminate the whole watcher.
-
-The broad flow is:
+Arrange the layers from top to bottom:
 
 ```text
-every 60 seconds
-      │
-      ├── pending / underpaid direct deposits
-      │       ↓
-      │   fetch chain data
-      │       ↓
-      │   match expected payment
-      │       ↓
-      │   total matching payments
-      │       ↓
-      │   confirmation check
-      │       ↓
-      │   atomic claim
-      │       ↓
-      │   fulfill order
-      │
-      ├── expired deposits
-      │       ↓
-      │   short late-payment scan
-      │       ↓
-      │   manual-review state
-      │
-      ├── CryptoBot recovery
-      │       ↓
-      │   query paid invoices
-      │       ↓
-      │   idempotent finalization
-      │
-      └── TON Connect pending payments
-              ↓
-          slow-path lookup
+Bawa wallet/derivation layer
+    ↓
+application backend
+    ↓
+address allocation and blockchain data
+    ↓
+payment matcher
+    ↓
+confirmation policy
+    ↓
+idempotent finalisation
+    ↓
+application/database
 ```
 
-This is more realistic than a simple:
+Run the watcher as a 60-second background loop. Keep separate error boundaries within each cycle, including around individual deposit checks, so a failure while checking one deposit does not terminate the whole watcher.
+
+Process these branches in each cycle:
+
+1. **Pending and underpaid direct deposits:** fetch chain data, match the expected payment, total matching payments, check confirmation, claim atomically, then fulfil the order.
+2. **Expired deposits:** run a short late-payment scan, then move the deposit to the manual-review state, `manual_review`.
+3. **External invoice recovery:** query paid invoices and recover their fulfilment through idempotent finalisation.
+4. **Slow-path pending payments:** run the slow-path lookup.
+
+Keep the invoice-recovery and slow-path branches separate because they provide different evidence with different timing, not extra chain feeds. Do not let either branch bypass payment matching or confirmation. Require each to satisfy both checks before the common idempotent finalisation gate can complete the order.
+
+Use this stateful flow rather than “address, get transactions, if transaction exists, paid”.
+
+### Underpayments and top-ups
+
+Sum matching payments to a deposit instead of assuming one exact transaction. For an expected amount of 100, two matching payments can reach the total: 60 + 40 = 100.
+
+Allow the deposit to remain in an `underpaid` state until the total reaches your configured acceptance threshold. Set that threshold as application policy: it is not part of BIP-32, BIP-44, Ethereum JSON-RPC, Bitcoin Core or any other wallet standard.
+
+### Expiry and late payments
+
+Treat a payment deadline as an application rule, not a blockchain rule. Distinguish pending, expired, late payment found and manual review in your payment state.
+
+Keep expired payment records so you can still match an on-chain payment that appears afterwards. Do not delete a record and assume expiry prevents a payment from arriving.
+
+### Idempotency
+
+Assume you can observe the same event more than once. Account for polling, retries, process restarts, duplicated webhook deliveries, rescans, multiple workers and indexer replays.
+
+Use this finalisation pipeline:
 
 ```text
-address → get transactions → if transaction exists, paid
+observe → identify event/payment uniquely → store/claim atomically → fulfil once → record final state
 ```
 
-## Underpayments and top-ups
+Make the claim atomic and choose a chain-specific uniqueness key:
 
-The watcher sums matching payments to a deposit instead of assuming the customer will always send exactly one transaction.
+- UTXO payments: `chain + txid + output`
+- EVM token events: `chain_id + tx_hash + log_index`
 
-For example:
+Use the same idempotent finalisation gate for every payment path. Do not let a repeated observation fulfil an order again.
+
+### Chain-specific matching
+
+#### Bitcoin
+
+Match a payment to a UTXO/output paying the assigned address. Follow Bitcoin's developer guide recommendation to use a unique address per payment request: associate the address with the request, then scan for transactions involving it.
+
+For free/manual tracking, use Mempool.space and Blockstream Esplora. Treat a hosted explorer as a convenience, not as your application's canonical database.
+
+#### EVM tokens
+
+For an ERC-20 payment, track the network/chain ID, token contract, `Transfer` event, sender, recipient, amount, transaction hash, log index and block number.
+
+Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and use modern block queries to distinguish `latest`, `safe` and `finalized` views.
+
+#### TRON
+
+Use the hosted TRON ecosystem's indexed transaction and event data. For a small application, this often avoids the need to run a full TRON indexer yourself.
+
+Retain the general matching model: network, contract, transaction-event, recipient, amount and block-finality state.
+
+#### TON
+
+Use a unique address, or a shared address plus a unique comment/memo. With a shared address, include the memo/comment in the payment-matching key.
+
+Retain the exact wallet configuration. A TON wallet address depends on its wallet contract type and wallet ID; do not treat it as the result of a generic Bitcoin-like path alone.
+
+### Confirmation is not one universal number
+
+Choose chain-specific confirmation settings as application policy. Do not blindly copy another application's numbers.
+
+Model the evidence each chain exposes:
+
+- **Ethereum:** distinguish its different chain-head/finality views.
+- **Solana:** use the explicit commitment levels `processed`, `confirmed`, `finalized`.
+- **TRON:** account for the solidification/reorganisation information exposed by its event APIs.
+
+Support richer states in your payment database: `seen`, `included`, `confirmed`, `finalized`, `reorged`, `expired`, `late`, `manual_review`, `paid`. Do not force every blockchain into one integer called `confirmations`.
+
+### Price quotes as payment state
+
+Cache recent prices in a separate price-feed subsystem. Keep the flow explicit:
 
 ```text
-expected = 100
-payment #1 = 60
-payment #2 = 40
------------------
-total     = 100
+market-data provider → quote snapshot → expected payment amount → payment request → blockchain watcher
 ```
 
-The application can remain in an `underpaid` state until the total reaches its configured acceptance threshold.
+Preserve at least these fields so you can reconstruct how you calculated and accepted a payment:
 
-That threshold is an application policy. It is not part of BIP-32, BIP-44, Ethereum JSON-RPC, Bitcoin Core or any other wallet standard.
+- Quote timestamp
+- Price source
+- Quoted price
+- Quoted atomic amount
+- Expiry
+- Rounding rule
+- Acceptance/tolerance rule
 
-## Expiry and late payments
+Do not re-price an order at payment-check time unless your business rules explicitly say to do so.
 
-A payment deadline belongs to the application, not the blockchain.
+### Atomic units, not floats
 
-The example therefore distinguishes:
+Use integers for stored monetary state:
 
-```text
-pending
-   ↓
-expired
-   ↓
-late payment found
-   ↓
-manual review
-```
-
-This is much safer than deleting an expired payment record and pretending an on-chain payment cannot appear afterward.
-
-## Idempotency
-
-A payment watcher must assume it can observe the same event more than once.
-
-This happens because of:
-
-- polling;
-- retries;
-- process restarts;
-- duplicated webhook deliveries;
-- rescans;
-- multiple workers;
-- indexer replays.
-
-A proper finalization pipeline therefore looks like:
-
-```text
-observe
-  ↓
-identify event/payment uniquely
-  ↓
-store/claim atomically
-  ↓
-fulfill once
-  ↓
-record final state
-```
-
-The Telegram example uses a database-backed payment record and a claim/finalization path to prevent a duplicate observation from delivering an order twice.
-
-For a generic application, a useful uniqueness key might resemble:
-
-```text
-chain + txid + output
-```
-
-for UTXO payments, or:
-
-```text
-chain_id + tx_hash + log_index
-```
-
-for EVM token events.
-
-The right key is chain-specific.
-
-## Chain-specific matching
-
-### Bitcoin
-
-Match a payment to a UTXO/output paying the assigned address.
-
-Bitcoin's developer guide recommends using a unique address for each payment request because the application can then associate the address with the payment request and scan for transactions involving that address.
-
-For free/manual tracking, Bawa should point readers to Mempool.space and Blockstream Esplora, while making clear that a hosted explorer is a convenience rather than your application's canonical database.
-
-### EVM tokens
-
-For an ERC-20 payment, an application normally cares about:
-
-```text
-network / chain ID
-token contract
-Transfer event
-sender
-recipient
-amount
-transaction hash
-log index
-block number
-```
-
-The ERC-20 `Transfer` event is the normal low-level primitive for this kind of tracking.
-
-Ethereum JSON-RPC provides `eth_getLogs` for querying logs, and modern block queries can distinguish `latest`, `safe` and `finalized` views.
-
-### TRON
-
-TRON's hosted ecosystem provides indexed transaction and event data, which is why a small application can often avoid running a full TRON indexer itself.
-
-The general model remains:
-
-```text
-network
-contract
-transaction/event
-recipient
-amount
-block/finality state
-```
-
-### TON
-
-TON needs its own model.
-
-A payment can use:
-
-```text
-unique address
-```
-
-or:
-
-```text
-shared address
-+
-unique comment/memo
-```
-
-The second model makes the memo/comment part of the payment-matching key.
-
-TON's wallet address itself is also configuration-dependent: wallet contract type and wallet ID affect the resulting address, so the tracker must retain the exact wallet configuration rather than treating a TON address as the result of a generic Bitcoin-like path alone.
-
-## Confirmation is not one universal number
-
-The Telegram bot has chain-specific confirmation settings. That is fine as an application decision, but another application should not blindly copy those numbers.
-
-Ethereum exposes different chain-head/finality views, while Solana uses explicit commitment levels such as `processed`, `confirmed`, and `finalized`. TRON's event APIs also expose solidification/reorganization information.
-
-A payment database should therefore support richer states such as:
-
-```text
-seen
-included
-confirmed
-finalized
-reorged
-expired
-late
-manual_review
-paid
-```
-
-instead of forcing every blockchain into one integer called `confirmations`.
-
-## Price quotes are also part of payment state
-
-The Telegram example has a separate price-feed subsystem and caches recent prices.
-
-That is the correct separation:
-
-```text
-market-data provider
-      ↓
-quote snapshot
-      ↓
-expected payment amount
-      ↓
-payment request
-      ↓
-blockchain watcher
-```
-
-For an auditable payment system, preserve at least:
-
-```text
-quote timestamp
-price source
-quoted price
-quoted atomic amount
-expiry
-rounding rule
-acceptance/tolerance rule
-```
-
-Do not re-price an order at payment-check time unless the business rules explicitly say to do so.
-
-## Atomic units, not floats
-
-The bot's payment layer also demonstrates a good rule:
-
-```text
-BTC   → satoshis
-EVM   → token base units
-TRON  → token/base units
-TON   → nanotons
-```
-
-Use integers for stored monetary state.
+- **BTC:** satoshis
+- **EVM:** token base units
+- **TRON:** token/base units
+- **TON:** nanotons
 
 Convert to human-readable decimal strings only at the presentation boundary.
+## 3. Reconciliation
 
----
+A watcher tells you what it currently sees; a reconciler checks whether your database still agrees with the chain. Use both:
 
-# A second thing the guide should teach: reconciliation
+- Frequent watcher → new activity → database.
+- Periodic reconciler → re-scan a known range → compare with database → repair missing/stale records.
 
-A watcher tells you what it currently sees.
+Retain a chain-native cursor:
 
-A reconciler checks whether your database still agrees with the chain.
+- **Bitcoin** — last relevant block/transaction cursor.
+- **EVM** — last processed block.
+- **Solana** — last processed slot/signature cursor.
+- **XRPL** — ledger index/transaction cursor.
+- **Cosmos** — block height/pagination cursor.
 
-Use both.
+The exact cursor depends on the chain. Do not rely only on wall-clock timestamps. Record successful reconciliation checkpoints so that, after an outage, your application can report "Last successfully reconciled height = H" and resume from a safe boundary.
 
-```text
-frequent watcher
-     ↓
-new activity
-     ↓
-database
+## 4. Bitcoin descriptors and PSBT
 
-periodic reconciler
-     ↓
-re-scan a known range
-     ↓
-compare with database
-     ↓
-repair missing / stale records
-```
+Use an xpub-to-address script for learning, but make output descriptors part of a serious Bitcoin watch-only design. Bitcoin Core descriptors can preserve derivation origin, script policy and ranged public-key derivation — particularly useful for watch-only wallets and external signers.
 
-A serious tracker should retain a chain-native cursor such as:
+For offline or hardware signing, study [BIP-174 (PSBT format)](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) and [BIP-371 (Taproot-related PSBT fields)](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki). Use this architecture:
 
 ```text
-Bitcoin      → last relevant block / transaction cursor
-EVM          → last processed block
-Solana       → last processed slot/signature cursor
-XRPL         → ledger index / transaction cursor
-Cosmos       → block height / pagination cursor
-```
-
-The exact cursor depends on the chain.
-
-Do not rely only on wall-clock timestamps.
-
-After an outage, the application should be able to say:
-
-```text
-Last successfully reconciled height = H
-```
-
-and resume from a safe boundary.
-
----
-
-# A second Bitcoin topic that belongs in a complete guide: descriptors and PSBT
-
-For Bitcoin, an xpub-to-address script is useful for learning, but serious watch-only systems should also understand output descriptors.
-
-Bitcoin Core descriptors can preserve derivation origin, script policy and ranged public-key derivation. This is particularly useful for watch-only wallets and external signers.
-
-For offline/hardware signing, study PSBT:
-
-- [BIP-174](https://bips.dev/174/) for the PSBT format;
-- [BIP-371](https://bips.dev/371/) for Taproot-related PSBT fields.
-
-The architecture is:
-
-```text
-WATCH-ONLY
-   ↓
-known UTXOs
-   ↓
-unsigned transaction / PSBT
-   ↓
-OFFLINE OR HARDWARE SIGNER
-   ↓
-signed transaction
-   ↓
-broadcast
+WATCH-ONLY → known UTXOs → unsigned transaction/PSBT → OFFLINE OR HARDWARE SIGNER → signed transaction → broadcast
 ```
 
 The online tracker never needs the spending key merely to build or monitor the transaction.
 
----
+[Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) can record:
 
-# Payment requests are not payments
+- **Derivation origin:** the master-key fingerprint and derivation path.
+- **Script policy:** the output type and spending requirements, such as single-key SegWit or a multisignature threshold.
+- **Ranged derivation:** wildcard paths from which the tracker derives successive public keys and addresses.
 
-A professional guide should also distinguish the object you give the payer from the transaction you later observe.
+Use public-only descriptors covering the wallet's receiving and change branches. These let the watch-only side determine which addresses belong to the wallet and what policy governs their outputs, without holding private keys.
 
-```text
-payment request
-      ≠
-on-chain settlement
-```
+Enumerate addresses within the tracker's configured ranges and match their output scripts against chain data to identify the wallet's unspent transaction outputs (UTXOs). Track a defined address set rather than guessing wallet ownership from one address. Keep those ranges current; a descriptor does not automatically reveal payments to addresses beyond the scanned range.
 
-Bitcoin uses BIP-321 for payment URIs. Ethereum has ERC-681 for payment-request URLs and can represent chain/token information.
+BIP-174 specifies the partially signed Bitcoin transaction (PSBT) format; BIP-371 adds Taproot-specific PSBT fields. Use a separate PSBT-capable Bitcoin wallet or coordinator to move a transaction through this flow:
 
-The useful design is:
+1. **Build online.** Select known wallet UTXOs and construct an unsigned transaction with the intended destinations, amounts and fee. Package it as an unsigned PSBT with the previous-output and derivation information the signer needs.
+2. **Sign offline or on hardware.** Transfer the PSBT to the signer, where the spending keys remain. Treat the online proposal as untrusted. Verify the destinations, amounts and fee through the trusted signing interface against the intended payment before approving.
+3. **Finalise.** Return the signed PSBT to the coordinator. Once the required signatures are present, finalise it and extract the signed transaction.
+4. **Broadcast online.** Send only the signed transaction to the Bitcoin network. The PSBT is a hand-off format for signing, not the object broadcast.
 
-```text
-asset
-network
-recipient
-amount
-expiry
-memo/tag when required
-```
+The online tracker and watcher never touch a spending key. A watcher compromise alone cannot spend funds; it can at most misreport them, which reconciliation must catch.
 
-as an explicit payment request, followed later by independent blockchain verification.
+Descriptors and PSBT are Bitcoin ecosystem standards, not Bawa features; Bawa's tools do not build or sign PSBTs.
+## 5. Payment requests are not payments
 
----
+Separate the payment request you give the payer from the transaction you later observe. A payment request is not on-chain settlement.
 
-# Wallet tracking vs payment tracking
+For Bitcoin payment URIs, use [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki). For Ethereum, use ERC-681 payment-request URLs, which can represent chain and token information.
 
-These are different problems.
+Build an explicit payment request with the asset, network, recipient, amount, expiry and memo/tag when required. Later, verify the payment independently against the blockchain. Do not treat the request itself as proof of payment.
 
-### Wallet tracking
+## 6. Source-of-truth drift
 
-You ask:
+Keep Bawa as the canonical reference and single source of truth for wallet-generation and derivation code. Package and deploy that code into the application.
 
-```text
-What does this address/account own?
-What happened to it?
-What is its balance?
-What tokens/NFTs are associated with it?
-```
+If you copy wallet tooling into the application’s own tools directory, treat the copied deployment artefacts as generated outputs where practical. Do not edit the Bawa copy and the application copy independently: they can eventually derive or validate addresses differently.
 
-### Payment tracking
+Keep application-specific payment tracking in the application: orders, payment records, quoting, allocation, matching, confirmations, reconciliation and fulfilment.
 
-You ask:
+## 7. What this means for the whole architecture
+
+Use a two-layer mental model for your HD-wallet architecture.
+
+**WALLET / KEY LAYER**
 
 ```text
-What payment did I ask for?
-Where did I ask it to be sent?
-What asset/network did I expect?
-When did the request expire?
-What on-chain event matched it?
-Was the amount sufficient?
-Did it reach the required finality?
-Have I already fulfilled the order?
+entropy → mnemonic → deterministic key tree → account-level public root
 ```
 
-The second problem includes the first, but adds an application state machine around it.
-
----
-
-# The current Telegram bot is also a useful warning about source-of-truth drift
-
-The Telegram bot repository currently contains copies of wallet tooling under its own `tools/hdwallet-gen/` directory.
-
-That creates a maintenance question:
+**APPLICATION LAYER**
 
 ```text
-Bawa copy
-      vs
-bot copy
+public root → address allocation → payment request → blockchain observation
+  → payment matching → confirmation/finality → idempotent claim
+  → fulfilment → reconciliation
 ```
 
-If both copies are edited independently, they can eventually derive or validate addresses differently.
+Keep wallet and key derivation separate from application payment tracking.
 
-Choose one source of truth for wallet-generation/derivation code and treat copied deployment artifacts as generated outputs where practical.
-
-For example:
+Model at least these payment states:
 
 ```text
-Bawa
-  └── canonical wallet/derivation reference
-          │
-          └── packaged/deployed into application
-
-nova-shop-assets
-  └── application-specific payment tracking
+requested → address/memo assigned → observed → matched
+  → underpaid/sufficient → confirmation/finality → claimed
+  → fulfilled → reconciled
 ```
 
-The bot should own:
+Treat an on-chain observation as evidence to validate. Do not treat it as automatic authorisation to fulfil an application order.
+## 8. Asset identity and Trust Wallet metadata
 
-```text
-orders
-payment records
-quoting
-allocation
-matching
-confirmations
-reconciliation
-fulfillment
-```
+For token payments, do not use a symbol alone as the asset identity. Persist at least:
 
-while Bawa can own the reusable explanation and reference derivation implementation.
+- Network/chain ID.
+- Asset type.
+- Token contract / chain-specific address.
+- Expected decimals.
+- Recipient.
+- Amount in atomic units.
+- Memo/tag where required.
 
----
+Treat Trust Wallet Assets as an optional metadata source for presentation, token lists and logos, not as the source of truth for observed payment settlement. Make your payment matcher verify the actual chain event against your application's requested network and asset identity.
 
-# What this means for the whole architecture
+See `docs/12` (Chain Registry and Asset Metadata) for the registry treatment.
 
-The complete mental model is:
+## 9. From payment request to allocation
 
-```text
-                 WALLET / KEY LAYER
+Use wallet tracking to determine what an address owns; use payment tracking to determine whether an observed blockchain event satisfies a particular request. Holdings are not payments, and allocation is not payment evidence.
 
- entropy
-    ↓
- mnemonic
-    ↓
- deterministic key tree
-    ↓
- account-level public root
+Follow this flow: **request → allocation → observation → confirmation → reconciliation**.
 
-                 APPLICATION LAYER
+### Define the request
 
- public root
-    ↓
- address allocation
-    ↓
- payment request
-    ↓
- blockchain observation
-    ↓
- payment matching
-    ↓
- confirmation/finality
-    ↓
- idempotent claim
-    ↓
- fulfillment
-    ↓
- reconciliation
-```
+Represent the following information in each request. These are conceptual fields, **not documented Bawa API keys**; Bawa does not define a payment API.
 
-That is the separation a professional HD-wallet guide should teach.
+| Conceptual field | Required information |
+| --- | --- |
+| network | The request's network. |
+| asset | The requested asset. |
+| recipient | The intended recipient. |
+| amount | The requested amount **in atomic units**. |
+| memo/tag | The request's memo or tag information, where the chain supports one. |
+| expiry | The request's expiry. |
 
-## Real application reference
+Before accepting payments, define your application's request schema: field types, network/asset identifier formats, amount validation and conversion, memo/tag optionality and how to represent its absence, and expiry format and exact boundary rules. Bawa does not document these schema details. Represent the memo/tag field explicitly even when it does not apply.
 
-[`crypto_watcher.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_watcher.py) and [`crypto_payments.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_payments.py) are application examples above the wallet layer, not Bawa dependencies.
+Decide whether the caller provides the recipient or your application assigns it, and define how selection relates to address allocation. Bawa does not document who selects the recipient. Represent the recipient unambiguously in the request before allocation.
 
-The current watcher demonstrates a 60-second background loop, pending/underpaid deposits, multiple payment top-ups, chain-specific confirmation policies, atomic claiming/idempotent finalization, expiry and late-payment review, CryptoBot paid-invoice recovery, TON Connect recovery, chain-specific transaction retrieval and price-feed fallbacks.
+### Set the allocation policy
 
-## Minimum payment state
+Put these application policies in place before accepting payments. They are not Bawa features.
 
-```
-requested → address/memo assigned → observed → matched → underpaid/sufficient → confirmation/finality → claimed → fulfilled → reconciled
-```
+| Condition | Application policy |
+| --- | --- |
+| Request information represented | Validate against your application's schema, then allocate. Treat allocation as the next application stage, not a payment conclusion. |
+| A field missing or ambiguous | Reject rather than choosing a default. Define how callers can correct and resubmit; Bawa does not document correction behaviour. |
+| Recipient already has holdings | Do not treat holdings alone as evidence that an event satisfies this request. |
+| Recipient shared or previously allocated | Use one address per request where possible. If you share an address, distinguish requests with a memo/tag or use a unique address instead. Never use holdings alone. Define further address-reuse and exclusivity rules. |
+| Allocation retried or attempted concurrently | Make allocation idempotent with a request/allocation identifier and atomic reservation, so a retry reuses the same allocation. |
+| Expiry reached | Treat events after expiry as late payments for manual review, not automatic finalisation. Define an allocation cut-off; Bawa does not document one. |
+| A blockchain event observed | Match the event to the request and apply the chain's confirmation policy before idempotent finalisation. Configure that policy per chain before accepting payments. Do not use allocation as a replacement for matching or confirmation. |
+| An event duplicated or a temporary outage occurs | Count each distinct matched event once, not each watcher delivery. Ensure reconciliation does not double-count or lose a payment. Define persistence, replay and recovery mechanics; Bawa does not document these. |
+| The confirmed amount differs from the request | Treat the difference as a discrepancy. Accumulate top-ups only if your application's own policy allows it. |
+| A payment is ready for finalisation | Compare the request terms, distinct accepted events and stored outcome under the chain's confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
+## 10. Observation, confirmation, reconciliation
 
-An on-chain observation is evidence to validate. It is not automatically authorization to fulfill an application order.
+Do not treat holdings as payments. Require evidence that satisfies a particular request, not merely a balance change.
 
-# Asset identity and Trust Wallet metadata
+Follow this conceptual flow:
 
-For token payments, a symbol alone is not an identity.
+Observation → match request and allocation → confirmation policy → confirmed evidence → reconciliation → idempotent finalisation.
 
-Persist at least:
-
-~~~
-network / chain ID
-asset type
-token contract / chain-specific address
-expected decimals
-recipient
-amount in atomic units
-memo/tag where required
-~~~
-
-Trust Wallet Assets can be a useful metadata source for presentation, token lists and logos, but it is not the source of truth for observed payment settlement. The payment matcher must verify the actual chain event against the application's requested network and asset identity.
-
-See [Chain Registry & Asset Metadata](../12-chain-registry-and-assets/README.md).
-## From payment request to allocation
-
-Wallet tracking asks what an address owns. Payment tracking asks whether an observed blockchain event satisfies a particular request. **Holdings are not payments, and allocation is not payment evidence.**
-
-```text
-request
-  ↓
-allocation
-  ↓
-observation
-  ↓
-confirmation
-  ↓
-reconciliation
-```
-
-```text
-Bawa wallet/derivation layer
-           │
-watch-only public roots
-           │
-           ▼
-Application backend
-  address allocation
-  blockchain data
-           │
-           ▼
-payment matcher
-           │
-           ▼
-confirmation policy
-           │
-           ▼
-idempotent finalisation
-           │
-           ▼
-application/database
-```
-
-The [Telegram bot example](https://github.com/Pr3eve6ti2o/nova-shop-assets) illustrates an application above the wallet layer. It is **not a Bawa dependency** and does not turn Bawa into a service.
-
-### Required request information
-
-The payment-tracking design rules require your application to represent all six fields before allocation. These are conceptual fields, **not documented Bawa API keys**. Bawa does not define a payment API.
-
-| Field | Information to represent |
-|---|---|
-| Network | The request’s network |
-| Asset | The requested asset |
-| Recipient | The intended recipient |
-| Amount | The requested amount **in atomic units** |
-| Memo/tag | The request’s memo or tag information, where the chain supports one |
-| Expiry | The request’s expiry |
-
-**You should see:** all six represented in the request design, with the amount expressed in atomic units.
-
-**Request schema:** Bawa does not document field types, network/asset identifier formats, amount validation or conversion, memo/tag optionality or how to represent its absence, or expiry format and exact boundary rules. Define these in your application before accepting payments. Represent the memo/tag field explicitly even when it does not apply.
-
-**Recipient selection:** Bawa does not document whether the caller provides the recipient or the application assigns it. Define who selects it and how selection relates to address allocation. The recipient must be represented unambiguously in the request before allocation.
-
-### Allocation decision table
-
-The payment-tracking design rules below are application policy, not Bawa features. Put these policies in place before accepting payments.
-
-| Situation | Decision or unresolved rule |
-|---|---|
-| Request information is represented | Validate the request using the application’s schema, then allocate. Allocation is the next application stage, not a payment conclusion. |
-| A field is missing or ambiguous | Reject the request rather than choosing a default. Bawa does not document correction behaviour; define how callers can correct and resubmit requests. |
-| The recipient already has holdings | Holdings alone do not establish that an event satisfies this request. |
-| A recipient is shared or previously allocated | Use one address per request where possible. If a recipient is shared, distinguish requests with a memo/tag or use a unique address; never use holdings alone. Define any further address-reuse and exclusivity rules in the application. |
-| Allocation is retried or attempted concurrently | Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation. |
-| Expiry has been reached | Treat events after expiry as late payments for manual review, not automatic finalisation. Bawa does not document an allocation cut-off; define it in the application. |
-| A blockchain event is observed | Match the event to the request and apply the chain’s confirmation policy before idempotent finalisation. Configure that policy for each chain before accepting payments. Allocation alone cannot replace matching or confirmation. |
-| An event is duplicated or a temporary outage occurs | Count each distinct matched event once, not each watcher delivery. Reconciliation must not double-count or lose a payment. Bawa does not document persistence, replay or recovery mechanics; define these in the application. |
-| The confirmed amount differs from the request | Treat the difference as a discrepancy. Accumulate top-ups only if the application’s own policy allows it. |
-| A payment is ready for finalisation | Compare the request terms, distinct accepted events and stored outcome under the chain’s confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
-
-**You should see:** allocation owned by the application backend, followed by event matching, confirmation and idempotent finalisation. These policies and implementation choices must be defined in the application before accepting payments; they are not implied Bawa features.
-
----
-## Observation → confirmation → reconciliation
-
-Holdings are not payments. We need evidence that satisfies a particular request, not merely a balance change.
-
-The Telegram bot is an external example, **not a Bawa dependency**; it does not turn Bawa into a service.
-
-```text
-observation
-↓
-match request + allocation
-↓
-confirmation policy
-```
-
-```text
-confirmed evidence
-↓
-reconciliation
-↓
-idempotent finalisation
-
-reconciliation
-↕
-application/database
-```
+Reconcile against your application/database. Bawa does not define a payment API; define your application's policy before accepting payments.
 
 ### Decision gate
 
-These are **proposed application checks**, not software output or claims about the bot’s implementation.
+Use these proposed application checks as payment-tracking policy, not as Bawa features, software output or claims about any example's implementation.
 
-The payment-tracking rules are application policy, not Bawa features. Bawa does not define a payment API. Define the application’s policy before accepting payments.
-
-| Situation | You should see: |
-|---|---|
-| Only holdings are known | No payment conclusion from the balance alone. |
-| Event does not match, or allocation is ambiguous | No automatic attachment to a request. |
-| Match established; confirmation policy not satisfied | Evidence retained, but no finalisation. |
-| The same event arrives again | At most one contribution from that event. |
-| Confirmed amount differs, or timing is unresolved | A discrepancy, not automatic acceptance. Events after expiry are late payments for manual review, not automatic finalisation. Top-ups accumulate only if the application’s own policy allows them. |
-| Match, confirmation and amount agree | Comparison with the stored outcome before any new finalisation effect. |
-| Chain data is unavailable | Uncertainty, not proof of non-payment; recovery must account for the missing interval. |
+| Condition | Application check |
+| --- | --- |
+| Only holdings are known | Draw no payment conclusion from the balance alone. |
+| The event does not match, or allocation is ambiguous | Do not attach the event automatically to a request. |
+| A match is established, but the confirmation policy is not satisfied | Retain the evidence, but do not finalise. |
+| The same event arrives again | Count at most one contribution from that event. |
+| The confirmed amount differs, or timing is unresolved | Treat this as a discrepancy, not automatic acceptance. |
+| An event arrives after expiry | Treat it as a late payment for manual review, not automatic finalisation. |
+| Top-ups arrive | Accumulate them only if your application's own policy allows them. |
+| Match, confirmation and amount agree | Compare with the stored outcome before any new finalisation effect. |
+| Chain data is unavailable | Treat this as uncertainty, not proof of non-payment. Account for the missing interval during recovery. |
 
 ### What reconciliation compares
 
-The proposed comparison has three sides:
+Compare three sides:
 
-```text
-request terms
-↕
-distinct, matched events accepted by the confirmation policy
-↕
-stored finalisation outcome
-```
+1. The request terms.
+2. The distinct, matched events accepted by the confirmation policy.
+3. The stored finalisation outcome.
 
-The confirmed amount comes from distinct accepted events, in atomic units—not from counting watcher deliveries. Repeating reconciliation must not add another credit. A stored outcome that disagrees with the evidence remains a discrepancy rather than being silently overwritten.
+Calculate the confirmed amount from distinct accepted events, in atomic units—not by counting watcher deliveries.
 
-### Worked example — placeholders only
+Make repeated reconciliation add no further credit. If the stored outcome disagrees with the evidence, keep that disagreement as a discrepancy; do not silently overwrite the outcome.
 
-Conceptual only; no signing or funds. Assume `<EVENT>` is the only distinct matching event and meets an explicitly defined application timing rule.
+### Worked example
 
-```text
-<REQUEST>:
-  network     <NETWORK>
-  asset       <ASSET>
-  recipient   <RECIPIENT>
-  amount      <AMOUNT_ATOMIC>
-  memo/tag    <MEMO_OR_TAG>
-  expiry      <EXPIRY>
+Keep this example conceptual: placeholders only, no signing or funds. Assume `<EVENT>` is the only distinct matching event and meets an explicitly defined application timing rule.
 
-<REQUEST>
-↓
-<ALLOCATION>
-↓
-<RECIPIENT>
+- `<REQUEST>` (network, asset, recipient, amount `<AMOUNT_ATOMIC>`, memo/tag `<MEMO_OR_TAG>`, expiry `<EXPIRY>`) → `<ALLOCATION>` → `<RECIPIENT>`.
+- `<EVENT>` → matching transfer of `<AMOUNT_ATOMIC>`.
 
-<EVENT>
-↓
-matching transfer of <AMOUNT_ATOMIC>
-```
+Work through these review steps:
 
-| Review step | You should see: |
-|---|---|
-| Observe `<EVENT>` for `<REQUEST>`. | Matching evidence, not yet a finalised payment. |
-| Receive `<EVENT>` again before confirmation. | One evidence item; the duplicate adds no amount. |
-| Lose the chain feed, then resume observation. | Recovery accounts for the unavailable interval, including missed observations; the outage alone does not discard the payment. |
-| Recheck `<EVENT>` against `<CONFIRMATION_POLICY>`; reconcile only if satisfied. | One accepted contribution of `<AMOUNT_ATOMIC>`, agreeing with the request and checked against the stored outcome. |
-| Finalise, lose the response, then retry. | The stored outcome is resolved first; no second credit or repeated finalisation effect. |
+1. **Observe `<EVENT>` for `<REQUEST>`.** Retain it as matching evidence, not yet a finalised payment.
+2. **Receive `<EVENT>` again before confirmation.** Keep one evidence item; add no amount for the duplicate.
+3. **Lose the chain feed, then resume observation.** Account for the unavailable interval during recovery, including missed observations. Do not discard the payment because of the outage alone.
+4. **Recheck `<EVENT>` against `<CONFIRMATION_POLICY>`.** Proceed to reconciliation only if the policy is satisfied.
+5. **Reconcile the confirmed evidence.** Use one accepted contribution of `<AMOUNT_ATOMIC>`, agreeing with the request, and check it against the stored outcome.
+6. **Finalise, lose the response, then retry.** Resolve the stored outcome first. Do not create a second credit or repeat a finalisation effect.
 
-This covers two different uncertainties: missing chain evidence during an outage, and not knowing whether an application update completed after a lost response. Neither should be treated as a fresh payment.
+Keep these two uncertainties separate: missing chain evidence during an outage, and not knowing whether an application update completed after a lost response. Treat neither as a fresh payment.
 
 ### Gaps before implementation
 
-The application payment-tracking design rules also require the following before accepting payments:
+Define these application payment-tracking design rules before implementation and before accepting payments:
 
-- Every request must carry network, asset, recipient, amount in atomic units, memo/tag where the chain supports one, and expiry. Represent all six fields before allocation. Reject requests with missing or ambiguous fields rather than using defaults.
-- Use one address per request where possible. When requests share a recipient, distinguish them with a memo/tag where supported or assign a unique address. Never rely on holdings alone.
+- Require every request to carry network, asset, recipient, amount in atomic units, memo/tag where the chain supports one, and expiry. Represent all six fields before allocation.
+- Reject requests with missing or ambiguous fields rather than using defaults.
+- Use one address per request where possible. When requests share a recipient, distinguish them with a memo/tag where supported or assign a unique address.
+- Never rely on holdings alone.
 - Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation.
 - Configure a confirmation policy for each chain before finalising.
 
-Bawa does not document stable event identity, confirmation thresholds, reversal handling, durable storage, atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook. No commands or implementation guarantees are implied here.
+Bawa does not document stable event identity, confirmation thresholds, reversal handling, durable storage, atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook.
 
-# Payment requests describe intent
+No commands or implementation guarantees are implied here.
+## 11. Payment requests describe intent
 
 A request records what your application expects to receive. Creating, displaying or scanning it moves no funds, proves no receipt and fulfils no order.
 
-## Make all six fields explicit
+### Make all six fields explicit
 
-Bawa does not prescribe a payment API. Before accepting payments, your application must define field types, identifier formats, amount validation, memo/tag optionality and exact expiry boundaries. Treat this list as an information checklist, not a serialisation schema.
+Bawa does not prescribe a payment API. Before accepting payments, define field types, identifier formats, amount validation, memo/tag optionality and exact expiry boundaries in your application. Treat this list as an information checklist, not a serialisation schema.
 
-| Field | What it establishes | When missing |
+### Receive QR payloads
+
+Use the approved payload forms below for receive QRs. All profiles are testnet-only.
+
+| Chain | Approved payload | Constraints |
 |---|---|---|
-| Network | The chain on which payment is expected. | Reject; do not infer the network from an address or wallet setting. |
-| Asset | The native currency or specific token expected. | Reject; do not assume the chain’s native currency. |
-| Recipient | The destination that must receive the funds. | Reject; do not substitute a default wallet address. |
-| Amount in atomic units | The quantity expressed in the asset’s smallest units. | Reject; do not derive it from a balance or accept an arbitrary amount. |
-| Memo/tag, where supported | Chain-specific routing or reference information. | Reject omission. For unsupported chains, represent “not applicable” explicitly in your model. Define whether an explicit empty value is allowed where supported. |
-| Expiry | The time limit for satisfying the request. | Reject; do not interpret absence as unlimited validity. |
+| BTC testnet4 | `bitcoin:?tb=<ADDRESS>`, optionally followed by `&amount=<BTC>` (decimal BTC) | [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki) supersedes BIP-21. Leave the URI body empty; put the testnet address in `tb`. A BTC URI alone does not establish testnet4: retain the selected network and compare it with the associated request. |
+| ETH Sepolia | `ethereum:pay-<ADDRESS>@11155111`, optionally followed by `?value=<WEI>` (scientific-notation wei) | [ERC-681](https://eips.ethereum.org/EIPS/eip-681). The network is explicit in `@11155111`. The amount is a suggestion. No gas parameters, ENS, ERC-20 or function path. |
+| TON testnet | `ton://transfer/<TESTNET_ADDRESS>`, with optional `?amount=<NANOCOINS>` (nanocoins) and `?text=<TEXT>` (URL-encoded UTF-8) | A de facto Keeper/Tonhub vendor convention, not a standard. Use `&` between query parameters when both are present. Require the full testnet address presentation; never use `bin`, `jetton` or `exp`. |
+| TRX Nile | Bare 34-character Base58 address beginning with `T` | No `tron:` payment URI exists to prescribe. The amount stays outside the QR. Nile identity comes from wallet configuration, never from the address. |
 
-Ambiguous values also require rejection. Do not turn incomplete instructions into apparently valid requests by guessing.
+For TON, use a full testnet address presentation, such as `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo` or `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`, never the `UQC7…` mainnet presentation.
 
-## Instructions are not receipts
+Keep the six-field application request separate from the QR payload. Serialise only the fields allowed by the Receive QR payloads table. Retain fields not carried by that payload in the associated request, display them with the request, and communicate them separately when the payer needs them. Do not encode the checklist as an application-specific six-field QR object.
 
-[BIP-321](https://code.sigidli.com/bitcoin/bips/src/branch/master/bip-0321.mediawiki) describes Bitcoin payment instructions using `bitcoin:<RECIPIENT>`, with parameters including `amount`, `label` and `message`. The wallet presents the amount as a suggestion to the payer; the URI cannot enforce settlement.
+A supported amount-less payload, including TRX's address-only form, is not by itself a complete six-field request. If a scan has no associated request metadata, leave missing fields unavailable rather than assigning defaults or claiming they were verified.
 
-[ERC-681](https://eips.ethereum.org/EIPS/eip-681) describes Ethereum transaction requests using `ethereum:<TARGET>[@<CHAIN_ID>][/transfer]`. Native-currency requests express `value` in wei. ERC-20 requests use `/transfer`, with `address` for the recipient and `uint256` for the atomic amount. The format has no invoice-reference field, so an ERC-20 `Transfer` log cannot by itself identify the invoice being paid.
+Field mapping: network — BTC `tb` carries a testnet address but does not establish testnet4 (retain the selected network and compare); ETH explicit `@11155111`; TON required testnet address presentation; TRX not carried (wallet configuration). Asset — fixed by each profile (BTC/ETH/TON native only; TRX supplied from context). Recipient — carried by all four. Amount — BTC decimal BTC, ETH scientific-notation wei, TON nanocoins, TRX not carried. Memo/tag — TON `text` only; otherwise not carried. Expiry — not carried by any approved form; it lives in the request record and the request details outside the QR. "Not carried" means not carried by these approved Bawa output forms, not that an underlying protocol lacks the capability.
 
-These formats can communicate what to send. Neither establishes that the requested transfer happened.
+**Verification contract.** `P.renderAndVerifyQr` constructs the approved payload, encodes it with the explicit error-correction setting below, decodes the actual QR output used by the UI, requires the decoded text to equal the intended payload, then calls `E.parsePaymentRequest` and `E.verifyPaymentRequest`. `P.scanPaymentRequest` supplies the decoded scanned text to `E.parsePaymentRequest`, then to `E.verifyPaymentRequest`. Do not require an external scan to equal a locally generated string. `E.verifyPaymentRequest` checks parsed fields against the approved profile, selected wallet context and any associated request record. Its result must distinguish encoded information from information supplied by configuration or the request record.
 
-## Keep three objects separate
+Shared checklist: (1) bind the context — selected network, asset, expected recipient, and the associated six-field request when available; (2) check actual output — for rendering, decode the actual QR, not the encoder input string, and require an exact text match; (3) parse, then verify — do not let normalisation discard information needed to reject prohibited duplicate parameters; (4) compare represented fields — recipient, network and asset against the expected context to the extent the payload represents them, applying the external-context rules where it does not; (5) preserve amounts and memo text — compare carried amounts with the intended request using exact atomic-unit values, without rounding, and compare carried memo text where present; do not interpret an omitted amount as zero; for ETH verify the encoded suggestion against the intended suggestion and display its full value including order of magnitude; (6) handle off-QR information explicitly — check the associated request's expiry and reject expired requests; if no expiry or other metadata was supplied, report it as unavailable, not as verified from the QR; (7) reject failures without fallback — do not silently substitute a bare address after an encoding, decoding, parsing or verification failure, and do not turn successful verification into a "paid", "received" or "order fulfilled" state.
 
-- **The request** holds the intended terms. Your application may identify it with `<REQUEST_ID>`; that identifier is not automatically carried on-chain.
-- **The on-chain event** is evidence to assess and associate with a particular request. Check its network, asset, recipient, atomic amount and applicable memo/tag, then apply your expiry rules. A wallet’s holdings cannot show that a particular event meets those terms.
-- **The fulfilled order** records the business outcome after your application has accepted payment evidence and completed fulfilment. A matching transfer does not itself deliver goods, provide a service or update the order.
+Per-chain verification:
 
-Keep explicit links between these objects. Do not treat the existence of one as proof that the others exist.
+| Chain | Required verification |
+|---|---|
+| BTC testnet4 | Require the empty-body `bitcoin:?tb=...` form. Reject `bitcoin:tb1q...` and bare `tb1q...`. Reject the whole URI for an unknown `req-` key. Reject duplicate `amount`, `label`, `message` or `pop` before normalisation can overwrite them. Interpret `amount` as decimal BTC. Compare the full decoded recipient against the selected testnet4 address; do not infer testnet4 from the URI alone. |
+| ETH Sepolia | Require `ethereum:pay-<ADDRESS>@11155111`, with the mandatory chain ID. Reject a missing or different chain ID, function paths, ENS, gas parameters and ERC-20 forms. Interpret `value` as scientific-notation wei. Display the complete suggested value, retaining its order of magnitude. |
+| TON testnet | Require `ton://transfer/` and the testnet address form (full `kQC7...` / `0QC7...` forms); never accept the `UQC7...` mainnet presentation for this profile. Apply the supplied nanocoin amount or text variant. Reject `bin`, `jetton` and `exp`. Compare the recipient with the selected testnet recipient. |
+| TRX Nile | Require the entire payload to be a bare 34-character Base58 address beginning with `T`; no scheme or amount query. Compare the recipient with the expected address. Establish Nile from wallet configuration, never from the address. Keep the amount outside the QR. |
 
-**You should see:** creating a valid `<REQUEST_ID>` leaves it awaiting payment; creation alone records neither receipt of funds nor order fulfilment.
+Add round-trip tests for every emitted variant and rejection tests for every listed invalid form.
 
-## Address allocation for payment requests
+**Nile testnet — native TRX only.** This QR contains only an address, not a network selection. Before sending, confirm that the sending wallet is configured for Nile. Do not assume that scanning will switch a mainnet wallet to Nile.
 
-Bawa exposes public roots for watch-only address derivation; it does not assign addresses to payment requests. Choosing an address, recording its reservation and making retries safe are application policy.
+Set QR error correction explicitly to M. Do not rely on an encoder default. Decode and verify the actual output before presenting it as verified.
 
-### Prefer a separate address
 
-Allocate a separate derived address to each request where practical. Attach the allocation to `<REQUEST_ID>` and keep the network, token, expected amount, expiry time and payer instructions in the request record. A bare recipient address makes reconciliation fragile without that invoice state ([payment architecture guidance](https://coinpayportal.com/blog/freelancing-crypto-payment-architecture)).
+| Field | Meaning | When missing |
+| --- | --- | --- |
+| Network | Chain on which payment is expected. | Reject — do not infer the network from an address or wallet setting. |
+| Asset | Native currency or specific token expected. | Reject — do not assume the chain's native currency. |
+| Recipient | Destination that must receive the funds. | Reject — do not substitute a default wallet address. |
+| Amount in atomic units | Quantity in the asset's smallest units. | Reject — do not derive it from a balance or accept an arbitrary amount. |
+| Memo/tag where supported | Chain-specific routing/reference information. | Reject omission. For unsupported chains, represent “not applicable” explicitly in your model. Where supported, define whether an explicit empty value is allowed. |
+| Expiry | Time limit for satisfying the request. | Reject — do not interpret absence as unlimited validity. |
 
-### Handle shared recipients explicitly
+Reject ambiguous values too. Do not turn incomplete instructions into apparently valid requests by guessing.
 
-If requests share `<RECIPIENT>`, allocate a distinct `<MEMO_OR_TAG>` to each request and require it in the payment instructions. This works only when the payment mechanism carries that field and your tracking can read it. Otherwise, use a dedicated address.
+### Treat instructions as instructions, not receipts
 
-For standard ERC-20 transfers, the recipient and amount arrive without an invoice identifier. A note on your invoice does not become a memo in the transfer event, so a shared recipient alone cannot identify the request ([ERC-20 attribution guidance](https://tomcn.uk/news/2026-10-14-usdc-payment-matching-deposit-address-vs-memo)).
+BIP-321 describes Bitcoin payment instructions using `bitcoin:<RECIPIENT>`, with parameters including `amount`, `label` and `message`. The wallet presents the amount as a suggestion to the payer; the URI cannot enforce settlement.
 
-### Make allocation idempotent
+ERC-681 describes Ethereum transaction requests using `ethereum:<TARGET>[@<CHAIN_ID>][/transfer]`. Native-currency requests express `value` in wei. ERC-20 requests use `/transfer`, with `address` for the recipient and `uint256` for the atomic amount. The format has no invoice-reference field, so an ERC-20 `Transfer` log cannot by itself identify the invoice being paid.
 
-Use `<REQUEST_ID>` as the stable allocation key:
+Use these formats to communicate what to send. Neither establishes that the requested transfer happened.
 
-- Return its stored allocation if one already exists.
-- Otherwise, reserve an available target and save the request mapping in one atomic transaction.
-- Enforce uniqueness on the request key and allocation target: the address for dedicated allocations, or the recipient/tag pair for shared allocations.
-- If concurrent calls for the same request race, return the committed allocation rather than creating another one.
+### Keep three objects separate
 
-For example, suppose your application commits the reservation but its response is lost:
+- **The request:** store the intended terms. Your application may identify it with `<REQUEST_ID>`, but that identifier is not automatically carried on-chain.
+- **The on-chain event:** assess the evidence and associate it with a particular request. Check its network, asset, recipient, atomic amount and applicable memo/tag, then apply your expiry rules. A wallet's holdings cannot show that a particular event meets those terms.
+- **The fulfilled order:** record the business outcome after your application has accepted payment evidence and completed fulfilment. A matching transfer does not itself deliver goods, provide a service or update the order.
+
+Keep explicit links between these objects. Do not treat the existence of one as proof that the others exist. Creating a valid `<REQUEST_ID>` leaves it awaiting payment; creation alone records neither receipt of funds nor order fulfilment.
+
+### Allocate addresses in your application
+
+Bawa exposes public roots for watch-only address derivation; it does not assign addresses to payment requests. Define application policy for choosing an address, recording its reservation and making retries safe.
+
+#### Prefer a separate address
+
+Allocate a separate derived address to each request where practical. Attach the allocation to `<REQUEST_ID>` and keep the network, token, expected amount, expiry time and payer instructions in the request record. A bare recipient address makes reconciliation fragile without that invoice state.
+
+#### Handle shared recipients explicitly
+
+If requests share `<RECIPIENT>`, allocate a distinct `<MEMO_OR_TAG>` to each request and require it in the payment instructions. Use this approach only when the payment mechanism carries that field and your tracking can read it; otherwise, use a dedicated address.
+
+For standard ERC-20 transfers, the recipient and amount arrive without an invoice identifier. A note on your invoice does not become a memo in the transfer event, so a shared recipient alone cannot identify the request.
+
+#### Make allocation idempotent
+
+Use `<REQUEST_ID>` as the stable allocation key. Return its stored allocation if one already exists. Otherwise, reserve an available target and save the request mapping in one atomic transaction.
+
+Enforce uniqueness on both:
+
+- The request key.
+- The allocation target: the address for dedicated allocations, or the recipient/tag pair for shared allocations.
+
+If concurrent calls for the same request race, return the committed allocation rather than creating another one.
 
 ```text
 First attempt: <REQUEST_ID>
 Atomic reservation: <REQUEST_ID> -> <RECIPIENT>
 Return: <RECIPIENT>
-```
 
-```text
 Retry: <REQUEST_ID>
 Stored allocation: <REQUEST_ID> -> <RECIPIENT>
 Return: <RECIPIENT>
 ```
 
-The retry retrieves the saved address, along with any memo/tag. It must not reserve a second address just because the caller did not receive the first response.
+On retry, retrieve the saved address along with any memo/tag. Do not reserve a second address just because the caller did not receive the first response.
 
-An allocation is not evidence of payment. Funds already held at `<RECIPIENT>` do not prove that a particular event fulfils `<REQUEST_ID>`. Event matching and payment confirmation remain separate requirements.
+An allocation is not evidence of payment. Funds already held at `<RECIPIENT>` do not prove that a particular event fulfils `<REQUEST_ID>`. Keep event matching and payment confirmation as separate requirements.
 
-**You should see:** Retrying allocation for `<REQUEST_ID>` returns the same `<RECIPIENT>` and leaves exactly one stored reservation.
+Make every allocation retry for `<REQUEST_ID>` return the same `<RECIPIENT>` and leave exactly one stored reservation.
 
-## Payment lifecycle state machine
+### Payment lifecycle state machine
 
-Your application owns this lifecycle; Bawa does not enforce these transitions. Append each change with its time, reason and evidence reference. A transaction report alone is not permission to fulfil.
+Own this lifecycle in your application; Bawa does not enforce these transitions. Append each change with its time, reason and evidence reference. Do not treat a transaction report alone as permission to fulfil.
 
-Start at `requested`. In `allocated`, the request has its receiving address or memo. `observed` captures a report; `seen` records basic validation. `matched` binds validated network, asset, destination and memo evidence to `<REQUEST_ID>`.
+Start at `requested`. Enter `allocated` once the request has its receiving address or memo. Capture a report at `observed`, record basic validation at `seen`, then bind validated network, asset, destination and memo evidence to `<REQUEST_ID>` at `matched`.
 
-**One progression rule:** no state may be skipped to reach finalisation. Process every applicable stage in order, even when evidence for several stages arrives together.
+Apply one progression rule: **do not skip any state to reach finalisation** — process every applicable stage in order, even when evidence for several stages arrives together.
 
-### Allowed transitions
-
-```text
-requested -> allocated
-allocated -> observed
-observed -> seen
-seen -> matched
-matched -> sufficient
-sufficient -> included
-included -> confirmed
-confirmed -> finalized
-finalized -> paid
-paid -> claimed
-claimed -> fulfilled
-fulfilled -> reconciled
-```
+Allow these transitions:
 
 ```text
+requested -> allocated -> observed -> seen -> matched -> sufficient -> included -> confirmed -> finalized -> paid -> claimed -> fulfilled -> reconciled
 matched -> underpaid
 underpaid -> observed
 allocated -> expired
@@ -865,166 +501,207 @@ fulfilled -> disputed
 disputed -> manual_review
 ```
 
-The deadline transition to `expired` is also allowed from `observed`, `seen`, `matched`, `sufficient`, `included`, `confirmed` and `reorged`.
+Also allow these conditional routes:
 
-Ambiguous or contradictory evidence allows `observed`, `seen`, `matched`, `underpaid`, `sufficient`, `included`, `confirmed`, `reorged`, `finalized`, `paid` or `claimed` to enter `manual_review`.
+- When the acceptance deadline passes, allow `observed`, `seen`, `matched`, `sufficient`, `included`, `confirmed` and `reorged` to enter `expired`.
+- For ambiguous or contradictory evidence, allow `observed`, `seen`, `matched`, `underpaid`, `sufficient`, `included`, `confirmed`, `reorged`, `finalized`, `paid` or `claimed` to enter `manual_review`.
 
-These routes are exhaustive. Duplicate reports retain the current state.
+Treat these routes as exhaustive. Keep the request in its current state when a duplicate report arrives.
 
 ### Checks and exception handling
 
-- **Normal progression:** At `matched`, compare the validated total with the requested amount: choose `underpaid` or `sufficient`. Top-ups return through `observed` for validation and matching. `included` requires canonical block inclusion; `confirmed` requires the configured confirmation depth; `finalized` requires the chosen chain-finality test to pass. `paid` records application acceptance, `claimed` an exclusive, durable fulfilment reservation, and `fulfilled` completed delivery.
+#### Follow normal progression
 
-- **`confirmed` to `reorged`:** When the supporting block leaves the canonical chain, invalidate its confirmation credit without deleting its history. Block acceptance and fulfilment. If the transaction reappears, return through `observed`, repeat matching and amount checks, then rebuild inclusion, confirmation and finality evidence.
+- At `matched`, compare the validated total with the requested amount and choose `underpaid` or `sufficient`. Route top-ups back through `observed` for validation and matching.
+- Require canonical block inclusion before entering `included`.
+- Require the configured confirmation depth before entering `confirmed`.
+- Require the chosen chain-finality test to pass before entering `finalized`.
+- At `paid`, record application acceptance.
+- At `claimed`, record an exclusive, durable fulfilment reservation.
+- At `fulfilled`, record completed delivery.
 
-- **`allocated` to `expired`:** When the acceptance deadline passes, retain the address/memo mapping and record expiry. Stop automatic acceptance, but keep monitoring. A later receipt does not make the request retrospectively timely.
+#### Handle `confirmed -> reorged`
 
-- **`expired` to `late`:** Record newly discovered payment evidence as `late`, then enter `manual_review`; do not finalise automatically. Review may restart only an unfulfilled request at `observed`, following a recorded approval that explicitly covers any deadline exception. The restarted request must traverse the normal checks. Review cannot jump directly to `finalized`, `paid` or `fulfilled`.
+When the supporting block leaves the canonical chain, enter `reorged` and invalidate its confirmation credit without deleting its history. If the transaction reappears, return through `observed`, repeat matching and amount checks, then rebuild inclusion, confirmation and finality evidence.
 
-- **`fulfilled` to `disputed`:** Append the dispute while preserving the delivery record and original stored result. Keep contrary evidence alongside them and flag the disagreement as a discrepancy. Continue into `manual_review`; do not silently replace the result or repeat delivery. Post-fulfilment review cannot restart the payment route.
+#### Handle `allocated -> expired`
 
-- **Into `reconciled`:** Compare the evidence with the recorded outcome and retain the audit decision. From `manual_review`, closure requires either a documented decision not to fulfil or resolution of an already-fulfilled order’s dispute. Unresolved discrepancies remain under review; resolved discrepancies and their original evidence remain recorded. `reconciled` is terminal audit closure, not another word for successful payment. It has no outgoing transitions. Later findings create a linked review case rather than rewriting the closed record.
+When the acceptance deadline passes, record expiry and retain the address/memo mapping. Stop automatic acceptance, but keep monitoring. Do not treat a later receipt as making the request retrospectively timely.
 
-**You should see:** an ordered history for `<REQUEST_ID>`, with every required check recorded, late payments routed to review, and no fulfilment authorised by observation alone.
+#### Handle `expired -> late`
 
-# Observation and chain-specific matching
+Record newly discovered payment evidence as `late`, then enter `manual_review`. Do not finalise automatically.
 
-Deduplicate observations using a chain-specific event key, then require an unambiguous link to a payment request. Compare destination, asset and atomic amount with the request, validate the fields below, and apply your confirmation/finality policy before accepting a match.
+From `manual_review`, restart only an unfulfilled request at `observed`, following a recorded approval that explicitly covers any deadline exception. Take the restarted request through every normal check. Do not jump directly from review to `finalized`, `paid` or `fulfilled`.
 
-## Bitcoin
+#### Handle `fulfilled -> disputed`
+
+Append the dispute while preserving the delivery record and original stored result. Keep contrary evidence alongside them and flag the disagreement as a discrepancy. Continue into `manual_review`.
+
+Do not silently replace the result or repeat delivery. Do not restart the payment route during post-fulfilment review.
+
+#### Close at `reconciled`
+
+Compare the evidence with the recorded outcome and retain the audit decision. Before closing from `manual_review`, require either:
+
+- A documented decision not to fulfil.
+- Resolution of an already-fulfilled order's dispute.
+
+Keep unresolved discrepancies under review. Retain resolved discrepancies and their original evidence.
+
+Treat `reconciled` as terminal audit closure, not another word for successful payment. Allow no outgoing transitions. For later findings, create a linked review case rather than rewriting the closed record.
+
+**Expected:** an ordered history for `<REQUEST_ID>`, with every required check recorded, late payments routed to review, and no fulfilment authorised by observation alone.
+## 12. Observation and chain-specific matching
+
+Deduplicate observations using a chain-specific event key, then require an unambiguous link to a payment request. Compare the destination, asset and atomic amount with the request, validate the fields below, and apply your confirmation/finality policy before accepting a match.
+
+### Bitcoin
 
 Read transaction outputs from a node or a node-backed address indexer.
 
-**Event key:** `(<CHAIN>, <TXID>, <OUTPUT_INDEX>)`.
+- Use `(<CHAIN>, <TXID>, <OUTPUT_INDEX>)` as the event key.
+- Allocate a separate address to each request.
+- Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and confirmation depth.
+- Use the assigned address to identify the request and the output key to identify the payment observation.
 
-Allocate a separate address to each request. Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and confirmation depth. The assigned address identifies the request; the output key identifies the payment observation.
+Treat a mempool output as an attempted payment, not confirmation. Block inclusion can still be reversed by a reorganisation. Identify the particular paying output; do not substitute an address balance for that identification.
 
-A mempool output indicates an attempted payment, not confirmation. Block inclusion can still be reversed by a reorganisation. An address balance cannot replace identification of the particular paying output.
-
-## EVM tokens
+### EVM tokens
 
 Use `eth_getLogs` on the intended network, filtering by the expected token contract and ERC-20 `Transfer` signature.
 
-**Event key:** `(<CHAIN_ID>, <TX_HASH>, <LOG_INDEX>)`.
+- Use `(<CHAIN_ID>, <TX_HASH>, <LOG_INDEX>)` as the event key.
+- Verify the node's chain ID, emitting contract, event signature, sender, recipient, atomic token amount, transaction hash, log index and block number/hash.
+- Enforce any sender restriction.
+- Reject non-canonical logs and logs whose `removed` flag is `true`.
+- If an accepted log is subsequently removed, invalidate that observation and reassess the request.
 
-Verify the node’s chain ID, emitting contract, event signature, sender, recipient, atomic token amount, transaction hash, log index and block number/hash. Enforce any sender restriction. Reject non-canonical logs and logs whose `removed` flag is true. If an accepted log is subsequently removed, invalidate that observation and reassess the request.
+Distinguish the block views and removal signal:
 
-`latest` follows the current head without guaranteeing finality. Where supported, `safe` denotes a justified view that remains reorganisable in principle; `finalized` reflects acceptance by over two-thirds of validators. A true `removed` flag reports removal during a reorganisation. [Log states and finality](https://docs.chainstack.com/reference/gnosis-getlogs).
+- `latest` follows the current head without guaranteeing finality.
+- Where supported, `safe` denotes a justified view that remains reorganisable in principle.
+- `finalized` reflects acceptance by over two-thirds of validators.
+- A `removed` flag set to `true` reports removal during a reorganisation.
 
-Give each request its own deposit address. A standard token-transfer event contains no invoice reference: a shared recipient and matching amount do not establish unique invoice attribution. [ERC-20 attribution](https://tomcn.uk/news/2026-10-14-usdc-payment-matching-deposit-address-vs-memo).
+Give each request its own deposit address. A standard token-transfer event contains no invoice reference: a shared recipient and matching amount do not establish unique invoice attribution.
 
-## TRON
+### TRON
 
 Read indexed transaction records and contract events, including execution results and block/finality state.
 
-**Token-event key:** `(<NETWORK>, <TXID>, <EVENT_INDEX>)`, using a stable transaction-local event position, never a pagination offset.
+- For token events, use `(<NETWORK>, <TXID>, <EVENT_INDEX>)` as the event key. Use a stable transaction-local event position for `<EVENT_INDEX>`, never a pagination offset.
+- For native transfers, use `(<NETWORK>, <TXID>, <CONTRACT_INDEX>)` in a separate namespace. The contract index identifies the transfer operation within the transaction.
+- Check the network, transfer contract/type, recipient, atomic amount, successful execution, block number/hash and confirmed or solidified state.
+- For tokens, also verify the expected token contract and decoded transfer event.
 
-For native transfers, use `(<NETWORK>, <TXID>, <CONTRACT_INDEX>)` in a separate namespace. The contract index identifies the transfer operation within the transaction.
+If several requests fit, do not guess. Treat an indexed transaction as evidence of visibility, not successful execution or finality. Do not treat a latest-block result as solidified merely because the indexer returned it.
 
-Check network, transfer contract/type, recipient, atomic amount, successful execution, block number/hash and confirmed or solidified state. For tokens, also verify the expected token contract and decoded transfer event. If several requests fit, do not guess.
+### TON
 
-An indexed transaction establishes visibility, not successful execution or finality. A latest-block result must not be treated as solidified merely because the indexer returned it.
+Read the receiving account's transactions and inbound messages through a node/API or indexer.
 
-## TON
+- Use `(<NETWORK>, <ACCOUNT_ADDRESS>, <LT>, <TX_HASH>)` as the native-receipt key. `<LT>` is the receiving transaction's logical time.
+- Check the network, exact recipient, inbound atomic value, transaction identity, execution/bounce outcome and block/finality state.
+- Verify a credited, non-bounced inbound payment. Do not treat a sender-side transaction alone as proof of receipt.
+- Use a dedicated address to identify the request. For a shared address, require the exact assigned comment/memo as part of the request-matching key. Do not use the memo in place of transaction identity.
+- Retain the wallet contract type and wallet ID used to derive the address. Recreating the wallet with different settings can produce a different destination.
 
-Read the receiving account’s transactions and inbound messages through a node/API or indexer.
+If you cannot reach a chain feed, leave the outcome unknown. Missing observations do not establish that nothing was paid.
 
-**Native-receipt key:** `(<NETWORK>, <ACCOUNT_ADDRESS>, <LT>, <TX_HASH>)`, where `<LT>` is the receiving transaction’s logical time.
+**Expected:** repeated polls produce one record per qualifying event, tied to one request, with validated fields and a recorded confirmation/finality state.
 
-Check the network, exact recipient, inbound atomic value, transaction identity, execution/bounce outcome and block/finality state. Verify a credited, non-bounced inbound payment; a sender-side transaction alone does not establish receipt.
+### Confirmation thresholds
 
-A dedicated address identifies the request. For a shared address, require the exact assigned comment/memo as part of the request-matching key. The memo does not replace transaction identity.
+**ILLUSTRATIVE application policy — not Bawa behaviour.** Choose your own value bands, risk limits and waiting times; never transplant these thresholds blindly. Treat “confirmed” as meaning that your policy passed, not that reversal is impossible.
 
-Retain the wallet contract type and wallet ID used to derive the address. Recreating the wallet with different settings can produce a different destination.
+For BTC, count blocks, including the inclusion block. Elsewhere, **1** means one successful event inclusion satisfying the stated chain condition.
 
-If a chain feed cannot be reached, leave the outcome unknown. Missing observations do not establish that nothing was paid.
-
-**You should see:** repeated polls producing one record per qualifying event, tied to one request, with validated fields and a recorded confirmation/finality state.
-
-## Confirmation thresholds
-
-**Illustrative application policy — not Bawa behaviour.** Choose your own value bands, risk limits and waiting times; never transplant these thresholds blindly. `confirmed` means your policy passed, not that reversal is impossible.
-
-BTC numbers count blocks, including the inclusion block. Elsewhere, **1** means one successful event inclusion satisfying the stated chain condition.
-
-| Chain | Low value | Ordinary value | High value |
-|---|---|---|---|
+| Chain | Low | Ordinary | High |
+| --- | --- | --- | --- |
 | BTC | **1** — avoids mempool-only acceptance; reversal risk remains. | **3** — lower end of the deposit range, balancing delay and risk. | **6** — more accumulated work protects larger exposure, but remains probabilistic. |
 | EVM (Ethereum) | **1 `latest` inclusion** — accepts head-reorg risk for small amounts. | **1 `safe` inclusion** — stronger consensus assurance than the latest head. | **1 `finalized` inclusion** — requires protocol finality for larger exposure. |
-| TRX | **1 successful inclusion** — faster, but explicitly provisional. | **1 solidified inclusion** — waits for the protocol’s quorum. | **1 solidified inclusion plus independent verification** — same finality, better protection against faulty node data. |
+| TRX | **1 successful inclusion** — faster, but explicitly provisional. | **1 solidified inclusion** — waits for the protocol's quorum. | **1 solidified inclusion plus independent verification** — same finality, better protection against faulty node data. |
 | TON | **1 verified masterchain anchor** — uses protocol finality rather than arbitrary depth. | **1 verified anchor** — ordinary value does not change the finality rule. | **1 verified anchor plus independent verification** — checks observation errors rather than inventing extra finality. |
 
-[Bitnob’s confirmation guide](https://bitnob.dev/docs/bitcoin/a-practical-guide-for-non-technical-pms/module-5) gives retail a 0–1 range, deposits at exchanges 3–6, and major settlements 6+. More depth reduces reversal probability; a displaced transaction can later return in another block.
+For BTC, retail guidance gives **0–1**, deposits at exchanges **3–6**, and major settlements **6+**. More depth reduces reversal probability; a displaced transaction can later return in another block.
 
-Ethereum’s views are gates, not fixed depths: verify that the payment block belongs to the chosen view. Other EVM networks need their own settlement rules, including upstream finality where relevant. A TON anchor means a verified finalised masterchain reference covering the payment’s shard block.
+Treat Ethereum's views as gates, not fixed depths: verify that the payment block belongs to the chosen view. Use separate settlement rules for other EVM networks, including upstream finality where relevant.
 
-Under [TRON’s confirmation rules](https://developers.tron.network/docs/confirmation-semantics), solidification requires block production by at least 19 different Super Representatives, each at the target height or higher. This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check that `contractRet` is `SUCCESS` separately.
+For TON, require a verified finalised masterchain reference covering the payment's shard block; this is the anchor.
 
-## Reorg handling
+Apply TRON's confirmation rules: solidification requires block production by at least **19 different Super Representatives**, each at the target height or higher. This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check that `contractRet` is `SUCCESS` separately.
 
-Keep observation status (`seen`, `included`, `confirmed`, `finalized`, `reorged`) separate from business status (`expired`, `late`, `manual_review`, `paid`). Persist event identity, block hash/height, claim linkage and policy version. Compare stored block hashes with the canonical chain; do not rely solely on removal notifications.
+### Reorg handling
+
+Keep observation status (`seen`, `included`, `confirmed`, `finalized`, `reorged`) separate from business status (`expired`, `late`, `manual_review`, `paid`). Persist event identity, block hash and height, claim linkage and policy version.
+
+Compare stored block hashes with the canonical chain. Do not rely solely on removal notifications.
 
 When an event is removed:
 
-- **`seen`/`included`:** retain the removed block observation as `reorged` and withhold acceptance. Return to `seen` only after actually observing the transaction pending again.
-- **`confirmed`:** mark it `reorged`, revoke eligibility and freeze outstanding fulfilment. Reverse provisional credits through compensating entries, preserving the confirmation history.
-- **Claimed or `paid`:** suspend the claim’s chain backing while retaining its allocation and audit trail. Block duplicate settlement. Already delivered goods or irreversible payouts require `manual_review`; changing a database flag cannot undo an external action.
+- For `seen` or `included`, retain the removed block observation as `reorged` and withhold acceptance. Return to `seen` only after you actually observe the transaction pending again.
+- For `confirmed`, mark it `reorged`, revoke eligibility and freeze outstanding fulfilment. Reverse provisional credits through compensating entries, preserving the confirmation history.
+- If the event is claimed or `paid`, suspend the claim’s chain backing while retaining its allocation and audit trail. Block duplicate settlement. If goods have already been delivered or a payout is irreversible, trigger `manual_review`. Changing a database flag cannot undo an external action.
 
-Removal from a `finalized` or solidified view should also pause automated settlement and trigger `manual_review` with independent verification.
+If an event is removed from a `finalized` or solidified view, also pause automated settlement and trigger `manual_review` with independent verification.
 
-For ordinary reorg recovery, find the common ancestor, rewind the scan cursor and replay canonical blocks. Reconcile pending and replacement transactions, then re-match idempotently. If `<TXID>` returns, verify its new block hash and execution, rebuild depth from its new inclusion, and reapply the threshold. Reassess `expired`/`late` against the original deadline before restoring eligibility.
+For ordinary reorg recovery:
 
-**You should see:** removing a confirmed test event suspends acceptance; its canonical return restores eligibility only after policy checks, without duplicate credit or fulfilment.
+1. Find the common ancestor, rewind the scan cursor and replay canonical blocks.
+2. Reconcile pending and replacement transactions, then re-match idempotently.
+3. If `<TXID>` returns, verify its new block hash and execution. Rebuild depth from its new inclusion and reapply the threshold.
+4. Reassess `expired`/`late` status against the original deadline before restoring eligibility.
 
-## Amounts, top-ups and expiry
+**Expected:** Removing a `confirmed` test event suspends acceptance; its canonical return restores eligibility only after policy checks, without duplicate credit or fulfilment.
 
-**Bawa behaviour.** The watcher tracks the combined value of transfers matching a deposit. `<CONFIRMED_ATOMIC>` includes each accepted event’s atomic-unit amount once, however often its notification arrives.
+### Amounts, top-ups and expiry
 
-**Application policy.** Calculate with integers in the requested asset’s atomic unit; convert only for display. Choose and document `<TOLERANCE_ATOMIC>`: non-negative and smaller than `<EXPECTED_ATOMIC>`. Choose zero if no shortfall is acceptable.
+Use `<CONFIRMED_ATOMIC>` as the watcher’s combined value of transfers matching a deposit. Each accepted event contributes its atomic-unit amount once, however often its notification arrives.
+
+Define the amount policy in your application. Calculate with integers in the requested asset’s atomic unit; convert only for display. Choose and document `<TOLERANCE_ATOMIC>` as a non-negative value smaller than `<EXPECTED_ATOMIC>`. Choose zero if no shortfall is acceptable.
+
+Set:
 
 ```text
 <THRESHOLD_ATOMIC> = <EXPECTED_ATOMIC> - <TOLERANCE_ATOMIC>
 ```
 
-The amount check passes when `<CONFIRMED_ATOMIC> >= <THRESHOLD_ATOMIC>`. Timing and top-up permission still apply. This threshold belongs to your application, not a wallet specification.
+The amount check passes when `<CONFIRMED_ATOMIC> >= <THRESHOLD_ATOMIC>`. Apply timing rules and top-up permission as well. This threshold belongs to your application, not a wallet specification.
 
-Calculate `<SHORTFALL>` as expected minus confirmed, and `<EXCESS>` as confirmed minus expected, clamping each at zero. Keep any tolerated shortfall visible; acceptance does not rewrite the received amount.
+Calculate `<SHORTFALL>` as `<EXPECTED_ATOMIC> - <CONFIRMED_ATOMIC>` and `<EXCESS>` as `<CONFIRMED_ATOMIC> - <EXPECTED_ATOMIC>`, clamping each at zero. Keep any tolerated shortfall visible; acceptance does not rewrite the received amount.
 
-### Worked amounts
-
-Assume these events match `<REQUEST_ID>` and are accepted before expiry. These are **Bawa totals with application-policy outcomes**. The two-part example assumes top-ups are enabled.
+For these worked amounts, assume the events match `<REQUEST_ID>` and are accepted before expiry. The examples use Bawa totals with application-policy outcomes; the two-part example assumes top-ups are enabled.
 
 - **Exact:** One accepted transfer of `<EXPECTED_ATOMIC>` gives `<CONFIRMED_ATOMIC> = <EXPECTED_ATOMIC>`. Shortfall and excess are zero; the amount qualifies.
 - **Underpaid:** One transfer of `<EXPECTED_ATOMIC> - <SHORTFALL>`, where `<SHORTFALL> > <TOLERANCE_ATOMIC>`, leaves the total below `<THRESHOLD_ATOMIC>`. Keep the request underpaid while its window remains open.
 - **Overpaid:** One transfer of `<EXPECTED_ATOMIC> + <EXCESS>`, with positive `<EXCESS>`, clears the threshold. Record the excess separately.
-- **Two-part top-up:** `<PART_A_ATOMIC> = <EXPECTED_ATOMIC> - <SHORTFALL>` remains insufficient when `<SHORTFALL> > <TOLERANCE_ATOMIC>`. A separate accepted event of `<PART_B_ATOMIC> = <SHORTFALL>` completes the amount:
+- **Two-part top-up:** `<PART_A_ATOMIC> = <EXPECTED_ATOMIC> - <SHORTFALL>` remains insufficient when `<SHORTFALL> > <TOLERANCE_ATOMIC>`. A separate accepted event of `<PART_B_ATOMIC> = <SHORTFALL>` completes the amount: `<CONFIRMED_ATOMIC> = <PART_A_ATOMIC> + <PART_B_ATOMIC> = <EXPECTED_ATOMIC>`.
 
-```text
-<CONFIRMED_ATOMIC> = <PART_A_ATOMIC> + <PART_B_ATOMIC>
-<CONFIRMED_ATOMIC> = <EXPECTED_ATOMIC>
-```
-
-**Application policy.** Allow multiple transfers to settle a request only when top-ups are enabled. For these examples, a timely, confirmed overpayment fulfils the request without an automatic excess refund. [Kaspa payment guidance](https://kaspaforge.org/blog/kaspa-payment-confirmations-blockdag-webhooks.html) similarly adds matching transfers and separates excess handling from fulfilment, since on-chain transfers cannot be reversed.
+Allow multiple transfers to settle a request only when top-ups are enabled. For these examples, treat a timely, confirmed overpayment as fulfilling the request without an automatic excess refund.
 
 ### Expiry and late payments
 
-**Application policy.** Record a deadline for `<REQUEST_ID>` and retain the record after expiry. Your deadline does not stop blockchain transfers.
+Define expiry and late-payment handling as application policy. Record a deadline for `<REQUEST_ID>` and retain the record after expiry. Your deadline does not stop blockchain transfers.
 
-Distinguish no funds yet, a deposit awaiting confirmation, full payment, excess payment, partial payment while open, and underpayment after closure, following [gateway status guidance](https://medium.com/@speend/crypto-payment-api-what-to-check-before-you-integrate-98bf6aa14c76). Partial, late and excess payments need separate statuses rather than one paid/unpaid flag, as [community payment practice](https://coinpayportal.com/blog/freelancing-crypto-payment-architecture) recommends.
+Distinguish these states:
 
-```text
-pending
-↓ deadline passes before acceptance
-expired
-↓ new matching payment found
-late payment found
-↓
-manual review
-```
+- No funds yet.
+- A deposit awaiting confirmation.
+- Full payment.
+- Excess payment.
+- Partial payment while the window is open.
+- Underpayment after closure.
 
-**Application policy.** Route newly discovered payments on expired requests to review, even when their value brings the total above the threshold. Do not finalise automatically.
+Give partial, late and excess payments separate statuses rather than one paid/unpaid flag.
 
-Before deciding, the reviewer checks:
+Use this expiry flow:
+
+`pending` → `deadline passes before acceptance` → `expired` → `new matching payment found` → `late payment found` → `manual review`
+
+Route newly discovered payments on expired requests to manual review, even when their value brings the total above the threshold. Do not finalise automatically.
+
+Before deciding, check:
 
 - The request, deposit and asset match.
 - Event uniqueness, acceptance and confirmations.
@@ -1032,189 +709,181 @@ Before deciding, the reviewer checks:
 - Payment and discovery times against the deadline.
 - Earlier fulfilment or refunds, and whether fulfilment remains possible.
 
-Release only when the amount meets policy and late acceptance is authorised. If fulfilment cannot proceed, refuse it with a recorded reason and a decision about the received funds. Refund only an authorised amount to an independently verified destination, under the documented fee policy; a refund requires a new transfer. Record the outcome.
+Release only when the amount meets policy and late acceptance is authorised. If fulfilment cannot proceed, refuse it and record the reason and your decision about the received funds.
 
-**You should see:** A late top-up moves `<REQUEST_ID>` to `manual review` even if it meets `<THRESHOLD_ATOMIC>`; another delivery of that event leaves `<CONFIRMED_ATOMIC>` unchanged.
+Refund only an authorised amount to an independently verified destination under the documented fee policy. A refund requires a new transfer. Record the outcome.
+
+Move `<REQUEST_ID>` to manual review when a late top-up is found, even if the total meets `<THRESHOLD_ATOMIC>`. Leave `<CONFIRMED_ATOMIC>` unchanged if that event is delivered again.
 
 ### Price quotes as payment state
 
-Quote policy is application policy, not a Bawa feature. Bawa does not define a price API.
+Define quote policy in your application; it is not a Bawa feature. Bawa does not define a price API.
 
-Freeze a quote snapshot into the payment request before presenting the amount. Keep live price collection separate from payment calculation and blockchain watching. The watcher uses the frozen amount; a market move must not change what the payer was asked to send.
+Freeze a quote snapshot into the payment request before presenting the amount. Keep live price collection separate from payment calculation and blockchain watching. Use the frozen amount in the watcher; do not let a market move change what the payer was asked to send.
 
 Preserve these seven fields together:
 
-- **Quote timestamp:** the time the quoted rate refers to. This establishes its age and the pricing moment; reading a cached rate must not give it a fresh timestamp.
-- **Price source:** the provider and feed or currency pair used. This identifies where the rate came from when providers disagree.
-- **Quoted price:** the exact conversion rate, including currencies and direction. This lets both sides reproduce the calculation.
-- **Quoted atomic amount:** the exact integer amount requested. This settles what the payer was asked for, regardless of decimal formatting.
-- **Expiry:** the limit of the quote’s validity. This records how long the rate was offered, rather than leaving an open-ended price promise.
-- **Rounding rule:** the precision, direction and stage of rounding. This explains any smallest-unit difference between the conversion result and the payable amount.
-- **Acceptance/tolerance rule:** the permitted deviation, if any, and its units. This prevents acceptance standards being chosen after seeing the payment.
+1. **Quote timestamp:** Record the time the quoted rate refers to. Use it to establish the quote’s age and pricing moment. Do not give a cached rate a fresh timestamp when you read it.
+2. **Price source:** Record the provider and feed or currency pair used, so you can identify where the rate came from when providers disagree.
+3. **Quoted price:** Store the exact conversion rate, including currencies and direction, so both sides can reproduce the calculation.
+4. **Quoted atomic amount:** Store the exact integer amount requested, so what the payer was asked for remains clear regardless of decimal formatting.
+5. **Expiry:** Record the limit of the quote’s validity to show how long the rate was offered. Do not leave an open-ended price promise.
+6. **Rounding rule:** Record the precision, direction and stage of rounding to explain any smallest-unit difference between the conversion result and the payable amount.
+7. **Acceptance/tolerance rule:** Record the permitted deviation, if any, and its units. Do not choose acceptance standards after seeing the payment.
 
-Document rounding and tolerance as application policy, then preserve the applied rules with each quote. Apply rounding when calculating the atomic amount, not when displaying it. Store amounts as integers in the relevant atomic unit: BTC satoshis, EVM token base units, TRON token/base units or TON nanotons. Human-readable decimals are presentation only; formatting must not determine what is owed or tolerated.
+Document rounding and tolerance as application policy, then preserve the applied rules with each quote. Apply rounding when calculating the atomic amount, not when displaying it.
 
-Re-pricing during a payment check breaks the link between the amount requested and the amount assessed. The stored request can no longer explain the decision. A re-quote is permissible only where explicit business rules, disclosed to the payer, allow it. Record the replacement quote as a new request term, retain the previous snapshot and make the changed terms visible to the payer. Never silently overwrite the original quote.
+Store amounts as integers in the relevant atomic unit: BTC satoshis, EVM token base units, TRON token/base units or TON nanotons. Use human-readable decimals for presentation only; do not let formatting determine what is owed or tolerated.
 
-Set a freshness limit for prices used at request time. If the feed is unavailable or stale and no fresh snapshot is available, either withhold the request or use an existing snapshot under a documented stale-quote policy. Clearly mark the quote as stale to the payer, show its age and retain its original timestamp. Never invent a replacement price.
+Re-pricing during a payment check breaks the link between the amount requested and the amount assessed; the stored request can no longer explain the decision. Re-quote only where explicit business rules, disclosed to the payer, allow it. Record the replacement quote as a new request term, retain the previous snapshot and make the changed terms visible to the payer. Never silently overwrite the original quote.
 
-During watching, a fallback feed changes only the source of new market data. It must not alter the frozen quote, including its recorded source, rate or atomic amount. Feed failover is not a re-quote.
+Set a freshness limit for prices used at request time. If the feed is unavailable or stale and no fresh snapshot is available, either withhold the request or use an existing snapshot under a documented stale-quote policy. If you use a stale snapshot, clearly mark the quote as stale to the payer, show its age and retain its original timestamp. Never invent a replacement price.
 
-# Duplicate payments, disputes and refunds
+During watching, switch to a fallback feed only for new market data. Do not alter the frozen quote, including its recorded source, rate or atomic amount. Feed failover is not a re-quote.
+## 13. Duplicate payments, disputes and refunds
 
-The controls below are **application policy, not Bawa behaviour**.
+Treat everything in this section as application policy, not Bawa behaviour.
 
-## Duplicate payments
+### Make finalisation replay-safe
 
-**Application policy — replay-safe finalisation.** Expect repeat observations from polling, retries, restarts, duplicated webhooks, rescans, multiple workers and indexer replays. Identify the actual transfer using the network, `<TXID>` and relevant output or log index, rather than a callback identifier alone.
+Expect repeat observations from polling, retries, restarts, duplicated webhooks, rescans, multiple workers and indexer replays.
 
-Observe the transfer, establish its identity, then persist the event and claim fulfilment atomically. Use a database transaction, a unique event constraint and a conditional claim on `<REQUEST_ID>`. Only the successful claimant fulfils, then records the final state; other workers consult the existing state instead of starting another fulfilment. Commit local credit with its outcome. For external fulfilment, use a durable outbox and an idempotent receiver.
+1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or log index. Identify the actual transfer; do not rely on a callback identifier alone.
+2. Persist the event and claim fulfilment atomically in a database transaction. Enforce a unique event constraint on the transfer identity and use a conditional claim on `<REQUEST_ID>`.
+3. Let only the successful claimant fulfil and then record the final state. Make other workers consult the existing state instead of starting another fulfilment.
 
-Replayed ‘paid’ notifications must not dispatch goods again. [Gateway integration guidance](https://medium.com/@speend/crypto-payment-api-what-to-check-before-you-integrate-98bf6aa14c76) warns that processing redelivery without idempotency can credit an account repeatedly.
+Commit local credit atomically with its outcome. For external fulfilment, use a durable outbox and an idempotent receiver. Do not dispatch goods again when a `paid` notification is replayed.
 
-**Application policy — stored outcomes and lost responses.** When finalisation completes but its response is lost, a retry must resolve the stored outcome first. Return a matching result without another credit or repeated finalisation effect. If any saved outcome contradicts the evidence, preserve both and flag a discrepancy for review; do not quietly replace the result.
+### Resolve stored outcomes after a lost response
 
-**Application policy — distinguish extra money from replay.** Retain every distinct transfer. An overpayment, or a second distinct payment against `<REQUEST_ID>`, belongs in review or an overpaid state rather than ordinary settlement. Use idempotent invoice creation to prevent accidental reissue, and reconciliation to detect multiple payments. [Community payment guidance](https://coinpayportal.com/blog/freelancing-crypto-payment-architecture) describes these as complementary controls: neither replaces the other.
+If finalisation completes but its response is lost, resolve the stored outcome first on retry. Return a matching result without another credit or repeated finalisation effect.
 
-## Disputes and refunds
+If any saved outcome contradicts the evidence, preserve both and flag a discrepancy for review. Do not quietly replace the result.
 
-**Application policy — retain review evidence.** Keep the request’s agreed asset, network, amount and destination alongside transaction evidence, confirmation status and the claim, credit and fulfilment history. Append review decisions and their reasons without erasing earlier evidence.
+### Distinguish extra money from replay
 
-- **Wrong asset — application policy:** hold for review. Compare the requested and received asset identifiers, including token contract identifiers where relevant, against transfer logs or outputs. Record the amount and asset precision. Matching names or tickers are not sufficient.
-- **Wrong network — application policy:** do not automatically settle the intended-network request. The reviewer needs the expected and observed chain identifiers, transaction evidence, destination and confirmation status, plus evidence that the operator controls the funds on the observed chain.
-- **Wrong amount — application policy:** compare the expected amount with distinct eligible transfers counted once, using consistent asset units. Retain the calculation, precision and agreed fee or tolerance rules. Hold shortfalls for review and explicitly flag excess funds as overpaid or under review.
-- **Sender unknown — application policy:** do not automatically return funds to a transaction’s source address; it may be a service wallet. Require authenticated claimant evidence linked to `<REQUEST_ID>` and `<TXID>`, corroborating payment records and verified return instructions. Transaction visibility alone does not establish entitlement.
+Retain every distinct transfer. Route an overpayment, or a second distinct payment against `<REQUEST_ID>`, to review or an overpaid state rather than ordinary settlement.
 
-**Application policy — refund through a separate payment.** A refund is a fresh outgoing payment requiring independent authorisation. Leave the original payment record unchanged. Create a linked refund record with its own approval, status and eventual `<REFUND_TXID>`. The approval must cover the asset, network, destination, amount and fees. Verify custody and recovery feasibility before promising repayment, particularly for wrong-asset or wrong-network cases. Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment.
+Use idempotent invoice creation to prevent accidental reissue, and reconciliation to detect multiple payments.
 
-**You should see:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
+### Keep evidence for disputes and refunds
 
-## Watcher and reconciler
+Keep the request’s agreed asset, network, amount and destination alongside transaction evidence, confirmation status and the claim, credit and fulfilment history. Append review decisions and their reasons without erasing earlier evidence.
 
-**Bawa behaviour:** Watching reports current observations. Reconciliation replays a bounded chain range, checks persisted state, and restores omitted entries or corrects obsolete ones. The watcher catches new activity beyond the replay’s endpoint; the reconciler catches missed payments and reorganisation-related changes within its range. Fresh observations do not certify earlier database history.
+- **Wrong asset:** Hold the payment for review. Compare the requested and received asset identifiers, including token contract identifiers where relevant, against transfer logs or outputs. Record the amount and asset precision. Do not rely on matching names or tickers.
+- **Wrong network:** Do not automatically settle the intended-network request. Give the reviewer the expected and observed chain identifiers, transaction evidence, destination and confirmation status, plus evidence that the operator controls the funds on the observed chain.
+- **Wrong amount:** Compare the expected amount with the total of distinct eligible transfers, counting each once and using consistent asset units. Retain the calculation, precision and agreed fee or tolerance rules. Hold shortfalls for review and explicitly flag excess funds as overpaid or under review.
+- **Sender unknown:** Do not automatically return funds to a transaction’s source address; it may be a service wallet. Require authenticated claimant evidence linked to `<REQUEST_ID>` and `<TXID>`, corroborating payment records and verified return instructions. Do not treat transaction visibility alone as proof of entitlement.
 
-**Application policy:** Watch frequently and reconcile periodically. Retain native cursors: Bitcoin’s most recent relevant block/transaction position; EVM’s processed block height; Solana’s slot plus signature; XRPL’s ledger index plus transaction; Cosmos’s height plus pagination state. Store the height reached by the latest successful reconciliation, or its chain equivalent, separately from watcher progress. Advance it only when the whole range succeeds and writes are durable. After downtime, restart from a conservative earlier boundary. Timestamps cannot replace chain cursors.
+### Refund through a separate payment
+
+Treat each refund as a fresh outgoing payment requiring independent authorisation. Leave the original payment record unchanged. Create a linked refund record with its own approval, status and eventual `<REFUND_TXID>`.
+
+Require the approval to cover the asset, network, destination, amount and fees. Verify custody and recovery feasibility before promising repayment, particularly for wrong-asset or wrong-network cases.
+
+Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment.
+
+**Expected:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
+## 14. Watcher and reconciler
+
+Use the watcher to report current observations. Use the reconciler to replay a bounded chain range, check persisted state, and restore omitted entries or correct obsolete ones. Keep the watcher catching new activity beyond the replay's endpoint; use the reconciler to catch missed payments and reorganisation-related changes within its range. Do not treat fresh observations as proof that earlier database history is correct. Watch frequently and reconcile periodically.
+
+Retain each chain's native cursor:
+
+- **Bitcoin:** the most recent relevant block/transaction position.
+- **EVM:** the processed block height.
+- **Solana:** the slot plus signature.
+- **XRPL:** the ledger index plus transaction.
+- **Cosmos:** the height plus pagination state.
+
+Store the height reached by the latest successful reconciliation, or its chain equivalent, separately from watcher progress. Advance it only when the whole range succeeds and writes are durable. After downtime, restart from a conservative earlier boundary. Do not substitute timestamps for chain cursors.
 
 ### Three-sided check
 
-**Bawa behaviour:** Check the request’s recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement with the saved finalisation outcome. Recheck individual matches as well as the accepted total. Re-observing an event must not count its value again.
+Choose confirmation requirements, amount tolerances and late-payment treatment. Check the request's recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement with the saved finalisation outcome.
 
-**Application policy:** Choose confirmation requirements, amount tolerances and late-payment treatment. Commit finalisation atomically with the credit or an outbox entry. Enforce a stable idempotency key for that entitlement, including in downstream consumers; never generate a fresh credit key per reconciliation run.
+Recheck individual matches as well as the accepted total. Count each event once: re-observing it must not add its value again.
+
+Commit finalisation atomically with the credit or an outbox entry. Enforce a stable idempotency key for that entitlement, including in downstream consumers. Never generate a fresh credit key per reconciliation run.
 
 ### Worked recovery
 
-**Application policy:** `<REQUEST_ID>` expects `<AMOUNT>` of `<ASSET>` on `<NETWORK>` at `<DESTINATION>`. The watcher was offline when `<TXID>` paid `<AMOUNT>` at `<HEIGHT>`; the database still records no payment. Replay `<SAFE_HEIGHT>` through `<END_HEIGHT>`, containing `<HEIGHT>`.
+`<REQUEST_ID>` expects `<AMOUNT>` of `<ASSET>` on `<NETWORK>` at `<DESTINATION>`. The watcher was offline when `<TXID>` paid `<AMOUNT>` at `<HEIGHT>`. The database still records no payment.
 
-**Bawa behaviour:** The replay finds the missing event and restores its record. The event matches the request and meets `<CONFIRMATION_POLICY>`, so the stored outcome needs correction.
+1. Replay `<SAFE_HEIGHT>` through `<END_HEIGHT>`, containing `<HEIGHT>`.
+2. Find the missing event during replay and restore its record.
+3. Check the restored event. It matches the request and meets `<CONFIRMATION_POLICY>`, so the stored outcome needs correction.
+4. Record the corrected finalisation and `<CREDIT_ID>` under `<IDEMPOTENCY_KEY>`.
+5. Replay the same range a second time. Retain that credit rather than issuing another.
 
-**Application policy:** Record the corrected finalisation and `<CREDIT_ID>` under `<IDEMPOTENCY_KEY>`. A second replay retains that credit rather than issuing another.
+### Audit trail
 
-### Audit trail — application policy
+Maintain an append-only journal with UTC timestamps, source, actor/job identity and schema/software versions. Preserve original decisions when correcting them.
 
-Keep request state, not merely an address: [community payment guidance](https://coinpayportal.com/blog/freelancing-crypto-payment-architecture) treats stateful reconciliation as central to dependable payments. Maintain an append-only journal with UTC timestamps, source, actor/job identity and schema/software versions. Preserve original decisions when correcting them.
+Before scanning, log the run ID, trigger, input checkpoint and range bounds. After durable processing, append the run's comparisons, repairs, errors, completion status and safe checkpoint.
 
-Before scanning, log the run ID, trigger, input checkpoint and range bounds. After durable processing, append its comparisons, repairs, errors, completion status and safe checkpoint. Retain the linked payment records in this causal order:
+Retain the linked payment records in causal order:
 
 1. **Request:** `<REQUEST_ID>`, creation/revision history, chain/network, asset identifier, base-unit amount, recipient, required memo/tag, validity limits and policy snapshot.
 2. **Observation:** `<TXID>`, chain/network and native event/output/log identity, cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
 3. **Match decision:** request–event link, deduplication key, evaluated confirmations, accepted/rejected/pending status and reason, tied to the policy version.
 4. **Reconciliation/finalisation:** accepted event set, total, database before/after values, discrepancy and repair, resulting status and decision reason.
-5. **Credit and settlement:** credit ID, idempotency key, journal amount/asset, reversals or adjustments, and allocation to the retained `<SETTLEMENT_LINE_ID>` record, including fees and net value. [Gateway audit guidance](https://www.coinsclone.com/cryptocurrency-payment-gateway-development/) emphasises settlement traceability for each payment.
+5. **Credit and settlement:** credit ID, idempotency key, journal amount/asset, reversals or adjustments, and allocation to the retained `<SETTLEMENT_LINE_ID>` record, including fees and net value.
 
-From these records alone, a reviewer verifies inclusion and policy acceptance at the recorded checkpoint, reconstructs the distinct accepted total, checks finalisation, and follows the credit into settlement. Run history establishes scanned coverage; credit keys and journal entries demonstrate that replay did not pay twice.
+Keep enough detail for a reviewer to verify inclusion and policy acceptance at the recorded checkpoint, reconstruct the distinct accepted total, check finalisation and follow the credit into settlement—all from these records alone. Use run history to establish scanned coverage, and credit keys and journal entries to show that replay did not pay twice.
 
-**You should see:** Replaying the worked range twice leaves one accepted event, one credit and a traceable request-to-settlement record chain.
+Replay the worked range twice and check that it leaves one accepted event, one credit and a traceable request-to-settlement record chain.
 
-### The Telegram example’s watcher loop
+### Watcher loop (generic)
 
-The Telegram bot example runs its background watcher on a 60-second cycle. This code is an external example above Bawa, not a Bawa dependency, and it does not turn Bawa into a service.
+Run the background watcher on a 60-second cycle. Give each deposit check its own error boundary. Do not let one bad deposit, failed chain lookup or broken price feed stop the loop or block other deposits. Do not rely on catching errors only around the whole cycle: that can leave the watcher running while it skips the remaining checks after a failure.
 
-Each deposit check has its own error boundary. One bad deposit, failed chain lookup or broken price feed must not stop the loop or block other deposits. Catching errors only around the whole cycle can leave the watcher running while still skipping the checks after a failure.
+Visit these four branches in this order on every cycle:
 
-Each cycle visits four branches, in this order:
+1. **Pending or underpaid direct deposits:** fetch transaction data using the chain-specific lookup, match the expected payment and total the matching payments. Apply that chain's confirmation policy. Claim a ready deposit atomically before fulfilling its order; otherwise, leave it pending or underpaid.
+2. **Expired deposits:** run a short scan for late payments, then move the deposit into the manual-review state. Leave the order for review rather than treating expiry handling as successful payment completion.
+3. **External invoice recovery:** query paid invoices and recover orders whose finalisation is still outstanding. Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
+4. **Slow-path pending payments:** run the slow-path lookup for payments still pending. Leave unresolved payments pending and send recovered evidence to the same finalisation path.
 
-1. **Pending or underpaid direct deposits.** Fetch transaction data using the chain-specific lookup, match the expected payment and total the matching payments. Apply that chain’s confirmation policy. A ready deposit is claimed atomically before its order is fulfilled; otherwise it remains pending or underpaid.
+In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil. Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
+I can’t check sources live here. The guide paths and Medium URL weren’t supplied, so this draft uses named cross-references and retains your Medium check note.
 
-2. **Expired deposits.** Run a short scan for late payments, then move the deposit into the manual-review state. This branch leaves the order for review rather than treating expiry handling as successful payment completion.
-
-3. **CryptoBot recovery.** Query paid invoices and recover orders whose finalisation is still outstanding. These go through idempotent finalisation, not a separate invoice-only route to fulfilment.
-
-4. **TON Connect pending payments.** Run the slow-path lookup for payments still pending. Unresolved payments stay pending; recovered evidence goes to the same finalisation path.
-
-CryptoBot invoice recovery and the TON Connect slow path are separate branches because they provide different evidence with different timing. They are not extra chain feeds. Neither branch bypasses payment matching or confirmation: each must satisfy those checks before the common idempotent finalisation gate can complete the order.
-
-For your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil. The loop should distinguish finding evidence, waiting for readiness, holding for review and completing an order.
-
-This code is an external example above Bawa, not a Bawa dependency, and it does not turn Bawa into a service.
-
-### Bitcoin descriptors and PSBT
-
-Descriptors and PSBT are Bitcoin ecosystem standards, not Bawa features. Bawa’s tools do not build or sign PSBTs.
-
-A bare xpub allows public-key derivation, but does not fully describe the key’s origin or how those keys become spendable outputs. [Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) can record:
-
-- **Derivation origin:** the master-key fingerprint and derivation path.
-- **Script policy:** the output type and spending requirements, such as single-key SegWit or a multisignature threshold.
-- **Ranged derivation:** wildcard paths from which the tracker derives successive public keys and addresses.
-
-Use public-only descriptors covering the wallet’s receiving and change branches. These let the watch-only side determine which addresses belong to the wallet and what policy governs their outputs, without holding private keys.
-
-The tracker can enumerate addresses within its configured ranges and match their output scripts against chain data to identify the wallet’s unspent transaction outputs (UTXOs). It is tracking a defined address set, not guessing wallet ownership from one address. Keep those ranges current; a descriptor does not automatically reveal payments to addresses beyond the scanned range.
-
-#### Moving a transaction to the signer
-
-[BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) specifies the partially signed Bitcoin transaction (PSBT) format. [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) adds Taproot-specific PSBT fields.
-
-Use a separate PSBT-capable Bitcoin wallet or coordinator for this flow:
-
-1. **Build online.** Select known wallet UTXOs and construct an unsigned transaction with the intended destinations, amounts and fee. Package it as an unsigned PSBT with the previous-output and derivation information the signer needs.
-2. **Sign offline or on hardware.** Transfer the PSBT to the signer, where the spending keys remain. Verify the destinations, amounts and fee through the trusted signing interface against the intended payment before approving. Treat the online proposal as untrusted.
-3. **Finalise.** Return the signed PSBT to the coordinator. Once the required signatures are present, finalise it and extract the signed transaction.
-4. **Broadcast online.** Send only the signed transaction to the Bitcoin network. The PSBT is a hand-off format for signing, not the object broadcast.
-
-The online tracker and watcher never touch a spending key. A watcher compromise alone cannot spend funds; it can at most misreport them, which reconciliation must catch.
-
-## Derivation ownership and token identity
-
-The Telegram bot’s `tools/hdwallet-gen/` directory holds a copy of Bawa’s wallet tooling. Maintaining both trees independently creates drift: a derivation or validation change made in only one copy can leave them producing or accepting different addresses for the same root, without an obvious failure.
+## 15. Derivation ownership and token identity
 
 Keep Bawa as the canonical home for the derivation explanation and reference implementation. Package the application’s copy from that reference and treat it as a generated deployment output. Never hand-edit the copied tooling in place.
 
-The application owns orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment. Bawa supplies the reusable derivation reference, not the payment workflow.
+Keep orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment in the application. Use Bawa for the reusable derivation reference, not the payment workflow. End the wallet/key layer at the account-level public root. Start the application layer with that root; no step in it needs a spending key.
 
-The wallet/key layer ends at the account-level public root. The application layer begins with that root; no step in it needs a spending key.
-
-```text
-WALLET / KEY LAYER
-entropy
-  -> mnemonic
-  -> deterministic key tree
-  -> account-level public root
-```
-
-```text
-APPLICATION LAYER
-account-level public root
-  -> address allocation
-  -> payment request
-  -> blockchain observation
-  -> payment matching
-  -> confirmation / finality
-  -> idempotent claim
-  -> fulfilment
-  -> reconciliation
-```
-
-A token’s ticker is only a label. Unrelated contracts can share a symbol, including on the same network, and a familiar symbol can appear on several chains. It cannot identify the asset being paid.
+Treat a token’s ticker as a label, not an asset identifier. Unrelated contracts can share a symbol, including on the same network, and a familiar symbol can appear on several chains. A ticker cannot identify the asset being paid.
 
 For each token payment, persist at least these seven fields:
 
-- Network/chain ID.
-- Asset type.
-- Token contract or chain-specific asset address.
-- Expected decimal precision.
-- Recipient address.
-- Amount expressed in atomic units.
-- Any required memo or tag.
+1. network/chain ID;
+2. asset type;
+3. token contract or chain-specific asset address;
+4. expected decimal precision;
+5. recipient address;
+6. amount expressed in atomic units;
+7. any required memo or tag.
 
-Use [Trust Wallet Assets](https://github.com/trustwallet/assets) for presentation metadata, token lists and logos, not as evidence that a payment has settled. Settlement must be based on a verified chain event checked against the requested network and token contract or equivalent asset address, never on a matching symbol or metadata entry.
+Use Trust Wallet Assets for presentation metadata, token lists and logos, not as evidence that a payment has settled. Base settlement on a verified chain event checked against the requested network and token contract or equivalent asset address. Never accept a matching symbol or metadata entry as settlement evidence.
+
+Keep these three worked procedures in the Web guide §H and Android guide §I, with README §13 cross-links:
+
+- testnet session end to end;
+- diagnose an apparently empty wallet;
+- run a private local chain and restart it.
+
+Link to those procedures rather than duplicating them here. Do not claim a capability until you have verified it by running it.
+
+## 16. Sources
+
+Use primary sources for technical claims. Check each source live at the time of writing:
+
+- [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
+- [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)
+- [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki)
+- [Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md)
+- [ERC-681](https://eips.ethereum.org/EIPS/eip-681)
+
+Retain the Medium article only as supplementary reading, with this dated check note: “403 to automated checks; existence confirmed 8 November 2026.”

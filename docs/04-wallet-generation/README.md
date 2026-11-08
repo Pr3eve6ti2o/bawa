@@ -1,209 +1,107 @@
-# Wallet Generation
+Replacement text for sections 1–4 follows. I’ve retained your four supplied headings; “seven sections” conflicts with the stated 13-section scope.
 
-Use this file for the one-time trusted operation: generate the root material, record recovery data, verify the result, and only then move public material online.
+# Wallet generation
 
-# Bawa's implementation: exactly what it does
+## 1. What generation is
 
-The current Bawa reference implementation is deliberately narrower than the entire guidebook.
+Generation is a one-time trusted operation. When you generate a wallet, Bawa’s `generate.js` performs ten steps:
 
-## `tools/hdwallet-gen/generate.js`
+1. Opens your controlling terminal first.
+2. Initialises Trust Wallet Core.
+3. Runs deterministic checks before generating a fresh wallet.
+4. Creates a 256-bit BIP-39 wallet with an empty BIP-39 passphrase.
+5. Exports BTC, ETH and TRON public roots, plus the configured TON address.
+6. Performs public derivation and address round trips.
+7. Encrypts your mnemonic with AES-256-GCM.
+8. Shows your mnemonic and the separate data key only on the terminal.
+9. Waits for your confirmations.
+10. Writes the seed bundle with restrictive permissions.
 
-One-time wallet generation.
+The surrounding tools have distinct roles:
 
-It:
+- `make_wallet.py` orchestrates filesystem and environment work and protects the public-output boundary.
+- `derive.js` performs one-shot watch-only derivation. The xpub goes over stdin, deliberately **not** in argv. Chain and index are arguments; the output is one derived address.
+- `derive_daemon.js` provides persistent watch-only derivation using newline-delimited JSON. It loads Wallet Core once and reuses it.
+- `compare.js` gives you a diagnostic cross-check of derived addresses against the parent application’s expectations.
+- `decrypt_seed.py` is your recovery utility for the application-specific seed bundle.
 
-1. opens the controlling terminal first;
-2. initializes Trust Wallet Core;
-3. runs deterministic checks before generating a fresh wallet;
-4. creates a 256-bit BIP-39 wallet with an empty passphrase;
-5. exports BTC/ETH/TRON public roots plus the configured TON address;
-6. performs public derivation/address round trips;
-7. encrypts the mnemonic with AES-256-GCM;
-8. shows the mnemonic and separate data key only on the terminal;9. waits for operator confirmations;
-10. writes the encrypted recovery artifact with restrictive permissions.
+At `e3b65fb0`, the npm `test` script targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was absent and the suite belonged only to an unpushed local repair copy.
 
-## `tools/make_wallet.py`
+Keep the empty BIP-39 passphrase and the 24-word mnemonic: both are fixed policy. A non-empty passphrase or a different word count gives you a different wallet. The confirmations exist because you have no second chance to record the mnemonic.
 
-Orchestration layer.
+## 2. Install pointer
 
-It handles the surrounding filesystem/environment work and protects the public-output boundary.
+Follow the root README §§5–7 as the single canonical installation procedure.
 
-## `tools/hdwallet-gen/derive.js`
+You need:
 
-One-shot watch-only derivation.
+- A Unix-like environment for the `/dev/tty` flow. This is recommended for that flow; generation itself is Unix-like only. There is no PowerShell activation.
+- Node matching the `engines` requirement in `package.json`, and npm.
+- Python 3.11+ and a venv.
+- Disk space.
+- An **offline or trusted machine** for actual generation. Never generate a wallet in a random online shell or on a CI runner.
 
-Input:
+Run the following repository-specific checks from the repository root.
 
-```text
-xpub over stdin
-chain + index as arguments
+For a signed commit, verify its signature using a maintainer key you already trust:
+
+```sh
+git verify-commit HEAD
 ```
 
-Output:
+> **Expected result**
+>
+> The commit signature verifies using a maintainer key you already trust. Printing a key ID alone is not verification.
 
-```text
-one derived address
+Check the installed Wallet Core version:
+
+```sh
+npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
 ```
 
-The xpub is deliberately not supplied in argv.
+> **Expected result**
+>
+> The dependency listing shows `@trustwallet/wallet-core@4.9.2`.
 
-## `tools/hdwallet-gen/derive_daemon.js`
+**Lockfile warning**
 
-Persistent watch-only derivation service using newline-delimited JSON.
+> Before calling the repository production-ready, commit the lockfile generated from a clean install.
+>
+> Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
 
-It loads Wallet Core once and reuses it rather than spawning a fresh Node/WASM process for every address.
+**Environment note:** A differential-test scratch result passed with Node v24.22.1 and Python 3.12.3. Python met the requirement; Node did not. That pass does **not** validate a supported installation. Repeat the differential check with Node 22.
 
-## `tools/hdwallet-gen/compare.js`
+## 3. Generating the wallet safely
 
-Diagnostic tool for comparing the derived addresses against the parent application's expectations.
+On your offline or trusted Unix-like machine, run this from the repository root:
 
-## `tools/decrypt_seed.py`
-
-Recovery utility for the application-specific encrypted seed artifact.
-
-## `test/smoke.test.js`
-
-Repository-level invariant checks. These are deliberately not presented as proof of cryptographic correctness. Full vector and cross-implementation testing is still part of professional release work.
-
----
-
-# Running Bawa from a clean machine
-
-The README needs to be runnable, not merely descriptive.
-
-## Prerequisites
-
-For the current reference tree:
-
-- a Unix-like environment is recommended for the interactive `/dev/tty` generation flow;
-- Node.js matching the repository's `package.json` engine requirement;
-- npm;
-- Python 3.11+;
-- a Python virtual environment for local tooling;
-- enough disk space for dependencies and recovery backups;
-- an **offline or trusted machine** for actual wallet generation.
-
-Do not generate a real wallet on a random online shell or CI runner just because the code runs there.
-
-## Clone
-
-```bash
-git clone https://github.com/Pr3eve6ti2o/bawa.git
-cd bawa
-```
-
-For a real installation, verify the commit/tag you intend to use before installing dependencies.
-
-## Node dependencies
-
-From the repository root:
-
-```bash
-npm install
-```
-
-If the root package is only an orchestration shell, install the wallet-core tooling as directed by its package boundary:
-
-```bash
-cd tools/hdwallet-gen
-npm install
-cd ../..
-```
-
-### Lockfiles matter
-
-Before calling the repository production-ready, commit the lockfile generated from a clean install.
-
-That turns:
-
-```text
-"install whatever satisfies this range"
-```
-
-into:
-
-```text
-"install the exact dependency graph that was tested"
-```
-
-The reference rewrite intentionally calls out a missing production lockfile as a release blocker rather than pretending it is already solved.
-
-## Python environment
-
-Create a virtual environment:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-On Windows PowerShell the activation command is:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
----
-
-# Generating the wallet safely
-
-Run generation only on a trusted machine.
-
-```bash
+```sh
 python3 tools/make_wallet.py
 ```
 
-The generator is intentionally interactive.
+> **Expected result**
+>
+> With a controlling terminal and successful checks, you see the mnemonic and separate data key only on that terminal. You are asked to confirm your backup before the seed bundle is written atomically with restrictive permissions and public material is saved for runtime.
+>
+> Without a controlling terminal, generation refuses to proceed. That refusal is a security boundary, not a bug.
 
-The process should refuse to continue when there is no controlling terminal.
+The flow is:
 
-That is not a convenience bug. It is part of the security boundary.
+Terminal check → Wallet Core self-checks → 256-bit wallet creation → mnemonic validation → public-root export → public address cross-check → AES-GCM encryption in-process → your backup confirmation → atomic seed bundle write → public material saved for runtime.
 
-The high-level flow is:
+**Record and retain all of the following:**
 
-```text
-terminal check
-     ↓
-wallet-core self-checks
-     ↓
-256-bit wallet creation
-     ↓
-mnemonic validation
-     ↓
-public-root export
-     ↓
-public address cross-check
-     ↓
-AES-GCM encryption in-process
-     ↓
-operator confirms backup
-     ↓
-atomic encrypted-file write
-     ↓
-public material saved for runtime
-```
+1. Your mnemonic.
+2. The BIP-39 passphrase policy: **empty**. Do not confuse the BIP-39 passphrase with a vault unlock passphrase.
+3. The exact derivation paths and policies for each chain.
+4. Any chain-specific wallet configuration needed for recovery.
+5. The seed bundle and its key, stored separately from each other.
 
-### What you must record
+An xpub is **not** a wallet backup. It is a watch-only capability.
 
-The recovery information is:
+## 4. What gets written to disk
 
-1. the mnemonic;
-2. the BIP-39 passphrase policy, if one is used;
-3. the exact derivation path/policy for each chain;
-4. any chain-specific wallet configuration needed for recovery;
-5. the encrypted artifact and its separately stored key, if you are using that recovery method.
-
-An xpub is **not** a wallet backup.
-
-It is a watch-only capability.
-
----
-
-# What gets written to disk
-
-The reference implementation uses a small application-specific encrypted artifact, conceptually:
+Your encrypted file is an application-specific **seed bundle**. Its conceptual structure is:
 
 ```json
 {
@@ -214,568 +112,273 @@ The reference implementation uses a small application-specific encrypted artifac
 }
 ```
 
-The actual plaintext mnemonic is not intended to be written to disk.
+Generation does not write your plaintext mnemonic to disk. Keep the random data-encryption key separately from the seed bundle.
 
-The random data-encryption key is deliberately stored separately.
+This is application-specific encryption at rest, **not** a universal replacement for a proper wallet backup standard. Recovery interoperability depends on your mnemonic, BIP-39 passphrase policy, derivation paths and chain-specific wallet configuration. Pay particular attention to the wallet configuration you need for TON.
+## 5. First-run checklist
 
-### Important limitation
+- [ ] Use a trusted machine.
+- [ ] Verify the source revision.
+- [ ] Review the dependency graph.
+- [ ] Confirm that deterministic tests pass.
+- [ ] Record your mnemonic offline.
+- [ ] Record your vault unlock passphrase policy.
+- [ ] Record your exact chain and derivation-path policy.
+- [ ] Verify addresses independently.
+- [ ] Complete a recovery drill on a clean machine.
+- [ ] Move only verified public/watch-only material online.
 
-This is **application-specific encryption at rest**, not a universal replacement for a proper wallet backup standard.
+## 6. One trusted, offline session
 
-Recovery interoperability still depends on knowing:
+1. **Prepare the machine.**
 
-```text
-mnemonic
-+ passphrase policy
-+ derivation paths
-+ chain-specific wallet configuration
-```
+   Use your trusted machine offline, with an interactive `/dev/tty` available.
 
-For TON, that last part is especially important.
+2. **Establish the launch procedure.**
 
----
+   Follow the launch procedure defined by `make_wallet.py`. It uses Node.js to run `tools/hdwallet-gen/generate.js`.
 
-## First-run checklist
+   If a wallet already exists, the launcher refuses to proceed unless you use `--force` or `--regenerate`. Verify a backup before using either option.
 
-```
-trusted machine
-verified source revision
-reviewed dependency graph
-deterministic tests pass
-mnemonic recorded offline
-passphrase policy recorded
-exact chain/path policy recorded
-independent address verification
-clean-machine recovery drill
-only public/watch-only material moves online
-```
+3. **Start and check the ordering.**
 
-## 04 Generation — one trusted, offline session
+   Start through that launch procedure and check the order:
 
-Do not place real seed words, xprv/zprv material or encryption keys into logs, chat, source control, screenshots or CI.
+   Open `/dev/tty` → initialise Core → run deterministic checks → generate a fresh 256-bit BIP-39 wallet with an empty BIP-39 passphrase → produce public exports → run public round trips → encrypt with AES-256-GCM → show the mnemonic plus data key on the terminal only → request your confirmations → atomically write the encrypted seed bundle at `0600`.
 
----
+   No seed material appears in the generator’s stdout; `make_wallet.py` checks this. Silence is not proof that the checks passed: use the completion check in step 6.
 
-Use this as a generation checklist, not a complete setup guide. Confirm the machine setup before starting.
+4. **Verify what is exported.**
 
-### 1. Prepare the machine
+   Check the BTC, ETH and TRON public roots and the configured TON address. For TON, verify the address; do not expect a fourth public-root export.
 
-Use a trusted, offline machine with an interactive `/dev/tty`.
+   Match the four public environment entries to the generator’s exports:
 
-Bawa does not document the repository URL or revision, prerequisite versions, Node dependency and lockfile procedure, or Python setup. Confirm these with the maintainers before running generation; do not guess.
+   | `.env` entry | Export field |
+   | --- | --- |
+   | `XPUB_BTC` | `btc_zpub` |
+   | `XPUB_ETH` | `eth_xpub` |
+   | `XPUB_TRX` | `trx_xpub` |
+   | `TON_DEPOSIT_ADDRESS` | `ton_address` |
 
-**You should see:** an offline session with a usable controlling terminal. Bawa does not document readiness commands or their expected output; ask the maintainers how to verify the setup.
+5. **Record recovery data before confirming.**
 
-### 2. Establish the launch procedure
+   Record your mnemonic and the separate data key from `/dev/tty` only. Keep both offline.
 
-`tools/make_wallet.py` defines the launch procedure, handles filesystem and environment work, and checks that the generator keeps seed material out of standard output. It runs `node tools/hdwallet-gen/generate.js`, which performs generation.
+   Your BIP-39 passphrase is **EMPTY**. The data key is a separate recovery key, not that passphrase.
 
-From the repository root, run:
+   Check your records before answering the confirmation prompts. Type the first word of your mnemonic, then type `SAVED`. If either confirmation fails, `seed.enc.json` is not written.
 
-```sh
-python3 tools/make_wallet.py
-```
+6. **Confirm, then inspect the write.**
 
-Generation refuses to continue if a wallet already exists unless you use `--force` or `--regenerate`. Use either flag only after verifying a backup of the existing wallet.
+   After confirming, check these locations and conditions:
 
-**You should see:** generation proceed for a new wallet, or a refusal if a wallet already exists and neither replacement flag was used. The successful completion check is in step 6.
+   - **Secrets directory:** the directory set by `NOVA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`. Symlinked paths are refused.
+   - **Backup directory:** the directory set by `BAWA_BACKUP_DIR`, or `seed-backup/` at the repository root, has mode `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
+   - **Public environment file:** the file set by `BAWA_ENV_FILE`, or the repository-root `.env`, is written atomically at `0600` and contains only the four public entries from step 4.
 
-### 3. Start and check the ordering
+   For completion, check for the message below **plus** all four public values, the seed bundle’s artefact path with mode `0600` and the backup bundle path:
 
-Once the machine is ready, the generator follows this sequence:
+   > Wallet generation and public configuration update completed.
 
-```text
-open controlling terminal
-↓
-initialise Trust Wallet Core
-↓
-deterministic checks
-↓
-fresh 256-bit BIP-39 wallet; empty passphrase
-```
-
-```text
-public exports
-↓
-public derivation/address round trips
-↓
-AES-256-GCM encryption
-↓
-terminal-only mnemonic + separate data key
-↓
-operator confirmations
-↓
-atomic encrypted recovery write (0600)
-```
-
-**You should see:** no seed material in the generator's standard output. `tools/make_wallet.py` checks this and verifies that the generator's self-checks pass. Bawa does not document exact start-up or check-success messages. Use the completion check in step 6; silence is not proof that the checks passed.
-
-### 4. Verify what is exported
-
-| Chain | Documented public export |
-|---|---|
-| BTC / ETH / TRON | Public roots |
-| TON | Configured address |
-
-A TON public-root export is not documented. Public derivation/address round trips follow the exports.
-
-`tools/make_wallet.py` writes the generator's four public values to the environment file using these names:
-
-- `XPUB_BTC`: `btc_zpub`
-- `XPUB_ETH`: `eth_xpub`
-- `XPUB_TRX`: `trx_xpub`
-- `TON_DEPOSIT_ADDRESS`: `ton_address`
-
-**You should see:** BTC, ETH and TRON public roots, plus the TON configured address, in the launcher's completion report and the public environment file. Bawa does not document the full display and serialisation formats, derivation paths or individual round-trip success diagnostics. Ask the maintainers before relying on those details.
-
-### 5. Record recovery data before confirming
-
-The mnemonic is encrypted with **AES-256-GCM**. Record the mnemonic and **separate data key** privately from the controlling terminal. The BIP-39 passphrase is **empty**; the data key is a separate recovery key, not that passphrase.
-
-`tools/hdwallet-gen/generate.js` shows the mnemonic and data key only on `/dev/tty` and requires two confirmations:
-
-1. Type the first word of the seed phrase.
-2. Type `SAVED` to confirm that you have stored the data key.
-
-If either confirmation fails, `seed.enc.json` is not written.
-
-**You should see:** the mnemonic and data key only on the controlling terminal, with the two confirmations above. Neither belongs in standard output or logs.
-
-### 6. Confirm, then inspect the write
-
-Files are written only after the confirmations succeed. The generator writes the encrypted recovery artefact, `seed.enc.json`, atomically with mode **`0600`**. `tools/make_wallet.py` verifies the artefact.
-
-The filesystem and environment rules in `tools/make_wallet.py` define these locations. In the default paths below, `repo` means the repository root.
-
-- **Secrets directory:** `NOVA_SECRETS_DIR`, or `repo/secrets` by default, with mode **`0700`**. Symlinked paths are refused. This directory holds `seed.enc.json`.
-- **Backup directory:** `BAWA_BACKUP_DIR`, or `repo/seed-backup` by default, with mode **`0700`**. It contains a **`0600`** copy of `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
-- **Public environment file:** `BAWA_ENV_FILE`, or `repo/.env` by default. It is written atomically with mode **`0600`** and contains only `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`.
-
-**You should see:** `Wallet generation and public configuration update completed.`, together with the four public values, the encrypted artefact path and its `0600` mode, and the backup bundle path. Check that the files, contents and permissions match the rules above.
-
-Bawa does not document the artefact schema or file-inspection commands. Ask the maintainers for inspection guidance rather than guessing.
-
-For recovery, use `tools/decrypt_seed.py` as described in the recovery document, `docs/RECOVERY.md`. Generation checks and backup-copy integrity do not prove successful decryption or recovery. Test a restore separately before funding.
+For recovery, use `tools/decrypt_seed.py` and follow `docs/RECOVERY.md`. Generation checks and backup-copy integrity do **not** prove successful decryption or recovery. Test a restore separately before funding.
 
 > Only verified public material belongs online. Never put mnemonic, private keys, data keys or recovery files in source control, issues, chat, CI logs or test fixtures.
 
----
-## Backup acceptance and failed runs
+## 7. Backup acceptance and failed runs
 
-Documented flow on the trusted, offline machine — these are stages, not commands:
+**Backup acceptance stages (not commands)**
 
-```text
-Open controlling /dev/tty
-  → initialise Wallet Core
-  → deterministic checks
-  → fresh 256-bit BIP-39 wallet; empty passphrase
-  → BTC/ETH/TRON public roots + configured TON address
-  → public derivation/address round trips
-```
+Check the stages in this order:
 
-```text
-Encrypt mnemonic with AES-256-GCM
-  → show mnemonic + separate data key on terminal only
-  → operator confirmations
-  → encrypted recovery artefact: atomic write, mode 0600
-```
+Open `/dev/tty` → initialise Core → deterministic checks → fresh 256-bit BIP-39 wallet with an empty BIP-39 passphrase → BTC/ETH/TRON public roots plus the configured TON address → public round trips → encrypt with AES-256-GCM → show the mnemonic plus data key on the terminal only → operator confirmations → atomic write of the encrypted seed bundle at `0600`.
 
-TON is an address export here, not a fourth public root. The public round trips check generation and export; they do not test backup restoration.
+TON is an address export, not a fourth public root. Round trips check generation and export; they do **not** test backup restoration.
+
+**Backup checks**
+
+Check the layout defined by `make_wallet.py`: the backup directory has mode `0700` and contains a `0600` copy of the seed bundle, `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
+
+The orchestrator checks that the original seed bundle has mode `0600` and that its bytes match the backup copy.
+
+**What verified can mean here**
+
+| Evidence | What you can conclude |
+| --- | --- |
+| Deterministic checks plus public round trips | The documented generation and export checks completed. |
+| Artefact at `0600` | The documented disk-write condition was met; this is not a restore result. |
+| Backup matches the original | You have copy integrity, not proof of successful decryption or recovery. |
+| Recovery from the saved copy | A successful, separate restore test with `decrypt_seed.py` establishes recovery from that copy. |
+
+**Failed runs**
 
 If a stage fails, stop before confirming. Keep recovery material offline and do not redirect secrets into logs.
 
-### Backup checks
+| Failure | What you should do |
+| --- | --- |
+| Terminal unavailable or your records do not match | Stop before confirming. |
+| Deterministic or public check fails | Hold public release and investigate with a maintainer. Treat exact diagnostics and exit codes as unspecified. |
+| Write fails, is interrupted, or permissions differ | Keep completion unverified and retain recovery material offline. File presence alone is not recovery proof. |
+| Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` places `decrypt_seed.py` and `docs/RECOVERY.md` in the backup directory; test a restore separately before funding. |
 
-`tools/make_wallet.py` defines the backup layout. The backup directory is set by `BAWA_BACKUP_DIR`, or defaults to `repo/seed-backup`. It has mode `0700` and contains a copy of `seed.enc.json` with mode `0600`, plus `decrypt_seed.py` and `docs/RECOVERY.md`. The orchestrator checks that the encrypted artefact has mode `0600` and that its bytes match the backup copy.
+**After a crash**
 
-Bawa does not document the encrypted file schema or a launch command; consult the generator and orchestrator code before relying on those details. The manual recording and storage steps below are operator recommendations, not additional Bawa features.
+Make no assumptions about what remains, clean-up behaviour or the safety of retries or overwrites. Check the implementation or ask a maintainer before retrying or overwriting. Atomic writing does not specify a recovery or rollback procedure.
+## 8. Launch wallet generation
 
-1. **Record and compare before confirming.** Record the terminal-displayed mnemonic and separate data key, and note that the BIP-39 passphrase is empty. The data key is not that passphrase.
-
-   **You should see:** your records agree with the controlling-terminal display. If they do not match, stop before confirming. Bawa does not document the exact confirmation wording, so read the terminal instructions before responding.
-
-2. **Back up the actual artefact, not a guessed filename.** Confirm the original location of `seed.enc.json` from the generator and orchestrator code. Once the write has completed, keep a protected offline copy and check it against the original. Storing the data key separately from the encrypted backup is an operator storage recommendation.
-
-   **You should see:** the original has mode `0600`, and the backup’s bytes match it. Confirmation alone does not prove that the later write succeeded. Bawa does not document manual copy, permission-check or comparison commands; consult your operating system’s documentation if you perform these operations yourself.
-
-3. **Keep recovery material out of online and development channels.** This includes mnemonics, private keys, data keys and recovery files: no source control, issues, chat, CI logs or test fixtures.
-
-   **You should see:** none of that material in those destinations. Terminal-only display is not permission to paste it elsewhere.
-
-### What “verified” can mean here
-
-| Evidence | What it establishes |
-|---|---|
-| Deterministic checks and public round trips | The documented generation/export checks completed. |
-| Encrypted artefact written with `0600` | The documented disk-write condition was met; not a restore result. |
-| Backup matches the original | Copy integrity, not successful decryption or recovery. |
-| Recovery from the saved copy | A successful, separate restore test with `decrypt_seed.py` establishes recovery from that copy. |
-
-The backup requirements for `tools/make_wallet.py` require a separate restore test with `decrypt_seed.py` before funding. Generation, permission and copy checks alone do not prove recovery.
-
-Bawa does not document an exact decryption invocation, a step-by-step restore test or its acceptance output. Read `docs/RECOVERY.md` and `tools/decrypt_seed.py` to establish how to run the test and check its result on the trusted, offline machine. Do not guess a command or report restore success from generation or copy checks alone.
-### If a stage fails
-
-Stop before confirming, keep recovery material offline and do not redirect secrets into logs. The actions below are maintainer guidance; they do not imply that Bawa automatically aborts or rolls back a failed stage.
-
-| Failure | Response and resumption check |
-|---|---|
-| Terminal unavailable or records do not match | Stop before confirming; do not redirect secrets into logs. **You should see:** the mnemonic and data key on the controlling terminal, with matching records, before proceeding. |
-| Deterministic or public check fails | Hold public release. **You should see:** those checks complete before proceeding. Bawa does not document exact diagnostics or exit codes; investigate the failed check with a maintainer before resuming. |
-| Write fails, is interrupted, or permissions differ | Keep completion unverified and retain recovery material offline. **You should see:** the identified encrypted artefact at `0600` before further verification; file presence alone is not recovery proof. |
-| Recovery fails or its procedure is unavailable | Keep recovery marked unverified. Bawa’s `tools/make_wallet.py` places `decrypt_seed.py` and `docs/RECOVERY.md` in the backup directory. Use them to test a restore separately before funding; if you cannot access them, ask a maintainer before proceeding. **You should see:** no claimed restore success based only on generation or copy checks. |
-
-**Crash handling, clean-up and retry safety:** Bawa does not document what remains after a crash, clean-up behaviour, or whether retries and overwrites are safe. Check the implementation or ask a maintainer before retrying or overwriting existing files. Atomic writing does not specify a recovery or rollback procedure.
-
-## Installing Bawa from scratch
-
-Fetch dependencies online if needed, but run wallet generation only on an offline or trusted machine—never on a random online shell or CI runner.
-
-### 1. Check your runtimes first
-
-```bash
-node --version
-python3 --version
-```
-
-Node must satisfy `>=22 <23`, as declared in `tools/hdwallet-gen/package.json`. Python must be 3.11 or later. **Stop if Node is outside that range.** Fix any missing or unsupported runtime before continuing.
-
-**You should see:** Node 22 and Python 3.11 or later.
-
-### 2. Clone and verify the revision
-
-```bash
-git clone https://github.com/Pr3eve6ti2o/bawa.git
-cd bawa
-git rev-parse HEAD
-```
-
-Compare the full commit ID with the expected commit obtained through a trusted release channel. For a signed commit, also run `git verify-commit HEAD` using a maintainer key you already trust. Printing an ID is not verification: if you cannot establish the revision’s provenance, stop before installing dependencies.
-
-**You should see:** a commit ID matching your trusted reference, with a valid signature where applicable.
-
-### 3. Install the Node dependencies
-
-From the repository root:
-
-```bash
-npm install
-cd tools/hdwallet-gen
-npm install
-cd ../..
-npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
-```
-
-The required Wallet Core version is **4.8.4**. Do not accept a different version or work around an engine mismatch. For background on HD derivation, see the [Wallet Core HD wallet implementation](https://deepwiki.com/trustwallet/wallet-core/4.1-hd-wallet-implementation).
-
-**You should see:** both installs completing successfully, with `@trustwallet/wallet-core@4.8.4` in the dependency listing. Your shell should be back at the repository root.
-
-### 4. Set up Python separately
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip show cryptography bip-utils
-```
-
-Keep the repository’s `requirements.txt` pins: `cryptography==50.0.2` and `bip-utils==2.12.2`. Use the activated environment for the remaining Python commands.
-
-**You should see:** `cryptography` version 50.0.2 and `bip-utils` version 2.12.2, installed under `.venv`.
-
-### 5. Run the public reference check
-
-Run this on your offline or trusted machine, using only the public test data—not a real wallet’s secrets.
-
-A scratch test in a disposable directory, since deleted, passed with Node v24.22.1 and Python 3.12.3. Python met the requirement; Node did not. That pass does **not** validate a supported installation, so repeat the check with Node 22.
-
-```bash
-python test/differential_test.py
-echo $?
-```
-
-**You should see:** these reference results, followed by exit status `0` from `echo`:
-
-```text
-bip_utils reference checks: PASS
-BTC m/84'/0'/0'/0/0: bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd
-ETH m/44'/60'/0'/0/0: 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7
-0
-```
-
-### 6. Record the dependency graph
-
-Commit the lockfile from this clean install, including the tool’s lockfile if it is separate. This records the exact dependency graph. Do not call anything production-ready before that record is committed, and keep wallet secrets out of version control.
-
-**You should see:** the clean-install lockfile recorded in repository history, with no pending lockfile changes.
-
-## Launch wallet generation
-
-Run generation only on a trusted machine. If a wallet already exists, the generator refuses to replace it unless you use `--force` or `--regenerate`. Use either flag **only after verifying a backup of the existing wallet**—not as a shortcut past an unexpected refusal.
-
-1. **Start from an interactive terminal.**
+1. **Use an interactive terminal.** From the repository root, run:
 
    ```sh
    python3 tools/make_wallet.py
    ```
 
-   The first check is for a controlling terminal. The generator is intentionally interactive and must refuse to continue without one. That refusal is a security boundary, not a bug; don’t work around it.
+   > **Expected result**
+   >
+   > The generator checks terminal access first. With a usable terminal, it proceeds to the self-checks; without one, it refuses. That refusal is a security boundary, not something to bypass.
 
-   **You should see:** The terminal check pass, allowing the run to continue. Without a controlling terminal, it must stop here.
+2. **Let the wallet-core self-checks finish.** These include:
+   - `coin_tron_195` and `coin_ton_607`;
+   - the published BTC fixture `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`;
+   - the published ETH fixture `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`;
+   - `zpub`/`xpub` prefix checks and public round-trip checks for BTC, ETH and TRX.
 
-2. **Let the wallet-core self-checks finish.**
+   The published addresses are **test fixtures, not your new wallet’s addresses**.
 
-   The deterministic checks include `coin_tron_195`, `coin_ton_607`, and these published fixtures:
+3. **Let wallet creation and mnemonic validation finish.** Generation uses 256-bit BIP-39 with an empty BIP-39 passphrase. Mnemonic validation must finish before public-root export. Keep your mnemonic private.
 
-   - BTC: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
-   - ETH: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
+4. **Let the public-material checks finish.** The order is public-root export, public-address cross-check, then encryption.
 
-   They also include `zpub`/`xpub` prefix and round-trip checks for BTC, ETH and TRON. The addresses above are test fixtures, not addresses for your new wallet.
+5. **Let in-process encryption finish.** AES-GCM encryption happens within the running process, before backup confirmation. The encrypted seed bundle is written later.
 
-   **You should see:** The self-checks pass before wallet creation begins.
+6. **Check your backup, then confirm it.** Your backup of the displayed recovery material must be securely stored and readable before you confirm. The next operation commits the seed bundle to disk.
 
-3. **Allow wallet creation and mnemonic validation.**
+7. **Let both saves finish.** The atomic seed bundle write comes first, followed by the public runtime material, in that order.
 
-   `generate.js` creates a 256-bit BIP-39 wallet with an empty passphrase. Mnemonic validation follows creation and must finish before public-root export. Keep the mnemonic private.
+## 9. Generation exports and launch refusals
 
-   **You should see:** Successful wallet creation followed by successful mnemonic validation.
+| Chain | Field | .env name | What it is |
+| --- | --- | --- | --- |
+| BTC | btc_zpub | XPUB_BTC | Public root |
+| ETH | eth_xpub | XPUB_ETH | Public root |
+| TRON | trx_xpub | XPUB_TRX | Public root |
+| TON | ton_address | TON_DEPOSIT_ADDRESS | Configured TON address |
 
-4. **Let the public-material checks run.**
+**Launch guards.** `make_wallet.py` captures only the generator’s public JSON stdout. Seed material in that stream causes a refusal, as does any failed self-check. Before writing public material, it checks that the seed bundle exists with mode exactly `0600`. A failed guard must stop the write. Do not treat a startup message as evidence that these checks passed.
 
-   Public roots are exported next. The generator then cross-checks the public addresses before moving on to encryption.
-
-   **You should see:** Public-root export complete, followed by a successful public-address cross-check.
-
-5. **Allow in-process encryption.**
-
-   The wallet is encrypted with AES-GCM within the running process. This happens before backup confirmation; the encrypted-file write comes later.
-
-   **You should see:** Encryption complete before the backup-confirmation stage, with the final encrypted-file write still pending.
-
-6. **Check your backup, then confirm it.**
-
-   Make sure your backup is securely stored and readable before confirming. Don’t confirm just to get through this stage: the next operation commits the encrypted wallet to disk.
-
-   **You should see:** The run wait for your backup confirmation before proceeding to the encrypted-file write.
-
-7. **Let both saves finish.**
-
-   After your confirmation, the generator writes the encrypted wallet file atomically. It then saves the public material needed at runtime, in that order.
-
-   **You should see:** The atomic encrypted-file write complete, followed by the save of public runtime material.
-
-For background, see the [wallet-core HD wallet implementation](https://deepwiki.com/trustwallet/wallet-core/4.1-hd-wallet-implementation).
-
-## Generation exports and launch refusals
-
-Practise first on a test network with valueless coins, never with real funds. For Bitcoin testnet background, see [Wasabi’s Testnet guide](https://docs.wasabiwallet.io/using-wasabi/Testnet.html).
-
-### 1. Check what generation exports
-
-`make_wallet.py` writes four public values into the configured environment file:
-
-| Network | Generator JSON field | Environment variable | Export |
-|---|---|---|---|
-| BTC | `btc_zpub` | `XPUB_BTC` | Public root |
-| ETH | `eth_xpub` | `XPUB_ETH` | Public root |
-| TRON | `trx_xpub` | `XPUB_TRX` | Public root |
-| TON | `ton_address` | `TON_DEPOSIT_ADDRESS` | Configured TON address |
-
-TON is an address export, not a fourth public root. No TON public-root export is documented.
-
-**You should see:** After successful generation, the four assignments listed above in the environment file, with TON represented by its configured address.
-
-### 2. Let the orchestrator’s guards do their job
-
-The orchestrator captures only the generator’s public JSON stdout. Seed material appearing in that stream causes a refusal, as does any failed self-check.
-
-Before writing any public material, it also verifies that the encrypted artefact exists and has mode `0600`: readable and writable only by its owner. A startup message alone does not mean these checks have passed.
-
-**You should see:** Public material written only after every guard passes, with the encrypted artefact present at exactly `0600`. A failed guard must stop that write.
-
-### 3. Recognise a missing-terminal refusal
-
-Generation needs a controlling terminal for the seed phrase and data key. Redirecting stdin is not a substitute.
-
-In a public-only scratch test, `NOVA_SECRETS_DIR`, `BAWA_ENV_FILE` and `BAWA_BACKUP_DIR` were directed into a disposable directory, and stdin came from `/dev/null`. The orchestrator printed:
+**Missing-terminal refusal.** The disposable check directed `NOVA_SECRETS_DIR`, `BAWA_ENV_FILE` and `BAWA_BACKUP_DIR` into a disposable directory, with stdin from `/dev/null`. It printed these startup lines, quoted verbatim including the legacy wording:
 
 ```text
 Generating wallet with Trust Wallet Core ...
 Seed phrase + data key are displayed only on the controlling terminal.
 ```
 
-It then exited with status `1` and reported:
+The run then exited with status `1` and:
 
 ```text
 wallet-core generation failed; stderr suppressed
 ```
 
-The cause was verified: stdin was not a terminal, and `/dev/tty` could not be opened. With no controlling terminal available, `generate.js` refused at its first step, exactly as intended. Those two startup lines did not mean a wallet had been created.
+The cause was confirmed: stdin was not a terminal and `/dev/tty` could not be opened. `generate.js` refused at its first step, exactly as intended. Those startup lines did not mean a wallet had been created.
 
-For another attempt, use a session with a controlling terminal; do not try to route seed output through stdout.
+No `seed.enc.json`, `.env` or backup directory was created. Only an empty secrets directory at `0700` remained. The disposable directory was then deleted. **No live wallet was created [in this scratch run].** Live wallet creation has since been performed end to end on the pushed head (2026-11-08, under a real pty; see README §18).
 
-**You should see:** In that scratch result, no `seed.enc.json`, no `.env` and no backup directory were created. Only an empty secrets directory at mode `0700` remained. The disposable directory was subsequently deleted, and no live wallet was created.
+**Existing-wallet refusal.** This protects an existing wallet against replacement; it is not a housekeeping error. Stop and check which wallet location you selected. Do not delete or rename wallet files to make generation run. Keep the existing wallet and its backups intact, and use a separate disposable location for a fresh test.
 
-### 4. Respect the existing-wallet refusal
+## 10. Record recovery data and check generated files
 
-Generation also refuses when it detects an existing wallet. This is protection against replacement, not a housekeeping error to bypass.
+1. **Make your recovery record before confirming.** Record:
+   - your mnemonic;
+   - the BIP-39 passphrase policy: **empty**;
+   - the exact derivation path and policy for each chain;
+   - the chain-specific wallet configuration;
+   - the intended location of the `seed.enc.json` seed bundle.
 
-If you hit this refusal, stop and check which wallet location you selected. Do not delete or rename wallet files merely to make generation run. Keep the existing wallet and its backups intact; use a separate disposable location for a fresh test.
+   Your recovery set needs that seed bundle and its separately stored data key. Save the key now. The seed bundle is written only after both terminal confirmations.
 
-**You should see:** A refusal to generate over the existing wallet, rather than a replacement wallet or a successful new export.
+2. **Complete both terminal confirmations.** Enter the first word of your mnemonic, then `SAVED`. Do not confirm storage until you have stored and checked your recovery material. If either confirmation fails, no write happens.
 
-## Record recovery data and check generated files
+3. **Check the seed bundle and backup bundle.** Check that:
+   - the secrets directory has mode `0700`;
+   - `seed.enc.json` has mode `0600`;
+   - the backup directory has mode `0700`;
+   - the backup bundle contains a `0600` copy of the seed bundle, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
 
-### 1. Make the recovery record before confirming
+   Symlinked paths are refused. The seed bundle uses AES-256-GCM, and the generator never writes the plaintext mnemonic to disk. Store the data key separately. Treat this as application-specific encryption at rest, not a universal backup standard.
 
-Before answering either confirmation, securely record:
+4. **Check the public environment file.** The `.env` write is atomic, with mode `0600`. Check that it contains exactly these four entries, using your generated public values in place of the placeholders:
 
-- The mnemonic.
-- The BIP-39 passphrase policy: **Bawa uses an empty passphrase**.
-- The exact derivation path and policy for each chain.
-- Any chain-specific wallet configuration.
+   ```dotenv
+   XPUB_BTC=<btc-xpub>
+   XPUB_ETH=<eth-xpub>
+   XPUB_TRX=<trx-xpub>
+   TON_DEPOSIT_ADDRESS=<ton-deposit-address>
+   ```
 
-Your recovery set must also include the encrypted artefact, `seed.enc.json`, and its separately stored data key. Record the intended artefact location and save the key now; retain the encrypted file once generation writes it. The file is only written after both confirmations succeed.
+   It must contain no mnemonic, private key or data key. An xpub is a watch-only capability, **not a wallet backup**.
 
-**You should see:** A recovery record covering the mnemonic, empty-passphrase policy and every chain’s settings, with the data key saved separately from the intended artefact location.
+5. **Read the completion report and keep recovery material private.** Look for `Wallet generation and public configuration update completed.` together with:
+   - the four public values;
+   - the seed bundle path with mode `0600`;
+   - the backup bundle path.
 
-### 2. Complete both terminal confirmations
+   Compare the reported paths with your recorded locations. Keep the data key separate from both the seed bundle and the backup bundle. Never put secret recovery material in source control, issues, chat, CI logs or test fixtures.
 
-`generate.js` shows the mnemonic and separate data key only on `/dev/tty`.
+## 11. Backup acceptance and generation failures
 
-First, type the first word of the seed phrase. Then type `SAVED` to confirm that you have stored the data key. Do not confirm storage until you have actually done it.
+1. **Record and compare before confirming.** Your recovery records must agree with the terminal display. If the terminal is unavailable or anything differs, stop before confirming. Never redirect secrets into logs.
 
-If either confirmation fails, `seed.enc.json` is not written. Files are written only after both confirmations succeed.
+2. **Respect the generation checks.** The deterministic checks and public round trips establish that the documented checks completed, not that recovery works. If a check fails, hold public release and investigate with a maintainer. Exact diagnostics and exit codes for failed checks are not documented.
 
-**You should see:** The first-word confirmation followed by the `SAVED` confirmation, with file writing held until both succeed.
+3. **Check the write, and pause after a crash.** A seed bundle at `0600` meets the disk-write condition; it is not a restore test. After a write failure, interruption or permission mismatch, treat completion as unverified and keep recovery material offline. Check crash, retry and overwrite safety before trying again.
 
-### 3. Check the encrypted artefact and backup bundle
+4. **Back up the actual seed bundle.** Use the file actually created, not a guessed filename. Make a protected offline copy and check it against the original. Store the data key separately. A matching copy establishes copy integrity only.
 
-Here, `repo` means the repository root.
+5. **Prove recovery separately.** Only a successful, separate restore test with `decrypt_seed.py`, using the backup copy, proves recovery from that copy. If recovery fails or the procedure is unavailable, keep recovery marked **unverified**.
 
-- **Secrets directory:** the path set by `NOVA_SECRETS_DIR`, or `repo/secrets` by default. Its mode is `0700`, and it holds `seed.enc.json` at mode `0600`.
-- **Backup directory:** the path set by `BAWA_BACKUP_DIR`, or `repo/seed-backup` by default. Its mode is `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
+## 12. Recovery drill and pre-funding gate
 
-Symlinked paths are refused.
+**This drill has NEVER been executed. It remains an open item.** (V1's decrypt round trip on 2026-11-08 is not this drill.) It must also be runnable on a clean install with disposable fixtures drawn only from published test vectors, with expected addresses, a testnet signing check, pass criteria and a sanitised record.
 
-The mnemonic is encrypted with AES-256-GCM. The generator never writes the plaintext mnemonic to disk, and the data key is stored separately. This is application-specific encryption at rest, not a universal backup standard.
+1. **Gather your recovery pack.** You need:
+   - the BIP-39 mnemonic, or the `seed.enc.json` seed bundle plus its separate 32-byte data key;
+   - the exact BIP-39 passphrase policy, currently **empty**;
+   - the chain derivation paths and address policy;
+   - the network and chain configuration;
+   - the TON wallet configuration, where applicable;
+   - the recorded original public addresses for comparison.
 
-**You should see:** Both directories at `0700`, both encrypted seed copies at `0600`, and the two recovery support files in the backup bundle.
+   An xpub or zpub cannot recover the wallet.
 
-### 4. Check the public environment file
+2. **Recover on a clean, trusted machine.** Keep screen sharing and terminal recording off. From the repository root in an interactive terminal, run the following command and enter the recorded path to your seed bundle:
 
-The public environment file is written atomically to the path set by `BAWA_ENV_FILE`, or `repo/.env` by default, at mode `0600`. It contains only these four entries; placeholders are shown below:
+   ```sh
+   printf 'Path to seed.enc.json: ' && IFS= read -r seed_bundle_path && python3 tools/decrypt_seed.py "$seed_bundle_path"
+   ```
 
-```dotenv
-XPUB_BTC=<btc-xpub>
-XPUB_ETH=<eth-xpub>
-XPUB_TRX=<trx-xpub>
-TON_DEPOSIT_ADDRESS=<ton-deposit-address>
-```
+   > **Expected result**
+   >
+   > After you enter the file path, `decrypt_seed.py` asks for the data key. With a valid seed bundle and matching key, it displays the mnemonic on the controlling terminal by default.
 
-An xpub is a watch-only capability, **not a wallet backup**. Keep the full recovery set even if the public configuration looks correct.
+   Use `--stdout` only for an explicit, controlled pipeline. The `--output` option writes an atomic plaintext file at `0600`; keep any such file offline, outside shared folders and the development tree. If you backed up the mnemonic directly, use that offline copy instead.
 
-**You should see:** The selected environment file at `0600`, containing exactly these four public entries and no mnemonic, private key or data key.
+3. **Restore the original settings.** Verify the mnemonic and BIP-39 passphrase policy against your recovery records. The BIP-39 passphrase is empty: do not add one during the drill or substitute a vault unlock passphrase.
 
-### 5. Read the completion report and keep recovery material private
+   Apply the recorded derivation paths, address policy, and network and chain configuration. For TON, preserve the original wallet contract and version, derivation convention, workchain, network presentation, wallet ID and subwallet ID.
 
-Check the reported paths against the locations you recorded. Keep the data key separate from both the encrypted artefact and the backup bundle.
+4. **Compare public outputs.** Derive known public addresses from the restored wallet for each chain. Compare them with your recorded originals using the original address and network presentation. Investigate any mismatch. Do not fund the wallet until the public outputs match.
 
-Never put mnemonics, private keys, data keys or recovery files in source control, issues, chat, CI logs or test fixtures.
+5. **Verify the retained backup and separate the key.** Restore from **the backup copy you will keep** and repeat the address comparison. A file merely existing is not enough. Keep the data key stored separately, and keep secret material out of online and development channels.
 
-**You should see:** `Wallet generation and public configuration update completed.` alongside the four public values, the encrypted artefact path and its `0600` mode, and the backup bundle path.
-
-## Backup acceptance and generation failures
-
-Don’t let a successful generation run stand in for a recovery test. Keep the evidence for acceptance, writing, copying and recovery separate.
-
-1. **Record and compare before confirming.**
-
-   Make your record of the backup details, then compare it directly with the terminal display. Confirm only when the records agree. If the terminal is unavailable or anything differs, stop before confirming. Never redirect secrets into logs to work round the problem.
-
-   **You should see:** a match between your records and the terminal display. Without that comparison and match, do not confirm.
-
-2. **Respect the generation checks.**
-
-   Successful deterministic checks and public round trips prove that the documented generation and export checks completed—not that recovery works. If a deterministic or public check fails, hold public release and investigate with a maintainer before resuming. Bawa does not document exact diagnostics or exit codes for these failures.
-
-   **You should see:** evidence that the documented generation and export checks completed. If a check failed, public release stays on hold.
-
-3. **Check the write, and pause after a crash.**
-
-   An artefact at mode `0600` establishes the documented disk-write condition; it does not demonstrate a restore. If writing fails, is interrupted, or leaves different permissions, keep completion unverified and retain recovery material offline.
-
-   The documentation does not say what survives a crash, what gets cleaned up, or whether another attempt or an overwrite is safe. Check the implementation or ask a maintainer before retrying or overwriting. Do not infer rollback behaviour from atomic writing alone.
-
-   **You should see:** a completed write with the artefact at `0600`. A write failure, interruption or permission mismatch leaves completion unverified; after a crash, retry or overwrite safety must be checked first.
-
-4. **Back up the actual artefact.**
-
-   Use the artefact that was actually created, not a guessed filename. Keep a protected offline copy and check it against the original. Store the data key separately from the encrypted backup.
-
-   A matching copy proves copy integrity only. It does not prove that the backup can be decrypted or that the wallet can be recovered.
-
-   **You should see:** a protected offline copy that matches the original, with the data key stored separately from the encrypted backup.
-
-5. **Prove recovery separately.**
-
-   Only a successful, separate restore test with `decrypt_seed.py`, using that backup copy, proves recovery from it. If recovery fails or the procedure is unavailable, keep recovery marked unverified. Neither generation checks nor a matching copy justify claiming restore success.
-
-   **You should see:** a successful separate restore from the backup copy using `decrypt_seed.py`—or recovery still marked unverified.
-
-## Recovery drill and pre-funding gate
-
-A backup is unproven until a clean restore reproduces the recorded public addresses. Keep the restored wallet unfunded throughout this drill.
-
-1. **Gather the recovery pack.**
-
-   Have the BIP-39 mnemonic, or the generated encrypted `seed.enc.json` plus its separate 32-byte data key. You also need the exact BIP-39 passphrase policy (currently empty), chain derivation paths and address policy, network and chain configuration, and TON wallet configuration where applicable. Have the recorded original public addresses ready for comparison.
-
-   An xpub or zpub cannot recover the wallet. It reproduces only public descendants below the exported account node.
-
-   **You should see:** usable recovery material, the original configuration and a public-address record—not just an account public key.
-
-2. **Recover on a clean, trusted machine.**
-
-   For an encrypted backup, run `python3 tools/decrypt_seed.py` with the actual local path to `seed.enc.json` as its argument. The utility asks for the data key and displays the mnemonic on the controlling terminal by default. Keep screen sharing and terminal recording off.
-
-   Use `--stdout` only for an explicit controlled pipeline, or `--output` for an atomic plaintext file with mode `0600`. Keep any plaintext file offline and outside shared folders or the development tree. If you backed up the mnemonic directly, use that offline copy instead.
-
-   **You should see:** the mnemonic available privately on the controlling terminal, or only at the deliberately selected output destination.
-
-3. **Restore the original settings.**
-
-   Verify the mnemonic and passphrase against your recovery records. The current BIP-39 passphrase is empty; do not add one during the drill. Apply the recorded derivation paths, address policy, network and chain configuration.
-
-   For TON, preserve the original wallet contract and version, derivation convention, workchain, network presentation, wallet ID and subwallet ID. These are recovery settings, not optional preferences.
-
-   **You should see:** the original configuration reapplied, including the empty passphrase policy and every applicable TON setting.
-
-4. **Compare public outputs.**
-
-   Derive known public addresses from the restored wallet for each relevant chain. Compare them with the recorded originals, using the original address and network presentation.
-
-   Investigate any mismatch rather than accepting something that looks plausible. Do not fund the restored wallet until the public outputs match.
-
-   **You should see:** every checked public address matching its recorded original exactly. Any mismatch keeps the gate closed.
-
-5. **Verify the retained backup and separate the key.**
-
-   Test the backup copy you will keep by restoring from that copy and repeating the address comparison. A file merely existing is not enough.
-
-   Store the data key separately from the encrypted backup. Keep all secret material out of online and development channels, including chats, tickets, repositories and logs.
-
-   **You should see:** a successful restore from the retained copy, separate key storage, and no secret material in those channels.
-
-Related reading: [BitPay’s testnet wallet guide](https://support.bitpay.com/hc/en-us/articles/360015463612-How-to-Create-a-Testnet-Wallet). Testnet practice does not replace this recovery drill.
-
-### Pre-funding gate
-
-Do not fund until every box is ticked:
+**Pre-funding gate — tick every box before funding:**
 
 - [ ] Restore tested.
-- [ ] Public addresses match.
-- [ ] Backup copy verified.
-- [ ] Data key stored separately.
+- [ ] Public addresses match the recorded originals.
+- [ ] Retained backup copy verified by restoring from that copy.
+- [ ] Data key stored separately from the seed bundle and backup bundle.
 - [ ] No secret material in any online or development channel.
+
+## 13. Sources
+
+- [Wasabi Testnet guide](https://docs.wasabiwallet.io/using-wasabi/Testnet.html).
+- [BitPay testnet wallet guide](https://support.bitpay.com/hc/en-us/articles/360015463612-How-to-Create-a-Testnet-Wallet) — returned `403` to an automated check on 8 November 2026; existence confirmed via the Zendesk public API. Keep this dated check note with the link.
+- [Trust Wallet Core HDWallet API](https://github.com/trustwallet/wallet-core/blob/master/src/HDWallet.h).

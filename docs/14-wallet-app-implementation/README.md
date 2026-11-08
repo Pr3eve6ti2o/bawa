@@ -1,228 +1,194 @@
+---
+title: Wallet App Implementation
+description: Implement the wallet app module by module, key, derivation, storage, network, signing and UI, with a fixture gate, typed errors and a build-from-scratch checklist; testnet only, with published vectors.
+last-updated: 2026-11-08
+---
+
 # Wallet app implementation
 
-## 1. Project structure and key module
+How-to guide.
 
-`bawa-hd-wallet-core-tools` is private (`private: true`), pins `@trustwallet/wallet-core` to `4.8.4` and requires Node `>=22 <23`. The paths below are a conceptual layout. Connected exercises use testnet configuration and endpoints; published vectors and mainnet-format export checks remain offline.
+## Contents
+
+- [Project structure and key module](#project-structure-and-key-module)
+- [Derivation module](#derivation-module)
+- [Storage module](#storage-module)
+- [Network and signing modules](#network-and-signing-modules)
+- [UI module and app-wide error handling](#ui-module-and-app-wide-error-handling)
+- [Testing, release security and build checklist](#testing-release-security-and-build-checklist)
+
+## Project structure and key module
+
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to Trust Wallet Core 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06), and require a Node version of at least 22 and below 23.
+
+Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
 ### Project structure
 
-**App shell — `src/app/`.** Initialise Wallet Core, enforce the fixture gate and coordinate creation, import and wallet sessions. Keep secrets out of application-wide state.
+**App shell (`src/app/`).** Initialise Wallet Core, enforce the platform's fixture gate and coordinate creation, import and wallet sessions. Keep secrets out of application-wide state.
 
-**Key — `src/key/`.** Own creation, import and short-lived native wallet objects. Seal secret material before storage; expose public results or opaque wallet IDs, never native handles or recovery material.
+**Key (`src/key/`).** Own creation, import and short-lived native wallet objects. Seal secret material before storage. Expose public results or opaque wallet IDs through general application interfaces, never native handles or recovery material. Confine mnemonic visibility to the one-time offline backup screen.
 
-**Derivation — `src/derivation/`.** Own coin, account and path policy. Derive non-hardened children from account public descriptors under [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). Hardened derivation must stay inside a key operation.
+**Derivation (`src/derivation/`).** Own coin, account and path policy. Derive non-hardened children from account public descriptors under [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). Keep hardened derivation inside a key operation.
 
-**Storage — `src/storage/`.** Persist authenticated ciphertext and public metadata, with encryption material protected by platform facilities. Never persist plaintext secrets; treat authentication or decryption failure as an error, not permission to create another wallet.
+**Storage (`src/storage/`).** Persist authenticated ciphertext and public metadata, with encryption material protected by platform facilities. Never persist plaintext secrets. Treat authentication or decryption failure as an error, not permission to create another wallet.
 
-**Network — `src/network/`.** Fetch testnet chain data and broadcast signed transactions. Accept only necessary public addresses and transaction payloads, never vault contents or key handles. Treat remote responses as untrusted.
+**Network (`src/network/`).** Fetch testnet chain data and broadcast signed transactions. Accept only necessary public addresses and transaction payloads, never vault contents or key handles. Treat remote responses as untrusted.
 
-**Signing — `src/signing/`.** Build and verify transaction intent locally, check chain selection and approval, then request scoped signing from the key boundary. Return signed payloads, not signing keys.
+**Signing (`src/signing/`).** Build and check transaction intent locally, check chain selection and approval, then request scoped signing from the key boundary. Return signed payloads, not signing keys.
 
-**UI — `src/ui/`.** Render public addresses, balances, confirmations and sanitised failures. Keep import text out of persistent state, analytics, crash reports and previews; receive no secret material from the key module.
+**UI (`src/ui/`).** Render public addresses, balances, confirmations and sanitised failures. Keep recovery material out of the general UI, subject only to the one-time offline mnemonic backup screen. Keep import text out of analytics, crash reports and previews, and apply the masked-entry and retention restrictions below.
 
-### Key module
+### Fixture gate
 
-#### Fixture gate
+Keep gate status specific to the platform:
 
-Before any fresh-wallet creation, require the published fixture self-checks to pass against the loaded Core build. Check the numeric coin values: TRON `195`, TON `607`. Fixture derivations must match:
+**Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 
-- BTC: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
-- ETH: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
+**Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
 
-These are offline expectations, not payment destinations or expected fresh-wallet outputs. Stop on any mismatch; never fall back to fresh generation. The companion fixture section covers the code.
+The on-device gate has never run: no Core AAR has been built and no device run has happened. The gate's requirements are acceptance criteria, not results.
 
-#### Creation and import
+Do not substitute the pure-module fixture checks for the Android on-device gate.
 
-Follow `generate.js`: `HDWallet.create(256, "")`. Under [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki), 256 bits of entropy produce 24 words. Read `mnemonic()` internally, check the 24-word count and `Mnemonic.isValid(mnemonic)`, then seal the recovery material before reporting success.
+Before any fresh-wallet creation, require the published fixture self-checks to pass against the loaded Core build. For Web, run the public fixture suite after Wallet Core WASM initialisation at startup and again before the first user-wallet operation. Do not treat a loaded WASM module as proof that the bundled Core matches Bawa's coin mappings, address encodings and derivation rules.
 
-Bawa’s application policy uses an **empty BIP-39 passphrase**. Changing the passphrase creates a different wallet; it does not merely change an encryption password.
+Tie each result to that Core instance and build. Rerun the checks after reinitialisation or an upgrade. Keep wallet actions disabled until the required checks pass and the ownership contract below is satisfied.
 
-Import takes both mnemonic and passphrase. Validate with `Mnemonic.isValid(mnemonic)` and enforce the passphrase policy before calling `HDWallet.createWithMnemonic(mnemonic, passphrase)`. Under the current empty-passphrase policy, reject non-empty input rather than silently replacing it with `""`. Supporting a non-empty passphrase requires an explicit policy change. Mnemonic validation cannot verify a passphrase or identify the intended wallet.
+Require the numeric coin values and fixture derivations to match these offline expectations:
 
-### Fixture self-checks and native-object disposal
+> **Expected result:**
+>
+> - TRON numeric coin value: 195.
+> - TON numeric coin value: 607.
+> - BTC fixture address: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
+> - ETH fixture address: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
 
-A loaded WASM module does not prove that the bundled Wallet Core matches Bawa’s coin mappings, address encodings and derivation rules. Run the public fixture suite after `initWasm()` at startup and again before the first user-wallet operation. Tie the result to that core instance and build; rerun after reinitialisation or an upgrade. Keep wallet actions disabled until the checks pass.
+Treat the addresses as offline fixture expectations, not payment destinations or expected fresh-wallet outputs. Stop on any mismatch; never fall back to fresh generation. Refer to the companion fixture section for the implementation.
 
-Use Bawa’s fixed published test mnemonic with an empty passphrase, never a user’s seed. Run offline and never fund the fixture. Interactive testing belongs on testnet.
+### Creation and import
 
-**Required checks**
+Create and import wallets through Wallet Core. For creation, follow `generate.js` and use Wallet Core's HDWallet.create operation with 256 bits of entropy and an empty BIP-39 passphrase. For this [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) entropy size, require a 24-word mnemonic.
 
-Use the [Trust Wallet Core HD wallet API](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWHDWallet.h) and [Trust Wallet Core coin API](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWCoinType.h). Export all extended public keys below with `getExtendedPublicKeyAccount`, account `0`.
+Read the mnemonic internally, check the 24-word count and validate it with Wallet Core's Mnemonic.isValid operation. Seal the recovery material before reporting success.
 
-- **Coin values:** `CoinType.tron.value === 195` and `CoinType.ton.value === 607`. TON has an enum check here, not an address fixture.
-- **Published addresses:** the fixture wallet’s `getAddressForCoin` results must match exactly, including case:
-  - BTC: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
-  - ETH: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
-- **BTC extended key:** use `Purpose.bip84`, `CoinType.bitcoin`, `Derivation.bitcoinSegwit` and `HDVersion.zpub`. Require the `zpub` prefix. Deriving `m/84'/0'/0'/0/0` must reproduce the direct BTC address above; deriving `m/84'/0'/0'/0/1` must produce a valid Bitcoin address.
-- **ETH extended key:** use `Purpose.bip44`, `CoinType.ethereum`, `Derivation.default` and `HDVersion.xpub`. Require the `xpub` prefix. Deriving `m/44'/60'/0'/0/0` must reproduce the direct ETH address above.
-- **TRX extended key:** use `Purpose.bip44`, `CoinType.tron`, `Derivation.default` and `HDVersion.xpub`. Require the `xpub` prefix. Deriving `m/44'/195'/0'/0/0` must equal the fixture wallet’s `getAddressForCoin(CoinType.tron)`.
-- **Validation:** require `CoinTypeExt.validate(coin, address)` to return true for every derived address, including all direct wallet results and extended-key results. Prefix and equality checks do not replace validation.
+Enforce Bawa's empty BIP-39 passphrase policy. Treat a changed passphrase as selecting a different wallet, not merely changing an encryption password.
 
-For each extended-key address, obtain the public key with `HDWallet.getPublicKeyFromExtended`, then call `CoinTypeExt.deriveAddressFromPublicKey`, using the matching coin throughout.
+Accept both mnemonic and passphrase for import. Validate the mnemonic with Mnemonic.isValid and enforce the passphrase policy before using Wallet Core's HDWallet.createWithMnemonic operation. Reject non-empty passphrase input rather than silently replacing it with an empty value. Make an explicit policy change before supporting a non-empty passphrase. Do not treat mnemonic validation as proof of the passphrase or the intended wallet.
 
-**On any failure**
+Show a mnemonic only on the one-time offline backup screen. Keep import entry masked throughout, and never retain import text in persisted forms or navigation state.
 
-A mismatch, initialisation failure or exception must block creating, importing or using a wallet. Show a plain error: “Wallet self-check failed. Wallet operations are disabled.” Do not offer a bypass. Log only the check identifier and non-secret core version/build information—not secrets, addresses, extended keys or raw exception payloads.
+### Native-object ownership and disposal
 
-**Dispose native objects on every exit path**
+Apply this ownership contract to every native object: assign one explicit owner, identify an explicit release point and establish destruction on every exit path through the ownership-contract review.
 
-Wallet Core objects own native/WASM resources; do not rely on JavaScript garbage collection. Follow Bawa’s public-key helper: call `pubkey.delete()` in a `finally` block. Give every wallet—including fixture, newly created and imported wallets—the same protection with `wallet.delete()` in `finally`, even when an assertion throws.
+Require each native owner to be reviewed against the ownership contract in this section, with the review recorded. Require source-level ownership and destruction findings to be source-verified against the Trust Wallet Core 4.9.2 tag. Do not treat source evidence as device evidence.
 
-Keep ownership local. Never retain wallet or public-key objects in UI stores or network state; pass required public strings instead. Disposal does not guarantee erasure of JavaScript strings. See [Emscripten Embind memory management](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#memory-management).
+Until the recorded ownership-contract review establishes explicit ownership and destruction on every exit path, do not claim "native objects deleted on every exit path", and do not allow the fixture gate to report READY.
 
-**You should see:**
+### Open signing proof
 
-- [ ] Startup and first-use checks pass, including every address validation.
-- [ ] A forced mismatch disables wallet actions and shows the plain error.
-- [ ] Acquired native objects are deleted on success and failure.
-- [ ] No native handles in UI/network state, and no secrets in logs.
+Keep the live EIP-1559 signing proof open. Treat the demonstration on Trust Wallet Core 4.8.4 as evidence for that release only, and re-run the proof against Trust Wallet Core 4.9.2.
 
-#### Public outputs
+## Derivation module
 
-Use `getExtendedPublicKeyAccount(purpose, coin, derivation, version, account)` with account `0`:
+Keep derivation watch-only. Turn an account extended public key and receiving index into a validated address, without importing secrets or signing transactions. Reject private material at the boundary so that the public-only flow never receives it.
 
-- BTC: [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki), Bitcoin SegWit derivation, `zpub`.
-- ETH and TRON: [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), default derivation, `xpub`.
-- TON: obtain an address through `getAddressForCoin(CoinType.ton)`; do not assume an xpub export.
+Expose the asynchronous `deriveAddress` interface with chain, account xpub and receiving index inputs. Return a promise of a result containing an address string on success, or a stable `DerivationError` kind and a safe message on failure. Keep key objects and the input xpub out of both results.
 
-Check the extended-key prefixes and validate TON with `CoinTypeExt.validate`. Require each BTC/ETH/TRON account-relative `0/0` address to match `getAddressForCoin(coin)`; also exercise `0/1`. These checks belong to the offline baseline, not testnet address configuration.
+### Account, receiving branch and index
 
-#### Native lifetime and hard boundaries
+Apply `bawa-derivation-policy-v1`. This policy covers Bawa-generated wallets; the watch-both-branches rule in `docs/09` is for external hardware signers only, whose exports use their own origin.
 
-Use `getKeyForCoin` or `getKey` with a derivation path only inside a scoped signing operation. Use `try/finally` to call `delete()` on owned native key objects and the wallet after use, including failure paths. **Never hold a wallet object longer than the operation**, cache it in application state or return it. Native disposal does not guarantee erasure of JavaScript strings; minimise their lifetime too.
+For BTC, ETH and TRX, fix account `0'` and use only receiving branch `0`. Vary only the final non-hardened index `i`. Follow the [BIP44 account/change/index layout](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), with [BIP84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) for BTC.
 
-The operation and lifecycle references are the [Trust Wallet Core HDWallet API](https://pub.dev/documentation/trust_wallet_core/latest/flutter_trust_wallet_core/HDWallet-class.html) and [DeepWiki: HD Wallet Implementation](https://deepwiki.com/trustwallet/wallet-core/4.1-hd-wallet-implementation). The linked BIPs are the scheme authorities.
+- For BTC (`btc`), use account xpub origin `m/84'/0'/0'` and pass the full path `m/84'/0'/0'/0/i` to Wallet Core.
+- For ETH (`eth`), use account xpub origin `m/44'/60'/0'` and pass the full path `m/44'/60'/0'/0/i` to Wallet Core.
+- For TRX (`trx`), use account xpub origin `m/44'/195'/0'` and pass the full path `m/44'/195'/0'/0/i` to Wallet Core.
 
-**Never log, print or return a mnemonic or private key**, including through errors, telemetry or test output. **Never hand a raw key to the network or UI module.** Return only opaque wallet IDs, public data or signed payloads.
+For TON, use generation-only derivation from `m/44'/607'/0'`. Keep TON outside this public-only API: use one configured deposit address, with no xpub flow.
 
-**You should see:**
+Treat the hardened prefix as the account xpub’s recorded export origin. Derive only `/0/i` from that xpub, because [BIP32 public derivation](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) cannot cross hardened steps. Reject hardened children below an account public key.
 
-- [ ] Seven modules with explicit ownership boundaries.
-- [ ] Fixture addresses and coin values checked before fresh creation.
-- [ ] Valid 24-word creation with the empty-passphrase policy.
-- [ ] Validated imports without silent passphrase substitution.
-- [ ] Public round trips passing; connected exercises staying on testnets.
-- [ ] Native objects deleted on success and failure.
-- [ ] No mnemonic or private key in logs or results; no raw keys reaching network or UI.
-
-## 2. Derivation module
-
-Keep derivation watch-only. Its job is to turn an account extended public key and receiving index into a validated address, not to import secrets or sign transactions. TON stays outside this API: Bawa uses one configured deposit address, with no xpub flow.
-
-Expose `deriveAddress(chain, xpub, index)` returning `Promise<Result<Address, DerivationError>>`. Success contains an address string; failure contains a stable error kind and a safe message. Neither result contains a key object or the input xpub.
-
-### Account, change and index
-
-Bawa fixes account `0'` and the external/receiving branch `0`. Only the final index varies. This follows the [BIP44 account/change/index layout](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), with [BIP84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) for BTC.
-
-| Chain | Account xpub origin | Full path passed to Wallet Core |
-|---|---|---|
-| BTC (`btc`) | `m/84'/0'/0'` | `m/84'/0'/0'/0/<index>` |
-| ETH (`eth`) | `m/44'/60'/0'` | `m/44'/60'/0'/0/<index>` |
-| TRX (`trx`) | `m/44'/195'/0'` | `m/44'/195'/0'/0/<index>` |
-
-The hardened prefix records where the account xpub was exported. Derivation from that xpub covers only `/0/<index>`: [BIP32 public derivation](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) cannot cross hardened steps.
-
-Keep chain and account-origin metadata alongside the xpub. Address validation cannot establish that the key belongs to the intended account.
+Keep chain and account-origin metadata alongside the xpub. Do not treat address validation as proof that the key belongs to the intended account.
 
 ### Public-only flow
 
-Mirror `derive.js` and its Wallet Core API sequence:
+Mirror the Wallet Core API sequence in `derive.js`. Apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
 
-```text
-<XPUB>, chain, index
-    ↓
-Input bounds and private-version checks
-    ↓
-Initialise WASM; select CoinType and full path
-    ↓
-HDWallet.getPublicKeyFromExtended
-    ↓
-CoinTypeExt.deriveAddressFromPublicKey
-    ↓
-CoinTypeExt.validate
-    ↓
-Validated address string
-```
+Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
 
-Every failed step returns a typed error instead of an address.
+Call the temporary public-key object’s `delete` method from a `finally` block, including when address conversion fails.
 
-Use Bitcoin, Ethereum or Tron `CoinType` according to the allow-listed chain. Keep WASM initialisation behind the module boundary. The derived public-key object is temporary: call `pubkey.delete()` in `finally`, including when address conversion fails.
-
-The library neither prints nor exits. The CLI adapter prints only the successful, validated address.
+Do not print or exit from the library. In the CLI adapter, print only the successful, validated address.
 
 ### Validation and failures
 
-- **Inputs:** accept exactly `btc`, `eth` or `trx`. Enforce the 200-character xpub limit before trimming, including while reading stdin; reject empty trimmed input. Require `Number.isInteger(index)` and `0 <= index <= 2147483647` (2³¹ − 1). Both endpoints are non-hardened. Use distinct kinds such as `UnsupportedChain`, `InvalidIndex`, `EmptyXpub` and `XpubTooLong`.
-- **Private extended keys:** Base58Check-decode the input, verify its double-SHA-256 checksum, then compare the four-byte version against `derive.js`’s eight-entry private-version set. This includes recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. Return `PrivateExtendedKey`; never convert private input into public form. Address allocation must not become a route for handling signing material.
-- **Malformed keys:** passing the private-version guard does not certify a valid xpub. Wallet Core must still parse it; invalid encoding, checksum or key structure must produce a typed failure, not an address.
-- **Runtime failures:** distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. An empty address or a false validation result is a failure.
+Reject invalid paths, wrong networks, out-of-range indices and private material at a public-only boundary with typed errors. Never use a fallback derivation. Do not silently derive a different account after rejecting an import.
 
-Apply `derive.js`’s extended-key-prefix and long-Base58 redaction to retained native error text. Do not attach raw input to errors or telemetry: an xpub still exposes an account’s address family.
+- **Inputs:** Accept exactly `btc`, `eth` or `trx`. Enforce the 200-character xpub limit before trimming, including while reading standard input, and reject empty trimmed input. Require a numeric integer index from `0` to `2147483647` inclusive. Treat both endpoints as non-hardened. Use distinct error kinds such as `UnsupportedChain`, `InvalidIndex`, `EmptyXpub` and `XpubTooLong`.
+- **Private extended keys:** Base58Check-decode the input, check its double-SHA-256 checksum, then compare the four-byte version against the eight-entry private-version set in `derive.js`, including recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. Return `PrivateExtendedKey` for recognised private extended keys, and never convert private input into public form. Keep address allocation from becoming a route for handling signing material.
+- **Malformed keys:** Do not treat passing the private-version guard as confirmation of a valid xpub. Require Wallet Core to parse it, and reject invalid encoding, checksum or key structure with a typed failure rather than an address.
+- **Runtime failures:** Distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. Treat an empty address or a false validation result as a failure.
 
-Keep stdin read failures in the CLI adapter. Match `derive.js`: read, usage and private-key rejection exit with `2`; runtime failures exit with `1`.
+Apply the extended-key-prefix and long-Base58 redaction from `derive.js` to retained native error text. Do not attach raw input to errors or telemetry, because an xpub still exposes an account’s address family.
 
-### You should see:
+Keep standard-input read failures in the CLI adapter. Match `derive.js`: exit with `2` for read errors, usage errors and private-key rejection, and with `1` for runtime failures.
 
-Use each published vector’s matching public fixture and documented index from the [Trust Wallet Core usage guide](https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage), not an arbitrary `<XPUB>`. These are conceptual regression assertions, not payment destinations. The BTC path and `bc1` vector are mainnet-formatted references; testnet integration needs separate configuration.
+### Regression checks
 
-- [ ] BTC returns `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` and passes Bitcoin validation.
-- [ ] ETH returns `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`, preserving its checksum casing, and passes Ethereum validation.
-- [ ] Repeating the same chain, xpub and index returns the same address.
-- [ ] `0` and `2147483647` pass the index gate; negative, fractional and larger indices fail.
-- [ ] Synthetic private-version fixtures are rejected before public-key derivation. Empty, overlong or malformed input and `ton` return typed errors, without key material or a successful address on stdout.
+Use each published vector’s matching public fixture and documented index from the [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (links checked live on 8 November 2026), rather than an arbitrary xpub. Treat these as conceptual regression assertions, not payment destinations. Treat the BTC path and `bc1` vector as mainnet-formatted references, and use separate configuration for testnet integration.
 
-## 3. Storage module
+Record source-check results as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the checks were made against that tag. Reserve “device-proven” for results backed by a device run.
 
-Keep storage behind one module. Payment code receives public records or signing results, not recovery material. Develop and exercise this flow on testnet.
+> **Expected result:**
+>
+> - Confirm that BTC returns `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` and passes Bitcoin validation.
+> - Confirm that ETH returns `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`, preserves its checksum casing and passes Ethereum validation.
+> - Repeat the same chain, xpub and index, and confirm that the address remains identical.
+> - Confirm that `0` and `2147483647` pass the index gate, while negative, fractional and larger indices fail with typed errors.
+> - Confirm that invalid paths, wrong networks and hardened children below an account public key fail with typed errors, without a fallback derivation or a silently substituted account.
+> - Confirm that synthetic private-version fixtures are rejected before public-key derivation.
+> - Confirm that empty, overlong or malformed input and `ton` return typed errors, without key material or a successful address on standard output.
+
+## Storage module
+
+Keep storage behind one module. Give payment code public records or signing results, never recovery material. Develop and exercise this flow on testnet.
 
 ### 3.1 Storage boundary
 
-- **Encrypted seed bundle:** ciphertext, nonce, authentication tag and non-secret format metadata.
-- **Data key:** separately in platform-protected credential storage, never in a neighbouring file. Keep its offline recovery copy apart from bundle backups.
-- **Public wallet data:** xpubs, addresses, derivation paths and network identifiers. These cannot authorise spending, but expose wallet history; keep them out of analytics.
-- **App records:** transaction references, settings and labels. Encrypt privacy-sensitive records and exclude secrets from the app database.
+- **Encrypted seed bundle:** Store ciphertext, nonce, authentication tag and non-secret format metadata.
+- **Data key:** Store the separate 32-byte data key in platform-protected credential storage, never in a neighbouring file. Keep its offline recovery copy apart from bundle backups.
+- **Public wallet data:** Treat xpubs, addresses, derivation paths and network identifiers as records that cannot authorise spending but can expose wallet history. Keep them out of analytics.
+- **App records:** Store transaction references, settings and labels separately from secrets. Encrypt privacy-sensitive records and exclude secrets from the app database.
 
 Never persist a plaintext mnemonic or private key. Never place the data key in the seed bundle, app database, `.env` or ciphertext backup archive.
 
-`make_wallet.py` remains an orchestrator without payment-module imports. It runs `generate.js`, reads public JSON only, rejects seed-like stdout containing 12+ lowercase words, and requires every self-check to pass. It writes only `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS` to `.env`, using `0600` permissions and temp-file, fsync and rename writes.
+Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more lowercase words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
 
 ### 3.2 Envelope and commit
 
-Retain Bawa’s envelope: AES-256-GCM, a random 32-byte data key, a fresh 12-byte nonce and fixed AAD `nova-shop-seed-v1`. There is no password KDF. Never reuse a key/nonce pair.
+Retain Bawa’s repository envelope: AES-256-GCM, a random 32-byte data key, a fresh 12-byte nonce and fixed AAD `nova-shop-seed-v1`. Use no password KDF for this envelope. Never reuse a key/nonce pair.
 
-`nonce_b64` holds the nonce; `ciphertext_b64` holds ciphertext followed by the 16-byte authentication tag. Preserve algorithm, KDF, AAD and provenance metadata. Decryption must authenticate successfully before releasing plaintext.
+Store the nonce in `nonce_b64`. Store the ciphertext followed by the 16-byte authentication tag in `ciphertext_b64`. Preserve algorithm, KDF, AAD and provenance metadata. Release plaintext only after successful authentication, and fail closed on tampering or GCM authentication failure.
 
-```text
-Create — mnemonic and random data key, memory only
-↓
-Encrypt — assemble the AES-256-GCM bundle in memory
-↓
-Confirm — first seed word, then SAVED
-↓
-Write — restrictive, atomic commit
-↓
-Backup — ciphertext package; recovery key kept elsewhere
-```
+Create the mnemonic and random data key in memory only, then assemble the encrypted bundle in memory. Replace the controlling-terminal display with a protected, short-lived recovery view. Show the mnemonic and recovery data key once. Require the first mnemonic word followed by literal `SAVED`, confirming that the data key was saved separately, before writing the bundle. Leave no new bundle on cancellation.
 
-Replace the controlling-terminal display with a protected, short-lived recovery view. Show the mnemonic and recovery data key once, without clipboard controls. Require the first mnemonic word and literal `SAVED`, confirming that the data key was saved separately, **before writing the bundle**. Cancellation leaves no new bundle.
+Keep the bundle inside the configured secrets directory. Use `0700` directories and `0600` files on POSIX, with equivalent app-private sandbox controls on mobile. Refuse symlinks throughout the path. Verify location and permissions when opening existing bundles.
 
-Keep the bundle inside the configured secrets directory. Use `0700` directories and `0600` files on POSIX, with equivalent app-private sandbox controls on mobile. Refuse symlinks throughout the path.
+Create an exclusive temporary file in the destination directory, write, fsync, close and rename it, then fsync the directory. Persist the separate secure-store credential before publishing the bundle. Clean up newly created orphan credentials if creation fails.
 
-Create an exclusive temporary file in the destination directory, write, fsync, close, rename, then fsync the directory. Verify location and permissions when opening existing bundles. Persist the separate secure-store credential before publishing the bundle; clean up newly created orphan credentials if creation fails.
+Use versioned migrations for storage changes, preserving authenticated encryption and atomic writes. Back up and restore through the encrypted seed bundle with its separate 32-byte data key, never through a plaintext export.
 
 ### 3.3 Platform protection and memory
 
-Distinguish the portable recovery data key from the device’s non-exportable hardware wrapping key.
+Choose and record one shared inactivity timeout for the application, since no inactivity timeout is defined in the repository. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
 
-- **iOS:** keep the data key in a device-only, non-synchronising Keychain item with user-presence access controls. Use Secure Enclave-backed key agreement or wrapping protection where supported; do not assume arbitrary AES keys reside directly in the enclave.
-- **Android:** protect the data key with a hardware-backed, non-exportable Keystore/KeyMint wrapping key. Keep the wrapped-key record in separate native credential storage.
+Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
-Require biometric or device-passcode/PIN authorisation. Verify hardware backing and platform-supported attestation; refuse storage when required protection is unavailable. Never fall back to plain AsyncStorage or SharedPreferences for secrets. See [Crypture’s mobile and desktop wallet security comparison](https://crypture.org/how-secure-are-mobile-and-desktop-wallets-compared-to-hardware-wallets/).
+> **Expected result:** The application locks at the chosen, recorded inactivity timeout. Immediate locking locks it without waiting for that timeout.
 
-Apply OWASP MASVS/MASTG guidance: hardware-backed keystores are the strongest local option; encrypt sensitive material at rest, decrypt only in memory, and keep secrets out of plaintext files, screenshots, cloud backups and logs. See [Cryptomathic’s MASVS/MASTG guidance overview](https://www.cryptomathic.com/blog/resources-to-assist-in-developing-and-testing-the-security-of-your-eudi-wallet-app) and [AMELA’s enterprise wallet development guide](https://amela.tech/the-ultimate-guide-to-crypto-wallet-development-for-enterprises/).
-
-Use short-lived native buffers and wipe keys after use, including errors and cancellation. Never keep a mnemonic in a long-lived variable, UI store or cache: garbage-collected strings cannot guarantee erasure. Exclude secret storage from automatic OS/cloud backups, analytics and crash attachments. Blank background previews and block screen capture where supported.
+Implement lock-time clearing within this bound: buffers are cleared on lock where the platform allows it, and clearing is best-effort, not guaranteed. Do not promise erasure of garbage-collected strings or native copies.
 
 ### 3.4 Backup, restore and failures
 
@@ -236,9 +202,23 @@ Hardware wrapping keys do not migrate. Restore either from the mnemonic or from 
 - **Missing data key:** offer the separate key backup or mnemonic recovery. A newly generated key cannot decrypt the existing bundle.
 - **Wrong permissions, unexpected location or symlink:** refuse access or writing. Explain how to choose a private location; never weaken controls to continue.
 
-## 4. Network and signing modules
+### 3.5 Shared clipboard rule
 
-This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core — Integration Guides](https://deepwiki.com/vultisig/wallet-core/6-integration-guides)). The app owns those responsibilities.
+Apply one clipboard policy throughout the application. Prohibit copying the mnemonic, and provide no clipboard controls for either the mnemonic or the recovery data key in the recovery view. Do not access the clipboard at import. Do not automatically paste from the clipboard into any input.
+
+Provide one-tap copy for the receive address, with automatic clipboard clearing after a successful paste or after 60 seconds, whichever occurs first. On the web, make clear that the browser cannot guarantee erasure.
+
+### 3.6 Vault passphrase policy and Web draft evidence
+
+Choose and record one minimum length for the vault unlock passphrase, since the repository specifies none. Reject weak passphrases under the recorded policy.
+
+Keep the Web validation draft’s vault distinct from the repository envelope. Treat its PBKDF2-600k with AES-256-GCM and its own AAD `bawa-web-vault-v1` as draft implementation choices. Preserve the distinction that this AAD is deliberately not the repository’s AAD. Do not claim `seed.enc.json` compatibility.
+
+Treat 600,000 PBKDF2-HMAC-SHA-256 iterations as a defensible floor for the FIPS-140 branch, matching the OWASP Password Storage Cheat Sheet’s FIPS-140 option (verified live 2026-11-08). Do not present this figure as OWASP’s top recommendation; recognise Argon2id as OWASP’s primary recommendation.
+
+## Network and signing modules
+
+This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)). The app owns those responsibilities.
 
 ### 4.1 Network module
 
@@ -263,13 +243,13 @@ The daemon has fixed derivation paths and no network selector. Its chain labels 
 
 ### 4.2 Signing module
 
-Build the public transaction fields of a chain-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning the chain’s `SigningOutput`. Bitcoin input carries UTXOs, outputs, fee and change; Ethereum input carries chain ID, nonce, gas and data ([Trust Wallet Core — AnySigner Interface](https://deepwiki.com/trustwallet/wallet-core/3.1-anysigner-interface)).
+Build the public transaction fields of a chain-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning the chain’s `SigningOutput`. Bitcoin input carries UTXOs, outputs, fee and change; Ethereum input carries chain ID, nonce, gas and data ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)).
 
 The signing coordinator holds no private keys. Only the key module adds signing secrets and invokes `AnySigner`; secret-bearing messages never leave that boundary. The key module must bind approval to the exact input. Check `SigningOutput` errors before accepting bytes.
 
-For offline/hardware signing, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction. Keys remain on the device; bind signatures to the reviewed input ([Vultisig Wallet Core — Integration Guides](https://deepwiki.com/vultisig/wallet-core/6-integration-guides)).
+For offline/hardware signing, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction. Keys remain on the device; bind signatures to the reviewed input ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)).
 
-Obtain approval for recipients, amounts, change, fees and contract calls before signing. Decode the actual signed bytes with a chain-specific decoder, compare them against that approved intent—including chain/network, nonce, gas and data where applicable—and display the decoded transaction before an explicit broadcast action. A mismatch or decoding failure blocks submission.
+Obtain approval for recipients, amounts, change, fees and contract calls before signing. Decode the actual signed bytes with a chain-specific decoder, compare them against that approved intent, including chain/network, nonce, gas and data where applicable, and display the decoded transaction before an explicit broadcast action. A mismatch or decoding failure blocks submission.
 
 Signing and network code exchange public transaction data and signed bytes, never key material. Broadcast only signed transaction bytes, never `SigningInput` or an unsigned transaction.
 
@@ -296,102 +276,158 @@ Return stable error codes and sanitised messages. Never dump secret-bearing prot
 - **Nonce/gas errors:** refresh network state, rebuild, and obtain fresh approval for changed fields. Never silently re-sign.
 - **Broadcast rejection:** retain the locally calculated transaction ID and show a sanitised reason. A timeout means submission status is unknown: query by transaction ID before retrying identical signed bytes. Do not automatically create a replacement transaction.
 
-## 5. UI module and app-wide error handling
+## UI module and app-wide error handling
 
-Keep the UI a presentation and intent layer. Follow Bawa’s `docs/03` boundary: Wallet Core owns keys, derivation and signing; RPC/indexer owns network state; the application owns records. Metadata calls receive no secret material. Use testnets for UI/send exercises and public vectors for offline derivation checks.
+Keep the UI a presentation and intent layer. Follow Bawa’s docs/03 boundary: leave keys, derivation and signing to Wallet Core, network state to RPC/indexer, and records to the application. Send no secret material to metadata calls. Use testnets for UI and send exercises, and public vectors for offline derivation checks.
 
 ### 5.1 Screens and permitted data
 
-Ordinary screens may show addresses, public keys, balances and transaction records. Never display private keys. A mnemonic is visible only on the one-time offline backup screen; import entry stays masked.
+Use the following as the single canonical screen list. Allow ordinary screens to show addresses, public keys, balances and transaction records. Never display private keys. Show a mnemonic only on the one-time offline Mnemonic backup screen; keep import entry masked.
 
-- **Onboarding/create-or-import:** explain recovery responsibility and network choice; create/import through Wallet Core. Never retain import text in persisted forms or navigation state.
-- **Backup confirmation:** display the mnemonic offline, verify selected words using protected entry, then clear temporary buffers. No copying, sharing, QR export or analytics.
-- **Accounts/addresses:** show account, chain, full address, optional public key and balance with freshness information.
-- **Receive:** show the full address and chain/testnet beside a matching QR. Make any requested amount explicit.
-- **Send:** collect recipient, asset and amount; estimate fees and prepare a reviewable action, not a signature.
-- **Activity/history:** join application records to RPC/indexer status. Distinguish pending, included, confirmed, failed and replaced transactions.
-- **Settings/lock:** control network, privacy, authentication and auto-lock. Provide immediate locking and explicit confirmation for local-wallet deletion, never private-key export.
+- **Welcome:** Show the create-or-import choices, explain recovery responsibility and introduce network choice.
+- **Create wallet:** Show recovery guidance and the selected network. Create the wallet through Wallet Core without displaying the mnemonic here.
+- **Import wallet:** Show network choice and masked import entry. Import through Wallet Core, and never retain import text in persisted forms or navigation state.
+- **Mnemonic backup:** Display the mnemonic once, offline. Verify selected words using protected entry, then clear temporary buffers. Prohibit copying, sharing, QR export and analytics.
+- **Portfolio dashboard:** Show account and chain context, balances and transaction records. Include balance freshness information.
+- **Asset list:** Show assets and their balances for the selected account and chain, with freshness information.
+- **Asset detail:** Show the selected asset, account, chain, full account address, optional public key, balance and related transaction records. Include balance freshness information.
+- **Receive:** Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
+- **Send:** Collect the recipient, asset and amount. Show sender, chain/network and fee information, and prepare a reviewable action, not a signature.
+- **Transaction history:** Show application transaction records joined to RPC/indexer status. Distinguish pending, included, confirmed, failed and replaced transactions.
+- **Transaction details:** Show the selected transaction record, transaction hash and RPC/indexer status, including inclusion and confirmations.
+- **Network selection:** Show the selected chain/network and available network choices, identifying testnets explicitly.
+- **Wallet management:** Show accounts, chains, full addresses and optional public keys. Require explicit confirmation for local-wallet deletion, and never offer private-key export.
+- **Security and backup settings:** Show privacy, authentication, auto-lock and backup controls. Provide immediate locking, but do not display the mnemonic here.
+
+Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
+
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). Receive-QR exists today only in the Android draft Receive screen (ZXing core 3.5.3, display-only, never runtime-verified); it still lacks the guide's decode-verification step, payment-request fields and Stale/Error states, and the Web draft has no QR of any kind. Scanning exists nowhere yet in either draft, and the Web guide contains no scanning specification. Add the web encoder and the Android verification half, and write the scanning specification, before treating either half as implemented.
 
 ### 5.2 Confirmation and send flow
 
-Before any signature, show the sender, **full recipient address**, amount and asset, chain/network, fee estimate and maximum authorised fee. Explain the decoded contract call in plain language: which contract and function, what changes, transfers, approval spender and allowance, including unlimited approvals. Derive this explanation from the actual payload, not untrusted descriptive text. Block unknown or undecodable actions; never blind-sign. Message signatures also need understandable intent.
+Take Send through Compose, Review, the biometric/PIN gate, Sign, Broadcast and Confirm, in that order.
 
-```text
-Compose
-↓
-Review
-↓
-Biometric/PIN gate
-↓
-Sign
-↓
-Broadcast
-↓
-Confirm
-```
+Before any signature, show the sender, **full recipient address**, amount and asset, chain/network, fee estimate and maximum authorised fee.
 
-Bind authorisation to the reviewed payload. Edits, chain changes or fee changes restart review and the gate. Wallet Core signs only that payload; RPC broadcasts the signed transaction. Broadcast acknowledgement is not confirmation: track inclusion, confirmations and reorgs.
+Copy public data only, using the complete address. Warn that other apps may read or replace clipboard contents. Never read the clipboard automatically. Validate explicit paste/scan against the chosen chain, review QR destination and amount, and reject unsupported payloads. Require comparison of the **full address** with a trusted recipient source. Scanning never authorises payment or silently changes networks. QR generation and actual-output decode-verification are required Receive behaviour. The decoded output must pass `E.parsePaymentRequest` and `E.verifyPaymentRequest` against the selected context and associated request.
+
+Explain the decoded contract call in plain language from the actual payload, never from untrusted descriptive text. Identify the contract and function, explain the changes and transfers, and state the approval spender and allowance, including unlimited approvals. Block unknown or undecodable actions; never blind-sign. Require understandable intent for message signatures as well.
+
+Bind authorisation to the reviewed payload. Restart Review and the biometric/PIN gate after any edit, chain change or fee change. Have Wallet Core sign only that payload, and have RPC broadcast the signed transaction.
+
+Do not treat broadcast acknowledgement as confirmation. Track inclusion, confirmations and reorgs.
 
 ### 5.3 Accessibility, clipboard and capture
 
-Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/): scalable text, labelled controls, generous touch targets, logical focus, screen-reader announcements and errors that do not rely on colour. Keep full addresses accessible, not available only as shortened labels.
+Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) for accessibility across screens and required states (verified live 8 November 2026; w3.org blocks automated checks).
 
-Copy public data only, using the complete address. Warn that other apps may read or replace clipboard contents. Never read the clipboard automatically. Validate explicit paste/scan against the chosen chain, review QR destination and amount, and reject unsupported payloads. Require comparison of the **full address** with a trusted recipient source. Scanning never authorises payment or silently changes networks.
+Apply the shared clipboard rule from section 3:
 
-Block screenshots and recording on sensitive screens where supported, especially import, backup and authorisation. Hide app-switcher previews. Clear sensitive UI state on backgrounding or lock.
+- Prohibit copying the mnemonic.
+- Prohibit all clipboard access during import.
+- Provide one-tap copying of the Receive address with automatic clearing.
+- Never automatically paste from the clipboard into any input.
+- Clear the clipboard after a successful paste or after 60 seconds.
+- On the web, make clear that the browser cannot guarantee clipboard erasure.
+
+Block screenshots and screen recording on sensitive screens where supported. Hide app-switcher previews, and clear sensitive UI state whenever the app is backgrounded or locked.
 
 ### 5.4 Typed errors and safe diagnostics
 
-Define module-specific types, for example `UiValidationError`, `AuthError`, `CoreKeyError`, `CoreDerivationError`, `CoreSigningError`, `RpcError`, `IndexerError`, `RecordStoreError` and `MetadataError`. Carry a stable code, stage, retryability and safe, localised recovery text—not raw exceptions. Missing metadata must never lead to guessed decimals or contract meaning.
+Use typed errors for app-wide handling, and map them to safe, actionable UI messages rather than exposing raw exceptions. Keep mnemonics, import text, private keys and other secret material out of error messages, logs, analytics and diagnostics. Follow the [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
 
-Authentication cancellation returns to review. A timeout after broadcast means “status unknown”, not “failed”: reconcile by transaction hash before rebroadcasting identical bytes. Never automatically re-sign. Record-write failures must remain visible without misreporting network status.
+Before displaying or recording derive.js output, replace each entire extended-key-like string whose prefix is xprv, xpub, yprv, ypub, zprv, zpub, Yprv, Ypub, Zprv, Zpub, tprv, tpub, uprv, upub, vprv or vpub, followed by Base58 characters, with [REDACTED]. Replace the whole string, not merely its prefix or suffix. Also replace every run of 100 or more Base58 characters with [REDACTED].
 
-Centralise sanitisation before errors cross module boundaries and before every UI, log or crash-report sink, including nested causes, breadcrumbs and SDK diagnostics. Apply the [`derive.js`](../../tools/hdwallet-gen/derive.js) rule: replace each entire extended-key-like string whose prefix is `xprv`, `xpub`, `yprv`, `ypub`, `zprv`, `zpub`, `Yprv`, `Ypub`, `Zprv`, `Zpub`, `tprv`, `tpub`, `uprv`, `upub`, `vprv` or `vpub`, followed by Base58 characters, with `[REDACTED]`. Also replace every run of **100+ Base58 characters** with `[REDACTED]`.
+Treat a timeout after broadcast as **status unknown**, not **failed**. Reconcile by transaction hash before rebroadcasting identical signed bytes. Never automatically re-sign.
 
-This rule cannot recognise mnemonic phrases or all shorter secrets. Prevent collection: no secret material in analytics, no input/state snapshots or memory dumps, and allowlisted diagnostic fields only. Follow the [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html). Disable SDK collection paths that cannot honour these controls.
-
-Use synthetic/public fixtures to test every redaction prefix, the 99/100-character boundary, nested failures, cancellation, stale fees, duplicate taps and ambiguous broadcasts. [`test/differential_test.py`](../../test/differential_test.py) independently verifies BTC BIP84 and ETH BIP44 address derivation with [bip_utils](https://github.com/ebellocchia/bip_utils); it does not verify UI safety or transaction delivery.
-
-## 6. Testing, release security and build checklist
+## Testing, release security and build checklist
 
 ### 6.1 Testing strategy
 
 Keep offline tests separate from disposable local-node and testnet runs. Never use customer wallet material.
 
-- **Unit tests by module.** Use published vectors only for cryptographic assertions, with mocks for failure paths. Test key generation/validation, randomness failure and handle cleanup; derivation paths, networks and index bounds; storage authentication, tampering, wrong credentials and atomic migrations; signing serialisation, signature verification, chain IDs, fees and amounts. Public-import interfaces must reject private material.
+- **Unit tests by module.** Use published vectors only for cryptographic assertions, with mocks for failure paths. Test key generation and validation, randomness failure and handle cleanup; derivation paths, networks and index bounds; storage authentication, tampering, wrong credentials and atomic migrations; signing serialisation, signature verification, chain IDs, fees and amounts. Require public-import interfaces to reject private material.
 
-- **Differential tests.** Pin Wallet Core to `4.8.4`, as Bawa does. `compare.js` reads `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` from the root `.env`, or the path selected by `NOVA_ENV`, and prints only public addresses at indices `0`, `1`, `2`. This checks public derivation, not custody or signing. Compare Wallet Core against independently pinned `bip_utils` on the same vectors. Bawa’s `test/differential_test.py` independently checks the published BTC/ETH index-zero results and prints `PASS`:
+  This layer has no runnable procedure in this guide yet.
+
+- **Differential tests.** Pin Trust Wallet Core to `4.9.2` and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
+
+  Use `test/differential_test.py` to independently check these published index-zero fixtures:
+
   - BTC `m/84'/0'/0'/0/0`: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
   - ETH `m/44'/60'/0'/0/0`: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
 
-  Assert exact equality in CI; extend independent coverage to TRX and indices 1 and 2. These addresses are fixtures, not payment destinations; the BTC vector is mainnet-formatted.
+  > **Expected result:**
+  >
+  > `compare.js` prints only public addresses at indices `0`, `1` and `2`.
+  >
+  > `test/differential_test.py` independently checks the BTC and ETH fixtures above and prints `PASS`.
 
-- **Integration tests.** Exercise balance, UTXO/nonce handling, fees, signing, broadcasting and receipts against a local node or explicitly selected testnet. Include reorgs and duplicate requests. Verify chain identity before signing; a timeout must not create a second payment.
+  Assert exact equality in CI. Track the extension of independent coverage to TRX and indices `1` and `2` as an open item. Treat these checks as public-derivation coverage, not custody or signing coverage. Treat the addresses as fixtures, not payment destinations, and label the BTC vector as mainnet-formatted.
 
-- **UI tests.** Match the confirmation’s network, asset, destination, amount and fees to the transaction actually signed. Cancellation must prevent signing. Exercise backup verification and restore with test-only inputs; exclude sensitive screens from snapshots.
+  This layer has no runnable procedure in this guide yet.
+
+- **Integration tests.** Exercise balance, UTXO/nonce handling, fees, signing, broadcasting and receipts against a local node or explicitly selected testnet. Include reorgs and duplicate requests. Verify chain identity before signing, and prevent a timeout from creating a second payment.
+
+  This layer has no runnable procedure in this guide yet.
+
+- **UI tests.** Match the confirmation’s network, asset, destination, amount and fees to the transaction actually signed. Ensure that cancellation prevents signing. Exercise backup verification and restore with test-only inputs, and exclude sensitive screens from snapshots.
+
+  This layer has no runnable procedure in this guide yet.
 
 - **Negative tests.** Reject private keys at xpub imports, corrupt bundles, invalid indices, hardened children below an account xpub, malformed addresses and unsupported networks. Simulate timeouts, stale responses and dropped broadcasts. Fail closed without losing the vault, switching networks or silently re-signing.
 
+  This layer has no runnable procedure in this guide yet.
+
+Keep the reported test results separate and retain their stated limits:
+
+- 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
+- 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
+- The phase-1 repair copy produced 28 ok, 0 fail, exit 0.
+
+Do not combine these counts or use them as evidence of a build, device run or live-network validation.
+
 ### 6.2 Release and update security
 
-Use **OWASP MASVS L1 as the floor**, with **L2/R** coverage for apps storing sensitive data ([Cryptomathic](https://www.cryptomathic.com/blog/resources-to-assist-in-developing-and-testing-the-security-of-your-eudi-wallet-app)). Maintain a threat model and commission an external penetration test ([AMELA](https://amela.tech/the-ultimate-guide-to-crypto-wallet-development-for-enterprises/)); automate dependency and secret scanning ([fasthedeveloper on DEV Community](https://dev.to/fasthedeveloper/owasp-mobile-top-10-for-react-native-fintech-apps-a-practical-implementation-checklist-3hle)).
+Apply OWASP MASVS L1 as the floor, with L2/R coverage for apps storing sensitive data. Maintain a threat model and commission an external penetration test. Automate dependency and secret scanning. Require signed, reproducible builds and use a staged rollout.
 
-- **Pin and audit.** Lock Wallet Core `4.8.4`, dependencies, toolchains and native/WASM artefacts. Audit transitive dependencies, review upgrades and rerun vectors. Pinning is not a reason to retain a vulnerable version.
+Block release for any of the following:
 
-- **Build and update trust.** Require signed, reproducible builds. Compare unsigned artefacts from an independent clean rebuild, then verify the release signature. Protect release-signing credentials outside the repository and app binary. Verify signatures on update metadata and packages, reject unauthorised downgrades and use trusted distribution channels over TLS. TLS alone does not authenticate an artefact; any downloaded JavaScript/WASM must follow the same policy.
+- Failing tests or MASVS controls.
+- Missing threat-model or penetration-test sign-off.
+- Unresolved critical/high findings.
+- Unresolved secret-scan alerts.
+- Secrets in the repository or binary.
+- Unsigned or non-reproducible builds.
+- Unsafe updates or migration failures.
 
-- **Staged rollout.** Release to small cohorts first, monitor redacted crash and migration failures, and rehearse signed recovery compatible with vault formats. Pause a failing rollout. Never collect keys, recovery phrases or vault contents.
-
-- **Block release** on failing tests or MASVS controls, missing threat-model or penetration-test sign-off, unresolved critical/high findings, unresolved secret-scan alerts, secrets in the repository or binary, unsigned or non-reproducible builds, unsafe updates or migration failures.
+Treat the result as a testnet app. Never use it to hold real funds on mainnet without an independent security review. Enforce that review as a gate, not an optional extra.
 
 ### 6.3 Build-from-scratch checklist
 
-1. **Set up.** Create the project shell, CI, lockfiles and initial threat model. Enforce testnet-only configuration. Commit placeholder settings such as `<XPUB>`, never local `.env` files or vaults.
-2. **Key module.** Separate public-only imports from local testnet key creation. Use platform randomness and minimise secret lifetime; keep secrets outside comparison tooling.
-3. **Derivation module.** Define chain, network and account paths; enforce index bounds. Separate offline vector fixtures from testnet address generation.
-4. **Storage module.** Build an authenticated encrypted vault with platform-protected keys, atomic writes, explicit recovery and versioned migrations.
-5. **Network module.** Add validated node clients, explicit chain checks, bounded retries and transaction-status tracking. Treat responses as untrusted; nodes never receive secrets.
-6. **Signing module.** Validate transaction intent independently, check the chosen chain and fee bounds, require authorisation and sign locally.
-7. **UI module.** Implement receive, backup/restore and confirmation flows. Show testnet status, destination, amount and total fees clearly.
-8. **Tests.** Run unit, differential, integration, UI and negative suites in CI. Keep sensitive data out of logs, traces and snapshots.
-9. **Review.** Refresh the threat model and complete audits, external penetration testing and release/update checks. The result is a testnet app; it must never hold real funds on mainnet without an independent security review. That review is a gate, not an optional extra.
+Treat the install steps as an unexecuted procedure, not a verified path: no debug APK has ever been built.
+
+Keep the on-device fixture gate marked as never run: no Core AAR has been built and no device run has happened, so the gate has never run.
+
+Live validation so far: wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. No live testnet spend has been made from this wallet.
+
+Use this nine-step checklist as work to complete, not as evidence of completion. Do not pass any release gate without its own evidence.
+
+1. **Establish the security scope.** Keep the app scoped to testnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
+
+2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.9.2` and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
+
+3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `NOVA_ENV`. Preserve the frozen identifier and use published fixtures, never customer wallet material.
+
+4. **Check offline logic and public derivation.** Work through the unit, negative and differential requirements in Section 6.1. Assert exact differential equality in CI, and retain the open items for independent TRX and index `1` and `2` coverage.
+
+5. **Build the Core AAR.** Obtain evidence for the AAR build itself. Do not substitute the pure Kotlin harness results for AAR, JNI binding or signing evidence.
+
+6. **Build and install the debug APK.** Build the APK, carry out the install steps and run the on-device fixture gate. Record separate evidence for the build and device run before describing either as verified.
+
+7. **Exercise integration, UI and live wallet flows.** Use a disposable local node or explicitly selected testnet for integration checks. Exercise creation, backup verification and recovery with test-only inputs, and obtain evidence of end-to-end live creation and recovery and a live testnet spend. Complete the confirmation, cancellation and negative-path checks from Section 6.1.
+
+8. **Collect CI and security evidence.** Automate dependency and secret scans, obtain threat-model and penetration-test sign-off, and retain evidence for each gate. Do not infer a CI pass from local test reports or transfer evidence from one gate to another.
+
+9. **Gate the testnet rollout.** Require signed, reproducible builds and safe updates and migrations. Apply every release blocker in Section 6.2 before a staged rollout. Keep independent security review mandatory before any use with real funds on mainnet.
+

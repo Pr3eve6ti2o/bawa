@@ -1,244 +1,168 @@
-# Repository & Tool Map
-
-This is the decision file: **what repository or service should be used for this exact job?**
-
-# So which repository should I use?
-
-This is the question Bawa should answer better than almost anything else.
-
-The right repository is determined by the job.
-
-### If your goal is to learn the standards
-
-Start with the standards themselves:
-
-- [BIP-32](https://bips.dev/32/)
-- [BIP-39](https://bips.dev/39/)
-- [BIP-43](https://bips.dev/43/)
-- [BIP-44](https://bips.dev/44/)
-- [BIP-49](https://bips.dev/49/)
-- [BIP-84](https://bips.dev/84/)
-- [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
-- [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
-- [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md)
-
-These are the source of truth for the scheme, not a random GitHub implementation.
-
-### If you need a small JavaScript BIP implementation
-
-Look at:
-
-- [@scure/bip39](https://github.com/paulmillr/scure-bip39)
-- [@scure/bip32](https://github.com/paulmillr/scure-bip32)
-
-They are especially useful when you want a small, auditable library surface.
-
-### If you need broad multi-chain key functionality
-
-Look at:
-
-- [Trust Wallet Core](https://github.com/trustwallet/wallet-core)
-
-Trust Wallet Core is an open-source, cross-platform low-level wallet library and currently documents support for more than 130 blockchains.
-
-Use it for key/crypto/address/transaction primitives.
-
-Do **not** pretend it is your blockchain indexer.
-
-### If you need Bitcoin-specific application code
-
-Look at:
-
-- [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib)
-- [Bitcoin Core](https://github.com/bitcoin/bitcoin)
-
-Use Bitcoin Core when you want the actual Bitcoin node/wallet environment. Use bitcoinjs-lib when you want a library integrated into a JavaScript application.
-
-### If you need an EVM application library
-
-Look at:
-
-- [viem](https://github.com/wevm/viem)
-- [ethers](https://github.com/ethers-io/ethers.js)
-
-Use the EVM library for RPC clients, ABI encoding, transaction handling and application logic.
-
-Do not ask it to become your multi-chain UTXO engine.
-
-### If you need Solana application access
-
-Use:
-
-- [Solana Kit](https://github.com/anza-xyz/kit)
-- the official [Solana documentation](https://solana.com/docs)
-
-### If you need TON
-
-Use the TON-native SDK family documented at:
-
-https://docs.ton.org/applications/sdks
-
-### If you need Cosmos/IBC metadata
-
-Use:
-
-- [Cosmos Chain Registry](https://github.com/cosmos/chain-registry)
-- [CosmJS](https://github.com/cosmos/cosmjs)
-
-### If you need Cardano
-
-Start with the Cardano CIPs and Cardano-native tooling, especially CIP-1852 and CIP-0003.
-
-### If you need Polkadot/Substrate
-
-Use the Substrate/polkadot.js ecosystem and respect its cryptographic and SS58 conventions.
-
-### If you need a hardware signer
-
-Look at the official:
-
-- [Trezor firmware/software ecosystem](https://github.com/trezor/trezor-firmware)
-- [Ledger developer ecosystem](https://developers.ledger.com/)
-
-The signing device should be treated as a separate trust domain, not as just another library in your web server.
-
----
-
 # Repository and tool map
 
-The table below is intentionally practical. “Recommended” does not mean “the only valid choice”. It means “a sensible place to start for this specific job”.
+## 1. What this document decides
 
-| Job | Recommended project | What it is good at | When not to use it | Cost / notes |
-|---|---|---|---|---|
-| Read the wallet standards | BIPs / SLIPs | Normative derivation rules | Never replace standards with a blog post | Free |
-| BIP-39 implementation | `paulmillr/scure-bip39` | Small focused BIP-39 implementation | Do not assume BIP-39 defines chain-specific paths | Open source |
-| BIP-32 implementation | `paulmillr/scure-bip32` | Focused HD derivation | Not a blockchain SDK | Open source |
-| Broad multi-chain wallet crypto | `trustwallet/wallet-core` | Keys, derivation, addresses and signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.8.4 in its reference runtime |
-| Bitcoin app library | `bitcoinjs/bitcoinjs-lib` | Bitcoin transaction/address tooling | Not a universal wallet SDK | Open source |
-| Bitcoin full node | `bitcoin/bitcoin` | Full chain validation + node/wallet | Heavy for a simple personal tracker | Open source; storage/bandwidth required |
-| Bitcoin indexed API | `Blockstream/esplora` | Address/UTXO/tx history | Bitcoin/Liquid-centric | Open source; can self-host |
-| Bitcoin indexed server | `spesmilo/electrumx` | Efficient history queries on top of a full node | Operationally heavier than a hosted API | Open source |
-| EVM application layer | `wevm/viem` | RPC, ABI, accounts, clients | Not a general indexer for every chain | Open source |
-| EVM application layer | `ethers-io/ethers.js` | Ethereum/EVM integration | Not your indexer or node | Open source |
-| Solana application layer | `anza-xyz/kit` | Modern Solana JavaScript SDK | Do not follow old web3.js v1 tutorials blindly for new work | Open source |
-| TON low-level SDK | `ton-org/ton` / TON core ecosystem | TON primitives and contracts | Do not invent Bitcoin-like abstractions for TON | Open source |
-| Cosmos metadata | `cosmos/chain-registry` | Chain, asset and IBC metadata | Not a wallet signer | Open source |
-| Cosmos JS | `cosmos/cosmjs` | Accounts, signing and chain interaction | Not a generic multi-chain key engine | Open source |
+Choose one owner per job. “Recommended” means a sensible place to start for this specific job, not the only valid choice.
+
+Use this document to select repositories and tools, with their responsibilities and limits. Use `docs/12` for the registry, `docs/11` for Wallet Core and `docs/02` for chain guidance.
+
+## 2. Choose by job
+
+Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki), [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki), [BIP-43](https://github.com/bitcoin/bips/blob/master/bip-0043.mediawiki), [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), [BIP-49](https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki), [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and SLIP-0010/0044/0132 are the source of truth for the scheme, not a random GitHub implementation.
+
+- **Small JavaScript BIP implementation:** use `@scure/bip39` and `@scure/bip32` (`paulmillr/scure-bip39`, `paulmillr/scure-bip32`) for a small, auditable library surface.
+- **Broad multi-chain key functionality:** use Trust Wallet Core, an open-source, cross-platform, low-level wallet library documenting support for more than 130 blockchains. It handles keys, derivation, addresses and signing primitives — not blockchain indexing.
+- **Bitcoin-specific application code:** use bitcoinjs-lib for transaction and address tooling in a JavaScript app, plus Bitcoin Core for the actual node and wallet environment.
+- **EVM application library:** use viem (`wevm/viem`) for RPC, ABI, accounts and clients, plus ethers (`ethers-io/ethers.js`) for Ethereum/EVM integration. Use the [ethers documentation](https://docs.ethers.org/v6/).
+- **Solana application access:** use Solana Kit (`anza-xyz/kit`), the modern JavaScript SDK, plus the [official Solana documentation source](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/index.mdx). Do not follow old web3.js v1 tutorials blindly for new work.
+- **TON:** use the [TON-native SDK family](https://docs.ton.org/applications/sdks).
+- **Cosmos/IBC metadata:** use the Cosmos Chain Registry (`cosmos/chain-registry`) for chain, asset and IBC metadata, plus CosmJS (`cosmos/cosmjs`) for accounts, signing and chain interaction.
+- **Cardano:** use the Cardano CIPs plus Cardano-native tooling, especially CIP-1852 and CIP-0003.
+- **Polkadot/Substrate:** use the Substrate/polkadot.js ecosystem. Respect its cryptographic and SS58 conventions.
+- **Hardware signer:** use the Trezor firmware/software ecosystem (`trezor/trezor-firmware`) plus the [Ledger developer ecosystem](https://developers.ledger.com). Treat the signing device as a separate trust domain, rather than as another library in a web server.
+- **Local EVM development:** use Foundry/Anvil for local EVM chains and testing, not mainnet infrastructure.
+- **Public blockchain data:** use the official explorer or RPC for quick manual verification. Account for privacy and rate limits.
+
+## 3. Repository and tool map
+
+| Job | Recommended project | What it is good at | When not to use it | Cost and notes |
+| --- | --- | --- | --- | --- |
+| Read the wallet standards | BIPs/SLIPs | Normative derivation rules | Never replace the standards with a blog post | Free |
+| BIP-39 implementation | paulmillr/scure-bip39 | Small, focused BIP-39 | Do not assume BIP-39 defines chain-specific paths | Open source |
+| BIP-32 implementation | paulmillr/scure-bip32 | Focused HD derivation | Not a blockchain SDK | Open source |
+| Broad multi-chain wallet crypto | trustwallet/wallet-core | Keys, derivation, addresses, signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.9.2 in its reference runtime |
+| Bitcoin app library | bitcoinjs/bitcoinjs-lib | Bitcoin transaction/address tooling | Not a universal wallet SDK | Open source |
+| Bitcoin full node | bitcoin/bitcoin | Full chain validation, node/wallet | Heavy for a simple personal tracker | Open source; storage/bandwidth required |
+| Bitcoin indexed API | Blockstream/esplora | Address/UTXO/transaction history | Bitcoin/Liquid-centric | Open source; can self-host |
+| Bitcoin indexed server | spesmilo/electrumx | Efficient history queries on top of a full node | Operationally heavier than a hosted API | Open source |
+| EVM application layer | wevm/viem | RPC, ABI, accounts, clients | Not a general indexer for every chain | Open source |
+| EVM application layer | ethers-io/ethers.js | Ethereum/EVM integration | Not your indexer or node | Open source |
+| Solana application layer | anza-xyz/kit | Modern Solana JavaScript SDK | Do not follow old web3.js v1 tutorials blindly for new work | Open source |
+| TON low-level SDK | ton-org/ton / TON core ecosystem | TON primitives and contracts | Do not invent Bitcoin-like abstractions for TON | Open source |
+| Cosmos metadata | cosmos/chain-registry | Chain, asset, IBC metadata | Not a wallet signer | Open source |
+| Cosmos JavaScript | cosmos/cosmjs | Accounts, signing, chain interaction | Not a generic multi-chain key engine | Open source |
 | Cardano standard | Cardano CIPs | Key derivation/address policy | Do not substitute BIP-44 assumptions | Free specs |
-| Substrate accounts | `polkadot-js` | sr25519/ed25519/ecdsa + SS58 | Not a Bitcoin-style xpub system | Open source |
-| XRP app access | `xrpl/xrpl.js` | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
-| Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware + open source components |
-| Hardware signer | Ledger | Secure signing and device UX | Device-app development has its own SDK/review model | Hardware + developer stack |
-| Local EVM development | Foundry / Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
-| Public blockchain data | Official explorer / RPC | Quick manual verification | Privacy and rate-limit sensitive | Usually free for modest manual use |
+| Substrate accounts | polkadot-js | sr25519/ed25519/ecdsa plus SS58 | Not a Bitcoin-style xpub system | Open source |
+| XRP app access | xrpl/xrpl.js | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
+| Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware plus open-source components |
+| Hardware signer | Ledger | Secure signing plus device UX | Device-app development has its own SDK/review model | Hardware plus developer stack |
+| Local EVM development | Foundry/Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
+| Public blockchain data | Official explorer/RPC | Quick manual verification | Privacy- and rate-limit-sensitive | Usually free for modest manual use |
 
-### One sentence decision rule
+## 4. One-sentence decision rule
 
-**Use a standards document to decide the rule, a mature crypto library to implement the rule, a chain-native SDK to handle chain semantics, an RPC/node to read current state, and an indexer/database when you need searchable history.**
+“Use a standards document to decide the rule, a mature crypto library to implement the rule, a chain-native SDK to handle chain semantics, an RPC/node to read current state, and an indexer/database when you need searchable history.”
 
----
-
-## Selection method
+## 5. Selection method
 
 1. Start with the standard or official chain rule.
 2. Find the canonical or mature implementation.
 3. Check releases, tests, dependencies and maintenance.
-4. Verify that the package solves the layer you actually need.
-5. For money-moving software, verify critical behavior with an independent implementation or reference vector.
+4. Verify the package solves the layer you actually need.
+5. For money-moving software, verify critical behaviour with an independent implementation or reference vector.
 
-## Current infrastructure examples
+**Version-record runbook**
 
-This is a dated snapshot. Verify the live provider page before purchasing.
+For each audit pin, expand step 3 into these checks and keep a record. Work from the pinned release, not a different release or the default branch.
 
-| Provider | Entry point | Typical reason to choose it |
-|---|---:|---|
-| Public explorer / RPC | $0 | Learning, manual verification, small personal tools |
-| Alchemy | $0 free tier | EVM RPC and small applications |
-| Infura | $0 Core tier | EVM RPC |
-| Chainstack | $0 Developer tier | Multi-chain hosted RPC |
-| Helius | $0 Free tier | Solana RPC/data |
+1. **Check releases.** Match the exact version you intend to pin to the release it came from. Record both the version and the release identifier.
+2. **Check tests.** Find the tests and reference vectors covering the behaviour you need at that release. Run the relevant tests and record their names, commands and results. Note coverage gaps. If you cannot run a test, record that rather than treating it as passed.
+3. **Check dependencies.** Inspect the release’s dependency declarations and any lockfiles. Record its dependencies and resolved versions; distinguish those from allowed version ranges.
+4. **Check maintenance.** Read the release history, repository activity and handling of relevant issues. Record the maintenance state you observe and what you based it on.
+
+Use a record with these fields:
+
+```text
+Project/package:
+Version:
+Release:
+Tests covering this pin:
+Test commands and results:
+Coverage gaps:
+Dependencies and resolved versions:
+Maintenance state and basis:
+```
+
+Repeat the checks when you change the pin. Mark anything you cannot establish as unknown rather than inventing a value.
+## 6. Current infrastructure examples
+
+Snapshot: 5 October 2026. See §10 for the pricing rule.
+
+| Provider | Entry point | Typical reason |
+| --- | --- | --- |
+| Public explorer/RPC | Public access | Learning, manual verification, small personal tools |
+| Alchemy | Free tier | EVM RPC and small applications |
+| Infura | Core tier | EVM RPC |
+| Chainstack | Developer tier | Multi-chain hosted RPC |
+| Helius | Free tier | Solana RPC/data |
 | Ankr | PAYG | Variable usage and indexed APIs |
-| GetBlock | Published paid tiers from about $49/mo | Multi-chain hosted RPC |
+| GetBlock | Published paid tiers | Multi-chain hosted RPC |
 | QuickNode | Paid plans | RPC/Streams and larger workloads |
-| Moralis | $149/mo Starter, annual billing | Higher-level wallet/token/NFT data |
+| Moralis | - | Higher-level wallet/token/NFT data |
 | Self-hosted | Infrastructure cost | Privacy, control, custom indexing |
 
-### Current published figures checked on October 5, 2026
+## 7. Independent verification: bip_utils
 
-- Alchemy: 30M Compute Units/month and 25 RPS on Free; PAYG starts at $0.525 per 1M CUs.
-- Infura: 3M daily credits and 500 credits/second on Core; Developer is $50/month; Team is $225/month.
-- Chainstack: 3M request units/month and 25 RPS on Developer; Growth $49/month; Pro $199/month; Business $499/month; Enterprise $990/month.
-- Helius: 1M credits and 10 RPS on Free; Developer $49/month; Business $499/month; Professional $999/month.
-- Ankr: current Advanced API documentation uses 1M API Credits = $0.10.
-- Moralis: Starter $149/month billed annually; Pro $249/month; Business $749/month.
+Use bip_utils as your independent reference for overlapping derivation schemes and public test vectors. It supports BIP-32, BIP-39, BIP-44, BIP-49, BIP-84, BIP-86, SLIP-0010, and CIP-1852, among many chain-specific systems.
 
-Prices, quotas and supported networks change.
+Keep it in the test/reference layer only — not as a second production wallet engine beside Wallet Core. See `docs/11-trust-wallet-and-independent-verification`.
 
-## Independent verification: bip_utils
+## 8. Trust Wallet Assets is a metadata repository, not a wallet
 
-Use [bip_utils](https://github.com/ebellocchia/bip_utils) as an independent reference implementation for overlapping derivation schemes and public test vectors. It supports BIP-32, BIP-39, BIP-44, BIP-49, BIP-84, BIP-86, SLIP-0010 and CIP-1852 among many chain-specific systems.
+Trust Wallet Assets (`trustwallet/assets`) holds token metadata, logos, and token lists. Do not use it for wallet derivation, key management, signing, or transaction handling.
 
-It belongs in the test/reference layer, not beside Wallet Core as a second production wallet engine. See [Trust Wallet Core & Independent Verification](../11-trust-wallet-and-independent-verification/README.md).
+Keep these responsibilities separate:
 
+- **Wallet Core:** keys, derivation, and signing.
+- **Assets:** token metadata, logos, and token lists.
+- **RPC/indexer:** blockchain state and history.
+- **Your application:** allocation, orders, and payment reconciliation.
+## 9. Tool map: ownership and limits
 
-## Trust Wallet Assets is a metadata repository, not a wallet
+One owner per job; do not treat any tool as a complete wallet backend. These boundaries are maintainer policy, not verified isolation. Enforce them by reviewing the call sites.
 
-[trustwallet/assets](https://github.com/trustwallet/assets) is useful for token metadata, logos and token lists. It does not provide wallet derivation, key management, signing or transaction handling.
+| Job | Tool | Boundary | Exclusion |
+| --- | --- | --- | --- |
+| Keys, derivation, addresses, signing primitives | Wallet Core | Handles secret material; review the code before claiming isolation | No node communication, balance retrieval, or transaction broadcasting |
+| Independent scheme verification | bip_utils | Separate differential/reference test harness; published vectors or clearly marked placeholders only | Not a second production engine |
+| Token/asset metadata, logos, token lists | Trust Wallet Assets | Metadata input, not signing authority; calls must receive no secret material | Not a wallet or signing library; not an authority on balances here |
+| Balances/history; submission through an RPC | RPC/indexer | Application service/data boundary; calls must receive no secret material | No key custody or signing role here; check the provider's supported operations; do not assume an indexer supports broadcasting |
+| Application records | Application DB | Application storage boundary; calls must receive no secret material | Not a signing engine or an authority on chain state in this design |
 
-For a production application keep these boundaries explicit:
+**Evidence limit:** Bawa documents no Assets metadata schema or API, no RPC/indexer provider with supported operations and guarantees, and no application database model. Check the Assets documentation, choose a network provider and confirm its capabilities and guarantees, and define your application's record model. RPC/indexer services and the application database are application infrastructure, not Bawa code. The table assigns responsibilities; it does not verify service capabilities.
 
-~~~
-Wallet Core → keys / derivation / signing
-Assets      → token metadata / logos / token lists
-RPC/indexer → blockchain state / history
-Application → allocation / orders / payment reconciliation
-~~~
-## 03 Tool map — ownership and limits
+Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 0044, 0132 are the sources of truth. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond the bip_utils list; review the relevant standards and tests before relying on additional coverage.
 
-Use one owner per job; do not treat any tool as a complete wallet backend. **These boundaries are maintainer policy, not verified isolation.** Enforce them by reviewing the call sites.
+**Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.9.2; `requirements.txt` lists `bip_utils` 2.12.2. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
 
-```text
-SCHEME AUTHORITY   BIP / SLIP texts
-PRIMITIVES         Wallet Core
-INDEPENDENT CHECK  bip_utils
-```
+1. Trace each proposed invocation to a table row, including the data crossing its boundary — an identified owner, call site, and data category, or a clear record of what still needs tracing; do not mark isolation as verified without code evidence.
+2. Review boundary enforcement at the call sites — evidence that metadata, network, and application-record calls receive no secret material under this policy, or a recorded violation or unresolved review item; do not assume the boundary is enforced.
+3. Review verification and signing examples — cited published vectors or clearly marked placeholders; bip_utils confined to independent checking; signing examples limited to testnet or conceptual use, never real funds; only claim a successful comparison when both the vector and the observed result are recorded.
 
-```text
-PROPOSED DATA OWNERS — maintainer policy
-metadata             Trust Wallet Assets
-network data         RPC / indexer
-application records  Application DB
-```
+**Version pins:** the "Version pins" table lives in the README (§5 shared contracts); this document cross-references it. Core 4.9.2 (source: `tools/hdwallet-gen/package.json`) and bip-utils 2.12.2 (source: `requirements.txt`).
 
-### Job → tool → boundary → exclusion
+**Lockfile blocker:** the missing root lockfile is a numbered release blocker (README §18). It is a prerequisite for any "reproducible install" claim for the repository root. `tools/hdwallet-gen/package-lock.json` is committed at `e3b65fb0` (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen` (verified exit 0, D22). Exact commands: run `npm install` from a clean tree, commit `package.json` and `package-lock.json` together, then use `npm ci` for every later install. `npm ci` requires an existing lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile. Until the root lockfile is committed, `npm ci` cannot run against the repo root.
 
-| Job | Tool | Required trust boundary | What it does NOT do |
-|---|---|---|---|
-| Keys, derivation, addresses, signing primitives | **Wallet Core** | Handles secret material; review the code before claiming isolation. | No node communication, balance retrieval or transaction broadcasting, as stated in Wallet Core’s official usage guide. |
-| Independent scheme verification | **bip_utils** | Separate differential/reference test harness; published vectors or clearly marked placeholders only. | Not a second production engine. |
-| Token and asset metadata, logos and token lists | **Trust Wallet Assets** | Metadata input, not signing authority; calls must receive no secret material. | Not a wallet or signing library, according to Trust Wallet Assets’ documentation. Not an authority on balances here. |
-| Balances/history; submission through an RPC | **RPC / indexer** | Application service/data boundary; calls must receive no secret material. | No key custody or signing role here. Check the provider’s supported operations; do not assume an indexer supports broadcasting. |
-| Application records | **Application DB** | Application storage boundary; calls must receive no secret material. | Not a signing engine or an authority on chain state in this design. |
+## 10. Canonical pricing note
 
-**Evidence limit:** Bawa does not document an Assets metadata schema or API for using it, an RPC/indexer provider with supported operations and guarantees, or an application database model. Check the Assets documentation, choose a network provider and confirm its capabilities and guarantees, and define your application’s record model. RPC/indexer services and the application database are application infrastructure, not Bawa code. The table assigns responsibilities; it does not verify service capabilities.
+Prices appear in exactly ONE place in this guide set: the costs reference in `docs/08-security-recovery`, labelled as an indicative snapshot dated 30 October 2026, recheck-required, not current quotations, with the recheck warning kept verbatim. No price figure is copied anywhere else in the guide set. No pricing page is cited anywhere. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check. `docs/06` and `docs/16` point here, not at figures.
 
-### Authority stays with the scheme
+## 11. Sources
 
-Bawa names **BIPs 32, 39, 43, 44, 49, 84** and **SLIPs 0010, 0044, 0132** as the sources of truth for these schemes. The standards, not the implementations, define the rules.
-
-The bip_utils documentation lists support for **BIPs 32, 39, 44, 49, 84, 86**, **SLIP-0010** and **CIP-1852**. Bawa uses bip_utils only for independent differential/reference testing. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond this list; review the relevant standards and tests before relying on additional coverage.
-
-### Invocation / code audit
-
-`tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` version `4.8.4`; `requirements.txt` lists `bip_utils` version `2.12.2`.
-
-This section is a decision table, not a runnable recipe. Check each tool’s own documentation and the relevant Bawa call site before using it. These checks are review criteria, not reported execution results.
-
-1. **Trace each proposed invocation to a table row**, including the data crossing its boundary.  
-   **You should see:** an identified owner, call site and data category—or a clear record of what still needs tracing. Do not mark isolation as verified without code evidence.
-
-2. **Review boundary enforcement at the call sites.**  
-   **You should see:** evidence that metadata, network and application-record calls receive no secret material under this policy—or a recorded violation or unresolved review item. Do not assume the boundary is enforced.
-
-3. **Review verification and signing examples.**  
-   **You should see:** cited published vectors or clearly marked placeholders; bip_utils confined to independent checking; signing examples limited to testnet or conceptual use, never real funds. Only claim a successful comparison when both the vector and the observed result are recorded.
+- [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
+- [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+- [BIP-43](https://github.com/bitcoin/bips/blob/master/bip-0043.mediawiki)
+- [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+- [BIP-49](https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki)
+- [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
+- [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
+- [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
+- [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md)
+- [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core)
+- [Trust Wallet Assets repository](https://github.com/trustwallet/assets)
+- [bip_utils repository](https://github.com/ebellocchia/bip_utils)
+- [Cosmos Chain Registry](https://github.com/cosmos/chain-registry)
+- [Solana docs source](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/index.mdx)
+- [ethers docs](https://docs.ethers.org/v6/)
+- [Ledger developer ecosystem](https://developers.ledger.com)
+- [TON SDKs](https://docs.ton.org/applications/sdks)
