@@ -12,9 +12,9 @@ CHAINS.eth = (coin) => coin.ethereum;
 CHAINS.trx = (coin) => coin.tron;
 
 const PATHS = Object.create(null);
-PATHS.btc = (i) => \`m/84'/0'/0'/0/\${i}\`;
-PATHS.eth = (i) => \`m/44'/60'/0'/0/\${i}\`;
-PATHS.trx = (i) => \`m/44'/195'/0'/0/\${i}\`;
+PATHS.btc = (i) => `m/84'/0'/0'/0/${i}`;
+PATHS.eth = (i) => `m/44'/60'/0'/0/${i}`;
+PATHS.trx = (i) => `m/44'/195'/0'/0/${i}`;
 
 const ALLOWED_CHAINS = new Set(["btc", "eth", "trx"]);
 const MAX_XPUB_LENGTH = 200;

@@ -63,7 +63,11 @@ def main() -> int:
 
     if args.stdout and args.output:
         parser.error("--stdout and --output are mutually exclusive")
-    if args.output and os.path.exists(args.output) and os.path.islink(args.output):
+    if args.output and os.path.islink(args.output):
+        # NB: no os.path.exists() gate — islink() alone must catch dangling
+        # symlinks too, otherwise a dangling symlink slips past this refusal
+        # (os.replace() would still not follow it, but the guard must mean
+        # what it says).
         raise SystemExit("refusing symlinked output path")
 
     key = _read_key()
