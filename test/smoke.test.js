@@ -275,6 +275,236 @@ async function testDaemonPrivateRejection() {
   });
 }
 
+// Check daemon validation and recovery through one sequential JSONL session.
+async function testDaemonDefects() {
+  return new Promise((resolve) => {
+    const steps = [
+      {
+        name: "daemon rejects TV1 xprv",
+        request: { chain: "btc", xpub: NEGATIVE.TV1_XPRV, index: 0 },
+        error: "extended public key required"
+      },
+      {
+        name: "daemon rejects version-mismatch xpub",
+        request: { chain: "btc", xpub: NEGATIVE.TV5_VER, index: 0 },
+        error: "extended public key required"
+      },
+      {
+        name: "daemon rejects bad-checksum xprv",
+        request: { chain: "btc", xpub: NEGATIVE.TV5_BAD, index: 0 },
+        error: "checksum"
+      },
+      {
+        name: "daemon rejects bad-checksum ETH xpub",
+        request: { chain: "eth", xpub: NEGATIVE.ETH_BAD_CHECKSUM, index: 0 },
+        error: "checksum",
+        fastName: "daemon rejects bad-checksum ETH xpub fast"
+      },
+      {
+        name: "daemon rejects BTC zpub as eth",
+        request: { chain: "eth", xpub: NEGATIVE.ZPUB84, index: 0 },
+        error: "not allowed for eth"
+      },
+      {
+        name: "daemon rejects BTC zpub as trx",
+        request: { chain: "trx", xpub: NEGATIVE.ZPUB84, index: 0 },
+        error: "not allowed for trx"
+      },
+      {
+        name: "daemon derives BTC index 0 after bad requests",
+        request: { chain: "btc", xpub: FIXTURES.btc.xpub, index: 0 },
+        address: FIXTURES.btc[0]
+      },
+      {
+        name: "daemon derives ETH index 0 after bad requests",
+        request: { chain: "eth", xpub: FIXTURES.eth.xpub, index: 0 },
+        address: FIXTURES.eth[0]
+      },
+      {
+        name: "daemon derives TRX index 0 after bad requests",
+        request: { chain: "trx", xpub: FIXTURES.trx.xpub, index: 0 },
+        address: FIXTURES.trx[0]
+      },
+      {
+        name: "daemon stays up and derives BTC index 1 after bad requests",
+        request: { chain: "btc", xpub: FIXTURES.btc.xpub, index: 1 },
+        address: FIXTURES.btc[1]
+      }
+    ];
+
+    let child;
+    let stdout = "";
+    let stderr = "";
+    let ready = false;
+    let finished = false;
+    let current = 0;
+    let sentAt;
+
+    const timer = setTimeout(() => {
+      finish(false, "daemon timed out after 60 s");
+    }, 60000);
+
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+
+      // An aborted run fails each outstanding expectation exactly once.
+      if (!cond) {
+        for (; current < steps.length; current += 1) {
+          const step = steps[current];
+          check(step.name, false, detail);
+          if (step.fastName) check(step.fastName, false, detail);
+        }
+      }
+
+      const cleanStderr =
+        !stderr.includes("Aborted") && !stderr.includes("enlarge memory");
+
+      check(
+        "daemon stderr has no WASM abort or allocation attempt",
+        cond && cleanStderr,
+        cleanStderr
+          ? detail
+          : 'daemon stderr contains "Aborted" or "enlarge memory"'
+      );
+
+      if (child) child.kill();
+      resolve();
+    }
+
+    function sendNext() {
+      if (finished) return;
+      if (current === steps.length) {
+        finish(true);
+        return;
+      }
+
+      try {
+        const payload = JSON.stringify(steps[current].request) + "\n";
+        sentAt = process.hrtime.bigint();
+        child.stdin.write(payload);
+      } catch (err) {
+        finish(false, `daemon stdin write failed: ${err.message}`);
+      }
+    }
+
+    try {
+      child = spawn(
+        process.execPath,
+        [path.join(TOOLS_DIR, "derive_daemon.js")],
+        { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
+      );
+    } catch (err) {
+      finish(false, `daemon spawn failed: ${err.message}`);
+      return;
+    }
+
+    child.on("error", (err) => {
+      finish(false, `daemon process error: ${err.message}`);
+    });
+
+    child.on("close", (code, signal) => {
+      if (finished) return;
+      finish(
+        false,
+        `daemon closed early (code=${code}, signal=${signal || "none"})` +
+          (stdout.length ? "; incomplete JSONL on stdout" : "")
+      );
+    });
+
+    if (!child.stdin || !child.stdout || !child.stderr) {
+      finish(false, "daemon stdio pipes were not created");
+      return;
+    }
+
+    child.stdin.on("error", (err) => {
+      finish(false, `daemon stdin error: ${err.message}`);
+    });
+    child.stdout.on("error", (err) => {
+      finish(false, `daemon stdout error: ${err.message}`);
+    });
+    child.stderr.on("error", (err) => {
+      finish(false, `daemon stderr error: ${err.message}`);
+    });
+
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+
+      // Timestamp arrival before parsing or checking the completed reply line.
+      const receivedAt = process.hrtime.bigint();
+      stdout += chunk;
+
+      let newline;
+      while (!finished && (newline = stdout.indexOf("\n")) !== -1) {
+        const line = stdout.slice(0, newline);
+        stdout = stdout.slice(newline + 1);
+
+        let reply;
+        try {
+          reply = JSON.parse(line);
+        } catch {
+          finish(
+            false,
+            ready
+              ? `invalid JSONL reply for ${steps[current].name}`
+              : "invalid JSONL while waiting for daemon readiness"
+          );
+          return;
+        }
+
+        if (!reply || typeof reply !== "object" || Array.isArray(reply)) {
+          finish(false, "daemon emitted a non-object JSONL message");
+          return;
+        }
+
+        if (!ready) {
+          if (reply.ready !== true) {
+            finish(false, "daemon emitted a message before its ready message");
+            return;
+          }
+          ready = true;
+          sendNext();
+          continue;
+        }
+
+        const step = steps[current];
+        const cond = step.error
+          ? reply.ok === false &&
+            typeof reply.error === "string" &&
+            reply.error.includes(step.error)
+          : reply.ok === true && reply.address === step.address;
+
+        check(
+          step.name,
+          cond,
+          step.error
+            ? `expected ok:false and error containing "${step.error}"`
+            : "expected ok:true and the fixture address"
+        );
+
+        if (step.fastName) {
+          const latencyMs = Number(receivedAt - sentAt) / 1e6;
+          check(
+            step.fastName,
+            latencyMs >= 0 && latencyMs < 5000,
+            `reply latency was ${latencyMs.toFixed(1)} ms; expected under 5000 ms`
+          );
+        }
+
+        current += 1;
+        sendNext();
+      }
+    });
+  });
+}
+
 (async () => {
   const core = await initWasm();
   const { CoinType, CoinTypeExt } = core;
@@ -451,8 +681,9 @@ async function testDaemonPrivateRejection() {
     }
   }
 
-  // 9. derive_daemon.js private-key rejection.
+  // 9. derive_daemon.js rejection checks (private key, checksum, wrong chain).
   await testDaemonPrivateRejection();
+  await testDaemonDefects();
 
   if (failures > 0) {
     console.log(`SMOKE TESTS FAILED: ${failures} failure(s)`);

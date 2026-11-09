@@ -2,9 +2,10 @@
 // JSONL request: {"chain":"btc|eth|trx","xpub":"...","index":5}
 // JSONL response: {"ok":true,"address":"..."} or {"ok":false,"error":"..."}
 // Startup: {"ready":true}
+// Extended keys are validated via the shared module before any per-request WASM call.
 const { initWasm } = require("@trustwallet/wallet-core");
 const readline = require("readline");
-const crypto = require("crypto");
+const { validateExtendedKey, redact } = require("./extended-key");
 
 const CHAINS = Object.create(null);
 CHAINS.btc = (coin) => coin.bitcoin;
@@ -20,47 +21,6 @@ const ALLOWED_CHAINS = new Set(["btc", "eth", "trx"]);
 const MAX_XPUB_LENGTH = 200;
 const MAX_LINE_LENGTH = 4096;
 const MAX_INDEX = 2147483647;
-
-const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-const PRIVATE_VERSIONS = new Set([
-  "0488ade4","049d7878","04b2430c","0295b005",
-  "02aa7a99","04358394","044a4e28","045f18bc",
-]);
-
-function decodeBase58(s) {
-  let n = 0n;
-  for (const ch of s) {
-    const v = B58_ALPHABET.indexOf(ch);
-    if (v < 0) return null;
-    n = n * 58n + BigInt(v);
-  }
-  let hex = n.toString(16);
-  if (hex.length % 2) hex = "0" + hex;
-  let zeros = 0;
-  while (zeros < s.length && s[zeros] === "1") zeros++;
-  return Buffer.concat([Buffer.alloc(zeros), Buffer.from(hex, "hex")]);
-}
-
-function isPrivateExtendedKey(s) {
-  if (typeof s !== "string") return false;
-  const t = s.trim();
-  if (!t) return false;
-  const buf = decodeBase58(t);
-  if (!buf || buf.length < 4) return false;
-  const payload = buf.subarray(0, buf.length - 4);
-  const checksum = buf.subarray(buf.length - 4);
-  const hash = crypto.createHash("sha256").update(payload).digest();
-  const hash2 = crypto.createHash("sha256").update(hash).digest();
-  if (!hash2.subarray(0, 4).equals(checksum)) return false;
-  return PRIVATE_VERSIONS.has(buf.subarray(0, 4).toString("hex"));
-}
-
-function redact(msg) {
-  let s = msg == null ? "" : String(msg);
-  s = s.replace(/(?:xprv|xpub|yprv|ypub|zprv|zpub|Yprv|Ypub|Zprv|Zpub|tprv|tpub|uprv|upub|vprv|vpub)[1-9A-HJ-NP-Za-km-z]+/g, "[REDACTED]");
-  s = s.replace(/[1-9A-HJ-NP-Za-km-z]{100,}/g, "[REDACTED]");
-  return s;
-}
 
 function fail(msg) {
   console.log(JSON.stringify({ ok: false, error: redact(msg) }));
@@ -86,7 +46,8 @@ function fail(msg) {
         !Number.isInteger(index) || index < 0 || index > MAX_INDEX
       ) return fail("bad request");
 
-      if (isPrivateExtendedKey(xpub)) return fail("extended public key required");
+      const validation = validateExtendedKey(xpub.trim(), chain);
+      if (!validation.ok) return fail(validation.message);
 
       const coin = CHAINS[chain](core.CoinType);
       let pubkey;
