@@ -1,6 +1,6 @@
 # Security & Threat Model
 
-Bawa's primary security boundary is:
+Bawa's intended deployment trust boundary is:
 
 ~~~
 trusted/offline generation
@@ -15,6 +15,8 @@ trusted/offline generation
                     ▼
              RPC / indexer
 ~~~
+
+Trusted/offline generation is an operating requirement. A controlling terminal and a public-only hand-off do not themselves establish host trust or network isolation.
 
 ## Assets to protect
 
@@ -35,25 +37,31 @@ Privacy-sensitive:
 
 Bawa assumes the online application may be monitored, logged, restarted or compromised. The architecture therefore avoids sending seed material to the watch-only runtime.
 
-The generator displays the mnemonic and encryption data key through the controlling terminal and keeps them out of normal subprocess stdout/stderr. This reduces accidental logging but does not guarantee protection from a compromised operating system, debugger, core dump, swap, memory capture or malicious terminal.
+Generation requires a controlling terminal. At startup, `generate.js` opens `/dev/tty` and exits with a fatal error and status 1 if no controlling terminal is available. The generator writes the mnemonic and data key only to that terminal's file descriptor, keeping them out of normal stdout/stderr. This reduces accidental logging through stdout/stderr, but terminal output can still be captured or recorded, for example by `script` or through `tmux` capture or logging. Writing to the controlling terminal does not guarantee protection from a compromised OS, debugger, core dump, swap, memory capture or malicious terminal.
 
 ## Filesystem rules
 
-Wallet secrets are written under a dedicated directory with restrictive permissions. Encrypted artifacts are written atomically as 0600. Symlinked secret paths are rejected.
+`generate.js` sets its secrets directory to mode 0700, and `make_wallet.py` uses mode 0700 for its secrets and backup directories. Recovery output is separate: `decrypt_seed.py` writes the recovered mnemonic to `/dev/tty` by default, to standard output with `--stdout`, or as plaintext to the file specified by `--output`. The `--output` file is written using a mode-0600 temporary file followed by `os.replace` and chmod to 0600. The primary encrypted seed bundle in `generate.js` is written to a mode-0600 temporary file and installed atomically with `fs.renameSync`. Backups made by `generate.js --force` and `make_wallet.py`'s `_copy_0600` are non-atomic copies followed by chmod to 0600. Symlink checks differ by tool. `make_wallet.py` checks the secrets directory, `.env`, backup directory and `_copy_0600` source/destination paths. `decrypt_seed.py` checks the encrypted artefact and `--output` paths. `generate.js` does not check `secretsDir`, `encPath`, `tmpPath` or the `--force` `.bak` path, and `compare.js` does not check `.env` before reading it.
 
-.env is not a secret store for mnemonics or private keys. It may contain public xpub/zpub values, which still have privacy implications.
+`.env` must not be used to store mnemonics or private keys. `make_wallet.py` writes public xpub values into `.env` using mode 0600. Treat extended public keys as privacy-sensitive.
+
+Recovery encryption uses AES-256-GCM with the additional authenticated data (AAD) string `nova-shop-seed-v1`. This is a legacy Nova Shop identifier used by the current code. `generate.js` and `decrypt_seed.py` use the same AAD bytes, and the recovery bundle records the value in its `aad` field. AAD is authenticated context, not an encryption secret; recovery must use the AAD used for encryption.
 
 ## Dependency and supply chain
 
 - Trust Wallet Core is pinned to an exact tested package version.
 - bip_utils is pinned and used only for independent verification.
 - Do not treat a version range as a tested dependency graph.
-- Commit a lockfile from a clean install before a production release.
-- Run dependency and secret scanning in CI/release workflows.
-- Prefer signed/tagged upstream releases and record release checksums/provenance where practical.
+- The tools lockfile is committed and records Core `4.8.4` exactly. No root lockfile is committed; the root `package.json` has no dependencies. Before a production release, verify and document the tools lockfile's clean-install origin and reproducibility.
+- The current `ci.yml` contains no dependency- or secret-scanning steps, and scanning evidence is recorded as `blocked-unverified`. Add and verify both kinds of scanning in CI/release workflows, and record the results.
+- Prefer signed/tagged releases. No release checksums or provenance are recorded in the repository. Record checksums and provenance where practical.
 
 ## Known limitations
 
 JavaScript/WebAssembly memory cannot provide a cryptographic guarantee of perfect zeroization. Encryption at rest protects stored ciphertext but does not eliminate plaintext exposure while a mnemonic is being generated or recovered.
 
 An external security review is required before treating this as production custody infrastructure.
+
+No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Establishing and publishing a private disclosure channel remains an open maintainer action. Do not post exploit details publicly.
+
+No session or inactivity timeout is implemented in the repository code. The 10-minute auto-lock is specified only in the Web draft. The 120-second subprocess timeout in `make_wallet.py` applies to generation, not inactivity; the daemon has no timeout.

@@ -1,6 +1,6 @@
 # Watch-only derivation
 
-> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb0`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. See the README §1 status warning. The interfaces below describe their behaviour.
+> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. See the README §1 status warning. The interfaces below describe their behaviour.
 
 ## 1. What watch-only derivation is
 
@@ -33,7 +33,7 @@ echo "$XPUB_ETH" | node tools/hdwallet-gen/derive.js eth 5
 
 > **Expected result**
 >
-> At `e3b65fb0`, the script runs and derives the address (exit status `0`); at the former pin `082f7915` it could not run because `derive.js` failed `node --check`.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the script runs and derives the address (exit status `0`); at the former pin `082f7915` it could not run because `derive.js` failed `node --check`.
 >
 > Intended success with a valid account xpub: exit status `0`, with the bare ETH address for index `5` on stdout and no JSON wrapper.
 
@@ -53,7 +53,9 @@ The intended exit statuses are:
 | `1` | Derivation or validation failure |
 | `0` | Success: bare address on stdout, without JSON |
 
-Input over `200` characters is rejected while reading, before derivation.
+For stdin, the 200-character limit counts all characters read, including any trailing newline. Accumulated input exceeding that total is rejected while reading, before derivation.
+
+Testnet-format extended public keys (`vpub`/`tpub`) are not supported by this workflow. A valid-checksum `vpub` can cause `derive.js` to abort with exit 1 and no address, emitting only an opaque WASM-abort message. See the testnet-format key limitation in docs/11.
 
 The approved receiving paths are:
 
@@ -71,7 +73,7 @@ node tools/hdwallet-gen/derive_daemon.js
 
 > **Expected result**
 >
-> At `e3b65fb0`, the daemon starts and prints the readiness message (verified 2026-11-08); at the former pin `082f7915` it could not start because `derive_daemon.js` failed `node --check`.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the daemon starts and prints the readiness message (verified 2026-11-08); at the former pin `082f7915` it could not start because `derive_daemon.js` failed `node --check`.
 >
 > Intended startup sequence: `initWasm()` completes → the readline input interface for stdin is created → the daemon prints:
 >
@@ -421,11 +423,15 @@ Run `compare.js` from the repository root:
 node tools/hdwallet-gen/compare.js
 ```
 
-It reads the repository-root `.env`, or the file named by `NOVA_ENV`. `NOVA_ENV` is a legacy name retained as a code identifier.
+It reads the repository-root `.env`, or the file named by `NOVA_ENV`. Ensure the selected env file exists before running `compare.js`. If `NOVA_ENV` points to a nonexistent file, the script exits 1 with an uncaught `ENOENT` stack trace. This is separate from the documented missing-chain-xpub error. `NOVA_ENV` is a legacy name retained as a code identifier.
+
+`tools/make_wallet.py` writes public configuration to `BAWA_ENV_FILE`, defaulting to `<repo>/.env`. `compare.js` selects its input independently through `NOVA_ENV`, also defaulting to `<repo>/.env`. If generation used a custom `BAWA_ENV_FILE`, set `NOVA_ENV` to that same file when running `compare.js`. The launcher's other path overrides are `NOVA_SECRETS_DIR` (default `<repo>/secrets`) and `BAWA_BACKUP_DIR` (default `<repo>/seed-backup`). The launcher refuses a symlinked secrets directory, `.env` file or backup directory.
 
 The script takes `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` and prints the first three receiving addresses per chain, at indexes `0`, `1` and `2`. Output is public-only: a chain label plus three addresses, not xpubs or private material.
 
 A missing chain xpub throws, and the top-level handler exits with status `1`. Check the exit status even when the output looks plausible: earlier chains may already have printed before a later chain fails. Use this for a spot-check, not as an allocation mechanism.
+
+`compare.js` does not perform the private-extended-key rejection used by `derive.js` and `derive_daemon.js`. Supply public extended keys only in the chain xpub settings. An `xprv` can be accepted and produce addresses successfully, so successful output does not prove that the input is public.
 
 **Reader pattern — not a Bawa file**
 
@@ -477,7 +483,7 @@ If the child exits unexpectedly or a pipe breaks, your caller must stop acceptin
 
 **Published positive fixtures**
 
-Use this BIP-84 account-0 zpub for the `abandon` mnemonic as a positive fixture. It is published in [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md), line 86:
+Use this BIP-84 account-0 zpub for the `abandon` mnemonic as a positive fixture. It is published in SLIP-0132.
 
 ```text
 zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs

@@ -11,8 +11,8 @@ How-to guide.
 ## Contents
 
 - [Part 1: Recovery, the full procedure](#part-1-recovery-the-full-procedure)
-- [Part 2: The encrypted-seed decryption workflow, part 1](#part-2-the-encrypted-seed-decryption-workflow-part-1)
-- [Part 2: The encrypted-seed decryption workflow, part 2](#part-2-the-encrypted-seed-decryption-workflow-part-2)
+- [Part 2: The encrypted-seed decryption workflow, part 1](#part-2-the-encrypted-seed-decryption-workflow-part-1-the-artefact-the-key-and-the-output-modes)
+- [Part 2: The encrypted-seed decryption workflow, part 2](#part-2-the-encrypted-seed-decryption-workflow-part-2-refusals-failures-and-clean-up)
 - [Part 3: What recovery cannot do](#part-3-what-recovery-cannot-do)
 - [Part 4: Backup testing, playbooks, separation, disaster and inheritance](#part-4-backup-testing-playbooks-separation-disaster-and-inheritance)
 - [Sources](#sources)
@@ -28,7 +28,7 @@ Follow this guide in four parts:
 
 Use recovery to restore access from the mnemonic and its exact BIP-39 passphrase. Recovery cannot recover a lost mnemonic, a lost passphrase or funds already moved.
 
-Live wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
+Live wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
 
 ### Required recovery material
 
@@ -179,7 +179,7 @@ Use this per-asset checklist for **bawa-derivation-policy-v1**:
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
 
-This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. Never paste a real mnemonic or data key anywhere.
+This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. Never paste a real mnemonic or data key anywhere.
 
 ### 6. Restore the TON configuration exactly, where applicable
 
@@ -320,17 +320,27 @@ Treat a refusal from `tools/decrypt_seed.py` as a reason to check the paths, the
 
 ### 1. Check the encrypted artefact path
 
-Use a direct path to the encrypted artefact, such as `/path/to/seed.enc.json`. The tool checks whether the path is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid.
+Use a direct path to the encrypted artefact, such as `/path/to/seed.enc.json`. Pass the artefact path as the positional argument:
+
+```sh
+python3 tools/decrypt_seed.py /path/to/seed.enc.json
+```
+
+If the positional path is omitted, the tool uses `secrets/seed.enc.json`.
+
+The tool checks whether the path is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid.
 
 If you find an unexpected link, establish which file you intended to recover before trying again. Do not blindly follow the link.
 
-> **Expected result:** `refusing symlinked encrypted artifact` for a symlinked input. That attempt returns no recovered mnemonic.
+> **Expected result:** a Python traceback ending with `ValueError: refusing symlinked encrypted artifact`, with exit status `1`, for a symlinked input.
+
+The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifact` are also raised as uncaught `ValueError`s, producing Python tracebacks and exit status `1`. By contrast, a symlinked `--output` path, including a dangling symlink, is rejected with `refusing symlinked output path` and exit status `1` without a traceback. Without a controlling terminal and with neither `--stdout` nor `--output`, the tool reports `no controlling terminal; use --stdout or --output explicitly` and exits with status `1` without a traceback.
 
 ### 2. Check the output and temporary paths
 
-With `--output`, choose a destination you control, such as `/path/to/recovered-mnemonic.txt`. An output path that already exists and is a symlink is rejected with `refusing symlinked output path`.
+With `--output`, choose a destination you control, such as `/path/to/recovered-mnemonic.txt`. An output path that is a symlink is rejected with `refusing symlinked output path`, including a dangling symlink whose target does not exist.
 
-Expect the temporary output path to be protected too. A symlink there is refused. The temporary file is created with `O_EXCL`, preventing an existing entry from being silently overwritten, and with permissions `0600`. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
+Expect the temporary output path to be protected too. A symlink there is refused. The temporary file is created with `O_EXCL` and permissions `0600`. If creation raises FileExistsError, the tool refuses a symlink at the temporary path; otherwise it unlinks that path and retries creation. A pre-existing non-symlink temporary file can therefore be silently removed and recreated. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
 
 Investigate unexpected temporary entries rather than deleting them blindly or disabling these safeguards.
 
@@ -448,7 +458,7 @@ Complete the pre-funding check before using a wallet with meaningful funds. Requ
 
 Keep every exercise below testnet-only. Use disposable test fixtures only, with a tiny testnet amount for transaction checks. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
 
-Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it.
+Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd.
 
 1. **Start on a fresh machine.**
 
@@ -456,17 +466,17 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
    > **Expected result:** A clean recovery environment and reference values recorded before the drill, not generated during it.
 
-2. **Install clean software.**
+2. **Name and prepare a clean wallet recovery setup.**
 
-   Obtain the wallet software through the project's official distribution channel and follow its release-verification instructions. For hardware recovery, use a trusted device with verified firmware. Keep mnemonic entry on the hardware device where that is the intended recovery method.
+   Bawa's tools generate and decrypt seed material; they do not import a mnemonic into a wallet. Name the external wallet software or hardware recovery setup you will use and record its software and firmware versions, as applicable. Independently verify testnet compatibility for that setup and those versions. Obtain and install clean software using that wallet provider's own acquisition and release-verification instructions. For hardware recovery, use a trusted device with verified firmware. Keep mnemonic entry on the hardware device where that is the intended recovery method.
 
-   > **Expected result:** The intended software and firmware versions, with their provenance checked and no existing wallet state mistaken for a recovery.
+   > **Expected result:** A named external wallet recovery setup with the intended software and firmware versions recorded as applicable, provenance checked and testnet compatibility independently verified, with no existing wallet state mistaken for a recovery.
 
-3. **Recover the test mnemonic from its backup.**
+3. **Recover the test wallet from its mnemonic backup.**
 
-   Use the backup intended for recovery of the disposable test wallet after a loss. Do not substitute an export from the still-working wallet. Never enter a mnemonic into a website, support chat or remote-access session.
+   Use the backup intended for recovery of the disposable test wallet after a loss. Do not substitute an export from the still-working wallet. Enter the mnemonic recovered from that backup into the named wallet's recovery interface. Never enter a mnemonic into a website, support chat or remote-access session.
 
-   > **Expected result:** Acceptance of the backup by the recovery interface. Treat this as an intermediate result, not a passed drill.
+   > **Expected result:** Acceptance of the recovered mnemonic by the named wallet's recovery interface. Treat this as an intermediate result, not a passed drill.
 
 4. **Apply the exact passphrase.**
 

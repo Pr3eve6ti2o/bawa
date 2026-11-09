@@ -1,7 +1,7 @@
 ---
 title: Chain Registry & Asset Metadata
 description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's four chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
-last-updated: 2026-11-08
+last-updated: 2026-11-09
 ---
 
 # Chain Registry & Asset Metadata
@@ -10,8 +10,8 @@ Reference.
 
 > **Verified on:** 2026-11-08
 > **Verification status:** Partially verified
-> **Scope:** repo guide docs/12 against the pinned repo at e3b65fb0 plus live registry checks
-> **Repository commit:** e3b65fb0
+> **Scope:** repo guide docs/12 against the pinned repo at 754721cd plus live registry checks
+> **Repository commit:** 754721cd
 > **Tool versions:** Node v24.22.2 (VM), outside the repo's declared >=22 <23 range
 > **Actually run:** Pinned-repository review; live `registry.json` checks
 > **Not run:** A complete metadata contribution and validation workflow
@@ -54,7 +54,7 @@ This is a selected subset of fields in `registry.json`, not a complete inventory
 - Bitcoin-style extended-key formats inside `derivation`; among Bawa's four chains, these are present only for Bitcoin.
 - Elliptic curve and public-key type.
 - Address prefixes and [HRP](../GLOSSARY.md#hrp) values (human-readable part: the readable prefix in an address encoding).
-- Network identifiers, including the optional `chainId` field for EVM chain IDs. This field is sparse: it is present on 5 of 168 entries, all mainnet.
+- Network identifiers, including the optional `chainId` field. In the Wallet Core 4.9.2 registry, this field is present on 100 of 168 entries, with all values stored as strings. It carries both EVM chain IDs and non-EVM network identifiers such as `cosmoshub-4`.
 - Explorer and documentation links.
 
 ### Do not collapse identifiers
@@ -80,7 +80,7 @@ This is a Bawa-focused interpretation map, not an exhaustive schema for all 168 
 |---|---|---|
 | Registry identity | `id`, `name`, `displayName` | `id` is the internal ID. `name` is the "More readable name"; optional `displayName` overrides `name` where visible to the user. |
 | Coin identity | `coinId` | Wallet Core's internal chain ID. "In most cases" it is the BIP-44 derivation ID, but there are special cases. |
-| Chain/blockchain metadata | `blockchain`, `chainId` | `blockchain` records the blockchain family. `chainId` is optional and mainnet only in the current registry. Among the four Bawa entries, only Ethereum has `chainId`: its value is the string `"1"`, not a JSON number. |
+| Chain/blockchain metadata | `blockchain`, `chainId` | `blockchain` records the blockchain family. `chainId` is optional, stored as a string when present, and used for both EVM chain IDs and non-EVM network identifiers. Among the four Bawa entries, only Ethereum has `chainId`: its value is the string `"1"`, not a JSON number. |
 | Token identity: native-asset metadata | `symbol`, `decimals`, `nativeTokenName` | These describe the native asset. `nativeTokenName` is optional and appears only on TON among the four entries. |
 | Derivations and extended-key formats | `derivation` → `name`, `path`, `xpub`, `xprv` | The first derivation is the default; an alternative path is optional. `xpub` and `xprv` live inside `derivation` and define Bitcoin-style extended-key formats, present only for Bitcoin among the four entries. This is not a complete wallet-policy specification. |
 | Cryptographic parameters | `curve`, `publicKeyType` | These are cryptographic parameters, not independent proof of integration compatibility. |
@@ -91,7 +91,7 @@ For the full SLIP-0132 prefix table (mainnet and testnet rows, labelled by netwo
 
 `slip44` is a real key in the wider 168-entry inventory, but it is absent from the four-entry field list. Keep it separate from `coinId`. The wider inventory also includes `staticPrefix`, `ss58Prefix`, `addressHasher`, `base58Hasher` and `publicKeyHasher`.
 
-The `explorer` object was confirmed present across the wider inventory; `info.documentation` was verified on four sampled entries.
+In `registry.json` at 4.9.2, the `explorer` object is present on 168/168 entries; `info.documentation` is present on 156/168 entries.
 
 **Registry caveats**
 
@@ -109,11 +109,11 @@ The `explorer` object was confirmed present across the wider inventory; `info.do
 
 Pin for both sources: tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. Re-pin and re-verify whenever the Core pin moves.
 
-Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb0. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
+Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
 
 ## Bawa's four chains in the registry
 
-The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb0`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy).
+The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy).
 
 | Registry field | Bitcoin | Ethereum | Tron | TON (`id: "ton"`) |
 | --- | --- | --- | --- | --- |
@@ -157,7 +157,7 @@ The fixture below uses the published 15-word ripple test vector with an empty pa
 | ed25519 public key | `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9` |
 | Raw address | `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f` |
 | Mainnet friendly address | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
-| Bounceable mainnet address | `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5wDyEi` |
+| Bounceable mainnet address | `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi` |
 | Bounceable testnet address | `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo` |
 | Non-bounceable testnet address | `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt` |
 

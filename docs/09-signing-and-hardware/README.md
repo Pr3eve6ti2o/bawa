@@ -6,6 +6,8 @@ last-updated: 2026-11-08
 
 # Signing, Descriptors, PSBT & Hardware
 
+Verified against commit `754721cd` (documentation-only rewrite; code identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`).
+
 How-to guide.
 
 ## Contents
@@ -54,7 +56,7 @@ For high-value systems, move signing into an offline or hardware-backed trust do
 
 ---
 
-**Open item:** The live EIP-1559 signing proof was demonstrated on Core 4.8.4. Re-run it against Core 4.9.2 before publication.
+The dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08), with `txMode: 1` producing a `0x02` envelope and Python independently recovering the published fixture sender. Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
 
 ## The fixed derivation policy
 
@@ -790,7 +792,9 @@ After broadcast, verify `<TXID>` and its status through a node or explorer on th
 
 ## Practise test funding, fees and change
 
-**This rehearsal stays on testnet, signet or regtest. Never use real funds.** We’ll fund a separate Bawa test wallet and prepare an unsigned PSBT for device review. Stop before signing: these are workflow checks, not guarantees of particular screens or tool output.
+**This rehearsal stays on testnet, signet or regtest. Never use real funds.**
+
+This is a device-review outline, not a runnable end-to-end rehearsal. Funding a separate Bawa test wallet and preparing an unsigned PSBT are external prerequisites; use your chosen watch-only wallet's documentation for those steps and your signer's documentation for device review. This guide provides no funding or PSBT-construction procedure. Stop before signing.
 
 ```text
 ONLINE — WATCH-ONLY

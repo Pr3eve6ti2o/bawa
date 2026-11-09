@@ -1,5 +1,7 @@
-// compare.js — public-only derivation comparison helper.
-// Reads .env from repository root and prints public addresses only.
+// compare.js — address comparison helper intended for extended public keys.
+// Reads XPUB_BTC/ETH/TRX from the file selected by NOVA_ENV, or the repository-root .env by default.
+// Prints public addresses only, but does not reject private extended keys.
+// Private extended-key inputs may repeat account-key addresses instead of producing the expected derived addresses.
 const { initWasm } = require("@trustwallet/wallet-core");
 const fs = require("fs");
 const path = require("path");

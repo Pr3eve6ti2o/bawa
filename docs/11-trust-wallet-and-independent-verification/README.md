@@ -1,7 +1,7 @@
 ---
 title: Trust Wallet Core and Independent Verification
 description: Use Trust Wallet Core 4.9.2 as the reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
-last-updated: 2026-11-08
+last-updated: 2026-11-09
 ---
 
 # Trust Wallet Core & Independent Verification
@@ -10,11 +10,12 @@ How-to guide.
 
 > **Verified on:** 2026-11-08  
 > **Verification status:** Partially verified  
-> **Scope:** repo guide docs/11 against the pinned repo at 082f7915 plus live link checks  
-> **Repository commit:** e3b65fb0  
+> **Scope:** repo guide docs/11 against the pinned repo at 754721cd, with previously recorded live link checks retained as historical evidence
+> **Repository commit:** 754721cd
 > **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
 > **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
-> **Not run:** no live testnet spend. The Wallet Core side of the differential comparison for the xpub mapping is now captured (D31, 2026-11-08).
+> **Not run:** no live testnet spend.
+> **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
 
 Mark the checks listed as not run above `blocked-unverified`.
 
@@ -125,7 +126,7 @@ clean-install CI
 Where no independent implementation or published vector exists, document the limitation instead of implying equivalent assurance.
 ## Verification, differential fixtures
 
-Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). Treat the **4.8.4** pin as superseded and keep bip-utils in the test layer.
+Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). At repository commit `754721cd`, `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` still pin **4.8.4**. Running `npm ci` in `tools/hdwallet-gen` installs **4.8.4**, so the repository's tool commands exercise **4.8.4**, not **4.9.2**. Keep bip-utils in the test layer and identify the Core version for each verification run.
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 
@@ -200,7 +201,7 @@ Keep the captured pass together with its coverage boundary:
 >
 > `bip_utils reference checks: PASS`
 >
-> At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1-2.
+> At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only. At 754721cd, `test/smoke.test.js` asserts fixture-address matches for BTC, ETH and TRX at indices 0 and 1. No repository test covers index 2; `compare.js` derives indices 0-2 as a helper, not as a test.
 
 Do not interpret this pass as a completed comparison with Wallet Core.
 
@@ -244,23 +245,23 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the account-0 rejection vector from [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and the three BIP-32 rejection vectors from [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki). Distinguish private extended-key rejection from bad-checksum and wrong-version rejection.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Neither tool's output distinguishes bad-checksum from wrong-version rejection.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
-  > Expected result: Reject the private extended key where a public extended key is required.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
 
-  > Expected result: Reject the private extended key where a public extended key is required.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
-  > Expected result: Reject for a bad checksum.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; the tool output does not distinguish it from a wrong-version failure.
 
 - **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
 
-  > Expected result: Reject for a wrong version.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect; the tool output does not distinguish it from a bad-checksum failure.
 
 ### Fixture and parity gaps
 
@@ -271,7 +272,7 @@ Demand reproduction of the TON fixture in every applicable check (Android D.7 ch
 - mnemonic: `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` (15-word published test vector; production creation is 24 words, do not mix them)
 - BIP-39 passphrase: empty
 - `ton_path`: `m/44'/607'/0'`
-- coin: CoinType.TON = 607
+- coin: CoinType.ton = 607
 - ed25519 public key (at `m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`
 - contract: Wallet V4 R2
 - wallet ID / subwallet: `698983191` (0x29A9A317; the @ton/ton V4 default)
@@ -287,7 +288,7 @@ Verified two independent ways (V3, 8 November 2026): Trust Wallet Core 4.8.4 (`g
 
 The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 files). Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08); the in-browser run on 4.9.2 remains open.
 
-Do not require a separate Sepolia address fixture, because ETH addresses are network-agnostic. The BTC testnet fixture is the re-encoded Bawa address `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`, from `m/84'/0'` index 0); the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08). With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
+Do not require a separate Sepolia address fixture, because ETH addresses are network-agnostic. The BTC testnet fixture is the re-encoded Bawa address `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`, from `m/84'/0'` index 0); the standards `m/84'/1'` witness program `01c252d7b62c638895aa976479d608a14eb9daf3` encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08). With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 
 ## Verification and testing
 
@@ -303,7 +304,7 @@ For the standards and paths covered by Bawa’s differential tests, require Wall
 
 ### Use the reference engine and independent verifier
 
-Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 200 and redirects to the Trust Wallet marketing homepage (checked live 2026-11-08). Link it only as the vendor's home page, not as documentation.
+Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
 
 Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
 

@@ -1,4 +1,3 @@
-Replacement text for sections 1–4 follows. I’ve retained your four supplied headings; “seven sections” conflicts with the stated 13-section scope.
 
 # Wallet generation
 
@@ -25,7 +24,7 @@ The surrounding tools have distinct roles:
 - `compare.js` gives you a diagnostic cross-check of derived addresses against the parent application’s expectations.
 - `decrypt_seed.py` is your recovery utility for the application-specific seed bundle.
 
-At `e3b65fb0`, the npm `test` script targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was absent and the suite belonged only to an unpushed local repair copy.
+At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the npm `test` script targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was absent and the suite belonged only to an unpushed local repair copy.
 
 Keep the empty BIP-39 passphrase and the 24-word mnemonic: both are fixed policy. A non-empty passphrase or a different word count gives you a different wallet. The confirmations exist because you have no second chance to record the mnemonic.
 
@@ -35,7 +34,7 @@ Follow the root README §§5–7 as the single canonical installation procedure.
 
 You need:
 
-- A Unix-like environment for the `/dev/tty` flow. This is recommended for that flow; generation itself is Unix-like only. There is no PowerShell activation.
+- A Unix-like environment with a usable /dev/tty is required for wallet generation. There is no PowerShell activation.
 - Node matching the `engines` requirement in `package.json`, and npm.
 - Python 3.11+ and a venv.
 - Disk space.
@@ -51,7 +50,7 @@ git verify-commit HEAD
 
 > **Expected result**
 >
-> The commit signature verifies using a maintainer key you already trust. Printing a key ID alone is not verification.
+> Expected result for a signed commit: The commit signature verifies using a maintainer key you already trust. At the pinned head 754721cd, HEAD is unsigned, so `git verify-commit HEAD` fails because there is no commit signature to verify. Printing a key ID alone is not verification.
 
 Check the installed Wallet Core version:
 
@@ -61,7 +60,7 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
 
 > **Expected result**
 >
-> The dependency listing shows `@trustwallet/wallet-core@4.9.2`.
+> The dependency listing shows `@trustwallet/wallet-core@4.8.4`.
 
 **Lockfile warning**
 
@@ -84,6 +83,8 @@ python3 tools/make_wallet.py
 > With a controlling terminal and successful checks, you see the mnemonic and separate data key only on that terminal. You are asked to confirm your backup before the seed bundle is written atomically with restrictive permissions and public material is saved for runtime.
 >
 > Without a controlling terminal, generation refuses to proceed. That refusal is a security boundary, not a bug.
+
+See section 6 for the 120-second limit on the entire generator subprocess.
 
 The flow is:
 
@@ -108,9 +109,12 @@ Your encrypted file is an application-specific **seed bundle**. Its conceptual s
   "alg": "AES-256-GCM",
   "kdf": "none - random 256-bit data key",
   "nonce_b64": "...",
-  "ciphertext_b64": "..."
+  "ciphertext_b64": "...",
+  "aad": "nova-shop-seed-v1"
 }
 ```
+
+The generated bundle contains alg, kdf, nonce_b64, ciphertext_b64, created, aad and note. The aad value is "nova-shop-seed-v1" and is required by decrypt_seed.py for recovery.
 
 Generation does not write your plaintext mnemonic to disk. Keep the random data-encryption key separately from the seed bundle.
 
@@ -140,6 +144,8 @@ This is application-specific encryption at rest, **not** a universal replacement
 
    If a wallet already exists, the launcher refuses to proceed unless you use `--force` or `--regenerate`. Verify a backup before using either option.
 
+   `tools/make_wallet.py` does not implement `--help`: that argument is ignored and the launcher attempts normal wallet generation. Do not use it merely to inspect usage. The recognised regeneration flags are `--force` and `--regenerate`; the usual existing-wallet refusal still applies.
+
 3. **Start and check the ordering.**
 
    Start through that launch procedure and check the order:
@@ -167,15 +173,15 @@ This is application-specific encryption at rest, **not** a universal replacement
 
    Your BIP-39 passphrase is **EMPTY**. The data key is a separate recovery key, not that passphrase.
 
-   Check your records before answering the confirmation prompts. Type the first word of your mnemonic, then type `SAVED`. If either confirmation fails, `seed.enc.json` is not written.
+   Check your records before answering the confirmation prompts. Type the first word of your mnemonic, then type `SAVED`. If either confirmation fails, `seed.enc.json` is not written. The 120-second limit applies to the entire generator subprocess, including time spent recording, checking and answering confirmations. If it expires, the generator is killed and generation fails, even if the mnemonic and data key have already been displayed.
 
 6. **Confirm, then inspect the write.**
 
    After confirming, check these locations and conditions:
 
    - **Secrets directory:** the directory set by `NOVA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`. Symlinked paths are refused.
-   - **Backup directory:** the directory set by `BAWA_BACKUP_DIR`, or `seed-backup/` at the repository root, has mode `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
-   - **Public environment file:** the file set by `BAWA_ENV_FILE`, or the repository-root `.env`, is written atomically at `0600` and contains only the four public entries from step 4.
+   - **Backup directory:** the directory set by `BAWA_BACKUP_DIR`, or `seed-backup/` at the repository root, has mode `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
+   - **Public environment file:** the file set by `BAWA_ENV_FILE`, or the repository-root `.env`, is written atomically with mode 0600. The four public wallet values from step 4 are updated; all other lines from the existing file, or from `.env.example` when the target file does not exist, are preserved.
 
    For completion, check for the message below **plus** all four public values, the seed bundle’s artefact path with mode `0600` and the backup bundle path:
 
@@ -197,7 +203,7 @@ TON is an address export, not a fourth public root. Round trips check generation
 
 **Backup checks**
 
-Check the layout defined by `make_wallet.py`: the backup directory has mode `0700` and contains a `0600` copy of the seed bundle, `seed.enc.json`, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
+Check the layout defined by `make_wallet.py`: the backup directory has mode `0700` and contains a `0600` copy of the seed bundle, `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
 
 The orchestrator checks that the original seed bundle has mode `0600` and that its bytes match the backup copy.
 
@@ -219,7 +225,7 @@ If a stage fails, stop before confirming. Keep recovery material offline and do 
 | Terminal unavailable or your records do not match | Stop before confirming. |
 | Deterministic or public check fails | Hold public release and investigate with a maintainer. Treat exact diagnostics and exit codes as unspecified. |
 | Write fails, is interrupted, or permissions differ | Keep completion unverified and retain recovery material offline. File presence alone is not recovery proof. |
-| Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` places `decrypt_seed.py` and `docs/RECOVERY.md` in the backup directory; test a restore separately before funding. |
+| Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` places `decrypt_seed.py` and `RECOVERY.md` (copied from `docs/RECOVERY.md` to the backup directory's top level) in the backup directory; test a restore separately before funding. |
 
 **After a crash**
 
@@ -301,11 +307,11 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
    - the secrets directory has mode `0700`;
    - `seed.enc.json` has mode `0600`;
    - the backup directory has mode `0700`;
-   - the backup bundle contains a `0600` copy of the seed bundle, plus `decrypt_seed.py` and `docs/RECOVERY.md`.
+   - the backup bundle contains a `0600` copy of the seed bundle, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
 
    Symlinked paths are refused. The seed bundle uses AES-256-GCM, and the generator never writes the plaintext mnemonic to disk. Store the data key separately. Treat this as application-specific encryption at rest, not a universal backup standard.
 
-4. **Check the public environment file.** The `.env` write is atomic, with mode `0600`. Check that it contains exactly these four entries, using your generated public values in place of the placeholders:
+4. **Check the public environment file.** The `.env` write is atomic, with mode `0600`. Check that XPUB_BTC, XPUB_ETH, XPUB_TRX and TON_DEPOSIT_ADDRESS contain the generated public values. Comments, blank lines and other preserved content may also be present.
 
    ```dotenv
    XPUB_BTC=<btc-xpub>
@@ -325,7 +331,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
 ## 11. Backup acceptance and generation failures
 
-1. **Record and compare before confirming.** Your recovery records must agree with the terminal display. If the terminal is unavailable or anything differs, stop before confirming. Never redirect secrets into logs.
+1. **Record and compare before confirming.** Your recovery records must agree with the terminal display. If the terminal is unavailable or anything differs, stop before confirming. Never redirect secrets into logs. If the 120-second limit expires, the generator is killed and generation fails.
 
 2. **Respect the generation checks.** The deterministic checks and public round trips establish that the documented checks completed, not that recovery works. If a check fails, hold public release and investigate with a maintainer. Exact diagnostics and exit codes for failed checks are not documented.
 
@@ -357,7 +363,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
    > **Expected result**
    >
-   > After you enter the file path, `decrypt_seed.py` asks for the data key. With a valid seed bundle and matching key, it displays the mnemonic on the controlling terminal by default.
+   > After you enter the file path, `decrypt_seed.py` can take the data key from the `BAWA_DATA_KEY` environment variable instead of prompting for it. Treat `BAWA_DATA_KEY` as secret material: keep it out of the public .env and logged or saved configuration. Prefer the interactive prompt. With a valid seed bundle and matching key, it displays the mnemonic on the controlling terminal by default.
 
    Use `--stdout` only for an explicit, controlled pipeline. The `--output` option writes an atomic plaintext file at `0600`; keep any such file offline, outside shared folders and the development tree. If you backed up the mnemonic directly, use that offline copy instead.
 

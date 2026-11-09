@@ -26,7 +26,7 @@ The exact construction is:
 
 The English list has 2048 words, with indices 0–2047. A 24-word mnemonic holds 256 entropy bits plus 8 checksum bits — not 264 bits of randomness.
 
-Bawa generates 24-word mnemonics and accepts the other valid counts on import; BIP-39 itself does not oblige an application to support all five.
+Bawa generates 24-word mnemonics but the repository tools do not provide a mnemonic-import entry point; BIP-39 itself does not oblige an application to support all five.
 
 **Published checksum test — test data only, never fund.** The published English test vector in [trezor/python-mnemonic’s `vectors.json`](https://github.com/trezor/python-mnemonic/blob/master/vectors.json) starts with 128 zero bits: 16 zero bytes.
 

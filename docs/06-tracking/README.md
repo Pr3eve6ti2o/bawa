@@ -228,25 +228,25 @@ Keep raw observations unchanged so you can rebuild dashboard facts. Use each fac
 
 Use this conceptual flow as proposed acceptance criteria, not API output. `FACT_A` and `BLOCK_A` are placeholders. Bawa does not document database or replay commands — write them for your chosen database.
 
-**(2) Successful poll**
+**(1) Successful poll**
 
 Model a complete response with test fact `FACT_A` anchored to `BLOCK_A`. Retain raw data before normalisation. Commit facts and checkpoint together, only after reconciliation.
 
 **Expected:** chain/network-scoped facts linked to raw observations; no checkpoint advance after an incomplete write; freshness and finality remain unknown until the required checks and a per-chain finality rule are in place.
 
-**(3) Repeat poll**
+**(2) Repeat poll**
 
 Model overlapping data. Update or insert using the same stable fact identity.
 
 **Expected:** observation history retained without duplicate dashboard facts.
 
-**(4) Lag, then outage**
+**(3) Lag, then outage**
 
 Compare the source's progress with a current chain view where available; otherwise, leave freshness unknown. Retain the last good view. Retry with bounded back-off.
 
 **Expected:** attempts recorded separately from successful polls; stale or unknown values labelled, not treated as zero balances. A successful request alone is not a freshness check.
 
-**(5) Possible reorg**
+**(4) Possible reorg**
 
 Model a changed block reference. Recheck against a current chain view: missing history alone does not prove a reorg. On a verified reorg, deactivate displaced facts, rewind to a verified checkpoint and replay.
 
@@ -406,7 +406,7 @@ Move to levels 3–6 when the lower levels stop fitting: you need more throughpu
 - **Level 5:** use larger hosted infrastructure.
 - **Level 6:** run self-hosted nodes and indexers.
 
-Follow the per-network testnet walkthroughs in the [Web guide §E](../../WEB-GUIDE.md#e-connectivity) and [Android guide §F](../../ANDROID-GUIDE.md#f--connectivity). For the local testing stage (regtest/signet), follow the [Web guide §H](../../WEB-GUIDE.md#h-testing) and [Android guide §I](../../ANDROID-GUIDE.md#i--testing).
+Follow the per-network testnet walkthroughs in the [Web guide §E](../web-wallet/WEB-GUIDE.md#e-connectivity) and [Android guide §F](../android-wallet/ANDROID-GUIDE.md#f--connectivity). For testing guidance, see the [Web guide §H](../web-wallet/WEB-GUIDE.md#h-testing) and [Android guide §I](../android-wallet/ANDROID-GUIDE.md#i--testing). No local chain stage is implemented for any chain in the validation draft.
 
 ## 15. From node RPC to reliable wallet state
 
@@ -590,7 +590,6 @@ On EVM networks, prefer WebSocket `eth_subscribe` streams for `newHeads` and rel
 For `eth_getLogs`, use short block windows and the relevant contract-address filter. If a window is rejected for size, split it instead of repeating a broad scan.
 
 If fetching or reconciliation remains uncertain, keep the previously committed balances visible with a stale-data warning.
-I can’t check sources live in this session; the references below need a live check before publication.
 
 ## 19. Local database and dashboard views
 

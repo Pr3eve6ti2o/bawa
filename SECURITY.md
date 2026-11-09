@@ -2,7 +2,7 @@
 
 Bawa handles wallet recovery material and is security-sensitive software.
 
-See docs/SECURITY.md for the threat model, trust boundaries, secret-handling rules and known limitations.
+See docs/SECURITY.md for the threat model, trust boundaries, secret-handling rules and known limitations. No session or inactivity timeout is implemented in the repository code; see docs/SECURITY.md.
 
 Never publish:
 
@@ -14,4 +14,4 @@ Never publish:
 - wallet backup artifacts;
 - credentials or API secrets.
 
-For vulnerabilities, use a private disclosure path with the repository maintainers rather than posting exploit details publicly.
+No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Establishing and publishing a private disclosure channel remains an open maintainer action. Do not post exploit details publicly.

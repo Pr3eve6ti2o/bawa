@@ -85,7 +85,7 @@ Find support through independently verified channels. Ignore unsolicited claim l
 
 ### Account for SIM swap
 
-Treat carrier account takeover as a credible risk while SMS remains a login or recovery route, particularly when your email or exchange access depends on your number. Recognise that a takeover can redirect your number so that someone else receives SMS codes and phone-based account recovery messages, potentially leading to email takeover, account lock-out and loss of exchange-held funds. [2, 3]
+Treat carrier account takeover as a credible risk while SMS remains a login or recovery route, particularly when your email or exchange access depends on your number. Recognise that a takeover can redirect your number so that someone else receives SMS codes and phone-based account recovery messages, potentially leading to email takeover, account lock-out and loss of exchange-held funds. [5, 6]
 
 Watch for unexplained loss of mobile service, unexpected SIM/eSIM or number-transfer notices, and unrequested login or password-reset messages.
 
@@ -97,7 +97,7 @@ Do not treat a SIM swap alone as evidence that your wallet seed needs replacing:
 
 ### Check for address poisoning and clipboard hijacking
 
-Account for address poisoning through misleading transaction-history entries that present addresses resembling genuine recipients, especially if you reuse addresses from history. Treat clipboard hijacking as a related threat from malware on your machine, which can substitute a different destination when you copy and paste an address. Regard both as realistic payment risks, particularly if you check only an address’s beginning and end. [1]
+Account for address poisoning through misleading transaction-history entries that present addresses resembling genuine recipients, especially if you reuse addresses from history. Treat clipboard hijacking as a related threat from malware on your machine, which can substitute a different destination when you copy and paste an address. Regard both as realistic payment risks, particularly if you check only an address’s beginning and end. [16]
 
 Watch for unexplained history entries, near-matching addresses, or differences between the intended destination, pasted value and signing display.
 
@@ -157,7 +157,7 @@ Require an external security review of Bawa before treating it as production cus
 
 Treat recovery as untested until you have executed a recovery rehearsal on a clean install and recorded it.
 
-Use Bawa’s dedicated directory for wallet secrets. Note that Bawa applies restrictive permissions, writes encrypted artefacts atomically with mode `0600` and rejects symlinked secret paths.
+Use Bawa’s dedicated directory for wallet secrets. Note that Bawa applies restrictive permissions. The primary encrypted seed bundle in `generate.js` is written to a mode-0600 temporary file and installed atomically with `fs.renameSync`. Backups made by `generate.js --force` and `make_wallet.py`'s `_copy_0600` are non-atomic copies followed by chmod to 0600. Symlink checks differ by tool. `make_wallet.py` checks the secrets directory, `.env`, backup directory and `_copy_0600` source/destination paths. `decrypt_seed.py` checks the encrypted artefact and `--output` paths. `generate.js` does not check `secretsDir`, `encPath`, `tmpPath` or the `--force` `.bak` path, and `compare.js` does not check `.env` before reading it.
 
 > **Warning:** Readable copies stored elsewhere are not protected by these controls, and public `xpub`/`zpub` values can reveal linked addresses and wallet activity. Keep mnemonics and private keys out of `.env`, and treat any public `xpub`/`zpub` values stored there as privacy-sensitive. If secrets might have been exposed, move remaining funds to a wallet with a newly generated seed.
 
@@ -242,7 +242,7 @@ Prices change; check the vendor's current pricing before choosing.
 
 | Vendor | Reference |
 | --- | --- |
-| Casa | Consult `docs/16` for the re-checked Casa figures. |
+| Casa | Consult `docs/16` for the re-checked Casa figures. For the fuller vendor price tables, including Unchained, Fireblocks and BitGo, see [docs/08-security-recovery](../08-security-recovery/). |
 
 ### Setup and recovery checklist
 
@@ -290,7 +290,7 @@ A compromised seed has no reset mechanism. Create a replacement wallet on a fres
 
 - [ ] Complete every small-holder check.
 - [ ] Use hardware signing. Check the complete destination address and amount on the signer’s own display before approving a transaction.
-- [ ] Use a wallet passphrase and keep its offline backup separate from the seed. Record its exact use in the recovery policy; memory is not a backup.
+- [ ] Use a BIP-39 passphrase and keep its offline backup separate from the seed. Record its exact use in the recovery policy; memory is not a backup.
 - [ ] Keep a complete, readable metal seed backup. Check the transcription before putting it into storage.
 - [ ] Keep backup copies at separate, access-controlled locations. Do not place a passphrase backup alongside a seed backup.
 - [ ] Repeat the full recovery test every quarter on clean, trusted recovery equipment. For hardware-wallet restoration, use a spare trusted signer. Record the date and outcome without recording secrets.
@@ -330,7 +330,7 @@ Begin containment before attempting wallet recovery or migration.
 
 ### Escalate to the maintainers
 
-Treat vulnerability disclosure as an open item: no disclosure channel exists in the repository. Report suspected compromise through the maintainers’ channel once containment is under way. If no maintainers’ channel is published, treat that reporting channel as an open item as well; do not assume another route is a disclosure channel.
+No vulnerability-disclosure channel is published in the repository (OI-065). Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Once such a channel is available and containment is under way, report suspected compromise through it.
 
 > **Warning:** Sharing wallet or account secrets can expose funds or accounts. Keep mnemonics, passphrase values and recovery codes out of the report. Check the report for those secrets before sending it.
 
@@ -360,6 +360,7 @@ Keep the residual limits in view rather than treating the combined setup as comp
 13. <https://www.cryptocurrencyhongkong.com/en/news/safeguarding-your-assets-33-practical-measures>
 14. <https://rootcrak.com/blog/sim-swap-crypto-2026.html>
 15. [Trezor — What is a passphrase?](https://trezor.io/guides/backups-recovery/advanced-wallets/what-is-a-passphrase)
+16. <https://www.spark.money/research/payment-agnostic-security-crypto-fiat>, verified live 9 November 2026; covers address poisoning and clipboard hijacking.
 
 Source check (2026-11-08): the Vajra1 article and site home returned HTTP 500, as did the tested URL and browser User-Agent variants, WordPress REST API and feed; both citations have been replaced with Trezor's passphrase guide, verified live that day.
 

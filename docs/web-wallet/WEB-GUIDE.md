@@ -11,7 +11,7 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 > - **Verification status:** verified against the sources below, with the open items listed in each section
 > - **Verified on:** 2026-11-08
 > - **Verification scope:** Web wallet build on Trust Wallet Core, four testnets
-> - **Repository commit:** `Pr3eve6ti2o/bawa` main at `e3b65fb0`
+> - **Repository commit:** `Pr3eve6ti2o/bawa` main at `e3b65fb832db287fdc8d54794980dd0b3456cc12`
 > - **Tool versions observed:** Node v24.22.2 (outside the declared `>=22 <23` range), Trust Wallet Core 4.9.2, esbuild 0.25.5, Python 3.12.3 with bip-utils 2.12.2 and cryptography 50.0.2
 > - **Environment:** Ubuntu 24.04 on the research VM
 > - **Actually run:** differential test (PASS), endpoint probes of all four testnets, fixture derivations
@@ -60,7 +60,7 @@ Call the words the **mnemonic**, the 64-byte value the **seed**, and the file th
 
 ### Sources
 
-- **Bawa repo:** `Pr3eve6ti2o/bawa`, branch `main` at commit `e3b65fb0`. Use its repo guide for the shared material and repo-level questions.
+- **Bawa repo:** `Pr3eve6ti2o/bawa`, branch `main` at commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`. Use its repo guide for the shared material and repo-level questions.
 - **Trust Wallet Core repository:** <https://github.com/trustwallet/wallet-core>.
 
 All links checked: **2026-11-08**.
@@ -80,10 +80,10 @@ All links checked: **2026-11-08**.
    ```sh
    git clone https://github.com/Pr3eve6ti2o/bawa.git
    cd bawa
-   git checkout e3b65fb0
+   git checkout e3b65fb832db287fdc8d54794980dd0b3456cc12
    ```
 
-   Every repository reference in this guide is written against `e3b65fb0`. First-hand verification of this pinned checkout on 2026-11-08 included reading the files cited in the guide. Use those pinned files when following later sections rather than substituting a different checkout.
+   Every repository reference in this guide is written against `e3b65fb832db287fdc8d54794980dd0b3456cc12`. First-hand verification of this pinned checkout on 2026-11-08 included reading the files cited in the guide. Use those pinned files when following later sections rather than substituting a different checkout.
 
 2. **Apply the runtime and dependency pins.**
 
@@ -105,7 +105,7 @@ All links checked: **2026-11-08**.
 
 3. **Create the app lockfile without overstating the repository’s state.**
 
-   The Bawa repository ships no root `package-lock.json`, and its guide calls that missing lockfile a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb0 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb0. `npm ci` requires an existing lockfile and fails without one, so it is not runnable against the repository root today.
+   The Bawa repository ships no root `package-lock.json`, and its guide calls that missing lockfile a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); the tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. `npm ci` requires an existing lockfile and fails without one, so it is not runnable against the repository root today.
 
    For the Web app itself, generate `package-lock.json` from a clean install using the pins above. Install `http-server` as a development dependency, inspect its installed version, and record that exact value in `package.json` without `^` or `~`. This makes the version a recorded fact rather than a floating install. Pin Core and esbuild exactly as shown in the table, and keep the app’s lockfile consistent with its manifest.
 
@@ -147,13 +147,13 @@ All links checked: **2026-11-08**.
 
 All sources checked on 2026-11-08.
 
-- **Bawa repository:** `main` at `e3b65fb0`, using the pinned checkout and clone URL in step 1.
+- **Bawa repository:** `main` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, using the pinned checkout and clone URL in step 1.
 - **[npm registry metadata for `@trustwallet/wallet-core` 4.9.2](https://registry.npmjs.org/@trustwallet/wallet-core/4.9.2):** use this endpoint as the citable link. The npmjs website’s package page returns `403` to automated checks because of bot protection, not because the package is missing.
 - **[Trust Wallet Core repository](https://github.com/trustwallet/wallet-core).**
 
 ### Open items
 
-- The Bawa repository still lacks a root `package-lock.json`; its guide treats this as a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb0 (Core 4.8.4 exact). See Doc 3, Consolidated open-items register, `OI-042`.
+- The Bawa repository still lacks a root `package-lock.json`; its guide treats this as a release blocker. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact). See Doc 3, Consolidated open-items register, `OI-042`.
 - The Core `4.9.2` EIP-1559 signing-proof demonstration is complete for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open (Section F). See Doc 3, Consolidated open-items register, `OI-004`.
 - The integrated browser flow has had an end-to-end run (Section D): V2, 2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps in a real headless browser. Live spend was not exercised. See Doc 3, Consolidated open-items register, `OI-039`.
 
@@ -256,7 +256,7 @@ Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with
 
 All checked 2026-11-08.
 
-- Repo `main` at `e3b65fb0`, `tools/hdwallet-gen/`; derivation contract, section 9, and signing document `docs/09`.
+- Repo `main` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `tools/hdwallet-gen/`; derivation contract, section 9, and signing document `docs/09`.
 - [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki).
 - [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core).
 - SLIP-0044 and SLIP-0132, as cited by the repo guide.
@@ -325,7 +325,7 @@ Bawa contains no transaction construction or signing implementation; signing exi
 
 ### Sources
 
-- Repo `main` at `e3b65fb0`.
+- Repo `main` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 - OWASP 2023 password-hashing guidance, as cited by the repo guide.
 - WebCrypto references: [`Pbkdf2Params`](https://developer.mozilla.org/en-US/docs/Web/API/Pbkdf2Params) and [`AesGcmParams`](https://developer.mozilla.org/en-US/docs/Web/API/AesGcmParams) — both live, checked 2026-11-08.
 
@@ -427,7 +427,7 @@ Restrict discovery to receiving-branch addresses in the validation draft. Change
 - [Ethereum JSON-RPC docs](https://ethereum.org/developers/docs/apis/json-rpc/) — canonical URL, checked 2026-11-08.
 - [TRON — getting testnet tokens](https://developers.tron.network/docs/getting-testnet-tokens-on-tron), checked 2026-11-08.
 - [TON — get coins](https://docs.ton.org/onboarding/wallet-apps/get-coins), checked 2026-11-08.
-- Repository docs 06, 07, 13 and 14 at `e3b65fb0`.
+- Repository docs 06, 07, 13 and 14 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
@@ -563,7 +563,7 @@ Apply these constraints alongside the common ceremony. A single signing entry po
 
 All sources checked 2026-11-08.
 
-- Repo `main` at `e3b65fb0`.
+- Repo `main` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 - [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core).
 - [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559).
 - [Ethereum JSON-RPC docs](https://ethereum.org/developers/docs/apis/json-rpc/).
@@ -588,31 +588,11 @@ Choose the look, framework and components yourself. This section defines a contr
 
 ### Screen obligations
 
-Provide all fourteen screens below with the stated behaviour.
+The canonical screen list and permitted-data contract are defined in docs/14 section 5.1. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
 
-**Validation evidence:** the screen list and expected states come from the Web validation draft’s build log. The draft is local-only, in no repository: its fourteen screens were written and its 31 unit tests pass, and the integrated browser flow was run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; Section D). Live spend was not exercised. Treat this as evidence for the mapping, not for a completed live-spend flow.
+**Validation evidence:** the screen list and expected states come from the Web validation draft’s build log. The draft is local-only, in no repository: its fourteen screens were written and its 31 unit tests pass, and the integrated browser flow was run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; Section D). Live spend was not exercised. Treat this as evidence for the screen list and expected states, not for a completed live-spend flow.
 
-| Screen | What it must show | What backs it |
-| --- | --- | --- |
-| Create wallet | 24-word generation, empty passphrase and fixture gate first; keep phrase handling isolated. | Fixture gating and key-module generation (Sections C, D). |
-| Import wallet | Phrase entry and validation before any derivation, inside the isolated ceremony. | Phrase validation (Section C); key-module ceremony (Section D). |
-| Backup confirmation | At-most-once phrase disclosure plus full-phrase re-entry, inside the isolated ceremony. | Key-module backup ceremony (Section D). |
-| Lock screen | Vault locked state, unlock entry and 10-minute auto-lock. | Vault locking, unlocking and auto-lock (Section D). |
-| Receive | First derived address per chain, with the network named; Receive-QR is in scope; it remains unimplemented in the evidence recorded on 2026-11-08. | Per-chain address derivation (Section C). |
-| Send | Recipient, amount, fee and chain; approval bound to the exact input. | Input-bound approval (Section F). |
-| Transaction review | Decoded signed transaction displayed before broadcast. | Signed-transaction decoding and broadcast flow (Section F). |
-| History | Paginated, per-network history with freshness labels. | History queries and freshness state (Section E). |
-| Balances | Native and token balances with “Not refreshed” states; never invented zeros. | Balance reads and refresh state (Section E). |
-| Token detail | Identity as network + contract + verified decimals. | Token identity and decimal verification (Section E). |
-| Watch-only | Public-only derivation, with no signing path. | Public-only derivation (Section C). |
-| Settings | Network selection (testnets only), endpoint display and lock timeout display. | Network selection and endpoint information; vault lock timeout (Section D). |
-| Diagnostics | Safe diagnostics only: no key material and redacted errors. | Safe diagnostics (Section I). |
-| Empty and locked states | What every screen shows when there is nothing to show and when the vault is locked. | Each screen’s empty state; vault locked state (Section D). |
-
-This fourteen-screen list is the Web platform’s mapping of the shared screen contract in the repo guide (`docs/14`, section 5.1). The repo guide holds the shared list; this section holds the Web mapping.
-
-Apply the final row across the whole app: listing “Empty and locked states” does not remove your obligation to define both states on each of the other screens.
-
+Define both states — empty and locked — on each screen.
 If you want a starting point for the presentation layer, the UI-template appendix after Section K ranks nine pre-existing templates, gives a five-point vetting checklist and states plainly that using a template is optional.
 
 ### QR receive: in scope
@@ -626,7 +606,7 @@ QR payment-request scanning is specified in Section F. See Doc 3, Consolidated o
 ### Sources
 
 - Web validation draft build log — local-only, in no repository; validation evidence for the Web screen list and expected states (Section D).
-- Repo guide, `docs/14`, section 5.1, at `e3b65fb0` — shared screen contract.
+- Repo guide, `docs/14`, section 5.1, at `e3b65fb832db287fdc8d54794980dd0b3456cc12` — shared screen contract.
 
 ### Open items
 
@@ -728,7 +708,7 @@ live wallet creation and live restore were performed in the V2 browser run (2026
 ### Sources
 
 - Web validation draft build log — local-only.
-- Repo docs 10 (operations and testing), 13 and 14 at `e3b65fb0`.
+- Repo docs 10 (operations and testing), 13 and 14 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 - Bitcoin developer docs on [testing](https://developer.bitcoin.org/examples/testing.html), checked 2026-11-08.
 
 ### Open items
@@ -862,7 +842,7 @@ Check every line before any release claim:
 
 ### Sources
 
-Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb0`.
+Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
@@ -942,7 +922,7 @@ Use this as a reader checklist, not as evidence of performed live operations.
 
 ### Sources
 
-- Repo `main` at `e3b65fb0`.
+- Repo `main` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 - npm registry metadata: <https://registry.npmjs.org/@trustwallet/wallet-core/4.9.2>, checked 2026-11-08.
 
 ### Open items
@@ -1039,8 +1019,8 @@ See also Sections D, H, I and J.
 
 ### Sources
 
-[^repo-13]: Repo guide at `e3b65fb0`, section 13 (troubleshooting).
-[^repo-14]: Repo guide at `e3b65fb0`, section 14 (FAQ).
+[^repo-13]: Repo guide at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, section 13 (troubleshooting).
+[^repo-14]: Repo guide at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, section 14 (FAQ).
 
 This guide: Sections B, C, D, E, F, H, I and J.
 
@@ -1105,7 +1085,7 @@ Keplr and Taho were checked as possible template sources on 8 November 2026 and 
 
 ## Improve this guide
 
-If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb0` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
+If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
 
 ## Need help?
 

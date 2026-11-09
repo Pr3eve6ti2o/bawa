@@ -268,6 +268,7 @@ Represent the following information in each request. These are conceptual fields
 | amount | The requested amount **in atomic units**. |
 | memo/tag | The request's memo or tag information, where the chain supports one. |
 | expiry | The request's expiry. |
+| expected decimal precision | For token payments, record the expected decimal precision, verified under the shared identity policy. |
 
 Before accepting payments, define your application's request schema: field types, network/asset identifier formats, amount validation and conversion, memo/tag optionality and how to represent its absence, and expiry format and exact boundary rules. Bawa does not document these schema details. Represent the memo/tag field explicitly even when it does not apply.
 
@@ -414,6 +415,7 @@ Set QR error correction explicitly to M. Do not rely on an encoder default. Deco
 | Amount in atomic units | Quantity in the asset's smallest units. | Reject — do not derive it from a balance or accept an arbitrary amount. |
 | Memo/tag where supported | Chain-specific routing/reference information. | Reject omission. For unsupported chains, represent “not applicable” explicitly in your model. Where supported, define whether an explicit empty value is allowed. |
 | Expiry | Time limit for satisfying the request. | Reject — do not interpret absence as unlimited validity. |
+| expected decimal precision | For token payments, record the expected decimal precision, verified under the shared identity policy. | Reject — do not accept a token payment without the expected decimal precision, verified under the shared identity policy. |
 
 Reject ambiguous values too. Do not turn incomplete instructions into apparently valid requests by guessing.
 
@@ -846,7 +848,6 @@ Visit these four branches in this order on every cycle:
 4. **Slow-path pending payments:** run the slow-path lookup for payments still pending. Leave unresolved payments pending and send recovered evidence to the same finalisation path.
 
 In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil. Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
-I can’t check sources live here. The guide paths and Medium URL weren’t supplied, so this draft uses named cross-references and retains your Medium check note.
 
 ## 15. Derivation ownership and token identity
 
@@ -868,13 +869,9 @@ For each token payment, persist at least these seven fields:
 
 Use Trust Wallet Assets for presentation metadata, token lists and logos, not as evidence that a payment has settled. Base settlement on a verified chain event checked against the requested network and token contract or equivalent asset address. Never accept a matching symbol or metadata entry as settlement evidence.
 
-Keep these three worked procedures in the Web guide §H and Android guide §I, with README §13 cross-links:
+For related testing and troubleshooting guidance, see Android guide §I.8 (“Testnet integration pass”) and Web guide §K.4 (“Why does the wallet look empty after restore?”).
 
-- testnet session end to end;
-- diagnose an apparently empty wallet;
-- run a private local chain and restart it.
-
-Link to those procedures rather than duplicating them here. Do not claim a capability until you have verified it by running it.
+No local chain stage is implemented for any chain in the validation draft. There is no regtest, signet or local-node mode for Bitcoin, Ethereum, TRON or TON. See Web guide §H and open item OI-049.
 
 ## 16. Sources
 
@@ -886,4 +883,3 @@ Use primary sources for technical claims. Check each source live at the time of 
 - [Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md)
 - [ERC-681](https://eips.ethereum.org/EIPS/eip-681)
 
-Retain the Medium article only as supplementary reading, with this dated check note: “403 to automated checks; existence confirmed 8 November 2026.”

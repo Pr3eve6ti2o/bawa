@@ -128,11 +128,11 @@ Apply the fixed `bawa-derivation-policy-v1` policy. This policy covers Bawa-gene
 
 Use account 0 and receiving branch 0 only for BTC, ETH and TRX, with `i` denoting the address index:
 
-- For BTC, use `m/84'/0'/0'/0/i`.
+Apply the fixed `bawa-derivation-policy-v1` policy. For BTC, use account origin `m/84'/0'/0'` and address path `m/84'/0'/0'/0/i`; require testnet4 for the BTC adapter. Bawa retains coin type `0'` on testnet4. This differs from SLIP-0044's testnet coin type `1` and SLIP-0132's association of `vpub` with `m/84'/1'`. The testnet derivation taught in docs/09 is therefore not the Bawa derivation used here. A standard testnet wallet using `m/84'/1'` will derive a different account from the same mnemonic and must not be assumed to reproduce Bawa's account or addresses.
 - For ETH, use `m/44'/60'/0'/0/i`.
 - For TRX, use `m/44'/195'/0'/0/i`.
 
-Keep TON generation-only from `m/44'/607'/0'` using ed25519. Provide a single deposit address and no xpub. Treat compatibility with any specific wallet as unverified.
+Keep TON generation-only from `m/44'/607'/0'` using ed25519. Provide a single deposit address and no xpub; the configured address is the V3 fixture in docs/11. Treat compatibility with any specific wallet as unverified.
 
 ### Vault protection and unlock policy
 
@@ -140,7 +140,7 @@ Keep local vault protection separate from BIP-39 seed construction. Treat the We
 
 Use the OWASP Password Storage Cheat Sheet’s FIPS-140 option as the basis for the 600,000-iteration PBKDF2-HMAC-SHA-256 figure. Match the rationale to its wording: “use PBKDF2 with a work factor of 600,000 or more and set with an internal hash function of HMAC-SHA-256” (verified live 2026-11-08). Treat 600,000 iterations as a defensible floor for that FIPS-140 branch, not as OWASP’s top recommendation. Recognise Argon2id as OWASP’s primary recommendation.
 
-Choose and record a minimum length for the vault unlock passphrase, because the repo specifies none. Enforce weak-passphrase rejection and record the unlock-time measurement. Keep the recorded policy distinct from the secret passphrase itself.
+Use the shared minimum vault unlock passphrase length recorded in docs/14 section 3.6. Enforce weak-passphrase rejection and record the unlock-time measurement. Keep the recorded policy distinct from the secret passphrase itself.
 
 ### Adapter network identity and endpoint trust
 
@@ -165,7 +165,7 @@ It can, however, link addresses throughout its non-hardened subtree and reveal a
 
 There is also a key-compromise hazard: an account xpub combined with a leaked descendant private key on an entirely non-hardened path can expose the account private node. Hardened ancestors limit upward propagation; they do not protect the exported account’s non-hardened subtree from this combination.
 
-Keep the full account path, network and address-format policy alongside each public export. The xpub’s embedded metadata is not a complete wallet description.
+The root `.env` written by `make_wallet.py` contains only `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`. It does not include the full account path, network or address-format policy alongside those values; record the path, network and address-format policy for each export in the wallet creation record instead. The xpub’s embedded metadata is not a complete wallet description.
 
 Expected result:
 
@@ -183,7 +183,9 @@ Generation establishes a new wallet identity. It is a one-time provisioning oper
 
 Run `tools/hdwallet-gen/generate.js` on a trusted machine with verified dependencies and a private, unrecorded controlling terminal. Prepare dependencies before disconnecting from the network. Do not use CI, a recorded support session, or a terminal with persistent capture enabled. Rehearsals must use disposable testnet material, never an operational wallet or a published example phrase.
 
-An existing `seed.enc.json` must cause refusal, not replacement. Check this before generating another wallet and enforce it when publishing the file: an ordinary rename can overwrite its destination, so it is not itself a no-clobber safeguard. Never delete an established seed file simply to make another generation attempt succeed.
+An existing `seed.enc.json` causes refusal unless `generate.js --force` is passed. When that flag is set and the file exists, the generator copies it to `seed.enc.json.bak.<timestamp>` and proceeds to replace it. `make_wallet.py` accepts `--force` or `--regenerate` and passes `--force` to `generate.js`.
+
+An ordinary rename can overwrite its destination, so it is not itself a no-clobber safeguard. Never delete an established seed file simply to make another generation attempt succeed.
 
 The 24-word mnemonic and independently generated data key are disclosed once through `/dev/tty`. Neither belongs on stdout, stderr, in application logs, or in clipboard and screenshot workflows. If a controlling terminal is unavailable, stop rather than falling back to ordinary output streams. TTY-only handling prevents ordinary output redirection from collecting secrets; it does not protect against terminal recording or a compromised host.
 
@@ -272,7 +274,7 @@ Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do no
 
 ### Signing boundary
 
-Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core 4.9.2. Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
+Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and both platform drafts pin version `4.8.4` at base commit `754721cd`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
 Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 
@@ -295,7 +297,7 @@ Keep keys and approval within the chosen signing trust boundary. Use [Cryptograp
 
 Derive addresses locally. Treat an address as a lookup target, not a balance. Build wallet state from discovered addresses and chain observations, rather than from derivation results alone.
 
-Inspect both receiving and change branches for Bitcoin, and apply a documented gap policy. Do not treat a completed bounded scan as proof that nothing exists beyond it.
+For external hardware-signer exports, whose origin follows the signer's own policy, inspect both receiving and change branches for Bitcoin and apply a documented gap policy. For Bawa-generated wallets, which use receiving branch 0 only, there is no change branch to inspect. Do not treat a completed bounded scan as proof that nothing exists beyond it.
 
 Track confirmations and chain reorganisations (reorgs). Account for the possibility that a transaction which looked confirmed can drop out.
 
@@ -320,9 +322,7 @@ Adopt the Android guide's 14 numbered screens, H.1 to H.14, as the wallet app's 
 13. **Wallet management** (H.13)
 14. **Security and backup settings** (H.14)
 
-Reconcile the Web guide's 14-screen inventory and docs/14's seven screen groups against this list, rather than maintaining competing screen lists. Treat **Review** as a required state of the **Send** flow, not a separate screen. Treat **Lock** as a required state, not a separate screen. Interpret the Web guide's **Review** and **Lock screen** entries as descriptions of those states, and align the Web guide's wording with this list during the merger.
-
-Use docs/14 section 5.1 as the shared reference for the full screen list with permitted data. Point both platform guides at that single list, and do not restate it in either platform guide.
+Use docs/14 section 5.1 as the wallet app's sole canonical fourteen-screen list and permitted-data reference. Review is a required state of the Send flow; Lock is a required app state. Both platform guides must link to this contract instead of restating the full screen list. Platform-specific guidance must refer to the relevant canonical screen or state without defining an alternative inventory.
 
 ### Backup gate and mnemonic handling
 
@@ -348,15 +348,17 @@ For an unsupported count, unrecognised word or checksum mismatch, identify the f
 
 After all checks pass, present a read-only public-address preview. Ask the user to check that the phrase belongs to the intended wallet, that its word order is correct, and that the selected network and previewed address match their expectations where known. Do not treat a valid checksum as proof of wallet identity. On an unexpected address, stop and review the recovery settings.
 
-After explicit confirmation, import the wallet through Wallet Core and open Mnemonic backup without lifting the backup-pending gate.
+Required behaviour: After explicit confirmation, import the wallet through Wallet Core and open Mnemonic backup without lifting the backup-pending gate. Lift the gate only after successful full, ordered re-entry of all 24 words from the user's saved copy. Successful import alone must not count as backup confirmation.
+
+Draft status at commit 754721cd: The Web import handler in main.js instead calls setBackupConfirmed(w.id) immediately after import, with the comment "import demonstrates possession of the phrase", and navigates to the portfolio without a backup-confirmation step. This is a draft deviation from the required import and backup-gate behaviour, not an allowed exception.
 
 ### Mnemonic backup and confirmation
 
 Show the mnemonic once, offline. For creation, use the single reveal described in the Create wallet flow, not an additional display. Do not redisplay the mnemonic on a confirmation retry.
 
-Verify selected words from the saved copy using protected entry. Ask the user to consult that copy rather than rely on memory. Compare each entered word with the corresponding position in the generated or imported mnemonic. Do not substitute successful checksum validation for backup confirmation.
+Require the user to re-enter the entire mnemonic from their saved copy using protected entry: all 24 words, in their original order. Ask the user to consult that copy rather than rely on memory. Compare every entered word with the corresponding position in the generated or imported mnemonic. Accept backup confirmation only when all 24 words match in order. Do not accept selected words, a partial match or a tick-box acknowledgement.
 
-On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all selected words match their requested positions.
+On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all 24 words match in order.
 
 After the user explicitly confirms, persist the confirmed backup status, clear temporary buffers and lift the backup-pending gate.
 
@@ -370,13 +372,13 @@ Do not let dismissing the warning change backup status. Retain a clear **Resume 
 > - One offline phrase reveal per creation attempt, with no repeat reveal on retry.
 > - Masked, editable input for invalid imports, with confirmation disabled and no imported wallet committed.
 > - Backup-pending status preserved after mismatches, skips, navigation and restarts.
-> - Removal of the backup-pending gate only after selected-word verification and explicit confirmation, followed by temporary-buffer clearing.
+> - Removal of the backup-pending gate only after full, ordered 24-word re-entry and explicit confirmation, followed by temporary-buffer clearing.
 
 ### Receive
 
 In Receive, show the full address and chain/testnet as text, and display a QR code for the receive address. Follow docs/14 section 5.3 for the shared clipboard rule. Use the Receive QR payloads table in docs/07. Construct the payload for the selected chain and network using only its approved forms. Do not encode a bare address except for TRX Nile. Keep request information not carried by the payload outside the QR. Use `P.renderAndVerifyQr` for generated receive QRs. Decoded generated or scanned requests must pass through `E.parsePaymentRequest` and `E.verifyPaymentRequest`, using the shared and per-chain checks in docs/07.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). Receive-QR exists today only in the Android draft Receive screen (ZXing core 3.5.3, display-only, never runtime-verified); it still lacks the guide's decode-verification step, payment-request fields and Stale/Error states, and the Web draft has no QR of any kind. Scanning exists nowhere yet in either draft. The Web guide's scanning specification is in its Section F; the Android verification half remains to be built. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. Scanning exists nowhere yet in either draft. The Web guide's scanning specification is in its Section F; the Android verification half remains to be built. Add the web encoder and the Android verification half before treating either half as implemented.
 
 ### Send and Review
 

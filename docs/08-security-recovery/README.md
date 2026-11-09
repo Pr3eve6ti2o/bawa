@@ -21,9 +21,9 @@ These limitations are not weaknesses of the guide — they are part of being hon
 
 Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
-**Open item:** the live EIP-1559 proof was demonstrated on Core 4.8.4 and must be re-run against 4.9.2.
+Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
 ## 2. Privacy: xpubs are sensitive public material
 
@@ -32,7 +32,7 @@ An xpub does not normally let an attacker spend, but its holder can derive many 
 - Treat xpubs as sensitive public material. Treat zpubs the same way.
 - Do not paste them into public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages.
 - For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower public node suffices.
-- An xpub or zpub CANNOT recover the wallet: it reproduces only public descendants below the exported account node ([docs/RECOVERY.md](RECOVERY.md)).
+- An xpub or zpub CANNOT recover the wallet: it reproduces only public descendants below the exported account node ([docs/RECOVERY.md](../RECOVERY.md)).
 - Bawa does not document an xpub-only import workflow — check your chosen watch-only tool's documentation.
 ## 3. Backup and recovery
 
@@ -44,7 +44,7 @@ Encryption at rest protects a stored artefact; it does not make plaintext secret
 
 ### Recovery drill (before funding)
 
-Follow the recovery procedure in [docs/RECOVERY.md](RECOVERY.md). Check that, on a fresh machine using clean software, you can recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address and compare it with a previously recorded address.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Check that, on a fresh machine using clean software, you can recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address and compare it with a previously recorded address.
 
 Do this before trusting the wallet with meaningful funds.
 
@@ -94,7 +94,7 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
 ### Restore gate (conceptual/testnet only)
 
-1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](RECOVERY.md). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
+1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
 
 2. **Proposed first-address check:** compare the restored first receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account and network.
 
@@ -104,7 +104,7 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
 ### Compromise rehearsal (testnet only)
 
-A compromised seed cannot be changed. As required by [docs/RECOVERY.md](RECOVERY.md), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
+A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
 
 ### Passphrase and backup checklist
 
@@ -130,7 +130,7 @@ Before using an existing encrypted backup, complete its decryption-handling chec
 
 If any of these remain undocumented, recovery is blocked.
 
-Bawa's [docs/RECOVERY.md](RECOVERY.md) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
+Bawa's [docs/RECOVERY.md](../RECOVERY.md) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
 
 Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked.
 
@@ -138,7 +138,7 @@ Treat xpubs and zpubs as **sensitive public material**. An encrypted xpub still 
 
 ### Restore drill (before funding, then quarterly)
 
-Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](RECOVERY.md). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
+Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
 
 1. **Record the first-address reference.** Record the unfunded testnet wallet's first-address reference and network/account/derivation context, including address policy and any applicable TON settings. Use a recorded public address from your own wallet, not an example address. Bawa does not document a first-address generation procedure — check the relevant wallet and chain documentation for that procedure before relying on the reference.
 
@@ -150,7 +150,7 @@ Complete recovery on a clean trusted machine before funding, as required by [doc
 
 ### Compromised seed (conceptual only)
 
-A seed cannot be "changed". [docs/RECOVERY.md](RECOVERY.md) requires:
+A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md) requires:
 
 1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet's documented generation procedure.
 2. **Move EVERY asset/token to the replacement wallet.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify every holding, transfer it and verify receipt before retiring the old wallet.
@@ -158,7 +158,7 @@ A seed cannot be "changed". [docs/RECOVERY.md](RECOVERY.md) requires:
 
 ### Recovery rehearsal procedure
 
-Follow the recovery procedure in [docs/RECOVERY.md](RECOVERY.md). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
 
 **The rehearsal has never been executed.** Show every unexecuted gate as **FAIL**.
 
@@ -188,11 +188,11 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Release blocker
 
-1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb0`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
+1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
 
    `npm ci` requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
 
-   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb0` on 2026-11-08, and this guide set re-pinned to `e3b65fb0` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). The remaining lockfile gap is the root lockfile only.
+   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
 
 ### TARGET — CI design, not existing CI
 
@@ -207,9 +207,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Current CI
 
-`.github/workflows/ci.yml` runs **ONE job**, `static-checks`: checkout, setup Node 22, `npm install`, then `npm run check` (syntax only). It never runs `npm test` or the differential test, and there is no Python job. It uses floating `ubuntu-latest`, `actions/checkout@v4` and `actions/setup-node@v4`.
-
-When this CI description was written, the repairs were unpushed. CI triggers only on push/PR, so it never ran on the repaired tree. Keep that historical state separate from the later repair pushed to `main`.
+`.github/workflows/ci.yml` runs nine steps: checkout; set up Node 22; install Node dependencies in `tools/hdwallet-gen` using `npm install --ignore-scripts --no-audit --no-fund`; check JavaScript syntax with `npm run check`; run smoke tests with `npm test`; set up Python 3.13; install Python reference-test dependencies; run the independent `bip_utils` reference test with `python test/differential_test.py`; and compile the Python tools with `python -m py_compile tools/make_wallet.py tools/decrypt_seed.py`. The repairs were pushed as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 8 November 2026, and GitHub Actions run 28 for that commit completed successfully. Floating references remain: `ubuntu-latest`, `actions/checkout@v4`, `actions/setup-node@v4` and `actions/setup-python@v5`.
 
 ## 5. Common mistakes
 
@@ -271,9 +269,9 @@ No private reporting route is documented, so this line does not identify an avai
 
 Carry these as open work and requirements, not claims that controls are implemented:
 
-- **OPEN ITEM — phrase clipboard policy.** Define a clipboard policy for the phrase in the Web guide. The Web guide currently has none.
+Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate.
 - **OPEN ITEM — script injection.** Give “defend against script injection” an executable control. It currently has none: no CSP/SRI/inline-script rule.
-- **PBKDF2 600,000 iterations — basis.** Use the [OWASP Password Storage Cheat Sheet 2023](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) as the basis for this value: checked live 8 November 2026; contains “600,000”.
+PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The OWASP Password Storage Cheat Sheet 2023 is cited as the basis for that draft value, not as evidence of a repository security control.
 - **OPEN ITEMS — vault passphrase and unlock time.** Define the vault-passphrase strength policy and unlock-time target. Keep both marked as open items, not stated policy.
 - **Required — network-identity verification.** Verify network identity for BTC, TRON and TON adapters too, not only ETH (`chainId 11155111`).
 - **Builder duty — genuine-app verification.** Make the genuine app verifiable through its official origin, publisher identity, release signing and key continuity.
@@ -642,11 +640,11 @@ An off-chain simulation uses no network gas. Broadcasting the real transaction c
 
 Public source can be inspected; that does not mean it has been audited. An audit has a scope and date, and mistakes can survive it. Install pinned scanners from verified releases; check available checksums or provenance; document exact runtimes, commit lockfiles and pin rule revisions. In CI, fetch full Git history and refs, then run these checks on pull requests and release commits without signing or deployment secrets. Require tests and dependency review too. Block findings and tool errors; exceptions need a reason, owner and expiry. Keep these gates even when paying for an audit.
 
-**Secret scanning:** run `gitleaks git --redact --log-opts="--all" .`, then `gitleaks dir --redact .`; Gitleaks flags recognised credential patterns in history and working files, including files later deleted; it can miss mnemonics, xpubs and custom key formats; it cannot undo exposure; extend default detectors in `.gitleaks.toml`, testing with published non-live fixtures in a throwaway branch; restrict access to reports. The CLI has no licence fee; full-history scans cost runner time and triage. Choose free for repository gates; paid coverage can help with organisation-wide integrations and staffed response.
+**Secret scanning:** run `gitleaks git --redact --log-opts="--all" .`, then `gitleaks dir --redact .`; Gitleaks flags recognised credential patterns in history and working files, including files later deleted; it can miss mnemonics, xpubs and custom key formats; it cannot undo exposure; Create `.gitleaks.toml` at the repository root before configuring extensions to the default detectors, testing with published non-live fixtures in a throwaway branch; restrict access to reports. The CLI has no licence fee; full-history scans cost runner time and triage. Choose free for repository gates; paid coverage can help with organisation-wide integrations and staffed response.
 
-**Package-manager dependency audits:** for npm, run `npm ci --ignore-scripts` then `npm audit --audit-level=low`; use your manager's native equivalent elsewhere; review required build scripts before permitting them in a separate build/test job; audit matches versions to published advisories; it cannot rule out unknown flaws or malicious releases, nor establish exploitability; registry failure is not a clean result; update deliberately, commit the new lockfile and rerun tests rather than forcing upgrades blindly. The command has no licence fee, but needs network access and maintenance; registry requests can disclose dependency metadata. Choose free for advisory checks; paid services can help prioritisation and continuous monitoring.
+**Package-manager dependency audits:** For npm, run `npm ci --ignore-scripts` followed by `npm audit --audit-level=low` in `tools/hdwallet-gen`, not at the repository root; use your manager's native equivalent elsewhere; review required build scripts before permitting them in a separate build/test job; audit matches versions to published advisories; it cannot rule out unknown flaws or malicious releases, nor establish exploitability; registry failure is not a clean result; update deliberately, commit the new lockfile and rerun tests rather than forcing upgrades blindly. The command has no licence fee, but needs network access and maintenance; registry requests can disclose dependency metadata. Choose free for advisory checks; paid services can help prioritisation and continuous monitoring.
 
-**Pattern scanners with free rules:** commit reviewed, freely licensed rules under `.semgrep/`; run `semgrep scan --config .semgrep/ --error --strict .` with Semgrep Community Edition; covered patterns can flag unsafe evaluation or weak randomness, not prove derivation, transaction intent or cryptographic correctness; check supported languages, skipped files and broad suppressions; test coverage with published fixtures. There is no licence fee, but rule upkeep and false positives cost time. Choose free for a supported stack you can maintain. For wallet-specific logic, commission specialist review rather than expecting another scanner to certify it.
+**Pattern scanners with free rules:** Create `.semgrep/` at the repository root, then add and commit reviewed, freely licensed rules there; run `semgrep scan --config .semgrep/ --error --strict .` with Semgrep Community Edition; covered patterns can flag unsafe evaluation or weak randomness, not prove derivation, transaction intent or cryptographic correctness; check supported languages, skipped files and broad suppressions; test coverage with published fixtures. There is no licence fee, but rule upkeep and false positives cost time. Choose free for a supported stack you can maintain. For wallet-specific logic, commission specialist review rather than expecting another scanner to certify it.
 
 **Free-security checklist for Bawa** (needs no subscription, but paper, secure storage and an offline device may cost money; if you lack trustworthy spare hardware, consider a reputable hardware signer).
 
@@ -661,9 +659,9 @@ Public source can be inspected; that does not mean it has been audited. An audit
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-Use section 17 as the single costs reference for the whole Bawa professional guide set.
+Use sections 17–22 as the single costs reference for the whole Bawa professional guide set.
 
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Make any custody agreement with an external provider, not Bawa. Treat all providers named here as examples, not Bawa recommendations.
 
@@ -704,13 +702,13 @@ Do not assume a retail exchange account is the same service, even where the same
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-Use this section as the single costs reference for the whole guide set. Treat any providers named as examples, NOT Bawa recommendations.
+Use sections 17–22 as the single costs reference for the whole Bawa professional guide set. Treat any providers named as examples, NOT Bawa recommendations.
 
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Any custody agreement is with an external provider, not Bawa.
 
 ### Figures
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 | Item | Dated position |
 |---|---|
@@ -850,7 +848,7 @@ An external security review of the complete design is required before treating a
 Flow: signing request, into quorum approval, into HSM signature, into broadcast.
 ## 19. Paid security: institutional MPC platforms
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 Providers named are examples, NOT Bawa recommendations. Bawa provides no custody service and keeps none of your keys.
 
@@ -888,7 +886,7 @@ A platform's share backup is not necessarily a BIP-39 mnemonic or something Bawa
 
 ### Figures
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 These are not current quotations; recheck every price and term before purchasing.
 
@@ -961,7 +959,7 @@ Provider outages, compliance freezes, insolvency and changed terms can interrupt
 
 **BitGo is a commercial example, not a Bawa recommendation.** It markets multisig and MPC wallets, qualified-custody services, and products for settlement and staking. Check the agreement for the particular service — these are not interchangeable arrangements.
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 | Item | Indicative figure and checks |
 |---|---|
@@ -1028,6 +1026,7 @@ Use these figures from [Unchained pricing](https://unchained.com/pricing), re-ch
 | Personal Vaults | US$250 per vault per year |
 | Inheritance Boot Camp | US$4,000 per client, renewing at US$4,500 a year |
 | Signature | US$6,000 for the first year, renewing at US$4,500 a year |
+| IRA | $250 per IRA account per year (checked 8 November 2026) |
 
 Pricing and availability are US-focused: check whether the service supports your residence, local regulations and time zones before relying on it.
 
@@ -1035,7 +1034,7 @@ Pricing and availability are US-focused: check whether the service supports your
 
 In this arrangement, a named provider operates a signing service, helps set up a multisig wallet, offers supported hardware options and manages an inheritance process. It may include an inheritance key or a time-locked mechanism, with defined steps for the successor.
 
-No generic assisted-multisig band is published. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals.
+No generic assisted-multisig band is published. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals. Unchained IRA costs $250 per IRA account per year (checked 8 November 2026).
 
 Higher-touch packages may include trustee arrangements and estate-planning support.
 
@@ -1101,7 +1100,7 @@ What it does not cover: market losses; protocol failures and smart-contract faul
 
 Covered-or-not table (illustrative — check the actual policy wording):
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 | Event | Typically covered? | Check |
 |---|---|---|
@@ -1114,7 +1113,7 @@ Covered-or-not table (illustrative — check the actual policy wording):
 | Lost seed with no recovery route | No | — |
 | Loss above the policy limit | No, beyond the limit | Shared limits across clients |
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 No published custody-insurance or protected-wallet price was verified at this check. Coincover publishes no prices — B2B only, "get in touch" — so obtain pricing and the applicable protection/insurance terms in writing via [Coincover](https://www.coincover.com/) for the specific assets, systems and limits. These are budgeting ranges, not quotes; obtain a written quotation for the specific assets, systems and limits.
 
@@ -1137,24 +1136,11 @@ A cloud key management service can hold and use keys without exposing them to yo
 
 **Who controls the key:** with a cloud KMS, the provider operates the key infrastructure; you retain contractual rights and give instructions, but you cannot necessarily sign without its cooperation. That differs from self-custody with your own HSM, where you retain control of key material, signing authority and recovery. Check whether keys are exportable, how backups are protected, and whether an encrypted backup will work with another vendor — do not assume a cloud KMS key can become a mnemonic or move to a different provider.
 
-**FIGURES (indicative snapshot dated 30 October 2026 — not vendor quotations or live prices):**
-
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED**
-
-| Service or item | Indicative charges |
-|---|---|
-| Cloud KMS key charges | US$0.05–$0.10 per key or active version per month for software-backed keys; $0.50–$2 per month for HSM-backed keys; $2–$4 per month for keys under external protection. |
-| Dedicated cloud HSM | US$1,000–$20,000 per month depending on the service, region and configuration. |
-| On-premises HSM | £5,000–£50,000 per appliance; redundant deployment plus integration £15,000–£150,000; support £1,000–£10,000 per appliance per year. |
-| HSM-backed secrets managers | £10,000–£100,000 per year. |
-
-These bands are not market limits; ask whether charges are per key, per version, per operation or per device; redundant equipment, hosted rental, backups, integration, support, staff, external review, withdrawal charges and network fees may be separate. Recheck every price before committing, including taxes, minimums and exit fees.
+Generic price and fee bands are not provided here. For AWS KMS charges, consult [the official AWS KMS pricing page](https://aws.amazon.com/kms/pricing/). For other KMS, HSM, audit, monitoring and Sherlock charges, consult the relevant provider's current official pricing or obtain a current written quote. Any specific figure included here must identify its source and check date.
 
 **First-quarter acceptance gate:** before relying on a cloud KMS or HSM service for production signing, complete a first-quarter acceptance gate — (1) a small-value signing test through the full approval path; (2) a recovery test using only the documented backup route, without the provider's support team; (3) a test of the exit route (fresh keys under a new boundary, verified receiving addresses, on-chain transfer); (4) a review of the policy wording, access controls and audit logs. If any step fails, do not increase exposure until it passes.
 
 **On-premises HSM:** buying an appliance keeps the hardware under your control, but you take on firmware updates, physical security, backups, redundancy and staff access. A single appliance is a single point of failure; budget for a redundant pair and for tested recovery. An appliance does not remove the need for an external security review of the complete design before treating a Bawa-based deployment as production custody infrastructure.
-
-These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
 Providers named are examples, NOT Bawa recommendations.
 
@@ -1164,26 +1150,9 @@ An external security review of the complete design is required before treating a
 
 Define the scope before commissioning: seed handling, derivation paths, signing, recovery, dependencies; name the components and the revision reviewed; record exclusions; and commission a follow-up review of the fixes — an audit report that lists findings without verified fixes is unfinished work.
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
-
-| Paid audit scope | Budgeting range |
-|---|---:|
-| Simple token | $8,000–$20,000 |
-| Enterprise | $80,000–$200,000 |
-| Mid-sized DeFi including re-audit | $200,000–$300,000 |
-| Complex bridge or cross-chain | $100,000–$300,000+ |
-
-These are budgeting ranges, not quotes; scope, duration and the firm's rates decide the actual price.
-
 ### Audit contests
 
 A contest pays many independent researchers to find vulnerabilities in a fixed window; the sponsor sets the prize pool and the rules.
-
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
-
-| Example provider | Premium | Advertised cover |
-|---|---|---|
-| Sherlock | 2.0%–2.25% of the covered amount | Up to approximately $10 million |
 
 Check what the premium buys, what events are covered, how claims are decided, and whether cover can be withdrawn or repriced.
 
@@ -1191,7 +1160,7 @@ Check what the premium buys, what events are covered, how claims are decided, an
 
 A bounty programme pays researchers who report vulnerabilities responsibly through a defined channel.
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 | Bounty item | Dated figure |
 |---|---|
@@ -1205,13 +1174,6 @@ Set the scope, the severity scale, the payout rules and the response times befor
 ### Transaction monitoring and simulation
 
 Monitoring watches on-chain activity and alerts on unusual transfers, new approvals or unexpected destinations; simulation previews a transaction's effects before signing. Neither can make an approved malicious transaction safe — they give you a chance to catch it before you approve.
-
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED.**
-
-| Monitoring service | Budgeting range |
-|---|---|
-| Personal monitoring | £0–£50 per month |
-| Business monitoring | £500–£10,000 per month for an initial allowance |
 
 Check what is actually monitored (which chains, which events), how alerts are delivered, and what happens when the monitoring service is down.
 
@@ -1235,9 +1197,9 @@ Choose by threat — match the control to the risk, not to the price tag:
 | Inheritance or incapacity | Letter of instruction, named recipient, tested handover | Assisted multisig with inheritance, estate wrapper |
 | Regulatory or audit requirements | Documented procedures, audit records | Qualified custody, external review |
 
-Choose by budget and skill — indicative scale (snapshot dated 30 October 2026, recheck-required):
+Choose by budget and skill — indicative scale (indicative cost guidance — check dates apply only to the figures explicitly marked; recheck before purchase):
 
-**INDICATIVE SNAPSHOT DATED 30 OCTOBER 2026, RECHECK-REQUIRED**
+INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
 | Approach | Indicative annual cost | Who it suits |
 |---|---|---|
@@ -1275,16 +1237,14 @@ Paying does not remove risk: a paid service can reduce dependence on a single de
 - SLIP-39 — https://github.com/satoshilabs/slips/blob/master/slip-0039.md
 - SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 - SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
-- OWASP Password Storage Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (checked 8 November 2026; contains the 600,000-iteration PBKDF2-HMAC-SHA-256 basis cited in §3)
+- OWASP Password Storage Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (checked 8 November 2026; contains the 600,000-iteration PBKDF2-HMAC-SHA-256 basis cited in §7 for the local-only web-draft vault)
 - age encryption tool — https://github.com/FiloSottile/age
 - Gitleaks — https://github.com/gitleaks/gitleaks
 - Semgrep — https://semgrep.dev/ (checked 8 November 2026; 403 to automated check, existence confirmed — keep with this dated note)
 - Keycard Shell — https://github.com/keycard-tech/keycard-shell (checked 8 November 2026)
 - Keycard (status-keycard) — https://github.com/keycard-tech/status-keycard (checked 8 November 2026)
 - Keycard product page (rate-limited to automated checks on 8 November 2026; linked from the live homepage)
-- Trust Wallet developer documentation home — https://developer.trustwallet.com/
 - Trust Wallet Core repository — https://github.com/trustwallet/wallet-core
-- WCAG 2.2 — https://www.w3.org/TR/WCAG22/ (checked 8 November 2026; w3.org blocks automated checks — keep with this dated note)
 - SIM-swapping protection — https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/ (government guidance)
 - BitBox multisig — https://support.bitbox.swiss/en_US/blog-content/how-nearly-all-personal-hardware-wallet-multisig-setups-are-insecure (checked 8 November 2026)
 - NCSC small organisations guide — https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security

@@ -7,7 +7,7 @@
 | Verification status | Partially verified — see §18 |
 | Verified on | 2026-11-08 |
 | Verification scope | Differential test; live wallet creation and restore; TON fixture derivation; integrated browser flow |
-| Repository commit | `e3b65fb0` |
+| Repository commit | `e3b65fb832db287fdc8d54794980dd0b3456cc12` |
 | Tool versions (full observed versions) | Python 3.12.3, `cryptography==50.0.2`, `bip-utils==2.12.2`, Node v24.22.2 (outside the declared Node `>=22 <23` range) |
 | Environment/runner | muse-vm |
 | Actually run | Differential test (bip-utils reference, BTC/ETH index 0 only); live wallet creation and restore under a real pty; TON fixture derivation with independent verification; integrated browser flow (14 PASS, 0 FAIL, 3 INFO) |
@@ -38,11 +38,11 @@ Read each **Warning** in this guide set in this order: **consequence → safe ac
 
 > **Warning**
 >
-> All six release gates are unmet, so you cannot use this guide as evidence of readiness. Keep your work within the reference scope above. Check the security posture in §17 and use §18 to assess the evidence required for every gate:
+> Five of the six release gates are unmet, so you cannot use this guide as evidence of readiness. Keep your work within the reference scope above. Check the security posture in §17 and use §18 to assess the evidence required for every gate:
 >
 > - **Unmet** — clean dependency install and lockfile.
 > - **Unmet** — full independent differential coverage.
-> - **Unmet** — chain-specific fixtures.
+> - **Pass** — chain-specific fixtures (see §18).
 > - **Unmet** — secret and dependency scanning.
 > - **Unmet** — reproducible release checksums and provenance.
 > - **Unmet** — external security review.
@@ -103,6 +103,8 @@ Learn from scratch — reading order:
 
 Deep-dive guides: docs/09-signing-and-hardware, docs/10-operations-and-testing, docs/11-trust-wallet-and-independent-verification, docs/12-chain-registry-and-assets, docs/13-wallet-app-architecture, docs/14-wallet-app-implementation, docs/15-threat-model-and-theft-prevention, docs/16-security-decision-guide, docs/RECOVERY.md, docs/GLOSSARY.md, docs/FAQ.md, docs/FURTHER-READING.md. Troubleshooting and the FAQ pointer live in §13 and §14 of this README.
 
+Supporting documentation: the [docs map](docs/README.md) lists every guide in reading order, with [References](docs/REFERENCES.md), [Security](docs/SECURITY.md) and [Testing](docs/TESTING.md) alongside. Platform guides: [Web wallet guide](docs/web-wallet/WEB-GUIDE.md) and [Android wallet guide](docs/android-wallet/ANDROID-GUIDE.md).
+
 
 ## 3. Prerequisites
 
@@ -119,9 +121,9 @@ Use §§3–4 and 6–7 as the single canonical installation procedure for the w
 | `bip-utils` | `bip-utils==2.12.2` |
 
 Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) (see §18).
-| `@trustwallet/wallet-core` | `4.9.2`, published 2026-11-06 |
+| `@trustwallet/wallet-core` | `4.8.4`, published 2026-09-24 |
 
-The live EIP-1559 proof was demonstrated on `4.8.4`. Re-run it on testnet against `4.9.2`; this remains an open item.
+The live EIP-1559 proof was demonstrated on `4.8.4`, and the construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2` (D21, 2026-11-08): with `txMode: 1` it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Browser send/sign was not exercised and nothing was broadcast.
 
 **Check your machine before installing**
 
@@ -258,7 +260,7 @@ Require a clean tree before installing. Stop and resolve any reported changes; d
 Use this detached checkout as the canonical pin throughout the guide set.
 
 ```sh
-git checkout --detach e3b65fb0
+git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12
 ```
 
 **Expected result — check**
@@ -266,7 +268,7 @@ git checkout --detach e3b65fb0
 test "$(git rev-parse --abbrev-ref HEAD)" = HEAD
 ```
 
-Record the full commit ID and compare it with the commit named by `e3b65fb0`. Confirm that the tree remains clean.
+Record the full commit ID and compare it with the commit named by `e3b65fb832db287fdc8d54794980dd0b3456cc12`. Confirm that the tree remains clean.
 
 ```sh
 git rev-parse HEAD
@@ -274,7 +276,7 @@ git rev-parse HEAD
 
 **Expected result — check**
 ```sh
-test "$(git rev-parse HEAD)" = "$(git rev-parse 'e3b65fb0^{commit}')" &&
+test "$(git rev-parse HEAD)" = "$(git rev-parse 'e3b65fb832db287fdc8d54794980dd0b3456cc12^{commit}')" &&
 test -z "$(git status --short)"
 ```
 
@@ -302,7 +304,7 @@ Fixtures are published test vectors; runtime work is testnet only. The published
 
 Compatibility is not established by these provenance records alone. Do not infer a compatibility matrix from them, do not attribute V3 to an unspecified execution commit.
 
-Provenance: the clone pin e3b65fb0 is sourced to the Android guide's A.6 pin check (Doc 3, section A.6). `tools/hdwallet-gen/package-lock.json` exists at e3b65fb0 (Core 4.8.4 exact), dated 2026-11-08. V3's dated fixture verification is linked to docs/11, "TON fixture (V3, 2026-11-08)".
+Provenance: the clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12 is sourced to the Android guide's A.6 pin check (Doc 3, section A.6). `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact), dated 2026-11-08. V3's dated fixture verification is linked to docs/11, "TON fixture (V3, 2026-11-08)".
 
 **Version pins**
 
@@ -314,7 +316,7 @@ Record full observed tool versions separately from these declared values.
 | Python | Python runtime | `>=3.11` | An exact full version satisfying `>=3.11` | Open — exact pin not recorded. |
 | cryptography | Python dependency | `cryptography==50.0.2` | `cryptography==50.0.2` | Release verification not recorded. |
 | bip-utils | Python dependency | `bip-utils==2.12.2` | `bip-utils==2.12.2` | Release verification not recorded. |
-| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.9.2` (published 2026-11-06) | `4.9.2` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.8.4` (published 2026-09-24) | `4.8.4` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | npm | JavaScript dependency installation | No version specified | An exact full npm version | **Release blocker** — no version specified. |
 
 
@@ -340,31 +342,24 @@ Start at the repository root. Stop if either install fails; the tools command re
 
 **Step 1 — root install**
 
-```sh
-npm install
-```
-
-**Expected result — check**
-```sh
-npm ls --depth=0
-```
+The repository root has no dependencies: `npm install` at the root installs nothing, and `npm ls --depth=0` cannot check a lockfile's selected package and version against the root because no root lockfile exists. Skip this step and proceed to Step 2.
 
 **Step 2 — tools install**
 
 ```sh
-cd tools/hdwallet-gen && npm install && cd ../..
+npm --prefix tools/hdwallet-gen install
 ```
 
 **Expected result — check**
 ```sh
-npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core@4.9.2 --depth=0
+npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core@4.8.4 --depth=0
 ```
 
 **Step 3 — syntax check**
 
 Use `npm run check` for syntax ONLY. It checks `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js` in `tools/hdwallet-gen`; it does not validate runtime behaviour.
 
-At e3b65fb0, the syntax check passes on all four files (verified 2026-11-08). The repository has no root dependency lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is an acknowledged release blocker.
+At e3b65fb832db287fdc8d54794980dd0b3456cc12, the syntax check passes on all four files (verified 2026-11-08). The repository has no root dependency lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is an acknowledged release blocker.
 
 ```sh
 npm run check
@@ -372,14 +367,14 @@ npm run check
 
 **Expected result — check immediately in the same shell**
 ```sh
-test "$?" -ne 0
+test "$?" -eq 0
 ```
 
 **Step 4 — lockfile status**
 
 Read the following as the status of the supplied commit, not any uncommitted lockfiles created by your local installs.
 
-Neither package-lock.json nor npm-shrinkwrap.json is present in this tree as supplied. The missing production lockfile is a release blocker.
+The repository root has no lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is a release blocker.
 
 Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
 
@@ -456,6 +451,45 @@ Version: 2.12.2
 Keep `bip-utils==2.12.2` pinned for verification only; the runtime generation code does not import it.
 
 ## 8. Wallet generation
+
+### Step 1 — Prepare.
+
+Work from the repository root in a Unix-like shell on an interactive terminal, with the virtual environment from §7 active. Use an isolated working copy on a trusted machine. The generator refuses to run without a controlling terminal.
+
+### Step 2 — Run the generation command.
+
+From the repository root, run this command with no flags for a first wallet:
+
+```sh
+python3 tools/make_wallet.py
+```
+
+### Step 3 — Answer the two confirmations on the terminal.
+
+The mnemonic and the data key are shown only on the controlling terminal (`/dev/tty`), never in subprocess stdout. Do not record the terminal session.
+
+The first prompt is `Type the first word of the seed phrase to confirm you wrote it down: `. After writing down the seed phrase, enter its first word. A wrong word stops the run with `Seed phrase confirmation failed — not writing seed.enc.json`, and no seed bundle is written.
+
+The second prompt is `Type SAVED to confirm you stored the data key: `. After storing the data key, enter `SAVED`. Anything other than `SAVED` stops the run with `Data key confirmation failed — not writing seed.enc.json`, and no seed bundle is written.
+
+### Step 4 — Read the completion output.
+
+A successful run prints:
+
+```text
+Wallet generation and public configuration update completed.
+```
+
+The four public values follow: BTC zpub, ETH xpub, TRX xpub and TON address. These are followed by:
+
+```text
+Encrypted recovery artifact: <path> (0600)
+Backup bundle: <dir>
+```
+
+Step 6 checks these lines. Do not treat any earlier message as completion.
+
+The `--force` and `--regenerate` flags are only for regenerating an existing wallet; a first wallet uses neither. Step 7 covers regeneration.
 
 **Step 5 — Check permissions**
 
@@ -556,6 +590,8 @@ Before regenerating, verify your backup on a trusted machine with `tools/decrypt
 
 Without `--force` or `--regenerate`, an existing seed bundle stops the run. Only after verifying the backup should you repeat the generation command from Steps 1–4 with `--force`.
 
+For direct `generate.js` invocation, use `--force` to replace an existing seed bundle. If an existing `seed.enc.json` blocks generation because `--force` was not supplied, the outer handler prints `FATAL: wallet generation failed — details redacted` on stderr and exits with status `1`. The launcher `tools/make_wallet.py` accepts either `--force` or `--regenerate`.
+
 The old seed bundle is backed up as `seed.enc.json.bak.<timestamp>` at `0600`. That file is not a substitute for your verified backup.
 
 **If it stops**
@@ -564,7 +600,7 @@ The old seed bundle is backed up as `seed.enc.json.bak.<timestamp>` at `0600`. T
 |---|---|
 | `existing wallet found` | Rerun with `--force`/`--regenerate` only after a verified backup. |
 | `wallet-core generation failed` / `FATAL details redacted` | Exit status is 1. Investigate on a trusted machine and keep diagnostics redacted. |
-| H4 violation: seed material in stdout | Treat stdout as secret. Do not share it or put it in `.env`. |
+| Unexpected seed material in generation stdout | Treat stdout as secret. Do not share it or put it in `.env`. |
 | `wallet-core self-checks failed <names>` | Do not use the public values until you have resolved the failures. |
 | Seed-bundle validation stops: missing, outside the secrets directory, or not exactly `0600` | Correct the cause. Do not bypass validation. |
 | Symlink refused | Use non-symlinked paths. |
@@ -573,7 +609,7 @@ The mnemonic and data key now exist in exactly three places — your offline rec
 
 ## 9. Watch-only derivation
 
-**At `e3b65fb0`, both `derive.js` and `derive_daemon.js` pass `node --check`, and the derivation tools run at this pin (verified 2026-11-08).** The interfaces below describe their behaviour; at the former pin `082f7915` they failed `node --check` and could not run.
+**At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, both `derive.js` and `derive_daemon.js` pass `node --check`, and the derivation tools run at this pin (verified 2026-11-08).** The interfaces below describe their behaviour; at the former pin `082f7915` they failed `node --check` and could not run.
 
 Run this section’s commands from `tools/hdwallet-gen`.
 
@@ -597,7 +633,7 @@ Use the BTC **zpub** from `XPUB_BTC`, and the xpubs from `XPUB_ETH` and `XPUB_TR
 
 - Chain: `btc`, `eth` or `trx`.
 - Index: an integer from `0` to `2147483647`, inclusive.
-- stdin: trimmed before use, with a maximum trimmed length of 200 characters.
+- stdin: trimmed before use, with a maximum raw length of 200 bytes checked before trimming. Whitespace, including a trailing newline, counts towards this limit.
 - Successful output: exactly one address.
 
 This command uses the supplied published BIP-84 zpub and receiving index 1:
@@ -608,7 +644,7 @@ echo "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCT
 
 > **Expected result**
 >
-> At `e3b65fb0`, the command runs with exit status 0 and produces the address; the published reference address for this input is recorded in §11 (Core-confirmed 2026-11-08, D31). At the former pin `082f7915` the command failed during parsing with exit status 1 and produced no address.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the command runs with exit status 0 and produces the address; the published reference address for this input is recorded in §11 (Core-confirmed 2026-11-08, D31). At the former pin `082f7915` the command failed during parsing with exit status 1 and produced no address.
 
 **Derivation policy**
 
@@ -633,28 +669,43 @@ Account 0 and receiving branch 0 only are Bawa’s pinned policy, not a BIP-44 r
 >
 > Core’s derivation layer produces a `bc1q` address in mainnet form. The wallet-facing layer re-encodes it with HRP `tb`, producing `tb1q`. The witness program is identical: witness version 0, a 20-byte program. Only the Bech32 HRP changes.
 
-For derivation, Core runs `getPublicKeyFromExtended` and then `deriveAddressFromPublicKey`. Core errors are redacted; derivation failures exit with status 1.
+For derivation, Core runs `getPublicKeyFromExtended` and then `deriveAddressFromPublicKey`.
+
+The path's purpose, coin and account levels are the caller's responsibility: Core derives from the supplied key using only the trailing change/index levels. Supply the correct account public key for the requested chain. `derive.js` can return a valid-looking wrong-branch address with exit status 0 and no warning when given a mismatched-chain key; successful address validation does not establish the key's chain or account provenance. Core errors are redacted; derivation failures exit with status 1.
+
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow. With the tested Core 4.8.4 build, both inputs produced no address and exited with status 1 with an opaque WASM-abort error. The error does not identify the input format as unsupported.
 
 | Failure | Result |
 |---|---|
 | Bad chain, empty key, or non-integer/out-of-range index | Usage line; exit 2. |
 | Private extended key | `usage: extended public key required (private extended keys are rejected)`; exit 2. |
-| Trimmed key longer than 200 characters | `xpub too long` |
+| Raw stdin longer than 200 bytes | `failed to read xpub from stdin: xpub too long` on stderr; exit 2. |
 | Core call fails | Redacted error; exit 1. |
 | Final validation fails | Exit 1. |
 
 **Daemon protocol**
 
-`derive_daemon.js` uses JSONL and stays in the foreground. No exact launch invocation is documented.
+`derive_daemon.js` uses JSONL and stays in the foreground. From the repository root, run `node tools/hdwallet-gen/derive_daemon.js`.
+
+Its startup JSONL record is `{"ready":true}`. Send one JSON request per stdin line; a successful request returns `{"ok":true,"address":"..."}`.
 
 Wait for `{"ready": true}` before sending requests. The request shape is `{"chain":"btc","xpub":"<xpub>","index":5}`; a successful response has the shape `{"ok":true,"address":"<address>"}`. Replace the public-value placeholders when constructing a request.
 
-The limits are 200 characters for an xpub and 4096 characters per line. Request errors have these forms:
+The limits are 200 characters for the original, untrimmed xpub string and 4096 characters per line. Whitespace counts towards the xpub limit and is removed before private-key detection and derivation.
 
-- `{"ok":false,"error":"request too large"}`
-- `{"ok":false,"error":"bad json"}`
-- `{"ok":false,"error":"bad request"}`
-- `{"ok":false,"error":"extended public key required"}`
+Error replies have the form `{"ok":false,"error":"<message>"}`. Input/request error messages are:
+
+- `request too large`
+- `bad json`
+- `bad request`
+- `extended public key required`
+
+Core, validation and internal error forms are:
+
+- `getPublicKeyFromExtended failed: <message>`
+- `deriveAddressFromPublicKey failed: <message>`
+- `derived address failed validation`
+- `internal error: <message>`
 
 A fatal error writes `FATAL` to stderr and exits with status 1. Close stdin or send SIGTERM to stop the daemon with status 0. None of this protocol is available while the pinned file fails parsing.
 
@@ -662,7 +713,7 @@ A fatal error writes `FATAL` to stderr and exits with status 1. Close stdin or s
 
 Use `compare.js` for a quick public-only cross-check, not as a tracker. It gives you no balances, transactions or live chain data.
 
-**At `e3b65fb0`, `compare.js` passes `node --check`, and its comparison output is available at this pin (verified 2026-11-08).**
+**At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `compare.js` passes `node --check`, and its comparison output is available at this pin (verified 2026-11-08).**
 
 Your `.env` needs `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. The default file is the repository-root `.env`, at `tools/hdwallet-gen/../../.env`. Set `NOVA_ENV` to select another file.
 
@@ -676,11 +727,11 @@ node compare.js
 
 > **Expected result**
 >
-> At `e3b65fb0`, the command runs with exit status 0 and prints the three comparison lines (verified 2026-11-08: compare.js 9/9 against an independent bip_utils re-derivation). At the former pin `082f7915` parsing failed with exit status 1.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the command runs with exit status 0 and prints the three comparison lines (verified 2026-11-08: compare.js 9/9 against an independent bip_utils re-derivation). At the former pin `082f7915` parsing failed with exit status 1.
 >
 > The intended successful output is three lines—BTC, ETH and TRX—with addresses at indexes 0, 1 and 2 in that order on each line. Compare those addresses with §9 using the same keys and paths.
 
-Runtime failures write `FATAL: ...` to stderr and exit with status 1. If you see `FATAL: missing <chain> xpub in <envPath>`, check the corresponding XPUB entry and confirm that you selected the intended environment file. At the pin, the parsing failure occurs before these runtime checks.
+Runtime failures write `FATAL: ...` to stderr and exit with status 1. If you see `FATAL: missing <chain> xpub in <envPath>`, check the corresponding XPUB entry and confirm that you selected the intended environment file. At the former pin 082f7915, the parsing failure occurred before these runtime checks.
 
 ## 11. Differential test
 
@@ -721,12 +772,12 @@ On a mismatch, stop and do not fund the wallet. Check the vector first, then the
 
 Keep these published reference values alongside the check; they are not additional coverage in the captured run.
 
-Account-0 zpub ([SLIP-0132, line 86](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L86)):
+Account-0 zpub ([SLIP-0132, line 166](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L166)):
 
 `zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs`
 
-- Second receiving address, `m/84'/0'/0'/0/1`: `bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g`
-- First change address, `m/84'/0'/0'/1/0`: `bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el`
+- Second receiving address, `m/84'/0'/0'/0/1`: `bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g` (verified live with `derive.js` from the account-0 zpub above, 2026-11-09)
+- First change address, `m/84'/0'/0'/1/0`: `bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el` (unverified — no repository tool derives the change branch)
 
 The change address is a published reference, not a change to Bawa’s receiving-branch-only policy.
 
@@ -741,7 +792,7 @@ The fixture mnemonic is the published Trust Wallet Core HDWallet test example (C
 - Core's own test table uses the passphrase `TREZOR`, which gives a different seed and different addresses — Bawa uses the empty passphrase. Do not mix the two.
 - The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
-Account-0 public nodes, derived with bip-utils 2.12.2 and labelled "bip-utils-derived, Core confirmation pending" (bip-utils is the same library as the differential test, so this confirms reproducibility, not independence):
+Account-0 public nodes, derived with bip-utils 2.12.2 and Core-confirmed on both 4.8.4 and 4.9.2 (D31, 2026-11-08):
 
 - BTC `m/84'/0'/0'`: `zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9`
 - ETH `m/44'/60'/0'`: `xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc`
@@ -749,7 +800,7 @@ Account-0 public nodes, derived with bip-utils 2.12.2 and labelled "bip-utils-de
 
 TRX anchor, independently derived with bip-utils 2.12.2 and Core-confirmed on 2026-11-08: `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` (`m/44'/195'/0'/0/0`).
 
-TON fixture, derived and independently verified on 2026-11-08 two ways — Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent SLIP-0010 derivation (pure-stdlib Python + PyNaCl) cross-checked with @ton/ton (Core 4.8.4 — the 4.9.2 re-run open item applies):
+TON fixture, derived and independently verified on 2026-11-08 two ways — Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent SLIP-0010 derivation (pure-stdlib Python + PyNaCl) cross-checked with @ton/ton (Core-confirmed on both 4.8.4 and 4.9.2 — D31, 2026-11-08):
 
 - Mnemonic: the ripple fixture above; passphrase empty.
 - ed25519 public key (`m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`.
@@ -823,7 +874,7 @@ This block creates a separate `.env`; it does not overwrite your wallet’s file
 
 > **Expected result**
 >
-> At `e3b65fb0`, the command exits with status 0 and `compare.stdout` contains the three address lines (verified 2026-11-08: compare.js 9/9). At the former pin `082f7915` it exited with status 1 and `compare.stderr` captured the parsing failure. Keep the Core side OPEN.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the command exits with status 0 and `compare.stdout` contains the three address lines (verified 2026-11-08: compare.js 9/9). At the former pin `082f7915` it exited with status 1 and `compare.stderr` captured the parsing failure. Keep the Core side OPEN.
 
 Keep each capture’s command, versions, public output, date and machine name together. Compare only corresponding public outputs from the same vector and paths. **Do not mark the fixture eligible until both sides have been captured and diffed.** Core self-checks alone do not complete that comparison.
 
@@ -896,7 +947,7 @@ A Bawa-generated wallet recovers as exactly 24 words. On import, `decrypt_seed.p
 
 Derive known public addresses using the recorded paths, address policy and configuration, including TON. Compare them with your recorded originals. Follow §§9–10 for the BTC/ETH/TRX derivation and comparison policy, including the `bc1q`/`tb1q` distinction.
 
-The §9–§10 commands run at `e3b65fb0` (verified 2026-11-08); use them to complete that verification at the pin. **Do not fund the wallet until the public outputs match.**
+The §9–§10 commands run at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (verified 2026-11-08); use them to complete that verification at the pin. **Do not fund the wallet until the public outputs match.**
 
 ## 13. Troubleshooting
 
@@ -907,6 +958,8 @@ This is the canonical home for repo-level troubleshooting; the Web and Android g
 | `npm install` fails | Check your Node and npm versions against §3. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
 | No-TTY refusal | `FATAL: no controlling terminal — refusing to run; generate the wallet interactively`, exit 1. This is expected. Run from a real interactive terminal; never defeat the check. |
 | Derived address mismatch | Follow the ordered comparison below. |
+
+Both Node packages require Node `>=22 <23`, and CI uses Node 22. Use Node 22 for the documented setup. An operator-verified installation under Node v24.22.2 emitted EBADENGINE because that runtime is outside the declared range, but installation completed and the syntax check and smoke suite passed with Wallet Core 4.8.4. This observation does not extend the declared Node support range.
 
 For an address mismatch, compare these in order:
 
@@ -1021,11 +1074,11 @@ npm --prefix tools/hdwallet-gen run check
 
 > **Expected result**
 >
-> At `e3b65fb0` the syntax check passes on all four files (see §6); record the result and compare it with your pre-update records. At the former pin `082f7915` it failed on `derive.js`, `derive_daemon.js` and `compare.js`. A check that newly passes or newly fails after an update is a stop signal — follow §13.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12` the syntax check passes on all four files (see §6); record the result and compare it with your pre-update records. At the former pin `082f7915` it failed on `derive.js`, `derive_daemon.js` and `compare.js`. A check that newly passes or newly fails after an update is a stop signal — follow §13.
 
-Follow §10 to re-run the `compare.js` comparison — at `e3b65fb0` it runs (see §6); record its output and compare with your pre-update records — then §11 to re-run the differential test. Compare the results with your pre-update records.
+Follow §10 to re-run the `compare.js` comparison — at `e3b65fb832db287fdc8d54794980dd0b3456cc12` it runs (see §6); record its output and compare with your pre-update records — then §11 to re-run the differential test. Compare the results with your pre-update records.
 
-The tools package's test script targets test/smoke.test.js, which exists in this tree at `e3b65fb0` and passes 28/28 (verified 2026-11-08). Use that script as an update check.
+The tools package's test script targets test/smoke.test.js, which exists in this tree at `e3b65fb832db287fdc8d54794980dd0b3456cc12` and passes 28/28 (verified 2026-11-08). Use that script as an update check.
 
 **Step 4 — Stop on failure (§13).**
 
@@ -1078,7 +1131,7 @@ Keep `@hdwallet/core` as a research-only reference. An automated check on npm re
 
 ## 17. Security posture
 
-Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2 — with the open item that the live EIP-1559 proof was demonstrated on 4.8.4 and must be re-run against 4.9.2 before that pin is treated as verified for signing.
+Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2 — the dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08); browser send/sign was not exercised and nothing was broadcast.
 
 What Bawa protects, and what it does not: Bawa's trusted, offline side creates the mnemonic, seed, private material and account-level public roots. The online RPC and indexer receive only the public information needed to watch accounts. Treat that online environment as something an attacker might inspect, collect logs from, repeatedly restart or take over; it must not receive seed material. The generator sends the mnemonic and data-encryption key to its controlling terminal rather than ordinary subprocess stdout/stderr — this reduces incidental logging; it does not defeat a hostile OS or terminal, a debugger, crash dumps, swap or memory snapshots. JavaScript and WebAssembly cannot promise that every secret copy has been securely erased; encrypting saved material also leaves plaintext exposed while a mnemonic is created or recovered.
 
@@ -1086,9 +1139,9 @@ Assets: the mnemonic (24 words, BIP-39), the seed (64 bytes), the data key (256-
 
 Filesystem rules: secrets/ 0700; seed.enc.json 0600; seed-backup/ 0700; backup copy 0600; .env 0600. The seed bundle is verified with tools/decrypt_seed.py plus the separate offline data key — never with a vault unlock passphrase. Keep seed words, private signing keys and their extended forms out of public commits, issues, screenshots and support logs; the same applies to keys used to decrypt recovery data, .env files used in production, wallet-backup artefacts, account/service credentials.
 
-Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.2, cryptography==50.0.2, bip-utils==2.12.2, Node >=22 <23, Python >=3.11. Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested. The Node lockfile is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
+Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.8.4, cryptography==50.0.2, bip-utils==2.12.2, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has not been re-pinned. Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested. The Node lockfile is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
 
-Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (only 55 pure-module tests); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — the Web vault's 10-minute auto-lock comes from the validation draft (app-web/src/vault.js:110), not the repo; never claim the repo signs, constructs or broadcasts transactions; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
+Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (only 55 pure-module tests); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — the Web vault's 10-minute auto-lock comes from the validation draft (`app-web/src/vault.js:110`, local unpushed draft — not part of this repository), not the repo; never claim the repo signs, constructs or broadcasts transactions; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
 
 Never publish: seed words, private keys, data keys, vault unlock passphrases, .env files used in production, wallet-backup artefacts, account/service credentials. Never claim "secure", "safe", "secure because encrypted", "production-ready", "ready" or "ready for real money" about anything unverified. Never claim "audited" or "reviewed" without scope, reviewer, date and evidence. Never claim mainnet: mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
@@ -1102,7 +1155,7 @@ Builder verifiability: a builder who ships an app from this guide must make the 
 
 Review gate: the "external security review" gate has a defined scope — seed handling, derivation paths, signing, recovery, dependencies; named components at a stated revision; exclusions recorded; follow-up review of fixes. The gate shows FAIL until that review is defined and executed (see §18).
 
-Docs/08 is the security reference for this guide set: it carries the full posture, the incident playbook, the paid-security costs reference (indicative snapshot dated 30 October 2026, recheck-required), and the sources. Read it before relying on any security claim in this README.
+Docs/08 is the security reference for this guide set: it carries the full posture, the incident playbook, the paid-security costs reference (vendor prices re-checked live on 8 November 2026), and the sources. Read it before relying on any security claim in this README.
 
 ## 18. Gates
 
@@ -1112,26 +1165,26 @@ Readiness gates (repo):
 
 | Gate | Status | Evidence |
 |---|---|---|
-| Prerequisites | PASS | Reader's machine; Node >=22 <23, Python >=3.11, Git (see §3) |
+| Prerequisites | PASS | Repository suite re-run on Node v22.23.4 on 2026-11-08 with identical results (D22); Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2 observed during verification (see §19). No separate reader's-machine prerequisites check was run. |
 | Python setup | PASS | venv + pip install -r requirements.txt; cryptography==50.0.2 and bip-utils==2.12.2 verified (see §7) |
-| Differential test | PASS, with a boundary | Published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1–2 (see §11) |
-| Node setup | PASS at e3b65fb0 (verified 2026-11-08) | The syntax check passes on all four files; `npm run check` exits 0 (Node v22.23.4 re-run, D22). At the former pin 082f7915 it failed on derive.js, derive_daemon.js and compare.js (backslash-escaped template literals); only generate.js passed |
+| Differential test | PASS, with a boundary | Published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; the smoke suite asserts BTC/ETH/TRX indices 0–1, and only index 2 is uncovered (see §11) |
+| Node setup | PASS at e3b65fb832db287fdc8d54794980dd0b3456cc12 (verified 2026-11-08) | The syntax check passes on all four files; `npm run check` exits 0 (Node v22.23.4 re-run, D22). At the former pin 082f7915 it failed on derive.js, derive_daemon.js and compare.js (backslash-escaped template literals); only generate.js passed |
 | Generation | DEMONSTRATED 2026-11-08, Node 22 re-run complete (D22) | Live wallet creation and restore were performed on the pushed head under a real pty on 2026-11-08 (completion message, four public values, seed.enc.json 0600, dirs 0700, backup byte-identical; decrypt round trip byte-identical, 24 words). That run used Node v24.22.2, outside the repository's declared Node >=22 <23 range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). No live testnet spend has been made from this wallet. |
-| Public derivations | PASS at e3b65fb0 (verified 2026-11-08) | derive.js 9/9 and compare.js 9/9 against an independent bip_utils re-derivation; daemon BTC index-5 match (see Node setup above). At the former pin 082f7915 compare.js could not run at the pin |
+| Public derivations | PASS at e3b65fb832db287fdc8d54794980dd0b3456cc12 (verified 2026-11-08) | derive.js 9/9 and compare.js 9/9 against an independent bip_utils re-derivation; daemon BTC index-5 match (see Node setup above). At the former pin 082f7915 compare.js could not run at the pin |
 | Recovery rehearsal | FAIL | No rehearsal has been executed on a clean install with disposable test fixtures, expected addresses, a testnet signing check, pass criteria and a sanitised record. A decrypt round trip is not the rehearsal. Unexecuted = FAIL. |
 
-Release gates (all FAIL):
+Release gates (five of six unmet):
 
 | Gate | Status | What it needs |
 |---|---|---|
-| Lockfile | FAIL (Node side resolved at e3b65fb0 — see note below) | A lockfile generated from a clean install, committed with package.json; until then, no install reproduces the exact dependency graph that was tested; npm ci is not runnable against the repo |
+| Lockfile | FAIL (Node side resolved at e3b65fb832db287fdc8d54794980dd0b3456cc12 — see note below) | A lockfile generated from a clean install, committed with package.json; until then, no install reproduces the exact dependency graph that was tested; `npm ci` runs in `tools/hdwallet-gen` (lockfile present) but not at the repository root (no lockfile) |
 | Full published-vector coverage | FAIL | Vectors covering TRX and indices 1–2, not only BTC/ETH index 0 |
-| Chain-specific fixtures, including TON | PASS at e3b65fb0 | A TON fixture was derived and independently verified on 2026-11-08 (see §11) and is written into docs/11 and Android D.7 |
+| Chain-specific fixtures, including TON | PASS at e3b65fb832db287fdc8d54794980dd0b3456cc12 | A TON fixture was derived and independently verified on 2026-11-08 (see §11) and is written into docs/11 and Android D.7 |
 | Secret and dependency scanning | FAIL | Named scanners, an owner, and redacted reports retained alongside ci-evidence.json; a missing or erroring scan must never be read as "clean" |
 | Reproducible releases | FAIL | A reproducible-build procedure: source and submodule SHAs, dependency locks, checksums, toolchain and image identities, two independent builders, same SHA, separate clean environments, whole-file SHA-256 comparison of agreed unsigned artefacts |
 | External security review | FAIL | A review with defined scope (seed handling, derivation paths, signing, recovery, dependencies), named components at a stated revision, recorded exclusions, and a follow-up review of fixes |
 
-Pin note: this rewrite is pinned to e3b65fb0. The phase-1 repair has since been pushed as e3b65fb0 (2026-11-08): on that head, the Node setup gate and the Public derivations gate pass (the three JavaScript files pass node --check; compare.js runs), and the Node lockfile gate passes (tools/hdwallet-gen/package-lock.json now exists, Core 4.8.4 exactly). The watch-only results were verified live on the repaired copy before the push: derive 9/9, compare 9/9, smoke 28/28 — all three FAIL on the pushed head 082f7915. The Python side still has no lockfile; the root still has none. CI's single job now passes on e3b65fb0: the workflow runs `npm run check`, `npm test` and the differential test, and CI run 28 at e3b65fb0 completed with success on 8 November 2026 (D09). This guide set re-pinned to e3b65fb0 on 2026-11-09 (user decision); the gate statuses above are the statuses at e3b65fb0, verified 2026-11-08; the former-pin statuses are retained in the merge record.
+Pin note: this rewrite is pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12. The phase-1 repair has since been pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08): on that head, the Node setup gate and the Public derivations gate pass (the three JavaScript files pass node --check; compare.js runs), and the Node lockfile gate passes (tools/hdwallet-gen/package-lock.json now exists, Core 4.8.4 exactly). The watch-only results were verified live on the repaired copy before the push: derive 9/9, compare 9/9, smoke 28/28 — all three FAIL on the pushed head 082f7915. The Python side still has no lockfile; the root still has none. CI's single job now passes on e3b65fb832db287fdc8d54794980dd0b3456cc12: the workflow runs `npm run check`, `npm test` and the differential test, and CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09). This guide set re-pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12 on 2026-11-09 (user decision); the gate statuses above are the statuses at e3b65fb832db287fdc8d54794980dd0b3456cc12, verified 2026-11-08; the former-pin statuses are retained in the merge record.
 
 What passing does NOT prove: passing the readiness gates does not prove the guide is safe; passing the release gates does not prove it is production-ready; passing any gate does not authorise mainnet use; a successful build or testnet send does not replace the release gates. No gate may be marked passed on the basis of a check that was not run, a file that does not exist in the pinned tree, or a count that combines test layers (never combine counts — no "86/86").
 
@@ -1143,7 +1196,7 @@ This guide explains how to build a non-custodial HD wallet from the Bawa referen
 
 What this guide does not do: it does not hold your keys; it does not sign, construct or broadcast transactions (the repo contains no transaction construction or signing code); it does not cover mainnet; it does not claim to be production-ready, secure, or audited; it does not provide a UI template — UI comes from a pre-existing template only, and if none is available, no UI is created here (see the Web and Android guides' UI-template appendices).
 
-Verified on: this rewrite was verified against the pinned commit 082f7915 on 8 November 2026, with live checks recorded in the section notes (differential test, live wallet creation and restore, TON fixture derivation, integrated browser flow). Tool versions observed during verification: Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2, Node v24.22.2 — outside the repository's declared Node >=22 <23 range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Repository commit: e3b65fb0. Sources fetched on 8 November 2026.
+Verified on: this rewrite was verified against the repair commit e3b65fb832db287fdc8d54794980dd0b3456cc12 on 8 November 2026, with live checks recorded in the section notes (differential test, live wallet creation and restore, TON fixture derivation, integrated browser flow). Tool versions observed during verification: Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2, Node v24.22.2 — outside the repository's declared Node >=22 <23 range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Repository commit: e3b65fb832db287fdc8d54794980dd0b3456cc12. Sources fetched on 8 November 2026. The former pin 082f7915 is retained only as history.
 
 ---
 

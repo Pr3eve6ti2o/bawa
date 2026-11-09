@@ -40,13 +40,13 @@ How-to guide.
 
 ## Verified position
 
-Treat pinned commit `e3b65fb0` as the reference checkout. CI run 28 at `e3b65fb0` completed with success on 8 November 2026 (D09): the syntax check passes, and `npm test` passes 28/28. Do not present a differential-test pass alone as a CI pass.
+Treat `e3b65fb832db287fdc8d54794980dd0b3456cc12` as the reference code baseline. This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. Use `754721cd` to retain this guide. Checking out `e3b65fb832db287fdc8d54794980dd0b3456cc12` instead restores the pre-rewrite documentation.: the syntax check passes, and `npm test` passes 28/28. Do not present a differential-test pass alone as a CI pass.
 
 > **Expected result:**
 >
 > `derive.js`, `derive_daemon.js` and `compare.js` pass `node --check` (verified 2026-11-08).
 >
-> At `e3b65fb0`, `npm test` targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was not in the tree and the suite belonged only to the phase-1 repair copy.
+> At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `npm test` targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was not in the tree and the suite belonged only to the phase-1 repair copy.
 
 Keep the local repair result separate from checkout results: “The phase-1 repair copy produced 28 ok, 0 fail, exit 0.”
 
@@ -69,10 +69,10 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on 4.8.4 and must be re-run against 4.9.2 |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
 | bip-utils | Python | `==2.12.2` | `==2.12.2` | Pinned |
-| Node | repo | `>=22 <23` | record the full tested version separately | Range is a compatibility declaration, not a reproducible pin; verification ran on Node v24.22.2 on the VM and v24.22.1 locally, outside the declared range; no Node 22 validation exists yet |
+| Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
 | Python | repo | `>=3.11` | Unresolved (tested 3.12.3; CI uses 3.13) | Range, not a pin |
 | npm | repo | no version specified | Unresolved | Unresolved required pin; resolve before any npm-based release validation |
 
@@ -84,11 +84,11 @@ Use these steps to prepare an inspection checkout, not to certify a release.
 
 Run `git clone https://github.com/Pr3eve6ti2o/bawa.git`, then enter the checkout with `cd bawa`.
 
-Verify the intended commit or tag before installing dependencies. For this reference, select and verify commit `e3b65fb0`; do not assume that the default cloned head matches it.
+Verify the intended commit or tag before installing dependencies. For this reference, select and verify commit `754721cd`; do not assume that the default cloned head matches it.
 
 ### Node dependencies
 
-From a clean tree at the repository root, run `npm install`.
+The repository root declares no dependencies, so skip root `npm install`. Running it installs nothing and creates an untracked root `package-lock.json`.
 
 Install the wallet-core tooling at its package boundary: enter it with `cd tools/hdwallet-gen`, run `npm install`, then return to the repository root with `cd ../..`.
 
@@ -96,11 +96,9 @@ Treat these as unlocked dependency installs, not as evidence of a reproducible d
 
 ### Release blockers
 
-1. **Missing committed lockfile.** From a clean tree, run `npm install` at the relevant package boundary, then commit `package.json` and `package-lock.json` together and push the commit. Use `npm ci` for every later install at that boundary.
+1. Install boundary. `tools/hdwallet-gen/package-lock.json` was committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (2026-11-08) and pins `@trustwallet/wallet-core` to 4.8.4. Use `npm ci` inside `tools/hdwallet-gen`; D22 verified that this succeeds on 2026-11-08. No root lockfile exists, but the root package has no dependencies. Remove the root install step rather than adding a root lockfile.
 
-   `npm ci` requires an existing lockfile, exits with an error on a mismatch with `package.json`, deletes `node_modules` first, and never writes to `package.json` or the lockfile. It cannot be run against the repository as checked in today. Until the lockfile is committed and pushed, treat every “reproducible install” sentence as aspirational.
-
-2. **Failing pinned CI.** The syntax failures and the missing smoke-test file were resolved by the phase-1 repair (main @ e3b65fb0, 2026-11-08); require a passing complete workflow on the candidate revision. Do not substitute a differential-test pass or a result from the repair copy.
+2. **Failing pinned CI.** The syntax failures and the missing smoke-test file were resolved by the phase-1 repair (main @ e3b65fb832db287fdc8d54794980dd0b3456cc12, 2026-11-08); require a passing complete workflow on the candidate revision. Do not substitute a differential-test pass or a result from the repair copy.
 
 3. **Incomplete version verification.** Resolve the required version pins, including npm before any npm-based release validation. Obtain Node 22 validation, record the full tested version separately. The live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 
@@ -122,7 +120,7 @@ Read the configured steps in this order:
 
 Distinguish this configured sequence from successful execution at the pinned head.
 
-Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags, no Dependabot, and a single job. CI run 28 at e3b65fb0 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags, no Dependabot, and a single job. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
 
 Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install.
 
@@ -130,7 +128,7 @@ Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned
 
 Treat the current version metadata as inconsistent. `CHANGELOG.md` heads with `1.2.0`, while both `package.json` files say `1.1.0`. No changelog entry carries a date.
 
-Keep both package versions at `1.1.0`. `1.2.0` was never released, so place its changes under `Unreleased` in the merge-owned changelog update. Record the CI correction under `Unreleased`, `Fixed`: the changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb0, 8 November 2026, success; D09). Leave the changelog file itself to the merge; use this guide as the statement of the verified position.
+Keep both package versions at `1.1.0`. `1.2.0` was never released. The changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12, 8 November 2026, success; D09). The merge was pushed at 754721cd without updating `CHANGELOG.md`. Update the changelog in a follow-up commit: place the outstanding changes under `Unreleased` and record the CI correction in its `Fixed` subsection.
 
 Semantic Versioning adherence: not established by the available evidence.
 
@@ -436,7 +434,7 @@ For every test layer, require the exact command, the file it runs and the expect
 Create a fresh clone at the pin, then run the environment setup and `test/differential_test.py` from the repository root:
 
 ```
-git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git checkout --detach e3b65fb0 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
+git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
 ```
 
 > **Expected result:**
@@ -453,7 +451,7 @@ Version pins are not a lockfile; until a lockfile generated from a clean install
 
 ### Capture the Wallet Core side
 
-Record the Wallet Core side as still having no captured result. Account for both blockers: `generate.js` refuses without a controlling terminal, and `compare.js` needs a root `.env` with `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` that does not exist in the repository.
+Wallet Core results were captured in V1 (2026-11-08). Generation ran under a real pty via `script -qec`, exited 0 and passed all README §8 checks. The decrypt round trip was byte-identical; derivation passed 9/9; comparison against an independent `bip_utils` re-derivation passed 9/9; the daemon BTC index-5 value matched exactly; and `npm test` passed 28/28. Generation requires a controlling terminal. No root `.env` is included in the repository; V1 built it from the published xpubs in docs/11, supplying `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` for `compare.js`.
 
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
@@ -463,7 +461,7 @@ node generate.js
 
 > **Expected result:**
 >
-> Require successful self-checks on the TTY and capture their actual output. Treat this as an acceptance requirement, not an observed result; no Wallet Core self-check result has been captured.
+> Require successful self-checks on the TTY and capture their actual output. Treat this as an acceptance requirement, not an observed result; the Wallet Core self-check result was captured in V1 (2026-11-08): live generation exited 0 and all README §8 checks passed.
 
 Build the root `.env` from the published xpubs in `docs/11`, using `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. Then run `node compare.js` from `tools/hdwallet-gen/` (the helper reads the `.env` from the repository root regardless of where it runs):
 
@@ -473,7 +471,7 @@ node compare.js
 
 > **Expected result:**
 >
-> Require the published-fixture comparison to match BTC BIP-84 index 0 to bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd and ETH BIP-44 index 0 to 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7. Capture the actual comparison output; no Wallet Core comparison result has been captured.
+> Require the published-fixture comparison to match BTC BIP-84 index 0 to bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd and ETH BIP-44 index 0 to 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7. Capture the actual comparison output; the Wallet Core comparison result was captured in V1 (2026-11-08): 9/9 against an independent `bip_utils` re-derivation.
 
 Do not mark the fixture eligible until both sides are captured and diffed. Keep the comparison within the reported reference coverage boundary, and keep differential-fixture eligibility separate from the per-platform fixture-gate status below.
 
@@ -483,11 +481,11 @@ Read each result with its provenance, environment and coverage limits. Do not co
 
 ### Smoke
 
-> The phase-1 repair copy produced 28 ok, 0 fail, exit 0.
+> At `754721cd`, the operator's 2026-11-09 run of `npm test` on Node v24.22.2 passed 28/28 with exit 0.
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-This layer has no runnable procedure in this guide yet.
+Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet-gen test`, which runs `node ../../test/smoke.test.js`. The smoke test file has been committed since `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Web
 
@@ -542,7 +540,7 @@ This layer has no runnable procedure in this guide yet.
 
 Retain the following limits:
 
-> Wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. No live testnet spend has been made from this wallet.
+> V1 (live run on 8 November 2026, pushed head 082f7915) demonstrated wallet generation under a real pty and a byte-identical decrypt round trip; the differential test returned PASS. V1 did not verify full recovery. See docs/08 §3 for the unexecuted clean-install recovery rehearsal with independent derivation and address comparison; its unexecuted gates are marked FAIL. No live testnet spend has been made from this wallet.
 >
 > TESTNET-only does not mean testnet-tested.
 
@@ -680,7 +678,7 @@ Establish the following sequence, and stop wherever required procedures or evide
 
 ### Implement the CI extension
 
-Extend the current workflow, which already runs the Node tests and Python differential test as steps in one job. Make the workflow file change in the repository; do not treat this prose as an implemented change. Obtain the actual workflow file path from the maintainer and record it in **TESTING**.
+Extend the current workflow, which already runs the Node tests and Python differential test as steps in one job. Make the workflow file change in the repository; do not treat this prose as an implemented change. The CI workflow is `.github/workflows/ci.yml`.
 
 Implement the following requirements:
 
@@ -747,7 +745,7 @@ Ask the maintainer for the undocumented CI configuration, public fixture locatio
 
 ### Establish trust first
 
-Treat verification from this tree alone as incomplete, because Bawa publishes no signing key in the repository. Before installing dependencies, confirm the maintainer’s public signing key through a separate trusted channel and require a successful signature check for the intended tag or commit.
+Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 Do not treat a tag as verified without both trusted-key confirmation and a successful check of that tag’s signature.
 
@@ -962,7 +960,7 @@ python3 test/differential_test.py
 
 The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
 
-**Expected result:** all four commands completing successfully. At the pinned commit e3b65fb0 they do: `npm run check` exits 0 and `npm test` passes 28/28 (verified 2026-11-08; all nine CI steps replayed exit 0, D23). At the former pin 082f7915, `npm run check` failed on three files and `npm test` could not run. Bawa does not document a fixed success transcript; if the outcome is unclear, confirm the expected behaviour for your revision with the maintainer. Passing these checks does not certify the machine as safe for real wallet generation.
+**Expected result:** all four commands completing successfully. At the pinned commit e3b65fb832db287fdc8d54794980dd0b3456cc12 they do: `npm run check` exits 0 and `npm test` passes 28/28 (verified 2026-11-08; all nine CI steps replayed exit 0, D23). At the former pin 082f7915, `npm run check` failed on three files and `npm test` could not run. Bawa does not document a fixed success transcript; if the outcome is unclear, confirm the expected behaviour for your revision with the maintainer. Passing these checks does not certify the machine as safe for real wallet generation.
 
 Keep recovery material out of the checkout and installation reports. `CONTRIBUTING.md` forbids committing `.env`, `secrets/`, `seed-backup/`, mnemonics, private keys, production xpubs/zpubs or real recovery material.
 
@@ -972,11 +970,11 @@ Keep recovery material out of the checkout and installation reports. `CONTRIBUTI
 
 ## Dependency lockfile discipline
 
-**The lockfile release gate is not yet met.** A search of this tree found no root `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` or `Pipfile.lock`. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb0 (Core 4.8.4 exact); no root lockfile and no Android-app lockfile are evidenced. A production lockfile still needs to be generated, reviewed, tested and committed.
+**The lockfile release gate is not yet met.** A search of this tree found no root `package-lock.json`, `npm-shrinkwrap.json`, `yarn.lock` or `Pipfile.lock`. `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); no root lockfile and no Android-app lockfile are evidenced. A production lockfile still needs to be generated, reviewed, tested and committed.
 
 A lockfile records the resolved dependency tree: exact package versions, including dependencies of dependencies, and integrity hashes. Version ranges in `package.json` alone can resolve differently on later installs. Without a lockfile, unchanged Bawa code can receive packages that were never part of the tested build.
 
-CI in `.github/workflows/ci.yml` currently runs `npm install --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen`, not `npm ci`, although `tools/hdwallet-gen/package-lock.json` exists at e3b65fb0. Switching CI to `npm ci` is an open improvement (D23 F5).
+CI in `.github/workflows/ci.yml` currently runs `npm install --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen`, not `npm ci`, although `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12. Switching CI to `npm ci` is an open improvement (D23 F5).
 
 ### Generate, review and test
 
@@ -1017,7 +1015,7 @@ Run the maintainer-confirmed checks after that install. Once they pass, commit t
 
 ## Daily and weekly rhythm by size
 
-Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. Watch-only tools reject private extended keys.
+Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
 These checks are guidance for your own setup, not Bawa monitoring features. Bawa does not document freshness thresholds, payment-confirmation rules or recovery procedures. Confirm those with the maintainer.
 
@@ -1071,7 +1069,9 @@ These checks are guidance for your own setup, not Bawa monitoring features. Bawa
 
 These checks belong to your monitoring setup, not Bawa monitoring features. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
 
-Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. Watch-only tools reject private extended keys. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
+Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
+
+`compare.js` reads its `.env` path from `process.env.NOVA_ENV` first. Check this setting and verify the selected `.env` file before running the tool: an inherited Nova Shop value can silently redirect Bawa's seed-directory lookup.
 
 Never log mnemonics, private keys, seed material, data keys, passwords or credentials. Use placeholders in diagnostic examples.
 
@@ -1209,7 +1209,7 @@ A compromised seed requires a new wallet, not a restored backup. See **Incident 
 
 Keep funding on hold until the encrypted backup has passed a restore check. Repeat after every backup change and regularly between changes.
 
-1. **Confirm the supported route.** Bawa does not document the full restore sequence, `tools/decrypt_seed.py` command syntax, verification checks, cleanup or drill frequency. Confirm these with the maintainer, together with suitable public fixtures and controlled-environment requirements. If those details cannot be confirmed, stop rather than improvise.  
+1. **Confirm the supported route.** The command syntax and output behaviour of `tools/decrypt_seed.py` are documented in docs/08 §3, including the invocation `python3 tools/decrypt_seed.py /path/to/seed.enc.json`. The full restore sequence and drill frequency remain undocumented. Confirm these with the maintainer, together with suitable public fixtures and controlled-environment requirements. If those details cannot be confirmed, stop rather than improvise.  
    **Expected result:** agreed instructions and known public reference checks.
 
 2. **Practise without funds.** Only run `tools/decrypt_seed.py` under the agreed isolated, offline conditions. Practise with `<PUBLIC_FIXTURE>` and its public test inputs in a fresh `<SCRATCH_DIRECTORY>`, away from live wallet files and synchronised storage. Use no real funds. Keep decrypted material out of logs, screenshots and support messages.  
@@ -1285,7 +1285,7 @@ Coordinate a history purge where possible, using a method confirmed with the mai
 
 ### Verify the tag or commit signature
 
-Bawa publishes no signing key in the repository, so verification cannot be completed from this tree alone. Before installing dependencies, confirm the maintainer’s public signing key through a separate trusted channel and require a successful signature check.
+Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 For the intended tag:
 
@@ -1329,11 +1329,11 @@ Bawa does not document a reproducibility procedure, external-review acceptance c
 
 | Gate | Evidence required | Status |
 | --- | --- | --- |
-| Committed lockfile | Lockfile committed at release revision | PARTIAL: `tools/hdwallet-gen/package-lock.json` committed at e3b65fb0 (2026-11-08); no root lockfile. |
+| Committed lockfile | Lockfile committed at release revision | PARTIAL: `tools/hdwallet-gen/package-lock.json` committed at e3b65fb832db287fdc8d54794980dd0b3456cc12 (2026-11-08); no root lockfile. |
 | Version ranges | Recorded range review | BLOCKED, review unconfirmed. |
-| Clean-machine CI | Passing logs for release revision | BLOCKED, no report. |
+| Clean-machine CI | Passing logs for release revision | PASS — GitHub Actions run 28 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`: completed/success, 2026-11-08 11:36 UTC (D09). |
 | Official BIP-32/BIP-39 vectors | Full published-vector coverage and passing results | BLOCKED, coverage/results missing. |
-| Independent differential testing | Recorded successful `test/differential_test.py` run | BLOCKED, no report. |
+| Independent differential testing | Recorded successful `test/differential_test.py` run | PASS — operator run 2026-11-09, exit 0; D23 replayed all nine CI steps with exit 0. |
 | Chain-specific fixtures | Per-chain fixtures and passing results | BLOCKED, no report. |
 | Secret scanning | Enabled checks, configuration and triaged report | BLOCKED, configuration/results undocumented. |
 | Dependency scanning | Enabled checks, configuration and triaged report | BLOCKED, configuration/results undocumented. |

@@ -30,7 +30,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 | Read the wallet standards | BIPs/SLIPs | Normative derivation rules | Never replace the standards with a blog post | Free |
 | BIP-39 implementation | paulmillr/scure-bip39 | Small, focused BIP-39 | Do not assume BIP-39 defines chain-specific paths | Open source |
 | BIP-32 implementation | paulmillr/scure-bip32 | Focused HD derivation | Not a blockchain SDK | Open source |
-| Broad multi-chain wallet crypto | trustwallet/wallet-core | Keys, derivation, addresses, signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.9.2 in its reference runtime |
+| Broad multi-chain wallet crypto | trustwallet/wallet-core | Keys, derivation, addresses, signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.8.4 in its reference runtime |
 | Bitcoin app library | bitcoinjs/bitcoinjs-lib | Bitcoin transaction/address tooling | Not a universal wallet SDK | Open source |
 | Bitcoin full node | bitcoin/bitcoin | Full chain validation, node/wallet | Heavy for a simple personal tracker | Open source; storage/bandwidth required |
 | Bitcoin indexed API | Blockstream/esplora | Address/UTXO/transaction history | Bitcoin/Liquid-centric | Open source; can self-host |
@@ -43,7 +43,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 | Cosmos JavaScript | cosmos/cosmjs | Accounts, signing, chain interaction | Not a generic multi-chain key engine | Open source |
 | Cardano standard | Cardano CIPs | Key derivation/address policy | Do not substitute BIP-44 assumptions | Free specs |
 | Substrate accounts | polkadot-js | sr25519/ed25519/ecdsa plus SS58 | Not a Bitcoin-style xpub system | Open source |
-| XRP app access | xrpl/xrpl.js | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
+| XRP app access | XRPLF/xrpl.js | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
 | Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware plus open-source components |
 | Hardware signer | Ledger | Secure signing plus device UX | Device-app development has its own SDK/review model | Hardware plus developer stack |
 | Local EVM development | Foundry/Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
@@ -133,15 +133,15 @@ One owner per job; do not treat any tool as a complete wallet backend. These bou
 
 Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 0044, 0132 are the sources of truth. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond the bip_utils list; review the relevant standards and tests before relying on additional coverage.
 
-**Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.9.2; `requirements.txt` lists `bip_utils` 2.12.2. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
+**Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.8.4; `requirements.txt` lists `bip_utils` 2.12.2. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
 
 1. Trace each proposed invocation to a table row, including the data crossing its boundary — an identified owner, call site, and data category, or a clear record of what still needs tracing; do not mark isolation as verified without code evidence.
 2. Review boundary enforcement at the call sites — evidence that metadata, network, and application-record calls receive no secret material under this policy, or a recorded violation or unresolved review item; do not assume the boundary is enforced.
 3. Review verification and signing examples — cited published vectors or clearly marked placeholders; bip_utils confined to independent checking; signing examples limited to testnet or conceptual use, never real funds; only claim a successful comparison when both the vector and the observed result are recorded.
 
-**Version pins:** the "Version pins" table lives in the README (§5 shared contracts); this document cross-references it. Core 4.9.2 (source: `tools/hdwallet-gen/package.json`) and bip-utils 2.12.2 (source: `requirements.txt`).
+**Version pins:** the "Version pins" table lives in the README (§5 shared contracts); this document cross-references it. Core 4.8.4 (source: `tools/hdwallet-gen/package.json`) and bip-utils 2.12.2 (source: `requirements.txt`).
 
-**Lockfile blocker:** the missing root lockfile is a numbered release blocker (README §18). It is a prerequisite for any "reproducible install" claim for the repository root. `tools/hdwallet-gen/package-lock.json` is committed at `e3b65fb0` (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen` (verified exit 0, D22). Exact commands: run `npm install` from a clean tree, commit `package.json` and `package-lock.json` together, then use `npm ci` for every later install. `npm ci` requires an existing lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile. Until the root lockfile is committed, `npm ci` cannot run against the repo root.
+**Lockfile blocker:** the missing root lockfile is a numbered release blocker (README §18). It is a prerequisite for any "reproducible install" claim for the repository root. `tools/hdwallet-gen/package-lock.json` is committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen` (verified exit 0, D22). Exact commands: run `npm install` from a clean tree, commit `package.json` and `package-lock.json` together, then use `npm ci` for every later install. `npm ci` requires an existing lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile. Until the root lockfile is committed, `npm ci` cannot run against the repo root.
 
 ## 10. Canonical pricing note
 

@@ -13,8 +13,8 @@ _How-to guide. Read from top to bottom on your first pass._
 >
 > - Verification status: Partially verified — sections A to K rewritten and checked first-hand on 8 November 2026; the procedures they specify have not been executed end to end.
 > - Verified on: 2026-11-08.
-> - Verification scope: rewrite of sections A–K of the Android guide, against the pinned repository at e3b65fb0 and the validation drafts.
-> - Repository commit: e3b65fb0 (Pr3eve6ti2o/bawa).
+> - Verification scope: rewrite of sections A–K of the Android guide, against the pinned repository at e3b65fb832db287fdc8d54794980dd0b3456cc12 and the validation drafts.
+> - Repository commit: e3b65fb832db287fdc8d54794980dd0b3456cc12 (Pr3eve6ti2o/bawa).
 > - Tool versions (observed, not declared pins): Node v24.22.2; Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2; Trust Wallet Core 4.8.4 WASM for the fixture verification runs; Core 4.9.2 is the pin this guide prescribes.
 > - Environment/runner: muse-vm (Boxd, Ubuntu 24.04.5 LTS).
 > - Actually run: Core 4.8.4 fixture verification (12 checks, all pass — see section D.7); TON path confirmation (m/44'/607'/0'); Core tag resolution (4.9.2 → 17e3cd4d…, 4.8.4 → d40d24a… via the GitHub API); first-hand reads of the pinned repo files, the validation draft's build files, NetworkConfig.kt, Fixtures.kt, TonConfig.kt and VaultEnvelope.kt.
@@ -54,14 +54,14 @@ Throughout this guide, each warning explains what could go wrong, tells you what
 
 Use Kotlin for the Android route. No complete sample application exists to link, so this guide links none.
 
-- Use the Bawa repository `Pr3eve6ti2o/bawa`, pinned at `e3b65fb0`, as the engine reference.
+- Use the Bawa repository `Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, as the engine reference.
 - The validation draft is a local-only, unpushed Android project that has never produced a Gradle build, an APK or a device run.
 
 ## A. Scope and boundaries
 
 ### A.1 Scope and responsibilities
 
-Use this guide with the Bawa repository pinned at `e3b65fb0`. The guide covers the engine and derivation behaviour, the vault (the encrypted store) and its unlock lifecycle, watch-only connectivity, transaction construction, review and signing, tests and the UI contract for a non-custodial, testnet-only Android wallet. Supply the application around those parts, the toolchain, testnet access and a device or emulator for the later device checks. Use published test vectors only.
+Use this guide with the Bawa repository pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The guide covers the engine and derivation behaviour, the vault (the encrypted store) and its unlock lifecycle, watch-only connectivity, transaction construction, review and signing, tests and the UI contract for a non-custodial, testnet-only Android wallet. Supply the application around those parts, the toolchain, testnet access and a device or emulator for the later device checks. Use published test vectors only.
 
 Non-custodial means the user controls signing and recovery material, with no operator-held recovery copy.
 
@@ -139,7 +139,7 @@ Do not infer readiness from address generation alone. Require independent securi
 
 ### A.6 Pin the checkout and keep the references
 
-Clone and pin exactly as the repository guide (Doc 1, section 4, 'Clone and verify the commit') prescribes; the pin is e3b65fb0.
+Clone and pin exactly as the repository guide (Doc 1, section 4, 'Clone and verify the commit') prescribes; the pin is e3b65fb832db287fdc8d54794980dd0b3456cc12.
 
 Keep the checkout detached. Verify the commit:
 
@@ -147,11 +147,11 @@ Keep the checkout detached. Verify the commit:
 git rev-parse HEAD
 ```
 
-Expected result: a commit hash starting with `e3b65fb0`.
+Expected result: a commit hash starting with `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 Keep the README run guide, `docs/RECOVERY.md`, `tools/hdwallet-gen` and docs 01, 02, 04, 05, 08, 09, 13, 14, 15 and 16 beside this guide. Include docs 03, 06, 07, 10, 11 and 12, which the repository guide also carries.
 
-The pinned checkout at `e3b65fb0` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly the four JavaScript tools and `decrypt_seed.py`, and all four tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
+The pinned checkout at `e3b65fb832db287fdc8d54794980dd0b3456cc12` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly the four JavaScript tools and `decrypt_seed.py`, and all four tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
 
 Docs 03 and 12 are the shallowest in the repository and have never received a deep pass. Treat anything taken from them as unreviewed until the repository guide deepens them. **Open item (OI-017):** docs 03 and 12 received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089).
 
@@ -212,7 +212,7 @@ Record each version's exact pin once, in this table. Keep version ranges only as
 
 Version pins are not a lockfile — until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
 
-**Open item (OI-008):** Partially resolved (2026-11-08): `tools/hdwallet-gen/package-lock.json` was added by the phase-1 repair at e3b65fb0. No Android-app dependency lockfile is evidenced; Android dependency locking remains open. The Node-tooling lockfile is present at the documented clone pin e3b65fb0. Owner: W4 (Android follow-up).
+**Open item (OI-008):** Partially resolved (2026-11-08): `tools/hdwallet-gen/package-lock.json` was added by the phase-1 repair at e3b65fb832db287fdc8d54794980dd0b3456cc12. No Android-app dependency lockfile is evidenced; Android dependency locking remains open. The Node-tooling lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. Owner: W4 (Android follow-up).
 
 ### B.2 Toolchain invariants
 
@@ -1927,7 +1927,7 @@ Sections F to K follow in the companion part of this guide: connectivity (F), se
 
 Last updated: 2026-11-08.
 
-Repository pin: `e3b65fb0` (Doc 1, section 4, 'Clone and verify the commit').
+Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
 Section E set up the vault and its unlock lifecycle; this section connects the wallet to the four testnets.
 
@@ -2709,7 +2709,7 @@ Until then, treat this as a testnet guide for a testnet wallet. TESTNET-only doe
 
 ## G — Send and signing
 
-Repository pin: `e3b65fb0` (Doc 1, section 4, 'Clone and verify the commit').
+Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
 Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
 
@@ -2973,13 +2973,13 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 
 ## H — UI contract
 
-Repository pin: `e3b65fb0` (Doc 1, section 4, 'Clone and verify the commit').
+Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
 A UI template is optional: implement section H yourself, or adapt an existing template only if it meets the same screen and security contract. If no template meets the contract, build the UI from section H and do not adopt a template for the sake of having one. Templates, if you want one, are ranked in the appendix; the guide is complete without one.
 
 This section supplies no user interface. Apply this contract to your navigation, layouts, required calls and displayed information, including protected input and mnemonic backup presentation.
 
-Implement the shared 14-screen set in `Screens.kt`: **Welcome**, **Create wallet**, **Import wallet**, **Mnemonic backup**, **Portfolio dashboard**, **Asset list**, **Asset detail**, **Receive**, **Send**, **Transaction history**, **Transaction details**, **Network selection**, **Wallet management**, and **Security and backup settings**.
+The canonical screen list and permitted-data contract are defined in docs/14 section 5.1. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
 
 Treat **Review** and **Lock** as required states, not separate screens on Android. Use the Send review flow for Review and the Locked state for Lock.
 
@@ -3171,7 +3171,7 @@ Until then, treat this as a testnet guide for a testnet wallet. Mainnet is absen
 |---|---|---|---|---|
 | Receive — address allocation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.reserveAddress()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine`. | **VERIFIED** — As of 2026-11-08, the cited draft symbols provide receive-address state in `WalletViewModel`, reservation through `WalletSession.reserveAddress()`, and the engine entry points `WalletEngine.deriveAddress(chain, xpub, index)` and `WalletEngine.tonDepositAddress(walletId)`. Verify their delegation during integration; this symbol mapping does not establish an executed call chain. | **Warning** — Secret-bearing data that you pass to Receive can reach ordinary UI channels. Keep the forbidden set, public-key derivation objects and any secret encoded as a QR outside Receive; check that ordinary UI receives only the approved public request and verified rendering reference.<br><br>Show **Loading** while obtaining and validating the address. Preserve the existing address-allocation policy. Do not allocate a new address during recomposition or when reopening the view unless that policy requires it. | Trace the wiring between receive-address state, reservation and the applicable engine entry point. Exercise recomposition and reopening; confirm that allocation follows the unchanged policy. Inspect UI-boundary payloads and reject forbidden data or derivation objects. |
 | Receive — address validation and public request | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — receive-address state in `WalletViewModel`.<br>Use these as integration points, not as evidence of a validator or request builder. | **OPEN** — As of 2026-11-08, ownership validation, permitted-network validation and payment-request construction require adapters: **NO DRAFT API — adapter requirement**.<br>The QR payload format is pinned in the repo guide's docs/07 Receive QR payloads table (D25). Encode the selected chain's approved payload with error correction explicitly set to M. Decode the actual QR output used by the UI, require the decoded text to match the intended payload, then parse and verify it against the selected network, recipient and associated request. Do not present a failed result as a verified QR. | Validate ownership and permitted network context before approving public receive data. The payload format is pinned in docs/07; retain the requirement for a **verified payment-request QR**; do not substitute the draft’s bare-address bitmap.<br>Show **Ready** only with the complete address, unmistakable network name, relevant asset information and matching verified QR. Keep the full address available wherever you show receive content.<br>Show **Error** for address, network or ownership mismatches. Disable copy and sharing for a failed request. | Confirm that address, ownership and network failures produce **Error** and prevent copy or share. Check every Ready field against the approved request and verified rendering. The payload format is pinned in the repo guide's docs/07 (OI-061); test payment-request interoperability against the pinned format. |
-| Receive — QR generation and decode-back verification | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — QR rendering within `Screens.Receive`, using `QRCodeWriter`.<br>V4 QR audit, 2026-11-08. | **VERIFIED** — As of 2026-11-08, this is the only draft QR-generation point. The draft configures ZXing core **3.5.3** `QRCodeWriter` for a **512×512** bitmap containing the bare address only. Its QR is display-only and unverified at runtime. The implementation lacks payment-request fields, decode-back verification and the required **Stale** and **Error** states.<br>Output decoding and decoded-payment-request verification: **NO DRAFT API — adapter requirement**. | Generate the QR without requesting camera permission. Show **Loading** while preparing it.<br>Decode the actual generated output, then validate the decoded request against the approved public request and current context. Do not substitute validation of the input text for verification of the rendered output. Return a verified rendering reference only after those checks succeed.<br>Show **Error** for a QR mismatch and prevent copy or share of the failed request. Keep all secrets out of QR payloads. | Decode the actual generated bitmap and compare its address and supported payment-request fields with the approved request. Reject mismatched output and withhold Ready, copy and sharing. Treat decode-back verification as an implementation requirement, not existing draft behaviour. Complete format-dependent checks after resolving the payload contract: Blocked pending OI-061. |
+| Receive — QR generation and decode-back verification | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — QR rendering within `Screens.Receive`, using `QRCodeWriter`.<br>V4 QR audit, 2026-11-08. | **VERIFIED** — As of 2026-11-08, this is the only draft QR-generation point. The draft configures ZXing core **3.5.3** `QRCodeWriter` for a **512×512** bitmap containing the bare address only. Its QR is display-only and unverified at runtime. The implementation lacks payment-request fields, decode-back verification and the required **Stale** and **Error** states. It also encodes with the ZXing default error correction L, not the required M.<br>Output decoding and decoded-payment-request verification: **NO DRAFT API — adapter requirement**. | Generate the QR without requesting camera permission. Show **Loading** while preparing it.<br>Decode the actual generated output, then validate the decoded request against the approved public request and current context. Do not substitute validation of the input text for verification of the rendered output. Return a verified rendering reference only after those checks succeed.<br>Show **Error** for a QR mismatch and prevent copy or share of the failed request. Keep all secrets out of QR payloads. | Decode the actual generated bitmap and compare its address and supported payment-request fields with the approved request. Reject mismatched output and withhold Ready, copy and sharing. Treat decode-back verification as an implementation requirement, not existing draft behaviour. Complete format-dependent checks after resolving the payload contract: Blocked pending OI-061. |
 | Receive — context and vault-state changes | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — balances and receive-address state in `WalletViewModel`. | **OPEN** — As of 2026-11-08, context observation and shared vault-state observation require adapters: **NO DRAFT API — adapter requirement**. Connect them to the existing UI state without introducing secret-bearing state. | Show **Stale** and require revalidation of cached requests or QR renderings after wallet, network or policy-context changes. Do not invalidate a locally validated address solely because the balance feed is offline.<br>Give **Locked** precedence over cached content: hide wallet-specific receive content and disable sharing.<br>Show **Gate-failed** when a required unlock does not complete. Do not automatically continue a queued share.<br>Communicate every state without relying on colour alone. | Change the wallet, network and policy context; confirm that cached approval cannot survive the change. Take the balance feed offline without changing context; confirm that this alone does not invalidate the address. Lock while receive content is cached, then cancel or fail a required unlock; confirm hidden content, disabled sharing and no automatic queued share. |
 | Receive — public copy and verified sharing | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — receive-address state in `WalletViewModel`.<br>Use these as UI integration points. | **OPEN** — As of 2026-11-08, guarded public copying and current-context verified-request sharing require adapters: **NO DRAFT API — adapter requirement**. | **Warning** — Sharing after a context change can give the recipient an obsolete request. Recheck the request’s context immediately before sharing; cancel the action if current validation fails.<br><br>Guard every clipboard action and name the selected network in copy warnings. Require current validation before copying approved public fields or sharing a verified request. Reject a verification badge from an earlier context. Never copy or share a failed request. | Change context between verification and the copy or share action; confirm that the action requires fresh validation and cannot rely on the earlier badge. Check that copy warnings name the selected network and that outbound data contains only approved public fields. Confirm that a failed required unlock does not resume sharing automatically. |
 | Receive — camera permission and scanning dependency | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — `QRCodeWriter` rendering.<br>V4 QR audit — Android manifest and scanner findings. | **VERIFIED** — As of 2026-11-08, the Android manifest declares an unused `CAMERA` permission. Neither draft contains a scanner library or camera code; QR scanning exists nowhere in the drafts. The dead permission is a draft defect.<br>QR scanning: **NO DRAFT API — adapter requirement**. | Remove the dead `CAMERA` permission, or retain it only once an implemented scanner uses it. Do not request camera permission for receive-QR generation.<br>Keep both receive-QR and scanning in scope, following the 2026-11-08 scope decision. Apply the shared QR, camera and data-boundary guards when implementing scanning. | Inspect the manifest for unused permission declarations and confirm that Receive generation needs no camera grant. Demonstrate an implemented scanner before claiming scanning availability.<br>**OPEN** — Scanning verification is Blocked pending OI-060. |
@@ -3729,7 +3729,7 @@ As of 2026-11-08, **VERIFIED** — the recorded reference run at `082f7915` retu
 
 1. Clone Bawa, check out the recorded commit and run the reference checks.
 
-   Start in an empty directory that will become the repository root. Clone and pin the repository with the canonical procedure in the repository guide (Doc 1, §3: clone, `git checkout --detach e3b65fb0`, `git rev-parse HEAD`, clean-tree check), then keep the remaining commands at that root.
+   Start in an empty directory that will become the repository root. Clone and pin the repository with the canonical procedure in the repository guide (Doc 1, §3: clone, `git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12`, `git rev-parse HEAD`, clean-tree check), then keep the remaining commands at that root.
 
    ```sh
    python3 -m venv .venv &&
@@ -3744,7 +3744,7 @@ As of 2026-11-08, **VERIFIED** — the recorded reference run at `082f7915` retu
    bip_utils reference checks: PASS
    ```
 
-   Git leaves the checkout detached at `e3b65fb0`; pip installs the requirements into `.venv`. The final command exits with status `0`.
+   Git leaves the checkout detached at `e3b65fb832db287fdc8d54794980dd0b3456cc12`; pip installs the requirements into `.venv`. The final command exits with status `0`.
 
 ### Per-case checks
 
@@ -4148,7 +4148,7 @@ Mark every unvisited surface, missing device pass or untested lifecycle path **O
 
 ## J — Security documentation
 
-Repository pin: `e3b65fb0` (Doc 1, section 4, 'Clone and verify the commit').
+Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
 Read the shared security baseline in the repository guide (`docs/08`) and the single threat model (`docs/15`). Use this section for the Android-specific checks and procedures.
 
@@ -4753,14 +4753,14 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
    Follow the repository guide’s canonical clone-and-pin procedure in Doc 1 §1 for **the Bawa repository only**, `Pr3eve6ti2o/bawa`. Clone Bawa through that procedure, then run these commands from its checkout:
 
    ```sh
-   git checkout --detach e3b65fb0
+   git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12
    git rev-parse HEAD
    git status --short
    ```
 
    > **Expected result**
    >
-   > Git places the checkout in detached-HEAD state at `e3b65fb0`. `git rev-parse HEAD` prints the full commit ID beginning with `e3b65fb0`. `git status --short`: No output.
+   > Git places the checkout in detached-HEAD state at `e3b65fb832db287fdc8d54794980dd0b3456cc12`. `git rev-parse HEAD` prints the full commit ID beginning with `e3b65fb832db287fdc8d54794980dd0b3456cc12`. `git status --short`: No output.
 
    Record the full commit ID. Stop if the revision differs or the status command reports changes. Initialise only the recorded submodule revisions if the checkout uses submodules; do not follow their latest branches.
 
@@ -5139,7 +5139,7 @@ Check that you can:
 
 ## L. Recovery by symptom
 
-Repository pin: `e3b65fb0` (Doc 1, section 4, 'Clone and verify the commit').
+Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
 README §13–14 remain the canonical home for repo-level troubleshooting and FAQ; this section covers only Android-build problems
 
@@ -5295,7 +5295,7 @@ in the lane files.
 | OI-005 | No Core AAR exists; the source build has never been completed; no locally built AAR. | Doc 3 §C, §I, §K | Builder | OPEN | W4 OI-A05; W5 OI-02. |
 | OI-006 | Whether 4.9.2 artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route; the flatDir-first local build is the verified path. | Doc 3 §C | Builder | OPEN | W4 OI-A06. |
 | OI-007 | No wrapper JAR is committed and no distributionSha256Sum is recorded; the draft wrapper's Gradle version is a validation baseline, not a project pin. | Doc 3 §B | Builder | OPEN | W4 OI-A07. |
-| OI-008 | No lockfile (repo root or Android app). Partially resolved 2026-11-08: tools/hdwallet-gen/package-lock.json was added by the phase-1 repair at e3b65fb0. No root lockfile; no Android-app lockfile. The tools lockfile is present at the documented clone pin e3b65fb0. | Doc 1 docs/10; Doc 2 §B; Doc 3 §B | Maintainers | OPEN (partially resolved) | W4 OI-A08; W5 OI-18; W3 §B (Web row OI-042). |
+| OI-008 | No lockfile (repo root or Android app). Partially resolved 2026-11-08: tools/hdwallet-gen/package-lock.json was added by the phase-1 repair at e3b65fb832db287fdc8d54794980dd0b3456cc12. No root lockfile; no Android-app lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 1 docs/10; Doc 2 §B; Doc 3 §B | Maintainers | OPEN (partially resolved) | W4 OI-A08; W5 OI-18; W3 §B (Web row OI-042). |
 | OI-011 | Inactivity / auto-lock timeout value undecided — the builder must choose one value, record it, and add an acceptance test that locks at that deadline. | Doc 3 §E, §J | Builder | OPEN | W4 OI-A11; W5 OI-14. |
 | OI-013 | TON fixture record (V3, 2026-11-08): Wallet V4 R2, wallet ID 698983191, workchain 0, m/44'/607'/0'. Canonical record: Doc 1, docs/11, 'TON fixture (V3, 2026-11-08)'. | Doc 1 docs/11; Doc 3 §D | Builder | CLOSED (V3, 2026-11-08) | W4 OI-A13; W5 OI-05; W3 §C (Web row OI-044). |
 | OI-014 | Whether the generated HDWallet exposes an explicit delete() method is unconfirmed, and deterministic disposal of every native wrapper is unverified; until verified, the fixture gate must not report READY. | Doc 3 §D.9 | W4 | OPEN | W4 OI-A14; W5 OI-31. |
@@ -5314,7 +5314,7 @@ in the lane files.
 | OI-037 | QR scope: keep receive-QR and scanning — RESOLVED by the user on 2026-11-08. Remaining open items concern specification details, implementation and verification, not whether to include either feature. | Doc 1 docs/07, docs/13, docs/14; Doc 2 §F, §G, §J; Doc 3 §H | User (decided) | RESOLVED (2026-11-08) | W3 §G/§J. |
 | OI-038 | QR payment-request scanning spec — open/build items (D24 F12): esbuild worker integration; native selection/failover controls; browser and camera coverage; loopback camera verification; EIP-681 @chainId forms; ton-test://; bare BTC/ETH/TON addresses in a QR; authoritative testnet-context checks; session timeout duration; decoder third-party notices inventory. | Doc 2 §F; Doc 3 §H | Builder | OPEN | W3 §F (D24 F12). |
 | OI-039 | Web live creation and live restore performed in the V2 browser run (2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps); live spend was not exercised (no testnet funds). | Doc 2 §A, §D, §F, §H, §J, §K | Builder | OPEN (spend only) | W3 §A/§D/§F/§H/§J/§K; Android row OI-031. |
-| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb0 (Core 4.8.4 exact); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb0. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
+| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
 | OI-043 | Web account-0 public nodes and TRX anchor Core confirmation — Core-confirmed in a recorded run (D31, 2026-11-08). | Doc 2 §C | Builder | CLOSED (D31, 2026-11-08) | W3 §C; Android row OI-067. |
 | OI-044 | Web TON fixture — recorded in the repo guide, docs/11, 'TON fixture (V3, 2026-11-08)'. | Doc 2 §C; Doc 1 docs/11 | Builder | CLOSED (V3, 2026-11-08) | W3 §C; Android row OI-013. |
 | OI-045 | Web WASM parity corpus — the upstream corpus exists (wasm/tests/ at tag 4.9.2); Node parity 6/6 MATCH on 4.9.2 and 4.8.4 (D30, 2026-11-08). The in-browser run on 4.9.2 remains open (OI-092). | Doc 2 §C | Builder | CLOSED (corpus); in-browser run open via OI-092 | W3 §C; Android row OI-015. |
@@ -5346,7 +5346,7 @@ in the lane files.
 | OI-072 | Recovery rehearsal never executed (Android). | Doc 3 §I.5, §K.6 | Builder | OPEN | W5 OI-15; W3 §I (Web row OI-056). |
 | OI-073 | No independent security review exists; the review scope was undefined (Android). | Doc 3 §J.7, §K.6 | Maintainers | OPEN | W5 OI-16; W3 §I (Web row OI-055). |
 | OI-074 | The 'intended TON wallet' is unnamed, so release gate 3 cannot pass. | Doc 3 §K.6 | Maintainers | OPEN | W5 OI-17. |
-| OI-075 | CI improvements (D23 F5): CI still runs npm install rather than npm ci; no live generation (TTY-gated); no decrypt round trip; differential test only BTC/ETH index 0; floating ubuntu-latest/@v4/@v5; no Dependabot; single job. The original 'CI runs syntax checks only' claim is STALE per D23 (CI runs npm test and the differential test at e3b65fb0). | Doc 1 docs/10; Doc 3 §K | Maintainers | OPEN | W5 OI-19. |
+| OI-075 | CI improvements (D23 F5): CI still runs npm install rather than npm ci; no live generation (TTY-gated); no decrypt round trip; differential test only BTC/ETH index 0; floating ubuntu-latest/@v4/@v5; no Dependabot; single job. The original 'CI runs syntax checks only' claim is STALE per D23 (CI runs npm test and the differential test at e3b65fb832db287fdc8d54794980dd0b3456cc12). | Doc 1 docs/10; Doc 3 §K | Maintainers | OPEN | W5 OI-19. |
 | OI-076 | Reproducible builds unverified (Android). | Doc 3 §K.4 | Builder | OPEN | W5 OI-20. |
 | OI-077 | Dependency and secret scanning never run; no scanner named or validated. | Doc 3 §J.13, §K | Maintainers | OPEN | W5 OI-21; W3 §J (Web row OI-059). |
 | OI-078 | Paid-security prices (Doc 1 docs/08) dated 30 October 2026 — CLOSED by the D17 re-check (8 November 2026): Casa $250/$2,100/$7,500/$2,750 per year; Unchained and Fireblocks figures as in docs/08. | Doc 1 docs/08 | Maintainers | CLOSED (D17, 2026-11-08) | W5 OI-23. |
@@ -5494,7 +5494,7 @@ Until then, treat this as a testnet guide for a testnet wallet. Mainnet is absen
 
 ## Improve this guide
 
-If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb0` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
+If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
 
 ## Need help?
 

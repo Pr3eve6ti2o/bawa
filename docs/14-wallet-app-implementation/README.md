@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to Trust Wallet Core 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06), and require a Node version of at least 22 and below 23.
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06) is a separate, uncompleted step; do not present 4.9.2 as the installed pin until the manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
@@ -63,6 +63,7 @@ Require the numeric coin values and fixture derivations to match these offline e
 > - TON numeric coin value: 607.
 > - BTC fixture address: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`
 > - ETH fixture address: `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
+> - TON fixture address (non-bounceable, mainnet presentation of the Core return): `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`, contract Wallet V4 R2, wallet ID 698983191, path `m/44'/607'/0'`, workchain 0. Testnet forms: `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo` (bounceable) and `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt` (non-bounceable). Full record and verification: docs/11.
 
 Treat the addresses as offline fixture expectations, not payment destinations or expected fresh-wallet outputs. Stop on any mismatch; never fall back to fresh generation. Refer to the companion fixture section for the implementation.
 
@@ -88,7 +89,7 @@ Until the recorded ownership-contract review establishes explicit ownership and 
 
 ### Open signing proof
 
-Keep the live EIP-1559 signing proof open. Treat the demonstration on Trust Wallet Core 4.8.4 as evidence for that release only, and re-run the proof against Trust Wallet Core 4.9.2.
+Treat the Trust Wallet Core 4.8.4 demonstration as evidence for that release only. D21 (8 November 2026) completed the EIP-1559 construction/signing demonstration with txMode: 1 against Trust Wallet Core 4.9.2 in a work copy of the Web draft upgraded to @trustwallet/wallet-core@4.9.2. The full suite recorded 31 pass / 0 fail; the dedicated demonstration produced a 0x02 envelope with exactly 12 RLP fields, and independent Python sender recovery matched the published fixture address exactly. The in-browser proof, send, sign and broadcast remain open.
 
 ## Derivation module
 
@@ -102,7 +103,9 @@ Apply `bawa-derivation-policy-v1`. This policy covers Bawa-generated wallets; th
 
 For BTC, ETH and TRX, fix account `0'` and use only receiving branch `0`. Vary only the final non-hardened index `i`. Follow the [BIP44 account/change/index layout](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), with [BIP84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) for BTC.
 
-- For BTC (`btc`), use account xpub origin `m/84'/0'/0'` and pass the full path `m/84'/0'/0'/0/i` to Wallet Core.
+For BTC (`btc`), use account xpub origin `m/84'/0'/0'` and pass the full path `m/84'/0'/0'/0/i` to `core.HDWallet.getPublicKeyFromExtended`. This API derives from the supplied xpub using only the trailing change/index components (`0/i`); it ignores the purpose, coin type and account components of the supplied path. Passing the full path therefore does not verify the xpub's account origin. Independently establish that the supplied xpub has the required account origin before deriving, and reject mismatched or unverified origins. Otherwise, a path/xpub disagreement can silently return a valid-looking address from the wrong account branch. Do not treat address validation as proof that the key belongs to the intended account.
+
+Bawa retains coin type `0'` on testnet4. This differs from SLIP-0044's testnet coin type `1` and SLIP-0132's association of `vpub` with `m/84'/1'`. The testnet derivation taught in docs/09 is therefore not the Bawa derivation used here. A standard testnet wallet using `m/84'/1'` will derive a different account from the same mnemonic and must not be assumed to reproduce Bawa's account or addresses.
 - For ETH (`eth`), use account xpub origin `m/44'/60'/0'` and pass the full path `m/44'/60'/0'/0/i` to Wallet Core.
 - For TRX (`trx`), use account xpub origin `m/44'/195'/0'` and pass the full path `m/44'/195'/0'/0/i` to Wallet Core.
 
@@ -166,6 +169,8 @@ Never persist a plaintext mnemonic or private key. Never place the data key in t
 
 Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more lowercase words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
 
+An existing `seed.enc.json` causes refusal unless `generate.js --force` is passed. When that flag is set and the file exists, the generator copies it to `seed.enc.json.bak.<timestamp>` and proceeds to replace it. `make_wallet.py` accepts `--force` or `--regenerate` and passes `--force` to `generate.js`.
+
 ### 3.2 Envelope and commit
 
 Retain Bawa’s repository envelope: AES-256-GCM, a random 32-byte data key, a fresh 12-byte nonce and fixed AAD `nova-shop-seed-v1`. Use no password KDF for this envelope. Never reuse a key/nonce pair.
@@ -182,7 +187,7 @@ Use versioned migrations for storage changes, preserving authenticated encryptio
 
 ### 3.3 Platform protection and memory
 
-Choose and record one shared inactivity timeout for the application, since no inactivity timeout is defined in the repository. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
+Set the shared application inactivity timeout to 10 minutes. This explicitly adopts the Web validation draft's ten-minute auto-lock interval as shared policy. At 754721cd, that interval is evidenced for the Web draft, and no inactivity timeout was found in the Android draft. Both platforms must meet the shared timeout; this policy statement does not establish that both drafts already comply. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
 
 Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
@@ -206,11 +211,11 @@ Hardware wrapping keys do not migrate. Restore either from the mnemonic or from 
 
 Apply one clipboard policy throughout the application. Prohibit copying the mnemonic, and provide no clipboard controls for either the mnemonic or the recovery data key in the recovery view. Do not access the clipboard at import. Do not automatically paste from the clipboard into any input.
 
-Provide one-tap copy for the receive address, with automatic clipboard clearing after a successful paste or after 60 seconds, whichever occurs first. On the web, make clear that the browser cannot guarantee erasure.
+Provide one-tap copy for the receive address, with automatic clipboard clearing after a successful paste or after 60 seconds, whichever occurs first. On the web, make clear that the browser cannot guarantee erasure. This is a requirement, not a statement of completed implementation: at 754721cd, both drafts contain receive-address copy code, but neither implements automatic clipboard clearing.
 
 ### 3.6 Vault passphrase policy and Web draft evidence
 
-Choose and record one minimum length for the vault unlock passphrase, since the repository specifies none. Reject weak passphrases under the recorded policy.
+Set the shared minimum vault unlock passphrase length to 8 characters. This explicitly adopts the minimum enforced by the Web validation draft in `main.js` as shared policy. Enforcement outside the Web draft is not established by the supplied evidence. Reject weak passphrases under the recorded policy.
 
 Keep the Web validation draft’s vault distinct from the repository envelope. Treat its PBKDF2-600k with AES-256-GCM and its own AAD `bawa-web-vault-v1` as draft implementation choices. Preserve the distinction that this AAD is deliberately not the repository’s AAD. Do not claim `seed.enc.json` compatibility.
 
@@ -287,7 +292,7 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 - **Welcome:** Show the create-or-import choices, explain recovery responsibility and introduce network choice.
 - **Create wallet:** Show recovery guidance and the selected network. Create the wallet through Wallet Core without displaying the mnemonic here.
 - **Import wallet:** Show network choice and masked import entry. Import through Wallet Core, and never retain import text in persisted forms or navigation state.
-- **Mnemonic backup:** Display the mnemonic once, offline. Verify selected words using protected entry, then clear temporary buffers. Prohibit copying, sharing, QR export and analytics.
+- **Mnemonic backup:** Display the mnemonic once, offline. Require the user to re-enter all 24 mnemonic words from their saved copy, in their original order, using protected entry. Accept backup confirmation only when the complete ordered entry matches the mnemonic, then clear temporary buffers. Do not accept selected words, a partial match or a tick-box acknowledgement. Prohibit copying, sharing, QR export and analytics.
 - **Portfolio dashboard:** Show account and chain context, balances and transaction records. Include balance freshness information.
 - **Asset list:** Show assets and their balances for the selected account and chain, with freshness information.
 - **Asset detail:** Show the selected asset, account, chain, full account address, optional public key, balance and related transaction records. Include balance freshness information.
@@ -301,11 +306,11 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). Receive-QR exists today only in the Android draft Receive screen (ZXing core 3.5.3, display-only, never runtime-verified); it still lacks the guide's decode-verification step, payment-request fields and Stale/Error states, and the Web draft has no QR of any kind. Scanning exists nowhere yet in either draft, and the Web guide contains no scanning specification. Add the web encoder and the Android verification half, and write the scanning specification, before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
 
 ### 5.2 Confirmation and send flow
 
-Take Send through Compose, Review, the biometric/PIN gate, Sign, Broadcast and Confirm, in that order.
+Take Send through Compose, Review, the platform-appropriate authentication or vault-session unlock gate, Sign, Broadcast and Confirm, in that order. In the Web draft, `approveAndSign()` calls `S.session.requireMnemonic()` before signing. On Android, use the biometric/device-credential gate. This is the required flow; it is not a claim that the complete sequence has been verified in both drafts.
 
 Before any signature, show the sender, **full recipient address**, amount and asset, chain/network, fee estimate and maximum authorised fee.
 
@@ -313,7 +318,7 @@ Copy public data only, using the complete address. Warn that other apps may read
 
 Explain the decoded contract call in plain language from the actual payload, never from untrusted descriptive text. Identify the contract and function, explain the changes and transfers, and state the approval spender and allowance, including unlimited approvals. Block unknown or undecodable actions; never blind-sign. Require understandable intent for message signatures as well.
 
-Bind authorisation to the reviewed payload. Restart Review and the biometric/PIN gate after any edit, chain change or fee change. Have Wallet Core sign only that payload, and have RPC broadcast the signed transaction.
+Bind authorisation to the reviewed payload. Restart Review and the platform-appropriate authentication or vault-session unlock gate after any edit, chain change or fee change. Have Wallet Core sign only that payload, and have RPC broadcast the signed transaction.
 
 Do not treat broadcast acknowledgement as confirmation. Track inclusion, confirmations and reorgs.
 
@@ -350,7 +355,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 
   This layer has no runnable procedure in this guide yet.
 
-- **Differential tests.** Pin Trust Wallet Core to `4.9.2` and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
+- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
 
   Use `test/differential_test.py` to independently check these published index-zero fixtures:
 
@@ -362,6 +367,8 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
   > `compare.js` prints only public addresses at indices `0`, `1` and `2`.
   >
   > `test/differential_test.py` independently checks the BTC and ETH fixtures above and prints `PASS`.
+
+  Exception at 754721cd: unlike `derive.js` and `derive_daemon.js`, `compare.js` does not reject private extended keys; given a private extended key it prints silently wrong addresses with exit 0 (D06 F1). Do not feed `compare.js` anything but a verified account public root.
 
   Assert exact equality in CI. Track the extension of independent coverage to TRX and indices `1` and `2` as an open item. Treat these checks as public-derivation coverage, not custody or signing coverage. Treat the addresses as fixtures, not payment destinations, and label the BTC vector as mainnet-formatted.
 
@@ -383,7 +390,7 @@ Keep the reported test results separate and retain their stated limits:
 
 - 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
 - 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
-- The phase-1 repair copy produced 28 ok, 0 fail, exit 0.
+- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0.
 
 Do not combine these counts or use them as evidence of a build, device run or live-network validation.
 
@@ -409,13 +416,13 @@ Treat the install steps as an unexecuted procedure, not a verified path: no debu
 
 Keep the on-device fixture gate marked as never run: no Core AAR has been built and no device run has happened, so the gate has never run.
 
-Live validation so far: wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. No live testnet spend has been made from this wallet.
+Live validation so far: wallet creation and recovery were verified end to end in a live run on 8 November 2026 (V1; pushed head at the time: 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1's watch-only checks — derive 9/9, compare 9/9 and smoke 28/28 — ran on the repaired working copy, byte-identical to the phase-1 repair later pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12. The subsequent professional rewrite was pushed as 754721cd. No live testnet spend has been made from this wallet.
 
 Use this nine-step checklist as work to complete, not as evidence of completion. Do not pass any release gate without its own evidence.
 
 1. **Establish the security scope.** Keep the app scoped to testnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
 
-2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.9.2` and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
+2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
 
 3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `NOVA_ENV`. Preserve the frozen identifier and use published fixtures, never customer wallet material.
 

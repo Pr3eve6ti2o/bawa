@@ -17,7 +17,7 @@ Reference comparison table:
 | EVM (Ethereum) | Supported, watch-only | 60 | `m/44'/60'/0'/0/x` |
 | TRON | Supported, watch-only | 195 | `m/44'/195'/0'/0/x` |
 | TON | Generation-only | 607 | `ton_path` from `CoinTypeExt.derivationPath(CoinType.ton)` |
-| Solana | Reference-only | 501 | Phantom/Solflare `m/44'/501'/x'/0'`; Trust/Sollet `m/44'/501'/x'` |
+| Solana | Reference-only | 501 | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. |
 | Cardano | Reference-only | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` |
 
 Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO (CIP-1852); TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
@@ -94,6 +94,7 @@ Nested SegWit was a compatibility bridge: older senders could pay a familiar `3.
 If you restore while scanning only another purpose, your wallet finds no outputs and shows zero. Hardened `49'` and `84'` select different subtrees; the outputs have not moved.
 
 In the BIP-49 testnet vector, `m/49'/1'/0'/0/0` gives `2Mww8dCYPUpKHofjgcXcBCEGmniw9CoaiD2`, with account prefix `upub`.
+This vector uses the BIP-49 specification's mnemonic: "abandon" repeated 11 times, followed by "about".
 
 Use this receiving descriptor:
 
@@ -323,11 +324,7 @@ ok("ton_valid", CoinTypeExt.validate(CoinType.ton, tonAddress));
 
 `ton_valid` confirms that Core accepts the address for `CoinType.ton`. It does **not** compare it with the account selected by a separate receiving wallet.
 
-`make_wallet.py` maps `ton_address` to `TON_DEPOSIT_ADDRESS` in `.env`. The placeholder form is:
-
-```dotenv
-TON_DEPOSIT_ADDRESS=<VERIFIED_TON_ADDRESS>
-```
+`make_wallet.py` maps `ton_address` to `TON_DEPOSIT_ADDRESS` in `.env`. The `.env.example` template contains `TON_DEPOSIT_ADDRESS=`, with no placeholder text.
 
 Populate it with the generated `ton_address`, verified in your intended receiving wallet before publication. A passing `ton_valid` check is not that verification.
 
@@ -340,7 +337,7 @@ Verify and monitor the intended account as follows:
 3. Verify the address in that wallet before publishing it. Compare both the SDK result and Bawa’s `ton_address` with your intended wallet’s receiving account. If they disagree, stop and resolve the key-scheme or contract-configuration difference.
 4. Monitor the verified account read-only, using account-state and transaction queries on the intended network. Keep the mnemonic and private key out of the watcher.
 
-TON fixture, derived and independently verified on 2026-11-08 two ways — Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent SLIP-0010 derivation (pure-stdlib Python + PyNaCl) cross-checked with @ton/ton (Core 4.8.4 — the 4.9.2 re-run open item applies):
+TON fixture, derived and independently verified on 2026-11-08 two ways — Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent SLIP-0010 derivation (pure-stdlib Python + PyNaCl) cross-checked with @ton/ton (Core 4.8.4 — the Core 4.9.2 re-run was completed by D31 and recorded in the programme notes):
 
 - Mnemonic: `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` (published Core test vector); passphrase empty.
 - ed25519 public key (`m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`.
@@ -364,10 +361,7 @@ Solana uses coin type `501` (SLIP-0044), Ed25519 keys and an account model: addr
 
 The Wallet Core registry lists two wallet path forms:
 
-| Wallets | Path |
-| --- | --- |
-| Trust/Sollet | `m/44'/501'/0'` |
-| Phantom/Solflare | `m/44'/501'/0'/0'` |
+Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'.
 
 Do not treat these paths as interchangeable. SLIP-0010 Ed25519 uses hardened-only child derivation; the extra `/0'` is another derivation step. Use your target wallet’s exact policy, including account numbering and import behaviour. Verify your results with published test material and known expected addresses for that wallet and path.
 
@@ -425,7 +419,7 @@ Use the actual network's documentation and test vectors before assuming a Bitcoi
 | ETH/EVM | Supported, watch-only (ETH) | 60 | secp256k1 | Account | `m/44'/60'/0'/0/i`, BIP-44 | 20-byte hex with `0x` | Watch-only ETH derivation on exactly the shown route |
 | TRX | Supported, watch-only | 195 | secp256k1 | Account | `m/44'/195'/0'/0/i`, BIP-44 | Base58Check `T…` (hex begins `41`) | Watch-only derivation on exactly the shown route |
 | TON | Generation-only | 607 | Ed25519 | Smart-contract wallet account | `ton_path` via `CoinTypeExt.derivationPath(CoinType.ton)` | Raw `<workchain>:<account-id-hex>`, or friendly Base64/Base64url (workchain 0 without the test-only flag: `EQ…` bounceable, `UQ…` non-bounceable) | Generates one deposit address per wallet; no xpub; no watch-only child derivation |
-| SOL | Reference-only | 501 | Ed25519 | Account | Phantom/Solflare `m/44'/501'/x'/0'`; Trust/Sollet `m/44'/501'/x'` | Base58-encoded public key (no fixed textual prefix) | No derivation, generation, or signing |
+| SOL | Reference-only | 501 | Ed25519 | Account | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. | Base58-encoded public key (no fixed textual prefix) | No derivation, generation, or signing |
 | ADA | Reference-only | 1815 | Ed25519 with Cardano's extended-key scheme | Extended-UTXO | Payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` (CIP-1852) | Shelley Bech32 `addr1…` mainnet / `addr_test1…` testnet; reward `stake1…` / `stake_test1…` (CIP-19) | No derivation, generation, or signing |
 
 The BTC/ETH/TRX entries are the derive tools' COMPLETE chain and path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `x'` is a hardened account index.
@@ -446,7 +440,7 @@ Complete testnet rows (SLIP-0132, labelled testnet):
 
 For the full SLIP-0132 table (mainnet and testnet rows), see docs/01.
 
-**Re-encoding a testnet address.** To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program. Change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` has witness program `01c252d7b62c638895aa976479d608a14eb9daf3`; re-encoded it is `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`. The standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`. Changing an extended-key prefix re-encodes the same node; it does not move it onto another derivation path. With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
+**Re-encoding a testnet address.** To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program. Change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` has witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`; re-encoded it is `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`. The standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`. Changing an extended-key prefix re-encodes the same node; it does not move it onto another derivation path. With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 
 **TON naming.** Core 4.9.2 `registry.json` records symbol `GRAM`; SLIP-0044 records coin 607 as TON; Bawa uses TON. The registry entry is `ton`, coin ID 607.
 

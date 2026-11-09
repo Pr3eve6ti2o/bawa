@@ -46,7 +46,7 @@ Judge custody by the keys, not the service label. Count who controls enough sign
 
 Use free tools without assuming that they remove your responsibility for maintaining the arrangement.
 
-Use open-source coordinators such as Electrum or Sparrow for watch-only coordination, preparing partially signed Bitcoin transactions (PSBTs), and coordinating multisig. For air-gapped signing, transfer a PSBT file on MicroSD or use QR codes. Check what you sign regardless of the transfer method.
+Use open-source coordinators such as Electrum or Sparrow for watch-only coordination, preparing partially signed Bitcoin transactions (PSBTs), and coordinating multisig. For air-gapped signing, use MicroSD or QR transfer only where the selected coordinator and separate signer support compatible PSBT formats and the chosen transfer method. Verify and record the complete PSBT exchange on testnet before relying on that route. Check what you sign regardless of the transfer method.
 
 Consider each of these options:
 
@@ -182,7 +182,7 @@ Use Bawa to learn how the pieces fit, but do not rely on it to watch your funds.
 
 **Open item:** No external security review has been commissioned.
 
-Treat the external security review as a mandatory gate, not an optional extra. Require an independent review of the wallet’s key handling, storage, signing flow and network code against the threat model in docs/15.
+Treat the external security review as a mandatory gate, not an optional extra. Require an independent review against the threat model in docs/15 of Bawa’s documented workflow and relevant repository code, covering key generation, key handling and storage guidance, watch-only derivation with no seed present, and independent checks. Explicitly define the boundaries with external coordinators, signers and hardware wallets. Identify separately any review of those external components’ signing or network code; do not describe that code as Bawa’s.
 
 Record the review’s findings and resolve all critical and high findings before considering any mainnet work. Do not treat passing this gate as authorisation for mainnet use.
 
