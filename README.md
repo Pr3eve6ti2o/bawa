@@ -257,10 +257,18 @@ test -z "$(git status --short)"
 
 Require a clean tree before installing. Stop and resolve any reported changes; do not discard files merely to force the check through.
 
-Use this detached checkout as the canonical pin throughout the guide set.
+Create a separate detached worktree at the repair commit. Do not check the
+repair commit out in this working directory: doing so would replace the
+corrected README you are reading with the older README from that commit.
 
 ```sh
-git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12
+git worktree add --detach ../bawa-pinned e3b65fb832db287fdc8d54794980dd0b3456cc12
+```
+
+Enter the pinned worktree and run the same checks there.
+
+```sh
+cd ../bawa-pinned
 ```
 
 **Expected result — check**
@@ -278,6 +286,33 @@ git rev-parse HEAD
 ```sh
 test "$(git rev-parse HEAD)" = "$(git rev-parse 'e3b65fb832db287fdc8d54794980dd0b3456cc12^{commit}')" &&
 test -z "$(git status --short)"
+```
+
+Return to the original directory and prove the corrected guide survived: the
+commit is still the one you cloned, the README is still 1243 lines, and the
+tree is still clean.
+
+```sh
+cd ../bawa
+```
+
+**Expected result — check**
+```sh
+test "$(git rev-parse HEAD)" = "56396a2010c150b2aa9ea70102194127048e905b"
+test "$(wc -l < README.md | tr -d ' ')" = 1243
+test -z "$(git status --short)"
+```
+
+All commands from §6 onward run inside `../bawa-pinned`. The original
+directory stays at the commit you cloned so you can keep reading the corrected
+guide.
+
+Once testing is complete, remove the pinned worktree from the original
+directory (do not run this from inside the worktree itself).
+
+```sh
+cd ../bawa
+git worktree remove ../bawa-pinned
 ```
 
 No signed-release verification procedure exists. Treat recording the commit as the minimum check, not proof of authenticity.
