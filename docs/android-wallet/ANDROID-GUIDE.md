@@ -3729,7 +3729,7 @@ As of 2026-11-08, **VERIFIED** — the recorded reference run at `082f7915` retu
 
 1. Clone Bawa, check out the recorded commit and run the reference checks.
 
-   Start in an empty directory that will become the repository root. Clone and pin the repository with the canonical procedure in the repository guide (Doc 1, §3: clone, `git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12`, `git rev-parse HEAD`, clean-tree check), then keep the remaining commands at that root.
+   Start in an empty directory that will become the repository root. Clone and pin the repository with the canonical procedure in the repository guide (Doc 1, §4: clone, separate detached worktree at `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `git rev-parse HEAD`, clean-tree check), then run the remaining commands inside the pinned worktree (`../bawa-pinned`), not in the original directory.
 
    ```sh
    python3 -m venv .venv &&
@@ -3744,7 +3744,7 @@ As of 2026-11-08, **VERIFIED** — the recorded reference run at `082f7915` retu
    bip_utils reference checks: PASS
    ```
 
-   Git leaves the checkout detached at `e3b65fb832db287fdc8d54794980dd0b3456cc12`; pip installs the requirements into `.venv`. The final command exits with status `0`.
+   Git leaves the original directory at the commit you cloned and the pinned worktree at `e3b65fb832db287fdc8d54794980dd0b3456cc12`; pip installs the requirements into `.venv`. The final command exits with status `0`.
 
 ### Per-case checks
 
@@ -4750,17 +4750,16 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
 2. **Check out and pin the Bawa repository.**
 
-   Follow the repository guide’s canonical clone-and-pin procedure in Doc 1 §1 for **the Bawa repository only**, `Pr3eve6ti2o/bawa`. Clone Bawa through that procedure, then run these commands from its checkout:
+   Follow the repository guide’s canonical clone-and-pin procedure in Doc 1 §4 for **the Bawa repository only**, `Pr3eve6ti2o/bawa`. Clone Bawa through that procedure, then run these commands from inside the pinned worktree (`../bawa-pinned`):
 
    ```sh
-   git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12
    git rev-parse HEAD
    git status --short
    ```
 
    > **Expected result**
    >
-   > Git places the checkout in detached-HEAD state at `e3b65fb832db287fdc8d54794980dd0b3456cc12`. `git rev-parse HEAD` prints the full commit ID beginning with `e3b65fb832db287fdc8d54794980dd0b3456cc12`. `git status --short`: No output.
+   > `git rev-parse HEAD` prints the full commit ID beginning with `e3b65fb832db287fdc8d54794980dd0b3456cc12`. `git status --short`: No output. The original directory stays at the commit you cloned, so the corrected guide is still readable there.
 
    Record the full commit ID. Stop if the revision differs or the status command reports changes. Initialise only the recorded submodule revisions if the checkout uses submodules; do not follow their latest branches.
 

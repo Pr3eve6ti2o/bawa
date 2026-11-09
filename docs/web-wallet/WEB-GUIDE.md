@@ -75,12 +75,13 @@ All links checked: **2026-11-08**.
 
 1. **Clone the repository and pin the checkout.**
 
-   Clone Bawa first; this guide does not assume that you already have the repository. Use this setup for testnet only.
+   Clone Bawa first; this guide does not assume that you already have the repository. Use this setup for testnet only. Pin with the canonical procedure in the repository guide (Doc 1, §4): clone, then create a separate detached worktree at the pin — do not check the pin out in the directory you cloned into, or the corrected guide you are reading is replaced by the older text.
 
    ```sh
    git clone https://github.com/Pr3eve6ti2o/bawa.git
    cd bawa
-   git checkout e3b65fb832db287fdc8d54794980dd0b3456cc12
+   git worktree add --detach ../bawa-pinned e3b65fb832db287fdc8d54794980dd0b3456cc12
+   cd ../bawa-pinned
    ```
 
    Every repository reference in this guide is written against `e3b65fb832db287fdc8d54794980dd0b3456cc12`. First-hand verification of this pinned checkout on 2026-11-08 included reading the files cited in the guide. Use those pinned files when following later sections rather than substituting a different checkout.

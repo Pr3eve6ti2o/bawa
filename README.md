@@ -1066,20 +1066,33 @@ Do not casually overwrite your seed bundle (the encrypted `seed.enc.json` file) 
 
 **Step 1 — Fetch and record the new commit (§4).**
 
-From the repository root, fetch and check out the new commit detached. The §4 checkout is detached, so `git pull` does not apply:
+From the original directory (the one you cloned into), fetch and update it. That directory was never detached — §4 pins the code in a separate worktree — so `git pull` applies here. Require a clean tree in both directories first (`git status --short` prints nothing in each); stop and resolve any reported changes.
 
 ```sh
 git fetch origin
-git checkout --detach <commit>
+git pull
+git rev-parse HEAD
 ```
 
 > **Expected result**
 >
-> Git checks out the requested commit without errors.
+> Git updates the original directory to the new commit without errors and prints the full commit ID of the new head. Save it with your update records; it is the `<commit>` for the worktree below. The README you are reading is still the corrected guide.
 
-After the checkout succeeds, print the checked-out commit and record the result:
+Then replace the pinned worktree with one at the new commit. Run this from the original directory (do not run it from inside the worktree itself):
 
 ```sh
+git worktree remove ../bawa-pinned
+git worktree add --detach ../bawa-pinned <commit>
+```
+
+> **Expected result**
+>
+> Git removes the old pinned worktree and creates a new one at the new commit. The original directory still reads the corrected guide.
+
+After the worktree is created, confirm the pinned commit and record the result:
+
+```sh
+cd ../bawa-pinned
 git rev-parse HEAD
 ```
 
@@ -1089,7 +1102,7 @@ git rev-parse HEAD
 
 **Step 2 — Reinstall dependencies (§6).**
 
-Repeat both Node installs from §6. If the Python requirements changed, run this from the repository root with your venv active:
+Repeat both Node installs from §6, inside the pinned worktree (`../bawa-pinned`). If the Python requirements changed, run this from the pinned worktree root with your venv active:
 
 ```sh
 pip install -r requirements.txt
@@ -1101,7 +1114,7 @@ pip install -r requirements.txt
 
 **Step 3 — Re-run the checks.**
 
-From the repository root, run:
+From inside the pinned worktree (`../bawa-pinned`), at the new commit, run:
 
 ```sh
 npm --prefix tools/hdwallet-gen run check
@@ -1109,11 +1122,11 @@ npm --prefix tools/hdwallet-gen run check
 
 > **Expected result**
 >
-> At `e3b65fb832db287fdc8d54794980dd0b3456cc12` the syntax check passes on all four files (see §6); record the result and compare it with your pre-update records. At the former pin `082f7915` it failed on `derive.js`, `derive_daemon.js` and `compare.js`. A check that newly passes or newly fails after an update is a stop signal — follow §13.
+> The baseline at `e3b65fb832db287fdc8d54794980dd0b3456cc12` is that the syntax check passes on all four files (see §6); record the result at the new commit and compare it with your pre-update records. At the former pin `082f7915` it failed on `derive.js`, `derive_daemon.js` and `compare.js`. A check that newly passes or newly fails after an update is a stop signal — follow §13.
 
-Follow §10 to re-run the `compare.js` comparison — at `e3b65fb832db287fdc8d54794980dd0b3456cc12` it runs (see §6); record its output and compare with your pre-update records — then §11 to re-run the differential test. Compare the results with your pre-update records.
+Follow §10 to re-run the `compare.js` comparison inside the pinned worktree — at `e3b65fb832db287fdc8d54794980dd0b3456cc12` it runs (see §6); record its output and compare with your pre-update records — then §11 to re-run the differential test. Compare the results with your pre-update records.
 
-The tools package's test script targets test/smoke.test.js, which exists in this tree at `e3b65fb832db287fdc8d54794980dd0b3456cc12` and passes 28/28 (verified 2026-11-08). Use that script as an update check.
+The tools package's test script targets test/smoke.test.js, which exists in the pinned tree at `e3b65fb832db287fdc8d54794980dd0b3456cc12` and passes 28/28 (verified 2026-11-08). Use that script as an update check.
 
 **Step 4 — Stop on failure (§13).**
 

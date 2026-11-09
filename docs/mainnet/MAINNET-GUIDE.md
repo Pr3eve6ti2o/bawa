@@ -280,7 +280,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 Gate status below is the **2026-11-09 baseline**, not a statement that the gates have passed.
 
 - [ ] **Clean, trusted machine.** Stop before handling seed material or data keys if you cannot establish that the machine is clean and trusted.
-- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `42eab796`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
+- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `45d75a2a`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
 - [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
@@ -359,7 +359,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
    > The original directory is still at the cloned baseline commit, its README is still 1243 lines, and its tree is still clean. All three tests must succeed:
    >
    > ```sh
-   > test "$(git rev-parse HEAD)" = "42eab796c521e5f9ab273cb7e728160dfd6ad41f"
+   > test "$(git rev-parse HEAD)" = "45d75a2aa4ad94af94d382cb2c8a626c614f0188"
    > test "$(wc -l < README.md | tr -d ' ')" = 1243
    > test -z "$(git status --short)"
    > ```
@@ -383,7 +383,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
 
 **Decided 2026-11-10 — proof form.** Step 4 uses the literal baseline HEAD SHA in the proof; the literal SHA is the check. The `MAIN_HEAD` capture in step 1 is supporting context only — record it for provenance, do not substitute it for the literal SHA. If main advances and Doc 4 is re-issued, update the literal SHA in step 4 to the new baseline.
 
-**PROVISIONAL — cross-references.** References to the F4 treatment in Doc 1 §15 and to the Android guide at L3732 and L4756 remain provisional, pending user decisions. Those Android locations still carry the old in-place detach; do not follow that forbidden form.
+**Decided 2026-11-10 — cross-references.** The F4 treatment in Doc 1 §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
 
 ## 6. Node and Python installation
 
@@ -2993,7 +2993,7 @@ For this baseline, use the repo-pinned **Node 22.23.4**. The declared range is `
 
 Doc 4’s current pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`. **Re-pinning to a newer head is OPEN**, pending the user’s decision. For any agreed update, re-run the **§5 worktree procedure** against the new head; §5 contains the full procedure. **Never update by checking a new commit out in place inside the working directory:** an in-place detach silently replaces the guide being read. (M28; F4 fix)
 
-The cross-reference to the F4 treatment in **Doc 1 §15 is PROVISIONAL**, pending the user’s decision. (M28; F4 fix)
+The cross-reference to the F4 treatment in **Doc 1 §15 was updated to the worktree procedure** in the 2026-11-10 push. (M28; F4 fix; M-34 decided 2026-11-10)
 
 Do not carry over the testnet guides’ old in-place pinning procedure, treat the testnet4 deviation as a mainnet defect, or reuse testnet endpoints, addresses or network metadata as mainnet configuration. Testnet gate outcomes are not mainnet evidence. (M28 §0; M36 F4)
 
@@ -3854,7 +3854,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** M36 item 3 (pin decision), M36 F3 (supplied repair value) and M36 item 5 (proof form); re-checked register — M-33, 2026-11-09; user decision 2026-11-10.
 
-### M-34 — F4 §15 + Android L3732/L4756 decisions still pending the user’s word
+### M-34 — F4 §15 + Android L3732/L4756 (decided 2026-11-10)
 
 **Question/risk:** §5/§19 cross-references point to the old in-place detach or the wrong section, reintroducing F4 in the mainnet guide.
 
@@ -3866,15 +3866,15 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M01 F35 identifies L4756 as the old checkout and L3732 as the wrong “Doc 1, §3” reference. The pin procedure is §4.
 - M19 D16 places the F4 follow-ups at parent level, not within M19. See also M28-OI-10.
 
-**Status:** OPEN — pending the user’s word. Asked on 2026-11-09 at approximately 17:25 IST; unanswered.
+**Status:** RESOLVED 2026-11-10 — the user approved the §15 worktree treatment and the Android L3732/L4756 updates; applied and pushed in this revision.
 
-**Operational restriction:** §5/§19 cross-references must stay provisional and flagged as M- entries until answered. The F4 worktree procedure remains the baseline for §4/§5 regardless.
+**Operational restriction:** None remaining for the §15/Android cross-references. The F4 worktree procedure remains the baseline for §4/§5.
 
-**Blocks writing completion:** No — provisional flagging is the authorised handling for these cross-references.
+**Blocks writing completion:** No — resolved by the 2026-11-10 decision.
 
-**Clearance condition:** The user’s decision on §15 treatment and the Android L3732/L4756 updates. Any status change must cite that decision.
+**Clearance condition:** Met 2026-11-10 — the user’s approval of the §15 treatment and the Android L3732/L4756 updates.
 
-**Gate/source links:** M36 item 2, M24 K01 and M28-OI-10; re-checked register — M-34, 2026-11-09.
+**Gate/source links:** M36 item 2, M24 K01 and M28-OI-10; re-checked register — M-34, 2026-11-09; user decision 2026-11-10.
 ### M-35 — No live send/sign/broadcast has been exercised; no reviewed small-amount rehearsal procedure exists
 
 **Question/risk:** No live send has been observed on any network; every send procedure is UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL; no reviewed small-amount procedure exists yet, so this guide invents none (M36 F12). The per-chain "tiny" amounts for sizing the rehearsal are also unestablished (M16-F17).
@@ -4125,7 +4125,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 28. In-browser fixture reproduction on mainnet endpoints unverified | m29 | OPEN — check derivation, displayed addresses and network selection without funding. |
 | 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 195 Warning callouts; unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
 | 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED in part — UI-appendix placement decided; §5 proof-staleness remains OPEN, carried as M-33. |
-| 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | OPEN — carried as M-34; asked 2026-11-09 ~17:25 IST, unanswered. |
+| 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | RESOLVED 2026-11-10 — carried as M-34 (worktree treatment applied and pushed). |
 | 32. Landing and re-check of all 36 source slices | M35 §3 item 32; O-M35-1 | CLOSED — all 36 slices landed and were re-checked. |
 
 **Item 30:** UI-appendix placement is **DECIDED**. The write-phase plan (2026-11-09 ~22:41 IST) specifies **no new UI appendix**: Doc 4 points to the Doc 2/Doc 3 appendices with “vetted for testnet; mainnet vetting open”. The §5 proof-staleness half remains **OPEN**, carried as **M-33**.
