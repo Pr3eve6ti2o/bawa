@@ -115,9 +115,15 @@ They supersede the corresponding statements in sections 1–6 where noted.
    WALLET-TEST-REPORT.md in the bawa-wallet-test working area. This is
    additional engine evidence for sections 1.2 and 4.1.
 8. M-31/M-15 reviewer still not designated. Criteria are in section 6.1.
-   The independent audit (claude-opus-5-5 via AgentRouter) is queued to run
-   once the daemon fix was verified (now done — H7) and a second pass at
-   the Phase 9 gates.
+   MODEL RESTRICTION (owner, 2026-11-10): Astra is the only authorised
+   AI model for this project, for every remaining phase. Opus is cancelled
+   completely — no Opus re-run, no other Claude model, no fallback. The
+   Phase 9 audit is an Astra second-pass review, labelled as such — never
+   presented as an independent audit. Independent verification in this
+   programme means Orion's first-hand verification (probes, test runs,
+   fresh-clone read-backs), not a second model. (Front-matter item 8
+   corrected at the Phase 2 checkpoint; the plan's section 6.1/6.5
+   Opus-audit references are superseded by this note.)
 
 
 ## 1. Baseline and verified state

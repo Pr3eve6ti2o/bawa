@@ -1,0 +1,110 @@
+# WALLET_BUILDER.md
+
+## Identify the request
+Begin with one plain-language sentence stating the requested product, platform, chains, operations and network.
+Default the network to testnet; mark other missing facts OPEN. Describe the user's goal, not an already-implemented capability.
+
+## Classify to a profile
+All seven profiles are PROPOSED; Phase 3 validates them. Use the plan to resolve overlaps; unresolved fit is OPEN.
+
+- `hd-wallet-cli` — CLI generation/derivation requests under the fixed engine policy.
+- `bitcoin-wallet` — Bitcoin-focused wallet requests; transaction support must not be assumed.
+- `evm-wallet` — ETH/EVM-oriented requests; support beyond the specified ETH policy is OPEN.
+- `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
+- `web-wallet` — Browser-wallet requests, with UI foundation reuse subject to inspection.
+- `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only.
+- `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
+
+Profile selection is routing, not a capability claim. Do not invent an eighth profile or assume profiles can be combined without plan support.
+
+## Select authoritative sources
+- **Plan:** `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`; read front matter for post-draft updates. It governs architecture, phases, templates, gates and decisions.
+- **Canonical guides:** `README.md` and Docs 01–16. Resolve actual numbered-guide filenames by inspection, not naming guesses.
+- **Doc 2:** `docs/web-wallet/WEB-GUIDE.md` for Web guidance.
+- **Doc 3:** `docs/android-wallet/ANDROID-GUIDE.md` for Android guidance.
+- **Doc 4:** `docs/mainnet/MAINNET-GUIDE.md`, with 22 sections and the 46-row register in section 21. Consulting its policy/gates does not authorize mainnet use.
+- **UI contract:** Doc 14 §5.1.
+- **Registries and assets:** use exact planned paths from plan §2.2 and inspect them. Profile-definition, registry, template and starter paths not supplied here are OPEN; see the planned asset map in `AGENTS.md`. Consult registries only when they exist.
+- **Prompts:** the naming convention is `ai/prompts/create-*.md`; inspect actual files rather than inventing filenames or claiming their existence.
+
+If a required source is unavailable or conflicting, record the issue as OPEN and stop the affected decision rather than guess.
+
+## Routing examples
+Examples inherit the testnet default and do not establish implementation.
+
+| Request example | Profile | Key sources |
+| --- | --- | --- |
+| Generate fresh test wallets from the CLI | `hd-wallet-cli` | Plan; `tools/hdwallet-gen`; Docs 01–16 |
+| Build a Bitcoin testnet wallet | `bitcoin-wallet` | Plan; Docs 01–16; Doc 4 policy/gates |
+| Build an Ethereum testnet wallet | `evm-wallet` | Plan; Docs 01–16; Doc 4 policy/gates |
+| Build a BTC/ETH/TRX/TON wallet | `multichain-wallet` | Plan; Docs 01–16; fixed TON restriction |
+| Build a browser wallet | `web-wallet` | Plan; Doc 2; Doc 14 §5.1 |
+| Build an Android wallet | `android-wallet` | Plan; Doc 3; Doc 14 §5.1 |
+| Show public-address balances without holding keys | `watch-only-wallet` | Plan; Docs 01–16; registries if present |
+
+## Execute the 12 steps
+1. **Parse:** capture the request sentence, required behavior, constraints and acceptance criteria. Keep missing choices OPEN; default to testnet.
+2. **Plan:** read the authority, identify the applicable phase, decisions and gates, and separate available scope from new work.
+3. **Profile:** select a proposed profile and record its fit and validation status. Use an actual inspected prompt only if present.
+4. **Engine:** inspect `tools/hdwallet-gen`, dependencies and available typed interfaces. Route engine responsibilities there; unknown interfaces are OPEN. Signing is not currently implemented.
+5. **Chains:** identify endpoint, fee, broadcast and confirmation requirements. Inspect actual adapter availability; unknown support is OPEN. Identify external dependencies and pass no secrets or secret-bearing objects.
+6. **Template:** nominate the plan-defined template/starter for the selected scope. Resolve its path from §2.2; no installed asset or compatible interface may be assumed.
+7. **Inspect:** inspect the repository and selected template/foundation before scaffolding. Check licensing, versions, boundaries, interfaces and gaps; perform Phase 5 foundation confirmation when applicable.
+8. **Scaffold:** use only the authorized, inspected layout. If paths, dependencies or required decisions remain unresolved, stop the blocked scaffolding rather than invent them.
+9. **Implement:** make scoped changes in the correct layers. Cryptographic work belongs behind engine interfaces, not in prompts, UI, adapters or orchestration. Missing transaction functionality is new work, not wiring to an assumed capability.
+10. **Verify:** run applicable inspected build/test/check procedures and record actual outcomes. Exercise relevant policies and UI states. Unavailable, blocked or unexecuted checks are NOT-RUN.
+11. **Audit claims:** compare each claim with its evidence, scope and network. Separate mocks, documentation and external dependencies from demonstrated behavior; generator checks cannot verify transaction flows.
+12. **Report:** show what works, what is mocked, what failed or was not run, unresolved questions, and the next required decisions/gates.
+
+Inspection must precede scaffolding. Do not skip a blocked step silently or turn a requested capability into an implementation claim.
+
+## Fixed engine and chain policy
+Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.8.4**; Node range **>=22 <23**.
+Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.2**.
+Unspecified commands, interfaces or dependency versions are OPEN until inspected.
+
+Derivation is fixed: **BIP-39, 256-bit entropy, 24 words, empty passphrase, account 0, receiving branch 0 only**. Preserve the chain-specific paths below; do not invent alternate paths or index ranges.
+
+| Chain | Fixed derivation / generation policy | Confirmation policy |
+| --- | --- | --- |
+| BTC | `m/84'/0'/0'/0/i` | 6 confirmations: recommendation, not protocol. |
+| ETH | `m/44'/60'/0'/0/i` | `finalized`; retain “12” only as an unsourced extra minimum, never a substitute. |
+| TRX | `m/44'/195'/0'/0/i` | 19 distinct SRs of 27 via `/walletsolidity/*`. |
+| TON | `m/44'/607'/0'`; generation-only, single address; wallet V4 R2; wallet ID 698983191 | 1 masterchain seqno after inclusion plus an outgoing-message outcome check. |
+
+This table is policy, not evidence of implemented or tested transaction handling.
+There is no signing, broadcast or transaction-construction code at H7; send/sign/broadcast has never been exercised on any network.
+Default to testnet without silently changing fixed policy. Unestablished network compatibility or endpoint details remain OPEN.
+
+## UI foundations and contract
+Owner-approved foundations, subject to Phase 5 confirmation by inspection:
+- Web: **token-ui** (`consenlabs/token-ui`), **MIT**.
+- Android: **Tether WDK Starter Kotlin**, **UI layer only**, **Apache-2.0**.
+- Default visual direction: **Bawa Balanced**.
+
+Reuse remains PROPOSED until inspected and evidenced; owner approval is not proof of integration. Foundation versions and unlisted local paths are OPEN.
+The UI/UX catalogue package is **not installed** in the repository.
+
+Follow Doc 14 §5.1's **14-screen contract**. **Review is a Send state; Lock is an app state**, not extra screens.
+Required states: **loading, empty, stale, locked, gate-failed, error**.
+UI presentation must not acquire derivation, storage or signing policy.
+
+## Verify and report honestly
+Fresh, real, functional test seed phrases/private keys MAY be generated under `AGENTS.md` controls. Use only test-only keys, never production or existing keys, never real mainnet funds. Never expose secrets or weaken controls to pass a check.
+
+Use exactly these evidence labels as defined in `AGENTS.md`:
+**IMPLEMENTED_AND_VERIFIED**, **DOCUMENTED_NOT_TESTED**, **PROPOSED**, **OPEN**, **EXTERNALLY_DEPENDENT**, **UNVERIFIED**.
+
+For each scoped claim/check, populate an evidence table with these columns:
+
+| Claim / scope | Evidence label | Revision / network | Actual command or artifact and observed result | PASS / FAIL / NOT-RUN | Mock / limitation / next gate |
+| --- | --- | --- | --- | --- | --- |
+
+Report changed files, demonstrated behavior, mocked behavior and unresolved work separately. Redact secrets; missing evidence is OPEN.
+The supplied H7 result—92 checks, 0 fail—is baseline evidence only, not a current-run pass.
+A successful build proves only its build scope; a tested mock proves only mock behavior. Neither demonstrates real transaction handling or mainnet readiness.
+
+## Stop rules
+- Stop the affected work when a required source, interface, approval, secret boundary or gate cannot be satisfied. State unsupported scope explicitly; do not fabricate substitutes or successful outcomes.
+- Never claim a build, a test pass or mainnet readiness without scoped evidence.
+- Never route mainnet use without separate approval. Approval does not replace applicable plan gates or mandatory real-funds gates; otherwise remain on testnet.

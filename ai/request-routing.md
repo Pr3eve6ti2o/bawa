@@ -1,0 +1,75 @@
+# ai/request-routing.md
+
+Read `AGENTS.md` and `WALLET_BUILDER.md`. Governing policy, layer rules and engine detail remain there and in `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
+All seven profiles are proposed; their `ai/profiles/<id>.md` files are planned for Phase 3. A routing match is not proof of availability or verification.
+Follow the entry-point workflow: parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report.
+
+## Classify the request
+
+1. Parse the requested interface, operations, chains and deliverable. Screen unsupported intent against the refusal list below.
+2. Match the intended build contract, not an isolated keyword, to the table.
+3. Use the mapped prompt and `ai/profiles/<id>.md`, substituting the listed profile ID. Do not invent a generic profile file.
+4. If the intended profile is ambiguous, ask one clarifying question and wait. If multiple profiles are explicitly requested, split the builds.
+
+| Intent / keywords | Example request | Profile ID | Prompt |
+| --- | --- | --- | --- |
+| CLI, command-line HD generation/derivation/recovery; BTC/ETH/TRX watch-only | “Build a CLI HD wallet with recovery and BTC/ETH/TRX watch-only.” | `hd-wallet-cli` | `ai/prompts/create-hd-wallet.md` |
+| Bitcoin, BTC derivation, 6-confirmation contract, Bitcoin watch-only | “Build a Bitcoin derivation and watch-only wallet with a 6-confirmation policy.” | `bitcoin-wallet` | `ai/prompts/create-bitcoin-wallet.md` |
+| ETH/EVM language with explicit ETH derivation and finalized-policy intent | “Build an ETH derivation wallet using the finalized policy.” | `evm-wallet` | `ai/prompts/create-evm-wallet.md` |
+| BTC/ETH/TRX/TON multichain; TON generation-only | “Build a BTC/ETH/TRX/TON wallet, with TON generation only.” | `multichain-wallet` | `ai/prompts/create-multichain-wallet.md` |
+| Browser, web wallet UI, 14 screens, token-ui | “Build a 14-screen web wallet using token-ui.” | `web-wallet` | `ai/prompts/create-web-wallet.md` |
+| Android, Kotlin wallet UI, 14 screens | “Build a 14-screen Android wallet UI.” | `android-wallet` | `ai/prompts/create-android-wallet.md` |
+| Watch-only, extended public keys, xpub input, no secrets/signing | “Derive addresses only from extended public keys, without secrets or signing.” | `watch-only-wallet` | `ai/prompts/create-watch-only-wallet.md` |
+
+## Scope boundaries affecting routing
+
+- Testnet is the default throughout. Mainnet without separate approval must be refused. Unspecified testnet path/network details are OPEN; supplied derivation references do not authorize mainnet use.
+- No signing or broadcast code exists in this repo. A wallet name, UI screen or foundation choice does not establish those capabilities.
+- ETH derivation does not establish generic EVM operation. Unspecified EVM capabilities are OPEN, not supported claims.
+- TON is generation-only in the proposed multichain profile: no send and no xpub. TRX derivation is `m/44'/195'/0'/0/i`; TON derivation is `m/44'/607'/0'`, generation-only.
+- Web uses owner-approved `token-ui`; Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 confirms these foundations by inspection.
+- No Android build exists yet, and no AAR/APK has ever been produced.
+- Web, Android and watch-only chain/path coverage not supplied here is OPEN; do not borrow another profile's capabilities.
+
+## Ambiguous requests: ask one question
+
+Leave profile selection OPEN until the answer resolves the ambiguity. The questions below are alternatives, not a questionnaire.
+
+- “Build a wallet”: ask, “Which build do you want: CLI HD, Bitcoin, ETH-focused EVM, BTC/ETH/TRX/TON multichain, web UI, Android UI, or extended-public-key-only watch-only?”
+- “Bitcoin watch-only wallet”: ask, “Do you want the Bitcoin profile's 6-confirmation contract or the extended-public-key-only watch-only profile?”
+- “EVM wallet” without a clear operation: ask, “Do you mean ETH derivation, or a different chain or operation?”
+- “Mobile wallet” without a platform: ask, “Do you mean the listed Android UI profile?”
+
+Ask only one applicable clarifying question and wait; do not guess or silently expand scope.
+
+## Multi-profile requests
+
+- Split explicitly requested profiles into separate builds, with one profile and its mapped prompt per build. Keep scope, verification and claims separate.
+- Example: “Build web and Android wallets” becomes one `web-wallet` build and one `android-wallet` build, not a merged profile.
+- The listed `multichain-wallet` is one proposed profile; it is not permission to merge the Bitcoin and EVM profiles.
+- A UI request mentioning BTC does not authorize merging UI and Bitcoin profiles. Check the UI profile's chain scope; if the intended build boundary is ambiguous, ask one question.
+- If the request insists on an unlisted combined profile, use the unlisted-profile refusal below.
+
+## Unsupported requests: exact sentences to report
+
+Report the matching sentence verbatim for each unsupported part. Do not improvise an implementation or silently substitute another feature or network. Route any remaining explicitly requested, routable parts separately.
+
+| Unsupported intent | Exact sentence |
+| --- | --- |
+| Mainnet use without separate approval | “I cannot support mainnet use without separate approval; the default scope is testnet.” |
+| Swaps, staking or bridges | “I cannot provide swaps, staking or bridges; they are out of scope for this programme.” |
+| Signing or broadcast claims without an engine that implements them | “I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.” |
+| TON send | “I cannot provide TON send; TON is generation-only in the proposed multichain profile.” |
+| Any profile not among the seven listed here | “I cannot route this request to an unlisted profile; only the seven profiles listed here are eligible for routing.” |
+| TON xpub | “I cannot provide TON xpub support; the proposed TON scope has no xpub support.” |
+
+Separate mainnet approval does not itself establish implementation or verification.
+
+## Pending validation and reporting
+
+- Route a matching request even while its profile is pending. Record the profile ID and prompt, label the proposed route PROPOSED, and report `profile pending validation`.
+- If an entry-point or planned profile file, verification procedure or result is unavailable, record OPEN. Do not invent missing file contents, tests or evidence.
+- Require passing Phase 3 validation evidence before promising the profile or claiming it is verified. Existing engine evidence or owner approval of a foundation is not a substitute.
+- Carry the selected profile's verification requirements into the plan and report. For web/Android, retain the 14-screen contract requirement and the Phase 5 foundation-inspection gap.
+- Use evidence labels only as justified: IMPLEMENTED_AND_VERIFIED / DOCUMENTED_NOT_TESTED / PROPOSED / OPEN / EXTERNALLY_DEPENDENT / UNVERIFIED.
+- Report the selected route or split routes, testnet scope, refused parts, validation and inspection gaps, OPEN facts, evidence labels and next required verification. Do not claim capabilities beyond the evidence.
