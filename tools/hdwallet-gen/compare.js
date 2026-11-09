@@ -1,10 +1,12 @@
 // compare.js — address comparison helper intended for extended public keys.
 // Reads XPUB_BTC/ETH/TRX from the file selected by NOVA_ENV, or the repository-root .env by default.
-// Prints public addresses only, but does not reject private extended keys.
-// Private extended-key inputs may repeat account-key addresses instead of producing the expected derived addresses.
+// Prints public addresses only. Private, bad-checksum, bad-version and
+// version-detectable wrong-chain inputs are rejected before WASM.
+// BTC/ETH/TRX xpubs share version 0488b21e, so an xpub carries no chain tag.
 const { initWasm } = require("@trustwallet/wallet-core");
 const fs = require("fs");
 const path = require("path");
+const { validateExtendedKey, redact } = require("./extended-key");
 
 const envPath = process.env.NOVA_ENV || path.join(__dirname, "..", "..", ".env");
 const env = {};
@@ -23,6 +25,17 @@ function addrFromXpub(core, xpub, coin, fullPath) {
 }
 
 (async () => {
+  // Validate every input before initialising WASM or deriving any addresses.
+  for (const [chain, xpub] of [
+    ["btc", env.XPUB_BTC],
+    ["eth", env.XPUB_ETH],
+    ["trx", env.XPUB_TRX],
+  ]) {
+    if (!xpub) throw new Error(`missing ${chain} xpub in ${envPath}`);
+    const validation = validateExtendedKey(xpub, chain);
+    if (!validation.ok) throw new Error(`${chain}: ${validation.message}`);
+  }
+
   const core = await initWasm();
   const { CoinType } = core;
   const jobs = [
@@ -31,8 +44,10 @@ function addrFromXpub(core, xpub, coin, fullPath) {
     ["trx", env.XPUB_TRX, CoinType.tron, i => `m/44'/195'/0'/0/${i}`],
   ];
   for (const [chain, xpub, coin, pathFn] of jobs) {
-    if (!xpub) throw new Error(`missing ${chain} xpub in ${envPath}`);
     const addrs = [0, 1, 2].map(i => addrFromXpub(core, xpub, coin, pathFn(i)));
     console.log(chain, ...addrs);
   }
-})().catch(e => { console.error("FATAL: " + e.message); process.exit(1); });
+})().catch(e => {
+  console.error("FATAL: " + redact(e.message));
+  process.exit(1);
+});

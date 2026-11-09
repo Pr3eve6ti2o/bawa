@@ -48,6 +48,50 @@ const FIXTURES = {
   },
 };
 
+// Published test vectors, never for funds.
+const NEGATIVE = {
+  TV1_XPRV: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
+  ZPRV: "zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE",
+  TV5_BAD: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL",
+  TV5_VER: "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm",
+  ZPUB84: "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs",
+  ETH_BAD_CHECKSUM: "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumd",
+};
+
+function runCompare(envText) {
+  const tempDir = fs.mkdtempSync(
+    path.join(require("node:os").tmpdir(), "oi-096-compare-")
+  );
+  const envFile = path.join(tempDir, "fixtures.env");
+
+  try {
+    fs.writeFileSync(envFile, envText, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    return spawnSync(
+      process.execPath,
+      [path.join(TOOLS_DIR, "compare.js")],
+      {
+        cwd: TOOLS_DIR,
+        env: { ...process.env, NOVA_ENV: envFile },
+        timeout: 60_000,
+        encoding: "utf8",
+      }
+    );
+  } finally {
+    // Remove the temporary env file and its directory.
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function timedRunCli(script, args, stdinData) {
+  const started = process.hrtime.bigint();
+  const result = runCli(script, args, stdinData);
+  const ms = Number(process.hrtime.bigint() - started) / 1e6;
+  return { result, ms };
+}
+
 let failures = 0;
 function check(name, cond, detail) {
   if (cond) {
@@ -127,6 +171,110 @@ async function testDaemon() {
   });
 }
 
+async function testDaemonPrivateRejection() {
+  return new Promise((resolve) => {
+    const child = spawn(
+      process.execPath,
+      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      {
+        cwd: TOOLS_DIR,
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
+
+    let finished = false;
+    let ready = false;
+    let stdoutBuffer = "";
+    let stderr = "";
+
+    const timer = setTimeout(() => {
+      finish(
+        false,
+        `timed out after 60 s waiting for ${
+          ready ? "a rejection reply" : "ready"
+        }; stderr=${stderr}`
+      );
+    }, 60_000);
+
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      check("derive_daemon.js rejects a private extended key", cond, detail);
+      child.kill();
+      resolve();
+    }
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.on("error", (error) => {
+      finish(false, `daemon spawn error: ${error.message}`);
+    });
+
+    child.stdin.on("error", (error) => {
+      finish(false, `daemon stdin error: ${error.message}`);
+    });
+
+    child.on("close", (code, signal) => {
+      finish(
+        false,
+        `daemon closed before rejection: status=${code}, signal=${signal}; stderr=${stderr}`
+      );
+    });
+
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+      stdoutBuffer += chunk;
+
+      let newline;
+      while (!finished && (newline = stdoutBuffer.indexOf("\n")) !== -1) {
+        const line = stdoutBuffer.slice(0, newline).trim();
+        stdoutBuffer = stdoutBuffer.slice(newline + 1);
+        if (line === "") continue;
+
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch (error) {
+          finish(false, `invalid JSONL on daemon stdout: ${error.message}`);
+          return;
+        }
+
+        if (!ready) {
+          if (!message || message.ready !== true) {
+            finish(false, "expected a ready message before sending the request");
+            return;
+          }
+
+          ready = true;
+          child.stdin.write(
+            JSON.stringify({
+              chain: "btc",
+              xpub: NEGATIVE.ZPRV,
+              index: 0,
+            }) + "\n"
+          );
+          continue;
+        }
+
+        finish(
+          message !== null &&
+            typeof message === "object" &&
+            message.ok === false &&
+            typeof message.error === "string" &&
+            message.error.includes("extended public key required"),
+          line
+        );
+      }
+    });
+  });
+}
+
 (async () => {
   const core = await initWasm();
   const { CoinType, CoinTypeExt } = core;
@@ -169,6 +317,142 @@ async function testDaemon() {
 
   // 6. Daemon JSONL protocol.
   await testDaemon();
+  // 7. derive.js rejection and index-1 regression checks.
+  {
+    const rejectionCases = [
+      ["TV1_XPRV", "btc", "private extended keys are rejected"],
+      ["ZPRV", "btc", "private extended keys are rejected"],
+      ["TV5_VER", "btc", "private extended keys are rejected"],
+      ["TV5_BAD", "btc", "checksum"],
+      ["ETH_BAD_CHECKSUM", "eth", "checksum"],
+      ["ZPUB84", "eth", "not allowed for eth"],
+      ["ZPUB84", "trx", "not allowed for trx"],
+    ];
+
+    for (const [vector, chain, expected] of rejectionCases) {
+      const label = `derive.js ${vector}/${chain}`;
+      const { result, ms } = timedRunCli(
+        "derive.js",
+        [chain, "0"],
+        `${NEGATIVE[vector]}\n`
+      );
+      const stdout = String(result.stdout || "");
+      const stderr = String(result.stderr || "");
+
+      check(
+        `${label}: exit 2`,
+        result.status === 2,
+        `status=${result.status}; stderr=${stderr}`
+      );
+      check(`${label}: empty stdout`, stdout === "", stdout);
+      check(
+        `${label}: expected rejection message`,
+        stderr.includes(expected),
+        `expected "${expected}"; stderr=${stderr}`
+      );
+
+      if (expected === "checksum") {
+        check(
+          `${label}: rejects within 5000 ms`,
+          ms < 5000,
+          `${ms.toFixed(1)} ms`
+        );
+        check(
+          `${label}: no WASM abort`,
+          !stderr.includes("Aborted") && !stderr.includes("enlarge memory"),
+          stderr
+        );
+      }
+    }
+
+    for (const chain of ["btc", "eth", "trx"]) {
+      const result = runCli(
+        "derive.js",
+        [chain, "1"],
+        `${FIXTURES[chain].xpub}\n`
+      );
+      const stdout = String(result.stdout || "");
+
+      check(
+        `derive.js ${chain} index 1: exit 0`,
+        result.status === 0,
+        `status=${result.status}; stderr=${result.stderr || ""}`
+      );
+      check(
+        `derive.js ${chain} index 1: matches fixture`,
+        stdout.trim() === FIXTURES[chain][1],
+        stdout
+      );
+    }
+  }
+
+  // 8. compare.js rejection without address output or echoed input.
+  {
+    const fixtureXpubs = {
+      btc: FIXTURES.btc.xpub,
+      eth: FIXTURES.eth.xpub,
+      trx: FIXTURES.trx.xpub,
+    };
+    const envTextFor = (xpubs) =>
+      `XPUB_BTC=${xpubs.btc}\n` +
+      `XPUB_ETH=${xpubs.eth}\n` +
+      `XPUB_TRX=${xpubs.trx}\n`;
+    const validEnvText = envTextFor(fixtureXpubs);
+
+    const rejectionCases = [
+      ["ZPRV", "btc", "private extended keys are rejected"],
+      ["TV5_BAD", "btc", "checksum"],
+      ["ETH_BAD_CHECKSUM", "eth", "checksum"],
+      ["ZPUB84", "eth", "not allowed for eth"],
+    ];
+
+    for (const [vector, chain, expected] of rejectionCases) {
+      const label = `compare.js ${vector}/${chain}`;
+      const input = NEGATIVE[vector];
+      const result = runCompare(
+        envTextFor({ ...fixtureXpubs, [chain]: input })
+      );
+      const stdout = String(result.stdout || "");
+      const stderr = String(result.stderr || "");
+
+      check(
+        `${label}: non-zero exit`,
+        Number.isInteger(result.status) && result.status !== 0,
+        `status=${result.status}; stderr=${stderr}`
+      );
+      check(`${label}: empty stdout`, stdout === "", stdout);
+      check(
+        `${label}: expected rejection message`,
+        stderr.includes(expected),
+        `expected "${expected}"; stderr=${stderr}`
+      );
+      check(
+        `${label}: input is not echoed`,
+        !stderr.includes(input),
+        "stderr contains the substituted input"
+      );
+    }
+
+    const validResult = runCompare(validEnvText);
+    const validStdout = String(validResult.stdout || "");
+
+    check(
+      "compare.js all-valid env: exit 0",
+      validResult.status === 0,
+      `status=${validResult.status}; stderr=${validResult.stderr || ""}`
+    );
+
+    for (const chain of ["btc", "eth", "trx"]) {
+      check(
+        `compare.js all-valid env: contains ${chain} index 0`,
+        validStdout.includes(FIXTURES[chain][0]),
+        validStdout
+      );
+    }
+  }
+
+  // 9. derive_daemon.js private-key rejection.
+  await testDaemonPrivateRejection();
 
   if (failures > 0) {
     console.log(`SMOKE TESTS FAILED: ${failures} failure(s)`);
