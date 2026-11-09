@@ -280,7 +280,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 Gate status below is the **2026-11-09 baseline**, not a statement that the gates have passed.
 
 - [ ] **Clean, trusted machine.** Stop before handling seed material or data keys if you cannot establish that the machine is clean and trusted.
-- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `45d75a2a`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
+- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `d2f0960c`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
 - [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
@@ -356,11 +356,11 @@ Use a separate worktree so pinning the code does not replace the guide you are r
 
    > **Expected result — check**
    >
-   > The original directory is still at the cloned baseline commit, its README is still 1243 lines, and its tree is still clean. All three tests must succeed:
+   > The original directory is still at the cloned baseline commit, its README is still 1256 lines, and its tree is still clean. All three tests must succeed:
    >
    > ```sh
-   > test "$(git rev-parse HEAD)" = "45d75a2aa4ad94af94d382cb2c8a626c614f0188"
-   > test "$(wc -l < README.md | tr -d ' ')" = 1243
+   > test "$(git rev-parse HEAD)" = "d2f0960c33f4590d1da64add7bb29ade1bb6b04e"
+   > test "$(wc -l < README.md | tr -d ' ')" = 1256
    > test -z "$(git status --short)"
    > ```
 
@@ -3881,11 +3881,11 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Affected sections:** §13 (whole section); §§11, 12, 14; §16; §17.
 
-**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20).
+**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision.
 
-**Status:** OPEN.
+**Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
 
-**Operational restriction:** No real funds move on the strength of this guide; no rehearsal procedure may be improvised from the capability table; §13 states the boundary only.
+**Operational restriction:** No real funds move on the strength of this guide; no rehearsal procedure may be improvised from the capability table; §13 states the boundary only. No funds move without separate explicit approval.
 
 **Blocks writing completion:** No — writing states the boundary. Blocks real-fund use and §17 gate closure.
 
@@ -3931,39 +3931,39 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 ### M-38 — BTC/ETH/TRX confirmation thresholds unconfirmed on mainnet
 
-**Question/risk:** The retained thresholds BTC 6 / ETH 12 + `finalized` / TRX 19 SR are stated in §16 as pinned wallet policies, UNCONFIRMED — none has been confirmed against current chain documentation. (The TON threshold is M-13.)
+**Question/risk:** The retained thresholds BTC 6 / ETH 12 + `finalized` / TRX 19 SR were stated in §16 as pinned wallet policies, UNCONFIRMED. (The TON threshold is M-13.)
 
 **Affected sections:** §16; §12; §14.
 
-**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied).
+**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, retained as a harmless extra minimum, subsumed by finalisation in normal operation); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` is the latest solidified block).
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-10 (owner decision).
 
-**Operational restriction:** Present the thresholds as pinned wallet policies, not verified chain facts; never present them as verified chain facts.
+**Operational restriction:** Present BTC 6, ETH `finalized` and TRX 19 SR as confirmed against current chain documentation (qualified as above). The ETH "12" is retained as an extra minimum without primary-source support — present it as such, never as a sourced threshold.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Each threshold confirmed against current chain documentation, with source and review date recorded.
+**Clearance condition:** Met 2026-11-10 (with the ETH "12" caveat recorded above).
 
-**Gate/source links:** M28-OI-03; M24 J21.
+**Gate/source links:** M28-OI-03; M24 J21; M-38 lane FINDINGS.md (2026-11-10).
 
 ### M-39 — Compatible external import/signing software not identified or tested
 
-**Question/risk:** The repository has no import tool and no signing code; no compatible external import or signing software has been identified or tested for any chain.
+**Question/risk:** The repository has no import tool and no signing code; no compatible external import or signing software has been identified or tested for any chain. For TON: Bawa can receive, not send; withdrawal needs external software.
 
 **Affected sections:** §7; §10; §13; §14.
 
-**Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON).
+**Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON). M-39 lane findings accepted 2026-11-10 (owner decision): NO GUI wallet is confirmed able to withdraw TON from a Bawa deposit address — Tonkeeper, MyTonWallet, Tonhub and the official TON Wallet all use TON-native mnemonics, NOT BIP-39 + `m/44'/607'/0'`; a BIP-39 import mode reproducing Bawa's derivation is UNVERIFIED for every candidate checked. Verified hands-on instead: `@ton/ton` reproduces the fixture address exactly from the published public key (9/9 local checks) and the on-chain query confirms the deployed V4R2 wallet matches (code hash, wallet ID 698983191, public key) — `@ton/ton` is the documented expert-assisted route. GUI watch-only import was NOT performed (no desktop browser on the test VM).
 
-**Status:** OPEN.
+**Status:** OPEN (findings accepted 2026-11-10; GUI withdrawal route unverified).
 
-**Operational restriction:** No application-specific restore instructions given; this guide must not imply the repository builds, signs or submits transfers.
+**Operational restriction:** No application-specific restore instructions given; this guide must not imply the repository builds, signs or submits transfers. Do not claim a working GUI withdrawal until one has actually been demonstrated.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Identified and tested compatible software per chain, or a stated "no tested route"; plus a decision on how the guide names external signers, with controls per chain.
+**Clearance condition:** Identified and tested compatible software per chain, or a stated "no tested route"; plus a decision on how the guide names external signers, with controls per chain. Next step for TON: GUI watch-only test on a desktop machine.
 
-**Gate/source links:** M16 open item 2, F09.
+**Gate/source links:** M16 open item 2, F09; M-39 lane FINDINGS.md (2026-11-10).
 
 ### M-40 — Change-passphrase flows unverified on both platforms
 
@@ -4104,7 +4104,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 7. Send-screen checklist implementation status unverified (full-address comparison, smallest-unit and balance validation, change ownership, freshness, decoded-transaction review) | m17 O8 | OPEN — needs a UI-by-UI audit of the Web draft Send screen. |
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
 | 9. Mainnet endpoints need live re-verification at guide-writing time (`mempool.space/api`, PublicNode mainnet RPC, Blockscout mainnet, `api.trongrid.io`, `toncenter.com/api/v2`) | m28-OI-02 | OPEN — carried as M-17/M-18/M-19; probe live, do not copy testnet values. |
-| 10. Confirmation thresholds unconfirmed on mainnet (BTC 6 / ETH 12 + `finalized` / TRX 19 SR / TON 1 masterchain seqno, with refinements) | m28-OI-03, m30 O1 | PARTLY RESOLVED 2026-11-10 — TON part decided (M-13: 1 masterchain seqno + outcome check); BTC/ETH/TRX refinements remain under M-38. |
+| 10. Confirmation thresholds unconfirmed on mainnet (BTC 6 / ETH 12 + `finalized` / TRX 19 SR / TON 1 masterchain seqno, with refinements) | m28-OI-03, m30 O1 | RESOLVED 2026-11-10 — TON part decided (M-13: 1 masterchain seqno + outcome check); BTC/ETH/TRX refinements resolved under M-38 (BTC 6, ETH `finalized` confirmed; ETH "12" retained as an unsourced extra minimum; TRX 19 SR confirmed). |
 | 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. |
 | 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
