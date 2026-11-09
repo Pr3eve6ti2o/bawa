@@ -280,7 +280,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 Gate status below is the **2026-11-09 baseline**, not a statement that the gates have passed.
 
 - [ ] **Clean, trusted machine.** Stop before handling seed material or data keys if you cannot establish that the machine is clean and trusted.
-- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `b3814e0b`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
+- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `42eab796`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
 - [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
@@ -359,7 +359,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
    > The original directory is still at the cloned baseline commit, its README is still 1243 lines, and its tree is still clean. All three tests must succeed:
    >
    > ```sh
-   > test "$(git rev-parse HEAD)" = "b3814e0b69becf74247577915ab62da19dfaa2d6"
+   > test "$(git rev-parse HEAD)" = "42eab796c521e5f9ab273cb7e728160dfd6ad41f"
    > test "$(wc -l < README.md | tr -d ' ')" = 1243
    > test -z "$(git status --short)"
    > ```
@@ -1280,7 +1280,7 @@ On **2026-11-09, `muse-vm`**, Toncenter `getMasterchainInfo` returned `ok:true` 
 
 The presence of `last_transaction_id` was **not verified history**. It establishes neither a complete transaction list nor receipt of a particular payment. Likewise, `ok:true` reports a successful API response, not payment acceptance. TonAPI’s masterchain-head route is a **head check only**, not account, history or payment verification.
 
-The confirmation policy is **1, masterchain-anchored**. Track seqno, not wall-clock time; observing a masterchain head alone does not establish that a payment is anchored.
+The confirmation policy is **1 masterchain seqno**: a TON payment is treated as confirmed once a masterchain block references the shardchain block containing the transaction, and the transaction's outgoing message is verified as successful (delivered, not bounced, not failed). Count masterchain seqno progression from inclusion, not the wallet's account seqno — which advances on every outgoing message the wallet sends — and not wall-clock time. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
 
 **TON reconciliation can never be automatic in this draft:** `tx.js:320` leaves `txid` as `null`. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
 
@@ -1530,6 +1530,8 @@ The loss modes for a funded attempt remain **wrong address, wrong network, wrong
 
 ## 13. Sending and signing: capability boundaries
 
+This section states what sending and signing Bawa and the drafts can and cannot do. It contains no send procedure for any chain. TON is generation-only in the repository: it can be received, not sent, from Bawa or the drafts. A reader who funds TON must withdraw through an external wallet; identifying that software is a separate open item (M-39). Nothing in this section authorises a send, and no send has been exercised on any network.
+
 ### 13.1 What Bawa is and is not — the no-signing boundary
 
 Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/09` separates signing from tracking: “Signing remains a trusted-side operation.”
@@ -1621,6 +1623,8 @@ The Web broadcast paths are testnet submission implementations. HTTP 200 probes 
 **Loss mode:** funding a receiving address and discovering afterwards that the draft cannot withdraw from that chain. Funding a chain without a send path means relying on an external wallet for withdrawal.
 
 **Prevention and stop:** check the intended chain’s actual composition and signing capability, not merely whether it displays a receiving address or has signing code. Stop where the required path is absent, the Android `chainId` prerequisite remains unresolved, or the claim rests only on a broadcast adapter or endpoint probe. These limitations remain funding blockers under §17 and §21.
+
+**Scope — TON send is out of scope for this section.** The repository generates a single TON deposit address and contains no TON signing, composition or broadcast code. The Android draft refuses TON signing (“TON signing is unimplemented in this build”); the Web draft has only a testnet broadcast submission implementation. This guide therefore gives no TON send procedure, no broadcast instructions and no rehearsal procedure for TON. Funding TON without a send path means relying on an external wallet for withdrawal (see the loss mode above).
 
 ### 13.8 TON wallet identity — the 698983191 check
 
@@ -2212,6 +2216,10 @@ Any proposed correction needs its own local review for **wrong address, wrong am
 
 Storage also accrues on idle accounts. Its formula uses configuration parameter `18`; the annual amount is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. The dated separate-recipient-charge estimate above does not remove storage accrual.  
 *Source and check: m12 §4; m10 F9/F10, 2026-11-09 ~11:57 UTC, muse-vm.*
+
+#### Confirmation
+
+A TON payment is treated as confirmed under the policy in §12: **1 masterchain seqno** — one masterchain block referencing the shardchain block containing the transaction, with the outgoing message verified as successful (delivered, not bounced, not failed). Count masterchain seqno progression from inclusion, not the wallet's account seqno and not wall-clock time. This is a confirmation policy, not a finality guarantee, and TON confirmation tracking is not implemented in the drafts, so the check is manual. Do not treat a fee estimate, a simulation, or a masterchain head observation as confirmation.
 
 ### Cross-chain simple-send table
 
@@ -3149,10 +3157,7 @@ This register records mainnet-scope questions and risks for Bawa at [`56396a20`]
 
 Under M36 F7, M-series IDs are allocated only to actual items, not placeholders. A shared issue has two scope-specific rows: an OI row in Doc 3 and an M- row here, with the M- row linking to its OI counterpart. Closing either row does not close the other. Every status change must cite evidence meeting that row’s clearance condition. Registering a gap does not clear it.
 
-Under M36 F8, ‘complete’ means the prose is done and checked; it never means authorisation for real-fund use. **Blocks writing completion** means the affected section’s prose cannot be drafted or finalised without the missing decision or evidence. Two rows block writing:
-
-- **M-13:** §12/§14 TON-threshold prose.
-- **M-24:** §13 TON-send prose.
+Under M36 F8, ‘complete’ means the prose is done and checked; it never means authorisation for real-fund use. **Blocks writing completion** means the affected section’s prose cannot be drafted or finalised without the missing decision or evidence. No rows block writing. M-13 and M-24 were resolved 2026-11-10 — see their rows below.
 
 M-33 (§5 finalisation) was resolved 2026-11-10 — see its row below.
 
@@ -3384,23 +3389,23 @@ Those entries appear later in this register. All other rows, including M-01–M-
 **Clearance condition:** None needed beyond correct prose for the taxonomy, which is evidenced. The open part is the per-chain work in M13 F20: address-poisoning mechanisms, address representation, history rendering and test-transfer limits. Writing the taxonomy correctly does not clear those outstanding items.
 
 **Gate/source links:** Register addendum, 2026-11-09 — M15 F1; M13 F07; M13 F20 open items.
-### M-13 — TON confirmation threshold is stated nowhere
+### M-13 — TON confirmation threshold (decided 2026-11-10)
 
 **Question/risk:** No TON confirmation/finality threshold exists in any guide. Inventing one would present an unverified settlement claim for real funds.
 
 **Affected sections:** §12, §14.
 
-**Evidence/uncertainty:** M30 O1 reports that a grep for TON confirmation statements found nothing: ‘NOT this slice’s to invent — it is open item O1’. M24 J21 records retained thresholds of BTC 6 / ETH 12 / TRX 19 / TON 1 masterchain seqno, but explicitly qualifies them: ‘confirmation policy ≠ finality guarantee; cited mainnet history required (none supplied — documentary gap)’. That retained list does not clear the missing TON threshold or establish its finality meaning.
+**Evidence/uncertainty:** M30 O1 reports that a grep for TON confirmation statements found nothing: ‘NOT this slice’s to invent — it is open item O1’. M24 J21 records retained thresholds of BTC 6 / ETH 12 / TRX 19 / TON 1 masterchain seqno, but explicitly qualifies them: ‘confirmation policy ≠ finality guarantee; cited mainnet history required (none supplied — documentary gap)’. That retained list does not clear the missing TON threshold or establish its finality meaning. TON Docs verification 2026-11-10 (checked first-hand): ‘Payment Processing on TON — Overview Guide’ — ‘TON achieves transaction finality after a single masterchain block confirmation, typically within 1 second. Once a transaction from a shardchain appears in a masterchain block, it becomes irreversible’; ‘TON Messages and Transactions Overview’ — ‘a transaction becomes final when the first masterchain block references it’. The documentary gap on the threshold’s finality meaning is closed; the remaining gap is exercising the check in the authorised small-amount rehearsal (M-35).
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-10 — the user approved the recommended threshold (1 masterchain seqno after inclusion, with the outgoing-message outcome checked) and the proposed §12/§14 wording; the TON Docs check in Evidence confirms the threshold’s finality meaning.
 
-**Operational restriction:** Establish the threshold with evidence; never invent it. Until then, §12 and §14 must not state a TON threshold.
+**Operational restriction:** None remaining for §12/§14 threshold prose. The threshold is stated per the approved wording. The check itself remains manual until TON confirmation tracking is implemented (M-25 F18).
 
-**Blocks writing completion:** YES — for any §12 or §14 prose that states a TON threshold.
+**Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
-**Clearance condition:** Evidence from current chain documentation or an owning slice, stating both the threshold and its meaning for finality.
+**Clearance condition:** Met 2026-11-10 — the user’s approval of the number and wording, plus the TON Docs verification of the threshold’s finality meaning (see Evidence).
 
-**Gate/source links:** Re-checked register, 9 November 2026: M30 O1; M24 J21.
+**Gate/source links:** Re-checked register, 9 November 2026: M30 O1; M24 J21; user decision 2026-11-10; TON Docs check 2026-11-10.
 
 ### M-14 — Fee figures are dated baselines, not standing fees
 
@@ -3626,7 +3631,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** Re-checked register (2026-11-09), M-23; M34 F8, F10 and F11.
 
-### M-24 — TON send is generation-only; no testnet fee section exists to convert
+### M-24 — TON send is generation-only; no testnet fee section exists to convert (decided 2026-11-10)
 
 **Question/risk:** §14 may be written as a conversion of a testnet fee section that does not exist, while §13 promises a TON send that the repository cannot perform.
 
@@ -3639,15 +3644,15 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - **M10:** TON is generation-only in the repository. The Web and Android drafts carry a send path, but it has never been exercised.
 - **M18 F06:** the generation-only TON path provides a single deposit address, with no `xpub`.
 
-**Status:** OPEN. Recording the limitation here does not settle §13’s scope.
+**Status:** RESOLVED 2026-11-10 — the user approved the recommended scope: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
 
-**Operational restriction:** §14 must be new prose, not a conversion. §13 must either state the TON-send limitation prominently or bring TON send into scope. A maintainer scoping decision is required; neither option is selected by this register entry.
+**Operational restriction:** None remaining for §13’s TON-send subsection. §14’s TON procedure is new mainnet prose, not a conversion (M28-OI-04); identifying external signing software remains open (M-39).
 
-**Blocks writing completion:** YES — for §13’s TON-send subsection. It cannot be drafted until the scoping decision is made.
+**Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
-**Clearance condition:** A recorded maintainer scoping decision: state the limitation prominently, or scope TON send in with a verified procedure.
+**Clearance condition:** Met 2026-11-10 — the user’s approval of the scope and wording.
 
-**Gate/source links:** Re-checked register (2026-11-09), M-24; M28-OI-04, M28-OI-06, M10 and M18 F06. The outstanding gate is the maintainer’s TON-send scoping decision.
+**Gate/source links:** Re-checked register (2026-11-09), M-24; M28-OI-04, M28-OI-06, M10 and M18 F06; user decision 2026-11-10.
 ### M-25 — Regulation and tax cover four jurisdictions only; India figures rely on secondary sources
 
 **Question/risk:** The guide could state a tax or law rule for a jurisdiction that was never researched, or present India’s reported 30% tax and 1% TDS figures as established when the official sources were unreachable.
@@ -4099,9 +4104,9 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 7. Send-screen checklist implementation status unverified (full-address comparison, smallest-unit and balance validation, change ownership, freshness, decoded-transaction review) | m17 O8 | OPEN — needs a UI-by-UI audit of the Web draft Send screen. |
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
 | 9. Mainnet endpoints need live re-verification at guide-writing time (`mempool.space/api`, PublicNode mainnet RPC, Blockscout mainnet, `api.trongrid.io`, `toncenter.com/api/v2`) | m28-OI-02 | OPEN — carried as M-17/M-18/M-19; probe live, do not copy testnet values. |
-| 10. Confirmation thresholds unconfirmed on mainnet (BTC 6 / ETH 12 + `finalized` / TRX 19 SR / TON 1 masterchain seqno, with refinements) | m28-OI-03, m30 O1 | OPEN — carried as M-13 (TON threshold stated nowhere; blocks §12/§14 threshold prose). |
+| 10. Confirmation thresholds unconfirmed on mainnet (BTC 6 / ETH 12 + `finalized` / TRX 19 SR / TON 1 masterchain seqno, with refinements) | m28-OI-03, m30 O1 | PARTLY RESOLVED 2026-11-10 — TON part decided (M-13: 1 masterchain seqno + outcome check); BTC/ETH/TRX refinements remain under M-38. |
 | 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. |
-| 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | OPEN — carried as M-24 (blocks §13 TON-send prose until the scoping decision). |
+| 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
 | 14. Standard-wallet import of a Bawa mnemonic never performed | m02, m28-OI-08 | OPEN — R-14 (extended); cross-wallet recovery still unverified (M23 F36, M22 F44). |
 | 15. 4.9.1 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
