@@ -355,7 +355,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 
   This layer has no runnable procedure in this guide yet.
 
-- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
+- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `BAWA_ENV_FILE` (`NOVA_ENV` is a deprecated alias for the same selection).
 
   Use `test/differential_test.py` to independently check these published index-zero fixtures:
 
@@ -424,7 +424,7 @@ Use this nine-step checklist as work to complete, not as evidence of completion.
 
 2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
 
-3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `NOVA_ENV`. Preserve the frozen identifier and use published fixtures, never customer wallet material.
+3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `BAWA_ENV_FILE`. Use published fixtures, never customer wallet material.
 
 4. **Check offline logic and public derivation.** Work through the unit, negative and differential requirements in Section 6.1. Assert exact differential equality in CI, and retain the open items for independent TRX and index `1` and `2` coverage.
 

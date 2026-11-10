@@ -767,7 +767,7 @@ Use `compare.js` for a quick public-only cross-check, not as a tracker. It gives
 
 **At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `compare.js` passes `node --check`, and its comparison output is available at this pin (verified 2026-11-08).**
 
-Your `.env` needs `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. The default file is the repository-root `.env`, at `tools/hdwallet-gen/../../.env`. Set `NOVA_ENV` to select another file.
+Your `.env` needs `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. The default file is the repository-root `.env`, at `tools/hdwallet-gen/../../.env`. Set `BAWA_ENV_FILE` to select another file (`NOVA_ENV` is a deprecated alias).
 
 The parser matches `^([A-Z_]+)=(.*)$`. Use plain `KEY=VALUE` entries, without `export` or quoted values.
 
@@ -918,7 +918,7 @@ This block creates a separate `.env`; it does not overwrite your wallet’s file
         >"$capture_dir/.env"
 
     cd tools/hdwallet-gen
-    NOVA_ENV="$capture_dir/.env" node compare.js \
+    BAWA_ENV_FILE="$capture_dir/.env" node compare.js \
         >"$capture_dir/compare.stdout" \
         2>"$capture_dir/compare.stderr"
 )

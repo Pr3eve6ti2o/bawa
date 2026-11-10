@@ -165,12 +165,25 @@ function runDerive(xpub, chain, index) {
   };
 }
 
-function runCompare(envFile) {
-  const env = { ...process.env, NOVA_ENV: envFile };
+// Select the env file through BAWA_ENV_FILE (canonical), NOVA_ENV
+// (deprecated fallback), or both. When neither is specified the test
+// defaults to NOVA_ENV, preserving the pre-F-15 contract for the
+// existing tests. Inherited BAWA_ENV_FILE/NOVA_ENV are removed first
+// so the operator's shell cannot leak into the test.
+function runCompare(envFile, { bawaEnvFile, novaEnv, timeout = 60_000 } = {}) {
+  const env = { ...process.env };
+  delete env.BAWA_ENV_FILE;
+  delete env.NOVA_ENV;
 
   // Inherited wallet variables must not mask the selected temporary file.
   for (const key of Object.keys(VALID_ENV)) {
     delete env[key];
+  }
+
+  if (bawaEnvFile !== undefined) env.BAWA_ENV_FILE = bawaEnvFile;
+  if (novaEnv !== undefined) env.NOVA_ENV = novaEnv;
+  if (bawaEnvFile === undefined && novaEnv === undefined) {
+    env.NOVA_ENV = envFile;
   }
 
   const result = spawnSync(
@@ -180,7 +193,7 @@ function runCompare(envFile) {
       cwd: ROOT,
       env,
       encoding: "utf8",
-      timeout: 60_000,
+      timeout,
     },
   );
 
@@ -202,6 +215,21 @@ function writeTempEnv(entries) {
   const envFile = path.join(directory, ".env");
   const lines = Object.entries(entries).map(([key, value]) => `${key}=${value}`);
   fs.writeFileSync(envFile, `${lines.join("\n")}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+
+  return envFile;
+}
+
+function writeTempEnvText(text) {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "bawa-negative-inputs-"),
+  );
+  temporaryDirectories.add(directory);
+
+  const envFile = path.join(directory, ".env");
+  fs.writeFileSync(envFile, text, {
     encoding: "utf8",
     mode: 0o600,
   });
@@ -356,6 +384,150 @@ test("compare.js: rejects a nonexistent NOVA_ENV file", () => {
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /\S/);
+});
+
+// F-07: a CRLF env file parses exactly like an LF one.
+test("compare.js: CRLF env file returns all three fixture addresses", () => {
+  const lines = Object.entries(VALID_ENV).map(([key, value]) => `${key}=${value}`);
+  const envFile = writeTempEnvText(`${lines.join("\r\n")}\r\n`);
+  const result = runCompare(envFile);
+
+  assert.equal(result.status, 0, result.stderr);
+
+  const rows = result.stdout.trim().split(/\r?\n/).map((line) => line.trim().split(/\s+/));
+  for (const [chain, fixture] of Object.entries(FIXTURES)) {
+    const row = rows.find(([name]) => name === chain);
+    assert.ok(row, `Expected a ${chain} line`);
+    assert.equal(row[1], fixture.address, `Unexpected ${chain} index 0 address`);
+  }
+});
+
+// F-06: an over-long replacement value fails loudly instead of keeping
+// the stale key from the earlier line in force.
+test("compare.js: rejects a 201-character replacement for a valid key", () => {
+  const envFile = writeTempEnvText(
+    [
+      `XPUB_BTC=${FIXTURES.btc.xpub}`,
+      `XPUB_BTC=${"A".repeat(201)}`,
+      `XPUB_ETH=${FIXTURES.eth.xpub}`,
+      `XPUB_TRX=${FIXTURES.trx.xpub}`,
+      "",
+    ].join("\n"),
+  );
+  const result = runCompare(envFile);
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /line 2 value for XPUB_BTC exceeds 200 characters/);
+});
+
+// F-06: an over-long line fails loudly even when it is not an assignment.
+test("compare.js: rejects a line over 1024 characters", () => {
+  const envFile = writeTempEnvText(
+    [
+      `XPUB_BTC=${FIXTURES.btc.xpub}`,
+      `#${"x".repeat(1024)}`,
+      `XPUB_ETH=${FIXTURES.eth.xpub}`,
+      `XPUB_TRX=${FIXTURES.trx.xpub}`,
+      "",
+    ].join("\n"),
+  );
+  const result = runCompare(envFile);
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /line 2 exceeds 1024 characters/);
+});
+
+// F-08: /dev/zero reports stat size 0 but yields bytes indefinitely; the
+// capped read must refuse quickly. The short spawn timeout keeps a
+// regression from hanging the suite (it fails the test instead).
+test("compare.js: refuses /dev/zero quickly instead of reading forever", () => {
+  const result = runCompare(null, { novaEnv: "/dev/zero", timeout: 10_000 });
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /exceeds 65536 bytes/);
+});
+
+// F-15: BAWA_ENV_FILE is the canonical selector and works silently.
+test("compare.js: BAWA_ENV_FILE selects the env file without a warning", () => {
+  const envFile = writeTempEnv(VALID_ENV);
+  const result = runCompare(envFile, { bawaEnvFile: envFile });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, new RegExp(FIXTURES.btc.address));
+});
+
+// F-15: NOVA_ENV alone still works but warns it is deprecated.
+test("compare.js: NOVA_ENV alone warns it is deprecated", () => {
+  const envFile = writeTempEnv(VALID_ENV);
+  const result = runCompare(envFile, { novaEnv: envFile });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /NOVA_ENV is deprecated; use BAWA_ENV_FILE/);
+});
+
+// F-15: both names set to different files refuse to run.
+test("compare.js: conflicting BAWA_ENV_FILE and NOVA_ENV refuses", () => {
+  const first = writeTempEnv(VALID_ENV);
+  const second = writeTempEnv(VALID_ENV);
+  const result = runCompare(first, { bawaEnvFile: first, novaEnv: second });
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /conflicting env files/);
+});
+
+// F-15: both names set to the same file warn and use it.
+test("compare.js: matching BAWA_ENV_FILE and NOVA_ENV warns and uses the file", () => {
+  const envFile = writeTempEnv(VALID_ENV);
+  const result = runCompare(envFile, { bawaEnvFile: envFile, novaEnv: envFile });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /NOVA_ENV is deprecated; use BAWA_ENV_FILE/);
+});
+
+// F-35: invalid arguments fail without waiting for stdin EOF. The stdin
+// pipe is never closed; the usage error must arrive promptly.
+test("derive.js: invalid arguments fail without waiting for stdin EOF", async () => {
+  const child = spawn(
+    process.execPath,
+    [path.join(ROOT, "tools", "hdwallet-gen", "derive.js"), "doge", "0"],
+    { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] },
+  );
+  const closed = new Promise((resolve) => {
+    child.once("close", (code) => resolve(code));
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  try {
+    const code = await Promise.race([
+      closed,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("derive.js did not exit promptly on invalid arguments")),
+        5_000,
+      )),
+    ]);
+    assert.equal(code, 2);
+    assert.match(stderr, /usage:/);
+  } finally {
+    child.kill("SIGKILL");
+    child.stdin.destroy();
+    child.stdout.destroy();
+    child.stderr.destroy();
+    child.unref();
+  }
+});
+
+// F-36: a rejection message never echoes the supplied key.
+test("derive.js: rejection stderr never contains the supplied key", () => {
+  const bad = NEGATIVE.ETH_BAD_CHECKSUM;
+  const result = runDerive(bad, "eth", 0);
+  assertDeriveRejected(result, /checksum/i);
+  assert.ok(!result.stderr.includes(bad), "stderr must not echo the supplied key");
 });
 
 async function runDaemon(requests) {

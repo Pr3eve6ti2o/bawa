@@ -13,7 +13,7 @@ A Nova Shop install's variables with these same names would silently redirect Ba
 
 The namespace is already mixed: `BAWA_ENV_FILE` and `BAWA_BACKUP_DIR` already exist and are used by the launcher tools. This rename completes the Bawa namespace; it does not introduce it.
 
-`docs/security-release-gates.md` already requires a rename to `BAWA_*` with guarded migration. `docs/14` calls `NOVA_ENV` a frozen legacy identifier pending a code change and a migration note.
+`docs/security-release-gates.md` already requires a rename to `BAWA_*` with guarded migration. `docs/14` formerly called `NOVA_ENV` a frozen legacy identifier pending a code change and a migration note; that change is now executed (F-15, 2026-11-11).
 
 ## Target names
 
@@ -66,14 +66,22 @@ name alone is accepted with a deprecation warning on stderr; neither
 set uses the existing default `<repo>/secrets`. Every code reference,
 test, doc and example now uses the new name. Migration tests cover
 both readers (`test/test_make_wallet.py`,
-`tests/secrets-dir.test.mjs`). The `NOVA_ENV` / `compare.js` selector
-is NOT part of this migration and is unchanged. The frozen AAD string
+`tests/secrets-dir.test.mjs`). The frozen AAD string
 `nova-shop-seed-v1` is unchanged.
+
+**F-15 EXECUTED — 2026-11-11 (remediation lane).** The env-file
+migration is now executed too: guarded dual-read implemented in
+`tools/hdwallet-gen/compare.js` (`resolveEnvPath`); canonical name
+`BAWA_ENV_FILE`; conflicting old/new values refuse to run; the old
+name alone is accepted with a deprecation warning on stderr; neither
+set uses the existing default `<repo>/.env`. Every code reference,
+test, doc and example now uses the new name. Migration tests cover the
+reader (`tests/negative-inputs.test.mjs`; `test/smoke.test.js` uses
+`BAWA_ENV_FILE`).
 
 Compatibility window: the old name and dual-read code are removed
 after one release cycle. No release or date is selected here.
 
 Not covered by this migration:
 
-- No change to `NOVA_ENV` (compare.js).
 - No change to the frozen AAD string `nova-shop-seed-v1`.

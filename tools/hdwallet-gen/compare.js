@@ -1,5 +1,6 @@
 // compare.js — address comparison helper intended for extended public keys.
-// Reads XPUB_BTC/ETH/TRX from the file selected by NOVA_ENV, or the repository-root .env by default.
+// Reads XPUB_BTC/ETH/TRX from the file selected by BAWA_ENV_FILE, or the repository-root .env by default.
+// NOVA_ENV is a deprecated alias for BAWA_ENV_FILE (warned fallback; both set to different values refuses).
 // Prints public addresses only. Private, bad-checksum, bad-version and
 // version-detectable wrong-chain inputs are rejected before WASM.
 // BTC/ETH/TRX xpubs share version 0488b21e, so an xpub carries no chain tag.
@@ -8,8 +9,57 @@ const fs = require("fs");
 const path = require("path");
 const { validateExtendedKey, redact } = require("./extended-key");
 
-const envPath = process.env.NOVA_ENV || path.join(__dirname, "..", "..", ".env");
-const env = {};
+const MAX_ENV_BYTES = 65536;
+const MAX_LINE_CHARS = 1024;
+const MAX_VALUE_CHARS = 200;
+
+// Canonical name BAWA_ENV_FILE; NOVA_ENV is accepted during the
+// compatibility window with a deprecation warning. Both names set to
+// different values refuses to run. Diagnostics name variables only,
+// never values. (F-15; same guarded-migration shape as
+// BAWA_SECRETS_DIR in tools/make_wallet.py.)
+function resolveEnvPath() {
+  const fresh = process.env.BAWA_ENV_FILE;
+  const legacy = process.env.NOVA_ENV;
+  const has = (value) => typeof value === "string" && value.length > 0;
+  if (has(fresh) && has(legacy)) {
+    if (fresh !== legacy) {
+      throw new Error("conflicting env files: BAWA_ENV_FILE and NOVA_ENV are both set to different values; set only one");
+    }
+    console.error("warning: NOVA_ENV is deprecated; use BAWA_ENV_FILE");
+    return fresh;
+  }
+  if (has(fresh)) return fresh;
+  if (has(legacy)) {
+    console.error("warning: NOVA_ENV is deprecated; use BAWA_ENV_FILE");
+    return legacy;
+  }
+  return path.join(__dirname, "..", "..", ".env");
+}
+
+// Read at most maxBytes bytes; refuse when the file is longer. A stat
+// size check alone does not bound the read (F-08): special files such
+// as /dev/zero report size 0 while yielding bytes indefinitely.
+function readFileCapped(filePath, maxBytes) {
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const chunks = [];
+    let total = 0;
+    const buffer = Buffer.alloc(8192);
+    for (;;) {
+      const n = fs.readSync(fd, buffer, 0, buffer.length, null);
+      if (n === 0) break;
+      total += n;
+      if (total > maxBytes) {
+        throw new Error(`env file exceeds ${maxBytes} bytes: ${filePath}`);
+      }
+      chunks.push(Buffer.from(buffer.subarray(0, n)));
+    }
+    return Buffer.concat(chunks).toString("utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 function addrFromXpub(core, xpub, coin, fullPath) {
   const pubkey = core.HDWallet.getPublicKeyFromExtended(xpub, coin, fullPath);
@@ -21,15 +71,27 @@ function addrFromXpub(core, xpub, coin, fullPath) {
 }
 
 (async () => {
-  if (fs.statSync(envPath).size > 65536) {
-    throw new Error(`env file exceeds 65536 bytes: ${envPath}`);
-  }
-  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-    if (line.length > 1024) continue;
+  const envPath = resolveEnvPath();
+  const env = {};
+  // Split on CRLF as well as LF (F-07): a trailing CR made the
+  // assignment regex fail, so a CRLF file reported a misleading
+  // "missing xpub" for a key that was present in the file.
+  const lines = readFileCapped(envPath, MAX_ENV_BYTES).split(/\r\n|\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    // Over-long lines and values fail loudly (F-06): silently skipping
+    // them kept a stale key from an earlier line in force while the
+    // operator believed the replacement applied.
+    if (line.length > MAX_LINE_CHARS) {
+      throw new Error(`env file line ${index + 1} exceeds ${MAX_LINE_CHARS} characters`);
+    }
     const m = line.match(/^([A-Z_]+)=(.*)$/);
     if (m) {
       const value = m[2].trim();
-      if (value.length <= 200) env[m[1]] = value;
+      if (value.length > MAX_VALUE_CHARS) {
+        throw new Error(`env file line ${index + 1} value for ${m[1]} exceeds ${MAX_VALUE_CHARS} characters`);
+      }
+      env[m[1]] = value;
     }
   }
   // Validate every input before initialising WASM or deriving any addresses.

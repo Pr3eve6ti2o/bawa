@@ -84,7 +84,7 @@ function runCompare(envText) {
       [path.join(TOOLS_DIR, "compare.js")],
       {
         cwd: TOOLS_DIR,
-        env: { ...process.env, NOVA_ENV: envFile },
+        env: { ...process.env, BAWA_ENV_FILE: envFile },
         timeout: 60_000,
         encoding: "utf8",
       }

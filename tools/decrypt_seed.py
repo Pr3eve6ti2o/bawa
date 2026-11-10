@@ -4,6 +4,18 @@
 Default behavior prints the recovered mnemonic to the controlling terminal,
 not ordinary stdout, and never writes the plaintext to disk. Use --stdout
 only when an explicit machine-readable pipeline is truly required.
+
+The recovered text is validated as a BIP-39 mnemonic (English wordlist
+plus checksum) before it is returned: a bundle that decrypts to
+non-wordlist words or a bad checksum is refused rather than handed to
+the operator as a mnemonic.
+
+Key input: prefer the non-echoing prompt. A data key supplied through
+the BAWA_DATA_KEY environment variable is visible to other processes
+running as the same user (and to privileged local processes) that can
+inspect the process environment; use it only on a trusted machine and
+clear it afterwards. A warning is printed on stderr whenever the
+environment key is used.
 """
 from __future__ import annotations
 
@@ -25,6 +37,15 @@ AAD = b"nova-shop-seed-v1"
 def _read_key() -> bytes:
     raw = os.environ.get("BAWA_DATA_KEY")
     if raw:
+        # F-37: a key in the process environment is visible to other
+        # processes running as the same user (and to privileged local
+        # processes). Name the variable, never the value.
+        print(
+            "warning: BAWA_DATA_KEY read from the process environment; "
+            "the key is visible to same-user and privileged local "
+            "processes — prefer the non-echoing prompt",
+            file=sys.stderr,
+        )
         key = bytes.fromhex(raw.strip())
     else:
         try:
@@ -96,11 +117,32 @@ def decrypt(path: str, key: bytes) -> str:
     words = text.split()
     if len(words) not in (12, 15, 18, 21, 24):
         raise ValueError("recovered data does not look like a BIP-39 mnemonic")
+    # F-38: word count alone does not establish a BIP-39 mnemonic.
+    # Validate the English wordlist and the checksum (same validator as
+    # make_wallet.py's assert_bundle_decrypts). Fail closed when the
+    # validator library is unavailable rather than returning unvalidated
+    # words.
+    try:
+        from bip_utils import Bip39Languages, Bip39MnemonicValidator
+    except ImportError:
+        raise ValueError(
+            "BIP-39 validation unavailable: bip-utils is not installed; "
+            "install requirements.txt"
+        ) from None
+    if not Bip39MnemonicValidator(Bip39Languages.ENGLISH).IsValid(text):
+        raise ValueError(
+            "recovered data is not a valid BIP-39 mnemonic (wordlist or checksum)"
+        )
     return text
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        epilog="Key input: prefer the non-echoing prompt. BAWA_DATA_KEY "
+        "read from the process environment is visible to same-user and "
+        "privileged local processes; use it only on a trusted machine "
+        "and clear it afterwards."
+    )
     parser.add_argument("path", nargs="?", default="secrets/seed.enc.json")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--stdout", action="store_true", help="write the mnemonic to stdout")

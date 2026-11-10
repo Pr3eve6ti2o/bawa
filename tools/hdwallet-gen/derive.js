@@ -23,6 +23,19 @@ const PATHS = Object.assign(Object.create(null), {
 
 (async () => {
   const [chain, indexRaw] = process.argv.slice(2);
+  const MAX_INDEX = 2147483647;
+  // Validate arguments BEFORE reading stdin (F-35): invalid arguments
+  // must fail with the usage error immediately, not wait for stdin EOF.
+  if (typeof indexRaw !== "string" || !/^[0-9]+$/.test(indexRaw)) {
+    console.error("usage: echo <xpub> | node derive.js <btc|eth|trx> <index>  (0 <= index <= 2147483647)");
+    process.exit(2);
+  }
+  const index = Number(indexRaw);
+  if (!ALLOWED_CHAINS.has(chain) || !Number.isInteger(index) || index < 0 || index > MAX_INDEX) {
+    console.error("usage: echo <xpub> | node derive.js <btc|eth|trx> <index>  (0 <= index <= 2147483647)");
+    process.exit(2);
+  }
+
   let xpub = "";
   try {
     xpub = (await new Promise((resolve, reject) => {
@@ -43,20 +56,17 @@ const PATHS = Object.assign(Object.create(null), {
     process.exit(2);
   }
 
-  if (typeof indexRaw !== "string" || !/^[0-9]+$/.test(indexRaw)) {
-    console.error("usage: echo <xpub> | node derive.js <btc|eth|trx> <index>  (0 <= index <= 2147483647)");
-    process.exit(2);
-  }
-
-  const index = Number(indexRaw);
-  const MAX_INDEX = 2147483647;
-  if (!ALLOWED_CHAINS.has(chain) || !xpub || !Number.isInteger(index) || index < 0 || index > MAX_INDEX) {
+  if (!xpub) {
     console.error("usage: echo <xpub> | node derive.js <btc|eth|trx> <index>  (0 <= index <= 2147483647)");
     process.exit(2);
   }
   const validation = validateExtendedKey(xpub, chain);
   if (!validation.ok) {
-    console.error(validation.message);
+    // Defence in depth (F-36): the messages are fixed strings, but
+    // validation output goes through redact() like every other
+    // stderr message in this tool, so a future message change cannot
+    // echo key material.
+    console.error(redact(validation.message));
     process.exit(2);
   }
 
