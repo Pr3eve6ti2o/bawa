@@ -260,7 +260,7 @@
       ],
       "status": "PROPOSED"
     },
-    "status": "PROPOSED",
+    "status": "IMPLEMENTED_AND_VERIFIED",
     "sources": [
       "tools/hdwallet-gen",
       "docs/11-trust-wallet-and-independent-verification",
@@ -322,7 +322,7 @@
       ],
       "status": "PROPOSED"
     },
-    "status": "PROPOSED",
+    "status": "IMPLEMENTED_AND_VERIFIED",
     "sources": [
       "tools/hdwallet-gen",
       "docs/11-trust-wallet-and-independent-verification",
