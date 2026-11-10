@@ -106,17 +106,15 @@ describe('failure modes', () => {
     assert.match(result.stderr, /not allowed for eth/);
   });
 
-  // SKIPPED: R-01 is CONFIRMED in the H7 Node validator (derive.js exits 0
-  // on an invalid point). The fix is pending in the auditfix2 lane (H8).
-  // The Web + Android boundaries already reject invalid points and their
-  // tests pass. Re-enable this test after the H8 push lands.
-  test('derive.js rejects an invalid secp256k1 point with exit 2 (R-01)', { skip: 'R-01 fix pending (auditfix2, H8)' }, () => {
+  // R-01: the H8 fix (shared validator point check) is in this tree; the
+  // test was skipped at H7 and re-enabled after the H9 rebase (2026-11-10).
+  test('derive.js rejects an invalid secp256k1 point with exit 2 (R-01)', () => {
     const payload = base58Decode(btcKey).subarray(0, 78);
     payload[45] = 0x02;
     payload.fill(0xff, 46, 78);
     const result = runDerive('btc', base58Encode(withChecksum(payload)));
     assert.equal(result.status, 2, result.stderr);
-    assert.match(result.stderr, /invalid.*point/i);
+    assert.match(result.stderr, /not a valid secp256k1 point/i);
   });
 
   test('compare.js rejects a bad input with exit 1 and empty stdout', () => {
