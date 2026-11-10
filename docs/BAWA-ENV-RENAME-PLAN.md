@@ -46,18 +46,34 @@ These steps require a separate maintainer decision before execution.
 6. After one release cycle, remove the old environment-variable names and the dual-read code.
    This removal must not change `nova-shop-seed-v1`.
 
-## Decision required
+## Decision
 
-Executing this plan needs a separate maintainer decision. The plan alone changes nothing in code.
-
-Open questions are which release the rename lands in, and whether the AAD string gets its own versioned migration. No release or date is selected here. Any AAD migration remains outside this plan.
+Execution authorised by the owner on 2026-11-10 (~18:23 IST) as part of
+the review-fix lane (finding F-03: fix the five Highs and the handoff
+corrections). The rename lands in the local builder tree; no release or
+date is selected here. The AAD string question remains open and outside
+this migration.
 
 ## Status
 
-**OPEN — planned, not executed, not tested.**
+**EXECUTED — 2026-11-10 (review-fix lane, finding F-03).**
 
-Not covered by this document:
+What changed: guarded dual-read implemented in both consumers
+(`tools/hdwallet-gen/generate.js` `resolveSecretsDir` and
+`tools/make_wallet.py` `resolve_secrets_dir`); canonical name
+`BAWA_SECRETS_DIR`; conflicting old/new values refuse to run; the old
+name alone is accepted with a deprecation warning on stderr; neither
+set uses the existing default `<repo>/secrets`. Every code reference,
+test, doc and example now uses the new name. Migration tests cover
+both readers (`test/test_make_wallet.py`,
+`tests/secrets-dir.test.mjs`). The `NOVA_ENV` / `compare.js` selector
+is NOT part of this migration and is unchanged. The frozen AAD string
+`nova-shop-seed-v1` is unchanged.
 
-- No code changes.
-- No test changes.
-- No doc changes beyond this plan.
+Compatibility window: the old name and dual-read code are removed
+after one release cycle. No release or date is selected here.
+
+Not covered by this migration:
+
+- No change to `NOVA_ENV` (compare.js).
+- No change to the frozen AAD string `nova-shop-seed-v1`.

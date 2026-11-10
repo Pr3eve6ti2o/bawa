@@ -2,7 +2,7 @@
 // generate-project.mjs — generate a differentiated wallet project for one
 // registry profile.
 //
-// Usage: node scripts/generate-project.mjs <profile-id> [--out <dir>]
+// Usage: node scripts/generate-project.mjs <profile-id> [--out <dir>] [--force]
 // Default output: generated/<profile-id> under the repo root. The output
 // is a starter or CLI scaffold, never a complete wallet: see the generated
 // README for the implemented capabilities, missing components, supported
@@ -39,7 +39,7 @@ const PATHS = {
 };
 
 function usageError(message) {
-  console.error('Usage: node scripts/generate-project.mjs <profile-id> [--out <dir>]');
+  console.error('Usage: node scripts/generate-project.mjs <profile-id> [--out <dir>] [--force]');
   if (message) console.error('generate-project: ' + message);
   return 2;
 }
@@ -153,10 +153,20 @@ function readmeFor(profile) {
 function main() {
   const [profileId, ...args] = process.argv.slice(2);
   let outDir = null;
-  if (args.length === 2 && args[0] === '--out' && args[1]?.trim()) {
-    outDir = resolve(args[1]);
-  } else if (args.length !== 0) {
-    return usageError('expected [--out <dir>]');
+  let force = false;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--force' && !force) {
+      force = true;
+    } else if (
+      args[i] === '--out' &&
+      outDir === null &&
+      args[i + 1]?.trim() &&
+      !args[i + 1].startsWith('--')
+    ) {
+      outDir = resolve(args[++i]);
+    } else {
+      return usageError('expected [--out <dir>] [--force]');
+    }
   }
   if (!profileId) return usageError('a profile id is required');
 
@@ -169,16 +179,51 @@ function main() {
   }
 
   const target = outDir ?? join(generatedRoot, profileId);
-  // Guard: never delete outside generated/ or an explicit --out under the
-  // repo root. Refuse the repo root itself.
-  const insideGenerated =
-    target === generatedRoot || target.startsWith(generatedRoot + sep);
+  // Guard: only generated/ descendants or an explicit --out under the
+  // repo root are allowed. Refuse both roots themselves.
+  const insideGenerated = target.startsWith(generatedRoot + sep);
   const insideRepo = target.startsWith(repoRoot + sep);
+  if (target === generatedRoot) {
+    return usageError('refusing to write to generated/ itself: ' + target);
+  }
   if ((!insideGenerated && !(outDir && insideRepo)) || target === repoRoot) {
     return usageError('refusing to write outside generated/ or the repo: ' + target);
   }
 
-  if (existsSync(target)) rmSync(target, { recursive: true, force: true });
+  if (existsSync(target)) {
+    let nonEmpty;
+    try {
+      nonEmpty = readdirSync(target).length > 0;
+    } catch {
+      return usageError('refusing to overwrite a non-directory or unreadable target: ' + target);
+    }
+
+    if (nonEmpty) {
+      if (!force) {
+        return usageError('refusing to overwrite a non-empty target without --force: ' + target);
+      }
+
+      let generatorOwned = false;
+      if (insideGenerated) {
+        try {
+          const marker = JSON.parse(
+            readFileSync(join(target, 'profile.json'), 'utf8'),
+          );
+          generatorOwned = marker?.generator === 'scripts/generate-project.mjs';
+        } catch {
+          // Missing, unreadable or invalid manifests do not establish ownership.
+        }
+      }
+
+      if (!generatorOwned) {
+        return usageError(
+          'refusing --force: target is not generator-owned inside generated/: ' + target,
+        );
+      }
+    }
+
+    rmSync(target, { recursive: true, force: true });
+  }
   mkdirSync(target, { recursive: true });
 
   const manifest = {

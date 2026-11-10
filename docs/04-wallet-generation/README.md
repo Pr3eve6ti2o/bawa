@@ -179,7 +179,7 @@ This is application-specific encryption at rest, **not** a universal replacement
 
    After confirming, check these locations and conditions:
 
-   - **Secrets directory:** the directory set by `NOVA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`. Symlinked paths are refused.
+   - **Secrets directory:** the directory set by `BAWA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`. Symlinked paths are refused.
    - **Backup directory:** the directory set by `BAWA_BACKUP_DIR`, or `seed-backup/` at the repository root, has mode `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
    - **Public environment file:** the file set by `BAWA_ENV_FILE`, or the repository-root `.env`, is written atomically with mode 0600. The four public wallet values from step 4 are updated; all other lines from the existing file, or from `.env.example` when the target file does not exist, are preserved.
 

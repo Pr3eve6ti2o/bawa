@@ -117,6 +117,9 @@ const secretPatterns = [
 // - test/differential_test.py uses the published 15-word test-vector
 //   mnemonic ("ripple scissors kick mammal ...") to verify derivation
 //   against bip-utils; it is public test data, never for funds.
+// - test/test_make_wallet.py uses the published "abandon" x23 + "art"
+//   BIP-39 test mnemonic to verify bundle decryption; it is public test
+//   data, never for funds.
 // Known published BIP-32 test vectors ("test vector, never for funds"):
 // TV1 root xprv, TV5 bad-checksum xprv, the abandon-mnemonic zprv, and the
 // TV1 path xprv (seed 000102..., m/0'/1/2'/2/1000000000).
@@ -131,6 +134,7 @@ const knownTestVectors = [
 const secretAllowlist = [
   { file: 'tools/decrypt_seed.py', patterns: [2] },
   { file: 'test/differential_test.py', patterns: [2] },
+  { file: 'test/test_make_wallet.py', patterns: [2] },
 ];
 const displayPath = file => JSON.stringify(file).slice(1, -1);
 
@@ -208,7 +212,7 @@ runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mj
 runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
-runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs']);
+runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs']);
 
 const web = join(root, 'apps/web');
 // The web gates run the pinned toolchain from apps/web/node_modules.
@@ -226,10 +230,11 @@ runCommand('web-build', 'npm', ['run', 'build'], web);
 if (args.includes('--skip-android')) {
   report('android-tests', 'SKIP', 'requested with --skip-android');
 } else if (!process.env.JAVA_HOME || !process.env.ANDROID_HOME) {
+  const missingVars = ['JAVA_HOME', 'ANDROID_HOME'].filter((name) => !process.env[name]);
   report(
     'android-tests',
-    'SKIP',
-    'JAVA_HOME or ANDROID_HOME is unset; JDK 17 and SDK platform 35 required',
+    'FAIL',
+    `Unset environment variables: ${missingVars.join(', ')}; JDK 17 and SDK platform 35 required`,
   );
 } else {
   // A configured toolchain must pass: never turn Gradle failures into skips.

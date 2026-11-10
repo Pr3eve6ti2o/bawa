@@ -191,7 +191,7 @@ function main() {
   const generate = { step: 'generate', platform, status: 'NOT-RUN' };
   steps.push(generate);
   const generated = runStep(generate, process.execPath,
-    ['scripts/generate-project.mjs', profileId, '--out', generatedPath], repoRoot);
+    ['scripts/generate-project.mjs', profileId, '--out', generatedPath, '--force'], repoRoot);
   if (!generated) blocked = true;
 
   // Verify inside the generated directory.

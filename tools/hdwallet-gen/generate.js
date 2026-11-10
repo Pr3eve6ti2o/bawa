@@ -4,6 +4,7 @@
 const { initWasm } = require("@trustwallet/wallet-core");
 const crypto = require("crypto");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const VEC_MNEMONIC = "ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal";
@@ -47,6 +48,45 @@ function verifySeedBundle(bundlePath, dataKey, expectedMnemonic) {
   }
 }
 
+// Resolve the secrets directory. Canonical name BAWA_SECRETS_DIR;
+// NOVA_SECRETS_DIR is accepted during the one-release compatibility
+// window with a deprecation warning. Both names set to different values
+// refuses to run; neither set uses the default. Diagnostics name
+// variables only, never values.
+function resolveSecretsDir(env = process.env) {
+  const value = (name) => {
+    const v = env[name];
+    return typeof v === "string" && v.length > 0 ? v : undefined;
+  };
+  const expand = (p) => {
+    if (p === "~") return os.homedir();
+    if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
+    return p;
+  };
+  const fresh = value("BAWA_SECRETS_DIR");
+  const legacy = value("NOVA_SECRETS_DIR");
+  if (fresh !== undefined && legacy !== undefined) {
+    if (expand(fresh) !== expand(legacy)) {
+      throw new Error(
+        "conflicting secrets directories: BAWA_SECRETS_DIR and " +
+          "NOVA_SECRETS_DIR are both set to different values; set only one"
+      );
+    }
+    console.error(
+      "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR"
+    );
+    return expand(fresh);
+  }
+  if (fresh !== undefined) return expand(fresh);
+  if (legacy !== undefined) {
+    console.error(
+      "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR"
+    );
+    return expand(legacy);
+  }
+  return path.join(__dirname, "..", "..", "secrets");
+}
+
 async function main() {
   let tty;
   try {
@@ -57,8 +97,7 @@ async function main() {
   }
 
   const force = process.argv.includes("--force");
-  const secretsDir = process.env.NOVA_SECRETS_DIR ||
-    path.join(__dirname, "..", "..", "secrets");
+  const secretsDir = resolveSecretsDir();
   const encPath = path.join(secretsDir, "seed.enc.json");
 
   if (fs.existsSync(encPath)) {
@@ -171,7 +210,19 @@ async function main() {
   // data-key display strings (immutable JS strings, plus split()/toString()
   // copies). Secret-string copies stay at the confirmation minimum: one hex
   // display and one first-word comparison.
-  const dataKey = crypto.randomBytes(32);
+  // The wrapper may supply the data key (BAWA_DATA_KEY_HEX) so it can
+  // independently verify the bundle afterwards; otherwise generate one.
+  // A supplied key must be exactly 64 hex characters (32 bytes).
+  const dataKey = (() => {
+    const supplied = process.env.BAWA_DATA_KEY_HEX;
+    if (supplied === undefined) return crypto.randomBytes(32);
+    if (!/^[0-9a-fA-F]{64}$/.test(supplied)) {
+      throw new Error(
+        "BAWA_DATA_KEY_HEX must be exactly 64 hex characters (32 bytes)"
+      );
+    }
+    return Buffer.from(supplied, "hex");
+  })();
   try {
     const nonce = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", dataKey, nonce);
@@ -282,4 +333,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { verifySeedBundle };
+module.exports = { verifySeedBundle, resolveSecretsDir };

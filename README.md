@@ -538,7 +538,7 @@ After generation, check these paths relative to the repository root:
 
 Check the **full mode, including special bits**: no group or other access, and no special bits. Stop if anything differs.
 
-If you used overrides, check those paths instead: `NOVA_SECRETS_DIR` selects the secrets directory, `BAWA_BACKUP_DIR` the backup directory, and `BAWA_ENV_FILE` the environment file.
+If you used overrides, check those paths instead: `BAWA_SECRETS_DIR` selects the secrets directory, `BAWA_BACKUP_DIR` the backup directory, and `BAWA_ENV_FILE` the environment file.
 
 Run this check from the repository root:
 
@@ -548,7 +548,7 @@ import os
 import stat
 from pathlib import Path
 
-secrets = Path(os.environ.get("NOVA_SECRETS_DIR", "secrets"))
+secrets = Path(os.environ.get("BAWA_SECRETS_DIR", "secrets"))
 backup = Path(os.environ.get("BAWA_BACKUP_DIR", "seed-backup"))
 env_file = Path(os.environ.get("BAWA_ENV_FILE", ".env"))
 
