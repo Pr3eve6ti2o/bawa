@@ -6,7 +6,7 @@
     {
       "id": "web-01-token-ui",
       "name": "imToken token-ui",
-      "status": "PROPOSED",
+      "status": "IMPLEMENTED_AND_VERIFIED",
       "source": "consenlabs/token-ui",
       "revision": "6380d5d4dfeebf89704c0527e3c552be6ee2d231",
       "licence": "MIT",
@@ -63,7 +63,7 @@
     {
       "id": "and-01-wdk-starter-kotlin",
       "name": "Tether WDK Starter Kotlin",
-      "status": "PROPOSED",
+      "status": "IMPLEMENTED_AND_VERIFIED",
       "source": "tetherto/wdk-starter-kotlin",
       "revision": "a4fa21729ba621c095d8638bc8c50de541008214",
       "licence": "Apache-2.0",
@@ -136,7 +136,7 @@
     {
       "id": "style-04-bawa-balanced",
       "name": "Bawa Balanced (STYLE-04)",
-      "status": "PROPOSED",
+      "status": "IMPLEMENTED_AND_VERIFIED",
       "source": "docs/UI-UX-CATALOGUE.md",
       "revision": "none",
       "licence": "none",

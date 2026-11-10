@@ -52,6 +52,21 @@
       "docs/14-wallet-app-implementation",
       "docs/mainnet/MAINNET-GUIDE.md",
       "M-38"
+    ],
+    "implemented": [
+      "CLI generation of fresh test wallets via tools/hdwallet-gen/generate.js (24-word BIP-39, empty passphrase, AES-256-GCM seed bundle with bundle_verified check) and tools/make_wallet.py",
+      "CLI watch-only derivation for BTC/ETH/TRX via derive.js/compare.js reproducing the published fixtures exactly",
+      "recovery via tools/decrypt_seed.py + re-derivation",
+      "TON single-address generation (V4 R2, wallet ID 698983191)"
+    ],
+    "missing": [
+      "a built CLI wallet product integrating these tools",
+      "send",
+      "sign",
+      "broadcast",
+      "confirmation-policy enforcement in code",
+      "TON watch-only derivation (no xpub)",
+      "any graphical UI"
     ]
   },
   {
@@ -102,6 +117,18 @@
       "docs/14-wallet-app-implementation",
       "docs/mainnet/MAINNET-GUIDE.md",
       "M-38"
+    ],
+    "implemented": [
+      "BTC watch-only derivation from extended public keys via the repo tools, fixtures exact at indices 0 and 1",
+      "BTC generation via the CLI tools"
+    ],
+    "missing": [
+      "a built Bitcoin wallet product",
+      "send",
+      "sign",
+      "broadcast",
+      "transaction construction",
+      "6-confirmation enforcement in code (policy only, documented not enforced)"
     ]
   },
   {
@@ -154,6 +181,19 @@
       "docs/mainnet/MAINNET-GUIDE.md",
       "M-38",
       "tools/hdwallet-gen: ETH derivation does not establish generic EVM-wallet operation"
+    ],
+    "implemented": [
+      "ETH watch-only derivation from extended public keys via the repo tools, fixtures exact at indices 0 and 1",
+      "ETH generation via the CLI tools"
+    ],
+    "missing": [
+      "a built EVM wallet product",
+      "generic EVM operation beyond ETH derivation",
+      "send",
+      "sign",
+      "broadcast",
+      "transaction construction",
+      "finality enforcement in code (policy only, documented not enforced)"
     ]
   },
   {
@@ -209,6 +249,19 @@
       "docs/14-wallet-app-implementation",
       "docs/mainnet/MAINNET-GUIDE.md",
       "M-38"
+    ],
+    "implemented": [
+      "generation for BTC/ETH/TRX/TON and watch-only derivation for BTC/ETH/TRX via the repo tools, fixtures exact",
+      "TON single-address generation-only (V4 R2, wallet ID 698983191)"
+    ],
+    "missing": [
+      "a built integrated multichain wallet product",
+      "send",
+      "sign",
+      "broadcast",
+      "cross-chain transaction operation",
+      "confirmation-policy enforcement in code",
+      "TON watch-only derivation"
     ]
   },
   {
@@ -223,12 +276,12 @@
     "engine": {
       "name": "trust-wallet-core",
       "version": "4.8.4",
-      "status": "UNVERIFIED"
+      "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
       "route": "token-ui",
       "foundation": "web-01-token-ui",
-      "status": "PROPOSED"
+      "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "security": {
       "boundaries": [
@@ -237,10 +290,10 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen and the required engine version for this proposed profile. 4.9.2 is the guides' reference engine only, never the tool pin. CLI generation and derivation evidence does not verify a web engine integration.",
-        "WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is pending. No web starter exists yet.",
+        "The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.8.4 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration \u2014 the boundary tests do.",
+        "WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented; app tests render title, empty dashboard, import and send-not-implemented states.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
-        "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; existing verification is through CLI tools, not this web profile.",
+        "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.",
         "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
         "Testnet is the default; mainnet is out of scope by default.",
@@ -253,14 +306,14 @@
         "no secret reaches adapters, UI state, logs or telemetry",
         "starter builds from a clean checkout",
         "14-screen contract coverage checked against docs/14 section 5.1",
-        "the token-ui foundation completes Phase 5 inspection before adoption and retains UI-only responsibilities",
+        "the token-ui foundation completes Phase 5 inspection before adoption and retains UI-only responsibilities (met: Phase 5 inspection done 2026-11-10; foundation adopted in Phase 6)",
         "Trust Wallet Core 4.8.4 integration is verified for the web profile without exposing secrets or signing authority to the UI",
         "the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only",
         "any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet"
       ],
-      "status": "PROPOSED"
+      "status": "IMPLEMENTED_AND_VERIFIED"
     },
-    "status": "IMPLEMENTED_AND_VERIFIED",
+    "status": "STARTER_IMPLEMENTED_AND_VERIFIED",
     "sources": [
       "tools/hdwallet-gen",
       "docs/11-trust-wallet-and-independent-verification",
@@ -270,6 +323,22 @@
       "WEB-01",
       "STYLE-04",
       "M-38"
+    ],
+    "implemented": [
+      "watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM with pre-WASM validation (Base58Check, checksum, private rejection, per-chain versions, R-01 point validation)",
+      "14 screens with honest loading/empty/stale/locked/gate-failed/error states",
+      "receive-QR display",
+      "import of extended public keys only"
+    ],
+    "missing": [
+      "send",
+      "sign",
+      "broadcast",
+      "balances",
+      "prices",
+      "transaction history",
+      "live-browser run (preview HTTP checks + unit tests only)",
+      "on-device derivation (web has no on-device concept \u2014 derivation is in-browser WASM)"
     ]
   },
   {
@@ -289,7 +358,7 @@
     "ui": {
       "route": "wdk-starter-ui-only",
       "foundation": "and-01-wdk-starter-kotlin",
-      "status": "PROPOSED"
+      "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "security": {
       "boundaries": [
@@ -298,11 +367,11 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen and the required engine version for this proposed profile. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. CLI generation and derivation evidence does not establish Android engine operation.",
-        "AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is pending. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.",
+        "AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); 17 unit tests pass; emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
-        "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; existing verification is through CLI tools, not Android.",
+        "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; on-device derivation is not implemented (no AAR); verification is through CLI tools and the web boundary tests, not Android derivation.",
         "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
         "Testnet is the default; mainnet is out of scope by default.",
@@ -322,7 +391,7 @@
       ],
       "status": "PROPOSED"
     },
-    "status": "IMPLEMENTED_AND_VERIFIED",
+    "status": "STARTER_IMPLEMENTED_AND_VERIFIED",
     "sources": [
       "tools/hdwallet-gen",
       "docs/11-trust-wallet-and-independent-verification",
@@ -332,6 +401,23 @@
       "AND-01",
       "STYLE-04",
       "M-38"
+    ],
+    "implemented": [
+      "14-screen watch-only UI with honest states",
+      "extended-public-key import (validator 10/10, policy 7/7 in unit tests)",
+      "R-01 point validation mirrored in pure Kotlin",
+      "receive-QR display"
+    ],
+    "missing": [
+      "on-device address derivation (no AAR)",
+      "send",
+      "sign",
+      "broadcast",
+      "balances",
+      "prices",
+      "transaction history",
+      "on-device Add-button acceptance path (taps swallowed under TCG emulation \u2014 NOT VERIFIED)",
+      "KVM-backed emulator run (a KVM-engaged launch crashed the host VM in ~8 s \u2014 NOT VERIFIED)"
     ]
   },
   {
@@ -389,6 +475,18 @@
       "docs/14-wallet-app-implementation",
       "docs/mainnet/MAINNET-GUIDE.md",
       "M-38"
+    ],
+    "implemented": [
+      "BTC/ETH/TRX watch-only derivation from extended public keys only via the repo tools, fixtures exact",
+      "private-key inputs rejected pre-WASM",
+      "invalid-point keys rejected (R-01)"
+    ],
+    "missing": [
+      "a built watch-only wallet product or monitoring interface",
+      "balances",
+      "confirmation-policy enforcement",
+      "TON (excluded: no xpub)",
+      "any secret intake or signing"
     ]
   }
 ]

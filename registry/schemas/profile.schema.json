@@ -137,7 +137,10 @@
           }
         },
         "notes": {
-          "type": "string"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -173,6 +176,7 @@
       "type": "string",
       "enum": [
         "IMPLEMENTED_AND_VERIFIED",
+        "STARTER_IMPLEMENTED_AND_VERIFIED",
         "DOCUMENTED_NOT_TESTED",
         "PROPOSED",
         "OPEN",
@@ -186,6 +190,18 @@
       "items": {
         "type": "string",
         "description": "A guide path or registry id."
+      }
+    },
+    "implemented": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     }
   }

@@ -1,7 +1,7 @@
 # ai/request-routing.md
 
 Read `AGENTS.md` and `WALLET_BUILDER.md`. Governing policy, layer rules and engine detail remain there and in `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
-All seven profiles are proposed; their `ai/profiles/<id>.md` files are planned for Phase 3. A routing match is not proof of availability or verification.
+The seven profiles are validated in `registry/profiles.json`; one profile file exists per profile in `ai/profiles/<id>.md`; the mapped prompt per profile is `ai/prompts/create-<id>.md`. A routing match is not proof of availability or verification.
 Follow the entry-point workflow: parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report.
 
 ## Classify the request
@@ -21,14 +21,18 @@ Follow the entry-point workflow: parse → plan → profile → engine → chain
 | Android, Kotlin wallet UI, 14 screens | “Build a 14-screen Android wallet UI.” | `android-wallet` | `ai/prompts/create-android-wallet.md` |
 | Watch-only, extended public keys, xpub input, no secrets/signing | “Derive addresses only from extended public keys, without secrets or signing.” | `watch-only-wallet` | `ai/prompts/create-watch-only-wallet.md` |
 
+## Generate the project
+
+The one-prompt workflow is `scripts/build-wallet.mjs "<request>"`. It classifies, generates the profile's project with `scripts/generate-project.mjs` into `generated/<profile-id>`, verifies that generated project, and writes a JSON report. Its classification order is: both web+android words → split (run two builds); android → android-wallet; web/website/browser → web-wallet; multi-chain/multichain → multichain-wallet; hd/hierarchical deterministic/cli/command-line → hd-wallet-cli; bitcoin/btc → bitcoin-wallet (bitcoin + watch-only without generation language is ambiguous — ask the listed question, do not guess); evm/ethereum/eth → evm-wallet (ETH derivation only); watch-only/watch only/xpub/extended public key → watch-only-wallet; otherwise unclassifiable. It does not require the word "wallet".
+
 ## Scope boundaries affecting routing
 
 - Testnet is the default throughout. Mainnet without separate approval must be refused. Unspecified testnet path/network details are OPEN; supplied derivation references do not authorize mainnet use.
 - No signing or broadcast code exists in this repo. A wallet name, UI screen or foundation choice does not establish those capabilities.
 - ETH derivation does not establish generic EVM operation. Unspecified EVM capabilities are OPEN, not supported claims.
 - TON is generation-only in the proposed multichain profile: no send and no xpub. TRX derivation is `m/44'/195'/0'/0/i`; TON derivation is `m/44'/607'/0'`, generation-only.
-- Web uses owner-approved `token-ui`; Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 confirms these foundations by inspection.
-- No Android build exists yet, and no AAR/APK has ever been produced.
+- Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (25 tests, build + preview verified); no live browser run has been performed.
+- An Android debug APK is produced by `./gradlew assembleDebug` (52,456,212 bytes, verified); no AAR exists for any version, and on-device derivation is not implemented.
 - Web, Android and watch-only chain/path coverage not supplied here is OPEN; do not borrow another profile's capabilities.
 
 ## Ambiguous requests: ask one question
@@ -67,9 +71,9 @@ Separate mainnet approval does not itself establish implementation or verificati
 
 ## Pending validation and reporting
 
-- Route a matching request even while its profile is pending. Record the profile ID and prompt, label the proposed route PROPOSED, and report `profile pending validation`.
+- Route a matching request and report its registry status (`DOCUMENTED_NOT_TESTED` or `STARTER_IMPLEMENTED_AND_VERIFIED`) with the implemented/missing lists. Record the profile ID and prompt.
 - If an entry-point or planned profile file, verification procedure or result is unavailable, record OPEN. Do not invent missing file contents, tests or evidence.
-- Require passing Phase 3 validation evidence before promising the profile or claiming it is verified. Existing engine evidence or owner approval of a foundation is not a substitute.
-- Carry the selected profile's verification requirements into the plan and report. For web/Android, retain the 14-screen contract requirement and the Phase 5 foundation-inspection gap.
-- Use evidence labels only as justified: IMPLEMENTED_AND_VERIFIED / DOCUMENTED_NOT_TESTED / PROPOSED / OPEN / EXTERNALLY_DEPENDENT / UNVERIFIED.
+- Require the profile's recorded evidence before promising it or claiming it is verified. Existing engine evidence or owner approval of a foundation is not a substitute.
+- Carry the selected profile's verification requirements into the plan and report. For web/Android, retain the 14-screen contract requirement and the recorded Phase 5 foundation inspection.
+- Use evidence labels only as justified: IMPLEMENTED_AND_VERIFIED / STARTER_IMPLEMENTED_AND_VERIFIED / DOCUMENTED_NOT_TESTED / PROPOSED / OPEN / EXTERNALLY_DEPENDENT / UNVERIFIED. STARTER_IMPLEMENTED_AND_VERIFIED means the starter for the profile is implemented and verified within its documented scope; it is not a complete wallet.
 - Report the selected route or split routes, testnet scope, refused parts, validation and inspection gaps, OPEN facts, evidence labels and next required verification. Do not claim capabilities beyond the evidence.

@@ -3,9 +3,9 @@
 ## Purpose and baseline
 Bawa (`Pr3eve6ti2o/bawa`) is the wallet-engine and canonical-guide repository for the AI Wallet Builder programme. The builder routes work; it is not a cryptographic implementation or a demonstrated full transaction wallet.
 
-Verified snapshot (2026-11-10): main at `b438d3a7` (H7). The engine suite recorded 92 checks, 0 fail at H7. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
+Verified snapshot (2026-11-10): main at `0b2aa295` (H9: H8 audit/review fixes + H9 doc refresh). The engine suite recorded 130 checks, 0 fail at H9. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
 
-At H7 there is NO signing, broadcast or transaction-construction code. Send/sign/broadcast has never been exercised on any network.
+At H9 there is NO signing, broadcast or transaction-construction code. Send/sign/broadcast has never been exercised on any network.
 
 ## Read order
 1. `AGENTS.md` — these repository-wide instructions.
@@ -21,6 +21,8 @@ The plan is authoritative for architecture, phases, templates, gates and decisio
 ## One-prompt workflow
 Follow **parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report**. Interpret the request, identify scope and gates, route through a proposed profile and authoritative sources, select engine/chain responsibilities and a candidate template, then inspect the repository and candidate foundation before scaffolding. Implement only scoped work in the correct layers, run applicable checks, audit every claim against evidence, and report working behavior, mocks, failures and unresolved gaps. A route is not proof that a capability exists.
 
+`scripts/build-wallet.mjs` runs the workflow for one plain-language request: it classifies the request, GENERATES a differentiated project for its profile with `scripts/generate-project.mjs` (output `generated/<profile-id>`, gitignored), verifies that generated project, and writes a JSON report. The workflow generates a project; it does not merely verify starters.
+
 ## Hard constraints
 - **Builder:** route work; never implement cryptography in prompt text or invent engine interfaces.
 - **Engine:** owns generation, derivation, custody, recovery and signing through narrow typed interfaces; never an indexer. Ownership does not establish implementation, especially for signing.
@@ -34,15 +36,16 @@ Follow **parse → plan → profile → engine → chains → template → inspe
 - **Honesty:** do not invent capabilities, files, paths, versions, interfaces, commands or results. Missing facts are OPEN.
 
 ## Planned assets — not an existence inventory
-Profiles are PROPOSED; Phase 3 validates them. Use plan section 2.2 for exact planned locations. Resolve OPEN paths from that section, then inspect existence before use; do not synthesize names.
+Profiles are VALIDATED in Phase 3 (`registry/profiles.json`, 7 profiles, with `implemented`/`missing` fields). Locations below are the installed state; inspect existence before use; do not synthesize names.
 
 | Asset | Planned location / status |
 | --- | --- |
-| Profile definitions | VALIDATED in Phase 3: `registry/profiles.json` (7 profiles); run `node scripts/validate-registry.mjs`. |
-| Profile routing prompts | PROPOSED layout: `ai/prompts/`, named `create-*.md`; individual files must be inspected. |
+| Profile definitions | VALIDATED in Phase 3: `registry/profiles.json` (7 profiles); run `node scripts/validate-registry.mjs`. The two starters carry status `STARTER_IMPLEMENTED_AND_VERIFIED`. |
+| Profile routing prompts | INSTALLED in `ai/prompts/`, named `create-*.md`; individual files must be inspected. |
+| Profile files | INSTALLED in `ai/profiles/` (one per profile, derived from `registry/profiles.json`). |
 | Registries | INSTALLED in Phase 3: `registry/` (`profiles.json`, `capabilities.json`, `engines.json`, `ui.json`, `schemas/`); validated. |
-| Templates | FOUNDATIONS RECORDED in Phase 5: `templates/web/UPSTREAM.md` (token-ui) and `templates/android/UPSTREAM.md` (WDK UI-only). No template code is vendored yet. |
-| Starters | PROPOSED; exact paths OPEN — plan §2.2. |
+| Templates | token-ui VENDORED in `apps/web/src/ui/`; WDK Starter UI layer VENDORED in `apps/android`. Upstream notes in `templates/web/UPSTREAM.md` and `templates/android/UPSTREAM.md`. |
+| Starters | INSTALLED: `apps/web` (watch-only starter, 25 tests) and `apps/android` (UI starter, 17 tests). |
 
 If section 2.2 cannot be read, keep unspecified locations OPEN and stop work that requires them. Do not claim planned assets are installed or present.
 
@@ -50,6 +53,7 @@ If section 2.2 cannot be read, keep unspecified locations OPEN and stop work tha
 | Label | Meaning |
 | --- | --- |
 | IMPLEMENTED_AND_VERIFIED | Demonstrated behavior only, within the evidenced revision, environment and scope. |
+| STARTER_IMPLEMENTED_AND_VERIFIED | The starter for this profile is implemented and verified within its documented scope; it is not a complete wallet; missing components are listed in the profile's `implemented`/`missing` fields. |
 | DOCUMENTED_NOT_TESTED | Described in documentation without execution evidence for that behavior. |
 | PROPOSED | Intended design, profile or future work; not an implementation claim. |
 | OPEN | Missing fact, unresolved decision or required evidence/input. |
@@ -65,4 +69,4 @@ State precisely which requested portion is unsupported and why. Mark missing fac
 Return an evidence table with: claim/scope, evidence label, revision/network, actual command or artifact and observed result, check status, mocks/limitations, and next gate.
 Use **PASS / FAIL / NOT-RUN** for checks; NOT-RUN is never a pass.
 List changed files, what actually works, what is mocked, and what remains unresolved or externally dependent. Redact secrets.
-Distinguish the supplied H7 baseline from current-run results; never report an unexecuted build or check as successful.
+Distinguish the supplied H9 baseline (130 checks, 0 fail) from current-run results; never report an unexecuted build or check as successful.
