@@ -38,10 +38,10 @@ Profiles are PROPOSED; Phase 3 validates them. Use plan section 2.2 for exact pl
 
 | Asset | Planned location / status |
 | --- | --- |
-| Profile definitions | PROPOSED; exact paths OPEN — plan §2.2. |
+| Profile definitions | VALIDATED in Phase 3: `registry/profiles.json` (7 profiles); run `node scripts/validate-registry.mjs`. |
 | Profile routing prompts | PROPOSED layout: `ai/prompts/`, named `create-*.md`; individual files must be inspected. |
-| Registries | PROPOSED; exact paths OPEN — plan §2.2. |
-| Templates | PROPOSED; exact paths OPEN — plan §2.2. |
+| Registries | INSTALLED in Phase 3: `registry/` (`profiles.json`, `capabilities.json`, `engines.json`, `ui.json`, `schemas/`); validated. |
+| Templates | FOUNDATIONS RECORDED in Phase 5: `templates/web/UPSTREAM.md` (token-ui) and `templates/android/UPSTREAM.md` (WDK UI-only). No template code is vendored yet. |
 | Starters | PROPOSED; exact paths OPEN — plan §2.2. |
 
 If section 2.2 cannot be read, keep unspecified locations OPEN and stop work that requires them. Do not claim planned assets are installed or present.

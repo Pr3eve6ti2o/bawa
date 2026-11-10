@@ -1265,6 +1265,8 @@ What this guide does not do: it does not hold your keys; it does not sign, const
 
 Verified on: this rewrite was verified against the repair commit e3b65fb832db287fdc8d54794980dd0b3456cc12 on 8 November 2026, with live checks recorded in the section notes (differential test, live wallet creation and restore, TON fixture derivation, integrated browser flow). Tool versions observed during verification: Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2, Node v24.22.2 — outside the repository's declared Node >=22 <23 range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Repository commit: e3b65fb832db287fdc8d54794980dd0b3456cc12. Sources fetched on 8 November 2026. The former pin 082f7915 is retained only as history.
 
+AI Wallet Builder programme: the builder entry points (`AGENTS.md`, `WALLET_BUILDER.md`), the implementation plan (`docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`), profiles and registries (`registry/`), and the UI/UX catalogue (`docs/UI-UX-CATALOGUE.md`, `docs/UI-TEMPLATE-REGISTRY.yaml`, `docs/ui-ux-assets/`) live alongside this guide. The guide scope above is rewritten around one-prompt use in Phase 10.
+
 ---
 
 ## Prose credit

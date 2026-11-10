@@ -1,0 +1,305 @@
+schema_version: 1
+catalogue_name: Bawa UI/UX template and design registry
+reviewed_at: 2026-11-10
+bawa_reviewed_snapshot:
+  repository: https://github.com/Pr3eve6ti2o/bawa
+  branch: main
+  commit: b3814e0b69becf74247577915ab62da19dfaa2d6
+  tree_sha: 42eab796c521e5f9ab273cb7e728160dfd6ad41f
+  tree_entries: 74
+  local_template_directories_found: false
+  local_web_or_android_app_found: false
+  note: >-
+    The catalogue and this registry are ready to add to Bawa, but the external
+    template repositories listed below are not vendored in the reviewed Bawa
+    snapshot. Do not tell users that they are already present locally.
+
+selection_policy:
+  source_of_truth: docs/UI-TEMPLATE-REGISTRY.yaml
+  menu_rules:
+    - Show only entries in template_choices matching the requested platform.
+    - Show availability_state beside each choice: vendored, fetch-required, or unavailable.
+    - Show a fetch-required choice only when the exact upstream commit is reachable.
+    - Show vendored choices first; show custom_path choices as build-from-specification options. Never present a research_only source as a selectable template.
+    - If a source is unreachable, its licence is unclear, or the exact revision cannot be pinned, hide it and explain why.
+    - Never invent template names, capabilities, screenshots, licences, or framework compatibility.
+    - Do not mix implementation foundations with visual-style references; ask those questions separately.
+    - If the user already chose a platform, do not ask for it again.
+    - If the user says choose for me, use the recommended option and state the choice briefly.
+  availability_states:
+    vendored: Source code exists inside the current Bawa checkout under templates/.
+    fetch_required: The catalogue identifies an upstream source and exact commit, but code must be fetched before use.
+    unavailable: Source cannot be fetched or verified; do not offer it as a current choice.
+    custom_path: A Bawa-specification implementation path, not a vendored third-party starter. This may be offered without external fetch.
+  copy_policy:
+    - Read the source README, AGENTS.md or equivalent, exact LICENSE, and relevant UI source files before copying.
+    - Pin the exact commit before copying or submoduling.
+    - Preserve copyright, licence, NOTICE and attribution requirements.
+    - Keep template UI separate from Bawa key management, derivation, vault and signing modules.
+    - Replace mock data with Bawa application ports; never present mock data as live chain data.
+    - Do not reuse upstream seed/key storage or transaction-signing code merely because it is adjacent to UI code.
+    - Never fetch or execute remote scripts at app runtime.
+
+platform_questions:
+  - id: web
+    label: Web wallet
+    show_template_ids: [WEB-01, WEB-02, WEB-03]
+  - id: android
+    label: Android wallet
+    show_template_ids: [AND-01, AND-02, AND-03, AND-04]
+  - id: both
+    label: Web + Android wallet
+    show_template_ids: [WEB-01, WEB-02, WEB-03, AND-01, AND-02, AND-03, AND-04]
+  - id: cli
+    label: HD wallet / CLI only
+    show_template_ids: []
+    note: No visual template menu is needed for a CLI-only request.
+
+template_choices:
+  - id: WEB-01
+    name: imToken Wallet UI Starter Kit
+    platform: web
+    source_type: complete_ui_starter
+    upstream_repository: https://github.com/consenlabs/token-ui
+    branch: main
+    pinned_commit: 6380d5d4dfeebf89704c0527e3c552be6ee2d231
+    licence: MIT
+    last_push_observed: 2026-09-10
+    availability_state: fetch_required
+    recommended: true
+    framework: React + Vite + pnpm workspace
+    provides: [wallet-style-dashboard, reusable-ui-components, design-tokens, light-and-dark-theme, DESIGN-md, AGENTS-md, mock-wallet-data]
+    does_not_provide: [Bawa-wallet-engine, key-management, derivation, custody, signing, blockchain-rpc, transaction-indexing]
+    adaptation_rules:
+      - Use as a presentation/UI foundation only.
+      - Read DESIGN.md and AGENTS.md before changing visuals.
+      - Replace mock wallet data with typed Bawa ports.
+      - Keep the upstream component library where practical; document deliberate changes.
+    why_selected: Explicitly prepared for AI-assisted wallet UI composition and includes a runnable React starter plus design/agent instructions.
+    screenshot_status: No screenshot assets were present in its inspected repository tree; use its source and DESIGN.md as evidence, not an invented screenshot.
+
+  - id: WEB-02
+    name: shadcn/ui component foundation
+    platform: web
+    source_type: component_library
+    upstream_repository: https://github.com/shadcn-ui/ui
+    branch: main
+    pinned_commit: 8ab27715521cbd4f87ae6886cd989cbb678f6de7
+    licence: MIT
+    last_push_observed: 2026-11-09
+    availability_state: fetch_required
+    recommended: false
+    framework: React component library
+    provides: [accessible-components, dialogs, forms, cards, tables, navigation-primitives, customization-patterns]
+    does_not_provide: [wallet-dashboard, wallet-workflows, wallet-engine, blockchain-integration]
+    adaptation_rules:
+      - Treat as components only, not a ready-made wallet app.
+      - Build Bawa screens and flows from the canonical 14-screen specification.
+      - Pin versions and run the repository's test suite.
+    why_selected: Strong component foundation when the user wants a custom visual identity rather than a precomposed wallet starter.
+    screenshot_status: No Bawa-specific wallet screenshot supplied; component docs and source are the evidence.
+
+  - id: WEB-03
+    name: Custom React UI (Bawa specification)
+    platform: web
+    source_type: custom_implementation
+    upstream_repository: null
+    branch: null
+    pinned_commit: null
+    licence: Bawa repository licence applies to Bawa-authored code; third-party dependencies require separate review.
+    availability_state: custom_path
+    recommended: false
+    framework: React or the framework approved by the current Bawa app profile
+    provides: [original-bawa-ui, canonical-14-screen-coverage, no-template-coupling]
+    does_not_provide: [prebuilt-visual-design, prebuilt-wallet-components]
+    adaptation_rules:
+      - Follow Bawa docs/13 and docs/14.
+      - Reuse already approved dependencies before adding new ones.
+      - Create original components and document design tokens.
+    why_selected: A valid fallback when no external source should be fetched or the user wants a distinct design.
+    screenshot_status: Conceptual Bawa design previews are included in the catalogue assets; they are not a shipped app screenshot.
+
+  - id: AND-01
+    name: Tether WDK Starter Kotlin - UI layer only
+    platform: android
+    source_type: wallet_sample_ui_extraction
+    upstream_repository: https://github.com/tetherto/wdk-starter-kotlin
+    branch: main
+    pinned_commit: a4fa21729ba621c095d8638bc8c50de541008214
+    licence: Apache-2.0
+    last_push_observed: 2026-09-30
+    availability_state: fetch_required
+    recommended: true
+    framework: Kotlin + Jetpack Compose + Material 3
+    provides: [welcome-screen, create-screen, import-screen, home-screen, send-screen, receive-screen, sign-screen, reusable-compose-components, dark-theme]
+    does_not_provide: [Bawa-compatible-engine, BTC-TRON-TON-complete-coverage, Bawa-24-word-backup-ceremony, audited-vault]
+    adaptation_rules:
+      - Extract or adapt presentation components only.
+      - Do not adopt WDK wallet logic, mnemonic policy, derivation paths, vault or signing code as Bawa implementation.
+      - Replace WDK calls with Bawa Android application ports backed by the approved Bawa engine.
+      - Rebuild protected 24-word backup and import ceremonies to satisfy Bawa docs/14.
+      - Verify all dependencies, API levels and build files before use.
+    why_selected: It is an actual Jetpack Compose wallet sample with useful screens and reusable components; UI can be adapted without adopting its engine.
+    screenshot_status: No screenshot files were present in its inspected source tree. A schematic Android screen map is included in the catalogue.
+
+  - id: AND-02
+    name: BDK DevKit Wallet app-ui-only (legacy reference)
+    platform: android
+    source_type: ui_only_sample
+    upstream_repository: https://github.com/thunderbiscuit/devkit-wallet/tree/master/app-ui-only
+    branch: master
+    pinned_commit: 36392bfcea2fab8e772a4e89d5f8e465ab3da439
+    licence: Apache-2.0
+    last_push_observed: 2025-02-12
+    archived: true
+    availability_state: fetch_required
+    recommended: false
+    framework: Kotlin + Jetpack Compose; older dependency stack
+    provides: [home-screen, wallet-navigation, send-screen, receive-screen, transaction-history-screen, recovery-phrase-screen, compose-components]
+    does_not_provide: [maintained-current-starter, Bawa-engine, Bawa-chain-coverage, security-verified-secret-ceremonies]
+    adaptation_rules:
+      - Label as legacy and archived before displaying it in the menu.
+      - Inspect copied dependencies for compatibility and vulnerabilities.
+      - Copy UI only; do not copy engine or derivation logic from sibling app modules.
+      - Replace placeholder/no-op actions and prove every resulting screen works.
+    why_selected: The repository contains a genuinely separate app-ui-only module, useful as a secondary visual/code reference.
+    screenshot_status: The upstream repository contains app screenshots; catalogue links to the source repository and screenshots rather than redistributing them.
+
+  - id: AND-03
+    name: Android Jetpack Compose Samples (generic foundation)
+    platform: android
+    source_type: generic_ui_foundation
+    upstream_repository: https://github.com/android/compose-samples
+    branch: main
+    pinned_commit: 25631e8f544a9a1e3f01e296eaf1b4c28428196c
+    licence: Apache-2.0
+    last_push_observed: 2026-11-09
+    availability_state: fetch_required
+    recommended: false
+    framework: Kotlin + Jetpack Compose
+    provides: [navigation-patterns, adaptive-layouts, design-system-examples, screen-architecture, accessibility-patterns]
+    does_not_provide: [crypto-wallet-screens, wallet-engine, wallet-storage, signing]
+    adaptation_rules:
+      - Treat as a generic Android foundation, not a wallet template.
+      - Build all Bawa screens and security ceremonies to the canonical specification.
+      - Choose a specific sample module only after inspection; do not clone the entire monorepo into the app.
+    why_selected: Maintained upstream Compose examples provide useful platform-native patterns if the Tether sample is not suitable.
+    screenshot_status: Individual sample screenshots are available in upstream module documentation; not included as an assertion of Bawa's final UI.
+
+  - id: AND-04
+    name: Custom Jetpack Compose UI (Bawa specification)
+    platform: android
+    source_type: custom_implementation
+    upstream_repository: null
+    branch: null
+    pinned_commit: null
+    licence: Bawa repository licence applies to Bawa-authored code; third-party dependencies require separate review.
+    availability_state: custom_path
+    recommended: false
+    framework: Kotlin + Jetpack Compose
+    provides: [original-bawa-ui, canonical-14-screen-coverage, no-template-coupling]
+    does_not_provide: [prebuilt-wallet-components]
+    adaptation_rules:
+      - Follow the Bawa Android guide and docs/14.
+      - Implement the shared design tokens and canonical screen list.
+      - Keep secrets out of ordinary Compose state, saved state and navigation arguments.
+    why_selected: A clean, platform-native implementation when source reuse is not desired.
+    screenshot_status: Conceptual Bawa design previews are included in the catalogue assets; they are not a shipped app screenshot.
+
+design_profiles:
+  - id: STYLE-01
+    name: Minimal dark
+    reference_brand: Phantom
+    reference_url: https://phantom.com/
+    status: design_reference_only
+    traits: [dark-first, compact-navigation, simple-action-tiles, uncluttered-asset-list, clear-balance-hierarchy]
+    avoid: [copying-logo, trademark, exact-brand-assets, pixel-for-pixel-clone]
+    preview_asset: ui-ux-assets/direction-01-minimal-dark.png
+  - id: STYLE-02
+    name: Portfolio-first
+    reference_brand: Exodus
+    reference_url: https://www.exodus.com/
+    status: design_reference_only
+    traits: [portfolio-visualisation, balance-chart, rich-asset-cards, strong-asset-detail, premium-dark-surface]
+    avoid: [copying-logo, trademark, exact-brand-assets, pixel-for-pixel-clone]
+    preview_asset: ui-ux-assets/direction-02-portfolio-first.png
+  - id: STYLE-03
+    name: Security-forward
+    reference_brand: Rabby
+    reference_url: https://rabby.io/
+    status: design_reference_only
+    traits: [explicit-network-context, detailed-transaction-review, fee-transparency, clear-risk-messages, precise-status-labels]
+    avoid: [copying-logo, trademark, exact-brand-assets, pixel-for-pixel-clone]
+    preview_asset: ui-ux-assets/direction-03-security-forward.png
+  - id: STYLE-04
+    name: Bawa Balanced
+    reference_brand: Original combination of Phantom + Exodus + Rabby interaction patterns
+    reference_url: null
+    status: recommended_original_direction
+    recommended: true
+    traits: [simple-navigation, useful-portfolio-summary, legible-asset-list, transaction-review-first, explicit-testnet-status, original-brand-tokens]
+    avoid: [direct-brand-imitation, decorative-effects-that-obscure-state, unsupported-claims]
+    preview_asset: ui-ux-assets/direction-04-bawa-balanced.png
+  - id: STYLE-05
+    name: Calm token-centric
+    reference_brand: imToken Design System
+    reference_url: https://github.com/consenlabs/token-ui
+    status: design_reference_only
+    traits: [bright-neutral-surfaces, semantic-design-tokens, reusable-components, restrained-blue-accent, accessible-light-and-dark-theme]
+    avoid: [assuming product screenshot is the starter app, copying trademark or logos]
+    preview_asset: null
+
+research_only:
+  - id: REF-01
+    name: Edge React GUI
+    repository: https://github.com/EdgeApp/edge-react-gui
+    pinned_commit: 95f46b8fb856e1e15531ab800c88f55df7411e38
+    licence: BSD-3-Clause
+    status: full_wallet_reference_only
+    reason: Full application is coupled to its own engine and product architecture; study UX and components, do not treat as a drop-in Bawa template.
+  - id: REF-02
+    name: XChain Platform Wallet
+    repository: https://github.com/XChain-Platform/xchain-wallet
+    pinned_commit: 3e550d05e913e29e5c3cf24527bf504f1a4fe942
+    licence: AGPL-3.0
+    status: architecture_reference_only
+    reason: Separate large wallet platform and AGPL-3.0 obligations; do not offer it as a normal copyable template without explicit licensing approval.
+  - id: REF-03
+    name: OWASP Wallet UX Security Handbook
+    repository: https://scs.owasp.org/handbooks/09-ux-security/
+    status: mandatory_ux_security_reference
+    reason: Security UX principles and scoring; not a template.
+  - id: REF-04
+    name: WCAG 2.2
+    repository: https://www.w3.org/TR/WCAG22/
+    status: mandatory_accessibility_reference
+    reason: Accessibility acceptance baseline; not a template.
+
+canonical_bawa_screen_contract:
+  source: docs/14-wallet-app-implementation/README.md section 5.1
+  screens:
+    - Welcome
+    - Create wallet
+    - Import wallet
+    - Mnemonic backup
+    - Portfolio dashboard
+    - Asset list
+    - Asset detail
+    - Receive
+    - Send
+    - Transaction history
+    - Transaction details
+    - Network selection
+    - Wallet management
+    - Security and backup settings
+  required_states:
+    - Loading
+    - Empty
+    - Stale
+    - Locked
+    - Gate-failed
+    - Error
+  notes:
+    - Review is a required state of Send, not an additional screen.
+    - Lock is a required application state, not an additional screen.
+    - Do not add or remove screens without maintainer approval.

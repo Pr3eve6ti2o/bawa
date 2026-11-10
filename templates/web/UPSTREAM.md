@@ -1,0 +1,87 @@
+# Web foundation adoption record
+
+## 1. Source, pin and licence
+
+- **Foundation:** imToken token-ui (`WEB-01`) — **SELECTED** Web foundation.
+- **Source:** `consenlabs/token-ui`.
+- **Pinned commit:** `6380d5d4dfeebf89704c0527e3c552be6ee2d231`.
+- **Approval:** pre-approved by the owner on 2026-11-10; confirmed by first-hand inspection on 2026-11-10.
+- **Licence:** MIT, recorded in upstream `LICENSE`, with copyright attributed to Consenlabs.
+
+The full upstream licence text must be preserved with any vendored code. A `NOTICE` must credit Consenlabs.
+
+**Vendoring status: NOT VENDORED.** No token-ui code is in Bawa's repository at Phase 5. Phase 6 performs the adoption; this file records the source, pin, licence and boundaries that adoption must respect.
+
+## 2. What was inspected
+
+The inspection on 2026-11-10 covered the pinned source:
+
+- **Commit:** existence confirmed by a GitHub API 200 response.
+- **Commit date:** 2026-05-14.
+- **Commit message:** “Align design docs and demo theme preview (#4)”.
+- **Tree:** 107 files.
+- **Stack:** pnpm 10.33.0, Node `>=22.12.0`, React, react-router, Vite, Tailwind CSS, TypeScript, Vitest and Biome.
+- **Layout:**
+  - `apps/web`: demo app.
+  - `packages/ui`: 62 components, including `asset-row`, `holding-card`, `bottom-sheet-modal`, `action-bar` and `checklist-card`.
+  - `tooling/tsconfig`.
+
+The demo app contains a wallet dashboard (`wallet-dashboard.tsx` and its test), a home page and a UI-kit page. Its `mock-data.ts` contains fake asset amounts only.
+
+Demo scripts inspected:
+
+- `dev`: `vite`.
+- `build`: `tsc --noEmit && vite build`.
+- `test`: `vitest run`.
+- `typecheck`.
+- `verify`: `check && test && typecheck`.
+
+### Exclusion check
+
+Across the pinned tree:
+
+- No mnemonic, private-key, seed or keystore code was found anywhere.
+- No fetch, axios, RPC or WalletConnect code was found anywhere.
+- `localStorage` is used only for the theme preference in `theme-toggle.tsx`.
+
+token-ui provides no engine, derivation, vault, custody, signing, RPC or indexing implementation.
+
+## 3. What is adopted / what is not adopted
+
+These lists define the Phase 6 adoption scope, not work already completed.
+
+### Adopted scope
+
+- The `packages/ui` component library.
+- The demo app's structure as the starting point for Bawa's `apps/web`.
+
+### Not adopted
+
+- The demo's mock data. Phase 6 replaces it through the Bawa engine boundary.
+- Engine, derivation, vault, custody, signing, RPC or indexing code. None is supplied by token-ui; no engine, vault or signing code is inherited.
+
+## 4. Compatibility notes
+
+- Bawa pins Node `>=22 <23`.
+- token-ui requires Node `>=22.12.0`.
+- The requirements are compatible: the shared range is `>=22.12.0 <23`.
+
+token-ui's package manager is pnpm 10.33.0; Bawa's tools use npm. **Phase 6 must decide and record which package manager the Web starter uses.** This record does not select either manager for the starter.
+
+## 5. What Phase 6 must do
+
+- Perform the adoption from the recorded pin within the scope above.
+- Preserve the full upstream MIT licence text with vendored code and provide a `NOTICE` crediting Consenlabs.
+- Replace the demo's mock data and wire the Bawa engine boundary.
+- Build the 14 screens specified in `docs/14`, section 5.1.
+- Keep secrets out of UI state, logs and telemetry.
+- Use the compatible Node range and record the Web starter's chosen package manager.
+
+## 6. What would invalidate this selection
+
+Do not proceed on the strength of this record without reassessment if:
+
+- The upstream licence changes, requiring the recorded licence basis to be reviewed.
+- The pinned commit disappears or can no longer be retrieved and verified.
+- An exclusion violation is found in the pinned source during adoption, contradicting the checks in section 2.
+- The adoption cannot preserve the full upstream licence text or provide the required `NOTICE` crediting Consenlabs.

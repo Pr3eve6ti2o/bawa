@@ -11,9 +11,16 @@
       "revision": "6380d5d4dfeebf89704c0527e3c552be6ee2d231",
       "licence": "MIT",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
-      "notes": "Recommended Web foundation (pre-approved). React + Vite + pnpm. Provides dashboard, components, design tokens, themes. Provides no engine, derivation, vault, custody, signing, RPC or indexing. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "SELECTED Web foundation (Phase 5, inspected 2026-11-10: commit 6380d5d4 exists, dated 2026-05-14; MIT licence confirmed; 107 files; React + Vite + pnpm 10.33.0, Node >=22.12.0. No mnemonic, private-key, seed, keystore, fetch, axios, RPC or WalletConnect code; localStorage only for the theme preference. Provides no engine, derivation, vault, custody, signing, RPC or indexing. Mock data must be replaced by the Bawa engine boundary in Phase 6. See templates/web/UPSTREAM.md."
     },
     {
       "id": "web-02-shadcn-ui",
@@ -23,9 +30,16 @@
       "revision": "8ab27715521cbd4f87ae6886cd989cbb678f6de7",
       "licence": "MIT",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
-      "notes": "Component-foundation alternative. Component library only, not a wallet application. Wallet-screen coverage and build compatibility OPEN. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "Component-foundation alternative. Commit 8ab27715 exists, dated 2026-11-08; MIT confirmed. Component library only, not a wallet application. Wallet-screen coverage and build compatibility OPEN."
     },
     {
       "id": "web-03-custom-react",
@@ -35,8 +49,15 @@
       "revision": "none",
       "licence": "OPEN",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
       "notes": "No-fetch fallback built from docs/13 + docs/14. No upstream application to fetch. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
     },
     {
@@ -47,9 +68,16 @@
       "revision": "a4fa21729ba621c095d8638bc8c50de541008214",
       "licence": "Apache-2.0",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
-      "notes": "Recommended Android foundation, UI LAYER ONLY (pre-approved). Kotlin + Jetpack Compose + Material 3. Its WDK engine, 12-word phrase policy, vault, derivation and signing are EXCLUDED from adoption. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "SELECTED Android foundation, UI LAYER ONLY (Phase 5, inspected 2026-11-10: commit a4fa2172 exists, dated 2026-09-30; Apache-2.0 confirmed; 20 files; Gradle 8.7, AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00, JVM 17 \u2014 JDK 17 CONFIRMED by the starter. Its wdk-core-kotlin engine module is OUTSIDE this repo (settings.gradle includes it from ../wdk-core-kotlin), so the starter does NOT build standalone; UI-only adoption must remove that dependency and all WdkCore imports and rebuild the protected 24-word ceremony. 7 screens present (Welcome/Create/Import/Home/Send/Receive/Sign); 7 of the 14-screen contract still missing. See templates/android/UPSTREAM.md."
     },
     {
       "id": "and-02-devkit-wallet",
@@ -59,9 +87,13 @@
       "revision": "36392bfcea2fab8e772a4e89d5f8e465ab3da439",
       "licence": "Apache-2.0",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc"],
-      "operations": ["ui"],
-      "notes": "Legacy secondary reference only. Archived; last push 2025-02-12. Current Gradle/Compose compatibility OPEN. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
+      "chains": [
+        "btc"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "Legacy secondary reference only. Archived (last commit 2025-02-12, 'Update readme with notice of public archive'). Current Gradle/Compose compatibility OPEN."
     },
     {
       "id": "and-03-compose-samples",
@@ -71,9 +103,16 @@
       "revision": "25631e8f544a9a1e3f01e296eaf1b4c28428196c",
       "licence": "Apache-2.0",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
-      "notes": "Generic Compose foundation, not a wallet template. Wallet-screen and state-coverage review OPEN. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "Generic Compose foundation, not a wallet template. Commit 25631e8f exists, dated 2026-10-23; Apache-2.0 confirmed. Wallet-screen and state-coverage review OPEN."
     },
     {
       "id": "and-04-custom-compose",
@@ -83,8 +122,15 @@
       "revision": "none",
       "licence": "OPEN",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
       "notes": "Specification-led build from the Android guide + docs/14. No upstream wallet code. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
     },
     {
@@ -95,8 +141,15 @@
       "revision": "none",
       "licence": "none",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
       "notes": "Default visual direction (pre-approved). Design reference only, never source code. Review pin 2026-11-10, not re-verified. Re-verification belongs to Phase 5, not Phase 3."
     },
     {
@@ -107,21 +160,31 @@
       "revision": "95f46b8fb856e1e15531ab800c88f55df7411e38",
       "licence": "BSD-3-Clause",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth"],
-      "operations": ["ui"],
-      "notes": "Research-only, never a selectable menu entry."
+      "chains": [
+        "btc",
+        "eth"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "Research-only, never a selectable menu entry. Commit 95f46b8f exists, dated 2026-11-09; BSD-3-Clause confirmed (copyright 2017 Airbitz Inc dba Edge). React Native app."
     },
     {
       "id": "research-xchain-platform",
       "name": "XChain Platform Wallet",
       "status": "OPEN",
-      "source": "XChainJS/xchainjs-lib",
+      "source": "xchainjs/xchainjs-lib",
       "revision": "3e550d05e913e29e5c3cf24527bf504f1a4fe942",
       "licence": "AGPL-3.0",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth"],
-      "operations": ["ui"],
-      "notes": "Research-only. Reciprocal licence (AGPL-3.0): do not copy without an explicit licensing decision. Never a selectable menu entry."
+      "chains": [
+        "btc",
+        "eth"
+      ],
+      "operations": [
+        "ui"
+      ],
+      "notes": "Research-only. Reciprocal licence (AGPL-3.0): do not copy without an explicit licensing decision. FINDING (Phase 5): the recorded pin 3e550d05 does NOT resolve in xchainjs/xchainjs-lib (GitHub API: 'No commit found for SHA'; git fetch: 'not our ref') \u2014 the pin is UNVERIFIED. The recorded source org case was also corrected (XChainJS -> xchainjs)."
     },
     {
       "id": "research-owasp-wcag",
@@ -131,8 +194,15 @@
       "revision": "unpinned",
       "licence": "OPEN",
       "reviewed_at": "2026-11-10",
-      "chains": ["btc", "eth", "trx", "ton"],
-      "operations": ["ui"],
+      "chains": [
+        "btc",
+        "eth",
+        "trx",
+        "ton"
+      ],
+      "operations": [
+        "ui"
+      ],
       "notes": "UX-security and accessibility references for Phase 9 review. Not a template. Research-only, never a selectable menu entry."
     }
   ]

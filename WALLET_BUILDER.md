@@ -82,8 +82,8 @@ Owner-approved foundations, subject to Phase 5 confirmation by inspection:
 - Android: **Tether WDK Starter Kotlin**, **UI layer only**, **Apache-2.0**.
 - Default visual direction: **Bawa Balanced**.
 
-Reuse remains PROPOSED until inspected and evidenced; owner approval is not proof of integration. Foundation versions and unlisted local paths are OPEN.
-The UI/UX catalogue package is **not installed** in the repository.
+Inspected in Phase 5 (see research/ui-candidates.md and registry/ui.json); owner approval is not proof of integration — adoption happens in Phases 6-7. Foundation pins are recorded in registry/ui.json and templates/web/UPSTREAM.md + templates/android/UPSTREAM.md.
+The UI/UX catalogue is installed: docs/UI-UX-CATALOGUE.md, docs/UI-TEMPLATE-REGISTRY.yaml and docs/ui-ux-assets/ (10 files).
 
 Follow Doc 14 §5.1's **14-screen contract**. **Review is a Send state; Lock is an app state**, not extra screens.
 Required states: **loading, empty, stale, locked, gate-failed, error**.
