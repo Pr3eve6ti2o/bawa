@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
 import {
-  existsSync, lstatSync, readdirSync, readFileSync, readlinkSync,
+  existsSync, lstatSync, readFileSync,
 } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { secretScan } from './secret-scan.mjs';
+import { verdict } from './gate-verdict.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,9 +16,13 @@ if (args.some(arg => arg !== '--skip-android')) {
 }
 
 let failures = 0;
+const skipped = [];
 
+// F-41: skips are tracked so the verdict can say so. report() records
+// FAILs in `failures` and SKIPs in `skipped`.
 function report(name, status, detail = '') {
   if (status === 'FAIL') failures += 1;
+  if (status === 'SKIP') skipped.push(name);
   console.log(`${name}: ${status}${detail ? ` (${detail})` : ''}`);
 }
 
@@ -36,39 +42,6 @@ function runCommand(name, executable, commandArgs, cwd = root) {
   });
 }
 
-const excludedTrees = [
-  'apps/web/dist', 'apps/android/app/build', 'apps/android/.gradle', 'reports',
-];
-
-function excluded(file, directory = false) {
-  return file.split('/').some(part => part === 'node_modules' || part === '.git') ||
-    excludedTrees.some(tree => file === tree || file.startsWith(`${tree}/`)) ||
-    (!directory && /\.(?:log|png)$/.test(file));
-}
-
-function* walk(directory = '') {
-  for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
-    const file = directory ? `${directory}/${entry.name}` : entry.name;
-    if (excluded(file, entry.isDirectory())) continue;
-    if (entry.isDirectory()) yield* walk(file);
-    else yield file;
-  }
-}
-
-function trackedFiles() {
-  const result = spawnSync('git', ['ls-files', '-z'], {
-    cwd: root,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  // If Git cannot provide a list, a full walk is the conservative fallback.
-  const files = !result.error && result.status === 0 && !result.signal
-    ? result.stdout.split('\0').filter(Boolean)
-    : [...walk()];
-  return [...new Set(files)].filter(file => !excluded(file)).sort();
-}
-
 // Reject symlinked parent directories rather than reading outside the worktree.
 function inspect(file) {
   const parts = file.split('/');
@@ -84,108 +57,27 @@ function inspect(file) {
   }
 }
 
-function readText(file) {
-  const { absolute, stat } = inspect(file);
-  if (stat.isDirectory()) return null; // Submodule gitlinks are not text files.
-  // Inspect the tracked symlink text, never the contents of its target.
-  if (stat.isSymbolicLink()) return readlinkSync(absolute, 'utf8');
-  if (!stat.isFile()) throw new Error('Not a regular file');
-  const data = readFileSync(absolute);
-  // Recognise BOM-marked UTF-16 before applying the binary NUL-byte check.
-  if (data[0] === 0xff && data[1] === 0xfe) {
-    return new TextDecoder('utf-16le', { fatal: true }).decode(data);
-  }
-  if (data[0] === 0xfe && data[1] === 0xff) {
-    return new TextDecoder('utf-16be', { fatal: true }).decode(data);
-  }
-  return data.includes(0) ? null : data.toString('utf8');
-}
-
-const secretPatterns = [
-  /xprv[1-9A-HJ-NP-Za-km-z]{100,}/,
-  /zprv[1-9A-HJ-NP-Za-km-z]{100,}/,
-  /^\s*(mnemonic|seed|private[_ ]?key)\s*[:=]\s*\S+/i,
-];
-// By-design exceptions (pattern index -> files). These are NOT leaks:
-// - test/smoke.test.js holds the published NEGATIVE xprv/zprv test vectors
-//   (documented "never for funds"); the negative tests need the literals.
-// - tools/decrypt_seed.py is the recovery tool; it holds the decrypted
-//   mnemonic in memory for the recovery operation only.
-// - docs/android-wallet/ANDROID-GUIDE.md and docs/web-wallet/WEB-GUIDE.md
-//   quote the same published NEGATIVE xprv/zprv vectors to document the
-//   rejection behaviour.
-// - test/differential_test.py uses the published 15-word test-vector
-//   mnemonic ("ripple scissors kick mammal ...") to verify derivation
-//   against bip-utils; it is public test data, never for funds.
-// - test/test_make_wallet.py uses the published "abandon" x23 + "art"
-//   BIP-39 test mnemonic to verify bundle decryption; it is public test
-//   data, never for funds.
-// Known published BIP-32 test vectors ("test vector, never for funds"):
-// TV1 root xprv, TV5 bad-checksum xprv, the abandon-mnemonic zprv, and the
-// TV1 path xprv (seed 000102..., m/0'/1/2'/2/1000000000).
-// Stripped from a line before the xprv/zprv patterns are tested, so any
-// OTHER private extended key literal anywhere still fails the gate.
-const knownTestVectors = [
-  'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi',
-  'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL',
-  'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE',
-  'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76',
-];
-const secretAllowlist = [
-  { file: 'tools/decrypt_seed.py', patterns: [2] },
-  { file: 'test/differential_test.py', patterns: [2] },
-  { file: 'test/test_make_wallet.py', patterns: [2] },
-];
-const displayPath = file => JSON.stringify(file).slice(1, -1);
-
-function secretScan() {
-  let passed = true;
-  for (const file of trackedFiles()) {
-    let text;
-    try {
-      text = readText(file);
-    } catch {
-      console.error(`  ${displayPath(file)}: file could not be read safely`);
-      passed = false;
-      continue;
-    }
-    if (text === null) continue;
-    const lines = text.split(/\r\n?|\n/);
-    const allowed = secretAllowlist.find(entry => entry.file === file);
-    for (let index = 0; index < lines.length; index += 1) {
-      const scrubbed = knownTestVectors.reduce(
-        (line, vector) => line.split(vector).join(''),
-        lines[index],
-      );
-      if (secretPatterns.some((pattern, patternIndex) => {
-        if (allowed?.patterns.includes(patternIndex)) return false;
-        // Patterns 0/1 (xprv/zprv) test the scrubbed line; pattern 2
-        // (secret assignment) tests the raw line.
-        return pattern.test(patternIndex < 2 ? scrubbed : lines[index]);
-      })) {
-        // Report locations only, never the matching text.
-        console.error(`  ${displayPath(file)}:${index + 1}`);
-        passed = false;
-      }
-    }
-  }
-  return passed;
-}
-
 function lockfiles() {
   const files = [
     'apps/web/package-lock.json',
     'tools/hdwallet-gen/package-lock.json',
   ];
-  const pin = '"@trustwallet/wallet-core": "4.8.4"';
+  // F-27: parse each lockfile as JSON and verify BOTH the spec and the
+  // resolution are 4.8.4. A string-presence check would pass a lockfile
+  // that merely mentions the pin in a comment or another entry.
   let passed = true;
   for (const file of files) {
     try {
       if (!existsSync(join(root, file))) throw new Error('Missing lockfile');
       const { absolute, stat } = inspect(file);
       if (!stat.isFile()) throw new Error('Not a regular lockfile');
-      if (!readFileSync(absolute, 'utf8').includes(pin)) {
-        console.error(`  ${file}: required wallet-core 4.8.4 pin is missing`);
+      const lock = JSON.parse(readFileSync(absolute, 'utf8'));
+      const spec = lock?.packages?.['']?.dependencies?.['@trustwallet/wallet-core'];
+      const resolved = lock?.packages?.['node_modules/@trustwallet/wallet-core']?.version;
+      if (spec !== '4.8.4' || resolved !== '4.8.4') {
+        console.error(
+          `  ${file}: wallet-core pin must be 4.8.4 (spec: ${spec ?? 'missing'}, resolved: ${resolved ?? 'missing'})`,
+        );
         passed = false;
       }
     } catch {
@@ -198,16 +90,12 @@ function lockfiles() {
 
 // The engine-dependent gates (negative-inputs shells out to derive.js /
 // compare.js; the engine suite needs the tools) require the
-// tools/hdwallet-gen dependencies installed. Install them when missing
-// so the gates pass from a genuinely clean checkout (no manual npm ci
-// first). Runs first: negative-inputs failed in a fresh clone when this
-// setup ran after it.
+// tools/hdwallet-gen dependencies installed. F-24: run npm ci
+// unconditionally — a partial/corrupt/wrong-version wallet-core dir must
+// not skip the install and get VERIFIED. Runs first: negative-inputs
+// failed in a fresh clone when this setup ran after it.
 const engineDir = join(root, 'tools', 'hdwallet-gen');
-if (existsSync(join(engineDir, 'node_modules', '@trustwallet', 'wallet-core'))) {
-  report('engine-setup', 'PASS', 'tools/hdwallet-gen dependencies already installed');
-} else {
-  runCommand('engine-setup', 'npm', ['ci', '--no-audit', '--no-fund'], engineDir);
-}
+runCommand('engine-setup', 'npm', ['ci', '--no-audit', '--no-fund'], engineDir);
 runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mjs']);
 runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
@@ -216,13 +104,8 @@ runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.te
 
 const web = join(root, 'apps/web');
 // The web gates run the pinned toolchain from apps/web/node_modules.
-// Install the dependencies when missing so the gates pass from a
-// genuinely clean checkout (no manual npm ci first).
-if (existsSync(join(web, 'node_modules'))) {
-  report('web-setup', 'PASS', 'apps/web dependencies already installed');
-} else {
-  runCommand('web-setup', 'npm', ['ci', '--no-audit', '--no-fund'], web);
-}
+// F-24: run npm ci unconditionally (same reason as engine-setup).
+runCommand('web-setup', 'npm', ['ci', '--no-audit', '--no-fund'], web);
 runCommand('web-typecheck', 'npm', ['run', 'typecheck'], web);
 runCommand('web-tests', 'npm', ['test'], web);
 runCommand('web-build', 'npm', ['run', 'build'], web);
@@ -241,10 +124,11 @@ if (args.includes('--skip-android')) {
   runCommand('android-tests', './gradlew', ['testDebugUnitTest'], join(root, 'apps/android'));
 }
 
-check('secret-scan', secretScan);
+check('secret-scan', () => secretScan(root));
 check('lockfiles', lockfiles);
 
-console.log(failures === 0
-  ? 'quality-gates: OK'
-  : `quality-gates: FAILED (${failures} gates failed)`);
+// F-41: the verdict names skips. 'quality-gates: OK' only with no
+// failures AND no skips; exit 0 is preserved for intentional
+// --skip-android.
+console.log(verdict(failures, skipped));
 process.exitCode = failures === 0 ? 0 : 1;
