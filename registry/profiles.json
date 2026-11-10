@@ -251,7 +251,8 @@
       "M-38"
     ],
     "implemented": [
-      "generation for BTC/ETH/TRX/TON and watch-only derivation for BTC/ETH/TRX via the repo tools, fixtures exact",
+      "generation for BTC/ETH/TRX/TON via the repo tools, fixtures exact",
+      "watch-only derivation for BTC/ETH/TRX via the repo tools, fixtures exact",
       "TON single-address generation-only (V4 R2, wallet ID 698983191)"
     ],
     "missing": [
