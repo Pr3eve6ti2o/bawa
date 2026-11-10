@@ -195,10 +195,27 @@ function lockfiles() {
 runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mjs']);
 runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
+// The engine suite needs tools/hdwallet-gen dependencies installed.
+// Install them when missing so the gates pass from a genuinely clean
+// checkout (no manual npm ci first).
+const engineDir = join(root, 'tools', 'hdwallet-gen');
+if (existsSync(join(engineDir, 'node_modules', '@trustwallet', 'wallet-core'))) {
+  report('engine-setup', 'PASS', 'tools/hdwallet-gen dependencies already installed');
+} else {
+  runCommand('engine-setup', 'npm', ['ci', '--no-audit', '--no-fund'], engineDir);
+}
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
 runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs']);
 
 const web = join(root, 'apps/web');
+// The web gates run the pinned toolchain from apps/web/node_modules.
+// Install the dependencies when missing so the gates pass from a
+// genuinely clean checkout (no manual npm ci first).
+if (existsSync(join(web, 'node_modules'))) {
+  report('web-setup', 'PASS', 'apps/web dependencies already installed');
+} else {
+  runCommand('web-setup', 'npm', ['ci', '--no-audit', '--no-fund'], web);
+}
 runCommand('web-typecheck', 'npm', ['run', 'typecheck'], web);
 runCommand('web-tests', 'npm', ['test'], web);
 runCommand('web-build', 'npm', ['run', 'build'], web);
