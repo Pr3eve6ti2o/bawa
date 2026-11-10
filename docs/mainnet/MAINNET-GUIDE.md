@@ -1530,7 +1530,7 @@ The loss modes for a funded attempt remain **wrong address, wrong network, wrong
 
 ## 13. Sending and signing: capability boundaries
 
-This section states what sending and signing Bawa and the drafts can and cannot do. It contains no send procedure for any chain. TON is generation-only in the repository: it can be received, not sent, from Bawa or the drafts. A reader who funds TON must withdraw through an external wallet; identifying that software is a separate open item (M-39). Nothing in this section authorises a send, and no send has been exercised on any network.
+This section states what sending and signing Bawa and the drafts can and cannot do. It contains no send procedure for any chain. TON is generation-only in the repository: it can be received, not sent, from Bawa or the drafts. A reader who funds TON must withdraw through an external wallet; an end-to-end external withdrawal workflow is unconfirmed (M-39), and @ton/ton is the documented expert-assisted route. Nothing in this section authorises a send, and no send has been exercised on any network.
 
 ### 13.1 What Bawa is and is not — the no-signing boundary
 
@@ -2630,18 +2630,18 @@ Before describing an endpoint as verified, **probe it live from the build enviro
 
 A provider listing is not a probe, and a successful endpoint response is not a funds rehearsal. No dated live mainnet probe results are supplied here. (M28 §6.2; M28-OI-02.)
 
-#### Confirmation thresholds: pinned policies awaiting confirmation
+#### Confirmation thresholds: pinned policies
 
-The following are **the guide’s pinned wallet policies**, not verified chain facts. Every policy remains **UNCONFIRMED on mainnet** and must be checked against current chain documentation rather than copied blindly. (M28 §6.3; Astra A02; M28-OI-03.)
+The following are **the guide's pinned wallet policies**, not finality guarantees. The qualified statuses below follow the §21 register: **reviewed 2026-11-10**, with M-38 and M-13 resolved by owner decisions on that date. (M28 §6.3; Astra A02; M28-OI-03; M-38; M-13.)
 
 | Network | Pinned wallet policy | Mainnet confirmation status |
 |---|---|---|
-| Bitcoin | **6 confirmations**. | **UNCONFIRMED** |
-| Ethereum | **≥12 confirmations AND canonical finalised inclusion**. **12 alone is insufficient.** | **UNCONFIRMED** |
-| TRON | **19 distinct Super Representatives out of 27**, with solidified inclusion verified through **`/walletsolidity/*`**. Do not substitute a block count. | **UNCONFIRMED** |
-| TON | **1 masterchain confirmation with proof of inclusion**. An unrelated `seqno` step is not proof of inclusion. | **UNCONFIRMED** |
+| Bitcoin | **6 confirmations**. | **CONFIRMED (qualified)** — a customary recommendation, not a protocol requirement. bitcoin.org FAQ and “Some things you need to know”: “6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction”; 6 is the “Minimum recommendation for high-value bitcoin transfers”. (M-38.) |
+| Ethereum | **≥12 confirmations AND canonical finalised inclusion (`finalized`)**. **12 alone is insufficient.** The 12 is retained as a legacy PoW-era extra minimum **without primary-source support**, normally subsumed by finalisation. | **CONFIRMED**: `finalized` and “12 alone is insufficient”. **UNVERIFIABLE**: 12 as a standalone threshold; no primary source states it. ethereum.org, “Proof-of-stake”, describes finalisation via a supermajority link between two checkpoints (≥⅔ staked ETH). The page's only “12” is the 12-second slot, not a confirmation threshold. (M-38.) |
+| TRON | **19 distinct active Super Representatives out of 27**, with solidified inclusion verified through **`/walletsolidity/*`**. Do not substitute a block count. | **CONFIRMED** — TRON developer docs, “Consensus and DPoS” (updated 2026-10-20): blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above. `walletsolidity/getnowblock` reports the latest solidified block. (M-38.) |
+| TON | **1 masterchain seqno after inclusion, with the outgoing-message outcome checked**. An unrelated `seqno` step is not proof of inclusion. The check remains **manual** until TON confirmation tracking is implemented (M-25 F18); exercising it belongs to the authorised small-amount rehearsal (M-35). | **CONFIRMED — finality meaning of the threshold**. TON Docs (2026-11-10): “TON achieves transaction finality after a single masterchain block confirmation”; “a transaction becomes final when the first masterchain block references it”. This does not mean confirmation tracking is implemented. (M-13.) |
 
-Confirm each policy against current chain documentation and retain the source and review date before relying on it for mainnet checks. An endpoint probe does not validate a confirmation policy, and neither check establishes receipt or spending behaviour. (M28-OI-02; M28-OI-03; M16-F36; M16-F42.)
+Recheck these policies against current chain documentation and retain the sources and review date before relying on them for mainnet checks. An endpoint probe does not validate a confirmation policy, and neither check establishes receipt or spending behaviour. (M28-OI-02; M28-OI-03; M16-F36; M16-F42.)
 
 ## 17. Mainnet review gates
 
@@ -2655,7 +2655,7 @@ Keep three states separate:
 
 The prose review required for writing completion is not the independent security review required before real funds. Neither review substitutes for missing execution evidence.
 
-Borrowed testnet assurance is the most likely structural failure mode of this document. Testnet references remain evidence of testnet scope, never transferable mainnet sign-off.
+Treating testnet evidence as mainnet sign-off is a structural risk this document must guard against. Testnet references remain evidence of testnet scope, never transferable mainnet sign-off.
 
 ### The rehearsal ladder
 
@@ -3935,7 +3935,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Affected sections:** §16; §12; §14.
 
-**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, retained as a harmless extra minimum, subsumed by finalisation in normal operation); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` is the latest solidified block).
+**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, 12 is retained by owner decision as an unsourced extra wallet minimum; finalised inclusion remains mandatory); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` is the latest solidified block).
 
 **Status:** RESOLVED 2026-11-10 (owner decision).
 
@@ -3947,13 +3947,13 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** M28-OI-03; M24 J21; M-38 lane FINDINGS.md (2026-11-10).
 
-### M-39 — Compatible external import/signing software not identified or tested
+### M-39 — Compatible external import/signing software: end-to-end withdrawal compatibility unconfirmed
 
 **Question/risk:** The repository has no import tool and no signing code; no compatible external import or signing software has been identified or tested for any chain. For TON: Bawa can receive, not send; withdrawal needs external software.
 
 **Affected sections:** §7; §10; §13; §14.
 
-**Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON). M-39 lane findings accepted 2026-11-10 (owner decision): NO GUI wallet is confirmed able to withdraw TON from a Bawa deposit address — Tonkeeper, MyTonWallet, Tonhub and the official TON Wallet all use TON-native mnemonics, NOT BIP-39 + `m/44'/607'/0'`; a BIP-39 import mode reproducing Bawa's derivation is UNVERIFIED for every candidate checked. Verified hands-on instead: `@ton/ton` reproduces the fixture address exactly from the published public key (9/9 local checks) and the on-chain query confirms the deployed V4R2 wallet matches (code hash, wallet ID 698983191, public key) — `@ton/ton` is the documented expert-assisted route. GUI watch-only import was NOT performed (no desktop browser on the test VM).
+**Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON). M-39 lane findings accepted 2026-11-10 (owner decision): NO GUI wallet is confirmed able to withdraw TON from a Bawa deposit address — a BIP-39 import mode reproducing Bawa's derivation is unverified for every candidate checked. Verified hands-on instead: `@ton/ton` reproduces the fixture address exactly from the published public key (9/9 local checks) and the on-chain query confirms the deployed V4R2 wallet matches (code hash, wallet ID 698983191, public key) — `@ton/ton` is the documented expert-assisted route. GUI watch-only import was NOT performed (no desktop browser on the test VM).
 
 **Status:** OPEN (findings accepted 2026-11-10; GUI withdrawal route unverified).
 

@@ -43,6 +43,11 @@ const PATHS = Object.assign(Object.create(null), {
     process.exit(2);
   }
 
+  if (typeof indexRaw !== "string" || !/^[0-9]+$/.test(indexRaw)) {
+    console.error("usage: echo <xpub> | node derive.js <btc|eth|trx> <index>  (0 <= index <= 2147483647)");
+    process.exit(2);
+  }
+
   const index = Number(indexRaw);
   const MAX_INDEX = 2147483647;
   if (!ALLOWED_CHAINS.has(chain) || !xpub || !Number.isInteger(index) || index < 0 || index > MAX_INDEX) {
@@ -70,7 +75,8 @@ const PATHS = Object.assign(Object.create(null), {
     addr = core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey);
   } catch (e) {
     console.error("deriveAddressFromPublicKey failed: " + redact(e && e.message));
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   } finally {
     pubkey.delete();
   }

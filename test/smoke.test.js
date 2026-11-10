@@ -18,6 +18,7 @@
 "use strict";
 
 const { spawn, spawnSync } = require("node:child_process");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -50,6 +51,15 @@ const FIXTURES = {
 
 // Published test vectors, never for funds.
 const NEGATIVE = {
+  INVALID_POINT_XPUB: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEgAeZQboMtDL9SK3y1FCbzvT2RNhXd5KBJDrFehG9Goe8ZB39VV",
+  POINT_X_EQ_P: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEgAeZQboMtDL9SK3y1FCbzvT2RNhXd5KBJDrFehFQTHQfokME85",
+  POINT_X_EQ_P_MINUS_1: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEgAeZQboMtDL9SK3y1FCbzvT2RNhXd5KBJDrFehFQTHQfgQLwyn",
+  POINT_X_EQ_5: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEeDuPB9mWTY71cjM4RdCegKg7JkysvESPf9k1W1N9coFecKmneJ",
+  POINT_X_EQ_1: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEeDuPB9mWTY71cjM4RdCegKg7JkysvESPf9k1W1N9coFe7ZepUb",
+  POINT_X_EQ_0: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEeDuPB9mWTY71cjM4RdCegKg7JkysvESPf9k1W1N9coFe5gztYV",
+  G_XPUB: "xpub661MyMwAqRbcEiHjdqucEvuyGAa8tYnEKNxRSHb554CQxfEJMwdTpYQHEf9XATYJ8eE5X1sSzitcy4JHC4dEYaPh8yfgqXzyRXqHa3Zxjpg",
+  DEPTH0_FINGERPRINT: "xpub661MyMwTWkfYbGsHSkBPfK8hV3UhGjbN4hYBHFNRsZRFaUa3Eg5jKNwq1HMHBXDCDy9zSQTnhJgVAJY3gs8sTpDdrNWrHzwdEoY7Lf6dzxA",
+  DEPTH0_CHILD: "xpub661MyMwAqRbcHG7iAofhFTywCv8fdScxFvDJvpPZrQfnYjTChfcdCM7UWu179f4DmYcB4d3xuhXR1fFqeykXjsYQFQ9WHho2G6GX5dSHoAV",
   TV1_XPRV: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
   ZPRV: "zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE",
   TV5_BAD: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL",
@@ -337,6 +347,10 @@ async function testDaemonDefects() {
     let stderr = "";
     let ready = false;
     let finished = false;
+    let childClosed = false;
+    let teardownTimer = null;
+    let teardownCond = false;
+    let teardownDetail;
     let current = 0;
     let sentAt;
 
@@ -348,6 +362,8 @@ async function testDaemonDefects() {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
+      teardownCond = cond;
+      teardownDetail = detail;
 
       // An aborted run fails each outstanding expectation exactly once.
       if (!cond) {
@@ -358,19 +374,23 @@ async function testDaemonDefects() {
         }
       }
 
-      const cleanStderr =
-        !stderr.includes("Aborted") && !stderr.includes("enlarge memory");
+      // An early close is finalized by the close handler already running.
+      if (childClosed || !child) return;
 
-      check(
-        "daemon stderr has no WASM abort or allocation attempt",
-        cond && cleanStderr,
-        cleanStderr
-          ? detail
-          : 'daemon stderr contains "Aborted" or "enlarge memory"'
-      );
+      if (child.stdin) child.stdin.end();
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGTERM");
+      }
 
-      if (child) child.kill();
-      resolve();
+      teardownTimer = setTimeout(() => {
+        if (
+          !childClosed &&
+          child.exitCode === null &&
+          child.signalCode === null
+        ) {
+          child.kill("SIGKILL");
+        }
+      }, 5000);
     }
 
     function sendNext() {
@@ -405,12 +425,34 @@ async function testDaemonDefects() {
     });
 
     child.on("close", (code, signal) => {
-      if (finished) return;
-      finish(
-        false,
-        `daemon closed early (code=${code}, signal=${signal || "none"})` +
-          (stdout.length ? "; incomplete JSONL on stdout" : "")
+      if (childClosed) return;
+      childClosed = true;
+      clearTimeout(teardownTimer);
+      teardownTimer = null;
+
+      if (!finished) {
+        finish(
+          false,
+          `daemon closed early (code=${code}, signal=${signal || "none"})` +
+            (stdout.length ? "; incomplete JSONL on stdout" : "")
+        );
+      }
+
+      // Evaluate stderr only now: the daemon has exited and its stdio has
+      // closed, so no late stderr can be missed, and the next test cannot
+      // start with this daemon still alive.
+      const cleanStderr =
+        !stderr.includes("Aborted") && !stderr.includes("enlarge memory");
+
+      check(
+        "daemon stderr has no WASM abort or allocation attempt",
+        teardownCond && cleanStderr,
+        cleanStderr
+          ? teardownDetail
+          : 'daemon stderr contains "Aborted" or "enlarge memory"'
       );
+
+      resolve();
     });
 
     if (!child.stdin || !child.stdout || !child.stderr) {
@@ -505,6 +547,398 @@ async function testDaemonDefects() {
   });
 }
 
+// A-9: daemon MAX_LINE_LENGTH enforcement (A-4). A newline-terminated
+// over-long line is rejected with "request too large" and the daemon stays
+// up; an unterminated over-long line is cut off with one reply and the
+// daemon exits 0.
+async function testDaemonLineLength() {
+  // Part 1: terminated over-long line, then a valid request proves stays-up.
+  await new Promise((resolve) => {
+    const child = spawn(
+      process.execPath,
+      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    let finished = false;
+    let ready = false;
+    let stage = 0;
+    let stdoutBuffer = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      finish(false, "timed out after 60 s waiting for " + (ready ? "a reply" : "ready"));
+    }, 60_000);
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (!cond) check("daemon line-length checks (terminated)", false, detail);
+      child.kill();
+      resolve();
+    }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => { finish(false, "daemon spawn error: " + error.message); });
+    child.stdin.on("error", (error) => { finish(false, "daemon stdin error: " + error.message); });
+    child.on("close", (code, signal) => {
+      finish(false, "daemon closed before line-length checks finished: status=" + code + ", signal=" + signal + "; stderr=" + stderr);
+    });
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+      stdoutBuffer += chunk;
+      let newline;
+      while (!finished && (newline = stdoutBuffer.indexOf("\n")) !== -1) {
+        const line = stdoutBuffer.slice(0, newline).trim();
+        stdoutBuffer = stdoutBuffer.slice(newline + 1);
+        if (line === "") continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch (error) {
+          finish(false, "invalid JSONL on daemon stdout: " + error.message);
+          return;
+        }
+        if (!ready) {
+          if (!message || message.ready !== true) {
+            finish(false, "expected a ready message before sending the request");
+            return;
+          }
+          ready = true;
+          child.stdin.write("x".repeat(5000) + "\n");
+          continue;
+        }
+        if (stage === 0) {
+          check(
+            "daemon rejects a newline-terminated over-long line",
+            message !== null && typeof message === "object" && message.ok === false &&
+              typeof message.error === "string" && message.error.includes("request too large"),
+            line
+          );
+          stage = 1;
+          child.stdin.write(JSON.stringify({ chain: "btc", xpub: FIXTURES.btc.xpub, index: 0 }) + "\n");
+          continue;
+        }
+        check(
+          "daemon stays up and derives after an over-long line",
+          message !== null && typeof message === "object" && message.ok === true &&
+            message.address === FIXTURES.btc[0],
+          line
+        );
+        finish(true);
+      }
+    });
+  });
+
+  // Part 2: unterminated over-long line — one reply, then the daemon exits 0.
+  await new Promise((resolve) => {
+    const child = spawn(
+      process.execPath,
+      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    let finished = false;
+    let ready = false;
+    let replied = false;
+    let replyOk = false;
+    let stdoutBuffer = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      finish(false, "timed out after 60 s waiting for " + (ready ? "a reply or exit" : "ready"));
+    }, 60_000);
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (!cond) check("daemon line-length checks (unterminated)", false, detail);
+      child.kill();
+      resolve();
+    }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => { finish(false, "daemon spawn error: " + error.message); });
+    child.stdin.on("error", (error) => { finish(false, "daemon stdin error: " + error.message); });
+    child.on("close", (code) => {
+      check(
+        "daemon rejects an unterminated over-long line",
+        replied && replyOk,
+        replied ? "reply was not a request-too-large rejection" : "no reply before exit"
+      );
+      check(
+        "daemon exits 0 after an unterminated over-long line",
+        code === 0,
+        "exit code=" + code + "; stderr=" + stderr.slice(0, 200)
+      );
+      finish(true);
+    });
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+      stdoutBuffer += chunk;
+      let newline;
+      while (!finished && (newline = stdoutBuffer.indexOf("\n")) !== -1) {
+        const line = stdoutBuffer.slice(0, newline).trim();
+        stdoutBuffer = stdoutBuffer.slice(newline + 1);
+        if (line === "") continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch (error) {
+          finish(false, "invalid JSONL on daemon stdout: " + error.message);
+          return;
+        }
+        if (!ready) {
+          if (!message || message.ready !== true) {
+            finish(false, "expected a ready message before sending the request");
+            return;
+          }
+          ready = true;
+          child.stdin.write("y".repeat(5000));
+          continue;
+        }
+        replied = true;
+        replyOk = message !== null && typeof message === "object" && message.ok === false &&
+          typeof message.error === "string" && message.error.includes("request too large");
+      }
+    });
+  });
+}
+
+// 11b. R-28: checksum rejections must not reach WASM at all. A preload
+// counts initWasm ("init") and getPublicKeyFromExtended ("derive") calls
+// in the child processes; bad-checksum inputs must produce zero counts.
+async function testNoWasmEntryOnChecksumRejection() {
+  const tempDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "bawa-no-wasm-entry-"));
+  const preloadFile = path.join(tempDir, "preload.cjs");
+  const countFile = path.join(tempDir, "counts.log");
+
+  function readCounts() {
+    if (!fs.existsSync(countFile)) return [];
+    return fs.readFileSync(countFile, "utf8").split("\n").filter(Boolean);
+  }
+
+  function resetCounts() {
+    fs.rmSync(countFile, { force: true });
+  }
+
+  try {
+    fs.writeFileSync(preloadFile, String.raw`'use strict';
+const Module = require('node:module');
+const { appendFileSync } = require('node:fs');
+const originalLoad = Module._load;
+function count(event) {
+  try {
+    const file = process.env.BAWA_WASM_COUNT_FILE;
+    if (file) appendFileSync(file, event + '\n');
+  } catch {}
+}
+function wrapCore(core) {
+  return new Proxy(core, {
+    get(target, key, receiver) {
+      const value = Reflect.get(target, key, receiver);
+      if (key !== 'HDWallet') return value;
+      return new Proxy(value, {
+        get(wallet, key, receiver) {
+          const method = Reflect.get(wallet, key, receiver);
+          if (key !== 'getPublicKeyFromExtended') return method;
+          return function (...args) {
+            count('derive');
+            return Reflect.apply(method, wallet, args);
+          };
+        }
+      });
+    }
+  });
+}
+Module._load = function (request, parent, isMain) {
+  const real = Reflect.apply(originalLoad, this, arguments);
+  if (request !== '@trustwallet/wallet-core') return real;
+  return new Proxy(real, {
+    get(target, key, receiver) {
+      const value = Reflect.get(target, key, receiver);
+      if (key !== 'initWasm') return value;
+      return function (...args) {
+        count('init');
+        return Reflect.apply(value, target, args).then(wrapCore);
+      };
+    }
+  });
+};
+`, "utf8");
+
+    const childEnv = {
+      ...process.env,
+      NODE_OPTIONS: `-r ${JSON.stringify(preloadFile)}`,
+      BAWA_WASM_COUNT_FILE: countFile,
+    };
+    const btcAddress = FIXTURES.btc[0];
+
+    // Part A: checksum rejection must precede initWasm.
+    for (const [badInput, chain] of [
+      [NEGATIVE.TV5_BAD, "btc"],
+      [NEGATIVE.ETH_BAD_CHECKSUM, "eth"],
+    ]) {
+      resetCounts();
+      const result = spawnSync(process.execPath, [
+        path.join(TOOLS_DIR, "derive.js"), chain, "0",
+      ], {
+        cwd: TOOLS_DIR,
+        env: childEnv,
+        input: badInput + "\n",
+        timeout: 60000,
+        encoding: "utf8",
+      });
+
+      check(`no-WASM-entry: derive.js ${chain} checksum rejection`,
+        result.status === 2 && (result.stderr || "").includes("checksum"),
+        `status=${result.status}; stderr=${result.stderr}; error=${result.error || ""}`);
+
+      const counts = readCounts();
+      check(`no-WASM-entry: derive.js ${chain} zero calls`,
+        counts.length === 0, JSON.stringify(counts));
+    }
+
+    resetCounts();
+    const positive = spawnSync(process.execPath, [
+      path.join(TOOLS_DIR, "derive.js"), "btc", "0",
+    ], {
+      cwd: TOOLS_DIR,
+      env: childEnv,
+      input: FIXTURES.btc.xpub + "\n",
+      timeout: 60000,
+      encoding: "utf8",
+    });
+
+    check("no-WASM-entry: derive.js positive control",
+      positive.status === 0 && (positive.stdout || "").trim() === btcAddress,
+      `status=${positive.status}; stdout=${positive.stdout}; stderr=${positive.stderr}; error=${positive.error || ""}`);
+
+    const positiveCounts = readCounts();
+    check("no-WASM-entry: derive.js positive call counts",
+      JSON.stringify(positiveCounts) === '["init","derive"]',
+      JSON.stringify(positiveCounts));
+
+    // Part B: startup initializes once; only the valid request derives.
+    resetCounts();
+    const child = spawn(process.execPath, [
+      path.join(TOOLS_DIR, "derive_daemon.js"),
+    ], {
+      cwd: TOOLS_DIR,
+      env: childEnv,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let buffer = "";
+    let stderr = "";
+    let closed = false;
+    let failure = null;
+    let wake = null;
+    const replies = [];
+
+    const fail = (error) => {
+      failure = error;
+      if (wake) wake();
+    };
+
+    const closePromise = new Promise((resolve) => {
+      child.once("close", () => {
+        closed = true;
+        if (wake) wake();
+        resolve();
+      });
+    });
+
+    child.on("error", fail);
+    child.stdin.on("error", fail);
+    child.stdout.on("error", fail);
+    child.stderr.on("error", fail);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.stdout.on("data", (chunk) => {
+      buffer += chunk;
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+      try {
+        for (const line of lines) replies.push(JSON.parse(line));
+      } catch (error) {
+        fail(error);
+      }
+      if (wake) wake();
+    });
+
+    function nextReply(label) {
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          finish(new Error(`${label}: timed out after 30 s`));
+        }, 30000);
+
+        function finish(error, reply) {
+          clearTimeout(timer);
+          wake = null;
+          if (error) reject(error);
+          else resolve(reply);
+        }
+
+        wake = () => {
+          if (failure) finish(failure);
+          else if (replies.length) finish(null, replies.shift());
+          else if (closed) finish(new Error(`${label}: daemon closed before a reply`));
+        };
+        wake();
+      });
+    }
+
+    try {
+      const ready = await nextReply("ready");
+      check("no-WASM-entry: daemon ready",
+        ready && ready.ready === true, JSON.stringify(ready));
+
+      child.stdin.write(JSON.stringify({
+        chain: "eth", xpub: NEGATIVE.ETH_BAD_CHECKSUM, index: 0,
+      }) + "\n");
+
+      const badReply = await nextReply("checksum rejection");
+      check("no-WASM-entry: daemon checksum rejection",
+        badReply && badReply.ok === false &&
+          typeof badReply.error === "string" && badReply.error.includes("checksum"),
+        JSON.stringify(badReply));
+
+      child.stdin.write(JSON.stringify({
+        chain: "btc", xpub: FIXTURES.btc.xpub, index: 0,
+      }) + "\n");
+
+      const goodReply = await nextReply("positive control");
+      check("no-WASM-entry: daemon positive control",
+        goodReply && goodReply.ok === true && goodReply.address === btcAddress,
+        JSON.stringify(goodReply));
+    } catch (error) {
+      check("no-WASM-entry: daemon protocol", false,
+        `${error.message}\nstderr: ${stderr}`);
+    } finally {
+      const killTimer = setTimeout(() => {
+        if (!closed) child.kill("SIGKILL");
+      }, 5000);
+
+      try {
+        if (!closed) {
+          child.stdin.end();
+          child.kill();
+        }
+        await closePromise;
+      } finally {
+        clearTimeout(killTimer);
+      }
+    }
+
+    const daemonCounts = readCounts();
+    check("no-WASM-entry: daemon startup init and valid-request derive only",
+      JSON.stringify(daemonCounts) === '["init","derive"]',
+      JSON.stringify(daemonCounts));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 (async () => {
   const core = await initWasm();
   const { CoinType, CoinTypeExt } = core;
@@ -535,6 +969,14 @@ async function testDaemonDefects() {
   check("derive.js rejects negative index", badIndex.status === 2, `status=${badIndex.status}`);
   const emptyXpub = runCli("derive.js", ["btc", "0"], "\n");
   check("derive.js rejects empty xpub", emptyXpub.status === 2, `status=${emptyXpub.status}`);
+  for (const token of ["", "0x10", "1e2", " 1", "+1"]) {
+    const result = runCli("derive.js", ["btc", token], FIXTURES.btc.xpub + "\n");
+    check(
+      `derive.js rejects index token ${JSON.stringify(token)}`,
+      result.status === 2 && result.stdout === "",
+      `status=${result.status}, stdout=${JSON.stringify(result.stdout)}, stderr=${JSON.stringify(result.stderr)}`
+    );
+  }
 
   // 5. Watch-only policy guard: the three documented paths exist in both
   // watch-only tools, and no TON derivation path exists in either.
@@ -550,6 +992,7 @@ async function testDaemonDefects() {
   // 7. derive.js rejection and index-1 regression checks.
   {
     const rejectionCases = [
+      ["INVALID_POINT_XPUB", "btc", "not a valid secp256k1 point"],
       ["TV1_XPRV", "btc", "private extended keys are rejected"],
       ["ZPRV", "btc", "private extended keys are rejected"],
       ["TV5_VER", "btc", "private extended keys are rejected"],
@@ -684,6 +1127,92 @@ async function testDaemonDefects() {
   // 9. derive_daemon.js rejection checks (private key, checksum, wrong chain).
   await testDaemonPrivateRejection();
   await testDaemonDefects();
+  await testDaemonLineLength();
+  await testNoWasmEntryOnChecksumRejection();
+
+  // 10. generate.js verifySeedBundle checks (A-3: decrypt verification).
+  // Requiring generate.js must not run generation (require.main guard); the
+  // plaintext below is a plain test string, not a wallet mnemonic.
+  {
+    const { verifySeedBundle } = require(path.join(TOOLS_DIR, "generate.js"));
+    check("verifySeedBundle is exported", typeof verifySeedBundle === "function");
+    const testPhrase = "bundle verification test phrase - not a wallet mnemonic";
+    const bundleDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "auditfix-bundle-"));
+    try {
+      const key = crypto.randomBytes(32);
+      const nonce = crypto.randomBytes(12);
+      const buildBundle = (phrase, aad, bundleKey, bundleNonce) => {
+        const cipher = crypto.createCipheriv("aes-256-gcm", bundleKey, bundleNonce);
+        cipher.setAAD(Buffer.from(aad, "utf8"));
+        const body = Buffer.concat([cipher.update(phrase, "utf8"), cipher.final()]);
+        return {
+          alg: "AES-256-GCM",
+          nonce_b64: bundleNonce.toString("base64"),
+          ciphertext_b64: Buffer.concat([body, cipher.getAuthTag()]).toString("base64"),
+          aad,
+        };
+      };
+      const writeBundle = (obj, name) => {
+        const p = path.join(bundleDir, name);
+        fs.writeFileSync(p, JSON.stringify(obj) + "\n");
+        return p;
+      };
+      const good = writeBundle(buildBundle(testPhrase, "nova-shop-seed-v1", key, nonce), "good.json");
+      check("verifySeedBundle: good bundle verifies", verifySeedBundle(good, key, testPhrase) === true);
+      const tampered = buildBundle(testPhrase, "nova-shop-seed-v1", key, nonce);
+      const raw = Buffer.from(tampered.ciphertext_b64, "base64");
+      raw[10] ^= 0x01;
+      tampered.ciphertext_b64 = raw.toString("base64");
+      check("verifySeedBundle: tampered ciphertext rejected", verifySeedBundle(writeBundle(tampered, "tampered.json"), key, testPhrase) === false);
+      const wrongAad = buildBundle(testPhrase, "wrong-aad", key, nonce);
+      check("verifySeedBundle: wrong AAD rejected", verifySeedBundle(writeBundle(wrongAad, "wrong-aad.json"), key, testPhrase) === false);
+      check("verifySeedBundle: wrong key rejected", verifySeedBundle(good, crypto.randomBytes(32), testPhrase) === false);
+      fs.writeFileSync(path.join(bundleDir, "malformed.json"), "{not json");
+      check("verifySeedBundle: malformed bundle rejected", verifySeedBundle(path.join(bundleDir, "malformed.json"), key, testPhrase) === false);
+    } finally {
+      fs.rmSync(bundleDir, { recursive: true, force: true });
+    }
+  }
+
+  // 11. Shared extended-key validator regressions (R-01/R-02/R-03).
+  // NOTE: a chain argument is required — without one the validator fails
+  // every input at the chain allow-list step, including valid points.
+  {
+    const { validateExtendedKey } = require(path.join(TOOLS_DIR, "extended-key.js"));
+
+    for (const vector of ["G_XPUB", "POINT_X_EQ_1"]) {
+      const result = validateExtendedKey(NEGATIVE[vector], "btc");
+      check(
+        `validateExtendedKey accepts ${vector}`,
+        result.ok === true,
+        `ok=${result.ok}, reason=${result.reason}`
+      );
+    }
+
+    for (const [vector, expectedReason] of [
+      ["INVALID_POINT_XPUB", "bad-point"],
+      ["POINT_X_EQ_P", "bad-point"],
+      ["POINT_X_EQ_P_MINUS_1", "bad-point"],
+      ["POINT_X_EQ_5", "bad-point"],
+      ["POINT_X_EQ_0", "bad-point"],
+      ["DEPTH0_FINGERPRINT", "bad-depth-metadata"],
+      ["DEPTH0_CHILD", "bad-depth-metadata"],
+    ]) {
+      const result = validateExtendedKey(NEGATIVE[vector], "btc");
+      check(
+        `validateExtendedKey rejects ${vector}`,
+        result.ok === false && result.reason === expectedReason,
+        `ok=${result.ok}, reason=${result.reason}`
+      );
+    }
+
+    const oversizedResult = validateExtendedKey("1".repeat(200), "btc");
+    check(
+      "validateExtendedKey rejects 200-character input",
+      oversizedResult.ok === false && oversizedResult.reason === "bad-length",
+      `ok=${oversizedResult.ok}, reason=${oversizedResult.reason}`
+    );
+  }
 
   if (failures > 0) {
     console.log(`SMOKE TESTS FAILED: ${failures} failure(s)`);

@@ -110,6 +110,13 @@ function decode82Bytes(input) {
 
 // Shared checks 1–3: alphabet, decoded length, then Base58Check checksum.
 function decodeAndCheck(input) {
+  // Length cap before the alphabet regex, so oversized input is not scanned.
+  if (typeof input === "string" && input.length > MAX_BASE58_LENGTH) {
+    return failure(
+      "bad-length",
+      "extended key must decode to exactly 82 bytes"
+    );
+  }
   // Do not trim or normalise input; whitespace is not a Base58 character.
   if (
     typeof input !== "string" ||
@@ -167,6 +174,21 @@ function isPrivateDecodedKey(decoded, version) {
   );
 }
 
+const SECP256K1_P = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn;
+
+function modpow(base, exponent, modulus) {
+  let result = 1n;
+  base %= modulus;
+  while (exponent > 0n) {
+    if ((exponent & 1n) === 1n) {
+      result = (result * base) % modulus;
+    }
+    base = (base * base) % modulus;
+    exponent >>= 1n;
+  }
+  return result;
+}
+
 function validateExtendedKey(input, chain) {
   const checked = decodeAndCheck(input);
   if (!checked.ok) {
@@ -191,6 +213,36 @@ function validateExtendedKey(input, chain) {
     return failure(
       "bad-key-data",
       "extended public key data must begin with 0x02 or 0x03"
+    );
+  }
+
+  // 5b. secp256k1 point validation: x must be below the field prime and
+  // x^3+7 must be a quadratic residue mod p (Legendre symbol), so the
+  // key data is a real curve point. Do not merely reduce x mod p.
+  const x = BigInt("0x" + decoded.subarray(46, 78).toString("hex"));
+  if (x >= SECP256K1_P) {
+    return failure(
+      "bad-point",
+      "extended public key is not a valid secp256k1 point"
+    );
+  }
+  const ySquared = (x * x * x + 7n) % SECP256K1_P;
+  const legendre = modpow(ySquared, (SECP256K1_P - 1n) / 2n, SECP256K1_P);
+  if (legendre !== 1n) {
+    return failure(
+      "bad-point",
+      "extended public key is not a valid secp256k1 point"
+    );
+  }
+
+  // 5c. Depth-0 extended keys must have zero fingerprint and child number.
+  if (
+    decoded[4] === 0 &&
+    (decoded.readUInt32BE(5) !== 0 || decoded.readUInt32BE(9) !== 0)
+  ) {
+    return failure(
+      "bad-depth-metadata",
+      "depth-0 extended key must have zero fingerprint and child number"
     );
   }
 

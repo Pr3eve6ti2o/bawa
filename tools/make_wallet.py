@@ -70,19 +70,60 @@ def _contains_seed_material(obj) -> bool:
     return _looks_like_seed_phrase(obj)
 
 
-def _parse_seed_bundle(path: str) -> tuple[bytes, bytes]:
-    with open(path, encoding="utf-8") as f:
-        bundle = json.load(f)
-    if bundle.get("alg") != "AES-256-GCM":
-        raise SystemExit("seed bundle malformed: unexpected algorithm")
+def _parse_seed_bundle(path: str) -> tuple[bytes, bytes, int]:
     try:
-        nonce = base64.b64decode(bundle["nonce_b64"], validate=True)
-        ciphertext = base64.b64decode(bundle["ciphertext_b64"], validate=True)
-    except (KeyError, binascii.Error, ValueError, TypeError):
-        raise SystemExit("seed bundle malformed: invalid base64")
-    if len(nonce) != 12 or len(ciphertext) < 16:
-        raise SystemExit("seed bundle malformed: invalid nonce/ciphertext")
-    return nonce, ciphertext
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            st = os.fstat(fd)
+            if not stat.S_ISREG(st.st_mode):
+                raise SystemExit("seed bundle malformed: not a regular file")
+            mode = stat.S_IMODE(st.st_mode)
+
+            # The finally block owns the descriptor, even if fdopen fails.
+            with os.fdopen(fd, "r", encoding="utf-8", closefd=False) as f:
+                bundle = json.load(f)
+        finally:
+            os.close(fd)
+
+        if not isinstance(bundle, dict):
+            raise SystemExit("seed bundle malformed: expected JSON object")
+        if bundle.get("alg") != "AES-256-GCM":
+            raise SystemExit("seed bundle malformed: unexpected algorithm")
+        try:
+            nonce = base64.b64decode(bundle["nonce_b64"], validate=True)
+            ciphertext = base64.b64decode(bundle["ciphertext_b64"], validate=True)
+        except (KeyError, binascii.Error, ValueError, TypeError):
+            raise SystemExit("seed bundle malformed: invalid base64") from None
+        if len(nonce) != 12 or len(ciphertext) < 16:
+            raise SystemExit("seed bundle malformed: invalid nonce/ciphertext")
+        return nonce, ciphertext, mode
+    except (
+        OSError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        AttributeError,
+        TypeError,
+        KeyError,
+    ):
+        raise SystemExit("seed bundle malformed: invalid input") from None
+
+
+def assertBundleVerified(data) -> None:
+    """Require the generator's in-process decrypt verification.
+
+    generate.js verifies the written seed bundle by decrypting it in-process
+    and reports {name: "bundle_verified", ok: true} in the stdout JSON checks
+    array. A missing check must fail the run, not pass silently: without it
+    there is no evidence the bundle decrypts with the data key shown to the
+    user. The existing failed-checks logic covers a present-but-not-ok check;
+    this covers the absent case.
+    """
+    checks = data.get("checks") if isinstance(data, dict) else None
+    if not isinstance(checks, list) or not any(
+        isinstance(c, dict) and c.get("name") == "bundle_verified" and c.get("ok") is True
+        for c in checks
+    ):
+        raise SystemExit("seed bundle verification missing: generator did not report bundle_verified")
 
 
 def main() -> None:
@@ -133,6 +174,7 @@ def main() -> None:
         raise SystemExit("wallet-core generation failed; stderr suppressed")
 
     data = json.loads(proc.stdout)
+    assertBundleVerified(data)
     if _contains_seed_material(data):
         raise SystemExit("H4 violation: seed material present in generator stdout")
 
@@ -146,9 +188,8 @@ def main() -> None:
     if not os.path.isfile(reported):
         raise SystemExit("seed bundle missing")
 
-    nonce, ciphertext = _parse_seed_bundle(reported)
+    nonce, ciphertext, mode = _parse_seed_bundle(reported)
     del nonce, ciphertext
-    mode = stat.S_IMODE(os.stat(reported).st_mode)
     if mode != 0o600:
         raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
 

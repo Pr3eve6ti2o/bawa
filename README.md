@@ -706,36 +706,55 @@ Account 0 and receiving branch 0 only are Bawa’s pinned policy, not a BIP-44 r
 
 For derivation, Core runs `getPublicKeyFromExtended` and then `deriveAddressFromPublicKey`.
 
-The path's purpose, coin and account levels are the caller's responsibility: Core derives from the supplied key using only the trailing change/index levels. Supply the correct account public key for the requested chain. `derive.js` can return a valid-looking wrong-branch address with exit status 0 and no warning when given a mismatched-chain key; successful address validation does not establish the key's chain or account provenance. Core errors are redacted; derivation failures exit with status 1.
+The path's purpose, coin and account levels remain the caller's responsibility: Core derives from the supplied key using only the trailing change/index levels. Supply the correct account public key for the requested chain. `derive.js`, `compare.js` and `derive_daemon.js` use the shared `extended-key.js` validator before any WASM call.
 
-Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow. With the tested Core 4.8.4 build, both inputs produced no address and exited with status 1 with an opaque WASM-abort error. The error does not identify the input format as unsupported.
+The public-version allow-lists are:
+
+- `btc`: `xpub` (`0488b21e`), `ypub` (`049d7cb2`) and `zpub` (`04b24746`).
+- `eth` and `trx`: `xpub` (`0488b21e`) only.
+
+Every version-distinguishable chain mismatch is rejected by `derive.js` with exit status 2. However, BTC, ETH and TRX `xpub` keys share version `0488b21e`: an `xpub` carries no chain tag, so a cross-chain `xpub` swap between those three is undetectable from serialisation alone. In that shared-version case, `derive.js` can still return a valid-looking wrong-chain address with exit status 0. Successful address validation does not establish the key's chain or account provenance.
+
+For `btc`, testnet `vpub` and `tpub` inputs are rejected before WASM with exit status 2 and, respectively, `extended key version 045f1cf6 is not allowed for btc` and `extended key version 043587cf is not allowed for btc` on stderr. A `zpub` supplied for `eth` is likewise rejected with exit status 2 and `extended key version 04b24746 is not allowed for eth` on stderr.
+
+`derive.js` handles failures as follows. In the version-error form, `<version>` is the rejected version and `<chain>` is the requested chain.
 
 | Failure | Result |
 |---|---|
 | Bad chain, empty key, or non-integer/out-of-range index | Usage line; exit 2. |
-| Private extended key | `usage: extended public key required (private extended keys are rejected)`; exit 2. |
+| Private extended key | `extended public key required (private extended keys are rejected)` on stderr; empty stdout; exit 2. |
+| Wrong version for the requested chain | `extended key version <version> is not allowed for <chain>` on stderr; exit 2. |
+| Bad checksum | `extended key checksum verification failed` on stderr; exit 2. |
+| Bad Base58 | `extended key must be a non-empty string of Base58 characters` on stderr; exit 2. |
+| Wrong decoded length | `extended key must decode to exactly 82 bytes` on stderr; exit 2. |
+| Bad public-key data | `extended public key data must begin with 0x02 or 0x03` on stderr; exit 2. |
 | Raw stdin longer than 200 bytes | `failed to read xpub from stdin: xpub too long` on stderr; exit 2. |
 | Core call fails | Redacted error; exit 1. |
 | Final validation fails | Exit 1. |
+
+`compare.js` validates all three inputs before any WASM call; bad input exits with status 1 and empty stdout.
 
 **Daemon protocol**
 
 `derive_daemon.js` uses JSONL and stays in the foreground. From the repository root, run `node tools/hdwallet-gen/derive_daemon.js`.
 
-Its startup JSONL record is `{"ready":true}`. Send one JSON request per stdin line; a successful request returns `{"ok":true,"address":"..."}`.
+Wait for its startup JSONL record, `{"ready":true}`, before sending requests. Send one JSON request per stdin line. The request shape is `{"chain":"btc","xpub":"<xpub>","index":5}`; a successful response has the shape `{"ok":true,"address":"..."}`. Replace `<xpub>` with the account public key when constructing a request.
 
-Wait for `{"ready": true}` before sending requests. The request shape is `{"chain":"btc","xpub":"<xpub>","index":5}`; a successful response has the shape `{"ok":true,"address":"<address>"}`. Replace the public-value placeholders when constructing a request.
+The limits are 200 characters for the original, untrimmed xpub string and 4096 characters per line. Whitespace counts towards the xpub limit; the string is trimmed before extended-key validation and derivation.
 
-The limits are 200 characters for the original, untrimmed xpub string and 4096 characters per line. Whitespace counts towards the xpub limit and is removed before private-key detection and derivation.
-
-Error replies have the form `{"ok":false,"error":"<message>"}`. Input/request error messages are:
+Error replies have the form `{"ok":false,"error":"<message>"}`. The daemon stays running after input or extended-key validation rejections. Input/request and extended-key validation error messages and forms are:
 
 - `request too large`
 - `bad json`
 - `bad request`
-- `extended public key required`
+- `extended public key required (private extended keys are rejected)`
+- `extended key must be a non-empty string of Base58 characters`
+- `extended key must decode to exactly 82 bytes`
+- `extended key checksum verification failed`
+- `extended key version <version> is not allowed for <chain>`
+- `extended public key data must begin with 0x02 or 0x03`
 
-Core, validation and internal error forms are:
+Core, final address-validation and internal error forms are:
 
 - `getPublicKeyFromExtended failed: <message>`
 - `deriveAddressFromPublicKey failed: <message>`

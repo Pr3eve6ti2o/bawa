@@ -10,10 +10,6 @@ const { validateExtendedKey, redact } = require("./extended-key");
 
 const envPath = process.env.NOVA_ENV || path.join(__dirname, "..", "..", ".env");
 const env = {};
-for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-  const m = line.match(/^([A-Z_]+)=(.*)$/);
-  if (m) env[m[1]] = m[2].trim();
-}
 
 function addrFromXpub(core, xpub, coin, fullPath) {
   const pubkey = core.HDWallet.getPublicKeyFromExtended(xpub, coin, fullPath);
@@ -25,6 +21,17 @@ function addrFromXpub(core, xpub, coin, fullPath) {
 }
 
 (async () => {
+  if (fs.statSync(envPath).size > 65536) {
+    throw new Error(`env file exceeds 65536 bytes: ${envPath}`);
+  }
+  for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
+    if (line.length > 1024) continue;
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m) {
+      const value = m[2].trim();
+      if (value.length <= 200) env[m[1]] = value;
+    }
+  }
   // Validate every input before initialising WASM or deriving any addresses.
   for (const [chain, xpub] of [
     ["btc", env.XPUB_BTC],
@@ -43,8 +50,12 @@ function addrFromXpub(core, xpub, coin, fullPath) {
     ["eth", env.XPUB_ETH, CoinType.ethereum, i => `m/44'/60'/0'/0/${i}`],
     ["trx", env.XPUB_TRX, CoinType.tron, i => `m/44'/195'/0'/0/${i}`],
   ];
+  const results = [];
   for (const [chain, xpub, coin, pathFn] of jobs) {
     const addrs = [0, 1, 2].map(i => addrFromXpub(core, xpub, coin, pathFn(i)));
+    results.push([chain, addrs]);
+  }
+  for (const [chain, addrs] of results) {
     console.log(chain, ...addrs);
   }
 })().catch(e => {

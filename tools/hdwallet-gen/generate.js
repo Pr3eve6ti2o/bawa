@@ -21,7 +21,33 @@ function addrFromExtended(core, xpub, coin, derivationPath) {
   }
 }
 
-(async () => {
+// Verify a written seed bundle by decrypting it in-process and comparing the
+// plaintext with the expected mnemonic. Returns false on any failure
+// (malformed bundle, wrong AAD/key, tampered ciphertext) — never throws, and
+// never prints the mnemonic or the key.
+function verifySeedBundle(bundlePath, dataKey, expectedMnemonic) {
+  try {
+    const bundle = JSON.parse(fs.readFileSync(bundlePath, "utf8"));
+    if (bundle.alg !== "AES-256-GCM") return false;
+    const nonce = Buffer.from(bundle.nonce_b64, "base64");
+    const ciphertext = Buffer.from(bundle.ciphertext_b64, "base64");
+    if (nonce.length !== 12 || ciphertext.length < 16) return false;
+    const decipher = crypto.createDecipheriv("aes-256-gcm", dataKey, nonce);
+    decipher.setAAD(Buffer.from("nova-shop-seed-v1", "utf8"));
+    const tag = ciphertext.subarray(ciphertext.length - 16);
+    const body = ciphertext.subarray(0, ciphertext.length - 16);
+    decipher.setAuthTag(tag);
+    const plain = Buffer.concat([decipher.update(body), decipher.final()]);
+    return (
+      plain.length === Buffer.byteLength(expectedMnemonic, "utf8") &&
+      crypto.timingSafeEqual(plain, Buffer.from(expectedMnemonic, "utf8"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function main() {
   let tty;
   try {
     tty = fs.openSync("/dev/tty", "w");
@@ -141,66 +167,99 @@ function addrFromExtended(core, xpub, coin, derivationPath) {
   // the controlling terminal and is never emitted to stdout/stderr.
   fs.mkdirSync(secretsDir, { recursive: true, mode: 0o700 });
   fs.chmodSync(secretsDir, 0o700);
+  // Wiping this Buffer is best-effort: it does not erase the mnemonic or hex
+  // data-key display strings (immutable JS strings, plus split()/toString()
+  // copies). Secret-string copies stay at the confirmation minimum: one hex
+  // display and one first-word comparison.
   const dataKey = crypto.randomBytes(32);
-  const nonce = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", dataKey, nonce);
-  cipher.setAAD(Buffer.from("nova-shop-seed-v1", "utf8"));
-  const encBody = Buffer.concat([cipher.update(mnemonic, "utf8"), cipher.final()]);
+  try {
+    const nonce = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv("aes-256-gcm", dataKey, nonce);
+    cipher.setAAD(Buffer.from("nova-shop-seed-v1", "utf8"));
+    const encBody = Buffer.concat([cipher.update(mnemonic, "utf8"), cipher.final()]);
 
-  const show = (s) => fs.writeSync(tty, s);
-  show("\n" + "=".repeat(64) + "\n");
-  show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
-  show("=".repeat(64) + "\n");
-  show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
-    dataKey.toString("hex") + "\n");
-  show("=".repeat(64) + "\n");
+    const show = (s) => fs.writeSync(tty, s);
+    show("\n" + "=".repeat(64) + "\n");
+    show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
+    show("=".repeat(64) + "\n");
+    show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
+      dataKey.toString("hex") + "\n");
+    show("=".repeat(64) + "\n");
 
-  const ttyIn = fs.openSync("/dev/tty", "r");
-  const readLine = (fd) => {
-    let line = "";
-    const buf = Buffer.alloc(1);
-    while (true) {
-      const n = fs.readSync(fd, buf, 0, 1, null);
-      if (n === 0) throw new Error("unexpected EOF on /dev/tty");
-      const ch = buf.toString("utf8", 0, n);
-      if (ch === "\n") break;
-      if (ch !== "\r") line += ch;
+    const ttyIn = fs.openSync("/dev/tty", "r");
+    const readLine = (fd) => {
+      let line = "";
+      const buf = Buffer.alloc(1);
+      while (true) {
+        const n = fs.readSync(fd, buf, 0, 1, null);
+        if (n === 0) throw new Error("unexpected EOF on /dev/tty");
+        const ch = buf.toString("utf8", 0, n);
+        if (ch === "\n") break;
+        if (ch !== "\r") line += ch;
+      }
+      return line;
+    };
+
+    show("Type the first word of the seed phrase to confirm you wrote it down: ");
+    if (readLine(ttyIn).trim() !== mnemonic.trim().split(/\s+/)[0]) {
+      throw new Error("Seed phrase confirmation failed — not writing seed.enc.json");
     }
-    return line;
-  };
+    show("Type SAVED to confirm you stored the data key: ");
+    if (readLine(ttyIn).trim() !== "SAVED") {
+      throw new Error("Data key confirmation failed — not writing seed.enc.json");
+    }
+    fs.closeSync(ttyIn);
+    fs.closeSync(tty);
 
-  show("Type the first word of the seed phrase to confirm you wrote it down: ");
-  if (readLine(ttyIn).trim() !== mnemonic.trim().split(/\s+/)[0]) {
-    throw new Error("Seed phrase confirmation failed — not writing seed.enc.json");
+    const tmpPath = encPath + ".tmp." + process.pid + "." + crypto.randomBytes(8).toString("hex");
+    // Enter temp-file cleanup only after a successful exclusive open.
+    const tmpFd = fs.openSync(tmpPath, "wx", 0o600);
+    let tmpFdNeedsClose = true;
+    try {
+      fs.writeFileSync(tmpFd, JSON.stringify({
+        alg: "AES-256-GCM",
+        kdf: "none - random 256-bit data key (shown once at creation)",
+        nonce_b64: nonce.toString("base64"),
+        ciphertext_b64: Buffer.concat([encBody, cipher.getAuthTag()]).toString("base64"),
+        created: "bawa/tools/hdwallet-gen/generate.js",
+        aad: "nova-shop-seed-v1",
+        note: "Decrypt with tools/decrypt_seed.py and the data key.",
+      }, null, 2) + "\n");
+
+      fs.fsyncSync(tmpFd);
+      // Do not retry close if it throws; the fd may already be released.
+      tmpFdNeedsClose = false;
+      fs.closeSync(tmpFd);
+      fs.renameSync(tmpPath, encPath);
+    } catch (err) {
+      if (tmpFdNeedsClose) {
+        try {
+          fs.closeSync(tmpFd);
+        } catch {
+          // Preserve the original failure.
+        }
+      }
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        // Cleanup is best-effort; preserve the original failure.
+      }
+      throw err;
+    }
+
+    const dirFd = fs.openSync(secretsDir, "r");
+    fs.fsyncSync(dirFd);
+    fs.closeSync(dirFd);
+
+    // Verify the written bundle by decrypting it in-process before the data key
+    // is zeroed. A failed round-trip fails the run; the stdout JSON is not printed.
+    if (!verifySeedBundle(encPath, dataKey, mnemonic)) {
+      throw new Error("seed bundle verification failed");
+    }
+    checks.push({ name: "bundle_verified", ok: true });
+  } finally {
+    dataKey.fill(0);
   }
-  show("Type SAVED to confirm you stored the data key: ");
-  if (readLine(ttyIn).trim() !== "SAVED") {
-    throw new Error("Data key confirmation failed — not writing seed.enc.json");
-  }
-  fs.closeSync(ttyIn);
-  fs.closeSync(tty);
-
-  const tmpPath = encPath + ".tmp";
-  fs.rmSync(tmpPath, { force: true });
-  fs.writeFileSync(tmpPath, JSON.stringify({
-    alg: "AES-256-GCM",
-    kdf: "none - random 256-bit data key (shown once at creation)",
-    nonce_b64: nonce.toString("base64"),
-    ciphertext_b64: Buffer.concat([encBody, cipher.getAuthTag()]).toString("base64"),
-    created: "bawa/tools/hdwallet-gen/generate.js",
-    aad: "nova-shop-seed-v1",
-    note: "Decrypt with tools/decrypt_seed.py and the data key.",
-  }, null, 2) + "\n", { mode: 0o600 });
-
-  const tmpFd = fs.openSync(tmpPath, "r+");
-  fs.fsyncSync(tmpFd);
-  fs.closeSync(tmpFd);
-  fs.renameSync(tmpPath, encPath);
-
-  const dirFd = fs.openSync(secretsDir, "r");
-  fs.fsyncSync(dirFd);
-  fs.closeSync(dirFd);
-  dataKey.fill(0);
 
   console.log(JSON.stringify({
     btc_zpub: btcZpub,
@@ -214,7 +273,13 @@ function addrFromExtended(core, xpub, coin, derivationPath) {
     seed_encrypted_to: encPath,
     wallet_core_version: require("@trustwallet/wallet-core/package.json").version,
   }));
-})().catch(() => {
-  console.error("FATAL: wallet generation failed — details redacted");
-  process.exit(1);
-});
+}
+
+if (require.main === module) {
+  main().catch(() => {
+    console.error("FATAL: wallet generation failed — details redacted");
+    process.exit(1);
+  });
+}
+
+module.exports = { verifySeedBundle };
