@@ -37,12 +37,12 @@ The one-prompt workflow is `scripts/build-wallet.mjs "<request>"`. It classifies
 
 ## Ambiguous requests: ask one question
 
-In an interactive session, leave profile selection OPEN until the answer resolves the ambiguity. The questions below are alternatives, not a questionnaire. The CLI does not ask or wait: it writes an AMBIGUOUS report (profile null, exit 2) — see "Generate the project".
+In an interactive session, leave profile selection OPEN until the answer resolves the ambiguity. The questions below are alternatives, not a questionnaire. The CLI does not ask or wait: an ambiguous request writes an AMBIGUOUS report (profile null, exit 2); a request matching no profile writes a classification-failure report (profile null, exit 2) — see "Generate the project".
 
-- “Build a wallet”: ask, “Which build do you want: CLI HD, Bitcoin, ETH-focused EVM, BTC/ETH/TRX/TON multichain, web UI, Android UI, or extended-public-key-only watch-only?”
+- “Build a wallet”: ask, “Which build do you want: CLI HD, Bitcoin, ETH-focused EVM, BTC/ETH/TRX/TON multichain, web UI, Android UI, or extended-public-key-only watch-only?” The CLI reports a bare “Build a wallet” as a classification failure (exit 2).
 - “Bitcoin watch-only wallet”: in an interactive session, ask, “Do you want the Bitcoin profile's 6-confirmation contract or the extended-public-key-only watch-only profile?” The CLI does not ask: bitcoin + watch-only without generation language selects `watch-only-wallet`.
 - “EVM wallet” without a clear operation: the default is ETH derivation (`evm-wallet`); ask a clarifying question only when a non-ETH chain or a non-derivation operation is named.
-- “Mobile wallet” without a platform: ask, “Do you mean the listed Android UI profile?”
+- “Mobile wallet” without a platform: ask, “Do you mean the listed Android UI profile?” The CLI does not route bare “mobile”: it is unclassifiable (classification-failure report, exit 2); the question is for an interactive session.
 
 Ask only one applicable clarifying question and wait; do not guess or silently expand scope.
 
