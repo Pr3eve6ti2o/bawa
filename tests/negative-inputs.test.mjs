@@ -268,6 +268,19 @@ for (const [chain, fixture] of Object.entries(FIXTURES)) {
   });
 }
 
+test("derive.js: valid BTC ypub (BIP-49) index 0 returns the fixture address (F-17)", () => {
+  // The ypub is the fixture zpub re-versioned to 049d7cb2: the same key,
+  // so the bech32 derivation gives the same address. Independently,
+  // bip-utils derives the BIP-49 P2SH address
+  // 34JdW53BKMNqjQXGU33G4N65VxbYdw6jFd at m/49'/0'/0'/0/0.
+  const ypub = "ypub6XYD5EHXRTjV5Ts4obsP9JGSgxcYzbxc1GcsWN73fjLXGXrpR3McpqJbko4xj3kFj41KRZpnymX4YbH6RTpUnKASUq94bKggxBAf5Wpvbv5";
+  const result = runDerive(ypub, "btc", 0);
+
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), FIXTURES.btc.address);
+  assert.equal(result.stderr, "");
+});
+
 for (const key of ["ZPRV", "TV1_XPRV"]) {
   test(`derive.js: rejects the ${key} private key as btc`, () => {
     assertDeriveRejected(

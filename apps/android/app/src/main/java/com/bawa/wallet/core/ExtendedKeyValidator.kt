@@ -87,8 +87,10 @@ object ExtendedKeyValidator {
 
         // BTC/ETH/TRX xpubs share version 0488b21e, so cross-chain xpub misuse
         // between those three is undetectable from serialisation alone.
+        // F-17: BIP-49 ypub (049d7cb2) is accepted for BTC, like the shared
+        // validator (tools/hdwallet-gen/extended-key.js).
         val allowed = when (chain) {
-            Chain.BTC -> version == "0488b21e" || version == "04b24746"
+            Chain.BTC -> version == "0488b21e" || version == "049d7cb2" || version == "04b24746"
             Chain.ETH, Chain.TRX -> version == "0488b21e"
         }
         if (!allowed) {

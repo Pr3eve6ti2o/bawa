@@ -15,7 +15,9 @@ const PRIVATE_VERSIONS = new Set([
 ]);
 
 const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
-  btc: ['0488b21e', '04b24746'],
+  // F-17: BIP-49 ypub (049d7cb2) is accepted for BTC, like the shared
+  // validator (tools/hdwallet-gen/extended-key.js).
+  btc: ['0488b21e', '049d7cb2', '04b24746'],
   eth: ['0488b21e'],
   trx: ['0488b21e'],
 };
@@ -33,8 +35,11 @@ let engineReady = false;
 
 function loadCore(): Promise<WalletCore> {
   if (wasmPromise === undefined) {
-    // Cache failures too, so initialisation is attempted only once.
-    wasmPromise = (async () => {
+    // F-40: a rejected initialisation must not poison the cache for the
+    // page lifetime. Clear the cached promise on rejection (only if it
+    // is still the same promise) so a later call retries; in-flight and
+    // successful initialisation stay cached.
+    const promise = (async () => {
       // No options: the wallet-core 4.8.4 Emscripten build rejects both
       // locateFile and wasmBinary (not in INCOMING_MODULE_JS_API). It
       // resolves wallet-core.wasm relative to the page URL in the
@@ -44,6 +49,10 @@ function loadCore(): Promise<WalletCore> {
       engineReady = true;
       return core;
     })();
+    promise.catch(() => {
+      if (wasmPromise === promise) wasmPromise = undefined;
+    });
+    wasmPromise = promise;
   }
 
   return wasmPromise;

@@ -10,6 +10,12 @@ import {
 
 const btcZpub =
   'zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9';
+// F-17: BIP-49 ypub, the BTC fixture zpub re-versioned to 049d7cb2. It is
+// the same key, so the repo's bech32 derivation gives the same addresses;
+// independently, bip-utils derives the BIP-49 P2SH address
+// 34JdW53BKMNqjQXGU33G4N65VxbYdw6jFd at m/49'/0'/0'/0/0.
+const btcYpub =
+  'ypub6XYD5EHXRTjV5Ts4obsP9JGSgxcYzbxc1GcsWN73fjLXGXrpR3McpqJbko4xj3kFj41KRZpnymX4YbH6RTpUnKASUq94bKggxBAf5Wpvbv5';
 const ethXpub =
   'xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc';
 const trxXpub =
@@ -187,6 +193,18 @@ describe.sequential('watch-only engine boundary', () => {
       ok: false,
       reason: 'invalid-length',
     });
+  });
+
+  it('recognises the BIP-49 ypub for BTC (F-17)', async () => {
+    await expect(validateExtendedKey(btcYpub, 'btc')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('derives the ypub key to the verified BTC address at index 0 (F-17)', async () => {
+    await expect(deriveAddress('btc', btcYpub, 0)).resolves.toBe(
+      'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+    );
   });
 
   it.each(addressCases)(

@@ -8,6 +8,11 @@ import org.junit.Test
 class ExtendedKeyValidatorTest {
     private val btcZpub =
         "zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9"
+    // F-17: BIP-49 ypub, the BTC fixture zpub re-versioned to 049d7cb2.
+    // Independently, bip-utils derives the P2SH address
+    // 34JdW53BKMNqjQXGU33G4N65VxbYdw6jFd at m/49'/0'/0'/0/0.
+    private val btcYpub =
+        "ypub6XYD5EHXRTjV5Ts4obsP9JGSgxcYzbxc1GcsWN73fjLXGXrpR3McpqJbko4xj3kFj41KRZpnymX4YbH6RTpUnKASUq94bKggxBAf5Wpvbv5"
     private val ethXpub =
         "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc"
     private val trxXpub =
@@ -21,6 +26,14 @@ class ExtendedKeyValidatorTest {
         assertEquals(
             ValidationResult.Valid,
             ExtendedKeyValidator.validate(btcZpub, Chain.BTC)
+        )
+    }
+
+    @Test
+    fun validBtcYpubReturnsValid() {
+        assertEquals(
+            ValidationResult.Valid,
+            ExtendedKeyValidator.validate(btcYpub, Chain.BTC)
         )
     }
 
