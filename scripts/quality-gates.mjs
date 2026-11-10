@@ -192,18 +192,21 @@ function lockfiles() {
   return passed;
 }
 
-runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mjs']);
-runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
-runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
-// The engine suite needs tools/hdwallet-gen dependencies installed.
-// Install them when missing so the gates pass from a genuinely clean
-// checkout (no manual npm ci first).
+// The engine-dependent gates (negative-inputs shells out to derive.js /
+// compare.js; the engine suite needs the tools) require the
+// tools/hdwallet-gen dependencies installed. Install them when missing
+// so the gates pass from a genuinely clean checkout (no manual npm ci
+// first). Runs first: negative-inputs failed in a fresh clone when this
+// setup ran after it.
 const engineDir = join(root, 'tools', 'hdwallet-gen');
 if (existsSync(join(engineDir, 'node_modules', '@trustwallet', 'wallet-core'))) {
   report('engine-setup', 'PASS', 'tools/hdwallet-gen dependencies already installed');
 } else {
   runCommand('engine-setup', 'npm', ['ci', '--no-audit', '--no-fund'], engineDir);
 }
+runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mjs']);
+runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
+runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
 runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs']);
 
