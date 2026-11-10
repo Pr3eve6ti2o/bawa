@@ -112,40 +112,19 @@ function detectFiles() {
     };
   };
 
-  let found = [];
-  try {
-    if (fs.existsSync(path.join(ROOT, "ai/profiles"))) {
-      found = fs.readdirSync(path.join(ROOT, "ai/profiles"))
-        .filter((name) => {
-          if (!name.endsWith(".md")) return false;
-          const file = path.join(ROOT, "ai/profiles", name);
-          if (!fs.existsSync(file)) return false;
-          try {
-            return fs.statSync(file).isFile();
-          } catch {
-            return false;
-          }
-        })
-        .sort();
-    }
-  } catch {
-    // An unavailable or concurrently removed profile directory is non-fatal.
-  }
-
+  // Phase 3: profiles live in registry/profiles.json and registries are
+  // JSON (plan section 3 file list). Section 2.2's .yaml names and
+  // ai/profiles/*.md were OPEN proposed allocations, superseded.
   return {
     entryPoints: check(["AGENTS.md", "WALLET_BUILDER.md"]),
     plan: check(["docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md"]),
-    profiles: {
-      status: found.length > 0 ? "ok" : "missing",
-      detail: found.length > 0
-        ? `Found: ${found.map((name) => `ai/profiles/${name}`).join(", ")}; missing: none`
-        : "Found: none; missing: ai/profiles/*.md",
-      found,
-    },
+    profiles: check(["registry/profiles.json"]),
     registries: check([
-      "registry/engines.yaml",
-      "registry/templates.yaml",
-      "registry/chains.yaml",
+      "registry/engines.json",
+      "registry/ui.json",
+      "registry/capabilities.json",
+      "registry/schemas/profile.schema.json",
+      "registry/schemas/registry.schema.json",
     ]),
     templates: check(["templates/web", "templates/android", "templates/shared"]),
     starters: check(["apps/web", "apps/android"]),

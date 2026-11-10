@@ -3,7 +3,7 @@
 Request: Create a web wallet UI following the 14-screen contract.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/web-wallet.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `web-wallet` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed UI contract: 14 screens, referenced by `docs/14`, section 5.1.
 - Foundation: `token-ui` (owner-approved).

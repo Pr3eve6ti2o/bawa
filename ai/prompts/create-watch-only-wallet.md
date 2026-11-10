@@ -3,7 +3,7 @@
 Request: Create a watch-only wallet deriving from extended public keys only.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/watch-only-wallet.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `watch-only-wallet` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed derivation input: extended public keys only.
 - Chain and derivation-path coverage: OPEN.

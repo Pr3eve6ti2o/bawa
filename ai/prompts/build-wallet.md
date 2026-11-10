@@ -4,7 +4,7 @@ Request: Build a wallet, with the profile not yet selected.
 Classify the request via `ai/request-routing.md` first.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: the selected `ai/profiles/<id>.md` from the routing guide (planned for Phase 3; profile pending validation).
+Profile: the selected `ai/profiles/<id>.md` from the routing guide (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Select one listed profile per build; split requests requiring multiple profiles.
 - Take scope, chains, derivation and foundation from the selected profile; unspecified facts: OPEN.

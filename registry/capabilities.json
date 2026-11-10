@@ -1,0 +1,263 @@
+{
+  "registry": "capabilities",
+  "version": 1,
+  "updated": "2026-11-10",
+  "entries": [
+    {
+      "id": "btc-mainnet",
+      "name": "Bitcoin mainnet",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["BTC"],
+      "networks": ["mainnet"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/84'/0'/0'/0/i, not live-network flows. M-38 requires 6 confirmations as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "btc-testnet4",
+      "name": "Bitcoin testnet4",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["BTC"],
+      "networks": ["testnet4"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "BTC testnet4 uses the fixed mainnet derivation path m/84'/0'/0'/0/i by documented policy deviation; verified repo tools cover network-independent 24-word BIP-39 generation with an empty passphrase and watch-only derivation. M-38 requires 6 confirmations as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "eth-mainnet",
+      "name": "Ethereum mainnet",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["ETH"],
+      "networks": ["mainnet"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i, not live-network flows. M-38 requires finalised status as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "eth-testnet",
+      "name": "Ethereum testnet (selection OPEN)",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["ETH"],
+      "networks": ["testnet (selection OPEN)"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Testnet selection is OPEN; verified repo tools cover network-independent 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i. M-38 requires finalised status as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "trx-mainnet",
+      "name": "TRON mainnet",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["TRX"],
+      "networks": ["mainnet"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i, not live-network flows. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "trx-testnet",
+      "name": "TRON testnet (selection OPEN)",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["TRX"],
+      "networks": ["testnet (selection OPEN)"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "watch-only": "IMPLEMENTED_AND_VERIFIED",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Testnet selection is OPEN; verified repo tools cover network-independent 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+    },
+    {
+      "id": "ton-mainnet",
+      "name": "TON mainnet",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["TON"],
+      "networks": ["mainnet"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "OPEN",
+        "watch-only": "OPEN",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Mainnet is out of scope by default; verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub and no watch-only derivation. M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo."
+    },
+    {
+      "id": "ton-testnet",
+      "name": "TON testnet (selection OPEN)",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "chains": ["TON"],
+      "networks": ["testnet (selection OPEN)"],
+      "operations": [
+        "generate",
+        "derive",
+        "watch-only",
+        "receive-address",
+        "import",
+        "recover",
+        "send",
+        "sign",
+        "broadcast",
+        "confirm"
+      ],
+      "capabilities": {
+        "generate": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "OPEN",
+        "watch-only": "OPEN",
+        "receive-address": "DOCUMENTED_NOT_TESTED",
+        "import": "DOCUMENTED_NOT_TESTED",
+        "recover": "DOCUMENTED_NOT_TESTED",
+        "send": "DOCUMENTED_NOT_TESTED",
+        "sign": "DOCUMENTED_NOT_TESTED",
+        "broadcast": "DOCUMENTED_NOT_TESTED",
+        "confirm": "DOCUMENTED_NOT_TESTED"
+      },
+      "notes": "Testnet selection is OPEN; verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub and no watch-only derivation. M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; no transaction-construction, signing or broadcast code exists in the repo."
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 Request: Create a Bitcoin derivation and watch-only wallet.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/bitcoin-wallet.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `bitcoin-wallet` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed chain and derivation reference: BTC — `m/84'/0'/0'/0/i`.
 - Proposed scope: watch-only with a 6-confirmation policy.

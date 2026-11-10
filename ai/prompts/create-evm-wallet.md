@@ -3,7 +3,7 @@
 Request: Create an ETH-focused wallet under the proposed EVM profile.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/evm-wallet.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `evm-wallet` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed chain and derivation reference: ETH — `m/44'/60'/0'/0/i`.
 - Proposed chain-state policy: finalized.

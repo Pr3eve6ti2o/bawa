@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bawa.example/registry/schemas/registry.schema.json",
+  "type": "object",
+  "required": [
+    "registry",
+    "version",
+    "updated",
+    "entries"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "IMPLEMENTED_AND_VERIFIED",
+        "DOCUMENTED_NOT_TESTED",
+        "PROPOSED",
+        "OPEN",
+        "UNVERIFIED",
+        "EXTERNALLY_DEPENDENT"
+      ]
+    }
+  },
+  "properties": {
+    "registry": {
+      "type": "string",
+      "enum": [
+        "engines",
+        "ui",
+        "capabilities"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated": {
+      "type": "string",
+      "format": "date"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "$ref": "#/definitions/status"
+          },
+          "source": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "licence": {
+            "type": "string"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "chains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "btc",
+                "eth",
+                "trx",
+                "ton"
+              ]
+            }
+          },
+          "networks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/status"
+            }
+          }
+        }
+      }
+    }
+  }
+}

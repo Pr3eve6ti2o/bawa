@@ -3,7 +3,7 @@
 Request: Create a CLI HD wallet for generation, derivation, watch-only and recovery.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/hd-wallet-cli.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `hd-wallet-cli` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed CLI functions: HD generation, derivation and recovery.
 - Proposed watch-only coverage: BTC, ETH and TRX.

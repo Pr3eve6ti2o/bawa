@@ -3,7 +3,7 @@
 Request: Create an Android wallet UI following the 14-screen contract.
 Read: `AGENTS.md`.
 Read: `WALLET_BUILDER.md`.
-Profile: `ai/profiles/android-wallet.md` (planned for Phase 3; profile pending validation).
+Profile: `registry/profiles.json` entry `android-wallet` (validated in Phase 3; run `node scripts/validate-registry.mjs` to re-check).
 
 - Proposed UI contract: 14 screens, referenced by `docs/14`, section 5.1.
 - Foundation: Tether WDK Starter Kotlin, UI layer only (owner-approved).
