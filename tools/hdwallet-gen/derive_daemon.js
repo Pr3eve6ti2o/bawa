@@ -26,6 +26,11 @@ const MAX_INDEX = 2147483647;
 let replyRl = null;
 let waitingForDrain = false;
 
+function onStdoutDrain() {
+  waitingForDrain = false;
+  if (replyRl) replyRl.resume();
+}
+
 function reply(obj) {
   if (process.stdout.write(JSON.stringify(obj) + "\n")) return;
 
@@ -33,10 +38,7 @@ function reply(obj) {
   if (waitingForDrain) return;
 
   waitingForDrain = true;
-  process.stdout.once("drain", () => {
-    waitingForDrain = false;
-    if (replyRl) replyRl.resume();
-  });
+  process.stdout.once("drain", onStdoutDrain);
 }
 
 function fail(msg) {
@@ -59,18 +61,32 @@ function fail(msg) {
       let start = 0;
       for (;;) {
         const newline = chunk.indexOf(10, start);
-        if (newline === -1) {
-          cappedLineBytes += chunk.length - start;
-          break;
-        }
+        cappedLineBytes += (newline === -1 ? chunk.length : newline) - start;
+        if (newline === -1) break;
         cappedLineBytes = 0;
         start = newline + 1;
       }
       if (cappedLineBytes > MAX_LINE_LENGTH) {
         cappedOverLimit = true;
-        fail("request too large");
-        process.stdin.destroy();
-        return callback();
+        const rejectFragment = () => {
+          fail("request too large");
+          process.stdin.destroy();
+          callback();
+        };
+        if (start === 0) return rejectFragment();
+
+        // Readline may be paused for stdout backpressure, so wait for the
+        // complete prefix to be consumed before rejecting the fragment.
+        let prefixBytes = this.readableLength + start;
+        const onPrefixData = (data) => {
+          prefixBytes -= data.length;
+          if (prefixBytes > 0) return;
+          this.removeListener("data", onPrefixData);
+          rejectFragment();
+        };
+        this.on("data", onPrefixData);
+        this.push(chunk.subarray(0, start));
+        return;
       }
       callback(null, chunk);
     },
@@ -84,7 +100,7 @@ function fail(msg) {
 
   rl.on("line", (line) => {
     try {
-      if (line.length > MAX_LINE_LENGTH) return fail("request too large");
+      if (Buffer.byteLength(line, "utf8") > MAX_LINE_LENGTH) return fail("request too large");
       if (!line.trim()) return fail("bad json");
 
       let req;
@@ -127,5 +143,17 @@ function fail(msg) {
   rl.on("close", () => { process.exitCode = 0; });
   // Destroy stdin too: the capped-input pipe keeps stdin flowing, so closing
   // readline alone no longer drains the event loop.
-  process.on("SIGTERM", () => { process.exitCode = 0; process.stdin.destroy(); rl.close(); });
+  // SIGTERM must exit promptly even when stdout is blocked (F-11).
+  // process.stdout.destroy() does NOT cancel a pending stdout write:
+  // verified first-hand, stdout.destroyed stays false and the pending
+  // WriteWrap keeps the event loop alive indefinitely when no client
+  // drains the pipe — including writes below the highWaterMark, which
+  // never set waitingForDrain. Exit directly; the pending write is to
+  // a pipe nobody drains, so it can never complete.
+  process.on("SIGTERM", () => {
+    process.stdout.removeListener("drain", onStdoutDrain);
+    process.stdin.destroy();
+    rl.close();
+    process.exit(0);
+  });
 })().catch((e) => { console.error("FATAL: " + (e && e.message)); process.exit(1); });

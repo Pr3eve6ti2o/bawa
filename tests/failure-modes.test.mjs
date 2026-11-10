@@ -183,4 +183,219 @@ describe('failure modes', () => {
       }
     }
   });
+
+  test('daemon rejects a terminated multibyte oversized line and stays up (F-09)', async () => {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+      cwd: toolsDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const closed = new Promise((resolve) => {
+      child.once('close', (code, signal) => resolve({ code, signal }));
+    });
+    let daemonError;
+    child.on('error', (error) => { daemonError = error; });
+    child.stdin.on('error', (error) => { daemonError = error; });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    const output = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const lines = output[Symbol.asyncIterator]();
+    const readReply = async () => {
+      const { value, done } = await withTimeout(lines.next(), 10_000, 'Timed out awaiting daemon output');
+      assert.ifError(daemonError);
+      assert.equal(done, false, `Daemon closed stdout before replying: ${stderr}`);
+      return JSON.parse(value);
+    };
+    const send = (request) => child.stdin.write(`${JSON.stringify(request)}\n`);
+
+    try {
+      assert.deepEqual(await readReply(), { ready: true });
+      send({ chain: 'btc', xpub: 'é'.repeat(3000), index: 0 });
+      const oversizedReply = await readReply();
+      assert.equal(oversizedReply.ok, false);
+      assert.match(oversizedReply.error, /too large/i);
+      send({ chain: 'btc', xpub: btcKey, index: 0 });
+      const reply = await readReply();
+      assert.equal(reply.ok, true);
+      assert.equal(reply.address, btcAddress);
+    } finally {
+      child.kill();
+      try {
+        const { code, signal } = await withTimeout(closed, 5_000, 'Daemon did not close within 5 s');
+        assert.ok(code !== null || signal !== null, 'Daemon neither exited nor was killed');
+        assert.ifError(daemonError);
+      } finally {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill('SIGKILL');
+          child.unref();
+        }
+        output.close();
+        child.stdin.destroy();
+        child.stdout.destroy();
+        child.stderr.destroy();
+      }
+    }
+  });
+
+  test('daemon rejects an unterminated oversized line once and exits (F-09)', async () => {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+      cwd: toolsDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const closed = new Promise((resolve) => {
+      child.once('close', (code, signal) => resolve({ code, signal }));
+    });
+    let daemonError;
+    child.on('error', (error) => { daemonError = error; });
+    child.stdin.on('error', (error) => { daemonError = error; });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    const output = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const lines = output[Symbol.asyncIterator]();
+    const readReply = async () => {
+      const { value, done } = await withTimeout(lines.next(), 10_000, 'Timed out awaiting daemon output');
+      assert.ifError(daemonError);
+      assert.equal(done, false, `Daemon closed stdout before replying: ${stderr}`);
+      return JSON.parse(value);
+    };
+
+    try {
+      assert.deepEqual(await readReply(), { ready: true });
+      child.stdin.write(Buffer.alloc(5_000, 'A'));
+      const reply = await readReply();
+      assert.equal(reply.ok, false);
+      assert.match(reply.error, /too large/i);
+      const [{ value, done }, { code, signal }] = await withTimeout(
+        Promise.all([lines.next(), closed]),
+        5_000,
+        'Daemon did not close stdout and exit within 5 s',
+      );
+      assert.equal(done, true, `Daemon emitted an extra reply: ${value}`);
+      assert.equal(code, 0, stderr);
+      assert.equal(signal, null, stderr);
+      assert.ifError(daemonError);
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        child.unref();
+      }
+      output.close();
+      child.stdin.destroy();
+      child.stdout.destroy();
+      child.stderr.destroy();
+    }
+  });
+
+  test('daemon answers a valid request and an oversized fragment in one chunk (F-10)', async () => {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+      cwd: toolsDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const closed = new Promise((resolve) => {
+      child.once('close', (code, signal) => resolve({ code, signal }));
+    });
+    let daemonError;
+    child.on('error', (error) => { daemonError = error; });
+    child.stdin.on('error', (error) => { daemonError = error; });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    const output = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const lines = output[Symbol.asyncIterator]();
+    const readReply = async () => {
+      const { value, done } = await withTimeout(lines.next(), 10_000, 'Timed out awaiting daemon output');
+      assert.ifError(daemonError);
+      assert.equal(done, false, `Daemon closed stdout before replying: ${stderr}`);
+      return JSON.parse(value);
+    };
+
+    try {
+      assert.deepEqual(await readReply(), { ready: true });
+      const request = JSON.stringify({ chain: 'btc', xpub: btcKey, index: 0 });
+      child.stdin.write(`${request}\n${'A'.repeat(5_000)}`);
+      const replies = [await readReply(), await readReply()];
+      const validReply = replies.find((reply) => reply.ok === true);
+      const oversizedReply = replies.find((reply) => reply.ok === false);
+      assert.equal(validReply?.ok, true, 'Missing successful BTC reply');
+      assert.equal(validReply.address, btcAddress);
+      assert.equal(oversizedReply?.ok, false, 'Missing oversized request reply');
+      assert.match(oversizedReply.error, /too large/i);
+      const [{ value, done }, { code, signal }] = await withTimeout(
+        Promise.all([lines.next(), closed]),
+        5_000,
+        'Daemon did not close stdout and exit within 5 s',
+      );
+      assert.equal(done, true, `Daemon emitted an extra reply: ${value}`);
+      assert.equal(code, 0, stderr);
+      assert.equal(signal, null, stderr);
+      assert.ifError(daemonError);
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        child.unref();
+      }
+      output.close();
+      child.stdin.destroy();
+      child.stdout.destroy();
+      child.stderr.destroy();
+    }
+  });
+
+  test('daemon exits on SIGTERM with blocked stdout (F-11)', async () => {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+      cwd: toolsDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const closed = new Promise((resolve) => {
+      child.once('close', (code, signal) => resolve({ code, signal }));
+    });
+    // Drain buffered output only after exit so the close event can fire.
+    child.once('exit', () => { child.stdout.resume(); });
+    let daemonError;
+    let stopping = false;
+    child.on('error', (error) => { daemonError = error; });
+    child.stdin.on('error', (error) => {
+      // Queued requests may hit a closed stdin during intentional shutdown.
+      if (!stopping || (error.code !== 'EPIPE' && error.code !== 'ERR_STREAM_DESTROYED')) {
+        daemonError = error;
+      }
+    });
+    let stderr = '';
+    child.stderr.setEncoding('utf8').on('data', (chunk) => { stderr += chunk; });
+    const output = createInterface({ input: child.stdout, crlfDelay: Infinity });
+    const lines = output[Symbol.asyncIterator]();
+    const readReply = async () => {
+      const { value, done } = await withTimeout(lines.next(), 10_000, 'Timed out awaiting daemon output');
+      assert.ifError(daemonError);
+      assert.equal(done, false, `Daemon closed stdout before replying: ${stderr}`);
+      return JSON.parse(value);
+    };
+
+    try {
+      assert.deepEqual(await readReply(), { ready: true });
+      // Closing readline removes its data reader; keep stdout paused until exit.
+      output.close();
+      child.stdout.pause();
+      const request = `${JSON.stringify({ chain: 'eth', xpub: badChecksum(ethKey), index: 0 })}\n`;
+      for (let index = 0; index < 2_000; index++) child.stdin.write(request);
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      assert.ifError(daemonError);
+      assert.equal(child.exitCode, null, `Daemon exited before SIGTERM: ${stderr}`);
+      assert.equal(child.signalCode, null, `Daemon was killed before SIGTERM: ${stderr}`);
+      stopping = true;
+      assert.equal(child.kill('SIGTERM'), true, 'Could not send SIGTERM to daemon');
+      const { code, signal } = await withTimeout(closed, 5_000, 'Daemon did not close within 5 s of SIGTERM');
+      assert.equal(code, 0, stderr);
+      assert.equal(signal, null, stderr);
+      assert.ifError(daemonError);
+    } finally {
+      stopping = true;
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        child.unref();
+      }
+      output.close();
+      child.stdin.destroy();
+      child.stdout.destroy();
+      child.stderr.destroy();
+    }
+  });
 });
