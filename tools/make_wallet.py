@@ -18,6 +18,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 
 BASE = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 TARGET_KEYS = {"XPUB_BTC", "XPUB_ETH", "XPUB_TRX", "TON_DEPOSIT_ADDRESS"}
@@ -302,6 +303,91 @@ def assert_bundle_decrypts(bundle_path, data_key) -> None:
             plain[i] = 0
 
 
+# Cap on generator output (F-14). The legitimate stdout is a small JSON
+# object (a few KB). Anything larger is a runaway or compromised
+# generator; capture_output would buffer it without a size limit, and
+# the 120 s timeout does not prevent memory exhaustion.
+GENERATOR_OUTPUT_LIMIT = 1024 * 1024  # 1 MiB per stream
+GENERATOR_TIMEOUT_S = 120
+
+
+class _CappedStream:
+    """Byte-capped drain for one child stream.
+
+    Reads in 64 KB chunks on its own thread. On overflow it marks the
+    stream, kills the child, and stops reading — the child cannot fill
+    memory through a stream nobody is draining. Each reader touches
+    only its own state; the caller reads the fields after joining.
+    """
+
+    def __init__(self, stream, limit, proc, name):
+        self.stream = stream
+        self.limit = limit
+        self.proc = proc
+        self.name = name
+        self.chunks = []
+        self.total = 0
+        self.overflow = False
+
+    def run(self):
+        try:
+            while True:
+                chunk = self.stream.read(65536)
+                if not chunk:
+                    break
+                self.total += len(chunk)
+                if self.total > self.limit:
+                    self.overflow = True
+                    self.proc.kill()
+                    return
+                self.chunks.append(chunk)
+        except (OSError, ValueError):
+            pass
+
+    def text(self):
+        return b"".join(self.chunks).decode("utf-8")
+
+
+def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPUT_LIMIT):
+    """Run the generator with byte-capped stdout/stderr collection.
+
+    Returns the stdout text. Stderr is drained and discarded under the
+    same cap (it is never printed: the wrapper reports generator
+    failure without echoing generator output). Raises SystemExit when
+    either stream exceeds `limit`, when the timeout expires, when the
+    child exits non-zero, or when stdout is not UTF-8 — all without
+    echoing captured content.
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    out = _CappedStream(proc.stdout, limit, proc, "stdout")
+    err = _CappedStream(proc.stderr, limit, proc, "stderr")
+    t_out = threading.Thread(target=out.run, daemon=True)
+    t_err = threading.Thread(target=err.run, daemon=True)
+    t_out.start()
+    t_err.start()
+    try:
+        proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        raise SystemExit("wallet-core generation timed out") from None
+    t_out.join(timeout=5)
+    t_err.join(timeout=5)
+    for stream in (out, err):
+        if stream.overflow:
+            proc.kill()
+            raise SystemExit(
+                f"wallet-core generation exceeded the {limit}-byte "
+                f"{stream.name} limit"
+            )
+    if proc.returncode != 0:
+        raise SystemExit("wallet-core generation failed; stderr suppressed")
+    try:
+        return out.text()
+    except UnicodeDecodeError:
+        raise SystemExit("generator stdout malformed: not UTF-8") from None
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
     raw_secrets = resolve_secrets_dir()
@@ -344,17 +430,15 @@ def main() -> None:
     data_key = bytearray(secrets.token_bytes(32))
     child_env = os.environ.copy()
     child_env["BAWA_DATA_KEY_HEX"] = bytes(data_key).hex()
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=child_env,
-    )
-    if proc.returncode != 0:
-        raise SystemExit("wallet-core generation failed; stderr suppressed")
-
-    data = json.loads(proc.stdout)
+    # F-14: capped collection (see run_generator). The wrapper never
+    # echoes generator output: a malformed stdout fails with a generic
+    # message, and the ten-key schema check below bounds the accepted
+    # JSON structure.
+    stdout_text = run_generator(cmd, child_env)
+    try:
+        data = json.loads(stdout_text)
+    except json.JSONDecodeError:
+        raise SystemExit("generator stdout malformed: invalid JSON") from None
     validate_public_stdout(data)
     assertBundleVerified(data)
     if _contains_seed_material(data):

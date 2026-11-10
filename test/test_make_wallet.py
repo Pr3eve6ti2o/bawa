@@ -22,6 +22,7 @@ from make_wallet import (
     assert_bundle_decrypts,
     assertBundleVerified,
     resolve_secrets_dir,
+    run_generator,
     validate_public_stdout,
 )
 
@@ -237,6 +238,86 @@ class TestAssertBundleDecrypts(unittest.TestCase):
             path = self._write_bundle(b"test phrase", key, tmp)
             with self.assertRaises(SystemExit):
                 assert_bundle_decrypts(path, key)
+
+
+class TestRunGenerator(unittest.TestCase):
+    """F-14: generator output is collected under a byte cap."""
+
+    def _fake_generator(self, tmp, body):
+        path = os.path.join(tmp, "fake_gen.py")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(body)
+        return [sys.executable, path]
+
+    def test_small_output_passes(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(
+                tmp, 'import sys; sys.stdout.write("hello")\n'
+            )
+            self.assertEqual(run_generator(cmd, dict(os.environ)), "hello")
+
+    def test_stdout_overflow_kills_and_raises(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(
+                tmp,
+                'import sys\n'
+                'for _ in range(8):\n'
+                '    sys.stdout.write("x" * 1024)\n'
+                '    sys.stdout.flush()\n',
+            )
+            with self.assertRaises(SystemExit) as caught:
+                run_generator(cmd, dict(os.environ), limit=1024)
+            self.assertIn("stdout limit", str(caught.exception))
+
+    def test_stderr_overflow_kills_and_raises(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(
+                tmp,
+                'import sys\n'
+                'for _ in range(8):\n'
+                '    sys.stderr.write("x" * 1024)\n'
+                '    sys.stderr.flush()\n',
+            )
+            with self.assertRaises(SystemExit) as caught:
+                run_generator(cmd, dict(os.environ), limit=1024)
+            self.assertIn("stderr limit", str(caught.exception))
+
+    def test_nonzero_exit_raises_without_echo(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(
+                tmp,
+                'import sys; sys.stderr.write("SECRET-MARKER-1234"); sys.exit(3)\n',
+            )
+            with self.assertRaises(SystemExit) as caught:
+                run_generator(cmd, dict(os.environ))
+            self.assertNotIn("SECRET-MARKER-1234", str(caught.exception))
+
+    def test_timeout_kills_and_raises(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(tmp, "import time; time.sleep(30)\n")
+            with self.assertRaises(SystemExit) as caught:
+                run_generator(cmd, dict(os.environ), timeout_s=2)
+            self.assertIn("timed out", str(caught.exception))
+
+    def test_non_utf8_stdout_raises(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = self._fake_generator(
+                tmp, 'import sys; sys.stdout.buffer.write(b"\\xff\\xfe")\n'
+            )
+            with self.assertRaises(SystemExit):
+                run_generator(cmd, dict(os.environ))
 
 
 class TestParseSeedBundle(unittest.TestCase):
