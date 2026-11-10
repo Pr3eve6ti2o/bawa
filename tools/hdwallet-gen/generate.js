@@ -87,6 +87,107 @@ function resolveSecretsDir(env = process.env) {
   return path.join(__dirname, "..", "..", "secrets");
 }
 
+function acquirePublishLock(encPath) {
+  const lockPath = encPath + ".lock";
+  const deadline = Date.now() + 10000;
+  const waitState = new Int32Array(new SharedArrayBuffer(4));
+  let lockFd;
+
+  for (;;) {
+    try {
+      lockFd = fs.openSync(lockPath, "wx", 0o600);
+      break;
+    } catch (err) {
+      if (err.code !== "EEXIST") {
+        throw err;
+      }
+    }
+
+    let live = false;
+    try {
+      const pidText = fs.readFileSync(lockPath, "utf8").trim();
+      const pid = Number(pidText);
+      if (/^\d+$/.test(pidText) && Number.isSafeInteger(pid) && pid > 0) {
+        try {
+          process.kill(pid, 0);
+          live = true;
+        } catch (killErr) {
+          // EPERM means the process exists but belongs to another
+          // user: the lock is live and must NOT be stolen. Any other
+          // probe failure (ESRCH = dead PID) permits reclamation.
+          if (killErr.code === "EPERM") live = true;
+        }
+      }
+    } catch (_) {
+      // An unreadable lock or unsuccessful PID probe permits reclamation.
+    }
+
+    if (!live) {
+      try {
+        fs.unlinkSync(lockPath);
+      } catch (err) {
+        if (err.code !== "ENOENT") {
+          throw err;
+        }
+      }
+
+      // Retry exclusive creation exactly once after reclaiming the lock.
+      lockFd = fs.openSync(lockPath, "wx", 0o600);
+      break;
+    }
+
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      throw new Error("seed bundle publish already in progress for " + encPath);
+    }
+    Atomics.wait(waitState, 0, 0, Math.min(100, remaining));
+  }
+
+  let lockFdNeedsClose = true;
+  try {
+    fs.writeFileSync(lockFd, String(process.pid));
+    // Do not retry close if it throws; the fd may already be released.
+    lockFdNeedsClose = false;
+    fs.closeSync(lockFd);
+  } catch (err) {
+    if (lockFdNeedsClose) {
+      try {
+        fs.closeSync(lockFd);
+      } catch (_) {
+        // Preserve the original acquisition error.
+      }
+    }
+    releasePublishLock(lockPath);
+    throw err;
+  }
+
+  return lockPath;
+}
+
+function releasePublishLock(lockPath) {
+  try {
+    fs.unlinkSync(lockPath);
+  } catch (_) {
+    // Ignore ENOENT and all other cleanup errors; release must never throw.
+  }
+}
+
+function publishSeedBundle({ encPath, tmpPath, force }) {
+  if (!force) {
+    try {
+      fs.linkSync(tmpPath, encPath);
+    } catch (err) {
+      if (err.code === "EEXIST") {
+        throw new Error("Refusing to overwrite existing seed.enc.json; pass --force to replace");
+      }
+      throw err;
+    }
+    fs.unlinkSync(tmpPath);
+  } else {
+    fs.renameSync(tmpPath, encPath);
+  }
+}
+
 async function main() {
   let tty;
   try {
@@ -99,15 +200,6 @@ async function main() {
   const force = process.argv.includes("--force");
   const secretsDir = resolveSecretsDir();
   const encPath = path.join(secretsDir, "seed.enc.json");
-
-  if (fs.existsSync(encPath)) {
-    if (!force) {
-      throw new Error("Refusing to overwrite existing seed.enc.json; pass --force to replace");
-    }
-    const backupPath = encPath + ".bak." + new Date().toISOString().replace(/[:.]/g, "-");
-    fs.copyFileSync(encPath, backupPath, fs.constants.COPYFILE_EXCL);
-    fs.chmodSync(backupPath, 0o600);
-  }
 
   const core = await initWasm();
   const { HDWallet, CoinType, CoinTypeExt, Purpose, Derivation, HDVersion } = core;
@@ -262,6 +354,31 @@ async function main() {
     fs.closeSync(ttyIn);
     fs.closeSync(tty);
 
+    const lockPath = acquirePublishLock(encPath);
+    try {
+      if (fs.existsSync(encPath)) {
+        if (!force) {
+          throw new Error("Refusing to overwrite existing seed.enc.json; pass --force to replace");
+        }
+        const backupPath = encPath + ".bak." + new Date().toISOString().replace(/[:.]/g, "-");
+        fs.copyFileSync(encPath, backupPath, fs.constants.COPYFILE_EXCL);
+        fs.chmodSync(backupPath, 0o600);
+
+        const backupFd = fs.openSync(backupPath, "r");
+        try {
+          fs.fsyncSync(backupFd);
+        } finally {
+          fs.closeSync(backupFd);
+        }
+
+        const backupDirFd = fs.openSync(secretsDir, "r");
+        try {
+          fs.fsyncSync(backupDirFd);
+        } finally {
+          fs.closeSync(backupDirFd);
+        }
+      }
+
     const tmpPath = encPath + ".tmp." + process.pid + "." + crypto.randomBytes(8).toString("hex");
     // Enter temp-file cleanup only after a successful exclusive open.
     const tmpFd = fs.openSync(tmpPath, "wx", 0o600);
@@ -281,7 +398,7 @@ async function main() {
       // Do not retry close if it throws; the fd may already be released.
       tmpFdNeedsClose = false;
       fs.closeSync(tmpFd);
-      fs.renameSync(tmpPath, encPath);
+      publishSeedBundle({ encPath, tmpPath, force });
     } catch (err) {
       if (tmpFdNeedsClose) {
         try {
@@ -308,6 +425,9 @@ async function main() {
       throw new Error("seed bundle verification failed");
     }
     checks.push({ name: "bundle_verified", ok: true });
+    } finally {
+      releasePublishLock(lockPath);
+    }
   } finally {
     dataKey.fill(0);
   }
@@ -333,4 +453,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { verifySeedBundle, resolveSecretsDir };
+module.exports = { verifySeedBundle, resolveSecretsDir, acquirePublishLock, releasePublishLock, publishSeedBundle };
