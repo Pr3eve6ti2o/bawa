@@ -289,7 +289,7 @@ test -z "$(git status --short)"
 ```
 
 Return to the original directory and prove the corrected guide survived: the
-commit is still the one you cloned, the README is still 1243 lines, and the
+commit is still the one you cloned, the README is still 1275 lines, and the
 tree is still clean.
 
 ```sh
@@ -298,8 +298,8 @@ cd ../bawa
 
 **Expected result — check**
 ```sh
-test "$(git rev-parse HEAD)" = "56396a2010c150b2aa9ea70102194127048e905b"
-test "$(wc -l < README.md | tr -d ' ')" = 1243
+test "$(git rev-parse HEAD)" = "b8298197dd227916ff424dd479508887753e713f"
+test "$(wc -l < README.md | tr -d ' ')" = 1275
 test -z "$(git status --short)"
 ```
 
