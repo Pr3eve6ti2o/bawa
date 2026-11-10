@@ -85,3 +85,34 @@ Do not proceed on the strength of this record without reassessment if:
 - The pinned commit disappears or can no longer be retrieved and verified.
 - An exclusion violation is found in the pinned source during adoption, contradicting the checks in section 2.
 - The adoption cannot preserve the full upstream licence text or provide the required `NOTICE` crediting Consenlabs.
+
+
+## 7. Adoption (Phase 6 — done 2026-11-10)
+
+- Vendored: `packages/ui/src` from the pinned commit into
+  `apps/web/src/ui/` — 67 files (65 components, `hooks/use-mobile.ts`,
+  `lib/utils.ts`, `styles/globals.css`, `LICENSE-token-ui`, `NOTICE.md`).
+  Change made: `@repo/ui/...` import paths rewritten to relative paths
+  (59 files). No behaviour changed. No upstream code was modified beyond
+  the import rewrite.
+- Package manager: **npm** (consistent with the repo's tooling). Upstream
+  pnpm 10.33.0 is recorded, not adopted.
+- Exact pins (apps/web/package.json, per-app lockfile
+  apps/web/package-lock.json, 295 packages): react/react-dom 19.2.5,
+  react-router 7.14.0, vite 8.0.7, typescript 5.9.3, tailwindcss 4.2.4,
+  vitest 4.1.3, jsdom 31.0.0, qrcode.react 4.2.0, @trustwallet/wallet-core
+  4.8.4 (the repo pin, Phase 4 decision).
+- WASM loading: the wallet-core 4.8.4 Emscripten build rejects both
+  `locateFile` and `wasmBinary` (not in INCOMING_MODULE_JS_API —
+  verified first-hand: both abort, no-args `initWasm()` works in Node).
+  The loader resolves `wallet-core.wasm` relative to the page URL in the
+  browser, so the binary is served from `public/` via
+  `scripts/copy-wasm.mjs` (runs on `predev`/`prebuild`). The wasm is a
+  build artifact, never committed (`apps/web/.gitignore`). Verified:
+  `vite preview` serves `/` HTTP 200 and `/wallet-core.wasm` HTTP 200
+  (10,386,536 bytes).
+- Delivered: the 14 screens (docs/14 §5.1), the engine boundary
+  (apps/web/src/engine/boundary.ts — validation before WASM, R-01 point
+  validation mirrored in pure BigInt), shared contracts
+  (packages/contracts), 25 tests, apps/web/README.md. Verified first-hand:
+  `tsc --noEmit` exit 0; `vitest run` 25/25; `vite build` exit 0.
