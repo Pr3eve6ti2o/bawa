@@ -197,14 +197,15 @@ export function validateReferences(files) {
   return errors;
 }
 
-export function validateAll(
-  registryDir = "registry",
-  schemaDir = "registry/schemas",
-) {
+export function validateAll(registryDir = "registry", schemaDir) {
+  // The schema directory defaults to <registryDir>/schemas, so a single
+  // absolute registry directory works from any working directory. An
+  // explicit schemaDir overrides it.
+  const resolvedSchemaDir = schemaDir ?? join(registryDir, "schemas");
   const files = {};
   const paths = [
-    ["profileSchema", join(schemaDir, "profile.schema.json")],
-    ["registrySchema", join(schemaDir, "registry.schema.json")],
+    ["profileSchema", join(resolvedSchemaDir, "profile.schema.json")],
+    ["registrySchema", join(resolvedSchemaDir, "registry.schema.json")],
     ["profiles", join(registryDir, "profiles.json")],
     ["capabilities", join(registryDir, "capabilities.json")],
     ["engines", join(registryDir, "engines.json")],
