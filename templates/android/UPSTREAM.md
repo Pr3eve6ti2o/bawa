@@ -113,3 +113,32 @@ Stop adoption and reassess the selection if:
 - The adopted UI cannot be made to build without retaining the external WDK engine or other excluded behaviour.
 
 Selection of the foundation does not waive its UI-only boundary or establish that a Bawa Gradle build already exists.
+
+
+## 7. Adoption (Phase 7 — done 2026-11-10)
+
+- Adopted UI layer only into `apps/android` (package `com.bawa.wallet`):
+  the WDK starter's Gradle wrapper (Gradle 8.7), AGP 8.2.2, Kotlin 1.9.22,
+  Compose BOM 2024.02.00, compileSdk 35, minSdk 33, targetSdk 35, JVM 17,
+  ZXing core 3.5.3, JUnit 4.13.2 (tests) and `Components.kt`
+  (ScreenHeader, NetworkPill, TestnetBadge, PrimaryButton,
+  OutlineActionButton, QrCodeImage, ActionCard, AssetRow). The two
+  mnemonic cells (SeedWordCell, SeedInputCell) were REMOVED — the starter
+  never handles mnemonics.
+- NOT adopted: the `:wdk-core-kotlin` engine module (it lives outside the
+  WDK starter repo and the starter does not build with it) and every
+  WdkCore import. The local draft's vault, signing, broadcast, adapter
+  and `:core` (GitHub Packages AAR) code was NOT adopted — it assumes a
+  Trust Wallet Core AAR that does not exist for any version.
+- Gradle 8.7 was chosen over the draft's 8.9 because 8.7 is the
+  foundation's wrapper; the draft's 8.9 is unproven and its `:core`
+  assumes the non-existent AAR.
+- Delivered: the 14 screens (docs/14 §5.1) as watch-only Compose screens,
+  a watch-only ViewModel (xpubs in memory only; lock is a UI state only),
+  a pure-Kotlin extended-key validator (base58check, checksum, private
+  rejection, per-chain versions, R-01 point validation) and the derivation
+  policy (BTC m/84'/0'/0'/0/i, ETH m/44'/60'/0'/0/i, TRX m/44'/195'/0'/0/i;
+  TON generation-only, unsupported). On-device derivation is OPEN.
+- Verified first-hand: `./gradlew testDebugUnitTest` 17/17 (validator 10/10,
+  policy 7/7); `./gradlew assembleDebug` exit 0 (app-debug.apk); emulator
+  evidence in docs/android-evidence.md.
