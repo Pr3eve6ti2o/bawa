@@ -3446,6 +3446,8 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Status:** OPEN.
 
+**Reviewer (owner, 2026-11-10 ~14:30 IST):** designated — Astra, max reasoning. The review runs after the acceptance programme finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST (the Opus audit lane had already ended BLOCKED: 8 consecutive HTTP 503 "no available channel under current group probation"). Astra authored the implementation, so the review is a second-pass review by the same model; its report must state that plainly, not present itself as a fully independent audit. Designation alone does not clear this gate.
+
 **Operational restriction:** No funding until gates 1–6 are complete unfunded, loss limits are recorded and owner-approved, and the independent security review has taken place. Rehearsals require separate authorisation, must be bounded, and must use fresh disposable accounts.
 
 **Blocks writing completion:** No — §17 must include the gate. The gate blocks release, not writing. Writing completion means prose done and checked; it does not authorise real-fund use.
@@ -3801,6 +3803,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
+**Reviewer (owner, 2026-11-10 ~14:30 IST):** designated — Astra, max reasoning. The review runs after the acceptance programme finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST (the Opus audit lane had already ended BLOCKED: 8 consecutive HTTP 503 "no available channel under current group probation"). Astra authored the implementation, so the review is a second-pass review by the same model; its report must state that plainly, not present itself as a fully independent audit. Designation alone does not clear this gate.
+
 **Operational restriction:** No real-funds use before the independent-security-review gate is cleared. Doc 4 must state that gate-passing is not a substitute for the review. “Complete” under M36 F8 means the prose is done and checked, never authorisation for real-fund use.
 
 **Blocks writing completion:** No — the gate blocks release, not writing.
@@ -4105,7 +4109,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
 | 9. Mainnet endpoints need live re-verification at guide-writing time (`mempool.space/api`, PublicNode mainnet RPC, Blockscout mainnet, `api.trongrid.io`, `toncenter.com/api/v2`) | m28-OI-02 | OPEN — carried as M-17/M-18/M-19; probe live, do not copy testnet values. |
 | 10. Confirmation thresholds unconfirmed on mainnet (BTC 6 / ETH 12 + `finalized` / TRX 19 SR / TON 1 masterchain seqno, with refinements) | m28-OI-03, m30 O1 | RESOLVED 2026-11-10 — TON part decided (M-13: 1 masterchain seqno + outcome check); BTC/ETH/TRX refinements resolved under M-38 (BTC 6, ETH `finalized` confirmed; ETH "12" retained as an unsourced extra minimum; TRX 19 SR confirmed). |
-| 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. |
+| 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. Reviewer designated 2026-11-10: Astra, max reasoning, runs after acceptance work; Opus audit dropped by owner decision 2026-11-10. |
 | 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
 | 14. Standard-wallet import of a Bawa mnemonic never performed | m02, m28-OI-08 | OPEN — R-14 (extended); cross-wallet recovery still unverified (M23 F36, M22 F44). |

@@ -86,9 +86,9 @@ Every item below remains **OPEN**. Release checks, review notes and proposed reh
 
 ### OPEN — Independent external review (M-31/M-15)
 
-No independent reviewer is designated. The Phase 9 review is an **Astra second-pass review**, not an independent review; never present it as independent.
+Reviewer designated (owner, 2026-11-10 ~14:30 IST): Astra, max reasoning. The review runs after the acceptance programme finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST (the Opus audit lane had already ended BLOCKED: 8 consecutive HTTP 503 "no available channel under current group probation"). Astra authored the implementation, so the review is a second-pass review by the same model; its report must state that plainly, not present itself as a fully independent audit. The Phase 9 review is likewise an **Astra second-pass review**, not an independent review; never present it as independent.
 
-**Unblocks when:** an independent external reviewer is designated, the agreed scope is reviewed, blocking findings are resolved and verified, and the outcome is recorded. Designating a reviewer alone does not close this gate.
+**Unblocks when:** the designated review is completed, blocking findings are resolved and verified, and the outcome is recorded. Designating a reviewer alone does not close this gate.
 
 ### OPEN — M-35 rehearsal authorisation
 

@@ -114,16 +114,24 @@ They supersede the corresponding statements in sections 1–6 where noted.
    Not tested: send/sign/broadcast, Web draft UI, Android. Report:
    WALLET-TEST-REPORT.md in the bawa-wallet-test working area. This is
    additional engine evidence for sections 1.2 and 4.1.
-8. M-31/M-15 reviewer still not designated. Criteria are in section 6.1.
+8. M-31/M-15 reviewer: DESIGNATED (owner, 2026-11-10 ~14:30 IST) — Astra,
+   max reasoning. It runs AFTER the acceptance coordinator finishes, so it
+   reviews the final state. The Opus independent audit was dropped by
+   owner decision 2026-11-10 ~14:28 IST ("Stop it — Astra only"); the
+   Opus audit lane had already ended BLOCKED (8 consecutive HTTP 503
+   "no available channel under current group probation", 2026-11-10).
    MODEL RESTRICTION (owner, 2026-11-10): Astra is the only authorised
-   AI model for this project, for every remaining phase. Opus is cancelled
-   completely — no Opus re-run, no other Claude model, no fallback. The
-   Phase 9 audit is an Astra second-pass review, labelled as such — never
-   presented as an independent audit. Independent verification in this
-   programme means Orion's first-hand verification (probes, test runs,
-   fresh-clone read-backs), not a second model. (Front-matter item 8
-   corrected at the Phase 2 checkpoint; the plan's section 6.1/6.5
-   Opus-audit references are superseded by this note.)
+   AI model for this project, for every remaining phase. Opus is out
+   completely — no Opus re-run, no other Claude model, no fallback, and
+   no Opus mention as a future reviewer. The Phase 9 audit is an Astra
+   second-pass review, labelled as such — never presented as an
+   independent audit. The M-31/M-15 review is likewise a second-pass
+   review by the same model that authored the implementation, and its
+   report must state that plainly — not a fully independent audit.
+   Independent verification in this programme means Orion's first-hand
+   verification (probes, test runs, fresh-clone read-backs), not a
+   second model. (Front-matter item 8 updated 2026-11-10 in the
+   acceptance programme; section 6.1/6.5 now carry the same record.)
 
 
 ## 1. Baseline and verified state
@@ -772,7 +780,7 @@ The approved direction comprises real, committed Web and Android starters; regis
 - **M-39: ACCEPTED, remains OPEN.** GUI withdrawal is **UNVERIFIED**. Next is a desktop GUI watch-only test; `@ton/ton` is the documented expert-assisted route.
 - **M-35:** BTC 0.0002, ETH 0.001, TRX 1, TON 0.05 receive-only are **approved for review only**. Execution is not authorised.
 - **Daemon fix:** approved as a separate lane, not permission to implement the builder.
-- **M-31/M-15 reviewer: OPEN**, not designated. Proposed criteria: no involvement in implementation or original verification, relevant technical competence, and ability to reproduce and challenge the evidence independently. No person is nominated.
+- **M-31/M-15 reviewer: DESIGNATED** (owner, 2026-11-10 ~14:30 IST) — Astra, max reasoning. It runs AFTER the acceptance coordinator finishes, so it reviews the final state. The Opus independent audit was dropped by owner decision 2026-11-10 ~14:28 IST; the Opus audit lane had already ended BLOCKED (8 consecutive HTTP 503 "no available channel under current group probation", 2026-11-10). Astra authored the implementation, so the review is a second-pass review by the same model — its report must state that plainly, not present itself as a fully independent audit. The review itself is still pending; designation alone does not clear the M-31/M-15 gate.
 
 **Stale-plan correction:** master plan §8 incorrectly carries M-13, M-24 and M-33 as unresolved. All three were resolved on 10 November 2026 and pushed at `45d75a2a`; M-34 was pushed at `464399e`. Do not carry those three forward.
 
@@ -848,7 +856,7 @@ The final handoff must use the master plan **§11.2 report table**. Its exact fi
 | Scope and changes | Authorised phase, inspected/delivered revisions, changed-file inventory, decision record and outstanding approvals. |
 | Delivered artefacts | Entry points, builder guide, profiles, registries/schemas, catalogue/assets, starters, scripts, pins and licences. |
 | Verification | Criterion-by-criterion commands, environment/toolchain and lockfile details, logs, build artefacts, scenario transcripts and pass/fail/not-run distinctions. |
-| Independent review | M-31/M-15 reviewer designation when evidenced, independence basis, findings and unresolved objections. |
+| Independent review | M-31/M-15 reviewer designated: Astra, max reasoning (owner, 2026-11-10 ~14:30 IST), runs after acceptance work; Opus audit dropped by owner decision 2026-11-10 ~14:28 IST. Report must state plainly it is a second-pass review by the same model, not a fully independent audit. Record findings and unresolved objections when the review lands. |
 | Residual work | Release-gate results, open risks, external dependencies, affected acceptance claims and next actions. |
 
 Assign each reported item **IMPLEMENTED_AND_VERIFIED**, **DOCUMENTED_NOT_TESTED**, **PROPOSED** or **EXTERNALLY_DEPENDENT**, supported by evidence. Do not infer a reviewer, approval, completion date or successful test.
