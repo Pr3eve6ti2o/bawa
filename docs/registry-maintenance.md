@@ -29,6 +29,9 @@ Validation lives in `scripts/validate-registry.mjs`; registry tests live in
 Add an existing repository resource as `PROPOSED`. Inspect it, run the relevant
 tests or build it, and record the scope and result. Move to
 `IMPLEMENTED_AND_VERIFIED` only when the evidence demonstrates the claimed behaviour.
+A profile starter moves to `STARTER_IMPLEMENTED_AND_VERIFIED` when its starter is
+demonstrated within its documented scope; the missing components are listed in the
+profile's `implemented`/`missing` fields.
 Use `DOCUMENTED_NOT_TESTED` when support is documented but has not been demonstrated.
 
 Mark an entry `OPEN` when a necessary fact is missing; state the question rather
@@ -41,6 +44,7 @@ Use these evidence statuses consistently:
 | --- | --- |
 | `PROPOSED` | Identify the existing repository resource and proposed use; make no verified-support claim. |
 | `IMPLEMENTED_AND_VERIFIED` | Demonstrated behaviour for the exact claim, backed by a test run, build or recorded inspection. Record the scope, method and outcome. |
+| `STARTER_IMPLEMENTED_AND_VERIFIED` | The starter for this profile is implemented and verified within its documented scope; it is not a complete wallet. Missing components are listed in the profile's `implemented`/`missing` fields. |
 | `DOCUMENTED_NOT_TESTED` | Cite documentation or inspection findings describing support, and state what has not been exercised or demonstrated. |
 | `OPEN` | Record the missing fact, why it matters and what evidence would settle it. |
 | `EXTERNALLY_DEPENDENT` | Identify and evidence the external prerequisite; distinguish local support from what depends on it. |
@@ -111,6 +115,7 @@ and fixtures. Registry checks are not a substitute for those runs.
 ## Current state
 
 The recorded baseline is 31 validated entries. `web-wallet` and `android-wallet`
-have been `IMPLEMENTED_AND_VERIFIED` since Phases 6–7. Three UI entries remain
+are `STARTER_IMPLEMENTED_AND_VERIFIED` since the acceptance programme (2026-11-10);
+they carried `IMPLEMENTED_AND_VERIFIED` in Phases 6–7 under the old label. Three UI entries remain
 research-only `OPEN`, and the XChain pin remains `UNVERIFIED`. This summary records
 the existing state; it is not fresh verification.
