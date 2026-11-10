@@ -7,8 +7,12 @@
 // programme, 2026-11-10): Astra stalled 3x on code prompts in this lane
 // (a01, a01b, a02 — 3 x 600s kills, 0 output), so the coordinator wrote
 // this rewrite directly and verified it first-hand, per the A-3 precedent.
+// Acceptance fix (2026-11-10, Orion, first-hand): the CLI path never
+// installed tools/hdwallet-gen dependencies, so the one-prompt command
+// failed from a genuinely clean checkout (verify 0/3, exit 1). The setup
+// step below installs them when missing (npm ci, lockfile-pinned).
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -192,9 +196,22 @@ function main() {
 
   // Verify inside the generated directory.
   if (!blocked && platform === 'cli') {
+    // Setup: the verify step runs the repo engine tools, which need the
+    // tools/hdwallet-gen dependencies installed. Install them when
+    // missing so the one-prompt command works from a genuinely clean
+    // checkout (no manual npm ci first).
+    const setup = { step: 'setup', platform, status: 'NOT-RUN' };
+    steps.push(setup);
+    const engineDir = join(repoRoot, 'tools', 'hdwallet-gen');
+    if (existsSync(join(engineDir, 'node_modules', '@trustwallet', 'wallet-core'))) {
+      setup.status = 'VERIFIED';
+      setup.reason = 'tools/hdwallet-gen dependencies already installed';
+    } else if (!runStep(setup, 'npm', ['ci', '--no-audit', '--no-fund'], engineDir)) {
+      blocked = true;
+    }
     const verify = { step: 'verify', platform, status: 'NOT-RUN' };
     steps.push(verify);
-    if (!runStep(verify, process.execPath, ['verify.mjs'], generatedPath)) blocked = true;
+    if (!blocked && !runStep(verify, process.execPath, ['verify.mjs'], generatedPath)) blocked = true;
   } else if (!blocked && platform === 'web') {
     for (const [step, command, stepArgs] of [
       ['setup', 'npm', ['install', '--no-audit', '--no-fund']],
