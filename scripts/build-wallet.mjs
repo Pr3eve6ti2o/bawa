@@ -10,11 +10,14 @@
 // Acceptance fix (2026-11-10, Orion, first-hand): the CLI path never
 // installed tools/hdwallet-gen dependencies, so the one-prompt command
 // failed from a genuinely clean checkout (verify 0/3, exit 1). The setup
-// step below installs them when missing (npm ci, lockfile-pinned).
+// step below installs them (F-18: npm ci unconditionally, so a
+// partial/corrupt/wrong-version wallet-core dir cannot skip the install
+// and get VERIFIED).
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { classifyRequest, findRefusal } from './classify-request.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const notes = [
@@ -92,6 +95,32 @@ function main() {
   }
   const outArg = args.length === 2 ? args[1] : null;
 
+  // F-31: refusal screen, before classification. A refusal is a JSON
+  // report with the exact sentence from ai/request-routing.md, profile
+  // null, exit 2.
+  const refusal = findRefusal(request);
+  if (refusal) {
+    const reportPath = writeReport(
+      {
+        request,
+        profile: null,
+        platforms: [],
+        steps: [],
+        generatedPath: null,
+        generatedFiles: [],
+        capabilities: { implemented: [], missing: [], chains: [] },
+        verification: null,
+        ambiguous: null,
+        refusal,
+        notes,
+      },
+      outArg,
+    );
+    console.log(reportPath);
+    console.log('build-wallet: REFUSED');
+    return 2;
+  }
+
   const profiles = JSON.parse(
     readFileSync(resolve(repoRoot, 'registry/profiles.json'), 'utf8'),
   );
@@ -99,60 +128,36 @@ function main() {
     throw new Error('registry/profiles.json must contain a JSON array');
   }
 
-  const lower = request.toLowerCase();
-  // Short tokens match as whole words only: substring matching would
-  // false-positive ("eth" inside "something", "cli" inside "click").
-  const word = (token) => new RegExp(`\\b${token}\\b`).test(lower);
-  const hasWeb = word('web') || word('website') || word('browser');
-  const hasAndroid = word('android');
-  const hasWatchOnly =
-    lower.includes('watch-only') ||
-    lower.includes('watch only') ||
-    word('xpub') ||
-    lower.includes('extended public key');
-
-  // Classification, ordered, first match wins. No "wallet" word required.
+  // Classification lives in scripts/classify-request.mjs (F-20/21/22).
+  const result = classifyRequest(request);
   let profileId = null;
   let ambiguous = null;
-  if (hasWeb && hasAndroid) {
-    ambiguous = 'split';
+  if (result.profile) {
+    profileId = result.profile;
+  } else if (result.ambiguous) {
+    ambiguous = result.ambiguous;
     console.error('build-wallet: split this request into one web-wallet build and one android-wallet build');
-  } else if (hasAndroid) {
-    profileId = 'android-wallet';
-  } else if (hasWeb) {
-    profileId = 'web-wallet';
-  } else if (word('multi-chain') || word('multichain')) {
-    profileId = 'multichain-wallet';
-  } else if (
-    word('hd') ||
-    lower.includes('hierarchical deterministic') ||
-    word('cli') ||
-    lower.includes('command-line') ||
-    lower.includes('command line')
-  ) {
-    profileId = 'hd-wallet-cli';
-  } else if (word('bitcoin') || word('btc')) {
-    const generationLanguage =
-      lower.includes('generat') ||
-      lower.includes('mnemonic') ||
-      lower.includes('seed') ||
-      lower.includes('recovery') ||
-      lower.includes('recover') ||
-      word('cli') ||
-      lower.includes('command-line') ||
-      lower.includes('command line');
-    if (hasWatchOnly && !generationLanguage) {
-      ambiguous = 'bitcoin-watch-only';
-      console.error('build-wallet: ambiguous request — do you want the Bitcoin profile\u2019s 6-confirmation contract or the extended-public-key-only watch-only profile?');
-    } else {
-      profileId = 'bitcoin-wallet';
-    }
-  } else if (word('evm') || word('ethereum') || word('eth')) {
-    profileId = 'evm-wallet';
-  } else if (hasWatchOnly) {
-    profileId = 'watch-only-wallet';
   } else {
-    console.error('cannot classify request');
+    // F-20: an unclassifiable request gets a JSON report with the
+    // failure reason (not bare stderr), exit 2.
+    const reportPath = writeReport(
+      {
+        request,
+        profile: null,
+        platforms: [],
+        steps: [],
+        generatedPath: null,
+        generatedFiles: [],
+        capabilities: { implemented: [], missing: [], chains: [] },
+        verification: null,
+        ambiguous: null,
+        classificationFailure: result.reason,
+        notes,
+      },
+      outArg,
+    );
+    console.log(reportPath);
+    console.log('build-wallet: UNCLASSIFIABLE');
     return 2;
   }
 
@@ -197,16 +202,13 @@ function main() {
   // Verify inside the generated directory.
   if (!blocked && platform === 'cli') {
     // Setup: the verify step runs the repo engine tools, which need the
-    // tools/hdwallet-gen dependencies installed. Install them when
-    // missing so the one-prompt command works from a genuinely clean
-    // checkout (no manual npm ci first).
+    // tools/hdwallet-gen dependencies installed. F-18: run npm ci
+    // unconditionally — a partial/corrupt/wrong-version wallet-core dir
+    // must not skip the install and get VERIFIED.
     const setup = { step: 'setup', platform, status: 'NOT-RUN' };
     steps.push(setup);
     const engineDir = join(repoRoot, 'tools', 'hdwallet-gen');
-    if (existsSync(join(engineDir, 'node_modules', '@trustwallet', 'wallet-core'))) {
-      setup.status = 'VERIFIED';
-      setup.reason = 'tools/hdwallet-gen dependencies already installed';
-    } else if (!runStep(setup, 'npm', ['ci', '--no-audit', '--no-fund'], engineDir)) {
+    if (!runStep(setup, 'npm', ['ci', '--no-audit', '--no-fund'], engineDir)) {
       blocked = true;
     }
     const verify = { step: 'verify', platform, status: 'NOT-RUN' };
@@ -214,7 +216,8 @@ function main() {
     if (!blocked && !runStep(verify, process.execPath, ['verify.mjs'], generatedPath)) blocked = true;
   } else if (!blocked && platform === 'web') {
     for (const [step, command, stepArgs] of [
-      ['setup', 'npm', ['install', '--no-audit', '--no-fund']],
+      // F-19: npm ci, not npm install — the lockfile is enforced.
+      ['setup', 'npm', ['ci', '--no-audit', '--no-fund']],
       ['build', 'npm', ['run', 'build']], ['test', 'npx', ['vitest', 'run']],
     ]) {
       const record = { step, platform, status: 'NOT-RUN' };

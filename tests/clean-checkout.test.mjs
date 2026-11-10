@@ -143,16 +143,16 @@ test(
   },
 );
 
-test('an unclassifiable request fails cleanly', () => {
+test('an unclassifiable request fails cleanly with a JSON report', () => {
   const { result, reportPath, output } = runRequest(
     'What is the weather?',
     'unclassifiable-report.json',
   );
 
-  assert.ok(Number.isInteger(result.status) && result.status !== 0, output);
-  assert.equal(
-    fs.existsSync(reportPath),
-    false,
-    'An unclassifiable request must not create a report',
-  );
+  // F-20: an unclassifiable request gets a JSON report with the failure
+  // reason (not bare stderr), exit 2.
+  assert.equal(result.status, 2, output);
+  const report = readReport(reportPath);
+  assert.equal(report.profile, null);
+  assert.equal(report.classificationFailure, 'cannot classify request');
 });

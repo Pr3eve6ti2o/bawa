@@ -21,6 +21,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -42,6 +43,24 @@ function usageError(message) {
   console.error('Usage: node scripts/generate-project.mjs <profile-id> [--out <dir>] [--force]');
   if (message) console.error('generate-project: ' + message);
   return 2;
+}
+
+// F-23: resolve the REAL destination before any mutation. A lexical
+// prefix check on the unresolved path is not enough: an ancestor of
+// the target may be a symlink pointing outside the repo, and the
+// writes below would follow it. Resolve the nearest existing ancestor
+// (symlinks included) and re-append the not-yet-existing tail, so the
+// path actually written is the path that is checked.
+function resolveContained(target) {
+  let ancestor = target;
+  while (!existsSync(ancestor)) {
+    const parent = dirname(ancestor);
+    if (parent === ancestor) break; // filesystem root
+    ancestor = parent;
+  }
+  const realAncestor = realpathSync(ancestor);
+  const tail = relative(ancestor, target);
+  return tail ? join(realAncestor, tail) : realAncestor;
 }
 
 function baseCommit() {
@@ -110,7 +129,7 @@ function readmeFor(profile) {
     profile.platform === 'cli'
       ? 'Verify the generated project with `node verify.mjs` (derives the published fixture addresses and asserts them exact, including the R-01 invalid-point rejection). Derive an address with `node derive.mjs <chain> <xpub> [index]`. Generate fresh test wallets with the repository tools: `node ../../tools/hdwallet-gen/generate.js` (interactive, needs a controlling terminal) and `python3 ../../tools/make_wallet.py`.'
       : profile.platform === 'web'
-        ? 'Install dependencies with `npm install`, build with `npm run build`, run the tests with `npx vitest run`. The wallet-core WASM file is copied into `public/` by the prebuild step; never commit it. The starter\'s own README is preserved as `README-starter.md` in this directory. This copy still depends on the repository checkout for `@bawa/contracts` (a local `file:` dependency).'
+        ? 'Install dependencies with `npm ci`, build with `npm run build`, run the tests with `npx vitest run`. The wallet-core WASM file is copied into `public/` by the prebuild step; never commit it. The starter\'s own README is preserved as `README-starter.md` in this directory. This copy still depends on the repository checkout for `@bawa/contracts` (a local `file:` dependency).'
         : 'Build with `./gradlew assembleDebug` and run the unit tests with `./gradlew testDebugUnitTest` (needs `JAVA_HOME` pointing at JDK 17 and `ANDROID_HOME` pointing at an Android SDK with platform 35). The starter\'s own README is preserved as `README-starter.md` in this directory.';
   return [
     '# Generated ' + profile.id,
@@ -180,20 +199,28 @@ function main() {
 
   const target = outDir ?? join(generatedRoot, profileId);
   // Guard: only generated/ descendants or an explicit --out under the
-  // repo root are allowed. Refuse both roots themselves.
-  const insideGenerated = target.startsWith(generatedRoot + sep);
-  const insideRepo = target.startsWith(repoRoot + sep);
-  if (target === generatedRoot) {
+  // repo root are allowed. Refuse both roots themselves. The check runs
+  // on the REAL paths (F-23): a symlinked ancestor pointing outside
+  // the repo must refuse even when the lexical path looks inside.
+  const realRepoRoot = realpathSync(repoRoot);
+  const realGeneratedRoot = resolveContained(generatedRoot);
+  const realTarget = resolveContained(target);
+  const insideGenerated = realTarget.startsWith(realGeneratedRoot + sep);
+  const insideRepo = realTarget.startsWith(realRepoRoot + sep);
+  if (realTarget === realGeneratedRoot) {
     return usageError('refusing to write to generated/ itself: ' + target);
   }
-  if ((!insideGenerated && !(outDir && insideRepo)) || target === repoRoot) {
+  if ((!insideGenerated && !(outDir && insideRepo)) || realTarget === realRepoRoot) {
     return usageError('refusing to write outside generated/ or the repo: ' + target);
   }
+  // All writes below use the resolved path, so they land exactly where
+  // the containment check validated.
+  const out = realTarget;
 
-  if (existsSync(target)) {
+  if (existsSync(out)) {
     let nonEmpty;
     try {
-      nonEmpty = readdirSync(target).length > 0;
+      nonEmpty = readdirSync(out).length > 0;
     } catch {
       return usageError('refusing to overwrite a non-directory or unreadable target: ' + target);
     }
@@ -207,7 +234,7 @@ function main() {
       if (insideGenerated) {
         try {
           const marker = JSON.parse(
-            readFileSync(join(target, 'profile.json'), 'utf8'),
+            readFileSync(join(out, 'profile.json'), 'utf8'),
           );
           generatorOwned = marker?.generator === 'scripts/generate-project.mjs';
         } catch {
@@ -222,9 +249,9 @@ function main() {
       }
     }
 
-    rmSync(target, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true });
   }
-  mkdirSync(target, { recursive: true });
+  mkdirSync(out, { recursive: true });
 
   const manifest = {
     ...profile,
@@ -235,10 +262,10 @@ function main() {
   const readme = readmeFor(profile);
 
   if (profile.platform === 'cli') {
-    writeFileSync(join(target, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-    writeFileSync(join(target, 'README.md'), readme, 'utf8');
+    writeFileSync(join(out, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+    writeFileSync(join(out, 'README.md'), readme, 'utf8');
     writeFileSync(
-      join(target, 'package.json'),
+      join(out, 'package.json'),
       JSON.stringify(
         {
           name: 'bawa-generated-' + profileId,
@@ -254,15 +281,15 @@ function main() {
     );
     copyFileSync(
       join(repoRoot, 'scripts', 'generate-templates', 'verify.mjs'),
-      join(target, 'verify.mjs'),
+      join(out, 'verify.mjs'),
     );
     copyFileSync(
       join(repoRoot, 'scripts', 'generate-templates', 'derive.mjs'),
-      join(target, 'derive.mjs'),
+      join(out, 'derive.mjs'),
     );
   } else if (profile.platform === 'web') {
     const source = join(repoRoot, 'apps', 'web');
-    cpSync(source, target, {
+    cpSync(source, out, {
       recursive: true,
       filter: (src) => {
         const rel = relative(source, src);
@@ -273,12 +300,12 @@ function main() {
         return true;
       },
     });
-    writeFileSync(join(target, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-    copyFileSync(join(target, 'README.md'), join(target, 'README-starter.md'));
-    writeFileSync(join(target, 'README.md'), readme, 'utf8');
+    writeFileSync(join(out, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+    copyFileSync(join(out, 'README.md'), join(out, 'README-starter.md'));
+    writeFileSync(join(out, 'README.md'), readme, 'utf8');
   } else if (profile.platform === 'android') {
     const source = join(repoRoot, 'apps', 'android');
-    cpSync(source, target, {
+    cpSync(source, out, {
       recursive: true,
       filter: (src) => {
         const rel = relative(source, src);
@@ -289,15 +316,15 @@ function main() {
         return true;
       },
     });
-    writeFileSync(join(target, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
-    copyFileSync(join(target, 'README.md'), join(target, 'README-starter.md'));
-    writeFileSync(join(target, 'README.md'), readme, 'utf8');
+    writeFileSync(join(out, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+    copyFileSync(join(out, 'README.md'), join(out, 'README-starter.md'));
+    writeFileSync(join(out, 'README.md'), readme, 'utf8');
   } else {
     return usageError('unsupported platform for profile ' + profileId + ': ' + profile.platform);
   }
 
-  console.log(target);
-  console.log('generate-project: ' + countFiles(target) + ' files');
+  console.log(out);
+  console.log('generate-project: ' + countFiles(out) + ' files');
   return 0;
 }
 

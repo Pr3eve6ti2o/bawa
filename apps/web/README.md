@@ -10,7 +10,7 @@ Use Node.js `>=22 <23`. The package is `bawa-web` and is private. Run these comm
 repository root:
 
     cd apps/web
-    npm install
+    npm ci
     npm run dev
     npm run build
     npm test
