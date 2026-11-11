@@ -1,0 +1,67 @@
+{
+  "registry": "engines",
+  "version": 1,
+  "updated": "2026-11-10",
+  "entries": [
+    {
+      "id": "trust-wallet-core-4-8-4",
+      "name": "Trust Wallet Core 4.8.4",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "source": "trustwallet/wallet-core",
+      "revision": "4.8.4",
+      "licence": "Apache-2.0",
+      "reviewed_at": "2026-11-10",
+      "chains": ["btc", "eth", "trx", "ton"],
+      "operations": ["generate", "derive", "watch-only"],
+      "notes": "Verified tool pin in tools/hdwallet-gen; npm test 92 checks pass at H7. Tooling baseline only — not proof of complete wallet readiness."
+    },
+    {
+      "id": "trust-wallet-core-4-9-1",
+      "name": "Trust Wallet Core 4.9.1",
+      "status": "PROPOSED",
+      "source": "trustwallet/wallet-core",
+      "revision": "4.9.1",
+      "licence": "Apache-2.0",
+      "reviewed_at": "2026-11-10",
+      "chains": ["btc", "eth", "trx", "ton"],
+      "operations": ["generate", "derive", "watch-only"],
+      "notes": "Doc 4 M-21 upgrade candidate. Not installed or tested; no Android AAR for any version."
+    },
+    {
+      "id": "trust-wallet-core-4-9-2",
+      "name": "Trust Wallet Core 4.9.2",
+      "status": "DOCUMENTED_NOT_TESTED",
+      "source": "trustwallet/wallet-core",
+      "revision": "17e3cd4",
+      "licence": "Apache-2.0",
+      "reviewed_at": "2026-11-10",
+      "chains": ["btc", "eth", "trx", "ton"],
+      "operations": ["generate", "derive", "watch-only", "sign"],
+      "notes": "Guides' reference engine (docs/09, docs/11); signing demos D21/D31 recorded on 4.9.2. Prerelease per Doc 4 M-21. In-browser send/sign/broadcast never exercised; never present as tool results."
+    },
+    {
+      "id": "bip-utils-verification-layer",
+      "name": "bip-utils + cryptography verification layer",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "source": "bip-utils 2.12.2 + cryptography 50.0.2",
+      "revision": "2.12.2",
+      "licence": "MIT",
+      "reviewed_at": "2026-11-10",
+      "chains": ["btc", "eth", "trx"],
+      "operations": ["derive"],
+      "notes": "Independent Python verification layer; test/differential_test.py PASS at H7."
+    },
+    {
+      "id": "ton-library-derivation",
+      "name": "@ton/ton derivation cross-check",
+      "status": "IMPLEMENTED_AND_VERIFIED",
+      "source": "@ton/ton",
+      "revision": "unpinned",
+      "licence": "Apache-2.0",
+      "reviewed_at": "2026-11-10",
+      "chains": ["ton"],
+      "operations": ["derive"],
+      "notes": "Narrowly verified hands-on in M-39 (T1): local derivation from the published public key reproduces the fixture address exactly. Derivation cross-check only — not a wallet, not a withdrawal route."
+    }
+  ]
+}

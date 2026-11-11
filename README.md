@@ -1,77 +1,75 @@
-# Bawa — How to run it
+# Bawa — How to run it, and how an AI builds with it
 
-**Verified on**
+Bawa is a practical open-source reference for HD-wallet workflows and an AI Wallet Builder: give an AI coding agent one plain request and it uses this repo to produce a real, buildable project. From the repo root, the one-prompt workflow starts with `node scripts/build-wallet.mjs "Create a Web wallet"`, `node scripts/build-wallet.mjs "Create an Android wallet"` or `node scripts/build-wallet.mjs "Create a multi-chain wallet"`.
 
-| Field | Record |
-|---|---|
+## Verified on
+
+| Field | Value |
+| --- | --- |
 | Verification status | Partially verified — see §18 |
-| Verified on | 2026-11-08 |
-| Verification scope | Differential test; live wallet creation and restore; TON fixture derivation; integrated browser flow |
-| Repository commit | `e3b65fb832db287fdc8d54794980dd0b3456cc12` |
-| Tool versions (full observed versions) | Python 3.12.3, `cryptography==50.0.2`, `bip-utils==2.12.2`, Node v24.22.2 (outside the declared Node `>=22 <23` range) |
+| Verified on | 2026-11-10 |
+| Verification scope | Differential test; live wallet creation and restore; TON fixture derivation; integrated browser flow; Web starter build + 25 tests; Android starter build + 17 unit tests + emulator install/launch |
+| Repository commit | b438d3a7 (H7) plus builder commits 0986c4c, 9455024, 51c7e39, d7eafd5, 05c76b4, 703bf86, e4b3e2f, 6258464, 661a7a5 (local only, not pushed) |
+| Tool versions | Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2, Node v22.23.4 (in range), JDK 17.0.21, Android SDK platform 35 |
 | Environment/runner | muse-vm |
-| Actually run | Differential test (bip-utils reference, BTC/ETH index 0 only); live wallet creation and restore under a real pty; TON fixture derivation with independent verification; integrated browser flow (14 PASS, 0 FAIL, 3 INFO) |
-| Not run/unresolved | live testnet spend; recovery rehearsal; on-device Android gate; Core side of the differential comparison |
-| Evidence | Recorded in §11, §18 and docs/08 |
+| Actually run | Differential test; live wallet creation and restore; TON fixture derivation; integrated browser flow; Web starter build + 25 tests; Android starter build + 17 unit tests + emulator install/launch |
+| Not run/unresolved | live testnet spend; recovery rehearsal; on-device Android Add-button acceptance; KVM-backed emulator run; mainnet use |
+| Evidence | Recorded in §11, §18, docs/android-evidence.md and docs/handoff.md |
 | Sources fetched on | 2026-11-08 |
 
 ## 1. Scope and non-goals
 
-Use Bawa as a practical open-source reference for HD-wallet workflows:
+Bawa keeps the wallet reference and the project builder together. Sections 2–18 are the reference: generate a wallet, derive watch-only addresses, compare derivations, recover from a backup and track balances — on testnets only. The builder uses the checked-in starters and registries to turn a plain request into a buildable Web, Android or multi-chain project.
 
-- Perform one-time wallet creation with `make_wallet.py` and `generate.js`, using `@trustwallet/wallet-core`.
-- Run watch-only public derivation with `derive.js`, `derive_daemon.js` and `compare.js`.
-- Run controlled recovery with `decrypt_seed.py`.
-- Run independent verification with `test/differential_test.py`.
-- Use these workflows as a basis for tracking and payment reconciliation; take responsibility for both in your application.
+### Builder entry points and workflow
 
-Distinguish the **mnemonic** (the words), the **seed** (the 64-byte BIP-39-derived value) and the **seed bundle** (the encrypted file `seed.enc.json`). Use **wallet** for the application and **vault** for an encrypted store. Leave the **BIP-39 passphrase** empty by policy; do not confuse it with a **vault unlock passphrase**, **app PIN** or **device credential**.
+1. Read [`AGENTS.md`](AGENTS.md) first.
+2. Follow [`WALLET_BUILDER.md`](WALLET_BUILDER.md) for request classification and routing.
+3. Run `node scripts/build-wallet.mjs "<request>"`. The supporting scripts are `scripts/setup.mjs`, `scripts/build.mjs` and `scripts/test.mjs`.
 
-Do not treat Bawa as:
+Sample requests are in [`docs/sample-requests.md`](docs/sample-requests.md). The implementation plan is [`docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`](docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md).
 
-- a hosted wallet or custody service;
-- an exchange or commercial product;
-- a node client, balance retriever or transaction broadcaster — these are outside Trust Wallet Core’s scope;
-- a security audit.
+[`registry/`](registry/) contains seven profiles alongside the capabilities, engines and UI registries. These provide the selection data for the builder rather than leaving the agent to invent a stack.
 
-Read each **Warning** in this guide set in this order: **consequence → safe action → check or recovery**.
+Two real, buildable starters are checked in:
 
-> **Warning**
->
-> Five of the six release gates are unmet, so you cannot use this guide as evidence of readiness. Keep your work within the reference scope above. Check the security posture in §17 and use §18 to assess the evidence required for every gate:
->
-> - **Unmet** — clean dependency install and lockfile.
-> - **Unmet** — full independent differential coverage.
-> - **Pass** — chain-specific fixtures (see §18).
-> - **Unmet** — secret and dependency scanning.
-> - **Unmet** — reproducible release checksums and provenance.
-> - **Unmet** — external security review.
+| Starter | Stack and UI foundation | Mode | Licence |
+| --- | --- | --- | --- |
+| [`apps/web`](apps/web) | React 19 + Vite + Tailwind; token-ui foundation | Watch-only | MIT |
+| [`apps/android`](apps/android) | Kotlin + Compose + Material 3; Tether WDK Starter UI layer only | Watch-only | Apache-2.0 |
 
-Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
+The Android starter uses the Tether WDK Starter **UI layer only**. That is not a claim of WDK transaction or signing integration.
 
-Version pins live in §5.4 (Compatibility, provenance, and version pins).
+### Engine and derivation policy
 
-### Architecture and responsibilities
+The engine is `@trustwallet/wallet-core` 4.8.4. The derivation policy is:
 
-Standards lead to chain-specific policy, which the Trust Wallet Core reference implementation follows. Watch-only public derivation turns public roots into addresses; RPC, node or indexer reads chain state; wallet and payment tracking observe payments; the application database reconciles them against orders:
+| Chain | Path |
+| --- | --- |
+| BTC | `m/84'/0'/0'/0/i` |
+| ETH | `m/44'/60'/0'/0/i` |
+| TRX | `m/44'/195'/0'/0/i` |
+| TON | `m/44'/607'/0'` — generation-only |
 
-Standards → Chain-specific policy → Trust Wallet Core reference implementation → Watch-only public derivation → RPC / node / indexer → Wallet + payment tracking → Application database / reconciliation
+`i` is the address index. TON generation support does not imply a TON watch-only starter workflow.
 
-| Component | Owns | Does NOT own |
-|---|---|---|
-| Standards | The base rules on which chain-specific policy rests. | Chain-state access or order reconciliation. |
-| Chain-specific policy | The chain-specific rules used by the reference implementation. | Reading chain state or deciding whether a payment satisfies an order. |
-| Trust Wallet Core | The reference wallet implementation: derivation and signing. | Reading chain state, making history searchable or deciding whether an order is paid. |
-| Trusted generator | Creating wallet material and account-level public roots on the trusted machine, with no online chain connection needed. | Online payment tracking or reconciliation. |
-| Watch-only public derivation | Address derivation from an xpub or zpub (sensitive public material), or use of a public address. | Signing or handling seed and private material — the tools do not accept a private extended key. |
-| RPC / node | Reading chain state. | Wallet derivation, signing or order-payment decisions. |
-| Indexer | Making chain history searchable. | Wallet derivation, signing or order-payment decisions. |
-| Wallet + payment tracking | Tracking wallets and observed payments. | Wallet generation or signing. |
-| Application database / reconciliation | Recording tracked payments and deciding whether an observed payment satisfies an order. | Wallet derivation, signing or providing chain state. |
+### Terminology
 
-The online application may be monitored, logged, restarted or compromised, so never allow the mnemonic, seed or private material to reach the watch-only runtime. Trusted generation keeps private material out of the online application, while chain observation supplies the evidence the application uses to reconcile payments.
+- **Mnemonic**: the BIP-39 recovery phrase — the words used for recovery, not the seed itself.
+- **Seed**: the 64-byte value derived from the mnemonic and a BIP-39 passphrase, which is empty if none is supplied. This is the starting material for HD-wallet derivation.
+- **Seed-bundle**: this repo's packaged backup of recovery material, used by the creation and restore workflows. It is a backup artefact, not a synonym for the mnemonic or the raw seed. Treat it as secret.
 
-Use this section as the shared authority for the whole guide set. The Web guide and Android guide link here for scope, derivation policy and gates. Follow the “Learn from scratch” path in §19.
+A BIP-39 passphrase changes the derived seed; it is not the same thing as a password used to encrypt a backup.
+
+### Non-goals and limits
+
+- **No hosted service or custody.** Bawa is not a hosted wallet, custodian or exchange. It does not hold your keys. You are responsible for recovery material generated or restored through the reference workflows.
+- **Watch-only starters.** Both starters validate extended public keys and derive and display addresses. They do not hold secrets and cannot spend. The reference's wallet-generation examples do not make the starters secret-holding wallets.
+- **No transactions.** There is no signing, transaction-construction or broadcast code anywhere in this repo. Send/sign/broadcast has never been exercised.
+- **No mainnet.** Testnet is the default; mainnet use is out of scope for both the reference and the builder.
+- **No production or security assurance.** Bawa is not production-ready, secure or audited. Use throwaway test material, not real funds or production recovery phrases.
+
+A documented workflow is not automatically a verified one. The table above and §18 record what has actually been run and what remains unresolved.
 
 ## 2. Choose your task
 
@@ -540,7 +538,7 @@ After generation, check these paths relative to the repository root:
 
 Check the **full mode, including special bits**: no group or other access, and no special bits. Stop if anything differs.
 
-If you used overrides, check those paths instead: `NOVA_SECRETS_DIR` selects the secrets directory, `BAWA_BACKUP_DIR` the backup directory, and `BAWA_ENV_FILE` the environment file.
+If you used overrides, check those paths instead: `BAWA_SECRETS_DIR` selects the secrets directory, `BAWA_BACKUP_DIR` the backup directory, and `BAWA_ENV_FILE` the environment file.
 
 Run this check from the repository root:
 
@@ -550,7 +548,7 @@ import os
 import stat
 from pathlib import Path
 
-secrets = Path(os.environ.get("NOVA_SECRETS_DIR", "secrets"))
+secrets = Path(os.environ.get("BAWA_SECRETS_DIR", "secrets"))
 backup = Path(os.environ.get("BAWA_BACKUP_DIR", "seed-backup"))
 env_file = Path(os.environ.get("BAWA_ENV_FILE", ".env"))
 
@@ -769,7 +767,7 @@ Use `compare.js` for a quick public-only cross-check, not as a tracker. It gives
 
 **At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `compare.js` passes `node --check`, and its comparison output is available at this pin (verified 2026-11-08).**
 
-Your `.env` needs `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. The default file is the repository-root `.env`, at `tools/hdwallet-gen/../../.env`. Set `NOVA_ENV` to select another file.
+Your `.env` needs `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. The default file is the repository-root `.env`, at `tools/hdwallet-gen/../../.env`. Set `BAWA_ENV_FILE` to select another file (`NOVA_ENV` is a deprecated alias).
 
 The parser matches `^([A-Z_]+)=(.*)$`. Use plain `KEY=VALUE` entries, without `export` or quoted values.
 
@@ -920,7 +918,7 @@ This block creates a separate `.env`; it does not overwrite your wallet’s file
         >"$capture_dir/.env"
 
     cd tools/hdwallet-gen
-    NOVA_ENV="$capture_dir/.env" node compare.js \
+    BAWA_ENV_FILE="$capture_dir/.env" node compare.js \
         >"$capture_dir/compare.stdout" \
         2>"$capture_dir/compare.stderr"
 )
@@ -1257,15 +1255,37 @@ What passing does NOT prove: passing the readiness gates does not prove the guid
 
 Platform gates (mapped from the Web and Android guides): Web fixture gate — enforced in-engine plus offline engine tests; no live-network gate run (the integrated browser flow was run end to end on 2026-11-08: 14 PASS, 0 FAIL, 3 INFO across 17 steps; send, sign and broadcast were not exercised — no testnet funds). Android fixture gate — defined, pure-logic half checked (55 pure-module tests); the on-device gate has never run: no Core 4.8.4 AAR has been built and no device run has happened. Android debug APK — no debug APK has ever been built; the build steps are an unexecuted procedure, not a verified path.
 
-## 19. About this guide
+## 19. About this guide and the builder programme
 
-This guide explains how to build a non-custodial HD wallet from the Bawa reference project: generate a wallet, derive watch-only addresses, compare derivations against independent references, recover from a backup, and track balances — on testnets only. It is a guide, not a product: Bawa itself is the explaining guide, powerful enough to make a wallet, a web wallet and an Android wallet from it alone. The app drafts used to validate the guides are local, unpushed drafts; they are not Bawa deliverables.
+Sections 2–18 remain Bawa’s wallet reference: generate, derive, compare, recover and track.
+They are for testnets only; that scope has not changed.
 
-What this guide does not do: it does not hold your keys; it does not sign, construct or broadcast transactions (the repo contains no transaction construction or signing code); it does not cover mainnet; it does not claim to be production-ready, secure, or audited; it does not provide a UI template — UI comes from a pre-existing template only, and if none is available, no UI is created here (see the Web and Android guides' UI-template appendices).
+The AI Wallet Builder programme, owner-approved on 2026-11-10, adds one-prompt wallet building.
+Bawa is now an AI-readable guide and resource repository, with committed, watch-only starters
+in [`apps/web`](apps/web/) and [`apps/android`](apps/android/). Their UI comes from the inspected
+token-ui (Web) and WDK Starter (Android, UI layer only) foundations. The workflow takes a request
+through building, verification and handoff, supported by the instructions, registry, AI resources,
+research and templates alongside the guide. The [documentation index](docs/index.md) gathers
+the supporting material.
 
-Verified on: this rewrite was verified against the repair commit e3b65fb832db287fdc8d54794980dd0b3456cc12 on 8 November 2026, with live checks recorded in the section notes (differential test, live wallet creation and restore, TON fixture derivation, integrated browser flow). Tool versions observed during verification: Python 3.12.3, cryptography==50.0.2, bip-utils==2.12.2, Node v24.22.2 — outside the repository's declared Node >=22 <23 range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Repository commit: e3b65fb832db287fdc8d54794980dd0b3456cc12. Sources fetched on 8 November 2026. The former pin 082f7915 is retained only as history.
+Verification on 2026-11-10: engine suite 92 checks, 0 failures; registry tests 10/10;
+negative-input tests 36/36; Web starter 25 tests plus build and preview HTTP checks;
+Android starter 17 unit tests plus APK build and emulator install/launch; quality gates 11/11;
+clean-checkout tests 3/3. The on-device Android Add-button acceptance path is **NOT VERIFIED**.
+Still open: independent external review (M-31/M-15) has no designated reviewer;
+M-35 rehearsal execution needs separate approval; M-39 GUI watch-only test needs a desktop machine;
+mainnet activation needs separate approval; on-device Android derivation is **OPEN**
+(no Trust Wallet Core AAR exists for any version). The Doc 4 §5 step-4 SHA still names
+H5 (`d2f0960c`) while `main` has advanced; refresh that SHA on the next Doc 4 re-issue.
 
----
+## 20. Where to go next
+
+- [`AGENTS.md`](AGENTS.md) — repository instructions and boundaries for agents working on a wallet build.
+- [`WALLET_BUILDER.md`](WALLET_BUILDER.md) — the starting point for the one-prompt builder workflow.
+- [`docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`](docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — programme scope, milestones and implementation work.
+- [`node scripts/build-wallet.mjs`](scripts/build-wallet.mjs) — the builder workflow command; see [sample requests](docs/sample-requests.md) for request examples.
+- [`docs/handoff.md`](docs/handoff.md) — what to record and pass on with a build, including verification and remaining limits.
+- [`docs/security-release-gates.md`](docs/security-release-gates.md) — security checks, release gates and approval requirements.
 
 ## Prose credit
 

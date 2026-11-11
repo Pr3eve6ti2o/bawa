@@ -14,4 +14,4 @@ Never publish:
 - wallet backup artifacts;
 - credentials or API secrets.
 
-No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Establishing and publishing a private disclosure channel remains an open maintainer action. Do not post exploit details publicly.
+A disclosure procedure is documented in [`docs/SECURITY.md`](docs/SECURITY.md#vulnerability-disclosure-procedure), with private reporting through GitHub's private vulnerability reporting for this repository. No private email contact is published. Do not post exploit details publicly.

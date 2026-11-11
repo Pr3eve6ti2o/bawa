@@ -423,9 +423,9 @@ Run `compare.js` from the repository root:
 node tools/hdwallet-gen/compare.js
 ```
 
-It reads the repository-root `.env`, or the file named by `NOVA_ENV`. Ensure the selected env file exists before running `compare.js`. If `NOVA_ENV` points to a nonexistent file, the script exits 1 with an uncaught `ENOENT` stack trace. This is separate from the documented missing-chain-xpub error. `NOVA_ENV` is a legacy name retained as a code identifier.
+It reads the repository-root `.env`, or the file named by `BAWA_ENV_FILE`. `NOVA_ENV` is a deprecated alias for the same selection. Ensure the selected env file exists before running `compare.js`. If the selected file does not exist, the script exits 1 with a `FATAL` message and no stack trace. This is separate from the documented missing-chain-xpub error.
 
-`tools/make_wallet.py` writes public configuration to `BAWA_ENV_FILE`, defaulting to `<repo>/.env`. `compare.js` selects its input independently through `NOVA_ENV`, also defaulting to `<repo>/.env`. If generation used a custom `BAWA_ENV_FILE`, set `NOVA_ENV` to that same file when running `compare.js`. The launcher's other path overrides are `NOVA_SECRETS_DIR` (default `<repo>/secrets`) and `BAWA_BACKUP_DIR` (default `<repo>/seed-backup`). The launcher refuses a symlinked secrets directory, `.env` file or backup directory.
+`tools/make_wallet.py` writes public configuration to `BAWA_ENV_FILE`, defaulting to `<repo>/.env`. `compare.js` selects its input through the same `BAWA_ENV_FILE`, also defaulting to `<repo>/.env`. If generation used a custom `BAWA_ENV_FILE`, `compare.js` reads that same file. `NOVA_ENV` remains as a deprecated alias for the selection. The launcher's other path overrides are `BAWA_SECRETS_DIR` (default `<repo>/secrets`) and `BAWA_BACKUP_DIR` (default `<repo>/seed-backup`). The launcher refuses a symlinked secrets directory, `.env` file or backup directory.
 
 The script takes `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` and prints the first three receiving addresses per chain, at indexes `0`, `1` and `2`. Output is public-only: a chain label plus three addresses, not xpubs or private material.
 

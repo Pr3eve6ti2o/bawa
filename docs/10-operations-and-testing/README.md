@@ -1071,7 +1071,7 @@ These checks belong to your monitoring setup, not Bawa monitoring features. Bawa
 
 Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
 
-`compare.js` reads its `.env` path from `process.env.NOVA_ENV` first. Check this setting and verify the selected `.env` file before running the tool: an inherited Nova Shop value can silently redirect Bawa's seed-directory lookup.
+`compare.js` reads its `.env` path from `process.env.BAWA_ENV_FILE` first, with `NOVA_ENV` as a deprecated fallback. Check this setting and verify the selected `.env` file before running the tool: an inherited Nova Shop value in `NOVA_ENV` can silently redirect Bawa's env-file lookup.
 
 Never log mnemonics, private keys, seed material, data keys, passwords or credentials. Use placeholders in diagnostic examples.
 

@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bawa.example/registry/schemas/profile.schema.json",
+  "type": "object",
+  "required": [
+    "id",
+    "platform",
+    "chains",
+    "engine",
+    "ui",
+    "security",
+    "verification",
+    "status",
+    "sources"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "enum": [
+        "hd-wallet-cli",
+        "bitcoin-wallet",
+        "evm-wallet",
+        "multichain-wallet",
+        "web-wallet",
+        "android-wallet",
+        "watch-only-wallet"
+      ]
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "cli",
+        "web",
+        "android"
+      ]
+    },
+    "chains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "btc",
+          "eth",
+          "trx",
+          "ton"
+        ]
+      }
+    },
+    "engine": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "trust-wallet-core"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:\\.[0-9]+)+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "IMPLEMENTED_AND_VERIFIED",
+            "DOCUMENTED_NOT_TESTED",
+            "PROPOSED",
+            "OPEN",
+            "UNVERIFIED",
+            "EXTERNALLY_DEPENDENT"
+          ]
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "required": [
+        "route",
+        "foundation",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "route": {
+          "type": "string",
+          "enum": [
+            "none",
+            "token-ui",
+            "shadcn-ui",
+            "custom-react",
+            "wdk-starter-ui-only",
+            "devkit-wallet-ui-only",
+            "compose-samples",
+            "custom-compose"
+          ]
+        },
+        "foundation": {
+          "type": "string",
+          "description": "An entry id from registry/ui.json, or \"none\"."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "IMPLEMENTED_AND_VERIFIED",
+            "DOCUMENTED_NOT_TESTED",
+            "PROPOSED",
+            "OPEN",
+            "UNVERIFIED",
+            "EXTERNALLY_DEPENDENT"
+          ]
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": [
+        "boundaries",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "boundaries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Must name, in plain words, the trusted key/vault boundary, the no-secrets-in-adapters rule, or the no-UI-transaction-authority rule."
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": [
+        "requirements",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "IMPLEMENTED_AND_VERIFIED",
+            "DOCUMENTED_NOT_TESTED",
+            "PROPOSED",
+            "OPEN",
+            "UNVERIFIED",
+            "EXTERNALLY_DEPENDENT"
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "IMPLEMENTED_AND_VERIFIED",
+        "STARTER_IMPLEMENTED_AND_VERIFIED",
+        "DOCUMENTED_NOT_TESTED",
+        "PROPOSED",
+        "OPEN",
+        "UNVERIFIED",
+        "EXTERNALLY_DEPENDENT"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "description": "A guide path or registry id."
+      }
+    },
+    "implemented": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

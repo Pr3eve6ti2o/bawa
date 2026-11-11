@@ -13,10 +13,12 @@ import binascii
 import json
 import os
 import re
+import secrets
 import shutil
 import stat
 import subprocess
 import sys
+import threading
 
 BASE = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 TARGET_KEYS = {"XPUB_BTC", "XPUB_ETH", "XPUB_TRX", "TON_DEPOSIT_ADDRESS"}
@@ -44,30 +46,126 @@ def _copy_0600(src: str, dst: str) -> None:
     os.chmod(dst, 0o600)
 
 
-def _looks_like_seed_phrase(value) -> bool:
-    if not isinstance(value, str):
-        return False
-    words = value.split()
-    run = 0
-    for word in words:
-        if word.isalpha() and word.islower():
-            run += 1
-            if run >= 12:
-                return True
-        else:
-            run = 0
-    return False
+def validate_public_stdout(data) -> None:
+    """Require the generator's stdout to match its public-data schema.
+
+    Only the ten documented public keys are allowed, each with its
+    expected type and shape. Anything else is refused: stdout is a
+    public-data channel, not a free-form one.
+    """
+    allowed = {
+        "btc_zpub", "eth_xpub", "trx_xpub", "ton_address", "ton_path",
+        "ton_note", "samples", "checks", "seed_encrypted_to",
+        "wallet_core_version",
+    }
+    if not isinstance(data, dict):
+        raise SystemExit("generator stdout malformed: expected JSON object")
+    if set(data) - allowed:
+        raise SystemExit("generator stdout malformed: unexpected key")
+    if allowed - set(data):
+        raise SystemExit("generator stdout malformed: missing key")
+    for key, prefix in (
+        ("btc_zpub", "zpub"), ("eth_xpub", "xpub"), ("trx_xpub", "xpub"),
+    ):
+        value = data[key]
+        if not isinstance(value, str) or not value.startswith(prefix):
+            raise SystemExit(
+                f"generator stdout malformed: {key} must start with {prefix}"
+            )
+    for key in (
+        "ton_address", "ton_path", "ton_note", "seed_encrypted_to",
+        "wallet_core_version",
+    ):
+        if not isinstance(data[key], str) or not data[key]:
+            raise SystemExit(
+                f"generator stdout malformed: {key} must be a non-empty string"
+            )
+    samples = data["samples"]
+    if (
+        not isinstance(samples, dict)
+        or not samples
+        or not all(
+            isinstance(k, str) and isinstance(v, str)
+            for k, v in samples.items()
+        )
+    ):
+        raise SystemExit(
+            "generator stdout malformed: samples must be a non-empty dict of strings"
+        )
+    checks = data["checks"]
+    if (
+        not isinstance(checks, list)
+        or not checks
+        or not all(
+            isinstance(c, dict)
+            and isinstance(c.get("name"), str)
+            and re.fullmatch(r"[a-z0-9_]+", c["name"])
+            and isinstance(c.get("ok"), bool)
+            for c in checks
+        )
+    ):
+        raise SystemExit(
+            "generator stdout malformed: checks must be a non-empty list of {name, ok} dicts"
+        )
+
+
+def _bip39_english_words():
+    import importlib.resources
+
+    return frozenset(
+        importlib.resources.files("bip_utils.bip.bip39.wordlist")
+        .joinpath("english.txt")
+        .read_text(encoding="utf-8")
+        .split()
+    )
+
+
+_BIP39_WORDS = None
 
 
 def _contains_seed_material(obj) -> bool:
-    if isinstance(obj, dict):
-        for value in obj.values():
-            if _contains_seed_material(value):
-                return True
+    """Detect seed material anywhere in parsed generator stdout.
+
+    Walks the whole document in order, collecting two token streams —
+    dict keys and string values — lowercasing and splitting on
+    non-letters, and flags a run of >=12 consecutive tokens from the
+    BIP-39 English wordlist in either stream. Keys and values are
+    scanned separately so a short key token cannot break a mnemonic
+    split across neighbouring values (and vice versa). Legitimate
+    public output contains only isolated wordlist words, never a run.
+    """
+    global _BIP39_WORDS
+    if _BIP39_WORDS is None:
+        _BIP39_WORDS = _bip39_english_words()
+    key_tokens = []
+    value_tokens = []
+
+    def _walk(node, into_values):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                _walk(key, into_values=False)
+                _walk(value, into_values=True)
+        elif isinstance(node, list):
+            for value in node:
+                _walk(value, into_values)
+        elif isinstance(node, str):
+            (value_tokens if into_values else key_tokens).extend(
+                re.split(r"[^a-z]+", node.lower())
+            )
+
+    def _has_word_run(tokens):
+        run = 0
+        for token in tokens:
+            if token and token in _BIP39_WORDS:
+                run += 1
+                if run >= 12:
+                    return True
+            else:
+                run = 0
         return False
-    if isinstance(obj, list):
-        return any(_contains_seed_material(value) for value in obj)
-    return _looks_like_seed_phrase(obj)
+
+    _walk(obj, into_values=True)
+    return _has_word_run(key_tokens) or _has_word_run(value_tokens)
 
 
 def _parse_seed_bundle(path: str) -> tuple[bytes, bytes, int]:
@@ -108,6 +206,45 @@ def _parse_seed_bundle(path: str) -> tuple[bytes, bytes, int]:
         raise SystemExit("seed bundle malformed: invalid input") from None
 
 
+def resolve_secrets_dir(env=None):
+    """Resolve the secrets directory (guarded BAWA_SECRETS_DIR migration).
+
+    Canonical name BAWA_SECRETS_DIR; NOVA_SECRETS_DIR is accepted during
+    the one-release compatibility window with a deprecation warning.
+    Both names set to different values refuses to run; neither set uses
+    the default. Diagnostics name variables only, never values.
+    """
+    if env is None:
+        env = os.environ
+
+    def _value(name):
+        value = env.get(name)
+        return value if isinstance(value, str) and value else None
+
+    fresh = _value("BAWA_SECRETS_DIR")
+    legacy = _value("NOVA_SECRETS_DIR")
+    if fresh is not None and legacy is not None:
+        if os.path.expanduser(fresh) != os.path.expanduser(legacy):
+            raise SystemExit(
+                "conflicting secrets directories: BAWA_SECRETS_DIR and "
+                "NOVA_SECRETS_DIR are both set to different values; set only one"
+            )
+        print(
+            "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR",
+            file=sys.stderr,
+        )
+        return os.path.expanduser(fresh)
+    if fresh is not None:
+        return os.path.expanduser(fresh)
+    if legacy is not None:
+        print(
+            "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR",
+            file=sys.stderr,
+        )
+        return os.path.expanduser(legacy)
+    return os.path.join(BASE, "secrets")
+
+
 def assertBundleVerified(data) -> None:
     """Require the generator's in-process decrypt verification.
 
@@ -126,11 +263,134 @@ def assertBundleVerified(data) -> None:
         raise SystemExit("seed bundle verification missing: generator did not report bundle_verified")
 
 
+def assert_bundle_decrypts(bundle_path, data_key) -> None:
+    """Independently decrypt the final bundle with the wrapper-held key.
+
+    The generator's bundle_verified flag is status, not proof: this check
+    authenticates the written bundle in the wrapper and validates the
+    plaintext as a valid 24-word BIP-39 mnemonic (wordlist + checksum).
+    Never returns or logs the plaintext or the key.
+    """
+    from bip_utils import Bip39Languages, Bip39MnemonicValidator
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce, ciphertext, _mode = _parse_seed_bundle(bundle_path)
+    try:
+        plain = bytearray(
+            AESGCM(bytes(data_key)).decrypt(nonce, ciphertext, b"nova-shop-seed-v1")
+        )
+    except Exception:
+        raise SystemExit(
+            "seed bundle independent verification failed: decrypt failed"
+        ) from None
+    try:
+        text = bytes(plain).decode("utf-8")
+        if len(text.split()) != 24 or not Bip39MnemonicValidator(
+            Bip39Languages.ENGLISH
+        ).IsValid(text):
+            raise SystemExit(
+                "seed bundle independent verification failed: plaintext is "
+                "not a valid 24-word BIP-39 mnemonic"
+            )
+    except UnicodeDecodeError:
+        raise SystemExit(
+            "seed bundle independent verification failed: plaintext is not UTF-8"
+        ) from None
+    finally:
+        # Best-effort wipe of the plaintext copy (the decoded str cannot
+        # be zeroed: immutable, same caveat as the generator's strings).
+        for i in range(len(plain)):
+            plain[i] = 0
+
+
+# Cap on generator output (F-14). The legitimate stdout is a small JSON
+# object (a few KB). Anything larger is a runaway or compromised
+# generator; capture_output would buffer it without a size limit, and
+# the 120 s timeout does not prevent memory exhaustion.
+GENERATOR_OUTPUT_LIMIT = 1024 * 1024  # 1 MiB per stream
+GENERATOR_TIMEOUT_S = 120
+
+
+class _CappedStream:
+    """Byte-capped drain for one child stream.
+
+    Reads in 64 KB chunks on its own thread. On overflow it marks the
+    stream, kills the child, and stops reading — the child cannot fill
+    memory through a stream nobody is draining. Each reader touches
+    only its own state; the caller reads the fields after joining.
+    """
+
+    def __init__(self, stream, limit, proc, name):
+        self.stream = stream
+        self.limit = limit
+        self.proc = proc
+        self.name = name
+        self.chunks = []
+        self.total = 0
+        self.overflow = False
+
+    def run(self):
+        try:
+            while True:
+                chunk = self.stream.read(65536)
+                if not chunk:
+                    break
+                self.total += len(chunk)
+                if self.total > self.limit:
+                    self.overflow = True
+                    self.proc.kill()
+                    return
+                self.chunks.append(chunk)
+        except (OSError, ValueError):
+            pass
+
+    def text(self):
+        return b"".join(self.chunks).decode("utf-8")
+
+
+def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPUT_LIMIT):
+    """Run the generator with byte-capped stdout/stderr collection.
+
+    Returns the stdout text. Stderr is drained and discarded under the
+    same cap (it is never printed: the wrapper reports generator
+    failure without echoing generator output). Raises SystemExit when
+    either stream exceeds `limit`, when the timeout expires, when the
+    child exits non-zero, or when stdout is not UTF-8 — all without
+    echoing captured content.
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    out = _CappedStream(proc.stdout, limit, proc, "stdout")
+    err = _CappedStream(proc.stderr, limit, proc, "stderr")
+    t_out = threading.Thread(target=out.run, daemon=True)
+    t_err = threading.Thread(target=err.run, daemon=True)
+    t_out.start()
+    t_err.start()
+    try:
+        proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        raise SystemExit("wallet-core generation timed out") from None
+    t_out.join(timeout=5)
+    t_err.join(timeout=5)
+    for stream in (out, err):
+        if stream.overflow:
+            proc.kill()
+            raise SystemExit(
+                f"wallet-core generation exceeded the {limit}-byte "
+                f"{stream.name} limit"
+            )
+    if proc.returncode != 0:
+        raise SystemExit("wallet-core generation failed; stderr suppressed")
+    try:
+        return out.text()
+    except UnicodeDecodeError:
+        raise SystemExit("generator stdout malformed: not UTF-8") from None
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
-    raw_secrets = os.path.expanduser(
-        os.environ.get("NOVA_SECRETS_DIR", os.path.join(BASE, "secrets"))
-    )
+    raw_secrets = resolve_secrets_dir()
     if os.path.islink(raw_secrets):
         raise SystemExit("refusing symlinked secrets directory")
     secrets_dir = os.path.realpath(raw_secrets)
@@ -163,17 +423,23 @@ def main() -> None:
         flush=True,
     )
 
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=os.environ.copy(),
-    )
-    if proc.returncode != 0:
-        raise SystemExit("wallet-core generation failed; stderr suppressed")
-
-    data = json.loads(proc.stdout)
+    # The wrapper generates the data key so it can independently verify
+    # the bundle afterwards. It is passed to the generator only through
+    # a subprocess-only environment copy — never the wrapper's own env,
+    # never logged — and zeroed after the verification below.
+    data_key = bytearray(secrets.token_bytes(32))
+    child_env = os.environ.copy()
+    child_env["BAWA_DATA_KEY_HEX"] = bytes(data_key).hex()
+    # F-14: capped collection (see run_generator). The wrapper never
+    # echoes generator output: a malformed stdout fails with a generic
+    # message, and the ten-key schema check below bounds the accepted
+    # JSON structure.
+    stdout_text = run_generator(cmd, child_env)
+    try:
+        data = json.loads(stdout_text)
+    except json.JSONDecodeError:
+        raise SystemExit("generator stdout malformed: invalid JSON") from None
+    validate_public_stdout(data)
     assertBundleVerified(data)
     if _contains_seed_material(data):
         raise SystemExit("H4 violation: seed material present in generator stdout")
@@ -192,6 +458,15 @@ def main() -> None:
     del nonce, ciphertext
     if mode != 0o600:
         raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
+
+    # Independent proof: decrypt the final bundle with the wrapper-held
+    # key and validate the plaintext as a BIP-39 mnemonic. The
+    # generator's bundle_verified flag above is status, not proof.
+    try:
+        assert_bundle_decrypts(reported, data_key)
+    finally:
+        for i in range(len(data_key)):
+            data_key[i] = 0
 
     raw_bundle = os.path.expanduser(
         os.environ.get("BAWA_BACKUP_DIR", os.path.join(BASE, "seed-backup"))

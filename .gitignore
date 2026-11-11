@@ -34,3 +34,7 @@ Thumbs.db
 coverage/
 reports/
 audit-output/
+
+# One-prompt workflow reports (generated, never committed)
+reports/
+generated/
