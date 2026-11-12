@@ -290,7 +290,7 @@ Gate status below is the **2026-11-09 baseline**, not a statement that the gates
 
 ## 5. Clone and pin with a worktree
 
-Use a separate worktree so pinning the code does not replace the guide you are reading. At the 2026-11-09 baseline, the old in-place detach silently replaced the corrected README (1243 lines) with the repair commit’s older README (1019 lines): defect F4. The corrected procedure was verified by a fresh-clone re-run on that date; the README fix is committed at `b3814e0b` (2026-11-10 push).
+Use a separate worktree so pinning the code does not replace the guide you are reading. At the 2026-11-09 baseline, the old in-place detach silently replaced the corrected README (1243 lines at the `b3814e0b` fix; 1275 lines at the step-4 baseline) with the repair commit’s older README (1019 lines): defect F4. The corrected procedure was verified by a fresh-clone re-run on that date; the README fix is committed at `b3814e0b` (2026-11-10 push).
 
 1. **Clone and check the original tree.** Clone `Pr3eve6ti2o/bawa` and enter the directory you cloned into. Record the starting HEAD as supporting context (provenance only — the literal SHA in step 4 is the proof):
 
@@ -361,7 +361,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
    > The original directory is still at the cloned baseline commit, its README is still 1275 lines, and its tree is still clean. All three tests must succeed:
    >
    > ```sh
-   > test "$(git rev-parse HEAD)" = "b8298197dd227916ff424dd479508887753e713f"
+   > test "$(git rev-parse HEAD)" = "0b2aa295079ec10eaf397b6202e470a9fe6e547e"
    > test "$(wc -l < README.md | tr -d ' ')" = 1275
    > test -z "$(git status --short)"
    > ```
@@ -384,6 +384,8 @@ Use a separate worktree so pinning the code does not replace the guide you are r
 **Decided 2026-11-10 — pin.** Doc 4 pins to the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (`e3b65fb8`), an immutable, explicitly identified SHA. Whether Doc 4 re-pins to a newer head remains **OPEN**, pending the user’s decision.
 
 **Decided 2026-11-10 — proof form.** Step 4 uses the literal baseline HEAD SHA in the proof; the literal SHA is the check. The `MAIN_HEAD` capture in step 1 is supporting context only — record it for provenance, do not substitute it for the literal SHA. If main advances and Doc 4 is re-issued, update the literal SHA in step 4 to the new baseline.
+
+**Re-verified 2026-11-12 (T07).** A fresh clone now lands on main HEAD `0b2aa295079ec10eaf397b6202e470a9fe6e547e` (2026-11-10); step 4's literal SHA was updated to it under this rule. Steps 1–3 re-ran passing; the README is still 1275 lines and the tree clean.
 
 **Decided 2026-11-10 — cross-references.** The F4 treatment in Doc 1 §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
 
@@ -523,7 +525,7 @@ The TON fixture is V4 R2, wallet ID `698983191`. TON generation is in `generate.
 >
 > A recognised prefix is not enough to pass these checks. For Bawa BTC mainnet, the expected input is `zpub` (`0x04b24746`). The SLIP-0132 mainnet reference entries also include public `xpub` (`0x0488B21E`) and private `xprv` (`0x0488ADE4`); private extended keys are excluded from the watch-only environment. These reference entries are not an alternative to Bawa’s recorded BIP-84 policy. [M28 §6.1; M28-016; M28-083; M27 §3.1]
 >
-> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: with Core `4.8.4`, both produce no address and exit `1` with an opaque WASM-abort error. [M28-016; M28-083; D31 F8]
+> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: at tip `981d0ba` both are rejected before WASM with exit `2` and a clean version message (`extended key version ... is not allowed for btc`), producing no address and no abort. [M28-016; M28-083; D31 F8; re-verified 2026-11-12, T07]
 >
 > After the input checks, the resulting address must **exactly match the independent offline reference** for the recorded policy; see §9. Otherwise, **STOP**. A valid-looking string, agreement between tool outputs, or exit `0` must not override a stop. [M04; M27; M35]
 
@@ -925,9 +927,9 @@ The fee path remains `/v1/fees/recommended`. It is identical on mainnet; only th
 The **2026-11-09, `muse-vm`** same-time comparison was:
 
 - mempool.space recommended `fastestFee 3 sat/vB`;
-- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97 sat/vB`.
+- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97 sat/vB`. **Correction (re-verified 2026-11-12, T07):** Blockstream's Esplora `API.md` defines these values as "the estimated feerate (in sat/vB)", so the dated value reads `0.972 sat/vB`. The recorded conversion also fails on its own terms: `0.972 BTC/kB` would equal `97,200 sat/vB`, not `97` (see also §14, where the same conversion rule — multiply a `BTC/kvB` rate by `100,000` — is stated correctly).
 
-That disagreement is **unresolved**. The Blockstream unit annotation is not a reconciled conversion to build into the wallet. Keep both sources visible; never quote one alone.
+That disagreement is **unresolved**, now framed as 3 versus 0.972 sat/vB. Keep both sources visible; never quote one alone.
 
 **BTC payment gate.** At send time, re-check both sources. Prefer the **mempool.space recommended set** as the reference, without discarding the other result. Do not average the quotes or silently choose the higher quote. Apply these checks together:
 
@@ -1055,6 +1057,8 @@ For reference only, the fixture `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3z
 
 Before issuing receiving instructions or considering a send, check all five loss modes: **wrong network, wrong address, wrong amount, stuck transaction and theft**. Receiving instructions must use the intended wallet’s **UQ form** and require **workchain 0**. Confirm the mainnet endpoint, CRC, complete account hash, Wallet V4 R2 and the wallet ID above against the intended wallet configuration; independently confirm the complete recipient address. Do not substitute a testnet form, and **never fund the fixture above**. Verify any proposed amount against the intended payment. Require a fresh successful masterchain seqno read; back off read-only checks when throttled, and do not repeat a transfer whose outcome is unknown. Keep mnemonics and signing keys out of endpoint requests and checking services. **Stop before sharing receiving instructions if wallet or address identity is unresolved; stop before signing if the network, address, amount, head check or prior transaction status is unresolved, or if a service asks for wallet secrets.**
 
+**§11 — Re-verification, 12 November 2026 (first-hand on `muse-vm`, T07).** TronScan API DNS now resolves after two failures on 9 November 2026; its account lookup returns live TRC-20 balances for the fixture. Previously untested Trongrid JSON-RPC at `api.trongrid.io/jsonrpc` now answers `eth_blockNumber` with HTTP 200. Cloudflare still answers `eth_chainId` with `0x1`, but `eth_blockNumber` and `eth_gasPrice` now return JSON-RPC error `-32046` ("Cannot fulfill request"), replacing the empty results seen on 9 November; conclusion unchanged: chain-ID check only. LlamaRPC still returns Cloudflare 525. Ankr still returns HTTP 200 with JSON-RPC error `-32000` (key required). `btc.com`, unreachable (HTTP 000) on 9 November, now answers HTTP 307 and remains outside the endpoint table. Etherscan pages still return HTTP 403 under bot protection.
+
 ### The draft retargeting checklist (file:line)
 
 This checklist covers the local-only Web validation draft (`app-web/`), which is in no repository and is not part of `Pr3eve6ti2o/bawa@56396a20`; it was checked **2026-11-09** on `muse-vm`. Its `file:line` paths are draft locations, not repository paths. It describes the changes needed, not a completed mainnet retarget.
@@ -1162,7 +1166,7 @@ Both implementations must also start from an independently checked public node. 
 
 #### Public-only input and output contract
 
-- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. Those testnet inputs trigger an opaque WASM abort with exit 1; do not feed them in as a network test.
+- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. Those testnet inputs are rejected before derivation with exit 2 and a version message (verified 2026-11-12, T07); do not feed them in as a network test.
 - Supply the public node through **stdin, never argv**. The single-address stdin limit is **200 characters including the trailing newline**, not 200 characters plus a newline.
 - The single-address interface uses exit **2** for usage or read errors, **1** for derivation or validation failure, and **0** for success with a bare address. A zero exit still requires the independent comparison above.
 - For the daemon, wait for its first output line, `{"ready": true}`, before sending requests. Requests are JSONL objects with the fields `chain`, `xpub` and `index`, plus optional `branch` (0 receiving, 1 change; default 0); the `xpub` field carries the BTC `zpub` as well. `index` must be an integer from **0 to 2147483647**, inclusive.
@@ -2819,6 +2823,8 @@ These are the results recorded at the **2026-11-09 evidence baseline**. Separate
 | **T2 — Web draft** | 2026-11-09 baseline | Real-browser testing: **19 PASS / 0 FAIL / 3 INFO**; **0 console errors**, **0 page errors**, **0 failed requests**. The **3 INFO remain INFO**, not additional passes. |
 | **T3 — fix spot checks** | 2026-11-09 baseline | **9 MATCH / 0 MISMATCH** in spot checks of the **200-finding fix**. These are spot-check results, not a claim that every finding was independently retested. |
 
+**Re-verification 2026-11-12 (T07).** Retain the 2026-11-09 figures above as the dated baseline. First-hand re-runs on `muse-vm` at tip `981d0ba` (Node v22.23.4; wallet-core 4.8.4) differ: `npm test` passes 130/130 assertions (exit 0; the suite expanded from 181 lines at `56396a20` to 1225); `derive.js` matches 3/3 index-0 fixture addresses (BTC/ETH/TRX; exit 0).
+
 The test/CI suite proves **offline derivation only**. These component results do not complete the recovery rehearsal, verify mainnet endpoints or confirmation policies, or establish spending capability. A decrypt round trip is not the rehearsal. (M06; M27; M16-F14.)
 
 **Send/sign/broadcast has never been exercised on any network.** Mainnet sending, signing and broadcasting remain **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
@@ -2868,7 +2874,7 @@ The provider-sourced candidates below are **EXPECTED values only**. They are not
 
 Before describing an endpoint as verified, **probe it live from the build environment and retain a dated result**. The record should identify the provider source, exact endpoint and network/configuration, request, expected result, observed result and outcome. Preserve the `curl` + `jq` + expected-result structure described above. For the Ethereum identity check, the expectation remains `eth_chainId` → `0x1` (= `1`).
 
-A provider listing is not a probe, and a successful endpoint response is not a funds rehearsal. No dated live mainnet probe results are supplied here. (M28 §6.2; M28-OI-02.)
+A provider listing is not a probe, and a successful endpoint response is not a funds rehearsal. Dated live mainnet probe results for all four endpoints were recorded 2026-11-12 (T07 re-verification; the §11 table carries the dated observations). (M28 §6.2; M28-OI-02.)
 
 #### Confirmation thresholds: pinned policies
 
@@ -3163,7 +3169,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### An address tool aborts, or returns plausible but wrong output
 
-**Cause:** BTC testnet `vpub`/`tpub` inputs to `derive.js` can cause an opaque WASM abort, exit status `1` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` accepts private extended keys and silently prints wrong addresses with exit status `0`; `derive.js` returns valid-looking addresses for mismatched-chain keys. (M04; OI-096)
+**Cause:** BTC testnet `vpub`/`tpub` inputs to `derive.js` are rejected before WASM with exit status `2`, a clean version message and no address (verified 2026-11-12, T07). This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` accepts private extended keys and silently prints wrong addresses with exit status `0`; `derive.js` returns valid-looking addresses for mismatched-chain keys. (M04; OI-096)
 
 **Action:** do not feed BTC testnet `vpub`/`tpub` keys to `derive.js`. Do not use `compare.js` with private extended keys, or accept mismatched-chain output from `derive.js` as validation. Plausible output plus exit status `0` is not validation. If an address mismatch remains, use the ordered mismatch tree above. (M04; OI-096; M16-F43)
 
@@ -3264,6 +3270,8 @@ After **any update**, re-run the recorded suite before trusting the new tree. Th
   - **ETH:** `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`
   - **TRX:** `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`
   - **TON:** `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`
+
+**Re-verification 2026-11-12 (T07).** Retain the 2026-11-09 checklist above as the dated baseline; the current tip `981d0ba` re-runs differently: `npm test` passes 130/130 assertions and `derive.js` matches 3/3 index-0 BTC/ETH/TRX fixture addresses (both exit 0). `differential_test.py` passes BTC+ETH; a `bip_utils` extension passes TRX. TON had no repository derivation tool at `981d0ba`.
 
 A fixture mismatch after an update is a **hard stop**, not a prompt to edit the fixtures. Use §18 for troubleshooting. (M06; M27)
 
@@ -3674,7 +3682,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 - TRX: $0 in quota; 0.265 TRX ≈ $0.084 out of quota. USDT: 6.43 TRX ≈ $2.04.
 - TON: 0.00012 TON for a deployed wallet; 0.00073 TON for a first send.
 
-M12 also records gaps G1–G10 with check procedures.
+M12 also records gaps G1–G10 with check procedures. Arithmetic re-verified 2026-11-12 (T07): the 141 vB totals (423/141 sats), the ETH conversions (21,000 × 0.148 gwei = 3,108 gwei; 21,000 × 0.276704742 gwei ≈ 0.0000058108 ETH) and the TRX conversion (64,285 × 100 SUN = 6.4285 TRX) all reproduce from the stated inputs. Status stays OPEN (standing dating rule).
 
 **Status:** OPEN — by design: baselines always date.
 
@@ -3742,7 +3750,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Affected sections:** §11, §4.
 
-**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/get` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
+**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/get` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain. Re-verification 2026-11-12 (T07): the §11 endpoint table was re-run live — Tronscan DNS now resolves, Trongrid JSON-RPC answers, and `btc.com` now returns HTTP 307 (it stays outside the endpoint table). Status stays OPEN; the row belongs to T04.
 
 **Status:** OPEN.
 
@@ -3764,7 +3772,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Evidence/uncertainty:** M18 F10 records a live check on 2026-11-09: `api.etherscan.io/api?module=proxy&action=eth_blockNumber` returned HTTP 200 with the reported body `{"status":"0","message":"NOTOK","result":"You are using a deprecated V1 endpoint, switch to Etherscan API V2…"}`. V2 requires an API key and was not tested live in that slice.
 
-M11 records HTTP 403 responses on Etherscan pages due to bot protection and says the guide must not use Etherscan as a verification command. M08 also records HTTP 403 on the Etherscan USDC page.
+M11 records HTTP 403 responses on Etherscan pages due to bot protection and says the guide must not use Etherscan as a verification command. M08 also records HTTP 403 on the Etherscan USDC page. Re-verification 2026-11-12 (T07): the V1 failure was reproduced (HTTP 200, `status 0`/`NOTOK`, deprecation text) via the account `txlist` call, and Etherscan pages still return HTTP 403. V2 remains untested live; status stays OPEN.
 
 **Replacement explorer, live-tested 2026-11-12 (T04, two egresses):** Blockscout `GET https://eth.blockscout.com/api/v2/addresses/0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7/transactions` (bare URL; `?limit=1` and `?page_size=1` both return HTTP 422 "Unexpected field") returns HTTP 200 with 48 items for the fixture address; the first item is a successful transfer to the fixture address. The address endpoint for the same fixture returns HTTP 200 with `coin_balance: "0"` and `has_token_transfers: true`. §12 now cites Blockscout as the ETH history route.
 
@@ -4039,6 +4047,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M29 treats funding the fixture addresses as immediate loss because the mnemonic is public. The warning must precede any mnemonic/address table.
 - M03 F06 states that the 15-word vector must never become a funded wallet or a recovery wallet.
 - **Placement verified first-hand 2026-11-12 (T11):** §1/§2 warnings precede §7; §7 "Fund none of the addresses below" precedes the offline-fixture table; the public-test-vector warning precedes the mainnet-fixture table; "Funding any address in the table below is immediate loss" precedes the §9 table; "Never fund a published fixture address" precedes the §11 fixture table. Regression-guarded in `test/smoke.test.js` (§5c, content anchors, not line numbers) — a future edit that moves a table above its warning fails the suite.
+- Re-verification 2026-11-12 (T07): the BTC fixture `chain_stats` are unchanged (16/311775/16/311775/32) on both providers; the TON fixture is still `active` with balance `0` and `last_transaction_id` lt `42954571000001` unchanged; the live data cell contains wallet ID `698983191` and the published public key. Status stays OPEN (standing rule).
 
 **Status:** OPEN (standing rule).
 
@@ -4138,6 +4147,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 - M36 item 5 identifies §5 proof staleness: use the `MAIN_HEAD` capture form or update the SHA at push.
 - M24 K01 records the §4 text fix as uncommitted and the §15/L3732/L4756 decisions as OPEN.
 - M01 F35 item 11 prohibits silently treating `56396a20` as an authorised mainnet baseline.
+- Baseline refreshed 2026-11-12 (T07): step-4 literal SHA `b8298197…` → `0b2aa295079ec10eaf397b6202e470a9fe6e547e` (main advanced); README still 1275 lines; steps 1–3 re-verified passing. Status stays RESOLVED.
 
 **Status:** RESOLVED 2026-11-10 — the user decided: pin Doc 4 to the immutable repair-commit SHA `e3b65fb832db287fdc8d54794980dd0b3456cc12`; the §5 step-4 proof uses the literal baseline HEAD SHA; the `MAIN_HEAD` capture in step 1 is supporting context only.
 
