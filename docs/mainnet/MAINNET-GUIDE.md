@@ -174,9 +174,9 @@ Those secondary sources report for India:
 - no loss set-off, with only the cost of acquisition deductible;
 - **1% TDS** on transfer consideration above thresholds.
 
-The successor-law position remains unresolved in this check. Two secondary sources conflict: one identifies the **Income Tax Act 2025**, effective **1 April 2026**; another identifies the **Income-tax Act 2026**, effective **1 April 2027**. These are conflicting accounts, not a verified statement of which successor law is in force.
+The successor-law position was re-checked **12 November 2026** and is narrowed but not closed. Several independent secondary sources now agree: the **Income-tax Act 2025** replaced the 1961 Act effective **1 April 2026**, carrying the 30% rate and 1% TDS forward in substance and renumbering them — 30% under s. 194(1), Table Sl. No. 4 (formerly s. 115BBH); 1% TDS under s. 393(1), Table Sl. No. 8(vi) (formerly s. 194S); the virtual-digital-asset definition under s. 2(111) (formerly s. 2(47A)). One source also lists an **Income Tax Act 2026** effective **1 April 2027**, so the conflict is narrowed, not resolved. The official text was still not read directly. These are converging secondary accounts, not a verified statement of which successor law is in force.
 
-Confirm the applicable law and current position with a **Chartered Accountant**. No renumbered successor sections are given here.
+Confirm the applicable law and current position with a **Chartered Accountant**. The renumbered sections above are secondary-source reports, not verified citations.
 
 #### EU — direct ESMA summary
 
@@ -186,7 +186,7 @@ ESMA states: “Markets in Crypto-Assets Regulation (MiCA) institutes uniform EU
 
 The scope described by this EU market-rule pointer is issuers and trading, not your self-custody. It does not determine your obligations as a wallet user.
 
-The text of **Regulation (EU) 2023/1114** could not be read: the request returned **HTTP 202 with an empty body**. This section makes no article-level claims.
+The text of **Regulation (EU) 2023/1114** was read directly on **12 November 2026** (EUR-Lex, CELEX:32023R1114; OJ L 150, 9.6.2023, pp. 40–205). Article 2 confines its scope to persons engaged in issuance, offer to the public and admission to trading of crypto-assets, or providing crypto-asset services in the Union. That confirms the pointer above: the Regulation governs issuers and service providers, not self-custody wallet use, and this section makes no article-level claims beyond that scope statement.
 
 ### Keep records
 
@@ -227,6 +227,8 @@ This guide gives no fixed retention period. Check your local retention rules and
 **Source basis:** convergence on the US OFAC position. **Checked 9 November 2026.**
 
 The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations carry **strict liability**: penalties are possible even without knowledge or intent.
+
+The underlying guidance is OFAC’s **“Sanctions Compliance Guidance for the Virtual Currency Industry”** (15 October 2021). Its recordkeeping rule, under 31 CFR Part 501 (Reporting, Procedures and Penalties Regulations), 31 CFR 501.602, requires full and accurate records for **five years** after the date of the transaction, or, for blocked property, five years after the property is unblocked. **Re-checked 12 November 2026** from secondary summaries of the guidance, not from the OFAC PDF text itself, which remains unread. A separate report claims a March 2025 change extended sanctions-related record-keeping from five to ten years; that claim is **unverified** and this guide still gives no fixed retention period (see Retention below).
 
 > **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or seized funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
 
@@ -1020,6 +1022,18 @@ The activation figures verified in the **2026-11-09 check** were **1 TRX for sys
 
 Before any prospective send, check all five loss modes: **wrong network, wrong address, wrong amount, stuck transaction and theft**. Confirm the wallet’s mainnet endpoint and the recent-block reference. Independently confirm the complete intended recipient T-address, then require a **read-only `wallet/getaccount` check of that recipient on the same mainnet endpoint**. Verify the intended amount and current applicable charges separately; do not turn the dated creation figures into a transfer amount. Require successful fresh reads and an understood recipient account state, and do not repeat a transfer whose outcome is unknown. Keep mnemonics and signing keys out of endpoint requests, explorers and QR tools. **Stop without signing** if the network, recipient, amount, charges, activation requirements or transaction status remain unresolved, or if a service asks for wallet secrets. Do not send funds as a connectivity or activation test.
 
+#### Manual TRX txid investigation procedure (M-28)
+
+When a TRX broadcast outcome is unknown — a timeout, no receipt, or a still-pending state — investigate by transaction ID before any retry. This procedure is **read-only**: it sends no transaction and moves no funds. Verified live from `muse-vm` on **12 November 2026** (TronGrid `getnowblock` returned block 87,932,266; TronScan API reachable, reversing the 2026-11-09 "unverified-from-VM" note for the API).
+
+1. **Look up the transaction.** `POST https://api.trongrid.io/wallet/gettransactionbyid` with body `{"value": "<txid>"}`. A known txid returns `raw_data` (contracts, owner address, `fee_limit`) and `ret` (for example `OUT_OF_ENERGY`). An unknown txid returns an **empty object `{}`** — that means the node knows no such transaction, not that it failed.
+2. **Look up the receipt.** `POST https://api.trongrid.io/wallet/gettransactioninfobyid` with the same body. A confirmed transaction returns `blockNumber`, `result` (`SUCCESS` or `FAILED`), `receipt.result`, and `resMessage` as hex (decode it: it is a human-readable reason). No `blockNumber` yet means not yet included — wait; do not resend.
+3. **Cross-check on TronScan.** `GET https://apilist.tronscan.org/api/transaction?address=<T-address>&limit=10&sort=-timestamp` lists that address's transactions with `confirmed`, `contractRet` and `result`. The txid, block, owner and recipient must match the TronGrid records; a mismatch means the wrong transaction is being read.
+4. **Decide from the combined record.** Included with `result: SUCCESS` means the transfer executed as recorded. Included with `result: FAILED` (for example `OUT_OF_ENERGY`) means it did not execute — the worked example below failed that way, and no funds moved under that contract call. Empty `{}` on both TronGrid calls plus absence from TronScan means the transaction is not known anywhere checked: the outcome stays **UNKNOWN**.
+5. **Stop rule.** An UNKNOWN outcome is not permission to retry, replace or re-send. A fresh composition can double-pay. Stop while the outcome is unresolved; a replacement, if ever attempted, needs a separately authorised procedure and is not given here.
+
+Worked example (public fixture history, 2026-11-12): txid `85add9e11da48b1bff7eb7ec4e87abc261533713ede4eec9a22be312371ca698`, a `TriggerSmartContract` transfer from the TRX fixture address. `gettransactioninfobyid` returned `blockNumber` 86280744, `result: FAILED`, `receipt.result: OUT_OF_ENERGY`, `resMessage` decoding to "Not enough energy for 'PUSH1' operation executing: curInvokeEnergyLimit[0], curOpEnergy[335], usedEnergy[0]". TronScan agreed (`confirmed: true`, `contractRet: OUT_OF_ENERGY`, `result: FAIL`). That agreement is what a reconciled record looks like; a single source alone is not enough.
+
 ### TON — mainnet endpoint and identity checks
 
 The mainnet Toncenter read-only endpoint is `https://toncenter.com/api/v2/getMasterchainInfo`. In the **2026-11-09 check from `muse-vm`**, it returned `ok: true` with masterchain seqno **104342200**. The TonAPI masterchain-head check returned seqno **104342382**. These are historical head observations, not fixed values to match in later checks. Obtain a fresh masterchain response from the configured mainnet endpoint, then check the address and wallet identity separately.
@@ -1779,6 +1793,19 @@ Fee acceptance also requires a fee tier chosen before signing, a quote refreshed
 Those preparation and review duties do not belong to the Signer. A quote refresh that changes the payload invalidates the existing approval; it cannot silently alter what will be signed. To prevent a **lost fee**, **stop if the retained UTXO amounts, change output, absolute fee or sat/vB calculation cannot be verified, or if a changed payload still carries the old approval**.
 
 The Web change-and-fee path is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. That status is separate from the unimplemented change branch. See §17 and §21.
+
+#### Mainnet change policy (M-27)
+
+This is the documented change policy for a mainnet BTC send. It is a policy, not a send procedure: no composer, signing or broadcast path exists in the drafts, and no send procedure is presented here.
+
+- **Destination.** Change goes to a fresh address on the change branch of the reader's own wallet, never to the recipient and never to an address supplied by anyone else. The Web draft's current behaviour — returning change to the sending address — is **not** this policy; it reuses one address and must not be presented as change handling.
+- **Derivation.** Change addresses derive from the same BIP-84 account as receiving addresses: `m/84'/0'/0'/1/i`, starting at `m/84'/0'/0'/1/0`. The watch-only tool derives them from the account `zpub` (`derive.js btc-change <index>`), with the same validation as receiving derivation and no private input. Change index `i` is fresh per send; an already-used change address is not reused. A bare change address carries no branch marker — the address alone cannot tell you it is change — so record the mode and full path alongside any change address you write down; `derive.js btc-change` prints the branch to stderr for exactly this reason.
+- **Signer control.** The signer verifies every output, including the change output, against its own derived change address and the intended amounts. A "change" label from the coordinator, the draft or any other party is not proof. **Stop before signing if any output is unreviewed, or if a proposed change output cannot be verified as the reader's own change address.**
+- **Discovery.** A wallet that holds change must scan the change branch (`/1/*`) as well as the receiving branch (`/0/*`). Checking receiving addresses alone can miss change funds and make a funded wallet look empty. The gap limit applies per branch.
+- **Recovery.** Change addresses come from the same seed and account as receiving addresses, so the same recovery material restores them — provided recovery scans the change branch. A recovery that checks only receiving addresses has not established the full balance. **Stop before treating a recovery as complete until both branches have been scanned.**
+- **Fee.** Omitted change becomes fee. The absolute fee and the change output are verified together before signing, from the retained UTXO amounts and all output amounts.
+
+What remains unverified: no change-output spend has been exercised. Spending a change output is part of the separately authorised small-amount rehearsal (M-35; M24 K21 step D), not of this policy. Until that rehearsal, the policy above is documented and tool-supported, but no change spend is demonstrated.
 
 ### 13.6 Nonce, stuck transactions, replacement — what does not exist
 
@@ -3912,6 +3939,10 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - India’s 30%/1% TDS figures rest on convergence of secondary sources only; the official sites were unreachable.
 - M33 records no tax coverage in the current guides. The repository’s only law sentence is at `docs/RECOVERY.md:680`.
 - M36 F6 places law, tax and records in front-matter §3, not in a footnote.
+- Re-checked 2026-11-12 (T11): **MiCA text now read directly** — Regulation (EU) 2023/1114, EUR-Lex CELEX:32023R1114 (OJ L 150, 9.6.2023, pp. 40–205); Article 2 scope (issuance/offer/admission/services) confirms it governs issuers and service providers, not self-custody wallet use. §3 updated accordingly.
+- Re-checked 2026-11-12 (T11): **India successor law narrowed, not closed** — several independent secondary sources agree the Income-tax Act 2025 replaced the 1961 Act effective 1 April 2026 (30% under s. 194(1) Table Sl. No. 4; 1% TDS under s. 393(1) Table Sl. No. 8(vi); VDA definition s. 2(111)); one source also lists an Income Tax Act 2026 effective 1 April 2027. Official text still unread; figures stay labelled secondary-source convergence.
+- Re-checked 2026-11-12 (T11): **OFAC guidance identified, PDF text still unread** — “Sanctions Compliance Guidance for the Virtual Currency Industry” (15 October 2021); the five-year recordkeeping rule is 31 CFR 501.602 (five years after the transaction, or five years after blocked property is unblocked), as reported in secondary summaries. A separate report claims a March 2025 extension to ten years; that claim is unverified, and §3 still gives no fixed retention period.
+- Re-checked 2026-11-12 (T11): HMRC manual section-level content still not read directly from the VM; the public GOV.UK guidance mirrors manual sections CRYPTO10100/CRYPTO22200 (pooling per token type, same-day and 30-day rules, per-pool records), but §3 still states no UK rule on those topics.
 
 **Status:** OPEN.
 
@@ -3919,26 +3950,28 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Read each source directly before publishing any rule. The outstanding source checks are M33 items 1–6 and 8: HMRC manual sections, India’s successor law, the OFAC guidance PDF text, the text of MiCA Regulation (EU) 2023/1114, and OFAC five-year retention.
+**Clearance condition:** Read each source directly before publishing any rule. Remaining outstanding source checks after the 2026-11-12 re-check: HMRC manual sections (read directly), India’s successor law (official text), the OFAC guidance PDF text (read directly), and OFAC retention (resolve the reported five-to-ten-year change). The MiCA Regulation (EU) 2023/1114 text check is done (direct EUR-Lex read, 2026-11-12).
 
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-25 — M33 and M36 F6; [docs/RECOVERY.md:680 at 56396a20](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/docs/RECOVERY.md#L680).
 
 ### M-26 — Terminology and callout work
 
-**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 195 Warning callouts are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
+**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The Warning callouts are ungraded. Deleting the instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
 
 **Affected sections:** §1, §2 and the whole document; writing-phase work.
 
 **Evidence:** M30 records the following:
-- The “Mainnet” glossary row at `docs/GLOSSARY.md:45` is false for the mainnet guide. The text itself breaks the “wallet” terminology rule at `docs/RECOVERY.md:423`, and two vaults share one glossary row.
-- The terms **BIP-39 passphrase** and **vault unlock passphrase** must be used in full, never reduced to the unqualified final word. Approximately 173 existing uses lack that qualification.
+- The “Mainnet” glossary row at `docs/GLOSSARY.md:45` was false for the mainnet guide ("Mainnet is outside this guide's scope"). **Fixed 2026-11-12 (T11):** the row now states that whether a guide covers mainnet is stated in that guide's own scope, and names Doc 4 as a mainnet guide. Regression-guarded in `test/smoke.test.js` (§5c).
+- The text itself breaks the “wallet” terminology rule at `docs/RECOVERY.md:423`, and two vaults share one glossary row.
+- The terms **BIP-39 passphrase** and **vault unlock passphrase** must be used in full, never reduced to the unqualified final word. Re-counted 2026-11-12 (T11): 18 lines in MAINNET-GUIDE.md use "passphrase" without the full "BIP-39 passphrase" or "vault unlock passphrase" qualification — not the ~173 previously recorded. The 173 figure does not reproduce against the current guide and must not be cited. (A further "vault passphrase" form appears in §16 troubleshooting, e.g. L2948; whether it counts as unqualified is for the re-grading pass to adjudicate.)
 - The callout taxonomy has three tiers — Never, Stop and Warning — written as `> **NAME**`, without a colon. Every callout must contain its trigger, required action and consequence.
-- All 195 existing `> **Warning**` callouts need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
+- Re-counted 2026-11-12 (T11): `> **Warning**` callouts number **21 in MAINNET-GUIDE.md and 118 repo-wide across docs/** (MAINNET-GUIDE.md + ANDROID-GUIDE.md only) — not the 195 previously recorded. The 195 figure does not reproduce and must not be cited. All 21 in this guide still need re-grading.
+- Re-counted 2026-11-12 (T11): "Never use real funds" occurs **8 times repo-wide** — 6 in real prose (docs/09 ×4, RECOVERY.md:459, FAQ.md:57) and 2 mentions inside this register row itself — not the 9 previously recorded. **Zero occur in MAINNET-GUIDE.md prose** (outside §21). The replacement rule stands: any such warning in mainnet prose must be replaced for mainnet, not deleted.
 - The 81 testnet-scope sentences require individual review, not bulk deletion. The “four secrets” map is missing.
 
 **Status:** OPEN (writing-phase work).
 
-**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 195 callouts using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
+**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade the 21 Warning callouts in this guide (118 repo-wide) using the C3 test, replace obsolete "Never use real funds" warnings for mainnet rather than deleting them, and sweep the 81 testnet-scope sentences individually.
 
 **Blocks writing completion:** No — this is the writing work itself, not a precondition for it.
 
@@ -3958,14 +3991,15 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M07 F11 requires verification that change returns to the reader’s own wallet, identifying `m/84'/0'/0'/1/0`.
 - M07 F16 records that omitted change becomes fee. The absolute fee and change output must be verified before signing.
 - M24 K21 / OI-097 step (D) requires the rehearsal to include a BTC change-output spend.
+- **Fixed in part 2026-11-12 (T11):** the change policy is now documented in §13.5 ("Mainnet change policy (M-27)"), covering destinations, derivation (`m/84'/0'/0'/1/i`), signer control, discovery (scan both branches) and recovery. Tool support added: `derive.js btc-change <index>` derives the change branch watch-only from the account `zpub` (same validation, no private input; ETH/TRX change modes rejected). Change addresses verified against two independent implementations (Trust Wallet Core WASM and Python bip_utils): index 0 `bc1qx3hncnu3lknuejrmzse4nf2yjwpaskgn6tpnve`, index 1 `bc1q2musnpmapynlze7lsq4jva8qf58acgkmd4txhs`, both distinct from the receiving addresses. Astra second-pass review (P02c) found one defect — a bare change address carries no branch marker and could be mistaken for a receiving address — fixed by printing the branch to stderr (stdout stays bare for scripts) and recording the no-marker rule in §13.5. Regression tests in `test/smoke.test.js` (§5b), including the stderr-marker check; full suite passes.
 
-**Status:** OPEN.
+**Status:** OPEN — narrowed. The documented policy and tool support are done (evidence above). What remains is the rehearsal evidence: a BTC change-output spend under M24 K21 step (D), which belongs to the separately authorised small-amount rehearsal (M-35), not to this row's documentation work.
 
-**Operational restriction:** §13 must state that change handling is unresolved. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts.
+**Operational restriction:** §13 now states the change policy. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts. The Web draft's return-to-sender behaviour is not the policy and must not be presented as change handling.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** A documented change policy covering destinations, derivation, signer control, discovery and recovery, before any mainnet send procedure is presented as complete.
+**Clearance condition:** A documented change policy covering destinations, derivation, signer control, discovery and recovery, before any mainnet send procedure is presented as complete. The documentation part was met 2026-11-12 (T11; see Evidence). Row closure additionally requires the rehearsal evidence: a BTC change-output spend under M24 K21 step (D) in the separately authorised small-amount rehearsal (M-35).
 
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-27 — M02 F9; M17 G4; M07 F11 and F16; M24 K21 / OI-097 step (D).
 
@@ -3980,14 +4014,16 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M07 F17–F21 identifies CPFP as the receive-side rescue when RBF is unavailable. Its decision tree is: **wait → RBF bump if signalled → CPFP if the reader controls an output → stop**. Never re-send blindly.
 - M17 O3 records no replace, cancel or RBF procedure for any chain, and no primary sources. M17 O5 requires criteria for retrying after a broadcast timeout and a manual TRX transaction-ID (`txid`) investigation procedure.
 - M08 records that a nonce gap or stuck transaction blocks every later nonce. A speed-up is a same-nonce replacement with policy-compliant higher fees. Cancellation is a paid competing transaction, not an undo. No receipt and a still-pending nonce mean unresolved, not “send it again”.
+- **Named primary sources, re-checked 2026-11-12 (T11):** BTC — **BIP-125, Opt-in Full Replace-by-Fee Signaling** (bitcoin/bips, `bip-0125.mediawiki`, read via bips.dev): explicit signalling is any input with `nSequence < 0xffffffff-1`; a replacement must pay at least the original transactions' summed absolute fee plus its own bandwidth at the minimum relay fee, and the replaced set plus evicted descendants must not exceed 100 transactions. Caveat, unverified against Core docs: secondary sources report Bitcoin Core 28.0 made full-RBF the default, so replacement on default nodes may no longer need the opt-in signal — the "RBF is opt-in" framing needs a direct Core-docs re-check before a written procedure relies on it. ETH — **MetaMask support, "How to speed up or cancel a pending transaction"** (support.metamask.io, read directly 2026-11-12): speed-up re-submits the same transaction at the same nonce with a higher fee; cancellation sends a new transaction at the same nonce (0 ETH to self), working backwards from the oldest pending nonce, with priority fee at least 10% higher and max fee at least 30% higher than the original. Note the stricter wallet guidance (30% max fee) versus the geth pool minimum reported elsewhere (10% on both fee fields); the geth-docs direct re-check is still outstanding. TRX — **TRON Developer Hub, GetTransactionById** (developers.tron.network, read directly 2026-11-12): "This API returns the transaction body, not the execution receipt. Use GetTransactionInfoById when you need fees, Energy usage, event logs, internal transactions, or execution status." That confirms the §11 procedure's two-step design (body, then receipt). TON — no replacement primary source named yet; outstanding.
+- **M17 O5 manual TRX txid investigation procedure supplied and verified live 2026-11-12 (T11):** new §11 subsection "Manual TRX txid investigation procedure (M-28)" — `wallet/gettransactionbyid` (unknown txid returns `{}`), `wallet/gettransactioninfobyid` (`blockNumber`, `result`, `receipt.result`, hex `resMessage`), TronScan cross-check (`confirmed`, `contractRet`, `result`), decision table and stop rule. Worked example from public fixture history: txid `85add9e11da48b1bff7eb7ec4e87abc261533713ede4eec9a22be312371ca698`, block 86280744, `FAILED` / `OUT_OF_ENERGY`, `resMessage` decoding to "Not enough energy for 'PUSH1' operation executing: curInvokeEnergyLimit[0], curOpEnergy[335], usedEnergy[0]"; TronScan agreed. TronScan API reachable from the VM on 2026-11-12 (reversing the 2026-11-09 "unverified-from-VM" note for the API).
 
-**Status:** OPEN.
+**Status:** OPEN — narrowed. The M17 O5 TRX investigation procedure is supplied and live-verified (evidence above). Still missing: the written replacement procedure under M17 O3, named primary sources for ETH (direct), TRX and TON, and the Bitcoin Core full-RBF re-check. No replacement is executable from the drafts in any case: there is no composer, signing or broadcast path to exercise one.
 
-**Operational restriction:** Present RBF, CPFP and replacement as missing procedures, not features. Teach the decision tree above: a stuck transaction needs that investigation and decision path, not an instruction to send again.
+**Operational restriction:** Present RBF, CPFP and replacement as missing procedures, not features. Teach the decision tree above: a stuck transaction needs that investigation and decision path, not an instruction to send again. The TRX investigation procedure in §11 is read-only; it authorises no retry, replacement or re-send.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Named primary sources for each chain, followed by a written procedure under M17 O3, plus the manual TRX `txid` investigation procedure required by M17 O5.
+**Clearance condition:** Named primary sources for each chain, followed by a written procedure under M17 O3, plus the manual TRX `txid` investigation procedure required by M17 O5. The M17 O5 part was met 2026-11-12 (T11; §11 procedure, live-verified). Named sources now held: BTC (BIP-125), ETH (MetaMask support, read directly), TRX (TRON Developer Hub, read directly). Still outstanding: a TON replacement primary source; the geth-docs direct re-check; the Bitcoin Core full-RBF re-check; and the written replacement procedure itself, which additionally needs a send path to exercise — none exists in the drafts.
 
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-28 — M07 F17–F21; M17 O3 and O5; M08.
 
@@ -4002,6 +4038,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M07 F9 records 32 transactions and 311,775 sats funded for the BTC fixture.
 - M29 treats funding the fixture addresses as immediate loss because the mnemonic is public. The warning must precede any mnemonic/address table.
 - M03 F06 states that the 15-word vector must never become a funded wallet or a recovery wallet.
+- **Placement verified first-hand 2026-11-12 (T11):** §1/§2 warnings precede §7; §7 "Fund none of the addresses below" precedes the offline-fixture table; the public-test-vector warning precedes the mainnet-fixture table; "Funding any address in the table below is immediate loss" precedes the §9 table; "Never fund a published fixture address" precedes the §11 fixture table. Regression-guarded in `test/smoke.test.js` (§5c, content anchors, not line numbers) — a future edit that moves a table above its warning fails the suite.
 
 **Status:** OPEN (standing rule).
 
@@ -4399,7 +4436,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 | 26. `docs/09` migration details (descriptor examples, placeholders, expected-result text, verified mainnet replacements) | m17 O7 | OPEN — file-and-line audit of `docs/09` first. |
 | 27. 24-word policy enforcement unverified (policy stated, enforcement behaviour not shown) | m02 | OPEN — verify separately. |
 | 28. In-browser fixture reproduction on mainnet endpoints unverified | m29 | OPEN — check derivation, displayed addresses and network selection without funding. |
-| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 195 Warning callouts; unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
+| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 21 Warning callouts in this guide, 118 repo-wide, re-counted 2026-11-12; unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
 | 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED in part — UI-appendix placement decided; §5 proof-staleness remains OPEN, carried as M-33. |
 | 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | RESOLVED 2026-11-10 — carried as M-34 (worktree treatment applied and pushed). |
 | 32. Landing and re-check of all 36 source slices | M35 §3 item 32; O-M35-1 | CLOSED — all 36 slices landed and were re-checked. |

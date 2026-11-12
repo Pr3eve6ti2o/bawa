@@ -1135,6 +1135,56 @@ Module._load = function (request, parent, isMain) {
     }
   }
 
+  // 5b. M-27: BTC change-branch derivation (watch-only, same account zpub).
+  // Change addresses verified against TWO independent implementations
+  // (Trust Wallet Core WASM and Python bip_utils) on 2026-11-12, T11.
+  const CHANGE = {
+    0: "bc1qx3hncnu3lknuejrmzse4nf2yjwpaskgn6tpnve",
+    1: "bc1q2musnpmapynlze7lsq4jva8qf58acgkmd4txhs",
+  };
+  for (const index of [0, 1]) {
+    const addr = deriveFromXpub(core, FIXTURES.btc.xpub, CoinType.bitcoin, `m/84'/0'/0'/1/${index}`);
+    check(`btc change index ${index} derives expected address`, addr === CHANGE[index], addr);
+    check(`btc change index ${index} differs from receiving`, addr !== FIXTURES.btc[index]);
+  }
+  for (const index of [0, 1]) {
+    const r = runCli("derive.js", ["btc-change", String(index)], FIXTURES.btc.xpub + "\n");
+    check(`derive.js btc-change ${index} CLI prints expected address`, r.status === 0 && r.stdout.trim() === CHANGE[index], `status=${r.status} out=${r.stdout.trim()}`);
+    check(`derive.js btc-change ${index} CLI marks the branch on stderr`, (r.stderr || "").includes("change branch m/84'/0'/0'/1/" + index), `stderr=${(r.stderr || "").trim()}`);
+  }
+  const noEthChange = runCli("derive.js", ["eth-change", "0"], FIXTURES.eth.xpub + "\n");
+  check("derive.js rejects eth-change (no ETH change branch)", noEthChange.status === 2, `status=${noEthChange.status}`);
+  const zprvChange = runCli("derive.js", ["btc-change", "0"], `${NEGATIVE.ZPRV}\n`);
+  check("derive.js btc-change rejects private key", zprvChange.status === 2 && zprvChange.stdout === "", `status=${zprvChange.status}`);
+  {
+    const src = fs.readFileSync(path.join(TOOLS_DIR, "derive.js"), "utf8");
+    check("derive.js carries BTC change path", src.includes("m/84'/0'/0'/1/${i}"));
+  }
+
+  // 5c. M-29 / M-26 register guards: never-fund warning placement and the
+  // glossary Mainnet row. Anchors are content strings, not line numbers,
+  // so ordinary prose edits above them do not break the checks.
+  {
+    const repoRoot = path.join(__dirname, "..");
+    const guide = fs.readFileSync(path.join(repoRoot, "docs", "mainnet", "MAINNET-GUIDE.md"), "utf8");
+    const glossary = fs.readFileSync(path.join(repoRoot, "docs", "GLOSSARY.md"), "utf8");
+    const warnBefore = (warning, tableAnchor, label) => {
+      const w = guide.indexOf(warning);
+      const t = guide.indexOf(tableAnchor);
+      check(`M-29 ${label}: never-fund warning precedes fixture table`, w !== -1 && t !== -1 && w < t, `warn=${w} table=${t}`);
+    };
+    warnBefore("Fund none of the addresses below", "| Chain | Derivation path | Expected public-fixture address |", "§7 offline fixtures");
+    warnBefore("Public test-vector warning: funding any address in the table below is immediate loss", "| Chain | Mainnet derivation path | First receiving-address fixture — never fund |", "§7 mainnet fixtures");
+    warnBefore("Funding any address in the table below is immediate loss", "| Chain | Recorded path or wallet parameters | Expected fixture address |", "§9 published fixtures");
+    warnBefore("Never fund a published fixture address.", "| Chain | Published fixture address — never fund |", "§11 fixture table");
+    const sec2Never = guide.indexOf("If an address is derived from the published 15-word");
+    const sec7 = guide.indexOf("## 7. Shared contracts and wallet generation");
+    check("M-29 §2 never-fund warning precedes §7", sec2Never !== -1 && sec7 !== -1 && sec2Never < sec7, `warn=${sec2Never} sec7=${sec7}`);
+    check("M-26 glossary Mainnet row is not scope-denying", !glossary.includes("Mainnet is outside this guide's scope"), "glossary still carries the false Mainnet scope sentence");
+    const proseBeforeRegister = guide.slice(0, guide.indexOf("## 21."));
+    check("M-26 no 'Never use real funds' in guide prose before §21", !proseBeforeRegister.includes("Never use real funds"), "testnet-only warning survives in mainnet prose");
+  }
+
   // 6. Daemon JSONL protocol.
   await testDaemon();
   // 6b. Daemon branch protocol (M-41).
