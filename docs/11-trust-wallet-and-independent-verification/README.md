@@ -304,7 +304,7 @@ For the standards and paths covered by Bawa’s differential tests, require Wall
 
 ### Use the reference engine and independent verifier
 
-Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
+Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. This reference-engine role records the version the guides’ verification evidence was produced against; it does not make `4.9.2` the pin. `4.9.2` is a GitHub prerelease; the repository pin remains `4.8.4` and the upgrade candidate is `4.9.1` (Doc 4 section 21 M-21). Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
 
 Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
 
@@ -498,7 +498,7 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 
 ### CI discipline, reproducible checks and build verification
 
-Use Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) in place of the superseded 4.8.4 pin.
+Use the repository pin, Trust Wallet Core **4.8.4**, in CI. Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) is the version the D21 EIP-1559 demonstration ran on; it is a GitHub prerelease, not the pin, and it does not supersede `4.8.4`. The upgrade candidate is `4.9.1`, pending its qualification run (Doc 4 section 21 M-21).
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. Do not carry that demonstration forward as proof of the in-browser flow.
 

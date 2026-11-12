@@ -643,7 +643,7 @@ The repo vault is the `seed.enc.json` bundle, not browser storage. Without its s
 
 The Web draft uses **PBKDF2 with 600,000 iterations** and a **10-minute auto-lock**. These are draft-only parameters, not repo controls. The browser vault has never been independently reviewed.
 
-The claim of “10 minutes of inactivity” is inaccurate: the timer re-arms only on unlock, not on activity.
+The claim of “10 minutes of inactivity” is inaccurate: the timer re-arms only on unlock or mnemonic access through `requireMnemonic()`, not on activity. Lock explicitly before leaving the wallet unattended; do not rely on the timer.
 
 > **Warning** If using the Web draft browser vault, keep independent offline recovery material and do not rely on browser storage as your only copy. It is weaker storage than an offline bundle: browser compromise can expose keys, and clearing browser data can erase the only copy and strand funds.
 
@@ -2935,7 +2935,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Core pin agreement — unresolved revision input
 
-**Status: unperformed.** Core is pinned at `4.8.4` but stated as `4.9.2`.
+**Status: resolved in the T10 working patch (2026-11-12), pending coordinator merge verification.** Resolution: the repository pin is `4.8.4`; the guides no longer state `4.9.2` as the repository pin or as the upgrade candidate. `4.9.2` remains only as the Android guide's testnet source-build pin for the demonstrated D21 scope, labelled as a GitHub prerelease, and `4.9.1` is the upgrade candidate pending its qualification run (M-21). Evidence: npm registry and GitHub release-page re-check 2026-11-12 (see M-21).
 
 - **Observable check:** Reconcile the pinned version, the version stated in the guide and the version proposed for the reviewed route. Do not silently select one side of the mismatch.
 - **Required evidence:** A cited resolution, the corresponding reviewed revision and evidence identifying the version actually checked for that scope.
@@ -3219,7 +3219,7 @@ For BIP-32, cite the [verified raw text](https://raw.githubusercontent.com/bitco
 **Wallet-core tally: 36 links — 35 LIVE and 1 DEAD-404 by design.**  
 **Tooling/install tally: 17 links — 14 LIVE, 1 LIVE-via-registry, 1 DEAD-404 template and 1 EXISTS-VM-BLOCKED.** [M31]
 
-Use the **Trust Wallet Core repository and `registry.json` at 4.8.4**, the Bawa repo pin. The release tagged **4.9.2** is an upgrade candidate, **not the pin**; do not use it as evidence for the pinned version’s behaviour. [M31; M28]
+Use the **Trust Wallet Core repository and `registry.json` at 4.8.4**, the Bawa repo pin. The release tagged **4.9.2** is a GitHub prerelease: it is **not** the upgrade candidate (that is **4.9.1**, pending its qualification run — M-21) and **not the pin**; do not use it as evidence for the pinned version’s behaviour. [M31; M28]
 
 Carry these access and citation qualifications:
 
@@ -3703,7 +3703,9 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - **OI-101 — Wrong-network signing threat:** blocker; requires an immutable mainnet profile bound to derivation, decoding, lookup, review, signing and broadcast.
 - **OI-102 — Mainnet review-gate acceptance criteria:** blocker; requires scope, owners, criteria, a result matrix, failure disposition and recorded sign-off.
 
-**Status:** OPEN — these are proposed rows for the Doc 3 register. Doc 4 §21 carries their substance as M-rows.
+**2026-11-12 re-check (T10):** the Doc 3 register contained no OI-097–OI-102 rows (it ended at OI-096); the six rows were added by this patch. Limitation: the verbatim M24 K21–K26 text is not in the repository or on the VM — the summaries above are the source. Only the K21→OI-097 and K26→OI-102 mappings are independently confirmed (M-35 cites K21/OI-097; M-31 cites K26/OI-102). Substance mapping verified against the M-rows (Astra review 2026-11-12, out-b-m20.md): OI-097→M-35 and OI-098→M-11 are carried; OI-099→M-07/M-14, OI-100→M-12/M-10 and OI-101→M-06/M-02 are partially carried (the full requirement exceeds the named M-rows); OI-102 is referenced by M-31 as a dependency, not carried. The partial-carriage gaps are themselves recorded by the rows' OPEN status.
+
+**Status:** OPEN — the six rows were recorded in the Doc 3 register on 2026-11-12 (T10 patch; see Doc 3, Consolidated open-items register, OI-097–OI-102). Recording them does not clear this row: per-row evidence is still required, and Doc 4 §21 carries their substance as M-rows.
 
 **Operational restriction:** Doc 4 §21 must carry each row’s substance and its disposition. No row may be closed by relabelling; recording a gate does not clear it.
 
@@ -3721,11 +3723,15 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 
-- **M05 F2/F3/F7:** `4.9.2` is npm `latest`, but its GitHub release has `prerelease: true` and was published on 2026-11-06. `4.9.1` has `prerelease: false` and is the latest stable release and upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`.
+- **M05 F2/F3/F7 (corrected 2026-11-12, T10):** `4.9.2` was npm `latest` at the 2026-11-09 baseline, but its GitHub release has `prerelease: true` (labelled “Pre-release” on the release page, re-checked live 2026-11-12) and was published on 2026-11-06. `4.9.1` is the latest stable release and upgrade candidate. They share source commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3` (npm `gitHead` for both, verified live 2026-11-12; the earlier draft cited `d40d24a`, which is the **4.8.4** tag commit, not the 4.9.1/4.9.2 commit). Their npm tarballs and SHA-1 hashes differ (`4.9.1` SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`; `4.9.2` SHA-1 `67fbe7c826fbb84b091d2b1c7a31677498924be5`). Neither carries an Android `.aar`. Live re-check 2026-11-12: npm `latest` is now `4.9.3`; `4.9.1` has no GitHub release (API 404).
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — the `4.9.1` qualification run specified in M05 O3 completed with recorded results (see Evidence). The repository pin stays `4.8.4`; qualification is not promotion — moving the pin is a separate maintainer decision requiring the repository's actual wrapper, build and deployed runtime to be exercised with `4.9.1` in a disposable checkout.
+
+**2026-11-12 (T10):** the guide prescriptions of `4.9.2` as the pin were corrected (ANDROID-GUIDE §B.6 and §§E/K, docs/11, Doc 4 §20).
+
+**Qualification run 2026-11-12 (T10; lane evidence `bawa-fanout/T10/evidence/qual-491/`):** wallet-core `4.9.1` installed exactly in a scratch directory (Node v22.23.4, Python 3.12.3); tarball SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0` verified against the npm record. Derivation 7/7 byte-identical: BTC/ETH/TRX indices 0–1 (6 published addresses) plus TON V4 R2 deposit address `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` with matching ed25519 public key. EIP-1559: locally signed with chain ID `1`, `txMode` Enveloped; independent Python recovery (17/17 checks) verified the `0x02` envelope, 12 RLP fields, chain ID 1, all intended fields (nonce 0, gas 21000, 20/2 gwei fees), canonical low-s signature, and recovered sender = published fixture sender. Nothing was broadcast; no funds moved. Mainnet endpoints (read-only, 2026-11-12T08:38:58Z): ETH `eth_chainId 0x1`, BTC tip height 975533, TRON block 87932966. Design reviewed by Astra (out-c-m21.md); its gaps were closed in the run (artifact hash, TON, low-s, field assertions). Still open and NOT part of this clearance: the in-browser WASM parity run on `4.9.1` (OI-092) and the promotion run against the repo's actual wrapper/build/runtime.
 
 **Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.1` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.2` results as `4.9.1` results.
 
@@ -3745,6 +3751,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 - **M34 F2:** “10 minutes of inactivity” is inaccurate. The Web timer re-arms only on unlock or `requireMnemonic()`; `poke()` is never called. There is no visibility-change or unload lock.
 - **M34 F15:** there is no inactivity timeout anywhere in the Android draft. Manual locking and the per-use biometric gate are the stated controls.
+- **2026-11-12 re-check (T10):** the inactivity wording occurs repo-wide only as a correction (Doc 4 §10, §15, this row); §10 now states the re-arm behaviour (unlock or mnemonic access) and tells readers to lock explicitly; no auto-lock code exists in either starter. The row stays OPEN as a wording rule per its clearance condition.
 
 **Status:** OPEN.
 
@@ -3767,6 +3774,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - **M34 F8:** Android Keystore documentation says that a biometric-only key is invalidated by default when new biometric enrolments are added. The draft calls `setUserAuthenticationRequired(true)` without calling `setUserAuthenticationParameters`. The invalidation default is therefore qualified, not a certain outcome for this key builder. The per-use-authentication reading is verified.
 - **M34 F10:** `WalletSession.unlock()` performs no biometric check; the gate lives in the UI layer.
 - **M34 F11:** the draft adds `FLAG_SECURE` on the Backup and Import routes only and clears it elsewhere.
+- **2026-11-12 re-check (T10):** the cited draft symbols (`WalletSession.kt`, `Screens.kt`, `App.kt`) do not exist in the repository at `981d0ba` (no such files; no deletion in history; the Android starter commit never contained them), and the real Android starter contains no Keystore, biometric or `FLAG_SECURE` code — only manual `lock()`/`unlock()` in `WalletViewModel.kt`. The actual key authorisation configuration therefore cannot be established from the repository, and the clearance condition is unmet (not merely qualified). ANDROID-GUIDE L1805 already prescribes the correct configuration; Doc 4 §10 already warns correctly. Evidence standard (Astra, 2026-11-12, verified against the Android Developers KeyProtection reference): the configuration is established either by inspecting the actual `KeyGenParameterSpec.Builder` calls (`setUserAuthenticationRequired`, `setUserAuthenticationParameters`, `setUserAuthenticationValidityDurationSeconds`, `setInvalidatedByBiometricEnrollment`) or by a runtime `KeyInfo` report (`isUserAuthenticationRequired()`, `getUserAuthenticationType()`, `getUserAuthenticationValidityDurationSeconds()`, `isInvalidatedByBiometricEnrollment()`). With only `setUserAuthenticationRequired(true)`, the defaults are per-use, strong-biometric-only authentication with enrolment invalidation enabled. Including `AUTH_DEVICE_CREDENTIAL` in the key's authorisation types prevents enrolment invalidation; a credential fallback in the UI alone does not reconfigure an existing key. The row stays OPEN; its blocker is the absence of any key-builder code to inspect.
 
 **Status:** OPEN.
 
@@ -3790,6 +3798,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - **M28-OI-06:** TON is generation-only, but a mainnet reader will expect to send TON.
 - **M10:** TON is generation-only in the repository. The Web and Android drafts carry a send path, but it has never been exercised.
 - **M18 F06:** the generation-only TON path provides a single deposit address, with no `xpub`.
+- **2026-11-12 re-check (T10):** §13 states capability boundaries only (TON receivable, not sendable); §13.7 carries the scope box; no TON send procedure, broadcast instructions or rehearsal procedure for TON exists in §13. The 2026-11-10 resolution is intact.
 
 **Status:** RESOLVED 2026-11-10 — the user approved the recommended scope: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
 

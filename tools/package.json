@@ -12,7 +12,7 @@
     "test": "npm --prefix hdwallet-gen test",
     "test:registry": "node ../tests/registry.test.mjs",
     "test:negative": "node ../tests/negative-inputs.test.mjs",
-    "test:all": "npm --prefix hdwallet-gen test && node ../tests/registry.test.mjs && node ../tests/negative-inputs.test.mjs",
+    "test:all": "npm --prefix hdwallet-gen test && node ../tests/registry.test.mjs && node ../tests/negative-inputs.test.mjs && node ../tests/register-t10.test.mjs",
     "validate": "node ../scripts/validate-registry.mjs"
   },
   "license": "MIT"
