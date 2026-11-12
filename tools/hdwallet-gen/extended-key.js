@@ -110,13 +110,13 @@ function decode82Bytes(input) {
 
 // Shared checks 1–3: alphabet, decoded length, then Base58Check checksum.
 function decodeAndCheck(input) {
-  // Length cap before the alphabet regex, so oversized input is not scanned.
-  if (typeof input === "string" && input.length > MAX_BASE58_LENGTH) {
-    return failure(
-      "bad-length",
-      "extended key must decode to exactly 82 bytes"
-    );
-  }
+  // Alphabet scan before the length cap, so an over-long input that also
+  // contains a non-Base58 character is rejected for the invalid character
+  // (bad-base58) rather than for length (bad-length). The scan is a
+  // linear, allocation-free regex test (NON_BASE58 has no /g flag, so
+  // .test is stateless); decode82Bytes below still caps decoding at 112
+  // characters, so oversized input cannot cause oversized allocations.
+  // (T42 reaudit-02a LOW; the 112-char cap itself is unchanged.)
   // Do not trim or normalise input; whitespace is not a Base58 character.
   if (
     typeof input !== "string" ||
@@ -126,6 +126,12 @@ function decodeAndCheck(input) {
     return failure(
       "bad-base58",
       "extended key must be a non-empty string of Base58 characters"
+    );
+  }
+  if (input.length > MAX_BASE58_LENGTH) {
+    return failure(
+      "bad-length",
+      "extended key must decode to exactly 82 bytes"
     );
   }
 

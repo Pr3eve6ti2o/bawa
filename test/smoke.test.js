@@ -1653,6 +1653,33 @@ Module._load = function (request, parent, isMain) {
       oversizedResult.ok === false && oversizedResult.reason === "bad-length",
       `ok=${oversizedResult.ok}, reason=${oversizedResult.reason}`
     );
+
+    // T42 reaudit-02a (R04): the alphabet scan runs before the 112-char
+    // cap, so an over-long input with an invalid character reports
+    // bad-base58, not bad-length. Covers the invalid character at the
+    // first over-long position (112 x "1" + "0") and one deep inside a
+    // long input (200 x "1" + "0"); the all-alphabet case above still
+    // reports bad-length, so the cap itself is unchanged.
+    const oversizedInvalidResult = validateExtendedKey(
+      "1".repeat(112) + "0",
+      "btc"
+    );
+    check(
+      "validateExtendedKey rejects over-long input with invalid character as bad-base58",
+      oversizedInvalidResult.ok === false &&
+        oversizedInvalidResult.reason === "bad-base58",
+      `ok=${oversizedInvalidResult.ok}, reason=${oversizedInvalidResult.reason}`
+    );
+    const deepInvalidResult = validateExtendedKey(
+      "1".repeat(200) + "0",
+      "btc"
+    );
+    check(
+      "validateExtendedKey rejects long input with deep invalid character as bad-base58",
+      deepInvalidResult.ok === false &&
+        deepInvalidResult.reason === "bad-base58",
+      `ok=${deepInvalidResult.ok}, reason=${deepInvalidResult.reason}`
+    );
   }
 
   // 12. T41: generate.js backup-confirmation helpers.
