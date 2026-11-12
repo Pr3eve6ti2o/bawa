@@ -75,6 +75,14 @@ on-device derivations or live confirmation checks.
 - Lock is a UI state only, not a security boundary.
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
 - The app requests no `INTERNET` permission.
+- Backups disabled (T47): `android:allowBackup="false"` — wallet data must never
+  leave the device in a cloud or adb backup.
+- Screenshots blocked (T47): `MainActivity` sets `FLAG_SECURE`, so receive QR codes
+  and xpubs do not appear in screenshots, screen recordings or recent-apps
+  thumbnails. UI hardening only — the starter holds no secrets.
+- Network posture explicit (T47): `res/xml/network_security_config.xml` forbids
+  cleartext traffic. The app makes no network calls; the file exists so a future
+  network addition cannot silently re-enable cleartext.
 - Testnet only by policy; mainnet is out of scope.
 
 ## File map

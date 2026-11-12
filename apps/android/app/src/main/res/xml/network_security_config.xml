@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- T47: explicit network-security posture. The starter makes no network
+     calls and requests no INTERNET permission; this file states that posture
+     so a future network addition cannot silently re-enable cleartext.
+     cleartextTrafficPermitted="false" is also the platform default for
+     targetSdk 35 — this is defence in depth, not a behaviour change. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

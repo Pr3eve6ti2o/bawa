@@ -70,6 +70,18 @@ Derivation policy, where `i` is the address index:
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
 - Testnet only by policy; mainnet is out of scope. The derivation paths are not a
   network-enforcement mechanism.
+- Content-Security-Policy (T47): `src/app/security-headers.ts` is the single source
+  of truth. The strict policy (`script-src 'self' 'wasm-unsafe-eval'`, no inline
+  scripts, `object-src 'none'`, `frame-ancestors 'none'`) is served as an HTTP
+  header by `vite preview` and injected as a `<meta>` tag into `dist/index.html`
+  at build time only — Vite dev injects an inline react-refresh preamble, so a
+  source-level meta tag would break `npm run dev`. Any production host serving
+  `dist/` must send the same `Content-Security-Policy` header (plus
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`); the meta tag alone
+  cannot enforce `frame-ancestors`.
+- WASM integrity (T47): `scripts/copy-wasm.mjs` refuses to copy a wallet-core.wasm
+  whose SHA-256 differs from the published @trustwallet/wallet-core@4.8.4 pin in
+  `scripts/wasm-integrity.mjs`. Bump the pin from the new published tarball only.
 
 ## File map
 
