@@ -49,6 +49,40 @@ function verifySeedBundle(bundlePath, dataKey, expectedMnemonic) {
   }
 }
 
+// T41: pure helpers for the backup confirmations (unit-tested in
+// test/smoke.test.js). Normalisation is case- and whitespace-insensitive;
+// comparison is plain string equality — the expected values were just
+// displayed on this terminal, so there is no oracle to protect with a
+// constant-time compare.
+function normalizeWords(text) {
+  return text.trim().toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+}
+
+function wordsMatch(entered, expected) {
+  return normalizeWords(entered) === normalizeWords(expected);
+}
+
+function keyMatches(entered, dataKeyHex) {
+  return entered.trim().toLowerCase() === dataKeyHex.toLowerCase();
+}
+
+// T41: read exactly 32 raw key bytes from an inherited file descriptor
+// (the make_wallet.py pipe handoff). Throws on EOF, short reads, or a
+// non-numeric descriptor. The caller closes the descriptor.
+function readDataKeyFromFd(fd) {
+  if (!Number.isInteger(fd) || fd < 0) {
+    throw new Error("BAWA_DATA_KEY_FD must be a file descriptor number");
+  }
+  const buf = Buffer.alloc(32);
+  let off = 0;
+  while (off < 32) {
+    const n = fs.readSync(fd, buf, off, 32 - off, null);
+    if (n === 0) throw new Error("BAWA_DATA_KEY_FD: unexpected EOF");
+    off += n;
+  }
+  return buf;
+}
+
 // Resolve the secrets directory. Canonical name BAWA_SECRETS_DIR;
 // NOVA_SECRETS_DIR is accepted during the one-release compatibility
 // window with a deprecation warning. Both names set to different values
@@ -344,10 +378,30 @@ async function main() {
   // data-key display strings (immutable JS strings, plus split()/toString()
   // copies). Secret-string copies stay at the confirmation minimum: one hex
   // display and one first-word comparison.
-  // The wrapper may supply the data key (BAWA_DATA_KEY_HEX) so it can
-  // independently verify the bundle afterwards; otherwise generate one.
-  // A supplied key must be exactly 64 hex characters (32 bytes).
+  // The wrapper may supply the data key over an inherited pipe
+  // (BAWA_DATA_KEY_FD) so it can independently verify the bundle
+  // afterwards; that replaces the old environment handoff
+  // (BAWA_DATA_KEY_HEX), which left the key visible in /proc/<pid>/environ
+  // to same-user processes. A directly-run generator still accepts
+  // BAWA_DATA_KEY_HEX (standalone use); otherwise a fresh key is generated.
+  // A supplied key must be exactly 32 raw bytes (fd) or 64 hex chars (env).
   const dataKey = (() => {
+    const fdRaw = process.env.BAWA_DATA_KEY_FD;
+    if (fdRaw !== undefined) {
+      if (!/^\d+$/.test(fdRaw)) {
+        throw new Error(
+          "BAWA_DATA_KEY_FD must be a file descriptor number"
+        );
+      }
+      const fd = Number(fdRaw);
+      const key = readDataKeyFromFd(fd);
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // The descriptor is single-use; a close failure is not fatal.
+      }
+      return key;
+    }
     const supplied = process.env.BAWA_DATA_KEY_HEX;
     if (supplied === undefined) return crypto.randomBytes(32);
     if (!/^[0-9a-fA-F]{64}$/.test(supplied)) {
@@ -363,14 +417,6 @@ async function main() {
     cipher.setAAD(Buffer.from("nova-shop-seed-v1", "utf8"));
     const encBody = Buffer.concat([cipher.update(mnemonic, "utf8"), cipher.final()]);
 
-    const show = (s) => fs.writeSync(tty, s);
-    show("\n" + "=".repeat(64) + "\n");
-    show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
-    show("=".repeat(64) + "\n");
-    show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
-      dataKey.toString("hex") + "\n");
-    show("=".repeat(64) + "\n");
-
     const ttyIn = fs.openSync("/dev/tty", "r");
     const readLine = (fd) => {
       let line = "";
@@ -385,13 +431,51 @@ async function main() {
       return line;
     };
 
-    show("Type the first word of the seed phrase to confirm you wrote it down: ");
-    if (readLine(ttyIn).trim() !== mnemonic.trim().split(/\s+/)[0]) {
-      throw new Error("Seed phrase confirmation failed — not writing seed.enc.json");
+    const show = (s) => fs.writeSync(tty, s);
+    // T41: reveal step. The secrets below stay on this terminal's
+    // scrollback and in any session recording, so the operator must
+    // confirm a private, unrecorded session BEFORE they are shown.
+    show("PRIVACY CHECK — the seed phrase and data key are about to appear on this terminal.\n");
+    show("Make sure nobody can see this screen, nothing is recording the session,\n");
+    show("and screen sharing is off. Press Enter when ready (Ctrl-C to abort): ");
+    readLine(ttyIn);
+    show("\n" + "=".repeat(64) + "\n");
+    show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
+    show("=".repeat(64) + "\n");
+    show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
+      dataKey.toString("hex") + "\n");
+    show("=".repeat(64) + "\n");
+
+    // T41: full re-entry confirmation (replaces the old first-word-only
+    // check, which passed a paper copy with any of words 2-24 wrong,
+    // missing, duplicated or reordered). The operator re-types all 24
+    // words from the written copy; entry may span several lines. The
+    // typed words echo — they were just displayed above, so echoing
+    // adds no new exposure. Any mismatch aborts before the bundle is
+    // written. This verifies transcription accuracy, not the medium:
+    // it cannot prove the words are on paper.
+    show("Re-type all 24 words from your written copy (several lines are fine):\n");
+    const enteredWords = [];
+    while (enteredWords.length < 24) {
+      const line = readLine(ttyIn);
+      const words = line.trim().split(/\s+/).filter(Boolean);
+      if (words.length === 0) {
+        if (enteredWords.length === 0) continue;
+        break;
+      }
+      enteredWords.push(...words);
     }
-    show("Type SAVED to confirm you stored the data key: ");
-    if (readLine(ttyIn).trim() !== "SAVED") {
-      throw new Error("Data key confirmation failed — not writing seed.enc.json");
+    if (!wordsMatch(enteredWords.join(" "), mnemonic)) {
+      throw new Error("Seed phrase confirmation failed — the re-typed words do not match; not writing seed.enc.json");
+    }
+
+    // T41: data-key re-entry (replaces the old "Type SAVED" step, which
+    // proved nothing about the saved copy). The operator re-types the
+    // key from the saved copy; echoing is harmless — the key was just
+    // displayed above. A mismatch aborts before the bundle is written.
+    show("Re-type the data key from your saved copy: ");
+    if (!keyMatches(readLine(ttyIn), dataKey.toString("hex"))) {
+      throw new Error("Data key confirmation failed — the re-typed key does not match; not writing seed.enc.json");
     }
     fs.closeSync(ttyIn);
     fs.closeSync(tty);
@@ -495,4 +579,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { verifySeedBundle, resolveSecretsDir, acquirePublishLock, releasePublishLock, publishSeedBundle };
+module.exports = { verifySeedBundle, resolveSecretsDir, acquirePublishLock, releasePublishLock, publishSeedBundle, normalizeWords, wordsMatch, keyMatches, readDataKeyFromFd };

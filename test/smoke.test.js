@@ -1655,6 +1655,55 @@ Module._load = function (request, parent, isMain) {
     );
   }
 
+  // 12. T41: generate.js backup-confirmation helpers.
+  {
+    const { normalizeWords, wordsMatch, keyMatches, readDataKeyFromFd } =
+      require(path.join(TOOLS_DIR, "generate.js"));
+    const phrase24 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art";
+    check("normalizeWords: case/whitespace-insensitive",
+      normalizeWords("  Abandon\tABANDON\nart  ") === "abandon abandon art");
+    check("wordsMatch: identical phrases match", wordsMatch(phrase24, phrase24) === true);
+    check("wordsMatch: one wrong word fails",
+      wordsMatch(phrase24.replace("art", "about"), phrase24) === false);
+    check("wordsMatch: reordered words fail",
+      wordsMatch(phrase24.split(" ").reverse().join(" "), phrase24) === false);
+    check("wordsMatch: 23 words fail",
+      wordsMatch(phrase24.split(" ").slice(0, 23).join(" "), phrase24) === false);
+    check("keyMatches: case-insensitive hex match",
+      keyMatches("AB12", "ab12") === true);
+    check("keyMatches: wrong key fails", keyMatches("ab12", "ab13") === false);
+    const keyDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "auditfix-fdkey-"));
+    try {
+      const keyFile = path.join(keyDir, "key.bin");
+      const keyBytes = crypto.randomBytes(32);
+      fs.writeFileSync(keyFile, keyBytes);
+      const fd = fs.openSync(keyFile, "r");
+      try {
+        check("readDataKeyFromFd: reads exactly 32 bytes",
+          Buffer.compare(readDataKeyFromFd(fd), keyBytes) === 0);
+      } finally {
+        fs.closeSync(fd);
+      }
+      const shortFile = path.join(keyDir, "short.bin");
+      fs.writeFileSync(shortFile, crypto.randomBytes(10));
+      const shortFd = fs.openSync(shortFile, "r");
+      let threw = false;
+      try {
+        readDataKeyFromFd(shortFd);
+      } catch {
+        threw = true;
+      } finally {
+        fs.closeSync(shortFd);
+      }
+      check("readDataKeyFromFd: short read throws", threw === true);
+      check("readDataKeyFromFd: non-numeric fd throws", (() => {
+        try { readDataKeyFromFd("x"); return false; } catch { return true; }
+      })());
+    } finally {
+      fs.rmSync(keyDir, { recursive: true, force: true });
+    }
+  }
+
   if (failures > 0) {
     console.log(`SMOKE TESTS FAILED: ${failures} failure(s)`);
     process.exit(1);

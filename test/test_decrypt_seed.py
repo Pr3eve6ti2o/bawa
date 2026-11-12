@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -155,6 +156,127 @@ class TestMainStdout(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertNotIn("Traceback", result.stderr)
         self.assertIn("authentication failed", result.stderr)
+
+
+class TestMainOutput(unittest.TestCase):
+    """T41: --output writes a private file and refuses to clobber."""
+
+    def _run_cli_output(self, plaintext, key, out_path, extra_env=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(plaintext, key, tmp)
+            env = dict(os.environ, BAWA_DATA_KEY=key.hex())
+            if extra_env:
+                env.update(extra_env)
+            result = subprocess.run(
+                [sys.executable, os.path.join(TOOLS_DIR, "decrypt_seed.py"),
+                 "--output", out_path, path],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+            )
+            return result
+
+    def test_output_writes_0600_file(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = os.path.join(tmp, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(out_path).st_mode), 0o600)
+            with open(out_path, encoding="utf-8") as f:
+                self.assertEqual(f.read().strip(), _MNEMONIC_24)
+
+    def test_output_refuses_existing_destination(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = os.path.join(tmp, "recovered.txt")
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write("previous recovery — must survive\n")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 1)
+            with open(out_path, encoding="utf-8") as f:
+                self.assertEqual(
+                    f.read(), "previous recovery — must survive\n"
+                )
+
+    def test_output_refuses_symlink_destination(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "target.txt")
+            link = os.path.join(tmp, "link.txt")
+            os.symlink(target, link)
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, link)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(os.path.exists(target))
+
+    def test_output_creates_private_parent_dirs(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            nested = os.path.join(tmp, "a", "b")
+            out_path = os.path.join(nested, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(nested).st_mode), 0o700)
+
+
+class TestDecryptTamperAndSize(unittest.TestCase):
+    """T41: tampering and oversized bundles are refused."""
+
+    def test_tampered_ciphertext_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            with open(path, encoding="utf-8") as f:
+                bundle = json.load(f)
+            ct = bytearray(base64.b64decode(bundle["ciphertext_b64"]))
+            ct[0] ^= 0xFF
+            bundle["ciphertext_b64"] = base64.b64encode(bytes(ct)).decode()
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(bundle, f)
+            with self.assertRaises(ValueError):
+                decrypt(path, key)
+
+    def test_oversized_bundle_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "seed.enc.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("x" * 70000)
+            with self.assertRaises(ValueError):
+                decrypt(path, key)
+
+    def test_symlinked_bundle_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            real = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            link = os.path.join(tmp, "link.json")
+            os.symlink(real, link)
+            with self.assertRaises(ValueError):
+                decrypt(link, key)
+
+
+class TestReadKeyInvalidEnv(unittest.TestCase):
+    """T41: an unusable env key falls through to the prompt."""
+
+    def test_invalid_hex_env_falls_through_to_prompt(self):
+        key = os.urandom(32)
+        buf = io.StringIO()
+        with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": "not-hex!!"}):
+            with mock.patch("getpass.getpass", return_value=key.hex()):
+                with contextlib.redirect_stderr(buf):
+                    self.assertEqual(_read_key(), key)
+        self.assertIn("BAWA_DATA_KEY", buf.getvalue())
+        self.assertIn("ignoring it", buf.getvalue())
+
+    def test_wrong_length_env_falls_through_to_prompt(self):
+        key = os.urandom(32)
+        buf = io.StringIO()
+        with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": "abcd"}):
+            with mock.patch("getpass.getpass", return_value=key.hex()):
+                with contextlib.redirect_stderr(buf):
+                    self.assertEqual(_read_key(), key)
+        self.assertIn("not 32 bytes", buf.getvalue())
 
 
 if __name__ == "__main__":

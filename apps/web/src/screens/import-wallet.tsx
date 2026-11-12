@@ -28,18 +28,22 @@ export function ImportWalletScreen() {
     if (isAdding) return;
 
     const publicKey = xpub.trim();
-    const validation = await validateExtendedKey(publicKey, chain);
-    if (!validation.ok) {
-      setError(validation.message || 'Enter a valid extended public key.');
-      return;
-    }
-
+    // T41: clear the draft immediately. A pasted mnemonic or private key
+    // must not linger in the field (and in React state / the DOM) after
+    // a rejected submission; the old code returned on validation failure
+    // with the input still populated.
+    setXpub('');
     setError(null);
     setIsAdding(true);
     try {
+      const validation = await validateExtendedKey(publicKey, chain);
+      if (!validation.ok) {
+        // Secret-free error: never echo the rejected input back.
+        setError('Invalid extended public key. The input was cleared; never paste a mnemonic, seed or private key here.');
+        return;
+      }
       await addXpub(chain, publicKey, label.trim());
       toast.success('Watch-only wallet added.');
-      setXpub('');
       setLabel('');
     } catch {
       setError('The wallet could not be added. Please try again.');

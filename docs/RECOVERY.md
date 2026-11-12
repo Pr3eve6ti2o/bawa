@@ -179,7 +179,7 @@ Use this per-asset checklist for **bawa-derivation-policy-v1**:
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
 
-This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. Never paste a real mnemonic or data key anywhere.
+This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of any later change — including the symlink-guard changes, the decryption-code changes at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12, and the T41 confirmation and key-handoff changes — so re-demonstrate the procedure end to end at the current head before relying on it. Never paste a real mnemonic or data key anywhere.
 
 ### 6. Restore the TON configuration exactly, where applicable
 

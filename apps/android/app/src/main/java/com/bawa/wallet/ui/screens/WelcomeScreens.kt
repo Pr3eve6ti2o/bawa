@@ -98,8 +98,9 @@ fun CreateWalletScreen(vm: WalletViewModel) {
             "This starter cannot create a wallet on-device — there is no vault design yet, " +
                 "so no mnemonic is ever generated or shown here."
         )
-        Text("From the root of a fresh clone of the repo, run either:")
-        Text("python3 tools/make_wallet.py\nor\nnode tools/hdwallet-gen/generate.js")
+        Text("From the root of a fresh clone of the repo, run:")
+        Text("python3 tools/make_wallet.py")
+        Text("The wrapper verifies the encrypted backup independently; do not run the generator directly.")
         Text("Follow the on-screen steps and keep the printed 24 words offline.")
 
         PrimaryButton(

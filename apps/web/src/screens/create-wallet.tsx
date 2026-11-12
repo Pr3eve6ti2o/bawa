@@ -42,15 +42,11 @@ export function CreateWalletScreen() {
             <li className="space-y-3">
               <StepCard
                 icon={<span>1</span>}
-                label="Run a repo tool from a fresh clone"
-                detail="From the repository root of a fresh clone, run either command below."
+                label="Run the repo wrapper from a fresh clone"
+                detail="From the repository root of a fresh clone, run the command below. The wrapper verifies the encrypted backup independently — do not run the generator directly."
               />
               <pre className="overflow-x-auto rounded-md bg-muted p-3 text-sm">
                 <code>python3 tools/make_wallet.py</code>
-              </pre>
-              <p className="text-sm text-muted-foreground">or</p>
-              <pre className="overflow-x-auto rounded-md bg-muted p-3 text-sm">
-                <code>node tools/hdwallet-gen/generate.js</code>
               </pre>
             </li>
             <li>

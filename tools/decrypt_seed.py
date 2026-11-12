@@ -40,22 +40,39 @@ def _read_key() -> bytes:
         # F-37: a key in the process environment is visible to other
         # processes running as the same user (and to privileged local
         # processes). Name the variable, never the value.
-        print(
-            "warning: BAWA_DATA_KEY read from the process environment; "
-            "the key is visible to same-user and privileged local "
-            "processes — prefer the non-echoing prompt",
-            file=sys.stderr,
-        )
-        key = bytes.fromhex(raw.strip())
-    else:
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("error", getpass.GetPassWarning)
-                key = bytes.fromhex(getpass.getpass("Bawa data key (hex): ").strip())
-        except getpass.GetPassWarning:
-            raise ValueError(
-                "terminal echo cannot be disabled; refusing to read data key"
-            ) from None
+            key = bytes.fromhex(raw.strip())
+        except ValueError:
+            # T41: an unusable env value must not hard-fail the recovery:
+            # warn (naming only the variable) and fall through to the
+            # prompt instead of aborting on a stale export.
+            print(
+                "warning: BAWA_DATA_KEY is not valid hex; ignoring it — "
+                "use the prompt (unset the variable to silence this)",
+                file=sys.stderr,
+            )
+        else:
+            if len(key) == 32:
+                print(
+                    "warning: BAWA_DATA_KEY read from the process environment; "
+                    "the key is visible to same-user and privileged local "
+                    "processes — prefer the non-echoing prompt",
+                    file=sys.stderr,
+                )
+                return key
+            print(
+                "warning: BAWA_DATA_KEY is not 32 bytes; ignoring it — "
+                "use the prompt (unset the variable to silence this)",
+                file=sys.stderr,
+            )
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            key = bytes.fromhex(getpass.getpass("Bawa data key (hex): ").strip())
+    except getpass.GetPassWarning:
+        raise ValueError(
+            "terminal echo cannot be disabled; refusing to read data key"
+        ) from None
     if len(key) != 32:
         raise ValueError("data key must be exactly 32 bytes")
     return key
@@ -167,12 +184,23 @@ def main() -> int:
         # what it says).
         raise SystemExit("refusing symlinked output path")
 
+    # T41: never silently destroy an existing file — a previous plaintext
+    # recovery could be the operator's only copy. Checked up front (like
+    # the symlink refusal) so a doomed run fails before the key prompt.
+    if args.output and os.path.lexists(args.output):
+        raise SystemExit(
+            "refusing to overwrite existing output file; remove it first"
+        )
+
     key = _read_key()
     mnemonic = decrypt(args.path, key)
 
     if args.output:
         output_dir = os.path.dirname(os.path.realpath(args.output))
-        os.makedirs(output_dir, exist_ok=True)
+        # T41: newly created parents must be private (mode 0o700), not
+        # the makedirs default 0o777 & ~umask. Pre-existing directories
+        # are left untouched (no chmod on a directory the operator owns).
+        os.makedirs(output_dir, mode=0o700, exist_ok=True)
         mode = os.stat(output_dir).st_mode
         if (mode & 0o022) and not (mode & 0o1000):
             raise SystemExit(
@@ -191,6 +219,12 @@ def main() -> int:
                 os.fsync(f.fileno())
             os.replace(tmp, args.output)
             published = True
+            # T41: fsync the directory so the rename survives power loss.
+            dir_fd = os.open(output_dir, os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
         finally:
             if not published:
                 try:

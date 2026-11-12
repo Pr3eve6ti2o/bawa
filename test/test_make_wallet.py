@@ -20,6 +20,7 @@ from make_wallet import (
     _contains_seed_material,
     _parse_seed_bundle,
     assert_bundle_decrypts,
+    assert_bundle_matches_public_roots,
     assertBundleVerified,
     resolve_secrets_dir,
     run_generator,
@@ -464,6 +465,135 @@ class TestParseSeedBundle(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(SystemExit):
                 _parse_seed_bundle(self._write(b, tmp))
+
+
+class TestAssertBundleDecryptsReturnsMnemonic(unittest.TestCase):
+    """T41: the decrypted mnemonic is returned for the roots check."""
+
+    def test_returns_validated_mnemonic(self):
+        import json
+        import tempfile
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["art"])
+        nonce = os.urandom(12)
+        ct = AESGCM(key).encrypt(nonce, mnemonic.encode("utf-8"), b"nova-shop-seed-v1")
+        bundle = {
+            "alg": "AES-256-GCM",
+            "nonce_b64": base64.b64encode(nonce).decode(),
+            "ciphertext_b64": base64.b64encode(ct).decode(),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "seed.enc.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(bundle, f)
+            self.assertEqual(assert_bundle_decrypts(path, key), mnemonic)
+
+
+class TestBundleMatchesPublicRoots(unittest.TestCase):
+    """T41: the decrypted bundle must reproduce the reported public roots.
+
+    Fixtures are the repo's published BIP-39 test vector (the same
+    mnemonic shipped in tools/hdwallet-gen/generate.js). The expected
+    roots were verified first-hand against wallet-core 4.8.4 output AND
+    an independent bip_utils derivation — both agree.
+    """
+
+    VEC_MNEMONIC = (
+        "ripple scissors kick mammal hire column oak again sun offer "
+        "wealth tomorrow wagon turn fatal"
+    )
+    VEC_DATA = {
+        "btc_zpub": "zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9",
+        "eth_xpub": "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc",
+        "trx_xpub": "xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF",
+        "samples": {
+            "btc1": "bc1qm7td3gmpsddct487a54wqylml0t8q6np64k8za",
+            "eth1": "0xD6c3112a8Db4991a7359018F15e501dfEE316d59",
+            "trx1": "TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B",
+        },
+    }
+
+    def test_matching_roots_pass(self):
+        assert_bundle_matches_public_roots(self.VEC_MNEMONIC, self.VEC_DATA)
+
+    def test_wrong_zpub_rejected(self):
+        import copy
+
+        data = copy.deepcopy(self.VEC_DATA)
+        data["btc_zpub"] = "zpub" + "1" * 107
+        with self.assertRaises(SystemExit) as caught:
+            assert_bundle_matches_public_roots(self.VEC_MNEMONIC, data)
+        self.assertIn("btc_zpub", str(caught.exception))
+
+    def test_wrong_sample_rejected(self):
+        import copy
+
+        data = copy.deepcopy(self.VEC_DATA)
+        data["samples"]["eth1"] = "0x0000000000000000000000000000000000000000"
+        with self.assertRaises(SystemExit) as caught:
+            assert_bundle_matches_public_roots(self.VEC_MNEMONIC, data)
+        self.assertIn("eth1", str(caught.exception))
+
+    def test_different_mnemonic_rejected(self):
+        other = " ".join(["abandon"] * 23 + ["art"])
+        with self.assertRaises(SystemExit):
+            assert_bundle_matches_public_roots(other, self.VEC_DATA)
+
+
+class TestSeedMaterialScanImportError(unittest.TestCase):
+    """T41: a missing wordlist fails closed with a clear diagnostic."""
+
+    def test_missing_bip_utils_raises_system_exit(self):
+        import make_wallet
+
+        previous = make_wallet._BIP39_WORDS
+        make_wallet._BIP39_WORDS = None
+        original = make_wallet._bip39_english_words
+        make_wallet._bip39_english_words = lambda: (_ for _ in ()).throw(
+            ImportError("bip_utils missing")
+        )
+        try:
+            with self.assertRaises(SystemExit) as caught:
+                _contains_seed_material({"checks": []})
+            self.assertIn("bip-utils", str(caught.exception))
+        finally:
+            make_wallet._bip39_english_words = original
+            make_wallet._BIP39_WORDS = previous
+
+
+class TestRunGeneratorPassFds(unittest.TestCase):
+    """T41: the data-key pipe reaches the child through run_generator."""
+
+    def test_fd_handoff_delivers_key_bytes(self):
+        import tempfile
+
+        key = os.urandom(32)
+        body = (
+            "import os, sys\n"
+            "fd = int(os.environ['BAWA_DATA_KEY_FD'])\n"
+            "data = os.read(fd, 32)\n"
+            "sys.stdout.write('got:%d:%s' % (len(data), data.hex()))\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "fd_reader.py")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(body)
+            key_r, key_w = os.pipe()
+            os.set_inheritable(key_r, True)
+            try:
+                os.write(key_w, key)
+            finally:
+                os.close(key_w)
+            env = dict(os.environ)
+            env["BAWA_DATA_KEY_FD"] = str(key_r)
+            try:
+                out = run_generator(
+                    [sys.executable, path], env, pass_fds=(key_r,)
+                )
+            finally:
+                os.close(key_r)
+            self.assertEqual(out, "got:32:" + key.hex())
 
 
 if __name__ == "__main__":

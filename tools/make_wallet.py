@@ -199,7 +199,15 @@ def _contains_seed_material(obj) -> bool:
     """
     global _BIP39_WORDS
     if _BIP39_WORDS is None:
-        _BIP39_WORDS = _bip39_english_words()
+        # T41: a missing wordlist must fail closed with a clear diagnostic,
+        # not abort as an unhandled ImportError traceback before the data
+        # key is zeroed (the outer finally in main covers the zeroing).
+        try:
+            _BIP39_WORDS = _bip39_english_words()
+        except ImportError:
+            raise SystemExit(
+                "seed-material scan unavailable: bip-utils is not installed"
+            ) from None
     key_tokens = []
     value_tokens = []
 
@@ -326,13 +334,15 @@ def assertBundleVerified(data) -> None:
         raise SystemExit("seed bundle verification missing: generator did not report bundle_verified")
 
 
-def assert_bundle_decrypts(bundle_path, data_key) -> None:
+def assert_bundle_decrypts(bundle_path, data_key) -> str:
     """Independently decrypt the final bundle with the wrapper-held key.
 
     The generator's bundle_verified flag is status, not proof: this check
     authenticates the written bundle in the wrapper and validates the
     plaintext as a valid 24-word BIP-39 mnemonic (wordlist + checksum).
-    Never returns or logs the plaintext or the key.
+    Returns the validated mnemonic text (never logged) so the caller can
+    cross-check it against the reported public roots. Never returns or
+    logs the plaintext or the key.
     """
     from bip_utils import Bip39Languages, Bip39MnemonicValidator
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -364,6 +374,71 @@ def assert_bundle_decrypts(bundle_path, data_key) -> None:
         # be zeroed: immutable, same caveat as the generator's strings).
         for i in range(len(plain)):
             plain[i] = 0
+    return text
+
+
+def assert_bundle_matches_public_roots(mnemonic, data) -> None:
+    """Require the decrypted bundle to match the reported public roots.
+
+    Re-derives the BTC zpub, ETH xpub, TRX xpub and the first receiving
+    addresses from the decrypted mnemonic on an independent path
+    (bip_utils, not wallet-core) and requires them to equal the
+    generator's reported roots and samples. A bundle that decrypts to a
+    valid but different mnemonic than the published wallet — a generator
+    bug, a swapped bundle, or a generator that encrypts an
+    attacker-chosen mnemonic while reporting honest roots — fails here
+    instead of silently backing up the wrong wallet. LIMITATION: a
+    generator that reports roots derived from the SAME attacker-known
+    mnemonic is undetectable from outside the generator; the trust
+    boundary is the generator itself. TON is not cross-checked: no
+    verified bip_utils TON derivation is available in this repo.
+    """
+    from bip_utils import (
+        Bip39SeedGenerator,
+        Bip44,
+        Bip44Changes,
+        Bip44Coins,
+        Bip84,
+        Bip84Coins,
+    )
+
+    seed = Bip39SeedGenerator(mnemonic).Generate()
+    btc = Bip84.FromSeed(seed, Bip84Coins.BITCOIN)
+    eth = Bip44.FromSeed(seed, Bip44Coins.ETHEREUM)
+    trx = Bip44.FromSeed(seed, Bip44Coins.TRON)
+
+    def _account_xpub(ctx):
+        return ctx.Purpose().Coin().Account(0).PublicKey().ToExtended()
+
+    def _receiving(ctx, index):
+        return (
+            ctx.Purpose()
+            .Coin()
+            .Account(0)
+            .Change(Bip44Changes.CHAIN_EXT)
+            .AddressIndex(index)
+            .PublicKey()
+            .ToAddress()
+        )
+
+    expected_roots = {
+        "btc_zpub": _account_xpub(btc),
+        "eth_xpub": _account_xpub(eth),
+        "trx_xpub": _account_xpub(trx),
+    }
+    for key, value in expected_roots.items():
+        if data.get(key) != value:
+            raise SystemExit(
+                "seed bundle mismatch: decrypted mnemonic does not match "
+                f"reported {key}"
+            )
+    samples = data.get("samples") or {}
+    for label, ctx in (("btc1", btc), ("eth1", eth), ("trx1", trx)):
+        if samples.get(label) != _receiving(ctx, 1):
+            raise SystemExit(
+                "seed bundle mismatch: decrypted mnemonic does not match "
+                f"reported sample {label}"
+            )
 
 
 # Cap on generator output (F-14). The legitimate stdout is a small JSON
@@ -411,7 +486,7 @@ class _CappedStream:
         return b"".join(self.chunks).decode("utf-8")
 
 
-def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPUT_LIMIT):
+def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPUT_LIMIT, pass_fds=()):
     """Run the generator with byte-capped stdout/stderr collection.
 
     Returns the stdout text. Stderr is drained and discarded under the
@@ -419,9 +494,10 @@ def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPU
     failure without echoing generator output). Raises SystemExit when
     either stream exceeds `limit`, when the timeout expires, when the
     child exits non-zero, or when stdout is not UTF-8 — all without
-    echoing captured content.
+    echoing captured content. `pass_fds` are inherited by the child
+    (used for the data-key pipe; see main).
     """
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, pass_fds=pass_fds)
     out = _CappedStream(proc.stdout, limit, proc, "stdout")
     err = _CappedStream(proc.stderr, limit, proc, "stderr")
     t_out = threading.Thread(target=out.run, daemon=True)
@@ -487,46 +563,67 @@ def main() -> None:
     )
 
     # The wrapper generates the data key so it can independently verify
-    # the bundle afterwards. It is passed to the generator only through
-    # a subprocess-only environment copy — never the wrapper's own env,
-    # never logged — and zeroed after the verification below.
+    # the bundle afterwards. T41: the key reaches the generator over an
+    # inherited anonymous pipe (BAWA_DATA_KEY_FD), never the environment:
+    # a key in the child's environment is visible in /proc/<pid>/environ
+    # to same-user processes, and the hex-string copies cannot be zeroed.
+    # The key is written into the pipe before spawn (32 bytes fits the
+    # pipe buffer) and the write end is closed in the parent; the child
+    # reads exactly 32 bytes and closes its read end. The outer finally
+    # zeroes the wrapper's copy on every path after this point — a
+    # generator failure, malformed stdout, failed check or scan error
+    # must not skip the wipe.
     data_key = bytearray(secrets.token_bytes(32))
-    child_env = os.environ.copy()
-    child_env["BAWA_DATA_KEY_HEX"] = bytes(data_key).hex()
-    # F-14: capped collection (see run_generator). The wrapper never
-    # echoes generator output: a malformed stdout fails with a generic
-    # message, and the ten-key schema check below bounds the accepted
-    # JSON structure.
-    stdout_text = run_generator(cmd, child_env)
     try:
-        data = json.loads(stdout_text)
-    except json.JSONDecodeError:
-        raise SystemExit("generator stdout malformed: invalid JSON") from None
-    validate_public_stdout(data)
-    assertBundleVerified(data)
-    if _contains_seed_material(data):
-        raise SystemExit("H4 violation: seed material present in generator stdout")
+        key_r, key_w = os.pipe()
+        os.set_inheritable(key_r, True)
+        try:
+            os.write(key_w, bytes(data_key))
+        finally:
+            os.close(key_w)
+        child_env = os.environ.copy()
+        child_env.pop("BAWA_DATA_KEY_HEX", None)
+        child_env["BAWA_DATA_KEY_FD"] = str(key_r)
+        try:
+            # F-14: capped collection (see run_generator). The wrapper never
+            # echoes generator output: a malformed stdout fails with a generic
+            # message, and the ten-key schema check below bounds the accepted
+            # JSON structure.
+            stdout_text = run_generator(cmd, child_env, pass_fds=(key_r,))
+        finally:
+            os.close(key_r)
+        try:
+            data = json.loads(stdout_text)
+        except json.JSONDecodeError:
+            raise SystemExit("generator stdout malformed: invalid JSON") from None
+        validate_public_stdout(data)
+        assertBundleVerified(data)
+        if _contains_seed_material(data):
+            raise SystemExit("H4 violation: seed material present in generator stdout")
 
-    failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
-    if failed:
-        raise SystemExit(f"wallet-core self-checks failed: {failed}")
+        failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
+        if failed:
+            raise SystemExit(f"wallet-core self-checks failed: {failed}")
 
-    reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
-    if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
-        raise SystemExit("seed bundle path outside configured secrets directory")
-    if not os.path.isfile(reported):
-        raise SystemExit("seed bundle missing")
+        reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
+        if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
+            raise SystemExit("seed bundle path outside configured secrets directory")
+        if not os.path.isfile(reported):
+            raise SystemExit("seed bundle missing")
 
-    nonce, ciphertext, mode = _parse_seed_bundle(reported)
-    del nonce, ciphertext
-    if mode != 0o600:
-        raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
+        nonce, ciphertext, mode = _parse_seed_bundle(reported)
+        del nonce, ciphertext
+        if mode != 0o600:
+            raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
 
-    # Independent proof: decrypt the final bundle with the wrapper-held
-    # key and validate the plaintext as a BIP-39 mnemonic. The
-    # generator's bundle_verified flag above is status, not proof.
-    try:
-        assert_bundle_decrypts(reported, data_key)
+        # Independent proof: decrypt the final bundle with the wrapper-held
+        # key and validate the plaintext as a BIP-39 mnemonic. The
+        # generator's bundle_verified flag above is status, not proof.
+        # Then require the decrypted mnemonic to reproduce the reported
+        # public roots (see assert_bundle_matches_public_roots).
+        mnemonic = assert_bundle_decrypts(reported, data_key)
+        assert_bundle_matches_public_roots(mnemonic, data)
+        del mnemonic  # plaintext no longer needed; drop the reference
     finally:
         for i in range(len(data_key)):
             data_key[i] = 0
