@@ -590,6 +590,19 @@ Mark the personal-wallet comparison as passed only when the complete derived add
 
 A pass does not establish that you can recover and use the wallet after losing the original installation. **End-to-end recovery and use, including send/sign/broadcast: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** Send/sign/broadcast was not exercised in either verification round: there were no testnet or mainnet funds, and the repo has no signing code. A decrypt round trip is not the recovery rehearsal; the rehearsal gate remains **FAIL** until executed, as required by README §18. Follow §10 and §16 for the rehearsal ladder rather than treating these component results as a substitute. [M27 §2.5/§8; M16-F14; README §18]
 
+### 6. Address discovery procedure
+
+Use this procedure to find which addresses of a recorded account have history, without substituting a populated account for the recorded one. It covers BTC, ETH and TRX. TON has no indexed derivation: check its single generated deposit address through the §12 routes; the indexed scan below does not apply to it.
+
+1. Start from the recorded account public node only (BTC `zpub`, ETH/TRX `xpub`), with its provenance and recorded chain, network and derivation policy established per §9.3. Never enter a mnemonic or private key.
+2. For each chain, derive receiving-branch addresses from index 0 upward with `derive.js <chain> <index> 0` (or the daemon with `"branch": 0`), then change-branch addresses with branch `1`. Each derived address must match the independent `bip_utils` re-derivation, whole address, before use (§9.1). A rejected branch value is an error: do not retry the derivation with the default branch, and do not treat the default branch's output as the requested branch's output.
+3. For each derived address, check transaction history on the §12 routes for that chain (BTC: the Esplora address endpoint; ETH/TRX per §12). Determine used status from history, not current balance. A failed lookup is not evidence of no history. Record per address: the address, branch, index, whether history was found, and the evidence (transaction count or transaction IDs). An address with history resets the unused counter; an address without history increments it.
+4. Stop a branch scan on the twentieth consecutive address with no history (BIP-44 gap limit 20; docs/05 §9). Keep used addresses marked used even after their balance reaches zero. Retain the issued index range, the last scanned index per branch, and the scan bounds and completion status.
+5. A completed bounded scan is not proof that nothing exists beyond it. If activity appears beyond the scanned range, extend the scan from the retained range; do not restart from a different account.
+6. Never substitute a populated account for the recorded one: an address with funds that is not derived from the recorded public node under the recorded policy is not the recorded wallet. Never re-fund a guess.
+
+Verification (2026-11-12, `muse-vm`, T14 lane): run against the published BTC fixture `zpub` with the patched daemon. The receiving branch found used addresses at index 0 (32 transactions) and index 1 (2 transactions), then 20 consecutive unused addresses (index 2–21) and stopped after index 21; the change branch found no used addresses and stopped after index 19 (20 consecutive unused). Evidence: T14 lane `evidence/discovery-full-scan.log`. [M-41]
+
 ## 10. Vault, backup and recovery
 
 Part A covers vault and backup custody. The repo’s `seed.enc.json` bundle and the Web draft browser vault are different stores; Android’s Keystore-bound vault has its own loss modes. Part B covers recovery. The three warnings in §2 still apply.
@@ -677,6 +690,14 @@ Neither the Web nor Android draft implements clipboard clearing.
 Web UI deletion requires the vault unlock passphrase: it calls `openVault` before `deleteWallet`. Android import refuses to proceed while a bundle exists.
 
 > **Stop** If you have forgotten the vault unlock passphrase, do not clear storage or app data unless you have checked that independent recovery material survives. The only escapes are undocumented out-of-app storage clears or app-data clears, and they destroy the local vault. That loss is catastrophic if no independent recovery material remains.
+
+### Changing the vault unlock passphrase
+
+No in-place change operation for the vault unlock passphrase exists — not in the repo, not in the Web draft, and not in the Android draft. First-hand check at `981d0ba` (T14 lane, 2026-11-12): the Web starter states "No vault. No PIN." and the Android starter states "No vault / No PIN"; the Web guide sets a vault unlock passphrase policy (minimum length unset, OI-046) but specifies no change procedure; Android guide §E specifies the vault envelope and unlock lifecycle but no change procedure; `docs/08` and `RECOVERY.md` describe changing the vault password only as part of migrating to a fresh seed, never as an in-place operation. Do not copy the Web rule across to Android, and do not treat a BIP-39 passphrase change as a vault change: changing the BIP-39 passphrase derives a different wallet, not the same wallet with a new password.
+
+The only route to a different vault unlock passphrase is to re-create the vault from verified independent recovery material — and the end-to-end reset/re-import procedure for that is itself an open item (M16-F22–M16-F29; §18). No execution steps are given here. Do not clear storage or delete a bundle to "change" the passphrase: that destroys the local vault (see "Forgotten vault unlock passphrase" above).
+
+A passphrase change never secures an exposed seed. If the mnemonic or seed is exposed, changing any password is not a remedy: only a fresh seed and migration can repair exposure (`docs/08`; `RECOVERY.md`). [M-40]
 
 ### Inheritance — proposed safeguards only
 
@@ -1111,7 +1132,7 @@ Both implementations must also start from an independently checked public node. 
 - **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. Those testnet inputs trigger an opaque WASM abort with exit 1; do not feed them in as a network test.
 - Supply the public node through **stdin, never argv**. The single-address stdin limit is **200 characters including the trailing newline**, not 200 characters plus a newline.
 - The single-address interface uses exit **2** for usage or read errors, **1** for derivation or validation failure, and **0** for success with a bare address. A zero exit still requires the independent comparison above.
-- For the daemon, wait for its first output line, `{"ready": true}`, before sending requests. Requests are JSONL objects with the fields `chain`, `xpub` and `index`; the `xpub` field carries the BTC `zpub` as well. `index` must be an integer from **0 to 2147483647**, inclusive.
+- For the daemon, wait for its first output line, `{"ready": true}`, before sending requests. Requests are JSONL objects with the fields `chain`, `xpub` and `index`, plus optional `branch` (0 receiving, 1 change; default 0); the `xpub` field carries the BTC `zpub` as well. `index` must be an integer from **0 to 2147483647**, inclusive.
 - Path selection is fixed by chain, not caller-configurable. Do not try to select another purpose, coin or account by supplying a different path.
 
 Stop on any error, missing address, unexpected prefix, unverified public-node source or independent mismatch. Do not work around a failure by accepting whichever output looks plausible.
@@ -1498,7 +1519,17 @@ GUIDE RECORD FORMAT — reader-owned; not a Bawa API schema
      Net value:
 ```
 
-Seeds, mnemonics, private keys and xpubs/zpubs have no place in this record. This is a field outline, not a storage implementation: **storage format, export procedure, retention duration and a completed example remain open**.
+Seeds, mnemonics, private keys and xpubs/zpubs have no place in this record.
+
+#### Storage format, export, retention and completed example
+
+**Storage format.** One JSON file per payment record, following `docs/mainnet/payment-record.schema.json` (`format_version` `bawa-payment-record/1`). File name: `payment-record-<record_id>.json`. Store the file offline with the §3 log, under the same media rules as other recovery records. The record holds public payment evidence only: seeds, mnemonics, private keys and xpubs/zpubs have no place in it, and the file must never be committed to a public repository, pasted into a support ticket, or sent to a "validation" site.
+
+**Export procedure.** Bawa has no export command for this record; the record is reader-owned, so export is a file operation, not an app feature: (1) write the JSON file from the retained record; (2) validate it with `python3 test/payment_record_check.py --record <file>` — it must print PASS for the record and for the tampered-copy self-test; (3) copy the validated file to the offline backup medium and keep the schema version recorded alongside it; (4) re-validate after any copy. A file that fails validation is not an exportable record: fix the record, do not ship the file.
+
+**Retention.** Retain each payment record for at least **5 years from the settlement date** (US OFAC record-keeping, 31 CFR 501.601: records "available for examination for at least 5 years after the date of such transaction"; checked 2026-11-12), and longer where local law requires. Never delete a record for an open, disputed, unresolved or `manual_review` payment, and never delete decision history (including reorged assessments). OFAC has announced an intended extension of the 501.601 requirement from 5 to 10 years; check the current rule before deleting any record.
+
+**Completed example.** `docs/mainnet/payment-record.example.json` is a completed record for the published BTC fixture: a 10,000-sat receipt at `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`, txid `730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa`, block 727565, fee 1,410 sats, confirmed under policy BTC-6. The fixture mnemonic is public: never fund fixture addresses. This is a worked example of the format, not a real payment. [M-45]
 
 ### History labels and the timeout rule
 
@@ -1526,6 +1557,19 @@ Two draft limitations prevent the general TXID reconciliation rule from being tr
 - **TRX:** there is no TXID lookup adapter. A TRX transfer stays **Pending** on manual refresh; that retained label is not fresh verification of its outcome. No manual investigation procedure is supplied.
 - **TON:** reconciliation **can never be automatic in this draft**. `txid` is `null` at `tx.js:320`.
 
+#### Chain-specific drop criteria
+
+`Dropped` requires positive evidence under the rule for that chain. Absence from a single lookup is never enough, and a dropped transaction is not permission to resend: reconcile by TXID first, and never auto-create a replacement.
+
+| Chain | Dropped only when | Not enough |
+|---|---|---|
+| **BTC** | The transaction is absent from the mempool views of both §12 routes (Esplora and mempool.space), more than 336 hours have passed since it was first observed unconfirmed (retain that first-observed time in the record), it appears in no confirmed block, and no conflicting transaction has spent its inputs. 336 hours is the Bitcoin Core default `-mempoolexpiry` (`src/kernel/mempool_options.h`, `DEFAULT_MEMPOOL_EXPIRY_HOURS{336}`; checked 2026-11-12) — node policy, not consensus; operators may configure it — so the window is a default, not a guarantee. | Absence from one provider; absence within the 336-hour window; eviction during congestion without the time check. |
+| **ETH** | A different transaction from the same account with the same nonce is confirmed (positive supersession evidence), or a queued (nonce-gap) transaction is absent from a default Geth node's pool after the 3-hour `txpool.lifetime` for non-executable transactions. Executable pending transactions have no fixed expiry under Geth defaults, so time alone never drops them. The §12 routes cannot query a txpool: with the guide's tools, only the supersession case is checkable; anything else stays `Unknown`. | Time passing; absence from an explorer's pending view; a higher fee on an unrelated nonce. |
+| **TRX** | The head-block time has passed the transaction's `raw_data.expiration` (default 60 seconds past the head block's timestamp, maximum 24 hours; TRON developer docs, "Transactions", checked 2026-11-12) and the transaction appears in no block. The expiration sits inside the signed payload: a new expiration needs a new signature, so the same signed bytes cannot be revived after expiry. | A "pending" display on manual refresh; the absence of a TXID lookup (the draft has no TRX TXID adapter — that stays `Pending`, not `Dropped`). |
+| **TON** | The sending wallet set an `expire_time`/`validUntil` on the external message and the current time has passed it (Tonconsole transaction-tracking guide: past `expire_time` the message "will never be accepted by the network"; checked 2026-11-12). No protocol-wide drop rule exists for TON: without a message expiry there is no sourced criterion, and the label stays `Unknown`. TON Center exposes neither pending nor dropped messages. | Time passing without a message expiry; a 404 from a trace lookup; a timeout in a polling loop. |
+
+Confirmation-policy values used above are M-13 (TON 1 masterchain seqno + outcome check) and M-38 (BTC 6, ETH `finalized`, TRX 19 SR). [M-46]
+
 ### Rehearsal
 
 Every mainnet send procedure carries this label:
@@ -1540,8 +1584,6 @@ The loss modes for a funded attempt remain **wrong address, wrong network, wrong
 
 ### Gaps to register
 
-- M-45 — Payment-record storage format, export procedure, retention duration and completed example.
-- M-46 — History-label implementation verification and sourced chain-specific drop criteria (confirmation-policy values: M-13, M-38).
 - M-28 — Speed-up, cancellation and replacement procedures.
 - M-04, M-28 — TRX TXID lookup adapter and manual investigation procedure.
 - M-04 — TON non-automatic reconciliation procedure for null-TXID records.
@@ -3049,7 +3091,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 **Action:** reproduce the recorded address with the recorded path and passphrase policy, using the ordered checks above. Keep address reproduction, current balance, transaction history and address discovery separate. Examine independent transaction evidence on the recorded network. (M16-F43, M16-F45)
 
-**Stop condition:** do not turn “no current balance” into “never received funds”, choose a different account because it is populated, or re-fund a guess. Address discovery is an **open item**: these findings supply no discovery procedure. (M16-F43, M16-F45)
+**Stop condition:** do not turn “no current balance” into “never received funds”, choose a different account because it is populated, or re-fund a guess. Address discovery follows the §9.6 procedure (M-41, resolved 2026-11-12): scan both branches from the recorded public node under the gap-20 rule, and never substitute a populated account for the recorded one. (M16-F43, M16-F45)
 
 #### Decryption ends with a traceback or refuses a path
 
@@ -4155,17 +4197,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §18; §10.
 
-**Evidence or uncertainty:** M16 open item 5; M16-F27.
+**Evidence or uncertainty:** M16 open item 5; M16-F27. T14 first-hand check at `981d0ba` (2026-11-12): no in-place change operation exists anywhere searched — the Web starter states "No vault. No PIN." (`apps/web/src/screens/security-settings.tsx`), the Android starter states "No vault / No PIN." (`apps/android/.../ManagementScreens.kt`), the Web guide sets a vault unlock passphrase policy (minimum length unset, OI-046) but specifies no change procedure, Android guide §E specifies the vault envelope and unlock lifecycle but no change procedure, and no `*vault*` implementation file exists in the repo. `docs/08` and `RECOVERY.md` describe changing the vault password only as part of migrating to a fresh seed, never as an in-place operation. Documented in §10 ("Changing the vault unlock passphrase").
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — stated "none exists", per the clearance condition. No in-place change operation exists on either platform. The re-creation/reset/re-import procedure remains open (M16-F22–M16-F29; §18) and no execution steps for it are given.
 
-**Operational restriction:** §18 gives no steps; do not copy the Web rule across to Android.
+**Operational restriction:** No in-place change exists; do not copy the Web rule across to Android. A passphrase change never secures an exposed seed — only a fresh seed and migration can.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Established and documented procedure, or a stated "none exists".
+**Clearance condition:** Established and documented procedure, or a stated "none exists". Met 2026-11-12 — stated "none exists" with the first-hand evidence above (see Evidence).
 
-**Gate/source links:** M16 open item 5, F27.
+**Gate/source links:** M16 open item 5, F27; T14 lane NOTES.md (2026-11-12).
 
 ### M-41 — Address discovery procedure missing
 
@@ -4173,17 +4215,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §18; §9.
 
-**Evidence or uncertainty:** M16-F03; M16-F45.
+**Evidence or uncertainty:** M16-F03; M16-F45. T14 (2026-11-12): the verified procedure is §9.6. It became possible by adding an optional branch argument to the repo tools — `derive.js <chain> <index> [branch]` and the daemon's optional `"branch"` (0 receiving, 1 change; default 0; anything else rejected) — because both tools previously hard-coded the receiving branch, so change-branch discovery was impossible (OI-050). Change-branch index-0 addresses verified against the independent `bip_utils` 2.12.2 oracle from the public xpubs (BTC `bc1qx3hncnu3lknuejrmzse4nf2yjwpaskgn6tpnve`, ETH `0x01183125aF0c91eA24E4E7066D87B7564fb08aF5`, TRX `TT2z3TvN2brZ19x826SAFdUCxYPEnkmZKF`); regression tests extended (smoke suite 130 → 155 checks, 0 FAIL). End-to-end verification on the published BTC fixture `zpub` via the patched daemon: receiving branch found used addresses at index 0 (32 txs) and index 1 (2 txs), then stopped after index 21 on 20 consecutive unused addresses; change branch found no used addresses and stopped after index 19. Evidence: T14 lane `evidence/discovery-full-scan.log`. TON stays single-address (generation-only); only its single deposit address is history-checked, no indexed scan. The Web draft's change-branch discovery UI remains OI-050's scope (Doc 3); this row covers the procedure and the repo tools only.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — verified discovery procedure (§9.6) with tool support, regression tests and end-to-end fixture evidence.
 
-**Operational restriction:** The guide marks this as an open item and never substitutes a populated account for the recorded one.
+**Operational restriction:** Follow §9.6. Never substitute a populated account for the recorded one.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Verified discovery procedure.
+**Clearance condition:** Verified discovery procedure. Met 2026-11-12 — §9.6 procedure + branch-capable tools + smoke tests + fixture scan evidence (see Evidence).
 
-**Gate/source links:** M16-F03, F45.
+**Gate/source links:** M16-F03, F45; T14 lane patch (derive.js, derive_daemon.js, test/smoke.test.js) and `evidence/discovery-full-scan.log`.
 
 ### M-42 — Exact file:line citations for RECOVERY.md / README §§12/13/18 not supplied
 
@@ -4245,17 +4287,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §12.
 
-**Evidence or uncertainty:** m18 F22.
+**Evidence or uncertainty:** m18 F22. T14 (2026-11-12): all four defined in §12 ("Storage format, export, retention and completed example") and reviewed. Storage format: one JSON file per record per `docs/mainnet/payment-record.schema.json` (`bawa-payment-record/1`). Export: file operation validated by `test/payment_record_check.py` (stdlib-only; shipped example PASS, tampered copy rejected). Retention: at least 5 years from the settlement date (31 CFR 501.601, checked 2026-11-12), longer where local law requires; never delete open/disputed/unresolved records. Completed example: `docs/mainnet/payment-record.example.json` — a 10,000-sat BTC fixture receipt (txid `730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa`, block 727565, fee 1,410 sats), observed via Esplora 2026-11-12.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — format, export, retention and example defined and reviewed.
 
-**Operational restriction:** The §12 record is a guide format, not a Bawa API schema.
+**Operational restriction:** The §12 record is a guide format, not a Bawa API schema. Retain records at least 5 years; never delete open, disputed or unresolved records.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Format, export, retention and example defined and reviewed.
+**Clearance condition:** Format, export, retention and example defined and reviewed. Met 2026-11-12 (see Evidence).
 
-**Gate/source links:** m18 F22.
+**Gate/source links:** m18 F22; `docs/mainnet/payment-record.schema.json`, `docs/mainnet/payment-record.example.json`, `test/payment_record_check.py`.
 
 ### M-46 — History-label implementation verification and chain-specific drop criteria open
 
@@ -4263,17 +4305,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §12.
 
-**Evidence or uncertainty:** m17 F11/F15.
+**Evidence or uncertainty:** m17 F11/F15. T14 implementation check at `981d0ba` (2026-11-12): the labels are **not implemented** in either starter — Web `apps/web/src/screens/transaction-history.tsx` and Android `ManagementScreens.kt` `TransactionHistoryScreen` both render an empty state ("No transaction history — no provider is selected, so this starter cannot fetch transactions") with no labels at all — and neither draft's UI contract maps the eight §12 labels to UI. That negative outcome is recorded here, not hidden: implementation remains an open builder gap. Drop criteria are now defined in §12 ("Chain-specific drop criteria"), sourced first-hand 2026-11-12: BTC — absent from both §12 mempool views + 336 hours past first observation (Bitcoin Core default `-mempoolexpiry`) + no confirmed inclusion + no conflicting spend; ETH — same-nonce supersession confirmed, or a queued tx past Geth's 3-hour `txpool.lifetime` (executable pending txs have no fixed expiry; with the guide's tools only supersession is checkable); TRX — head-block time past `raw_data.expiration` (default +60s, max 24h; TRON developer docs, "Transactions"); TON — no protocol-wide rule; only a set `expire_time`/`validUntil` that has passed justifies Dropped, otherwise `Unknown` (Tonconsole tracking guide). Policy values are defined: M-13 (TON 1 masterchain seqno + outcome check) and M-38 (BTC 6, ETH `finalized`, TRX 19 SR) are both RESOLVED.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — implementation check performed and recorded (labels not implemented; builder gap remains open, see Evidence), chain-specific drop criteria defined, policy values defined (M-13, M-38).
 
-**Operational restriction:** Labels are required meanings, not verified implementation guarantees.
+**Operational restriction:** Labels are required meanings, not verified implementation guarantees. Do not present any label as an implemented guarantee until the builder gap is closed.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Implementation check against the draft, plus policy values defined (see M-13, M-38).
+**Clearance condition:** Implementation check against the draft, plus policy values defined (see M-13, M-38). Met 2026-11-12 — check done and recorded, criteria defined, M-13/M-38 resolved (see Evidence). The unimplemented-labels builder gap is recorded here and is not closed by this row.
 
-**Gate/source links:** m17 F11/F15.
+**Gate/source links:** m17 F11/F15; M-13, M-38; T14 lane NOTES.md (2026-11-12).
 
 ### Carried-forward items from the M35 register
 

@@ -32,22 +32,31 @@ const FIXTURES = {
     xpub: "zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9",
     0: "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd",
     1: "bc1qm7td3gmpsddct487a54wqylml0t8q6np64k8za",
+    // Change branch (branch 1) index 0, verified against bip_utils 2.12.2
+    // from the public xpub above (T14, M-41). Receiving index 1 has real
+    // mainnet history (2 txs); change index 0 has none (2026-11-12 check).
+    c0: "bc1qx3hncnu3lknuejrmzse4nf2yjwpaskgn6tpnve",
     coin: "bitcoin",
     path: (i) => `m/84'/0'/0'/0/${i}`,
+    changePath: (i) => `m/84'/0'/0'/1/${i}`,
   },
   eth: {
     xpub: "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc",
     0: "0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7",
     1: "0xD6c3112a8Db4991a7359018F15e501dfEE316d59",
+    c0: "0x01183125aF0c91eA24E4E7066D87B7564fb08aF5",
     coin: "ethereum",
     path: (i) => `m/44'/60'/0'/0/${i}`,
+    changePath: (i) => `m/44'/60'/0'/1/${i}`,
   },
   trx: {
     xpub: "xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF",
     0: "TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c",
     1: "TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B",
+    c0: "TT2z3TvN2brZ19x826SAFdUCxYPEnkmZKF",
     coin: "tron",
     path: (i) => `m/44'/195'/0'/0/${i}`,
+    changePath: (i) => `m/44'/195'/0'/1/${i}`,
   },
 };
 
@@ -189,6 +198,67 @@ async function testDaemon() {
     });
     child.on("error", (e) => {
       check("daemon spawns", false, e.message);
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
+// M-41: the daemon accepts an optional branch (0 receiving default, 1 change)
+// and rejects any other branch value without deriving.
+async function testDaemonBranch() {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let buf = "";
+    let stage = 0;
+    const timer = setTimeout(() => {
+      check("daemon branch test responds within timeout", false, "timed out");
+      child.kill();
+      resolve();
+    }, 60000);
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      buf += chunk;
+      let idx;
+      while ((idx = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, idx);
+        buf = buf.slice(idx + 1);
+        if (!line.trim()) continue;
+        let msg;
+        try {
+          msg = JSON.parse(line);
+        } catch {
+          check("daemon branch test emits valid JSONL", false, line.slice(0, 80));
+          continue;
+        }
+        if (stage === 0) {
+          check("daemon branch test startup reports ready", msg.ready === true, JSON.stringify(msg));
+          stage = 1;
+          child.stdin.write(JSON.stringify({ chain: "btc", xpub: FIXTURES.btc.xpub, index: 0, branch: 1 }) + "\n");
+        } else if (stage === 1) {
+          check("daemon derives BTC change index 0", msg.ok === true && msg.address === FIXTURES.btc.c0, JSON.stringify(msg));
+          stage = 2;
+          child.stdin.write(JSON.stringify({ chain: "eth", xpub: FIXTURES.eth.xpub, index: 0 }) + "\n");
+        } else if (stage === 2) {
+          check("daemon defaults to receiving branch when branch omitted", msg.ok === true && msg.address === FIXTURES.eth[0], JSON.stringify(msg));
+          stage = 3;
+          child.stdin.write(JSON.stringify({ chain: "btc", xpub: FIXTURES.btc.xpub, index: 0, branch: 2 }) + "\n");
+        } else if (stage === 3) {
+          check("daemon rejects branch 2", msg.ok === false, JSON.stringify(msg));
+          stage = 4;
+          child.stdin.write(JSON.stringify({ chain: "btc", xpub: FIXTURES.btc.xpub, index: 0, branch: "1" }) + "\n");
+        } else if (stage === 4) {
+          check("daemon rejects string branch", msg.ok === false, JSON.stringify(msg));
+          clearTimeout(timer);
+          child.kill();
+          resolve();
+        }
+      }
+    });
+    child.on("error", (e) => {
+      check("daemon branch test spawns", false, e.message);
       clearTimeout(timer);
       resolve();
     });
@@ -965,22 +1035,41 @@ Module._load = function (request, parent, isMain) {
       check(`${chain} index ${index} derives expected address`, addr === fx[index], addr);
       check(`${chain} index ${index} address validates`, CoinTypeExt.validate(coin, addr));
     }
+    // M-41: change branch (branch 1) index 0 matches the bip_utils oracle.
+    const changeAddr = deriveFromXpub(core, fx.xpub, coin, fx.changePath(0));
+    check(`${chain} change index 0 derives expected address`, changeAddr === fx.c0, changeAddr);
+    check(`${chain} change index 0 address validates`, CoinTypeExt.validate(coin, changeAddr));
+    check(`${chain} change index 0 differs from receiving index 0`, changeAddr !== fx[0], changeAddr);
   }
   // 2. Address-format guards (fail loudly if a format ever changes shape).
-  check("btc addresses are bech32 segwit", FIXTURES.btc[0].startsWith("bc1q") && FIXTURES.btc[1].startsWith("bc1q"));
-  check("eth addresses are 0x + 40 hex", /^0x[0-9a-fA-F]{40}$/.test(FIXTURES.eth[0]) && /^0x[0-9a-fA-F]{40}$/.test(FIXTURES.eth[1]));
-  check("trx addresses are T + 33 base58 chars", /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(FIXTURES.trx[0]) && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(FIXTURES.trx[1]));
+  check("btc addresses are bech32 segwit", FIXTURES.btc[0].startsWith("bc1q") && FIXTURES.btc[1].startsWith("bc1q") && FIXTURES.btc.c0.startsWith("bc1q"));
+  check("eth addresses are 0x + 40 hex", /^0x[0-9a-fA-F]{40}$/.test(FIXTURES.eth[0]) && /^0x[0-9a-fA-F]{40}$/.test(FIXTURES.eth[1]) && /^0x[0-9a-fA-F]{40}$/.test(FIXTURES.eth.c0));
+  check("trx addresses are T + 33 base58 chars", /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(FIXTURES.trx[0]) && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(FIXTURES.trx[1]) && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(FIXTURES.trx.c0));
 
   // 3. derive.js CLI end to end (public xpub on stdin, address on stdout).
   for (const [chain, fx] of Object.entries(FIXTURES)) {
     const r = runCli("derive.js", [chain, "0"], fx.xpub + "\n");
     check(`derive.js ${chain} CLI exit 0 and prints expected address`, r.status === 0 && r.stdout.trim() === fx[0], `status=${r.status} out=${r.stdout.trim()} err=${(r.stderr || "").trim().slice(0, 120)}`);
+    // M-41: explicit branch 1 derives the change address; omitting the
+    // branch keeps the receiving default.
+    const rc = runCli("derive.js", [chain, "0", "1"], fx.xpub + "\n");
+    check(`derive.js ${chain} CLI branch 1 prints change address`, rc.status === 0 && rc.stdout.trim() === fx.c0, `status=${rc.status} out=${rc.stdout.trim()} err=${(rc.stderr || "").trim().slice(0, 120)}`);
+    const r0 = runCli("derive.js", [chain, "0", "0"], fx.xpub + "\n");
+    check(`derive.js ${chain} CLI branch 0 prints receiving address`, r0.status === 0 && r0.stdout.trim() === fx[0], `status=${r0.status} out=${r0.stdout.trim()} err=${(r0.stderr || "").trim().slice(0, 120)}`);
   }
   // 4. derive.js input guards (all must refuse with exit 2, never derive).
   const badChain = runCli("derive.js", ["ton", "0"], FIXTURES.btc.xpub + "\n");
   check("derive.js rejects TON (TON watch-only lives in derive-ton.js, not derive.js)", badChain.status === 2, `status=${badChain.status}`);
   const badIndex = runCli("derive.js", ["btc", "-1"], FIXTURES.btc.xpub + "\n");
   check("derive.js rejects negative index", badIndex.status === 2, `status=${badIndex.status}`);
+  for (const token of ["2", "-1", "01", "x", "1.0"]) {
+    const result = runCli("derive.js", ["btc", "0", token], FIXTURES.btc.xpub + "\n");
+    check(
+      `derive.js rejects branch token ${JSON.stringify(token)}`,
+      result.status === 2 && result.stdout === "",
+      `status=${result.status}, stdout=${JSON.stringify(result.stdout)}, stderr=${JSON.stringify(result.stderr)}`
+    );
+  }
   const emptyXpub = runCli("derive.js", ["btc", "0"], "\n");
   check("derive.js rejects empty xpub", emptyXpub.status === 2, `status=${emptyXpub.status}`);
   for (const token of ["", "0x10", "1e2", " 1", "+1"]) {
@@ -993,12 +1082,13 @@ Module._load = function (request, parent, isMain) {
   }
 
   // 5. Watch-only policy guard: the three documented paths exist in both
-  // xpub tools, and no TON derivation path exists in either (TON has no
-  // xpub; its watch-only route is the separate derive-ton.js).
+  // xpub tools (branch is now a 0|1 parameter, default receiving), and no
+  // TON derivation path exists in either (TON has no xpub; its watch-only
+  // route is the separate derive-ton.js).
   for (const script of ["derive.js", "derive_daemon.js"]) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, script), "utf8");
     check(`${script} carries BTC/ETH/TRX paths`,
-      src.includes("m/84'/0'/0'/0/${i}") && src.includes("m/44'/60'/0'/0/${i}") && src.includes("m/44'/195'/0'/0/${i}"));
+      src.includes("m/84'/0'/0'/${branch}/${i}") && src.includes("m/44'/60'/0'/${branch}/${i}") && src.includes("m/44'/195'/0'/${branch}/${i}"));
     check(`${script} carries no TON derivation path`, !src.includes("m/44'/607'"));
   }
   {
@@ -1043,6 +1133,8 @@ Module._load = function (request, parent, isMain) {
 
   // 6. Daemon JSONL protocol.
   await testDaemon();
+  // 6b. Daemon branch protocol (M-41).
+  await testDaemonBranch();
   // 7. derive.js rejection and index-1 regression checks.
   {
     const rejectionCases = [

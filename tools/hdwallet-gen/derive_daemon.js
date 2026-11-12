@@ -1,5 +1,8 @@
 // derive_daemon.js — persistent public-only Trust Wallet Core derivation daemon.
 // JSONL request: {"chain":"btc|eth|trx","xpub":"...","index":5}
+// Optional "branch": 0 (receiving, default) or 1 (change). Any other value
+// is a bad request. The branch selects the BIP-44 change component only;
+// purpose, coin type and account stay fixed per chain (M-41).
 // JSONL response: {"ok":true,"address":"..."} or {"ok":false,"error":"..."}
 // Startup: {"ready":true}
 // Extended keys are validated via the shared module before any per-request WASM call.
@@ -14,9 +17,9 @@ CHAINS.eth = (coin) => coin.ethereum;
 CHAINS.trx = (coin) => coin.tron;
 
 const PATHS = Object.create(null);
-PATHS.btc = (i) => `m/84'/0'/0'/0/${i}`;
-PATHS.eth = (i) => `m/44'/60'/0'/0/${i}`;
-PATHS.trx = (i) => `m/44'/195'/0'/0/${i}`;
+PATHS.btc = (branch, i) => `m/84'/0'/0'/${branch}/${i}`;
+PATHS.eth = (branch, i) => `m/44'/60'/0'/${branch}/${i}`;
+PATHS.trx = (branch, i) => `m/44'/195'/0'/${branch}/${i}`;
 
 const ALLOWED_CHAINS = new Set(["btc", "eth", "trx"]);
 const MAX_XPUB_LENGTH = 200;
@@ -106,11 +109,16 @@ function fail(msg) {
       let req;
       try { req = JSON.parse(line); } catch { return fail("bad json"); }
 
-      const { chain, xpub, index } = req || {};
+      const { chain, xpub, index, branch: branchRaw } = req || {};
+      // Branch defaults to receiving (0). Only the integers 0 and 1 are
+      // accepted: a non-integer, out-of-range or wrong-type branch is a bad
+      // request, never a silent receiving-branch default (M-41).
+      const branch = branchRaw === undefined ? 0 : branchRaw;
       if (
         !ALLOWED_CHAINS.has(chain) ||
         typeof xpub !== "string" || !xpub.trim() || xpub.length > MAX_XPUB_LENGTH ||
-        !Number.isInteger(index) || index < 0 || index > MAX_INDEX
+        !Number.isInteger(index) || index < 0 || index > MAX_INDEX ||
+        !Number.isInteger(branch) || (branch !== 0 && branch !== 1)
       ) return fail("bad request");
 
       const validation = validateExtendedKey(xpub.trim(), chain);
@@ -119,7 +127,7 @@ function fail(msg) {
       const coin = CHAINS[chain](core.CoinType);
       let pubkey;
       try {
-        pubkey = core.HDWallet.getPublicKeyFromExtended(xpub.trim(), coin, PATHS[chain](index));
+        pubkey = core.HDWallet.getPublicKeyFromExtended(xpub.trim(), coin, PATHS[chain](branch, index));
       } catch (e) {
         return fail("getPublicKeyFromExtended failed: " + (e && e.message));
       }

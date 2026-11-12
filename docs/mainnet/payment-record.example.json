@@ -1,0 +1,66 @@
+{
+  "created_utc": "2026-11-12T08:20:00Z",
+  "credit_settlement": {
+    "credit_id": "PAY-EXAMPLE-001",
+    "idempotency_key": "bitcoin-mainnet:730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa:0",
+    "journal_amount_atomic": 10000,
+    "journal_asset": "BTC",
+    "reversals_adjustments": [],
+    "settlement_line": {
+      "allocation_atomic": 10000,
+      "fees_atomic": 1410,
+      "net_value_atomic": 10000,
+      "recipient_borne_fees_atomic": 0,
+      "retained_record_reference": "STL-EXAMPLE-001"
+    }
+  },
+  "format_version": "bawa-payment-record/1",
+  "match": {
+    "deduplication_key": "bitcoin-mainnet:730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa:0",
+    "evaluated_confirmations": 6,
+    "policy_version": "BTC-6",
+    "reason": "matching total equals requested amount; confirmation policy BTC-6 met",
+    "request_event_link": "full recipient address and atomic amount match the request; network bitcoin-mainnet matches",
+    "status": "accepted"
+  },
+  "observation": {
+    "amount_atomic": 10000,
+    "asset": "BTC",
+    "block_identity": {
+      "height": 727565,
+      "time": 1647421457
+    },
+    "canonicality": "canonical",
+    "chain_network": "bitcoin-mainnet",
+    "cursor": "Esplora /txs/chain first page, checked 2026-11-12",
+    "memo_tag": null,
+    "output_identity": "vout 0",
+    "payer": null,
+    "recipient": "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd",
+    "txid": "730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa"
+  },
+  "reconciliation": {
+    "accepted_event_set": [
+      "730eae989d7067d746dc83687005228ec16c496edc3f5c5224946166bbdd77aa"
+    ],
+    "database_after_atomic": 10000,
+    "database_before_atomic": 0,
+    "decision_reason": "one matching event, no duplicates, total equals request",
+    "discrepancy_atomic": 0,
+    "repair": null,
+    "resulting_status": "confirmed",
+    "total_atomic": 10000
+  },
+  "record_id": "PAY-EXAMPLE-001",
+  "request": {
+    "amount_atomic": 10000,
+    "amount_unit": "sats",
+    "asset": "BTC",
+    "expiry": "2022-03-17T00:00:00Z",
+    "memo_tag": null,
+    "network": "bitcoin-mainnet",
+    "policy_version": "BTC-6",
+    "recipient": "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd"
+  },
+  "source_note": "Completed example using the published BTC research fixture only (bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd). The mnemonic is public; never fund fixture addresses. Observation checked 2026-11-12 on muse-vm via Blockstream Esplora. This is a worked example of the record format, not a real payment."
+}
