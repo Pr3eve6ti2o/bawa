@@ -497,7 +497,7 @@ On Bitcoin mainnet, Bawa uses the standard BIP-84 native-SegWit account `m/84'/0
 | TRX | `m/44'/195'/0'/0/i` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `m/44'/607'/0'` — generation-only | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
 
-The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is absent from both `derive.js` and `daemon.js`. [M29; M04]
+The TON fixture is V4 R2, wallet ID `698983191`. TON generation is in `generate.js`; TON watch-only derivation is the public-key-only `derive-ton.js` (single address, no index), and TON is absent from both `derive.js` and `daemon.js`. [M29; M04]
 
 **Derive, serve and compare**
 
@@ -1099,7 +1099,7 @@ Stop on any error, missing address, unexpected prefix, unverified public-node so
 
 Before handing out or using a derived address, check the complete destination against the independently verified public-node source, and check the intended mainnet chain, asset and amount against the payment record. A **wrong address, wrong network or wrong amount** can misdirect funds; a **misleading status can prompt a duplicate payment**; and **substituted destinations can cause theft**. Address derivation establishes neither an amount nor payment status. Stop if any of those details is uncertain, and do not send another payment to compensate for missing watch-only output.
 
-**TON is generation-only in this repo.** It provides one deposit address from `m/44'/607'/0'`, using Wallet V4 R2 and wallet ID `698983191`. There is no TON xpub and no TON watch-only derivation tool. There is no indexed TON receiving-address workflow to demonstrate here.
+**TON is generation-only in this repo, with a public-key-only watch-only route.** It provides one deposit address from `m/44'/607'/0'`, using Wallet V4 R2 and wallet ID `698983191`. There is no TON xpub; TON watch-only derivation is `tools/hdwallet-gen/derive-ton.js` (single V4 R2 address from a 32-byte Ed25519 public key, no index). There is no indexed TON receiving-address workflow to demonstrate here.
 
 ### Xpub privacy
 

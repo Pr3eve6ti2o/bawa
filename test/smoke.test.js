@@ -10,9 +10,11 @@
 //   implementations: Trust Wallet Core (WASM) and Python bip_utils 2.12.2.
 //   BTC/ETH index 0 match the repo's published fixtures; index 1 and both
 //   TRX addresses match bip_utils exactly.
-// - TON has no watch-only derivation in Bawa (generation-only, single deposit
-//   address, no xpub); the policy guard below asserts no TON derivation path
-//   exists in the watch-only tools.
+// - TON watch-only derivation is tools/hdwallet-gen/derive-ton.js: a
+//   single V4 R2 address from a 32-byte Ed25519 public key (no xpub, no
+//   index — the account path m/44'/607'/0' is fully hardened). The policy
+//   guard below asserts no TON derivation path exists in the xpub tools
+//   (derive.js, derive_daemon.js).
 //
 // Any failure exits non-zero. Nothing here touches the network.
 "use strict";
@@ -47,6 +49,18 @@ const FIXTURES = {
     coin: "tron",
     path: (i) => `m/44'/195'/0'/0/${i}`,
   },
+};
+
+// TON watch-only fixture: PUBLIC material only. The public key is the
+// Ed25519 account public key at m/44'/607'/0' for the repo's own published
+// test-vector mnemonic; the expected address is the published V4 R2
+// fixture (wallet ID 698983191), independently verified against
+// @ton/ton 16.3.0 WalletContractV4 (workchain 0). No mnemonic, seed or
+// private key appears in this file. Never fund the fixture address: the
+// mnemonic is public.
+const TON_FIXTURE = {
+  pubkeyHex: "c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9",
+  address: "UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn",
 };
 
 // Published test vectors, never for funds.
@@ -964,7 +978,7 @@ Module._load = function (request, parent, isMain) {
   }
   // 4. derive.js input guards (all must refuse with exit 2, never derive).
   const badChain = runCli("derive.js", ["ton", "0"], FIXTURES.btc.xpub + "\n");
-  check("derive.js rejects TON (no watch-only TON derivation)", badChain.status === 2, `status=${badChain.status}`);
+  check("derive.js rejects TON (TON watch-only lives in derive-ton.js, not derive.js)", badChain.status === 2, `status=${badChain.status}`);
   const badIndex = runCli("derive.js", ["btc", "-1"], FIXTURES.btc.xpub + "\n");
   check("derive.js rejects negative index", badIndex.status === 2, `status=${badIndex.status}`);
   const emptyXpub = runCli("derive.js", ["btc", "0"], "\n");
@@ -979,12 +993,52 @@ Module._load = function (request, parent, isMain) {
   }
 
   // 5. Watch-only policy guard: the three documented paths exist in both
-  // watch-only tools, and no TON derivation path exists in either.
+  // xpub tools, and no TON derivation path exists in either (TON has no
+  // xpub; its watch-only route is the separate derive-ton.js).
   for (const script of ["derive.js", "derive_daemon.js"]) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, script), "utf8");
     check(`${script} carries BTC/ETH/TRX paths`,
       src.includes("m/84'/0'/0'/0/${i}") && src.includes("m/44'/60'/0'/0/${i}") && src.includes("m/44'/195'/0'/0/${i}"));
     check(`${script} carries no TON derivation path`, !src.includes("m/44'/607'"));
+  }
+  {
+    const tonSrc = fs.readFileSync(path.join(TOOLS_DIR, "derive-ton.js"), "utf8");
+    check("derive-ton.js documents the TON account path m/44'/607'/0'",
+      tonSrc.includes("m/44'/607'/0'"));
+    check("derive-ton.js carries no xpub handling",
+      !tonSrc.includes("xpub") || tonSrc.includes("no xpub"));
+  }
+
+  // 5b. derive-ton.js CLI end to end (public key on stdin, address on stdout).
+  {
+    const r = runCli("derive-ton.js", [], TON_FIXTURE.pubkeyHex + "\n");
+    check("derive-ton.js fixture exit 0 and prints expected address",
+      r.status === 0 && r.stdout.trim() === TON_FIXTURE.address,
+      `status=${r.status} out=${r.stdout.trim()} err=${(r.stderr || "").trim().slice(0, 120)}`);
+    const padded = runCli("derive-ton.js", [], "  " + TON_FIXTURE.pubkeyHex + "  \n");
+    check("derive-ton.js accepts whitespace-padded fixture pubkey",
+      padded.status === 0 && padded.stdout.trim() === TON_FIXTURE.address,
+      `status=${padded.status} out=${padded.stdout.trim()}`);
+    const upper = runCli("derive-ton.js", [], TON_FIXTURE.pubkeyHex.toUpperCase() + "\n");
+    check("derive-ton.js accepts uppercase hex fixture pubkey",
+      upper.status === 0 && upper.stdout.trim() === TON_FIXTURE.address,
+      `status=${upper.status} out=${upper.stdout.trim()}`);
+    const extraArg = runCli("derive-ton.js", ["0"], TON_FIXTURE.pubkeyHex + "\n");
+    check("derive-ton.js rejects extra arguments",
+      extraArg.status === 2 && extraArg.stdout === "",
+      `status=${extraArg.status}, stdout=${JSON.stringify(extraArg.stdout)}`);
+    for (const [name, input] of [
+      ["empty input", "\n"],
+      ["62 hex chars", TON_FIXTURE.pubkeyHex.slice(0, 62) + "\n"],
+      ["66 hex chars", TON_FIXTURE.pubkeyHex + "aa\n"],
+      ["non-hex chars", "zz" + TON_FIXTURE.pubkeyHex.slice(2) + "\n"],
+      ["0x-prefixed input", "0x" + TON_FIXTURE.pubkeyHex + "\n"],
+    ]) {
+      const bad = runCli("derive-ton.js", [], input);
+      check(`derive-ton.js rejects ${name}`,
+        bad.status === 2 && bad.stdout === "",
+        `status=${bad.status}, stdout=${JSON.stringify(bad.stdout)}, stderr=${JSON.stringify(bad.stderr)}`);
+    }
   }
 
   // 6. Daemon JSONL protocol.
