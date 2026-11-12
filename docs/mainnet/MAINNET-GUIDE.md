@@ -2775,7 +2775,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### QR verification — wrong address
 
-**Status: unperformed.** There is no QR verification: Android has no scanning and Web has no encoder.
+**Status: unperformed.** QR verification remains unperformed: both drafts encode bare-address receive QRs, but neither implements scanning or decoding and no round-trip evidence exists. STOP: do not publish the §12/§13 candidates as VERIFIED or clear M-30 until gate M24 K16 is met with candidate-payload round-trip evidence at EC=M, an implemented scanner, permission grant/denial/revocation evidence, and the recorded EC-M decision.
 
 - **Observable check:** Before a QR-dependent route can be used, verify the actual encoding and scanning path and compare the resulting public address with its independent target.
 - **Required evidence:** An inspectable test record for the proposed QR route, including the encoded or scanned address and comparison result.
@@ -3790,6 +3790,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Clearance condition:** QR round-trip evidence against the mandated formats under M24 K16, including EC=M, an implemented scanner and permission grant/denial/revocation, plus the EC-M decision required by M25 F19.
 
+**Verification note (2026-11-12, repo tip `981d0ba`):** Both drafts now implement receive-QR encoding. Web uses qrcode.react 4.2.0 in `receive.tsx` without an explicit EC level; Android uses ZXing QRCodeWriter without hints (default EC-L). Both encode bare addresses, not BTC/ETH/TON URI candidates; TRX's listed candidate is already a bare address, and matching that format still does not verify it. Neither draft implements scanning/decoding; Android has no CAMERA permission and Web has no qr-scanner dependency. No round-trip evidence exists. This is an unverified receive-QR/address binding: an incorrect, stale or substituted QR could misdirect funds even when the visible address is correct, and a bare address can leave the intended network ambiguous (notably ETH without `@1`). EC=M improves damage tolerance, not authenticity; adding a scanner alone does not prevent deliberate substitution. M-30 remains OPEN; M24 K16 clearance is unmet, pending EC=M, an implemented scanner, round-trip and permission grant/denial/revocation evidence, and the recorded EC-M decision.
+
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-30 — M18 F20; M20 F1; M24 H06 / OI-060; M25 F19; M24 K16.
 ### M-31 — Independent security review gate (before any real-funds use)
 
@@ -3812,6 +3814,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Blocks writing completion:** No — the gate blocks release, not writing.
 
 **Clearance condition:** The independent security review itself, with recorded scope, owners, criteria, result matrix, failure disposition and sign-off under OI-102. Any status change must cite that review evidence. Registering this gap does not clear it.
+
+**Verification note (2026-11-12):** Astra authored the implementation; its same-model second-pass review — not a fully independent audit — was delivered in 22 calls: FIT FOR ITS STATED PURPOSE, WITH FINDINGS. All 44 findings (0 Critical, 5 High, 29 Medium, 10 Low) were fixed at tip `981d0ba`. The owner accepted the handoff on 2026-11-11, not M-31 closure; the handoff requires the owner's word for closure, and the review does not imply mainnet approval. The owner then ordered a new separate-context AI-led Astra audit, with no human reviewer, in progress on 2026-11-12 as fan-out workstream 4, lane T50. M-31 remains OPEN. Closure requires T50 completion, its findings addressed and its evidence accepted (T50 acceptance), plus explicit owner acceptance of M-31 closure.
 
 **Gate/source links:** M24 K08, K17 and K26 / OI-102; re-checked register — M-31, 2026-11-09.
 
@@ -3836,6 +3840,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Clearance condition:** The merge operator’s done-gate check (M36 F8), plus the M35 re-check of this document’s §21 against all 36. Any status change must cite evidence of both checks.
 
+**Verification note (2026-11-12, repo tip `981d0ba`):** Scoped re-check covered M-30–M-34 plus a scope-label scan. All 97 uppercase `VERIFIED` occurrences were inside `UNVERIFIED-*` labels (zero bare-VERIFIED lines); approximately 30 sampled lowercase "verified" uses had explicit scope. No borrowed-assurance violation was found within this scope. Section 16 QR staleness was fixed under M-30. This does not complete the all-36-row §21 re-check. M-32 stays OPEN pending the merge operator’s done-gate check and the remaining register-lane and coordinator re-checks.
+
 **Gate/source links:** M24 I17 and M27 (scope); M36 F8 and M35 (completion checks); [M-31 — independent security review gate](#m-31--independent-security-review-gate-before-any-real-funds-use); re-checked register — M-32, 2026-11-09.
 
 ### M-33 — Doc 4 pin decision + §5 proof form (decided 2026-11-10)
@@ -3858,6 +3864,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Clearance condition:** Met 2026-11-10 — the user’s word: pin to the immutable repair-commit SHA; proof uses the literal SHA; `MAIN_HEAD` capture as supporting context.
 
+**Verification note (2026-11-12, repo tip `981d0ba`):** Repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` and §4 text-fix commit `b3814e0b` exist and are ancestors of this tip. Doc 4 §5 step 3 checks the pinned worktree against the literal repair SHA; step 4 proves the original directory with the literal baseline HEAD SHA `b8298197dd227916ff424dd479508887753e713f` (the 2026-11-10 issue baseline, matching the §4 pinned revision) and README 1275 lines, which matches README at that commit. `MAIN_HEAD` is captured only in step 1 as supporting context. README §4 uses the worktree procedure. RESOLVED (2026-11-10) stands. Follow-up, not a reopening: the step-4 values are revision-locked to the `b8298197` baseline; at this tip README is 1295 lines, so they must be updated when Doc 4 is next re-issued, per §5's own instruction — the new baseline is a coordinator/owner re-issue decision. Reopening triggers: an incorrect or unresolvable repair pin, step-4 proof no longer using a literal SHA (including substitution of `MAIN_HEAD`), or a regression that breaks the required checkout procedure.
+
 **Gate/source links:** M36 item 3 (pin decision), M36 F3 (supplied repair value) and M36 item 5 (proof form); re-checked register — M-33, 2026-11-09; user decision 2026-11-10.
 
 ### M-34 — F4 §15 + Android L3732/L4756 (decided 2026-11-10)
@@ -3879,6 +3887,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Blocks writing completion:** No — resolved by the 2026-11-10 decision.
 
 **Clearance condition:** Met 2026-11-10 — the user’s approval of the §15 treatment and the Android L3732/L4756 updates.
+
+**Verification note (2026-11-12, repo tip `981d0ba`):** Android L3732/L4756 cite Doc 1 §4 clone-and-pin using a separate detached worktree at the repair SHA. Doc 4 §§5/19 point to that procedure; §19 explicitly prohibits in-place detach. Doc 1 §15 (README, Updating and rebuilding) was re-checked first-hand: the original directory is never detached and all pinned work runs inside `../bawa-pinned`. The M-34 fix commit `464399e` is an ancestor of this tip and of `origin/main` (pushed). RESOLVED (2026-11-10) stands. Reopening triggers: F4 §15 regressed, cited instructions losing the repair-SHA/separate-worktree requirement or permitting in-place detach, or the required fixes absent from the intended remote.
 
 **Gate/source links:** M36 item 2, M24 K01 and M28-OI-10; re-checked register — M-34, 2026-11-09; user decision 2026-11-10.
 ### M-35 — No live send/sign/broadcast has been exercised; no reviewed small-amount rehearsal procedure exists
