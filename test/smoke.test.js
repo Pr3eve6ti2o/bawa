@@ -93,6 +93,20 @@ const NEGATIVE = {
   VER_02AA7A99: "ZprvAoSgWe4xytk7pxSnWAgf6eSUonME1zW93fE2SC5A5z3CB8sDwJrsjgoF3pusm1wNeEqzn13eaw3pqv7ASCp6XU6f8kj5G5hktQFXZczz4kw",
   ZPUB84: "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs",
   ETH_BAD_CHECKSUM: "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumd",
+  // T45 F-T45-1: the fixture BTC zpub re-serialised with altered metadata
+  // (same key bytes, valid checksum). DEPTH4 is a depth-4 key, CHILD1 is
+  // depth 3 with a non-hardened child number, FP0 is depth 3 with a
+  // zeroed parent fingerprint. All are published-fixture derivations;
+  // none is a live key.
+  DEPTH4_ZPUB: "zpub6tFcEgUKSnQzcFPsmVysxL1vYiDfSrez7cyck8yvKRTtSdwzGcoPVAGZeGCWTMyC2j6KMR5trBBk1jG5m7jyBM3158Eq9LL48ziLdu8iQaN",
+  DEPTH3_CHILD1_ZPUB: "zpub6rNUNtxJEUjzo2bPGUHCejKYhEsFV2PFzG76roukRqaMboE5a4HD5HQAAvnFhd5eiw3GFxJhW7cUNrjLMg6yKE5n6ttiuApu9pp86QsUfbr",
+  DEPTH3_FP0_ZPUB: "zpub6qKJA3qD7NEXinvr8asbSfpC53RQfkFHL5U9QZQHo5Uh6NDZUQAWN5ty5YoVKgqdBKxoRvbgTQQsXFAp8CpDbboZCcJtmgm8ash5ufyU25Y",
+  // T45 F-T45-1: a REAL account-1 BTC xpub (m/84'/0'/1') derived from the
+  // repo's published test-vector mnemonic with bip_utils 2.12.2. Its
+  // index-0 address is bc1qn5edktucrclgejfrs9wffyy50uqfuad2ylshtd — a real
+  // account-1 address, not the account-0 fixture address. Public test
+  // material only; never for funds.
+  ACCOUNT1_XPUB: "xpub6ChwmZccGnC1FUwqLgw4d3rA3C6vzMgVBGPVKiNhT7WPjXdGSuVCXgmPGT5hAdRtsTuGHkAEXJaTVWRaSy9qoHme3MSSXTsvzwgNkNFmZsf",
 };
 
 function runCompare(envText) {
@@ -791,6 +805,195 @@ async function testDaemonLineLength() {
   });
 }
 
+// T45 F-T45-1: the daemon must reject non-account-level keys instead of
+// silently deriving under the wrong path. DEPTH4 (depth 4), CHILD1
+// (depth 3, non-hardened child) and ACCOUNT1 (a real account-1 xpub from
+// the published test-vector mnemonic) are rejected with an account-level
+// error; FP0 (depth 3, zeroed fingerprint) is accepted — the parent
+// fingerprint cannot be checked without the parent key — and derives the
+// fixture address, which pins that limitation. A valid request afterwards
+// proves the daemon stays up.
+async function testDaemonAccountLevel() {
+  return new Promise((resolve) => {
+    const steps = [
+      {
+        name: "daemon rejects a depth-4 extended key",
+        request: { chain: "btc", xpub: NEGATIVE.DEPTH4_ZPUB, index: 0 },
+        error: "account-level",
+      },
+      {
+        name: "daemon rejects a depth-3 key with a non-hardened child number",
+        request: { chain: "btc", xpub: NEGATIVE.DEPTH3_CHILD1_ZPUB, index: 0 },
+        error: "account-level",
+      },
+      {
+        name: "daemon rejects a real account-1 extended key",
+        request: { chain: "btc", xpub: NEGATIVE.ACCOUNT1_XPUB, index: 0 },
+        error: "account-level",
+      },
+      {
+        name: "daemon derives from a depth-3 key with a zeroed fingerprint",
+        request: { chain: "btc", xpub: NEGATIVE.DEPTH3_FP0_ZPUB, index: 0 },
+        address: FIXTURES.btc[0],
+      },
+      {
+        name: "daemon derives BTC index 0 after account-level rejections",
+        request: { chain: "btc", xpub: FIXTURES.btc.xpub, index: 0 },
+        address: FIXTURES.btc[0],
+      },
+    ];
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+      cwd: TOOLS_DIR,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let finished = false;
+    let ready = false;
+    let current = 0;
+    let stdoutBuffer = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      finish(false, "timed out after 60 s");
+    }, 60_000);
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (!cond) {
+        for (; current < steps.length; current += 1) check(steps[current].name, false, detail);
+      }
+      child.kill();
+      resolve();
+    }
+    function sendNext() {
+      if (finished || current >= steps.length) return;
+      try {
+        child.stdin.write(JSON.stringify(steps[current].request) + "\n");
+      } catch (err) {
+        finish(false, `daemon stdin write failed: ${err.message}`);
+      }
+    }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => { finish(false, `daemon spawn error: ${error.message}`); });
+    child.stdin.on("error", (error) => { finish(false, `daemon stdin error: ${error.message}`); });
+    child.on("close", (code, signal) => {
+      if (!finished) finish(false, `daemon closed early: status=${code}, signal=${signal}; stderr=${stderr}`);
+    });
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+      stdoutBuffer += chunk;
+      let newline;
+      while (!finished && (newline = stdoutBuffer.indexOf("\n")) !== -1) {
+        const line = stdoutBuffer.slice(0, newline).trim();
+        stdoutBuffer = stdoutBuffer.slice(newline + 1);
+        if (line === "") continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch {
+          finish(false, `invalid JSONL on daemon stdout: ${line.slice(0, 80)}`);
+          return;
+        }
+        if (!ready) {
+          if (!message || message.ready !== true) {
+            finish(false, "expected a ready message before sending the request");
+            return;
+          }
+          ready = true;
+          sendNext();
+          continue;
+        }
+        const step = steps[current];
+        const cond =
+          message !== null &&
+          typeof message === "object" &&
+          (step.address !== undefined
+            ? message.ok === true && message.address === step.address
+            : message.ok === false &&
+              typeof message.error === "string" &&
+              message.error.includes(step.error));
+        check(step.name, cond, line);
+        current += 1;
+        if (current >= steps.length) {
+          finish(true);
+          return;
+        }
+        sendNext();
+      }
+    });
+  });
+}
+
+// T45 F-T45-2: a broken reply pipe must end the daemon with a clean exit 1
+// and no uncaught-exception stack trace — not the pre-fix crash
+// ("Unhandled 'error' event / Error: write EPIPE" on stderr).
+async function testDaemonEpipe() {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+      cwd: TOOLS_DIR,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let finished = false;
+    let ready = false;
+    let stdoutBuffer = "";
+    let stderr = "";
+    const timer = setTimeout(() => {
+      finish(false, "timed out after 15 s waiting for the daemon to exit");
+    }, 15_000);
+    function finish(cond, detail) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      check("daemon exits cleanly on a broken reply pipe", cond, detail);
+      child.kill();
+      resolve();
+    }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => { finish(false, `daemon spawn error: ${error.message}`); });
+    child.stdin.on("error", (error) => { finish(false, `daemon stdin error: ${error.message}`); });
+    child.on("close", (code, signal) => {
+      const cleanStderr =
+        !stderr.includes("Unhandled") &&
+        !stderr.includes("write EPIPE") &&
+        !stderr.includes("Error:");
+      finish(
+        code === 1 && signal === null && cleanStderr,
+        `exit code=${code}, signal=${signal}; stderr=${stderr.slice(0, 200)}`
+      );
+    });
+    child.stdout.on("data", (chunk) => {
+      if (finished) return;
+      stdoutBuffer += chunk;
+      let newline;
+      while (!finished && (newline = stdoutBuffer.indexOf("\n")) !== -1) {
+        const line = stdoutBuffer.slice(0, newline).trim();
+        stdoutBuffer = stdoutBuffer.slice(newline + 1);
+        if (line === "") continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch {
+          return;
+        }
+        if (!ready && message && message.ready === true) {
+          ready = true;
+          // Close the parent's read end of the daemon's stdout, then
+          // elicit a reply: the daemon's write hits EPIPE.
+          child.stdout.destroy();
+          try {
+            child.stdin.write(JSON.stringify({ chain: "btc", xpub: FIXTURES.btc.xpub, index: 0 }) + "\n");
+          } catch (err) {
+            finish(false, `daemon stdin write failed: ${err.message}`);
+          }
+        }
+      }
+    });
+  });
+}
+
 // 11b. R-28: checksum rejections must not reach WASM at all. A preload
 // counts initWasm ("init") and getPublicKeyFromExtended ("derive") calls
 // in the child processes; bad-checksum inputs must produce zero counts.
@@ -1328,6 +1531,8 @@ Module._load = function (request, parent, isMain) {
   await testDaemonPrivateRejection();
   await testDaemonDefects();
   await testDaemonLineLength();
+  await testDaemonAccountLevel();
+  await testDaemonEpipe();
   await testNoWasmEntryOnChecksumRejection();
 
   // 10. generate.js verifySeedBundle checks (A-3: decrypt verification).
@@ -1380,7 +1585,10 @@ Module._load = function (request, parent, isMain) {
   {
     const { validateExtendedKey } = require(path.join(TOOLS_DIR, "extended-key.js"));
 
-    for (const vector of ["G_XPUB", "POINT_X_EQ_1"]) {
+    for (const vector of ["G_XPUB", "POINT_X_EQ_1", "DEPTH4_ZPUB", "DEPTH3_CHILD1_ZPUB", "DEPTH3_FP0_ZPUB", "ACCOUNT1_XPUB"]) {
+      // The general validator does NOT enforce account level: the three
+      // T45 metadata-mutation vectors pass here and are caught by
+      // validateAccountKey below (T45 F-T45-1).
       const result = validateExtendedKey(NEGATIVE[vector], "btc");
       check(
         `validateExtendedKey accepts ${vector}`,
@@ -1406,6 +1614,37 @@ Module._load = function (request, parent, isMain) {
         result.ok === false && result.reason === expectedReason,
         `ok=${result.ok}, reason=${result.reason}`
       );
+    }
+
+    // Account-level validation (T45 F-T45-1; same section 11).
+    {
+      const { validateAccountKey } = require(path.join(TOOLS_DIR, "extended-key.js"));
+      for (const [chain, fixture] of Object.entries(FIXTURES)) {
+        const result = validateAccountKey(fixture.xpub, chain);
+        check(
+          `validateAccountKey accepts the ${chain} fixture`,
+          result.ok === true,
+          `ok=${result.ok}, reason=${result.reason}`
+        );
+      }
+      const fp0 = validateAccountKey(NEGATIVE.DEPTH3_FP0_ZPUB, "btc");
+      check(
+        "validateAccountKey accepts a depth-3 key with a zeroed fingerprint",
+        fp0.ok === true,
+        `ok=${fp0.ok}, reason=${fp0.reason}`
+      );
+      for (const [vector, expectedReason] of [
+        ["DEPTH4_ZPUB", "not-account-key"],
+        ["DEPTH3_CHILD1_ZPUB", "not-account-key"],
+        ["ACCOUNT1_XPUB", "not-account-key"],
+      ]) {
+        const result = validateAccountKey(NEGATIVE[vector], "btc");
+        check(
+          `validateAccountKey rejects ${vector}`,
+          result.ok === false && result.reason === expectedReason,
+          `ok=${result.ok}, reason=${result.reason}`
+        );
+      }
     }
 
     const oversizedResult = validateExtendedKey("1".repeat(200), "btc");

@@ -9,7 +9,7 @@
 const { initWasm } = require("@trustwallet/wallet-core");
 const readline = require("readline");
 const { Transform } = require("stream");
-const { validateExtendedKey, redact } = require("./extended-key");
+const { validateAccountKey, redact } = require("./extended-key");
 
 const CHAINS = Object.create(null);
 CHAINS.btc = (coin) => coin.bitcoin;
@@ -35,7 +35,16 @@ function onStdoutDrain() {
 }
 
 function reply(obj) {
-  if (process.stdout.write(JSON.stringify(obj) + "\n")) return;
+  let flushed;
+  try {
+    flushed = process.stdout.write(JSON.stringify(obj) + "\n");
+  } catch {
+    // A synchronously failed write (e.g. a destroyed stdout stream)
+    // must not become an uncaught exception; see the stdio error
+    // handlers below.
+    process.exit(1);
+  }
+  if (flushed) return;
 
   if (replyRl) replyRl.pause();
   if (waitingForDrain) return;
@@ -47,6 +56,18 @@ function reply(obj) {
 function fail(msg) {
   reply({ ok: false, error: redact(msg) });
 }
+
+// A broken stdio pipe must end the daemon cleanly, not crash it with an
+// uncaught EPIPE exception (T45 F-T45-2). Exit 1, not 0: the daemon can
+// no longer serve, so a supervisor with Restart=on-failure relaunches
+// it — the same exit code the uncaught crash produced, minus the stack
+// trace. No logging here: stderr may itself be broken, and logging to a
+// broken stream can throw again. (Astra's re-audit suggested exit 0 for
+// a peer disconnect; exit 1 was kept so the documented
+// Restart=on-failure recovery model and the pre-existing exit code are
+// unchanged — only the uncaught-exception crash is removed.)
+process.stdout.on("error", () => process.exit(1));
+process.stdin.on("error", () => process.exit(1));
 
 (async () => {
   const core = await initWasm();
@@ -121,7 +142,7 @@ function fail(msg) {
         !Number.isInteger(branch) || (branch !== 0 && branch !== 1)
       ) return fail("bad request");
 
-      const validation = validateExtendedKey(xpub.trim(), chain);
+      const validation = validateAccountKey(xpub.trim(), chain);
       if (!validation.ok) return fail(validation.message);
 
       const coin = CHAINS[chain](core.CoinType);

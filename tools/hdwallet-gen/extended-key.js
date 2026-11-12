@@ -268,7 +268,36 @@ function validateExtendedKey(input, chain) {
     );
   }
 
-  return { ok: true, version };
+  return { ok: true, version, decoded };
+}
+
+/*
+ * Account-level validation (T45 F-T45-1): validateExtendedKey plus the
+ * account-0 input contract. Every derivation caller (derive_daemon.js,
+ * derive.js, compare.js) derives account 0 with a fixed path, so the
+ * input must be an account-level key (depth 3) for account 0 (child
+ * number 0x80000000). Any other depth or child number would be silently
+ * derived under the wrong path, returning plausible validated addresses
+ * that are not the caller's wallet addresses. This lives here, not in
+ * validateExtendedKey, because that function is also the general
+ * extended-key validator (its point/depth test vectors are not
+ * account-level keys and must keep passing). The parent fingerprint
+ * (bytes 5-8) cannot be checked without the parent key; a zeroed
+ * fingerprint is accepted, and that stays a limitation.
+ */
+function validateAccountKey(input, chain) {
+  const checked = validateExtendedKey(input, chain);
+  if (!checked.ok) {
+    return checked;
+  }
+  const decoded = checked.decoded;
+  if (decoded[4] !== 3 || decoded.readUInt32BE(9) !== 0x80000000) {
+    return failure(
+      "not-account-key",
+      "extended key must be an account-level key (depth 3, account 0)"
+    );
+  }
+  return { ok: true, version: checked.version };
 }
 
 /*
@@ -295,6 +324,7 @@ function redact(msg) {
 
 module.exports = {
   validateExtendedKey,
+  validateAccountKey,
   isPrivateExtendedKey,
   redact,
   PUBLIC_VERSIONS,

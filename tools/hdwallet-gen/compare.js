@@ -7,7 +7,7 @@
 const { initWasm } = require("@trustwallet/wallet-core");
 const fs = require("fs");
 const path = require("path");
-const { validateExtendedKey, redact } = require("./extended-key");
+const { validateAccountKey, redact } = require("./extended-key");
 
 const MAX_ENV_BYTES = 65536;
 const MAX_LINE_CHARS = 1024;
@@ -101,7 +101,7 @@ function addrFromXpub(core, xpub, coin, fullPath) {
     ["trx", env.XPUB_TRX],
   ]) {
     if (!xpub) throw new Error(`missing ${chain} xpub in ${envPath}`);
-    const validation = validateExtendedKey(xpub, chain);
+    const validation = validateAccountKey(xpub, chain);
     if (!validation.ok) throw new Error(`${chain}: ${validation.message}`);
   }
 

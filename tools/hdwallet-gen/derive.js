@@ -17,7 +17,7 @@
 // xpub carries no chain tag: cross-chain xpub misuse between those three
 // cannot be detected from serialisation alone.
 const { initWasm } = require("@trustwallet/wallet-core");
-const { validateExtendedKey, redact } = require("./extended-key");
+const { validateAccountKey, redact } = require("./extended-key");
 
 const ALLOWED_CHAINS = new Set(["btc", "eth", "trx", "btc-change"]);
 const CHAINS = Object.assign(Object.create(null), {
@@ -33,7 +33,7 @@ const PATHS = Object.assign(Object.create(null), {
   "btc-change": (branch, i) => `m/84'/0'/0'/1/${i}`,
 });
 // btc-change validates against the btc public-version allow-list: it is the
-// same account zpub, only the branch differs. validateExtendedKey knows no
+// same account zpub, only the branch differs. validateAccountKey knows no
 // "btc-change" chain, so it must receive the base chain here.
 const BASE_CHAIN = Object.assign(Object.create(null), {
   btc: "btc",
@@ -98,7 +98,7 @@ const BASE_CHAIN = Object.assign(Object.create(null), {
     console.error(USAGE);
     process.exit(2);
   }
-  const validation = validateExtendedKey(xpub, BASE_CHAIN[chain]);
+  const validation = validateAccountKey(xpub, BASE_CHAIN[chain]);
   if (!validation.ok) {
     // Defence in depth (F-36): the messages are fixed strings, but
     // validation output goes through redact() like every other
