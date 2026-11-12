@@ -487,6 +487,7 @@ function parsePublicKey(pubBytes) {
   if (pub.length === 65 && pub[0] === 0x04) {
     const x = bigIntFromBytes(pub.subarray(1, 33));
     const y = bigIntFromBytes(pub.subarray(33));
+    if (x >= SECP_P || y >= SECP_P) throw new SigningError('Public key coordinate out of range');
     if ((y * y - (x * x * x + 7n)) % SECP_P !== 0n) throw new SigningError('Public key not on curve');
     return { x, y };
   }
@@ -506,6 +507,8 @@ function modPow(base, exp, mod) {
 }
 
 export function ecdsaVerify(hashBytes, r, s, pubBytes) {
+  if (Buffer.from(hashBytes).length !== 32) return false;
+  if (typeof r !== 'bigint' || typeof s !== 'bigint') return false;
   const e = bigIntFromBytes(hashBytes);
   const rN = BigInt(r);
   const sN = BigInt(s);
@@ -525,6 +528,8 @@ export function ecdsaVerify(hashBytes, r, s, pubBytes) {
 }
 
 export function ecdsaRecover(hashBytes, r, s, recid) {
+  if (Buffer.from(hashBytes).length !== 32) return null;
+  if (typeof r !== 'bigint' || typeof s !== 'bigint') return null;
   const e = bigIntFromBytes(hashBytes);
   const rN = BigInt(r);
   const sN = BigInt(s);
@@ -954,6 +959,8 @@ function parseDerSignature(sigWithHashType) {
   }
   if (r[0] === 0x00 && r.length > 1 && (r[1] & 0x80) === 0) throw new SigningError('BTC witness signature: non-minimal r');
   if (s[0] === 0x00 && s.length > 1 && (s[1] & 0x80) === 0) throw new SigningError('BTC witness signature: non-minimal s');
+  if ((r[0] & 0x80) !== 0) throw new SigningError('BTC witness signature: negative r');
+  if ((s[0] & 0x80) !== 0) throw new SigningError('BTC witness signature: negative s');
   const rN = bigIntFromBytes(r);
   const sN = bigIntFromBytes(s);
   if (rN < 1n || rN >= SECP_N || sN < 1n || sN >= SECP_N) throw new SigningError('BTC witness signature: r/s out of range');

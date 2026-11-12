@@ -147,14 +147,19 @@ export function classifyRequest(request) {
   } else if (word('multi-chain', lower) || word('multichain', lower)) {
     return { profile: 'multichain-wallet' };
   } else if (
-    word('hd', lower) ||
-    lower.includes('hierarchical deterministic') ||
-    word('cli', lower) ||
-    lower.includes('command-line') ||
-    lower.includes('command line')
+    requested('hd', request) ||
+    requestedPhrase('hierarchical deterministic', request) ||
+    requested('cli', request) ||
+    requestedPhrase('command-line', request) ||
+    requestedPhrase('command line', request)
   ) {
     return { profile: 'hd-wallet-cli' };
-  } else if (word('bitcoin', lower) || word('btc', lower)) {
+  } else if (
+    (requested('bitcoin', request) || requested('btc', request)) &&
+    (requested('evm', request) || requested('ethereum', request) || requested('eth', request))
+  ) {
+    return { ambiguous: 'split' };
+  } else if (requested('bitcoin', request) || requested('btc', request)) {
     const generationLanguage =
       lower.includes('generat') ||
       lower.includes('mnemonic') ||
@@ -170,7 +175,7 @@ export function classifyRequest(request) {
       return { profile: 'watch-only-wallet' };
     }
     return { profile: 'bitcoin-wallet' };
-  } else if (word('evm', lower) || word('ethereum', lower) || word('eth', lower)) {
+  } else if (requested('evm', request) || requested('ethereum', request) || requested('eth', request)) {
     // T46: a named non-ETH EVM chain fails closed instead of silently
     // routing to the ETH-only evm-wallet profile.
     const nonEthChain = NON_ETH_EVM_CHAINS.find((chain) =>
@@ -198,7 +203,7 @@ const REFUSAL_TON_SEND =
 const REFUSAL_TON_XPUB =
   'I cannot provide TON xpub support; the proposed TON scope has no xpub support.';
 const REFUSAL_SIGNING =
-  'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.';
+  'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.';
 const REFUSAL_MAINNET =
   'I cannot support mainnet use without separate approval; the default scope is testnet.';
 const REFUSAL_SWAPS =

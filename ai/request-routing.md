@@ -40,7 +40,7 @@ The one-prompt workflow is `scripts/build-wallet.mjs "<request>"`. It classifies
 ## Scope boundaries affecting routing
 
 - Testnet is the default throughout. Mainnet without separate approval must be refused. Unspecified testnet path/network details are OPEN; supplied derivation references do not authorize mainnet use.
-- No signing or broadcast code exists in this repo. A wallet name, UI screen or foundation choice does not establish those capabilities.
+- The only signing code in this repo is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented. A wallet name, UI screen or foundation choice does not establish those capabilities.
 - ETH derivation does not establish generic EVM operation. Unspecified EVM capabilities are OPEN, not supported claims.
 - TON is generation-only in the proposed multichain profile: no send and no xpub. TRX derivation is `m/44'/195'/0'/0/i`; TON derivation is `m/44'/607'/0'`, generation-only.
 - Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (25 tests, build + preview verified); no live browser run has been performed.
@@ -74,7 +74,7 @@ Report the matching sentence verbatim for each unsupported part. Do not improvis
 | --- | --- |
 | Mainnet use without separate approval | “I cannot support mainnet use without separate approval; the default scope is testnet.” |
 | Swaps, staking or bridges | “I cannot provide swaps, staking or bridges; they are out of scope for this programme.” |
-| Signing or broadcast claims without an engine that implements them | “I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.” |
+| Signing or broadcast claims without an engine that implements them | “I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.” |
 | TON send | “I cannot provide TON send; TON is generation-only in the proposed multichain profile.” |
 | Any profile not among the seven listed here | “I cannot route this request to an unlisted profile; only the seven profiles listed here are eligible for routing.” |
 | TON xpub | “I cannot provide TON xpub support; the proposed TON scope has no xpub support.” |

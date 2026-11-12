@@ -87,6 +87,10 @@ const deniedEntry = (name) => {
   return (
     /^\.env($|\.)/i.test(name) ||
     /^(secrets|seed-backup|keystore\.properties)$/i.test(name) ||
+    /^\.npmrc$/i.test(name) ||
+    /\.(pem|key)$/i.test(name) ||
+    /^id_rsa/i.test(name) ||
+    /\.enc\.json\.bak\./i.test(name) ||
     /\.(enc\.json|jks|keystore)$/i.test(name)
   );
 };

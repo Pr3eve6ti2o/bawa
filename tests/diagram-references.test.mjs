@@ -1,7 +1,9 @@
 // T08 diagram-reference regression test — Doc 4 §13.0.
 // Guards the corrected diagram's traced claims: every in-repo path it cites
 // must exist, every validation-draft path it marks NOT IN REPO must stay
-// absent, and the Send-disabled / no-signing code facts it states must hold.
+// absent, and the Send-disabled / gated-signing facts it states must hold:
+// the only signing code is a local, test-only signer restricted to temporary
+// unfunded test credentials, and broadcast is not implemented.
 // Run: node tests/diagram-references.test.mjs (Node >=22 <23).
 // No network, no secrets, no private material.
 import test from "node:test";
@@ -146,11 +148,17 @@ test("Web Send stays disabled and watch-only derivation stays TON-free", () => {
   );
 });
 
-test("no signing/broadcast call exists in repo code", () => {
-  // Prose mentions (strings, comments, .md) are out of scope: this checks
-  // for an actual implementation call in code files.
+test("no production signing/broadcast call exists in repo code", () => {
+  // The only signing code is a local, test-only signer restricted to temporary
+  // unfunded test credentials; broadcast is not implemented.
   const codeDirs = ["tools", "apps", "scripts", "packages"];
-  const callPattern = /\b(signTransaction|sendRawTransaction|broadcast\s*\()\b/;
+  const callPattern = /\b(signTransaction|sendRawTransaction)\s*\(|\bbroadcast\s*\(/;
+  const allowlist = {
+    // signTransaction is a throwing stub, verified below.
+    "tools/mainnet-tx/unsigned-tx.mjs": true,
+    // broadcast( appears only inside the FORBIDDEN_IMPLEMENTED regex literal.
+    "scripts/validate-registry.mjs": true,
+  };
   const offenders = [];
   for (const dir of codeDirs) {
     const root = path.join(ROOT, dir);
@@ -159,12 +167,59 @@ test("no signing/broadcast call exists in repo code", () => {
       if (!/\.(js|mjs|ts|tsx|kt|py)$/.test(file)) continue;
       if (file.includes(`${path.sep}node_modules${path.sep}`)) continue;
       const text = fs.readFileSync(file, "utf8");
-      if (callPattern.test(text)) offenders.push(path.relative(ROOT, file));
+      const repoPath = path.relative(ROOT, file).split(path.sep).join("/");
+      if (callPattern.test(text) && !Object.hasOwn(allowlist, repoPath)) {
+        offenders.push(repoPath);
+      }
     }
   }
   assert.deepEqual(
     offenders,
     [],
-    `signing/broadcast implementation call found in: ${offenders.join(", ")}`,
+    `production signing/broadcast implementation call found in: ${offenders.join(", ")}`,
+  );
+
+  const localSigning = fs.readFileSync(
+    path.join(ROOT, "tools/mainnet-signing/local-signing.mjs"),
+    "utf8",
+  );
+  assert.ok(
+    localSigning.includes(
+      "assertOperationAllowed('sign', { credentialKind: 'temporary-unfunded', localOnly: true })",
+    ),
+    "the local signer must be gated to temporary unfunded test credentials",
+  );
+
+  const unsignedTx = fs.readFileSync(
+    path.join(ROOT, "tools/mainnet-tx/unsigned-tx.mjs"),
+    "utf8",
+  );
+  assert.match(
+    unsignedTx,
+    /export function signTransaction\(\)\s*\{[^}]*\bthrow\b[^}]*\}/,
+    "signTransaction must remain a throwing stub",
+  );
+
+  assert.doesNotMatch(
+    localSigning,
+    callPattern,
+    "local signing must not broadcast or send raw transactions",
+  );
+
+  const registry = fs.readFileSync(
+    path.join(ROOT, "scripts/validate-registry.mjs"),
+    "utf8",
+  );
+  const registryCallLines = registry
+    .split(/\r?\n/)
+    .filter((line) => callPattern.test(line));
+  assert.equal(
+    registryCallLines.length,
+    1,
+    "only the FORBIDDEN_IMPLEMENTED regex line may match in the registry",
+  );
+  assert.ok(
+    registryCallLines.every((line) => line.includes("broadcast(s|ed|ing)?")),
+    "registry matches must be confined to the FORBIDDEN_IMPLEMENTED regex literal",
   );
 });

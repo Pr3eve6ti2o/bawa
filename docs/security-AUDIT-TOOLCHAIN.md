@@ -21,9 +21,11 @@ Repo facts the toolchain is sized for (snapshot `981d0ba`):
   4.9.1, WASM), React 19 + Vite 8 + TypeScript 5.9 + Vitest 4.1.3 in
   `apps/web`. Lockfiles in both projects. No lint or SAST config.
 - Python: `>=3.11` (VM: 3.12.3), `requirements.txt` pins
-  `cryptography==50.0.2`, `bip-utils==2.12.2`. No pyproject, no
-  lockfile. Code: `tools/make_wallet.py`, `tools/decrypt_seed.py`,
-  `test/*.py`.
+  `cryptography==50.0.2`, `bip-utils==2.12.2`. No pyproject.
+  `requirements.lock` (R02, 2026-11-12) freezes the full transitive
+  graph with hashes (pip-compile --generate-hashes, 23 packages);
+  install it with `pip install --require-hashes -r requirements.lock`.
+  Code: `tools/make_wallet.py`, `tools/decrypt_seed.py`, `test/*.py`.
 - Android: AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00,
   compileSdk 35, minSdk 33, JDK 17, ZXing core 3.5.3. Watch-only
   testnet app: no signing, no broadcast, no Trust Wallet Core AAR.

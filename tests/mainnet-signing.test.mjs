@@ -541,3 +541,76 @@ describe('T35 fixture sanity', () => {
     assert.equal(decodeBech32P2wpkh(BTC_A0).toString('hex'), '751e76e8199196d454941c45d1b3a323f1433bd6');
   });
 });
+
+describe('R02-F12 signing strictness', () => {
+  test('rejects noncanonical 65-byte public keys', () => {
+    const P = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2Fn;
+    const N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n;
+    function modPow(base, exponent, modulus) {
+      let result = 1n;
+      base %= modulus;
+      while (exponent > 0n) {
+        if (exponent & 1n) result = (result * base) % modulus;
+        base = (base * base) % modulus;
+        exponent >>= 1n;
+      }
+      return result;
+    }
+    const x = P + 1n;
+    const y = modPow(8n, (P + 1n) / 4n, P);
+    const aliasKey = Buffer.concat([
+      Buffer.from([0x04]),
+      Buffer.from(x.toString(16).padStart(64, '0'), 'hex'),
+      Buffer.from(y.toString(16).padStart(64, '0'), 'hex'),
+    ]);
+    assert.equal(localSigning.ecdsaVerify(Buffer.alloc(32), (P + 1n) % N, (P + 1n) % N, aliasKey), false);
+  });
+
+  test('rejects non-32-byte digests', () => {
+    const pubkey = privateKeyToPublicKey(priv(1), true);
+    assert.equal(localSigning.ecdsaVerify(Buffer.alloc(33), 1n, 1n, pubkey), false);
+    assert.equal(localSigning.ecdsaRecover(Buffer.alloc(33), 1n, 1n, 0), null);
+  });
+
+  test('rejects non-BigInt r without throwing', () => {
+    const pubkey = privateKeyToPublicKey(priv(1), true);
+    assert.equal(localSigning.ecdsaVerify(Buffer.alloc(32), Buffer.from([1]), 1n, pubkey), false);
+    assert.equal(localSigning.ecdsaVerify(Buffer.alloc(32), 1.5, 1n, pubkey), false);
+    assert.equal(localSigning.ecdsaRecover(Buffer.alloc(32), Buffer.from([1]), 1n, 0), null);
+  });
+
+  test('rejects a DER negative r in a BTC witness signature', async () => {
+    // Only priv(1) owns the fixture prevout (BTC_A0); the other priv(n)
+    // keys fail preflight 10. The default 20000-sat fixture's r is NOT
+    // sign-padded (DER 30 44 02 20 12...); the 20004-sat variant IS
+    // (verified first-hand: DER 30 45 02 21 00...), so build that variant.
+    const btcUnsignedFixture = buildBtcP2wpkhUnsignedTx({
+      utxos: [{ txid: BTC_TXID, vout: 0, valueSats: '30000', scriptPubKey: BTC_SCRIPT0 }],
+      toAddress: BTC_A1,
+      amountSats: '20004',
+      feeSats: '200',
+      maxFeeSats: '200',
+      changeAddress: BTC_AC,
+    });
+    const btcApproval20004 = btcApproval({ amountSats: '20004' });
+    const btcSigned = await signBtc(btcUnsignedFixture, btcApproval20004, priv(1), isolation());
+    const btcParsed = parseBtcSignedTx(btcSigned.signedTxHex);
+    assert.equal(btcParsed.witnesses[0][0][4], 0x00, 'fixture r must be sign-padded for this test');
+    assert.equal(verifyBtc(btcSigned, btcUnsignedFixture, btcApproval20004).valid, true);
+
+    const signature = btcParsed.witnesses[0][0];
+    const sigHex = bytesToHex(signature);
+    const badSignature = Buffer.concat([signature.subarray(0, 4), signature.subarray(5)]);
+    badSignature[1] -= 1;
+    badSignature[3] -= 1;
+    const sigLengthHex = signature.length.toString(16).padStart(2, '0');
+    const badSigLengthHex = badSignature.length.toString(16).padStart(2, '0');
+    // Keep the CompactSize witness-item length in sync with the shortened DER signature.
+    const badBtcHex = btcSigned.signedTxHex
+      .replace(`${sigLengthHex}${sigHex}`, `${badSigLengthHex}${sigHex}`)
+      .replace(sigHex, bytesToHex(badSignature));
+    const result = verifyBtc({ ...btcSigned, signedTxHex: badBtcHex }, btcUnsignedFixture, btcApproval20004);
+    assert.equal(result.valid, false);
+    assert.match(result.reason, /negative r/);
+  });
+});

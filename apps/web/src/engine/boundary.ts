@@ -98,10 +98,14 @@ function isValidCompressedPoint(keyBytes: Uint8Array): boolean {
   return modPow(ySquared, (SECP256K1_P - 1n) / 2n, SECP256K1_P) === 1n;
 }
 
-export async function validateExtendedKey(
+type DecodedExtendedKeyValidation =
+  | { ok: true; bytes: Uint8Array }
+  | Extract<import('@bawa/contracts').ExtendedKeyValidation, { ok: false }>;
+
+async function decodeAndValidateExtendedKey(
   xpub: string,
   chain: ChainId,
-): Promise<import('@bawa/contracts').ExtendedKeyValidation> {
+): Promise<DecodedExtendedKeyValidation> {
   const key = xpub.trim();
 
   // T42: bound the input before decoding, like the shared Node validator.
@@ -223,6 +227,39 @@ export async function validateExtendedKey(
       ok: false,
       reason: 'version-not-allowed',
       message: `extended key version ${versionHex} is not allowed for ${chain}`,
+    };
+  }
+
+  return { ok: true, bytes };
+}
+
+export async function validateExtendedKey(
+  xpub: string,
+  chain: ChainId,
+): Promise<import('@bawa/contracts').ExtendedKeyValidation> {
+  const validation = await decodeAndValidateExtendedKey(xpub, chain);
+  if (validation.ok === false) return validation;
+  return { ok: true };
+}
+
+export async function validateAccountKey(
+  xpub: string,
+  chain: ChainId,
+): Promise<import('@bawa/contracts').ExtendedKeyValidation> {
+  const validation = await decodeAndValidateExtendedKey(xpub, chain);
+  if (validation.ok === false) return validation;
+
+  const { bytes } = validation;
+  const childNumber = new DataView(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength,
+  ).getUint32(9, false);
+  if (bytes[4] !== 3 || childNumber !== 0x80000000) {
+    return {
+      ok: false,
+      reason: 'not-account-key',
+      message: 'extended key must be an account-level key (depth 3, account 0)',
     };
   }
 
@@ -389,7 +426,11 @@ export function validateTonAddress(address: string): TonAddressValidation {
 }
 
 // Watch-only import validation for any chain: TON validates a public
-// address, btc/eth/trx validate an extended public key.
+// address, btc/eth/trx validate an extended public key — and the key
+// must be the account-level key (depth 3, account 0; R02-F01), so a
+// depth-0/1/2 key cannot be imported and silently derive addresses
+// from the wrong level. validateAccountKey returns the exact
+// not-account-key message for that case.
 export async function validateWatchOnlyImport(
   chain: ChainId,
   value: string,
@@ -405,7 +446,7 @@ export async function validateWatchOnlyImport(
     }
     return { ok: true };
   }
-  return validateExtendedKey(value, chain);
+  return validateAccountKey(value, chain);
 }
 
 export async function deriveAddress(
@@ -431,7 +472,7 @@ export async function deriveAddress(
   }
 
   const key = xpub.trim();
-  const validation = await validateExtendedKey(key, chain);
+  const validation = await validateAccountKey(key, chain);
   if (validation.ok === false) {
     throw new Error(validation.message);
   }

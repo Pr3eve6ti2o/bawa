@@ -199,4 +199,36 @@ describe.sequential('ImportWalletScreen (T41)', () => {
       }
     }
   });
+
+  it('shows the do-not-enter-secrets label guidance (R02-F09)', async () => {
+    const previousUrl = window.location.href;
+    const previousState = window.history.state;
+    const previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+    try {
+      window.history.pushState({}, '', '/import-wallet');
+      await act(async () => {
+        root.render(<App />);
+      });
+      expect(div.textContent).toContain('Labels are stored in plain text in this browser');
+      expect(div.textContent).toContain('do not enter secrets');
+    } finally {
+      try {
+        await act(async () => {
+          root.unmount();
+        });
+      } finally {
+        div.remove();
+        window.history.replaceState(previousState, '', previousUrl);
+        if (previousActEnvironment === undefined) {
+          delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+        } else {
+          testGlobal.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+        }
+      }
+    }
+  });
 });

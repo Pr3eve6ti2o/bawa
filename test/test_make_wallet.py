@@ -16,14 +16,18 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from unittest import mock
+
 from make_wallet import (
     BASE,
+    _assert_trusted_executable,
     _contains_seed_material,
     _copy_0600,
     _copy_versioned_0600,
     _data_key_pipe,
     _makedirs_0700_fsynced,
     _parse_seed_bundle,
+    _resolve_node,
     assert_bundle_decrypts,
     assert_bundle_matches_public_roots,
     assertBundleVerified,
@@ -831,6 +835,165 @@ class TestDataKeyPipe(unittest.TestCase):
                     [sys.executable, path], env, pass_fds=(key_r,)
                 )
             self.assertEqual(out, "got:32:" + key.hex())
+
+
+class TestResolveNode(unittest.TestCase):
+    _INVALID_BAWA_NODE_MESSAGE = (
+        "BAWA_NODE must be an absolute path to an existing file"
+    )
+    _DIR_OWNER_MESSAGE = (
+        "refusing node executable in a directory "
+        "not owned by you or root; set BAWA_NODE to a trusted absolute node path"
+    )
+    _DIR_NON_STICKY_MESSAGE = (
+        "refusing node executable in a non-sticky group/other-writable "
+        "directory; set BAWA_NODE to a trusted absolute node path"
+    )
+    _FILE_OWNER_MESSAGE = (
+        "refusing node executable not owned by you or root; "
+        "set BAWA_NODE to a trusted absolute node path"
+    )
+    _FILE_WRITABLE_MESSAGE = (
+        "refusing group/other-writable node executable; "
+        "set BAWA_NODE to a trusted absolute node path"
+    )
+    _FILE_UNINSPECTABLE_MESSAGE = (
+        "refusing node executable that cannot be inspected; "
+        "set BAWA_NODE to a trusted absolute node path"
+    )
+
+    def test_bawa_node_absolute_existing_file(self):
+        with mock.patch.dict(
+            os.environ, {"BAWA_NODE": sys.executable}, clear=True
+        ), mock.patch("make_wallet.shutil.which", return_value=None):
+            self.assertEqual(_resolve_node(), sys.executable)
+
+    def test_bawa_node_relative_path_is_refused(self):
+        with mock.patch.dict(
+            os.environ, {"BAWA_NODE": "node"}, clear=True
+        ), mock.patch("make_wallet.shutil.which", return_value=None):
+            with self.assertRaises(SystemExit) as raised:
+                _resolve_node()
+        self.assertEqual(str(raised.exception), self._INVALID_BAWA_NODE_MESSAGE)
+
+    def test_bawa_node_nonexistent_absolute_path_is_refused(self):
+        with mock.patch.dict(
+            os.environ, {"BAWA_NODE": "/nonexistent/node"}, clear=True
+        ), mock.patch("make_wallet.shutil.which", return_value=None):
+            with self.assertRaises(SystemExit) as raised:
+                _resolve_node()
+        self.assertEqual(str(raised.exception), self._INVALID_BAWA_NODE_MESSAGE)
+
+    def test_which_node_in_self_owned_private_directory(self):
+        node = "/trusted/node"
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch(
+            "make_wallet.shutil.which", return_value=node
+        ), mock.patch(
+            "os.stat",
+            return_value=mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+        ):
+            self.assertEqual(_resolve_node(), node)
+
+    def test_which_node_in_other_owned_directory_is_refused(self):
+        node = "/untrusted/node"
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch(
+            "make_wallet.shutil.which", return_value=node
+        ), mock.patch(
+            "os.stat",
+            return_value=mock.Mock(st_mode=0o41777, st_uid=os.getuid() + 1),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _resolve_node()
+        self.assertEqual(str(raised.exception), self._DIR_OWNER_MESSAGE)
+
+    def test_which_none_uses_fallback(self):
+        with mock.patch.dict(os.environ, {}, clear=True), mock.patch(
+            "make_wallet.shutil.which", return_value=None
+        ):
+            self.assertEqual(_resolve_node(), "/usr/bin/node")
+
+    def test_assert_trusted_executable_self_owned_private_directory(self):
+        with mock.patch(
+            "os.stat",
+            return_value=mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+        ):
+            _assert_trusted_executable("/trusted/node")
+
+    def test_assert_trusted_executable_root_owned_writable_directory(self):
+        with mock.patch(
+            "os.stat",
+            side_effect=[
+                mock.Mock(st_mode=0o41777, st_uid=0),
+                mock.Mock(st_mode=0o40755, st_uid=0),
+            ],
+        ):
+            _assert_trusted_executable("/trusted/node")
+
+    def test_assert_trusted_executable_self_owned_non_sticky_writable_directory_is_refused(self):
+        with mock.patch(
+            "os.stat",
+            side_effect=[
+                mock.Mock(st_mode=0o40777, st_uid=os.getuid()),
+                mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+            ],
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._DIR_NON_STICKY_MESSAGE)
+
+    def test_assert_trusted_executable_other_owned_private_directory_is_refused(self):
+        with mock.patch(
+            "os.stat",
+            return_value=mock.Mock(st_mode=0o40755, st_uid=os.getuid() + 1),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._DIR_OWNER_MESSAGE)
+
+    def test_assert_trusted_executable_other_owned_file_is_refused(self):
+        with mock.patch(
+            "os.stat",
+            side_effect=[
+                mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+                mock.Mock(st_mode=0o40755, st_uid=os.getuid() + 1),
+            ],
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._FILE_OWNER_MESSAGE)
+
+    def test_assert_trusted_executable_group_writable_file_is_refused(self):
+        with mock.patch(
+            "os.stat",
+            side_effect=[
+                mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+                mock.Mock(st_mode=0o40777, st_uid=os.getuid()),
+            ],
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._FILE_WRITABLE_MESSAGE)
+
+    def test_assert_trusted_executable_uninspectable_file_is_refused(self):
+        with mock.patch(
+            "os.stat",
+            side_effect=[
+                mock.Mock(st_mode=0o40755, st_uid=os.getuid()),
+                OSError("gone"),
+            ],
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._FILE_UNINSPECTABLE_MESSAGE)
+
+    def test_assert_trusted_executable_other_owned_writable_directory(self):
+        with mock.patch(
+            "os.stat",
+            return_value=mock.Mock(st_mode=0o41777, st_uid=os.getuid() + 1),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                _assert_trusted_executable("/untrusted/node")
+        self.assertEqual(str(raised.exception), self._DIR_OWNER_MESSAGE)
 
 
 if __name__ == "__main__":

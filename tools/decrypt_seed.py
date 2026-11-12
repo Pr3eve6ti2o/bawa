@@ -192,6 +192,20 @@ def decrypt(path: str, key: bytes) -> str:
     return text
 
 
+def _assert_trusted_output_dir(output_dir):
+    st = os.stat(output_dir)
+    mode = st.st_mode
+    if (mode & 0o022) and not (mode & 0o1000):
+        raise SystemExit(
+            "refusing non-sticky group/other-writable output directory"
+        )
+    if (mode & 0o022) and st.st_uid not in (os.getuid(), 0):
+        raise SystemExit(
+            "refusing group/other-writable output directory not owned by "
+            "you or root; use a private directory"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         epilog="Key input: prefer the non-echoing prompt. BAWA_DATA_KEY "
@@ -210,7 +224,7 @@ def main() -> int:
     if args.output and os.path.islink(args.output):
         # NB: no os.path.exists() gate — islink() alone must catch dangling
         # symlinks too, otherwise a dangling symlink slips past this refusal
-        # (os.replace() would still not follow it, but the guard must mean
+        # (os.link() would still not follow it, but the guard must mean
         # what it says).
         raise SystemExit("refusing symlinked output path")
 
@@ -231,11 +245,7 @@ def main() -> int:
         # the makedirs default 0o777 & ~umask. Pre-existing directories
         # are left untouched (no chmod on a directory the operator owns).
         os.makedirs(output_dir, mode=0o700, exist_ok=True)
-        mode = os.stat(output_dir).st_mode
-        if (mode & 0o022) and not (mode & 0o1000):
-            raise SystemExit(
-                "refusing non-sticky group/other-writable output directory"
-            )
+        _assert_trusted_output_dir(output_dir)
 
         fd, tmp = tempfile.mkstemp(
             prefix="seed-", suffix=".tmp", dir=output_dir
@@ -252,8 +262,8 @@ def main() -> int:
             # check is refused instead of silently replaced.
             _publish_no_clobber(tmp, args.output)
             published = True
-            # T41: fsync the directory so the rename survives power loss.
-            # Durability (T43 r2a Fix 3): the rename must be fsynced
+            # T41: fsync the directory so the link survives power loss.
+            # Durability (T43 r2a Fix 3): the link must be fsynced
             # into the output directory; a file fsync alone does not
             # commit the directory entry. If this fsync fails the file
             # is already installed — the error reports that, it does

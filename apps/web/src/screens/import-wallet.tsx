@@ -18,9 +18,9 @@ type ImportInputConfig = {
 };
 
 const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
-  btc: { label: 'Extended public key (xpub)', placeholder: 'xpub…' },
-  eth: { label: 'Extended public key (xpub)', placeholder: 'xpub…' },
-  trx: { label: 'Extended public key (xpub)', placeholder: 'xpub…' },
+  btc: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  eth: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  trx: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   ton: { label: 'TON public address', placeholder: 'UQ… or 0:…' },
 };
 
@@ -80,7 +80,8 @@ export function ImportWalletScreen() {
         <h1 className="text-2xl font-semibold">Import a watch-only wallet</h1>
         <p id="watch-only-notice" className="text-sm text-muted-foreground">
           Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
-          are rejected. Never paste a mnemonic, seed or private key here.
+          are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
+          Never paste a mnemonic, seed or private key here.
           An extended public key lets its holder track this account&apos;s
           derivable addresses, balances and transaction history. Imported
           keys are stored in this browser (localStorage) and stay stored
@@ -143,6 +144,7 @@ export function ImportWalletScreen() {
             placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
             maxLength={40}
           />
+          <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
         </div>
 
         {error && (

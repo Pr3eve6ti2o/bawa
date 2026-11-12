@@ -174,11 +174,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const label = rawLabel.length > LABEL_MAX_LENGTH ? '' : rawLabel;
       try {
         const validation = await validateWatchOnlyImport(chain, publicKey);
-        if (!cancelled && !changed.current[chain] && validation.ok) {
-          // For TON, xpub holds the validated TON public address (see
-          // contracts). TON has one address because its path is fully hardened.
-          const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
-          void putWallet(chain, wallet);
+        if (!cancelled && !changed.current[chain]) {
+          if (validation.ok) {
+            // For TON, xpub holds the validated TON public address (see
+            // contracts). TON has one address because its path is fully hardened.
+            const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
+            void putWallet(chain, wallet);
+          }
+          // Keep well-formed non-account keys and labels visible and stored for
+          // investigation. putWallet triggers refreshChain; deriveAddresses ->
+          // deriveAddress enforces validateAccountKey and throws the not-account-key
+          // message before deriving any addresses. refreshChain catches the error
+          // and sets the chain to the error state with that message.
+          else if (validation.reason === 'not-account-key') {
+            const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
+            void putWallet(chain, wallet);
+          }
         }
       } catch {
         // Ignore corrupt or unverifiable entries; never restore unvalidated data.

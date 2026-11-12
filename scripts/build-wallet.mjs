@@ -151,7 +151,7 @@ function main() {
     profileId = result.profile;
   } else if (result.ambiguous) {
     ambiguous = result.ambiguous;
-    console.error('build-wallet: split this request into one web-wallet build and one android-wallet build');
+    console.error('build-wallet: split this request into one build per requested profile');
   } else {
     // F-20: an unclassifiable request gets a JSON report with the
     // failure reason (not bare stderr), exit 2.

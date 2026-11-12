@@ -103,6 +103,11 @@ describe('generate-project secret-file exclusion (T49 F-01)', () => {
     'secrets/token.txt',
     'src/__t49-nested__/.env',
     'release.jks',
+    'src/__t49-nested__/.npmrc',
+    'cert.pem',
+    '__t49-test__.key',
+    'id_rsa_test',
+    'seed.enc.json.bak.2026-01-01T00-00-00.0123456789abcdef',
     '.environment.ts',
     '.env.example',
     '__t49-control__.txt',
@@ -166,6 +171,11 @@ describe('generate-project secret-file exclusion (T49 F-01)', () => {
       );
     }
     assert.equal(existsSync(join(webOut, 'secrets')), false);
+    assert.equal(
+      existsSync(join(webOut, '.npmrc')),
+      false,
+      'the starter\'s real .npmrc must not reach the generated project',
+    );
     assert.equal(
       existsSync(join(webOut, '__t49-control__.txt')),
       true,

@@ -708,6 +708,54 @@ def _data_key_pipe(data_key):
             pass
 
 
+def _assert_trusted_executable(path: str) -> None:
+    real = os.path.realpath(path)
+    directory = os.path.dirname(real)
+    directory_stat = os.stat(directory)
+    mode = directory_stat.st_mode
+    if directory_stat.st_uid not in (0, os.getuid()):
+        raise SystemExit(
+            "refusing node executable in a directory not owned by you or root; "
+            "set BAWA_NODE to a trusted absolute node path"
+        )
+    if (mode & 0o022) and (mode & 0o1000) == 0:
+        raise SystemExit(
+            "refusing node executable in a non-sticky group/other-writable directory; "
+            "set BAWA_NODE to a trusted absolute node path"
+        )
+    try:
+        executable_stat = os.stat(real)
+    except OSError:
+        raise SystemExit(
+            "refusing node executable that cannot be inspected; "
+            "set BAWA_NODE to a trusted absolute node path"
+        )
+    if executable_stat.st_uid not in (0, os.getuid()):
+        raise SystemExit(
+            "refusing node executable not owned by you or root; "
+            "set BAWA_NODE to a trusted absolute node path"
+        )
+    if executable_stat.st_mode & 0o022:
+        raise SystemExit(
+            "refusing group/other-writable node executable; "
+            "set BAWA_NODE to a trusted absolute node path"
+        )
+
+
+def _resolve_node() -> str:
+    # BAWA_NODE: explicit override for a trusted node executable.
+    override = os.environ.get("BAWA_NODE")
+    if override:
+        if not os.path.isabs(override) or not os.path.isfile(override):
+            raise SystemExit("BAWA_NODE must be an absolute path to an existing file")
+        return override
+    resolved = shutil.which("node")
+    if resolved is None:
+        return "/usr/bin/node"
+    _assert_trusted_executable(resolved)
+    return resolved
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
     raw_secrets = resolve_secrets_dir()
@@ -726,7 +774,7 @@ def main() -> None:
             "existing wallet found; rerun with --force/--regenerate only after making a verified backup"
         )
 
-    node = shutil.which("node") or "/usr/bin/node"
+    node = _resolve_node()
     generator = os.path.join(BASE, "tools", "hdwallet-gen", "generate.js")
     if not os.path.isfile(generator):
         raise SystemExit(f"generator not found: {generator}")
@@ -887,7 +935,7 @@ def main() -> None:
     print(f"  BTC zpub: {data['btc_zpub']}")
     print(f"  ETH xpub: {data['eth_xpub']}")
     print(f"  TRX xpub: {data['trx_xpub']}")
-    print(f"  TON:      {data['ton_address']}")
+    print(f"  TON:      {data['ton_address']} (reported by generator; not independently cross-checked)")
     print(f"Encrypted recovery artifact: {reported} (0600)")
     print(f"Backup bundle: {backup_dir}")
 

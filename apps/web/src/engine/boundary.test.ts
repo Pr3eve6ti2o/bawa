@@ -5,6 +5,7 @@ import {
   deriveAddress,
   deriveAddresses,
   isEngineReady,
+  validateAccountKey,
   validateExtendedKey,
   validateTonAddress,
 } from './boundary';
@@ -254,6 +255,66 @@ describe.sequential('watch-only engine boundary', () => {
         reason: 'invalid-depth-metadata',
       });
     }
+  });
+
+  it.each(fixtures)(
+    'accepts the account-0 fixtures with validateAccountKey (R02-F01)',
+    async ({ chain, xpub }) => {
+      await expect(validateAccountKey(xpub, chain)).resolves.toMatchObject({
+        ok: true,
+      });
+    },
+  );
+
+  it('rejects non-account depths with validateAccountKey (R02-F01)', async () => {
+    for (const depth of [0, 1, 2, 4, 5]) {
+      const mutated = mutatePayload(btcZpub, (payload) => {
+        payload[4] = depth;
+        if (depth === 0) {
+          payload.fill(0, 5, 13);
+        }
+      });
+
+      await expect(validateExtendedKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: true,
+      });
+      await expect(validateAccountKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'not-account-key',
+      });
+    }
+  });
+
+  it('rejects depth-3 non-account-0 child numbers with validateAccountKey (R02-F01)', async () => {
+    for (const childNumber of [0x80000001, 0x00000000]) {
+      const mutated = mutatePayload(btcZpub, (payload) => {
+        payload[9] = (childNumber >>> 24) & 0xff;
+        payload[10] = (childNumber >>> 16) & 0xff;
+        payload[11] = (childNumber >>> 8) & 0xff;
+        payload[12] = childNumber & 0xff;
+      });
+
+      await expect(validateExtendedKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: true,
+      });
+      await expect(validateAccountKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'not-account-key',
+      });
+    }
+  });
+
+  it('deriveAddress rejects a depth-2 key before core invocation (R02-F01)', async () => {
+    const depth2 = mutatePayload(btcZpub, (payload) => {
+      payload[4] = 2;
+    });
+
+    await expect(deriveAddress('btc', depth2, 0)).rejects.toThrow(
+      'extended key must be an account-level key (depth 3, account 0)',
+    );
+    await expect(deriveAddress('btc', btcZpub, 0)).resolves.toBe(
+      'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+    );
   });
 
   it('rejects a character outside the base58 alphabet', async () => {

@@ -40,6 +40,19 @@ function runCommand(name, executable, commandArgs, cwd = root) {
   });
 }
 
+function reportOnlyScan(name, executable, commandArgs, cwd, summarize) {
+  const result = spawnSync(executable, commandArgs, { cwd, stdio: 'pipe', encoding: 'utf8' });
+  if (result.error) {
+    report(name, 'SKIP', 'tool not available');
+    return;
+  }
+  try {
+    report(name, 'REPORT', summarize(result.stdout));
+  } catch {
+    report(name, 'REPORT', 'unparsed output');
+  }
+}
+
 // The lockfile pin check runs FIRST (T44-F5): it used to run last,
 // after `npm ci` had already installed — and the suites had already
 // executed — whatever a tampered lockfile said. A wrong pin, a
@@ -87,6 +100,15 @@ if (args.includes('--skip-android')) {
 }
 
 check('secret-scan', () => secretScan(root));
+
+// R02-F10: these scans are report-only until pre-existing findings are addressed:
+// R03's secret-scan findings, ecdsa PYSEC-2026-1325 (no fix version), and bandit's
+// test-file issues. Promoting any step to a hard gate is a separate decision.
+reportOnlyScan('audit-npm-engine', 'npm', ['audit', '--omit=dev', '--json'], engineDir, (out) => `${JSON.parse(out).metadata.vulnerabilities.total} vulnerabilities`);
+reportOnlyScan('audit-npm-web', 'npm', ['audit', '--json'], web, (out) => `${JSON.parse(out).metadata.vulnerabilities.total} vulnerabilities`);
+reportOnlyScan('audit-pip', 'pip-audit', ['--format', 'json', '-r', 'requirements.txt'], root, (out) => `${JSON.parse(out).dependencies.reduce((n, d) => n + d.vulns.length, 0)} vulnerabilities`);
+reportOnlyScan('sast-bandit', 'bandit', ['-r', 'tools', 'test', '-f', 'json'], root, (out) => `${JSON.parse(out).results.length} findings`);
+reportOnlyScan('sast-ruff', 'ruff', ['check', '--select', 'S', 'tools', 'test', '--output-format', 'json'], root, (out) => `${JSON.parse(out).length} findings`);
 
 // F-41: the verdict names skips. 'quality-gates: OK' only with no
 // failures AND no skips; exit 0 is preserved for intentional

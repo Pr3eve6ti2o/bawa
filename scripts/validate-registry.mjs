@@ -229,8 +229,7 @@ export function validateReferences(files) {
 }
 
 // T46: operation wording that must never appear in a profile's
-// implemented[] list. No send/sign/broadcast code exists in the
-// repository, so any implemented claim using these words (including
+// implemented[] list. The only signing code in the repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented, so any implemented claim using these words (including
 // "sending", "signing", "broadcasting", "sent transactions",
 // "signature creation" and transaction-submission wording) is false
 // on its face. The words stay allowed in missing[], where they belong.
@@ -267,7 +266,7 @@ export function validateProfileClaims(files) {
     for (const entry of implemented) {
       if (typeof entry === "string" && FORBIDDEN_IMPLEMENTED.test(entry)) {
         errors.push(
-          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims a send/sign/broadcast capability; no such code exists in this repository`,
+          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims a send/sign/broadcast capability; the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented`,
         );
       }
     }

@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from decrypt_seed import _publish_no_clobber, _read_key, decrypt
+from decrypt_seed import _assert_trusted_output_dir, _publish_no_clobber, _read_key, decrypt, main
 
 TOOLS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools"))
 
@@ -229,6 +229,113 @@ class TestMainOutput(unittest.TestCase):
             result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(stat.S_IMODE(os.stat(nested).st_mode), 0o700)
+
+    def test_output_link_publish_is_no_clobber(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            output_dir = os.path.join(tmp, "output")
+            os.mkdir(output_dir, 0o700)
+            out_path = os.path.join(output_dir, "recovered.txt")
+            argv = ["decrypt_seed.py", "--output", out_path, bundle_path]
+            with mock.patch.object(sys, "argv", argv):
+                with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": key.hex()}):
+                    with mock.patch("os.link", side_effect=FileExistsError):
+                        with self.assertRaises(SystemExit) as caught:
+                            main()
+            self.assertEqual(
+                str(caught.exception),
+                "refusing to overwrite existing output file; remove it first",
+            )
+            self.assertFalse(
+                any(
+                    name.startswith("seed-") and name.endswith(".tmp")
+                    for name in os.listdir(output_dir)
+                )
+            )
+
+    def test_output_link_publish_preserves_existing_destination_on_race(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            output_dir = os.path.join(tmp, "output")
+            os.mkdir(output_dir, 0o700)
+            out_path = os.path.join(output_dir, "recovered.txt")
+            with open(out_path, "w", encoding="utf-8") as fh:
+                fh.write("previous recovery — must survive\n")
+            argv = ["decrypt_seed.py", "--output", out_path, bundle_path]
+            real_lexists = os.path.lexists
+            with mock.patch.object(sys, "argv", argv):
+                with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": key.hex()}):
+                    with mock.patch(
+                        "os.path.lexists",
+                        side_effect=lambda p: (
+                            False if p == out_path else real_lexists(p)
+                        ),
+                    ):
+                        with self.assertRaises(SystemExit) as caught:
+                            main()
+            self.assertEqual(
+                str(caught.exception),
+                "refusing to overwrite existing output file; remove it first",
+            )
+            with open(out_path, "r", encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), "previous recovery — must survive\n")
+            self.assertFalse(
+                any(
+                    name.startswith("seed-") and name.endswith(".tmp")
+                    for name in os.listdir(output_dir)
+                )
+            )
+
+    def test_output_allows_self_owned_sticky_writable_directory(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chmod(tmp, 0o1777)
+            out_path = os.path.join(tmp, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(out_path).st_mode), 0o600)
+
+    def test_trusted_output_dir_rejects_other_owned_writable_directory(self):
+        other_uid = os.getuid() + 1
+        self.assertNotIn(other_uid, (os.getuid(), 0))
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=other_uid)
+        with mock.patch("os.stat", return_value=fake_stat):
+            with self.assertRaises(SystemExit) as caught:
+                _assert_trusted_output_dir("output")
+        self.assertEqual(
+            str(caught.exception),
+            "refusing group/other-writable output directory not owned by you or root; "
+            "use a private directory",
+        )
+
+    def test_trusted_output_dir_allows_self_owned_writable_directory(self):
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=os.getuid())
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
+
+    def test_trusted_output_dir_allows_root_owned_writable_directory(self):
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=0)
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
+
+    def test_trusted_output_dir_rejects_non_sticky_writable_directory(self):
+        other_uid = os.getuid() + 1
+        self.assertNotIn(other_uid, (os.getuid(), 0))
+        fake_stat = mock.Mock(st_mode=0o40775, st_uid=other_uid)
+        with mock.patch("os.stat", return_value=fake_stat):
+            with self.assertRaises(SystemExit) as caught:
+                _assert_trusted_output_dir("output")
+        self.assertEqual(
+            str(caught.exception),
+            "refusing non-sticky group/other-writable output directory",
+        )
+
+    def test_trusted_output_dir_allows_private_directory(self):
+        fake_stat = mock.Mock(st_mode=0o40700, st_uid=os.getuid())
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
 
 
 class TestPublishNoClobber(unittest.TestCase):

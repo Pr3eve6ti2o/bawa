@@ -59,6 +59,41 @@ describe('classifyRequest()', () => {
     );
   });
 
+  test('R02-F08: bitcoin+EVM conflicts split or respect negation', () => {
+    assert.deepEqual(
+      classifyRequest('Generate two independent testnet wallets: a Bitcoin wallet and an EVM wallet'),
+      { ambiguous: 'split' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate an EVM wallet and a Bitcoin wallet'),
+      { ambiguous: 'split' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate an EVM testnet wallet, not a Bitcoin wallet'),
+      { profile: 'evm-wallet' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate a Bitcoin testnet wallet, not an EVM wallet'),
+      { profile: 'bitcoin-wallet' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate a Bitcoin testnet wallet'),
+      { profile: 'bitcoin-wallet' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate an EVM testnet wallet'),
+      { profile: 'evm-wallet' },
+    );
+    assert.deepEqual(
+      classifyRequest('Build a Bitcoin HD wallet'),
+      { profile: 'hd-wallet-cli' },
+    );
+    assert.deepEqual(
+      classifyRequest('Generate an EVM wallet with HD keys'),
+      { profile: 'hd-wallet-cli' },
+    );
+  });
+
   test('F-21: "Create a Bitcoin wallet from my xpub" selects watch-only-wallet', () => {
     assert.deepEqual(
       classifyRequest('Create a Bitcoin wallet from my xpub'),
@@ -104,11 +139,11 @@ describe('findRefusal()', () => {
   test('generic signing / broadcast / send is refused', () => {
     assert.equal(
       findRefusal('Add signing support to the web wallet'),
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
     );
     assert.equal(
       findRefusal('Add broadcast support'),
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
     );
   });
 
@@ -195,11 +230,11 @@ describe('T46 negator scope', () => {
   test('a negator across a comma does not negate send', () => {
     assert.equal(
       findRefusal('Build a wallet with no fees, send BTC daily'),
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
     );
     assert.equal(
       findRefusal('Build a wallet, not complicated, send funds'),
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
     );
   });
 
@@ -207,7 +242,7 @@ describe('T46 negator scope', () => {
     assert.equal(negated('send', 'Send BTC, no send on mainnet'), false);
     assert.equal(
       findRefusal('Send BTC, no send on mainnet'),
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
     );
   });
 
@@ -237,7 +272,7 @@ describe('T46 spelling and synonyms', () => {
 
   test('transfer / pay / withdraw with a value word are refused as send', () => {
     const signing =
-      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.';
+      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.';
     assert.equal(
       findRefusal('Build a web wallet to transfer BTC to friends'),
       signing,

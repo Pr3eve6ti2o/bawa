@@ -32,6 +32,7 @@ export type ExtendedKeyValidation =
         | 'invalid-depth-metadata'
         | 'private-key'
         | 'version-not-allowed'
+        | 'not-account-key'
         | 'invalid-point';
       message: string;
     };
