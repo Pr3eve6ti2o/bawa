@@ -102,7 +102,7 @@ runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.m
 runCommand('register-t01-tests', process.execPath, ['--test', 'tests/register-t01.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
-runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/mainnet-derivation-vectors.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs']);
+runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/mainnet-derivation-vectors.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs', 'tests/mainnet-guards.test.mjs']);
 
 const web = join(root, 'apps/web');
 // The web gates run the pinned toolchain from apps/web/node_modules.
