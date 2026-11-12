@@ -12,7 +12,7 @@ Version checks and environment observations below were recorded first-hand on 20
 
 **DECISION (proposed, T20 2026-11-12) — UPGRADE the tool pin to Trust Wallet Core 4.9.1, subject to owner approval.**
 
-This replaces the Phase 4 resolution against **Doc 4, M-21** (stay on 4.8.4) on the strength of the T20 qualification run recorded below. Merging this change is the approval; until then 4.8.4 remains the selected tool pin.
+This replaces the Phase 4 resolution against **Doc 4, M-21** (stay on 4.8.4) on the strength of the T20 qualification run recorded below. T20 qualification completed on 2026-11-12; 4.9.1 is now the selected tool pin.
 
 - **4.8.4 — previously selected and verified; superseded as the active pin.** It was pinned in `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json`. The supporting H7 evidence is the 92/92 suite result, a passing differential test and exact fixtures.
 - **4.9.1 — selected (proposed upgrade, T20 2026-11-12).** Installed and tested in scratch copies against 4.8.4: tools smoke 130 ok / 0 fail on both versions, exact fixtures, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery, web vitest 28/28 with tsc + build exit 0 on both. No regressions found; the only measured differences are WASM +33,286 bytes and bundle +14.87 kB. The 4.9.1 / 4.9.2 npm packages are byte-identical except the version field, so D21/D30/D31 evidence on 4.9.2 applies at the artifact level.
@@ -38,7 +38,7 @@ The table distinguishes declared constraints, checked-in pins and observed runti
 
 | Component | Pin or recorded value | Where the pin lives / evidence | Status |
 |---|---|---|---|
-| Trust Wallet Core, generator | **4.9.1** (proposed; was 4.8.4) | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified (T20 qualification 2026-11-12) |
+| Trust Wallet Core, generator | **4.9.1** (selected; was 4.8.4) | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified (T20 qualification completed 2026-11-12) |
 | Node.js requirement | `>=22 <23`; CI uses Node 22 | Recorded runtime policy; CI Node selection | verified |
 | Node.js on this VM | `v24.22.2` | VM observation; not the declared project range | observed — deviation |
 | Python requirement | `>=3.11`; CI uses 3.13 | Recorded runtime policy; CI Python selection | verified |
@@ -89,7 +89,7 @@ The recorded H7 outcomes are **92/92**, **PASS** and **exact fixtures**. For set
 | Step | Expected result |
 |---|---|
 | Fresh clone and checkout | Checkout succeeds and `HEAD` resolves to the baseline identified by `51c7e39`. |
-| `npm ci` in `tools/hdwallet-gen` | Installation succeeds using the committed lockfile, retaining Trust Wallet Core 4.8.4 rather than resolving an upgrade. |
+| `npm ci` in `tools/hdwallet-gen` | Installation succeeds using the committed lockfile, retaining Trust Wallet Core 4.9.1 rather than resolving an upgrade. |
 | `npm run check` | The checked-in check script completes successfully. |
 | `npm test` | **92/92 passing**, matching H7. |
 | Create and activate the Python venv | An isolated environment is active under a Python version satisfying `>=3.11`. |

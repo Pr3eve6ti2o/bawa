@@ -22,7 +22,7 @@ is produced. This module implements the W3 mainnet local-signing work.
 | `tools/mainnet-guards/mainnet-guards.mjs` | T25 guard (isolation, redaction, destruction) — dependency |
 | `tools/mainnet-tx/unsigned-tx.mjs` | T33 unsigned-transaction builders — dependency |
 
-Signing uses `@trustwallet/wallet-core` **4.8.4** (pinned; see
+Signing uses `@trustwallet/wallet-core` **4.9.1** (pinned; see
 `WALLET_CORE_VERSION`). The loader is memoised and resolves the
 package relative to this module (`../hdwallet-gen/node_modules`), so
 no other wallet-core version can be picked up accidentally.

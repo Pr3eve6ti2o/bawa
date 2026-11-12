@@ -395,7 +395,7 @@ For the procedures, see **Doc 1 §6 (Node)** and **Doc 1 §7 (Python)**. Install
 
 Match these repo pins:
 - **Node 22.23.4**, within the repo range `>=22 <23` (M05).
-- **Trust Wallet Core 4.8.4** (M05 F11).
+- **Trust Wallet Core 4.9.1** (M05 F11).
 - Python packages **`cryptography==50.0.2`** and **`bip-utils==2.12.2`** (M05).
 
 **Standing environment note:** verification ran on **Node v24.22.2**, outside the repo range. Node v24 is not a supported configuration (M05/M06; verify2 T1 environment failure). Anything installed outside the pins is untested against the repo.
@@ -3059,7 +3059,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Core pin agreement — unresolved revision input
 
-**Status: resolved in the T10 working patch (2026-11-12), pending coordinator merge verification.** Resolution: the repository pin is `4.8.4`; the guides no longer state `4.9.2` as the repository pin or as the upgrade candidate. `4.9.2` remains only as the Android guide's testnet source-build pin for the demonstrated D21 scope, labelled as a GitHub prerelease, and `4.9.1` is the upgrade candidate pending its qualification run (M-21). Evidence: npm registry and GitHub release-page re-check 2026-11-12 (see M-21).
+**Status: resolved in the T10 working patch (2026-11-12), pending coordinator merge verification.** Resolution: the repository pin is now `4.9.1` (upgraded 2026-11-12, T20 qualification); the guides no longer state `4.9.2` as the repository pin or as the upgrade candidate. `4.9.2` remains only as the Android guide's testnet source-build pin for the demonstrated D21 scope, labelled as a GitHub prerelease, and `4.9.1` was the upgrade candidate, whose qualification run is complete (M-21, T20). Evidence: npm registry and GitHub release-page re-check 2026-11-12 (see M-21).
 
 - **Observable check:** Reconcile the pinned version, the version stated in the guide and the version proposed for the reviewed route. Do not silently select one side of the mismatch.
 - **Required evidence:** A cited resolution, the corresponding reviewed revision and evidence identifying the version actually checked for that scope.
@@ -3347,7 +3347,7 @@ For BIP-32, cite the [verified raw text](https://raw.githubusercontent.com/bitco
 **Wallet-core tally: 36 links — 35 LIVE and 1 DEAD-404 by design.**  
 **Tooling/install tally: 17 links — 14 LIVE, 1 LIVE-via-registry, 1 DEAD-404 template and 1 EXISTS-VM-BLOCKED.** [M31]
 
-Use the **Trust Wallet Core repository and `registry.json` at 4.8.4**, the Bawa repo pin. The release tagged **4.9.2** is a GitHub prerelease: it is **not** the upgrade candidate (that is **4.9.1**, pending its qualification run — M-21) and **not the pin**; do not use it as evidence for the pinned version’s behaviour. [M31; M28]
+Use the **Trust Wallet Core repository and `registry.json` at 4.9.1**, the Bawa repo pin. The release tagged **4.9.2** is a GitHub prerelease: it is **not the pin** (**4.9.1** is the pin, upgraded 2026-11-12 — M-21, T20); do not use it as evidence for the pinned version’s behaviour. [M31; M28]
 
 Carry these access and citation qualifications:
 
@@ -3885,7 +3885,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** The `4.9.1` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
+**Clearance condition:** The `4.9.1` qualification run specified in M05 O3, with recorded results, is complete (T20, 2026-11-12).
 
 **Gate/source links:** Re-checked register (2026-11-09), M-21; M05 F2/F3/F7 and O3; M23; M24 K18 / OI-090. Repository context: [Bawa at `56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20).
 

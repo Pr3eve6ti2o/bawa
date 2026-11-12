@@ -26,7 +26,7 @@ The last two rows use the clean-checkout workflow as the end-to-end route. The o
 
 ### Pinned baseline
 
-- Engine: **`@trustwallet/wallet-core` 4.8.4**, the repository pin and Phase 4 decision. **4.9.1 exists but is untested here**; do not substitute it or imply coverage.
+- Engine: **`@trustwallet/wallet-core` 4.9.1**, the repository pin (upgraded 2026-11-12, T20 qualification; the former Phase 4 pin 4.8.4 is superseded). **Do not substitute 4.9.2** or imply coverage beyond the qualified version.
 - Web starter: derives **in-browser from extended public keys only**. This is not a signing capability.
 - Android starter: derives **nothing on-device**. There is **no wallet-core AAR**; passing its unit tests does not demonstrate on-device derivation.
 

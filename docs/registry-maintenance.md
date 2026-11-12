@@ -80,7 +80,7 @@ A pin that does not resolve is `UNVERIFIED`. Preserve the failed lookup evidence
 never silently substitute a plausible version, tag or commit. Any correction must
 be explicit and evidenced. The AGPL-3.0-or-later XChain entry remains `OPEN`, research-only, and never selectable; its pin `3e550d05e913e29e5c3cf24527bf504f1a4fe942` is verified as the `master` HEAD of `XChain-Platform/xchain-wallet` (commit 2026-11-01, release v0.342.1) and is absent from `xchainjs/xchainjs-lib`.
 
-The engine pin is `@trustwallet/wallet-core` **4.8.4**. A version change needs a
+The engine pin is `@trustwallet/wallet-core` **4.9.1**. A version change needs a
 separate recorded decision and a re-run of install, the suite, differential checks
 and fixtures. Registry checks are not a substitute for those runs.
 
