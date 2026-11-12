@@ -55,6 +55,11 @@ export function ImportWalletScreen() {
         <p id="watch-only-notice" className="text-sm text-muted-foreground">
           Only extended PUBLIC keys are accepted. Private extended keys (xprv/zprv)
           are rejected. Never paste a mnemonic, seed or private key here.
+          An extended public key lets its holder track this account&apos;s
+          derivable addresses, balances and transaction history. Imported
+          keys are stored in this browser (localStorage) and stay stored
+          when the wallet is locked; they are readable by this site&apos;s
+          scripts and by extensions with access to this site.
         </p>
       </header>
 

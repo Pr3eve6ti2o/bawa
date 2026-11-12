@@ -18,6 +18,7 @@ import {
   copyFileSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -26,7 +27,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateAll } from './validate-registry.mjs';
 
@@ -62,6 +63,68 @@ function resolveContained(target) {
   const realAncestor = realpathSync(ancestor);
   const tail = relative(ancestor, target);
   return tail ? join(realAncestor, tail) : realAncestor;
+}
+
+// T49 F-01: shared denylist for the starter-copy filters. A generated
+// project is distributed as a new wallet project, so anything that can
+// hold a secret must never be copied out of the starter tree: .env files
+// and the secret dirs/file types the root .gitignore already excludes
+// (.gitignore does NOT stop this generator — it copies from the working
+// copy, not from git). The check runs on EVERY path part, at any depth,
+// so a secret nested under src/ or res/ is excluded too. Symlinks and
+// non-file/non-directory entries are refused outright (fail closed):
+// a symlink inside a starter could point at a secret outside it, and
+// cpSync would otherwise copy the link into the generated project.
+// The .env pattern matches `.env` and `.env.<suffix>` only — NOT
+// `.environment.ts` or other source files that merely start with
+// `.env` (C5 re-audit: the looser /^\.env/ also dropped harmless
+// `.env.example` templates and could silently drop source files).
+// `.env.example` itself is a documented template, not a secret file,
+// so it is explicitly allowed through (C6 re-audit); anything
+// sensitive inside such a template is the secret-scan gate's job.
+const deniedEntry = (name) => {
+  if (/^\.env\.example$/i.test(name)) return false;
+  return (
+    /^\.env($|\.)/i.test(name) ||
+    /^(secrets|seed-backup|keystore\.properties)$/i.test(name) ||
+    /\.(enc\.json|jks|keystore)$/i.test(name)
+  );
+};
+
+function starterFilter(source, excludedNames, excludedPaths = []) {
+  return (src) => {
+    const rel = relative(source, resolve(src));
+    if (rel === '') return true;
+    const parts = rel.split(sep);
+    if (isAbsolute(rel) || parts.includes('..')) {
+      throw new Error('generate-project: source outside starter: ' + src);
+    }
+    if (
+      parts.some(deniedEntry) ||
+      parts.some((part) => excludedNames.includes(part)) ||
+      excludedPaths.includes(parts.join('/'))
+    ) {
+      return false;
+    }
+    // Errors propagate: never allow an entry that cannot be inspected.
+    const entry = lstatSync(src);
+    if (entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())) {
+      throw new Error('generate-project: unsafe source entry: ' + src);
+    }
+    return true;
+  };
+}
+
+// T49 F-01 (C5 re-audit): the filter above skips lstat for the starter
+// root itself (rel === ''), so a symlinked apps/web or apps/android
+// directory would pass the filter and the copy could follow it to an
+// unfiltered tree. Validate the root once, before any copy: it must be
+// a real directory, not a symlink.
+function assertStarterRoot(source) {
+  const entry = lstatSync(source);
+  if (entry.isSymbolicLink() || !entry.isDirectory()) {
+    throw new Error('generate-project: unsafe starter root: ' + source);
+  }
 }
 
 function baseCommit() {
@@ -304,32 +367,20 @@ function main() {
     );
   } else if (profile.platform === 'web') {
     const source = join(repoRoot, 'apps', 'web');
+    assertStarterRoot(source);
     cpSync(source, out, {
       recursive: true,
-      filter: (src) => {
-        const rel = relative(source, src);
-        if (rel === '') return true;
-        const head = rel.split(sep)[0];
-        if (head === 'node_modules' || head === 'dist') return false;
-        if (rel === join('public', 'wallet-core.wasm')) return false;
-        return true;
-      },
+      filter: starterFilter(source, ['node_modules', 'dist'], ['public/wallet-core.wasm']),
     });
     writeFileSync(join(out, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
     copyFileSync(join(out, 'README.md'), join(out, 'README-starter.md'));
     writeFileSync(join(out, 'README.md'), readme, 'utf8');
   } else if (profile.platform === 'android') {
     const source = join(repoRoot, 'apps', 'android');
+    assertStarterRoot(source);
     cpSync(source, out, {
       recursive: true,
-      filter: (src) => {
-        const rel = relative(source, src);
-        if (rel === '') return true;
-        const head = rel.split(sep)[0];
-        if (head === 'build' || head === '.gradle') return false;
-        if (rel === 'local.properties') return false;
-        return true;
-      },
+      filter: starterFilter(source, ['build', '.gradle', 'local.properties']),
     });
     writeFileSync(join(out, 'profile.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
     copyFileSync(join(out, 'README.md'), join(out, 'README-starter.md'));

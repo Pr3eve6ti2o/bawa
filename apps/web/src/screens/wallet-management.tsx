@@ -40,9 +40,9 @@ export function WalletManagementScreen() {
                       type="button"
                       variant="outline"
                       onClick={() => removeXpub(id)}
-                      aria-label={`Remove ${name} wallet`}
+                      aria-label={`Forget stored ${name} key`}
                     >
-                      Remove
+                      Forget stored key
                     </Button>
                   </CardHeader>
                   <CardContent>
@@ -75,7 +75,22 @@ export function WalletManagementScreen() {
 
       <p className="text-sm text-muted-foreground">
         Only extended public keys are stored (in localStorage). No secrets are stored anywhere in this starter.
+        An extended public key lets its holder track this account&apos;s derivable addresses, balances and
+        transaction history. Stored keys stay stored when the wallet is locked; forgetting a key removes it
+        from this browser, but cannot revoke a copy someone already took.
       </p>
+
+      {hasWallets && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            for (const { id } of chains) removeXpub(id);
+          }}
+        >
+          Forget all stored keys
+        </Button>
+      )}
     </section>
   );
 }

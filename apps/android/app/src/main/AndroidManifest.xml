@@ -11,6 +11,8 @@
     <application
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="Bawa Wallet"
         android:supportsRtl="true"
         android:theme="@style/Theme.Bawa">
