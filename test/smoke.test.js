@@ -1705,12 +1705,13 @@ Module._load = function (request, parent, isMain) {
       const keyBytes = crypto.randomBytes(32);
       fs.writeFileSync(keyFile, keyBytes);
       const fd = fs.openSync(keyFile, "r");
-      try {
-        check("readDataKeyFromFd: reads exactly 32 bytes",
-          Buffer.compare(readDataKeyFromFd(fd), keyBytes) === 0);
-      } finally {
-        fs.closeSync(fd);
-      }
+      // R05 r2a: readDataKeyFromFd closes the descriptor itself, on
+      // every path — the caller must not close it again.
+      check("readDataKeyFromFd: reads exactly 32 bytes",
+        Buffer.compare(readDataKeyFromFd(fd), keyBytes) === 0);
+      check("readDataKeyFromFd: closes the descriptor on success", (() => {
+        try { fs.fstatSync(fd); return false; } catch { return true; }
+      })());
       const shortFile = path.join(keyDir, "short.bin");
       fs.writeFileSync(shortFile, crypto.randomBytes(10));
       const shortFd = fs.openSync(shortFile, "r");
@@ -1719,10 +1720,11 @@ Module._load = function (request, parent, isMain) {
         readDataKeyFromFd(shortFd);
       } catch {
         threw = true;
-      } finally {
-        fs.closeSync(shortFd);
       }
       check("readDataKeyFromFd: short read throws", threw === true);
+      check("readDataKeyFromFd: closes the descriptor on short read", (() => {
+        try { fs.fstatSync(shortFd); return false; } catch { return true; }
+      })());
       check("readDataKeyFromFd: non-numeric fd throws", (() => {
         try { readDataKeyFromFd("x"); return false; } catch { return true; }
       })());

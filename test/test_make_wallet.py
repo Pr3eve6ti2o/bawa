@@ -10,6 +10,7 @@ import io
 import os
 import sys
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
@@ -20,6 +21,7 @@ from make_wallet import (
     _contains_seed_material,
     _copy_0600,
     _copy_versioned_0600,
+    _data_key_pipe,
     _makedirs_0700_fsynced,
     _parse_seed_bundle,
     assert_bundle_decrypts,
@@ -112,7 +114,7 @@ def _legitimate_stdout():
         "trx_xpub": "xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF",
         "ton_address": "UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn",
         "ton_path": "m/44'/607'/0'",
-        "ton_note": "single address per wallet; no xpub exported",
+        "ton_note": "single address per wallet; no xpub exported; TON address not independently cross-checked",
         "samples": {
             "btc1": "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g",
             "eth1": "0xD6c3112a8Db4991a7359018F15e501dfEE316d59",
@@ -769,6 +771,65 @@ class TestRunGeneratorPassFds(unittest.TestCase):
                 )
             finally:
                 os.close(key_r)
+            self.assertEqual(out, "got:32:" + key.hex())
+
+
+class TestDataKeyPipe(unittest.TestCase):
+    """R05 r2a: the pipe read end is closed on every exit path."""
+
+    def test_normal_exit_closes_read_end(self):
+        key = os.urandom(32)
+        with _data_key_pipe(key) as key_r:
+            self.assertEqual(os.read(key_r, 32), key)
+        with self.assertRaises(OSError):
+            os.fstat(key_r)
+
+    def test_exception_in_body_closes_read_end(self):
+        key = os.urandom(32)
+        seen = []
+        with self.assertRaises(RuntimeError):
+            with _data_key_pipe(key) as key_r:
+                seen.append(key_r)
+                raise RuntimeError("boom")
+        with self.assertRaises(OSError):
+            os.fstat(seen[0])
+
+    def test_short_write_raises_and_leaks_no_fd(self):
+        before = set(os.listdir("/proc/self/fd"))
+        with mock.patch("os.write", return_value=0):
+            with self.assertRaises(SystemExit):
+                with _data_key_pipe(os.urandom(32)):
+                    pass
+        self.assertEqual(before, set(os.listdir("/proc/self/fd")))
+
+    def test_failed_write_closes_read_end(self):
+        before = set(os.listdir("/proc/self/fd"))
+        with mock.patch("os.write", side_effect=OSError("boom")):
+            with self.assertRaises(OSError):
+                with _data_key_pipe(os.urandom(32)):
+                    pass
+        self.assertEqual(before, set(os.listdir("/proc/self/fd")))
+
+    def test_pipe_delivers_key_to_child_via_run_generator(self):
+        import tempfile
+
+        key = os.urandom(32)
+        body = (
+            "import os, sys\n"
+            "fd = int(os.environ['BAWA_DATA_KEY_FD'])\n"
+            "data = os.read(fd, 32)\n"
+            "sys.stdout.write('got:%d:%s' % (len(data), data.hex()))\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "fd_reader.py")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(body)
+            with _data_key_pipe(key) as key_r:
+                env = dict(os.environ)
+                env["BAWA_DATA_KEY_FD"] = str(key_r)
+                out = run_generator(
+                    [sys.executable, path], env, pass_fds=(key_r,)
+                )
             self.assertEqual(out, "got:32:" + key.hex())
 
 

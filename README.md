@@ -628,7 +628,7 @@ The paths must match Step 5, including any overrides. Compare all four public va
 
 `Encrypted recovery artifact: <path>` is program output. Keep it verbatim when recording that output.
 
-stdout JSON contains public material only: `btc_zpub`, `eth_xpub`, `trx_xpub`, `ton_address`, `ton_path`, `ton_note`, samples, checks, `seed_encrypted_to` and `wallet_core_version`. The `ton_note` value is `single address per wallet; no xpub exported`. Do not expect a TON xpub.
+stdout JSON contains public material only: `btc_zpub`, `eth_xpub`, `trx_xpub`, `ton_address`, `ton_path`, `ton_note`, samples, checks, `seed_encrypted_to` and `wallet_core_version`. The `ton_note` value is `single address per wallet; no xpub exported; TON address not independently cross-checked`. Do not expect a TON xpub. The TON address is not independently cross-checked by the wrapper (BTC/ETH/TRX roots are); see the R05 report.
 
 **Step 7 — Regenerate only after a verified backup**
 

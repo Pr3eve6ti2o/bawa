@@ -68,19 +68,29 @@ function keyMatches(entered, dataKeyHex) {
 
 // T41: read exactly 32 raw key bytes from an inherited file descriptor
 // (the make_wallet.py pipe handoff). Throws on EOF, short reads, or a
-// non-numeric descriptor. The caller closes the descriptor.
+// non-numeric descriptor. R05 r2a: the descriptor is single-use and is
+// closed here on EVERY path, including a failed read — the old
+// caller-closes contract leaked the descriptor when the read threw.
 function readDataKeyFromFd(fd) {
   if (!Number.isInteger(fd) || fd < 0) {
     throw new Error("BAWA_DATA_KEY_FD must be a file descriptor number");
   }
   const buf = Buffer.alloc(32);
-  let off = 0;
-  while (off < 32) {
-    const n = fs.readSync(fd, buf, off, 32 - off, null);
-    if (n === 0) throw new Error("BAWA_DATA_KEY_FD: unexpected EOF");
-    off += n;
+  try {
+    let off = 0;
+    while (off < 32) {
+      const n = fs.readSync(fd, buf, off, 32 - off, null);
+      if (n === 0) throw new Error("BAWA_DATA_KEY_FD: unexpected EOF");
+      off += n;
+    }
+    return buf;
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      // A close failure is not fatal; the read result (or throw) stands.
+    }
   }
-  return buf;
 }
 
 // A symlinked secrets directory is refused wherever it can be returned:
@@ -245,7 +255,12 @@ function acquirePublishLock(encPath) {
       // the same dead inode; otherwise loop and wait on whoever holds
       // it now. This narrows the window to the second probe → rename
       // gap; it does not close it — there is no pure-Node primitive
-      // for a conditional rename. The publish fence in
+      // for a conditional rename. R05 r2d sharpens the residual: two
+      // reclaimers can both finish their second probe on the same
+      // stale inode S; A renames S aside and creates its live lock,
+      // then B's pathname rename moves A's LIVE lock aside and B
+      // creates its own — both then believe they hold the lock, and
+      // with --force both can publish. The publish fence in
       // publishSeedBundle is the second line of defence, and a
       // kernel flock on a stable, never-unlinked inode remains the
       // full fix (no Node stdlib binding exists for it).
@@ -589,13 +604,8 @@ async function main() {
         );
       }
       const fd = Number(fdRaw);
-      const key = readDataKeyFromFd(fd);
-      try {
-        fs.closeSync(fd);
-      } catch {
-        // The descriptor is single-use; a close failure is not fatal.
-      }
-      return key;
+      // readDataKeyFromFd closes the descriptor on every path (R05 r2a).
+      return readDataKeyFromFd(fd);
     }
     const supplied = process.env.BAWA_DATA_KEY_HEX;
     if (supplied === undefined) return crypto.randomBytes(32);
@@ -760,7 +770,7 @@ async function main() {
     trx_xpub: trxXpub,
     ton_address: tonAddress,
     ton_path: CoinTypeExt.derivationPath(CoinType.ton),
-    ton_note: "single address per wallet; no xpub exported",
+    ton_note: "single address per wallet; no xpub exported; TON address not independently cross-checked",
     samples,
     checks,
     seed_encrypted_to: encPath,

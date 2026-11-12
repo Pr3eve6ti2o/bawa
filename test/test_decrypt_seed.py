@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from decrypt_seed import _read_key, decrypt
+from decrypt_seed import _publish_no_clobber, _read_key, decrypt
 
 TOOLS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools"))
 
@@ -229,6 +229,37 @@ class TestMainOutput(unittest.TestCase):
             result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(stat.S_IMODE(os.stat(nested).st_mode), 0o700)
+
+
+class TestPublishNoClobber(unittest.TestCase):
+    """R05 r2c: the --output publish is atomic no-clobber, not os.replace."""
+
+    def test_publishes_when_destination_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "seed-.tmp")
+            dest = os.path.join(tmp, "recovered.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("recovered words\n")
+            _publish_no_clobber(src, dest)
+            self.assertFalse(os.path.exists(src))
+            with open(dest, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "recovered words\n")
+
+    def test_refuses_destination_that_appeared_after_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "seed-.tmp")
+            dest = os.path.join(tmp, "recovered.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("new recovery\n")
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write("previous recovery — must survive\n")
+            with self.assertRaises(SystemExit):
+                _publish_no_clobber(src, dest)
+            with open(dest, encoding="utf-8") as f:
+                self.assertEqual(
+                    f.read(), "previous recovery — must survive\n"
+                )
+            self.assertTrue(os.path.exists(src))
 
 
 class TestDecryptTamperAndSize(unittest.TestCase):

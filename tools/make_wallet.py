@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
 import datetime
 import hashlib
 import json
@@ -677,6 +678,36 @@ def run_generator(cmd, env, timeout_s=GENERATOR_TIMEOUT_S, limit=GENERATOR_OUTPU
         raise SystemExit("generator stdout malformed: not UTF-8") from None
 
 
+@contextlib.contextmanager
+def _data_key_pipe(data_key):
+    """Yield the read end of an anonymous pipe pre-filled with the data key.
+
+    R05 r2a hardening of the T41 pipe handoff: the write end is closed
+    before yielding, and the read end is closed on EVERY exit path — a
+    failed or short write, an exception in the caller, or normal return —
+    so no failure between pipe creation and the child spawn can leak the
+    read descriptor with unread key bytes. The caller passes the yielded
+    fd via pass_fds; that alone makes it inheritable in the child
+    (verified first-hand: a non-inheritable fd in pass_fds is readable
+    by the child), so no os.set_inheritable call is needed. A short
+    write raises instead of silently handing the child a truncated key.
+    """
+    key_r, key_w = os.pipe()
+    try:
+        try:
+            written = os.write(key_w, bytes(data_key))
+        finally:
+            os.close(key_w)
+        if written != len(data_key):
+            raise SystemExit("data-key pipe write incomplete")
+        yield key_r
+    finally:
+        try:
+            os.close(key_r)
+        except OSError:
+            pass
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
     raw_secrets = resolve_secrets_dir()
@@ -722,58 +753,54 @@ def main() -> None:
     # reads exactly 32 bytes and closes its read end. The outer finally
     # zeroes the wrapper's copy on every path after this point — a
     # generator failure, malformed stdout, failed check or scan error
-    # must not skip the wipe.
+    # must not skip the wipe. R05 r2a: the pipe itself lives in
+    # _data_key_pipe, which closes the read end on every exit path
+    # (including a failed or short write) and needs no
+    # os.set_inheritable call — pass_fds alone makes the fd
+    # inheritable in the child.
     data_key = bytearray(secrets.token_bytes(32))
     try:
-        key_r, key_w = os.pipe()
-        os.set_inheritable(key_r, True)
-        try:
-            os.write(key_w, bytes(data_key))
-        finally:
-            os.close(key_w)
-        child_env = os.environ.copy()
-        child_env.pop("BAWA_DATA_KEY_HEX", None)
-        child_env["BAWA_DATA_KEY_FD"] = str(key_r)
-        try:
+        with _data_key_pipe(data_key) as key_r:
+            child_env = os.environ.copy()
+            child_env.pop("BAWA_DATA_KEY_HEX", None)
+            child_env["BAWA_DATA_KEY_FD"] = str(key_r)
             # F-14: capped collection (see run_generator). The wrapper never
             # echoes generator output: a malformed stdout fails with a generic
             # message, and the ten-key schema check below bounds the accepted
             # JSON structure.
             stdout_text = run_generator(cmd, child_env, pass_fds=(key_r,))
-        finally:
-            os.close(key_r)
-        try:
-            data = json.loads(stdout_text)
-        except json.JSONDecodeError:
-            raise SystemExit("generator stdout malformed: invalid JSON") from None
-        validate_public_stdout(data)
-        assertBundleVerified(data)
-        if _contains_seed_material(data):
-            raise SystemExit("H4 violation: seed material present in generator stdout")
+            try:
+                data = json.loads(stdout_text)
+            except json.JSONDecodeError:
+                raise SystemExit("generator stdout malformed: invalid JSON") from None
+            validate_public_stdout(data)
+            assertBundleVerified(data)
+            if _contains_seed_material(data):
+                raise SystemExit("H4 violation: seed material present in generator stdout")
 
-        failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
-        if failed:
-            raise SystemExit(f"wallet-core self-checks failed: {failed}")
+            failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
+            if failed:
+                raise SystemExit(f"wallet-core self-checks failed: {failed}")
 
-        reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
-        if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
-            raise SystemExit("seed bundle path outside configured secrets directory")
-        if not os.path.isfile(reported):
-            raise SystemExit("seed bundle missing")
+            reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
+            if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
+                raise SystemExit("seed bundle path outside configured secrets directory")
+            if not os.path.isfile(reported):
+                raise SystemExit("seed bundle missing")
 
-        nonce, ciphertext, mode = _parse_seed_bundle(reported)
-        del nonce, ciphertext
-        if mode != 0o600:
-            raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
+            nonce, ciphertext, mode = _parse_seed_bundle(reported)
+            del nonce, ciphertext
+            if mode != 0o600:
+                raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
 
-        # Independent proof: decrypt the final bundle with the wrapper-held
-        # key and validate the plaintext as a BIP-39 mnemonic. The
-        # generator's bundle_verified flag above is status, not proof.
-        # Then require the decrypted mnemonic to reproduce the reported
-        # public roots (see assert_bundle_matches_public_roots).
-        mnemonic = assert_bundle_decrypts(reported, data_key)
-        assert_bundle_matches_public_roots(mnemonic, data)
-        del mnemonic  # plaintext no longer needed; drop the reference
+            # Independent proof: decrypt the final bundle with the wrapper-held
+            # key and validate the plaintext as a BIP-39 mnemonic. The
+            # generator's bundle_verified flag above is status, not proof.
+            # Then require the decrypted mnemonic to reproduce the reported
+            # public roots (see assert_bundle_matches_public_roots).
+            mnemonic = assert_bundle_decrypts(reported, data_key)
+            assert_bundle_matches_public_roots(mnemonic, data)
+            del mnemonic  # plaintext no longer needed; drop the reference
     finally:
         for i in range(len(data_key)):
             data_key[i] = 0

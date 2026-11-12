@@ -34,6 +34,28 @@ import warnings
 AAD = b"nova-shop-seed-v1"
 
 
+def _publish_no_clobber(tmp: str, dest: str) -> None:
+    """Atomically publish tmp at dest, refusing if dest exists.
+
+    R05 r2c: the preflight lexists check in main() is not atomic — a
+    destination created after the check was silently replaced by
+    os.replace. os.link fails with EEXIST instead, so a destination
+    that appears between the check and the publish is refused and the
+    existing file is left untouched. tmp and dest are in the same
+    directory, so the link cannot fail with EXDEV. tmp is unlinked
+    after a successful link; if that unlink raises, the caller's
+    finally still removes it and the error propagates while dest stays
+    published (the same shape as a directory-fsync failure below).
+    """
+    try:
+        os.link(tmp, dest)
+    except FileExistsError:
+        raise SystemExit(
+            "refusing to overwrite existing output file; remove it first"
+        ) from None
+    os.unlink(tmp)
+
+
 def _read_key() -> bytes:
     raw = os.environ.get("BAWA_DATA_KEY")
     if raw:
@@ -225,7 +247,10 @@ def main() -> int:
                 f.write(mnemonic + "\n")
                 f.flush()
                 os.fsync(f.fileno())
-            os.replace(tmp, args.output)
+            # R05 r2c: atomic no-clobber publish (see _publish_no_clobber).
+            # A destination that appeared after the up-front lexists
+            # check is refused instead of silently replaced.
+            _publish_no_clobber(tmp, args.output)
             published = True
             # T41: fsync the directory so the rename survives power loss.
             # Durability (T43 r2a Fix 3): the rename must be fsynced
