@@ -44,9 +44,25 @@ function resolveEnvPath() {
 // Opening a FIFO for reading blocks until a writer appears, so a
 // FIFO .env stalled automated runs indefinitely. Character devices
 // such as /dev/zero still go through the capped read, so the F-08
-// byte-cap refusal keeps its exact message.
+// byte-cap refusal keeps its exact message (that behaviour is pinned
+// by tests/negative-inputs.test.mjs).
+// T43 r2a Fix 4 (partial): the open is also O_NOFOLLOW, so a symlinked
+// .env fails fast instead of opening an unrelated process-readable
+// file (c3b §1). A regular-file requirement is deliberately NOT added:
+// it would change the pinned /dev/zero refusal into a type error.
 function readFileCapped(filePath, maxBytes) {
-  const fd = fs.openSync(filePath, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+  let fd;
+  try {
+    fd = fs.openSync(
+      filePath,
+      fs.constants.O_RDONLY | fs.constants.O_NONBLOCK | fs.constants.O_NOFOLLOW
+    );
+  } catch (err) {
+    if (err.code === "ELOOP") {
+      throw new Error(`env file is a symlink: ${filePath}`);
+    }
+    throw err;
+  }
   try {
     const stat = fs.fstatSync(fd);
     if (stat.isFIFO() || stat.isSocket()) {

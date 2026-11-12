@@ -18,6 +18,9 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from make_wallet import (
     BASE,
     _contains_seed_material,
+    _copy_0600,
+    _copy_versioned_0600,
+    _makedirs_0700_fsynced,
     _parse_seed_bundle,
     assert_bundle_decrypts,
     assert_bundle_matches_public_roots,
@@ -465,6 +468,179 @@ class TestParseSeedBundle(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(SystemExit):
                 _parse_seed_bundle(self._write(b, tmp))
+
+    def test_oversize_bundle_refused(self):
+        # T43 F6 / r1b Fix 3: bundles over 64 KiB are refused before
+        # json.load reads the whole file.
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "seed.enc.json")
+            with open(path, "wb") as f:
+                f.write(b"x" * 65537)
+            with self.assertRaises(SystemExit):
+                _parse_seed_bundle(path)
+
+    def test_fifo_bundle_refused_promptly(self):
+        # T43 c3a §2: a FIFO at the path must not block the open.
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fifo = os.path.join(tmp, "seed.enc.json")
+            os.mkfifo(fifo)
+            with self.assertRaises(SystemExit):
+                _parse_seed_bundle(fifo)
+
+
+class TestCopy0600(unittest.TestCase):
+    # T43 r1b Fix 3 / r1d rework: temp + verify + atomic replace + fsync.
+
+    def test_round_trip_bytes_and_mode(self):
+        import stat
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "src.json")
+            dst = os.path.join(tmp, "sub", "seed.enc.json")
+            with open(src, "wb") as f:
+                f.write(b'{"bundle": 1}')
+            _copy_0600(src, dst)
+            with open(dst, "rb") as f:
+                self.assertEqual(f.read(), b'{"bundle": 1}')
+            self.assertEqual(stat.S_IMODE(os.stat(dst).st_mode), 0o600)
+            self.assertEqual(os.listdir(os.path.join(tmp, "sub")), ["seed.enc.json"])
+
+    def test_symlinked_src_refused(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "target")
+            with open(target, "w") as f:
+                f.write("sentinel")
+            link = os.path.join(tmp, "link")
+            os.symlink(target, link)
+            with self.assertRaises(SystemExit):
+                _copy_0600(link, os.path.join(tmp, "dst"))
+            with open(target) as f:
+                self.assertEqual(f.read(), "sentinel")
+
+    def test_symlinked_dst_refused_without_touching_victim(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "src")
+            with open(src, "w") as f:
+                f.write("new")
+            victim = os.path.join(tmp, "victim")
+            with open(victim, "w") as f:
+                f.write("victim-bytes")
+            link = os.path.join(tmp, "dst")
+            os.symlink(victim, link)
+            with self.assertRaises(SystemExit):
+                _copy_0600(src, link)
+            with open(victim) as f:
+                self.assertEqual(f.read(), "victim-bytes")
+
+    def test_fifo_src_refused_promptly(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fifo = os.path.join(tmp, "fifo")
+            os.mkfifo(fifo)
+            with self.assertRaises(SystemExit):
+                _copy_0600(fifo, os.path.join(tmp, "dst"))
+
+    def test_oversize_src_refused_without_creating_dst(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "big")
+            with open(src, "wb") as f:
+                f.write(b"x" * (1024 * 1024 + 1))
+            with self.assertRaises(SystemExit):
+                _copy_0600(src, os.path.join(tmp, "dst"))
+            self.assertFalse(os.path.exists(os.path.join(tmp, "dst")))
+
+
+class TestCopyVersioned0600(unittest.TestCase):
+    # T43 r1b Fix 3 / F1: a second copy must preserve the first bundle
+    # as a versioned archive instead of silently overwriting it.
+
+    def test_second_copy_preserves_first_as_archive(self):
+        import stat
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = os.path.join(tmp, "seed.enc.json")
+            src1 = os.path.join(tmp, "one")
+            src2 = os.path.join(tmp, "two")
+            with open(src1, "wb") as f:
+                f.write(b"bundle-one")
+            with open(src2, "wb") as f:
+                f.write(b"bundle-two")
+            _copy_versioned_0600(src1, dst)
+            _copy_versioned_0600(src2, dst)
+            with open(dst, "rb") as f:
+                self.assertEqual(f.read(), b"bundle-two")
+            archives = [n for n in os.listdir(tmp) if ".bak." in n]
+            self.assertEqual(len(archives), 1)
+            with open(os.path.join(tmp, archives[0]), "rb") as f:
+                self.assertEqual(f.read(), b"bundle-one")
+            self.assertEqual(
+                stat.S_IMODE(os.stat(os.path.join(tmp, archives[0])).st_mode),
+                0o600,
+            )
+
+    def test_failing_copy_leaves_old_dst_and_archive(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dst = os.path.join(tmp, "seed.enc.json")
+            src1 = os.path.join(tmp, "one")
+            with open(src1, "wb") as f:
+                f.write(b"bundle-one")
+            _copy_versioned_0600(src1, dst)
+            missing = os.path.join(tmp, "does-not-exist")
+            with self.assertRaises(OSError):
+                _copy_versioned_0600(missing, dst)
+            with open(dst, "rb") as f:
+                self.assertEqual(f.read(), b"bundle-one")
+            archives = [n for n in os.listdir(tmp) if ".bak." in n]
+            self.assertEqual(len(archives), 1)
+
+
+class TestMakedirs0700Fsynced(unittest.TestCase):
+    # T43 r1d §3: fresh ancestor chains are created at 0700; existing
+    # directories are left untouched.
+
+    def test_fresh_nested_dirs_created_at_0700(self):
+        import stat
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "a", "b", "c")
+            _makedirs_0700_fsynced(target)
+            for directory in (
+                os.path.join(tmp, "a"),
+                os.path.join(tmp, "a", "b"),
+                target,
+            ):
+                self.assertEqual(stat.S_IMODE(os.stat(directory).st_mode), 0o700)
+
+    def test_existing_dirs_untouched_and_idempotent(self):
+        import stat
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "a", "b")
+            os.makedirs(target, mode=0o755)
+            os.chmod(os.path.join(tmp, "a"), 0o751)
+            _makedirs_0700_fsynced(target)
+            _makedirs_0700_fsynced(target)
+            self.assertEqual(
+                stat.S_IMODE(os.stat(os.path.join(tmp, "a")).st_mode), 0o751
+            )
+            self.assertEqual(stat.S_IMODE(os.stat(target).st_mode), 0o755)
 
 
 class TestAssertBundleDecryptsReturnsMnemonic(unittest.TestCase):

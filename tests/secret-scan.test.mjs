@@ -221,6 +221,94 @@ describe('secret-scan (F-25/26)', () => {
     assert.equal(secretScan(root), true);
   });
 
+  test('T43: PEM private-key blocks fail', () => {
+    // Built by concatenation: written out in full, this test file
+    // would trip the gate it is testing (the planted content is
+    // identical either way).
+    write(root, 'key.pem', '-----BEGIN ' + 'PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n');
+    assert.equal(secretScan(root), false, 'PEM block must fail');
+  });
+
+  test('T43: a 64-hex value next to a data-key name fails', () => {
+    const hex = 'a'.repeat(64);
+    write(root, 'a.txt', 'BAWA_DATA_KEY_HEX = "' + hex + '"\n');
+    assert.equal(secretScan(root), false, 'data-key hex must fail');
+  });
+
+  test('T43: seed_hex with a 64-hex value fails', () => {
+    write(root, 'a.txt', 'seed_hex = "' + 'b'.repeat(64) + '"\n');
+    assert.equal(secretScan(root), false, 'seed_hex must fail');
+  });
+
+  test('T43: a bare 64-hex string still passes', () => {
+    write(root, 'a.txt', 'sha256 = "' + 'c'.repeat(64) + '"\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), true, 'bare 64-hex must pass');
+  });
+
+  test('T43: a 12-word BIP-39 run fails', () => {
+    // Built from fragments across two source lines: written out in
+    // full, this test file would trip the gate it is testing (the
+    // planted content is identical either way).
+    const run = ['abandon', 'ability', 'able', 'about', 'above', 'absent',
+      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'].join(' ');
+    write(root, 'm.txt', run + '\n');
+    assert.equal(secretScan(root), false, '12-word run must fail');
+  });
+
+  test('T43: the known published vectors pass', () => {
+    // Each planted line is exactly one known vector, so the complete-
+    // run exemption applies; a longer run starting with one still fails
+    // (next test).
+    write(root, 'v.txt', 'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal\n');
+    write(root, 'h.txt', 'test test test test test test test test test test test junk\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), true, 'known vectors must pass');
+  });
+
+  test('T43: a 24-word run starting with the allowlisted 15-word vector still fails', () => {
+    // r2a §2: allowlisting complete runs, not substrings of longer
+    // mnemonics — removing the 15-word prefix would leave nine words
+    // and hide a non-allowlisted secret.
+    const vector = 'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
+    const extra = ['abandon', 'ability', 'able', 'about', 'above', 'absent',
+      'absorb', 'abstract', 'absurd'].join(' ');
+    write(root, 'm.txt', vector + ' ' + extra + '\n');
+    assert.equal(secretScan(root), false, 'vector-prefix 24-word run must fail');
+  });
+
+  test('T43: a known vector with one extra word attached still passes', () => {
+    // The documented vectors read as 16-word runs in prose: "15-word"
+    // contributes the BIP-39 word "word", and the WEB-GUIDE table rows
+    // follow the vector with the "Empty" passphrase cell. One extra
+    // word is exempt; two are not (next test).
+    const vector = 'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
+    write(root, 'a.txt', vector + ' word\n');
+    write(root, 'b.txt', vector + ' empty\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), true, 'vector plus one word must pass');
+  });
+
+  test('T43: a known vector with two extra words attached still fails', () => {
+    // The one-word allowance is tight: two extra words are real
+    // mnemonic material, not prose.
+    const vector = 'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
+    write(root, 'm.txt', vector + ' word empty\n');
+    assert.equal(secretScan(root), false, 'vector plus two words must fail');
+  });
+
+  test('T43: a TRACKED file under a build tree fails (no longer excluded)', () => {
+    write(root, 'apps/web/dist/probe.txt', 'mnemonic = "word1 word2 word3 word4"\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), false, 'tracked build file must fail');
+  });
+
+  test('T43: a TRACKED file under node_modules fails (no longer excluded)', () => {
+    write(root, 'node_modules/pkg/index.js', 'mnemonic = "word1 word2 word3 word4"\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), false, 'tracked node_modules file must fail');
+  });
+
   test('a clean tree passes', () => {
     write(root, 'README.md', '# hello\n');
     git(root, ['add', '.']);

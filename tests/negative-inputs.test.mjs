@@ -883,3 +883,19 @@ test("daemon: remains usable after a non-JSON line", async () => {
   assert.strictEqual(replies[1].ok, true, JSON.stringify(replies[1]));
   assert.strictEqual(replies[1].address, FIXTURES.btc.address);
 });
+
+// T43 r2a Fix 4: a symlinked .env is refused fast instead of opening an
+// unrelated process-readable file (c3b §1).
+test("compare.js: refuses a symlinked env file", () => {
+  const target = writeTempEnv(VALID_ENV);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bawa-compare-symlink-"));
+  temporaryDirectories.add(directory);
+  const linkPath = path.join(directory, "env.link");
+  fs.symlinkSync(target, linkPath);
+
+  const result = runCompare(null, { bawaEnvFile: linkPath, timeout: 10_000 });
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /env file is a symlink/);
+});

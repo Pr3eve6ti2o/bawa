@@ -33,6 +33,16 @@ export function ImportWalletScreen() {
     // a rejected submission; the old code returned on validation failure
     // with the input still populated.
     setXpub('');
+    // T43 r2b Fix (a): validate before setting the adding state, so a
+    // rejected value reports its specific error and returns early.
+    const validation = await validateExtendedKey(publicKey, chain);
+    if (!validation.ok) {
+      // Clear again inside the failure block (already cleared above by
+      // the T41 step): the rejection path must clear before reporting.
+      setXpub('');
+      setError(`${validation.message || 'Invalid extended public key.'} The input was cleared; never paste a mnemonic, seed or private key here.`);
+      return;
+    }
     setError(null);
     setIsAdding(true);
     try {
@@ -113,6 +123,7 @@ export function ImportWalletScreen() {
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
+            maxLength={40}
           />
         </div>
 

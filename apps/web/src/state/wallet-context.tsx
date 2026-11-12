@@ -6,8 +6,17 @@ import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/co
 import { deriveAddresses, validateExtendedKey } from '../engine/boundary';
 
 const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx'];
+// Maximum wallet-label length enforced at the storage boundary (T43
+// r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
+// characters, an xprv is 111, and a 32-byte data key in hex is 64, so
+// no complete secret of those forms fits in 40 characters, while
+// ordinary labels ("Savings") are unaffected. This is a bound, not a
+// guarantee: a shorter complete secret (e.g. a 23-character Chinese
+// BIP-39 mnemonic, a 40-character Z85 key) or a secret fragment still
+// fits — see REPORT.md. The label input also carries maxLength={40}.
 // localStorage contains public watch-only data only (xpubs and labels), never secrets.
 const STORAGE_KEY = 'bawa-watch-only-xpubs';
+export const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
 const perChain = <T,>(make: () => T): PerChain<T> => ({
   btc: make(), eth: make(), trx: make(),
@@ -116,7 +125,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!validation.ok) throw new Error(validation.message);
     if (epoch !== lifetime.current || request !== additions.current[chain]) return;
     changed.current[chain] = true;
-    const wallet = { chain, xpub: publicKey, label: label.trim(), derivedCount: 5 };
+    const trimmedLabel = label.trim();
+    if (trimmedLabel.length > LABEL_MAX_LENGTH) {
+      throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
+    }
+    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: 5 };
     await putWallet(chain, wallet);
   }, [putWallet]);
 
@@ -151,7 +164,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const entry = saved[chain];
       if (changed.current[chain] || !isRecord(entry) || typeof entry.xpub !== 'string') return;
       const publicKey = entry.xpub.trim();
-      const label = typeof entry.label === 'string' ? entry.label.trim() : '';
+      // An over-long stored label is dropped to '' (T43 r2b Fix (b)):
+      // restore-to-'' rather than truncation, so a persisted prefix of
+      // a pasted secret is not kept. The persistence effect below then
+      // overwrites the stored label with ''.
+      const rawLabel = typeof entry.label === 'string' ? entry.label.trim() : '';
+      const label = rawLabel.length > LABEL_MAX_LENGTH ? '' : rawLabel;
       try {
         const validation = await validateExtendedKey(publicKey, chain);
         if (!cancelled && !changed.current[chain] && validation.ok) {

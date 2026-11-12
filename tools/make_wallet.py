@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import base64
 import binascii
+import datetime
+import hashlib
 import json
 import os
 import re
@@ -18,17 +20,153 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import threading
 
 BASE = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+# Cap on any single copied wallet-material file (T43 r1d rework). The
+# legitimate files are small (a seed bundle is capped at 64 KiB by the
+# parser); 1 MiB bounds the copier's whole-source read without imposing
+# the parser's limit on non-bundle files such as RECOVERY.md.
+_COPY_MAX_BYTES = 1024 * 1024
+
+
+def _fsync_dir(path: str) -> None:
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _makedirs_0700_fsynced(path: str) -> None:
+    """Create missing directories at 0700, fsyncing each new entry's parent.
+
+    os.makedirs applies the mode to the leaf only and never fsyncs, so a
+    fresh ancestor chain would not be durable after a crash (T43 r1d
+    §3). Existing directories are left untouched (no chmod, no fsync).
+    """
+    target = os.path.abspath(path)
+    missing = []
+    cursor = target
+    while not os.path.isdir(cursor):
+        missing.append(cursor)
+        parent = os.path.dirname(cursor)
+        if parent == cursor:
+            raise SystemExit(f"cannot create directory: {target}")
+        cursor = parent
+    for directory in reversed(missing):
+        os.mkdir(directory, 0o700)
+        os.chmod(directory, 0o700)
+        _fsync_dir(os.path.dirname(directory))
+
+
 def _copy_0600(src: str, dst: str) -> None:
+    """Copy src to dst as a fresh 0600 file, atomically and durably.
+
+    The source is opened O_RDONLY|O_NOFOLLOW|O_NONBLOCK and must be a
+    regular file (a FIFO never blocks the open; a symlink is refused).
+    At most _COPY_MAX_BYTES are read, in chunks. Bytes go to an
+    exclusively created 0600 temp file in the destination directory,
+    which is fsynced, re-read and SHA-256-verified against the source
+    snapshot, then published with os.replace — a symlinked dst is
+    replaced, never followed — and the directory is fsynced. The temp
+    file already carries 0600 through the replace, so there is no
+    post-replace pathname chmod to race. The islink prechecks remain
+    as a fast fail only (T43 r1b Fix 3 / r1d rework).
+    """
     if os.path.islink(src) or os.path.islink(dst):
         raise SystemExit("refusing symlinked wallet material path")
-    os.makedirs(os.path.dirname(dst), mode=0o700, exist_ok=True)
-    shutil.copyfile(src, dst)
-    os.chmod(dst, 0o600)
+    src_fd = os.open(
+        src,
+        os.O_RDONLY
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0),
+    )
+    try:
+        st = os.fstat(src_fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise SystemExit("refusing non-regular wallet material source")
+        chunks = []
+        total = 0
+        while True:
+            chunk = os.read(src_fd, 65536)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _COPY_MAX_BYTES:
+                raise SystemExit("wallet material exceeds 1 MiB")
+            chunks.append(chunk)
+        data = b"".join(chunks)
+    finally:
+        os.close(src_fd)
+    dst_dir = os.path.dirname(dst) or "."
+    _makedirs_0700_fsynced(dst_dir)
+    fd, tmp = tempfile.mkstemp(prefix=".copy-", dir=dst_dir)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        with open(tmp, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        if digest != hashlib.sha256(data).hexdigest():
+            raise SystemExit("wallet material copy verification failed")
+        os.replace(tmp, dst)
+        tmp = None
+        _fsync_dir(dst_dir)
+    finally:
+        if tmp is not None:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
+
+
+def _copy_versioned_0600(src: str, dst: str) -> None:
+    """Copy src to dst, preserving any previous dst as a versioned archive.
+
+    A previous dst is hard-linked to dst + ".bak." + UTC timestamp +
+    "." + 16 random hex chars (retrying on collision) and the directory
+    is fsynced before replacement, so the preserved bundle is durable
+    first. _copy_0600's os.replace then overwrites dst atomically — a
+    failing copy leaves the old bundle in place at dst plus the archive
+    (no early unlink, T43 r1d rework). The archive inherits the old
+    inode's mode, so it is chmodded 0600 only AFTER the replace, when
+    the inode is private to the archive; chmodding before the replace
+    would have changed the live dst too.
+    """
+    if os.path.islink(src) or os.path.islink(dst):
+        raise SystemExit("refusing symlinked wallet material path")
+    archive = None
+    archive_needs_chmod = False
+    if os.path.exists(dst):
+        if not os.path.isfile(dst):
+            raise SystemExit("refusing non-regular wallet material destination")
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H-%M-%S"
+        )
+        for _ in range(5):
+            candidate = f"{dst}.bak.{stamp}.{secrets.token_hex(8)}"
+            try:
+                os.link(dst, candidate)
+            except FileExistsError:
+                continue
+            archive = candidate
+            break
+        if archive is None:
+            raise SystemExit("could not create a versioned backup name")
+        archive_needs_chmod = stat.S_IMODE(os.stat(archive).st_mode) != 0o600
+        _fsync_dir(os.path.dirname(dst) or ".")
+    _copy_0600(src, dst)
+    if archive is not None and archive_needs_chmod:
+        try:
+            os.chmod(archive, 0o600)
+        except OSError:
+            pass
 
 
 def _clean_text(value) -> bool:
@@ -241,11 +379,23 @@ def _contains_seed_material(obj) -> bool:
 
 def _parse_seed_bundle(path: str) -> tuple[bytes, bytes, int]:
     try:
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        # O_NONBLOCK (T43 c3a §2): a FIFO at the path must not block the
+        # open; the fstat check below rejects it as non-regular.
+        fd = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0),
+        )
         try:
             st = os.fstat(fd)
             if not stat.S_ISREG(st.st_mode):
                 raise SystemExit("seed bundle malformed: not a regular file")
+            # Size cap (T43 F6 / r1b Fix 3): json.load reads the whole
+            # file, so the bound must be enforced here, before the
+            # read — decrypt_seed.py already caps at 64 KiB.
+            if st.st_size > 65536:
+                raise SystemExit("seed bundle malformed: too large")
             mode = stat.S_IMODE(st.st_mode)
 
             # The finally block owns the descriptor, even if fdopen fails.
@@ -636,7 +786,10 @@ def main() -> None:
     backup_dir = os.path.realpath(raw_bundle)
     os.makedirs(backup_dir, mode=0o700, exist_ok=True)
     os.chmod(backup_dir, 0o700)
-    _copy_0600(reported, os.path.join(backup_dir, "seed.enc.json"))
+    # Versioned (T43 r1b Fix 3 / F1): a --force regenerate must not
+    # silently destroy the previous backup — the only backup of the old
+    # wallet — by overwriting seed.enc.json in place.
+    _copy_versioned_0600(reported, os.path.join(backup_dir, "seed.enc.json"))
 
     recovery = os.path.join(BASE, "tools", "decrypt_seed.py")
     if os.path.isfile(recovery):
@@ -677,22 +830,30 @@ def main() -> None:
             lines.append(f"{key}={value}")
 
     new_env = "\n".join(lines).rstrip("\n") + "\n"
-    os.makedirs(os.path.dirname(os.path.realpath(env_path)), exist_ok=True)
-    tmp_env = env_path + ".tmp"
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    # Random temp name + fsync ordering (T43 r1b Fix 3 / F10): the old
+    # predictable env_path + ".tmp" with unlink-then-reopen had a TOCTOU
+    # window, and the post-replace pathname chmod could race a swapped
+    # symlink. mkstemp creates an exclusively owned 0600 temp that
+    # already carries the mode through os.replace; the directory is
+    # fsynced after the replace so the rename is durable.
+    env_dir = os.path.dirname(os.path.abspath(env_path)) or "."
+    _makedirs_0700_fsynced(env_dir)
+    fd, tmp_env = tempfile.mkstemp(prefix=".env.", dir=env_dir)
     try:
-        fd = os.open(tmp_env, flags, 0o600)
-    except FileExistsError:
-        if os.path.islink(tmp_env):
-            raise SystemExit("refusing symlinked temporary .env path")
-        os.unlink(tmp_env)
-        fd = os.open(tmp_env, flags, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(new_env)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp_env, env_path)
-    os.chmod(env_path, 0o600)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(new_env)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_env, env_path)
+        tmp_env = None
+        _fsync_dir(env_dir)
+    finally:
+        if tmp_env is not None:
+            try:
+                os.unlink(tmp_env)
+            except FileNotFoundError:
+                pass
 
     print("Wallet generation and public configuration update completed.")
     print("Public roots:")

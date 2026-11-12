@@ -84,6 +84,17 @@ class TestDecryptMnemonicValidation(unittest.TestCase):
             with self.assertRaises(ValueError):
                 decrypt(path, wrong_key)
 
+    def test_fifo_bundle_refused_promptly(self):
+        # T43 c3a §2 / r2a Fix 3: without O_NONBLOCK a FIFO at the path
+        # blocks the open forever with no writer; the fstat check must
+        # refuse it as a non-regular file instead.
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            fifo = os.path.join(tmp, "seed.enc.json")
+            os.mkfifo(fifo)
+            with self.assertRaises(ValueError):
+                decrypt(fifo, key)
+
 
 class TestReadKey(unittest.TestCase):
     def test_env_key_warns_and_names_only_the_variable(self):

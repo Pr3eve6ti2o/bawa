@@ -82,7 +82,15 @@ def decrypt(path: str, key: bytes) -> str:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
     try:
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        # O_NONBLOCK (T43 c3a §2 / r2a Fix 3): without it a FIFO at the
+        # path blocks the open forever with no writer; the fstat check
+        # below then rejects it promptly as a non-regular file.
+        fd = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0),
+        )
     except OSError as exc:
         if exc.errno in (errno.ELOOP, errno.EMLINK):
             raise ValueError("refusing symlinked encrypted artifact") from None
@@ -220,6 +228,11 @@ def main() -> int:
             os.replace(tmp, args.output)
             published = True
             # T41: fsync the directory so the rename survives power loss.
+            # Durability (T43 r2a Fix 3): the rename must be fsynced
+            # into the output directory; a file fsync alone does not
+            # commit the directory entry. If this fsync fails the file
+            # is already installed — the error reports that, it does
+            # not pretend the write was rolled back.
             dir_fd = os.open(output_dir, os.O_RDONLY)
             try:
                 os.fsync(dir_fd)
