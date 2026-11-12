@@ -9,6 +9,7 @@ enum class Reason {
     INVALID_BASE58,
     INVALID_LENGTH,
     INVALID_CHECKSUM,
+    INVALID_DEPTH_METADATA,
     PRIVATE_KEY,
     VERSION_NOT_ALLOWED,
     INVALID_POINT
@@ -28,6 +29,7 @@ object ExtendedKeyValidator {
 
     private val PRIVATE_VERSIONS = setOf(
         "0488ade4", "049d7878", "04b2430c",
+        "0295b005", "02aa7a99",
         "04358394", "044a4e28", "045f18bc"
     )
     private val FIELD_PRIME = BigInteger.ONE.shiftLeft(256)
@@ -82,6 +84,15 @@ object ExtendedKeyValidator {
             return ValidationResult.Invalid(
                 Reason.INVALID_POINT,
                 "extended key contains an invalid secp256k1 public key point"
+            )
+        }
+
+        // T40-F1: depth-0 extended keys must have zero fingerprint and
+        // child number (matches tools/hdwallet-gen/extended-key.js check 5c).
+        if (decoded[4] == 0.toByte() && decoded.copyOfRange(5, 13).any { it != 0.toByte() }) {
+            return ValidationResult.Invalid(
+                Reason.INVALID_DEPTH_METADATA,
+                "depth-0 extended key must have zero fingerprint and child number"
             )
         }
 

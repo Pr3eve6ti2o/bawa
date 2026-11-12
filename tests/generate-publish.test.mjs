@@ -34,18 +34,27 @@ describe('generate.js publish (F-12/F-13)', () => {
     }
   });
 
-  test('stale lock from a dead PID is stolen; malformed lock is reclaimed', () => {
+  test('stale lock from a dead PID or malformed content is NOT stolen (T40-F3 fail-closed)', () => {
+    // T40-F3: automatic reclamation was removed — a contender unlinking a
+    // lock it observed as stale could unlink a live holder's lock (the
+    // empty-file window), so both processes could publish concurrently.
+    // A stale lock now waits the bounded 10 s, refuses, names the lock
+    // file for manual cleanup, and leaves the file in place.
     const dir = mkdtempSync(join(tmpdir(), 'gen-pub-'));
     try {
       const encPath = join(dir, 'seed.enc.json');
       const lockPath = encPath + '.lock';
-      writeFileSync(lockPath, '999999');
-      assert.equal(acquirePublishLock(encPath), lockPath);
-      assert.equal(readFileSync(lockPath, 'utf8'), String(process.pid));
-      releasePublishLock(lockPath);
-      writeFileSync(lockPath, 'not-a-pid');
-      assert.equal(acquirePublishLock(encPath), lockPath);
-      releasePublishLock(lockPath);
+      for (const stale of ['999999', 'not-a-pid']) {
+        writeFileSync(lockPath, stale);
+        const start = Date.now();
+        assert.throws(
+          () => acquirePublishLock(encPath),
+          /seed bundle publish already in progress.*remove the stale lock file/
+        );
+        const waited = Date.now() - start;
+        assert.ok(waited >= 9000 && waited < 20000, `bounded wait was ${waited} ms, expected ~10000`);
+        assert.equal(readFileSync(lockPath, 'utf8'), stale);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

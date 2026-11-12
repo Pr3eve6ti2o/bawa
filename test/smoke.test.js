@@ -87,6 +87,10 @@ const NEGATIVE = {
   ZPRV: "zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE",
   TV5_BAD: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL",
   TV5_VER: "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm",
+  // T40-F2: the two further documented private versions (0295b005,
+  // 02aa7a99) re-versioned from the ETH fixture with the same key data.
+  VER_0295B005: "YprvAUcRCyQ3qDCdyfFffou2tZLydpCn5NWe8YhoeoBGhyfK833zgehK7d972cxHm7HTEbjC2XT68GhGxdVbiWQ5jER4GR2egAtGcgBtB4bVYDG",
+  VER_02AA7A99: "ZprvAoSgWe4xytk7pxSnWAgf6eSUonME1zW93fE2SC5A5z3CB8sDwJrsjgoF3pusm1wNeEqzn13eaw3pqv7ASCp6XU6f8kj5G5hktQFXZczz4kw",
   ZPUB84: "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs",
   ETH_BAD_CHECKSUM: "xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumd",
 };
@@ -1343,6 +1347,8 @@ Module._load = function (request, parent, isMain) {
       ["POINT_X_EQ_0", "bad-point"],
       ["DEPTH0_FINGERPRINT", "bad-depth-metadata"],
       ["DEPTH0_CHILD", "bad-depth-metadata"],
+      ["VER_0295B005", "private-key"],
+      ["VER_02AA7A99", "private-key"],
     ]) {
       const result = validateExtendedKey(NEGATIVE[vector], "btc");
       check(

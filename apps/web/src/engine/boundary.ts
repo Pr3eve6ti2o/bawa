@@ -9,6 +9,8 @@ const PRIVATE_VERSIONS = new Set([
   '0488ade4',
   '049d7878',
   '04b2430c',
+  '0295b005',
+  '02aa7a99',
   '04358394',
   '044a4e28',
   '045f18bc',
@@ -178,6 +180,16 @@ export async function validateExtendedKey(
       ok: false,
       reason: 'invalid-point',
       message: 'extended key contains an invalid secp256k1 public key point',
+    };
+  }
+
+  // T40-F1: depth-0 extended keys must have zero fingerprint and child
+  // number (matches tools/hdwallet-gen/extended-key.js check 5c).
+  if (bytes[4] === 0 && bytes.subarray(5, 13).some((b) => b !== 0)) {
+    return {
+      ok: false,
+      reason: 'invalid-depth-metadata',
+      message: 'depth-0 extended key must have zero fingerprint and child number',
     };
   }
 

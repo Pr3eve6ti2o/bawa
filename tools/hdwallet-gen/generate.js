@@ -94,6 +94,14 @@ function acquirePublishLock(encPath) {
   const waitState = new Int32Array(new SharedArrayBuffer(4));
   let lockFd;
 
+  // T40-F3 (fail-closed): an existing lock is NEVER removed by a
+  // contender. Automatic reclamation of dead-PID or malformed locks was
+  // removed: stale observation plus pathname deletion is not atomic, so
+  // a contender could unlink a live holder's lock and both processes
+  // could publish concurrently (empty-file window, plus a raw EEXIST
+  // escaping from the reclaim retry). A lock left by a crashed run now
+  // refuses until the operator removes it after confirming no
+  // generation is running; the refusal names the lock path.
   for (;;) {
     try {
       lockFd = fs.openSync(lockPath, "wx", 0o600);
@@ -104,42 +112,13 @@ function acquirePublishLock(encPath) {
       }
     }
 
-    let live = false;
-    try {
-      const pidText = fs.readFileSync(lockPath, "utf8").trim();
-      const pid = Number(pidText);
-      if (/^\d+$/.test(pidText) && Number.isSafeInteger(pid) && pid > 0) {
-        try {
-          process.kill(pid, 0);
-          live = true;
-        } catch (killErr) {
-          // EPERM means the process exists but belongs to another
-          // user: the lock is live and must NOT be stolen. Any other
-          // probe failure (ESRCH = dead PID) permits reclamation.
-          if (killErr.code === "EPERM") live = true;
-        }
-      }
-    } catch (_) {
-      // An unreadable lock or unsuccessful PID probe permits reclamation.
-    }
-
-    if (!live) {
-      try {
-        fs.unlinkSync(lockPath);
-      } catch (err) {
-        if (err.code !== "ENOENT") {
-          throw err;
-        }
-      }
-
-      // Retry exclusive creation exactly once after reclaiming the lock.
-      lockFd = fs.openSync(lockPath, "wx", 0o600);
-      break;
-    }
-
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
-      throw new Error("seed bundle publish already in progress for " + encPath);
+      throw new Error(
+        "seed bundle publish already in progress for " + encPath +
+          "; if no generation is running, remove the stale lock file " +
+          lockPath + " and retry"
+      );
     }
     Atomics.wait(waitState, 0, 0, Math.min(100, remaining));
   }

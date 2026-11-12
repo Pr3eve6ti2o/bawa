@@ -26,6 +26,7 @@ export type ExtendedKeyValidation =
         | 'invalid-base58'
         | 'invalid-length'
         | 'invalid-checksum'
+        | 'invalid-depth-metadata'
         | 'private-key'
         | 'version-not-allowed'
         | 'invalid-point';

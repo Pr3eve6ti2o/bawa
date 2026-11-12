@@ -175,6 +175,46 @@ describe.sequential('watch-only engine boundary', () => {
     });
   });
 
+  it('rejects the two further private versions with the private-key reason (T40-F2)', async () => {
+    // 0295b005 and 02aa7a99 are in the documented 8-version private set
+    // (docs/05-watch-only/README.md) and in the shared Node validator;
+    // the web validator previously reported them as version-not-allowed.
+    for (const version of [
+      [0x02, 0x95, 0xb0, 0x05],
+      [0x02, 0xaa, 0x7a, 0x99],
+    ] as const) {
+      const privateVersion = mutatePayload(ethXpub, (payload) => {
+        payload[0] = version[0];
+        payload[1] = version[1];
+        payload[2] = version[2];
+        payload[3] = version[3];
+      });
+
+      await expect(
+        validateExtendedKey(privateVersion, 'eth'),
+      ).resolves.toMatchObject({
+        ok: false,
+        reason: 'private-key',
+      });
+    }
+  });
+
+  it('rejects depth-0 keys with nonzero fingerprint or child number (T40-F1)', async () => {
+    // Same vectors as the shared Node validator's DEPTH0_* regressions
+    // (test/smoke.test.js): depth 0 with fingerprint 00000001 / child 00000001.
+    const depth0Fingerprint =
+      'xpub661MyMwTWkfYbGsHSkBPfK8hV3UhGjbN4hYBHFNRsZRFaUa3Eg5jKNwq1HMHBXDCDy9zSQTnhJgVAJY3gs8sTpDdrNWrHzwdEoY7Lf6dzxA';
+    const depth0Child =
+      'xpub661MyMwAqRbcHG7iAofhFTywCv8fdScxFvDJvpPZrQfnYjTChfcdCM7UWu179f4DmYcB4d3xuhXR1fFqeykXjsYQFQ9WHho2G6GX5dSHoAV';
+
+    for (const key of [depth0Fingerprint, depth0Child]) {
+      await expect(validateExtendedKey(key, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'invalid-depth-metadata',
+      });
+    }
+  });
+
   it('rejects a character outside the base58 alphabet', async () => {
     const invalidBase58 = ethXpub.slice(0, 10) + '0' + ethXpub.slice(10);
 
