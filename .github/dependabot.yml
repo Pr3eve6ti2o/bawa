@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+
+  - package-ecosystem: npm
+    directory: /tools/hdwallet-gen
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+    # Never bump @trustwallet/wallet-core to a new major version without a qualification run.
+    ignore:
+      - dependency-name: "@trustwallet/wallet-core"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+    # Keep requirements.txt dependencies (cryptography, bip-utils) pinned with exact == versions; never float.
+    versioning-strategy: increase

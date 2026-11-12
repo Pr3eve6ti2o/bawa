@@ -12,7 +12,7 @@ Required coverage — not all items below are implemented:
 - BIP-44 Ethereum outputs;
 - extended-key serialization and checksum behavior.
 
-Current automated coverage comprises BTC/ETH/TRX watch-only smoke derivations at indices 0–1 on both the receiving and change branches, CLI and daemon checks (including branch rejection), an address-only differential test for BIP-84 Bitcoin and BIP-44 Ethereum at index 0, and a payment-record schema/arithmetic check (`test/payment_record_check.py`, stdlib-only; shipped example PASS, tampered copy rejected). It does not cover BIP-39 mnemonic validation or mnemonic-to-seed vectors, BIP-32 master/child vectors including hardened and leading-zero cases, or extended-key serialisation/checksum behaviour.
+Current automated coverage comprises BTC/ETH/TRX watch-only smoke derivations at indices 0–1 on both the receiving and change branches, CLI and daemon checks (including branch rejection), an address-only differential test for BIP-84 Bitcoin and BIP-44 Ethereum at indices 0–1, BIP-44 TRON at indices 0–1, BTC change 0, TON, BIP-84 abandon anchors, Hardhat account 0 and BIP-32 test-vector-1 xpubs (T30), and a payment-record schema/arithmetic check (`test/payment_record_check.py`, stdlib-only; shipped example PASS, tampered copy rejected). It does not cover BIP-39 mnemonic validation or mnemonic-to-seed vectors, BIP-32 master/child vectors including hardened and leading-zero cases, or extended-key serialisation/checksum behaviour.
 
 The current Trust Wallet Core generator contains public regression fixtures. The root README, section 18, lists **Full published-vector coverage** as **FAIL**: vectors covering TRX and indices 1–2, not only BTC/ETH index 0.
 
