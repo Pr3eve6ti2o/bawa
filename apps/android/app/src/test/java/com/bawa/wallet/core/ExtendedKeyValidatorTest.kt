@@ -98,6 +98,51 @@ class ExtendedKeyValidatorTest {
     }
 
     @Test
+    fun smallXNonResiduePointIsRejected() {
+        // T42: Legendre branch — x = 5 gives y^2 = 132, a non-residue mod p.
+        val payload = base58Decode(btcZpub).copyOfRange(0, 78)
+        payload[45] = 0x02
+        payload.fill(0.toByte(), fromIndex = 46, toIndex = 78)
+        payload[77] = 5.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        val result = ExtendedKeyValidator.validate(mutated, Chain.BTC)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_POINT, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun smallXValidPointIsAccepted() {
+        // T42: Legendre branch — x = 1 gives y^2 = 8, a quadratic residue.
+        val payload = base58Decode(btcZpub).copyOfRange(0, 78)
+        payload[45] = 0x02
+        payload.fill(0.toByte(), fromIndex = 46, toIndex = 78)
+        payload[77] = 1.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        assertEquals(
+            ValidationResult.Valid,
+            ExtendedKeyValidator.validate(mutated, Chain.BTC)
+        )
+    }
+
+    @Test
+    fun overLongInputIsRejected() {
+        val overLong = "1".repeat(200)
+        val result = ExtendedKeyValidator.validate(overLong, Chain.BTC)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_LENGTH, (result as ValidationResult.Invalid).reason)
+
+        val justOver = "z".repeat(113)
+        val result2 = ExtendedKeyValidator.validate(justOver, Chain.BTC)
+
+        assertTrue(result2 is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_LENGTH, (result2 as ValidationResult.Invalid).reason)
+    }
+
+    @Test
     fun privateVersion0295b005IsRejected() {
         // T40-F2: 0295b005 is in the documented 8-version private set
         // (docs/05-watch-only/README.md) and in the shared Node validator.

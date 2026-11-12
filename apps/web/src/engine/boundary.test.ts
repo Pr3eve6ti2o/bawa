@@ -175,6 +175,46 @@ describe.sequential('watch-only engine boundary', () => {
     });
   });
 
+  it('rejects a small-x non-residue point (Legendre branch, T42)', async () => {
+    const nonResidue = mutatePayload(btcZpub, (payload) => {
+      payload[45] = 0x02;
+      payload.fill(0, 46, 78);
+      payload[77] = 5;
+    });
+
+    await expect(validateExtendedKey(nonResidue, 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-point',
+    });
+  });
+
+  it('accepts the small-x valid point x=1 (Legendre branch, T42)', async () => {
+    const validSmall = mutatePayload(btcZpub, (payload) => {
+      payload[45] = 0x02;
+      payload.fill(0, 46, 78);
+      payload[77] = 1;
+    });
+
+    await expect(validateExtendedKey(validSmall, 'btc')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('rejects over-long input without scanning it (T42)', async () => {
+    await expect(validateExtendedKey('1'.repeat(200), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+    await expect(validateExtendedKey('z'.repeat(113), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+    await expect(validateExtendedKey('z'.repeat(1000000), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+  });
+
   it('rejects the two further private versions with the private-key reason (T40-F2)', async () => {
     // 0295b005 and 02aa7a99 are in the documented 8-version private set
     // (docs/05-watch-only/README.md) and in the shared Node validator;

@@ -16,6 +16,10 @@ const PRIVATE_VERSIONS = new Set([
   '045f18bc',
 ]);
 
+// T42: a valid 82-byte extended key needs at most 112 Base58 characters
+// (ceil(82 * log(256) / log(58))); the shared Node validator caps here.
+const MAX_BASE58_LENGTH = 112;
+
 const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   // F-17: BIP-49 ypub (049d7cb2) is accepted for BTC, like the shared
   // validator (tools/hdwallet-gen/extended-key.js).
@@ -75,7 +79,10 @@ function modPow(base: bigint, exponent: bigint, modulus: bigint): bigint {
 }
 
 // Compressed public key: prefix 0x02/0x03, x < p, and x^3 + 7 a quadratic
-// residue mod p (y^2 = x^3 + 7 has a solution). y^2 == 0 is on-curve.
+// residue mod p (y^2 = x^3 + 7 has a solution). T42: y^2 == 0 is NOT
+// accepted as a special case any more — the Legendre symbol must be exactly
+// 1, matching the shared Node validator. The case is unreachable anyway:
+// -7 is not a cubic residue mod p, so no x has x^3 + 7 == 0 mod p.
 function isValidCompressedPoint(keyBytes: Uint8Array): boolean {
   const prefix = keyBytes[0];
   if (prefix !== 0x02 && prefix !== 0x03) return false;
@@ -83,7 +90,6 @@ function isValidCompressedPoint(keyBytes: Uint8Array): boolean {
   for (let i = 1; i < 33; i++) x = (x << 8n) | BigInt(keyBytes[i]!);
   if (x >= SECP256K1_P) return false;
   const ySquared = ((x * x) % SECP256K1_P * x + 7n) % SECP256K1_P;
-  if (ySquared === 0n) return true;
   return modPow(ySquared, (SECP256K1_P - 1n) / 2n, SECP256K1_P) === 1n;
 }
 
@@ -92,6 +98,18 @@ export async function validateExtendedKey(
   chain: ChainId,
 ): Promise<import('@bawa/contracts').ExtendedKeyValidation> {
   const key = xpub.trim();
+
+  // T42: bound the input before decoding, like the shared Node validator.
+  // Without this, a huge pasted string is scanned character by character
+  // on the browser main thread (the loop keeps scanning after overflow to
+  // preserve alphabet-error precedence).
+  if (key.length > MAX_BASE58_LENGTH) {
+    return {
+      ok: false,
+      reason: 'invalid-length',
+      message: 'invalid extended key length',
+    };
+  }
 
   // Fixed-width, big-endian accumulator; leading '1's represent zero bytes.
   const bytes = new Uint8Array(82);
