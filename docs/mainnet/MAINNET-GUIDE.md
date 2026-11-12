@@ -282,7 +282,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 Gate status below is the **2026-11-09 baseline**, not a statement that the gates have passed.
 
 - [ ] **Clean, trusted machine.** Stop before handling seed material or data keys if you cannot establish that the machine is clean and trusted.
-- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `b8298197`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
+- [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `0b2aa295`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
 - [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
