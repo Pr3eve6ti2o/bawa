@@ -24,6 +24,11 @@ export function SendScreen() {
             frozen intent → human-readable details → validate payload against
             intent → broadcast the exact signed payload
           </p>
+          <p>
+            An unknown outcome must stay unresolved pending independent
+            reconciliation and must never be treated as permission to resend
+            or blindly compose a fresh replacement transfer.
+          </p>
         </CardContent>
       </Card>
 

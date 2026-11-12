@@ -11,6 +11,7 @@ const VEC_MNEMONIC = "ripple scissors kick mammal hire column oak again sun offe
 const VEC = {
   btc: "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd",
   eth: "0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7",
+  ton: "UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn",
 };
 
 function addrFromExtended(core, xpub, coin, derivationPath) {
@@ -216,6 +217,9 @@ async function main() {
   const v = HDWallet.createWithMnemonic(VEC_MNEMONIC, "");
   ok("vec_btc", v.getAddressForCoin(CoinType.bitcoin) === VEC.btc);
   ok("vec_eth", v.getAddressForCoin(CoinType.ethereum) === VEC.eth);
+  // TON triple check (M-03): wallet-core 4.8.4 defaults (V4 R2, wallet ID
+  // 698983191, subwallet 0) must reproduce the recorded fixture address.
+  ok("vec_ton", v.getAddressForCoin(CoinType.ton) === VEC.ton);
 
   const vBtcZpub = v.getExtendedPublicKeyAccount(
     Purpose.bip84, CoinType.bitcoin, Derivation.bitcoinSegwit, HDVersion.zpub, 0

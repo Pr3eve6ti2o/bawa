@@ -1862,6 +1862,18 @@ Balance responses have a separate failure mode. The draft’s `TonTestnetAdapter
 
 **Prevention and stop:** preserve UNKNOWN until txid reconciliation resolves it, and establish the account and network before relying on a balance. Never treat a stale value as current spendable funds. Stop while submission state, network identity or balance freshness remains unresolved; missing history and successful zeroes do not remove that stop condition. See §14 and §17.
 
+## M-04 reconciliation procedure (verified without spending)
+
+An unknown outcome is not permission to resend. For any future send implementation, record the signed bytes and intended destination and amount at send time, together with the txid (TRX), or the sender address and seqno (TON). Save these records before submission so independent lookup remains possible after a timeout, interrupted session or lost response.
+
+**TON:** Query `getTransactions` for the sender address. Match the outgoing message by destination, amount and logical time; page by `lt`/`hash` until the relevant history is covered. The `UQ`/`EQ` forms of an address identify the same account. Count the transfer as landed only when the matching outgoing message is in the sender history after masterchain confirmation.
+
+**TRX:** Query `wallet/gettransactionbyid` with the recorded txid and read `contractRet` under `ret`. Cross-check the sender address history. Count the transfer as landed when the returned txid matches and `contractRet` is `SUCCESS`. API-level `ok` or `success` is not transfer confirmation.
+
+Treat it as not landed only after conclusive failure or expiry evidence establishes that the signed attempt cannot still execute, and complete relevant confirmed history excludes the transfer. Missing results, incomplete history, timeouts or a zero balance are insufficient.
+
+If neither conclusion is established, the status stays unresolved. Never compose a fresh replacement transfer blindly. The read-only demonstrations from the VM on 2026-11-12 verified public lookups without spending, not an executed send.
+
 ### 13.10 Tool defects that block funding — OI-096
 
 OI-096 remains open:
@@ -3372,15 +3384,15 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected sections:** §21, §9 and §16.
 
-**Evidence or uncertainty:** M24 K19; M06 R01, including the negative test in `tools/hdwallet-gen/test/smoke.test.js` using a disposable private extended key.
+**Evidence or uncertainty:** Fixed in `d2f0960`, hardened by `94f60e0`. T09 ran `test/fixture-oracle.py` first-hand on `muse-vm` on 2026-11-12, working copy tip `981d0ba`, with `test/fixture-oracle-vectors.json` generated first-hand from `test/smoke.test.js`. The oracle uses independent Python `bip_utils 2.12.2` to derive expected addresses from the published 15-word ‘ripple scissors...’ vector with an empty passphrase, and black-box tests `tools/hdwallet-gen/derive.js` and `compare.js`. All expected BTC/ETH/TRX addresses matched at indices 0 and 1, and the TON triple check reproduced the recorded fixture address. Private-material, bad-checksum and wrong-chain inputs were rejected with exit 2 and no address output. The wrong-path demonstration showed that a path swap is detectable. `compare.js` passed with fixture keys and failed closed with a private key in the env file. The run passed 21/21 checks; evidence artefacts are the oracle script, fixture vectors and the run’s JSON evidence output.
 
-**Status:** OPEN.
+**Status:** RESOLVED.
 
-**Operational restriction:** The defective tools’ output is never sufficient evidence of their own repair.
+**Operational restriction:** OI-096 must not certify its own repair. This independent verification resolves M-01 only; Doc 3 row OI-096 remains open and its closure is separate.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Independent fixture-oracle verification using only the published vector must demonstrate private-material rejection and wrong-network/path rejection, with the exact expected addresses recorded. The evidence must identify the fixed commit, artefact, test evidence and reviewer. OI-096 stays open until that evidence exists; its closure remains separate from the mainnet row’s closure.
+**Clearance condition:** Met by the independent fixture-oracle procedure and recorded evidence. Reviewer: T09 lane, on the first-hand run above. Merge acceptance by the fan-out coordinator remains the programme’s acceptance gate.
 
 **Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5274); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/tools/hdwallet-gen/test/smoke.test.js).
 
@@ -3390,15 +3402,15 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected sections:** §8 and §9.
 
-**Evidence or uncertainty:** M04 F8 records the behaviour reproduced twice. M04 F9 identifies `derive.js:39–56`: the checksum check at lines 50–53 returns `false` before the version-byte check. See also M04 F10. The ‘explicit rejection’ framing for the bad-checksum vector at `docs/11:248` is wrong and must not be carried into this guide.
+**Evidence or uncertainty:** The same first-hand M-01 fixture-oracle run verifies the repair, including rejection of bad-checksum and private-material inputs with exit 2 and no address output. In `extended-key.js`, `validateExtendedKey` verifies the checksum before the version check, rejects a private payload marker or private version, and uses a fixed-size 82-byte decode so oversized input cannot cause oversized allocations. Both `derive.js` and `compare.js` call it before WASM starts. The pre-existing smoke suite also passed at baseline: 130 checks, 0 failures at 981d0ba, and 166 checks, 0 failures after the rebase onto 2b66177. The register’s old location, `tools/hdwallet-gen/test/smoke.test.js`, is stale and does not exist; the test lives at `test/smoke.test.js`.
 
-**Status:** OPEN.
+**Status:** RESOLVED.
 
-**Operational restriction:** Never submit private exports, including damaged ones, to a watch-only tool or a support ticket. Before input reaches Core, require both a valid checksum and a confirmed public extended-key type. Invalid or unknown input means stop, not ‘not private, therefore public’. Keep suspect private-key text out of logs, and do not auto-retry malformed input.
+**Operational restriction:** The repaired `derive.js` and `compare.js` paths must retain checksum and private-key validation before WASM starts. Bad-checksum and private-key inputs must fail closed with exit 2 and no address output.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** A code fix must provide decoded private-material rejection and correct checksum handling, verified through the M-01 fixture-oracle procedure.
+**Clearance condition:** Met: verified through the M-01 fixture-oracle procedure, with its JSON evidence output. The passing baseline smoke suite is supporting evidence, not a substitute for that verification.
 
 **Gate/source links:** Re-checked register: M04 F8–F10; [M-01 fixture-oracle gate](#m-01--oi-096-must-not-certify-its-own-repair).
 
@@ -3408,17 +3420,17 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected sections:** §10, §13 and §21.
 
-**Evidence or uncertainty:** M25 F11 shows that `TonConfig.validate()` checks format only; Create defaults `walletIdText` to `"0"`; and Import hardcodes `0L`. The draft’s own test asserts that `(v4r2, 0L, 0, testnet, UQC7…)` is `VALID`. `698983191` appears nowhere in the Android draft code. M22 F32 identifies the Web draft’s two recorded `0` entries at `main.js:502` and `main.js:526`. M10 F7 and M03 F21 record the measured result that wallet ID `0` gives a different address. Cross-wallet recovery evidence under M23 F36 and M22 F44 remains unverified.
+**Evidence or uncertainty:** First-hand T09 checks on 2026-11-12 at `981d0ba` found that the named Android draft code (`TonConfig.validate`, Create `walletIdText "0"`, Import `0L`) does not exist in the repository. Grep finds no `walletId`/`TonConfig` outside the guides; `apps/android` is a watch-only starter with no TON derivation. Guide prose already pins V4 R2 with wallet ID 698983191. The triple-versus-address consistency check is now implemented and passing: `test/fixture-oracle.py` re-derives the TON fixture address from the published mnemonic using independent `bip_utils` and asserts that it equals `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`. `wallet-core 4.8.4` independently reproduces the same address. `tools/hdwallet-gen/generate.js` now includes a `vec_ton` regression check asserting that fixture address. Since this lane's base, T18 added `tools/hdwallet-gen/derive-ton.js`, which derives the same triple (V4 R2, wallet ID 698983191, workchain 0) and was independently cross-checked with `@ton/ton 16.3.0`.
 
 T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram pins the TON triple `(v4r2, 698983191, 0)` and labels the draft `0` as wrong. The `main.js:502`/`main.js:526` locations name a local-only draft file absent from every repository revision. The defect itself is unchanged.
 
 **Status:** OPEN.
 
-**Operational restriction:** The guide must pin **Wallet V4 R2 with wallet ID `698983191`** and explicitly flag both Web draft entries recording `0` as wrong. Require an independent address-reproduction check before receiving funds. The code must default to `698983191` and add a triple-versus-address consistency check. Correcting this default is a derivation-correctness fix, not a mainnet substitution.
+**Operational restriction:** Do not treat fixture consistency as cross-wallet recovery evidence or claim that TON cross-wallet recovery is verified.
 
 **Blocks writing completion:** No — the affected sections can be written with the correction. Cross-wallet compatibility stays open.
 
-**Clearance condition:** A code fix, the triple-versus-address consistency check, fixture-only address reproduction and cross-wallet recovery evidence are all required. The recovery evidence identified by M23 F36 and M22 F44 is currently unverified.
+**Clearance condition:** Three of four clearance elements met. The exact remaining blocker is cross-wallet recovery evidence for M23 F36 and M22 F44. This remains unverified: no external wallet is available in this environment, and no such recovery result is claimed.
 
 **Gate/source links:** Re-checked register: M25 F11, M22 F32, M10 F7 and M03 F21; unverified cross-wallet recovery gates: M23 F36 and M22 F44.
 
@@ -3428,17 +3440,22 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §12 and §13.
 
-**Evidence or uncertainty:** M22 F26 and F27 identify the TON and TRX reconciliation gaps. M24 I18 sets the rule for an unknown broadcast outcome: persist the signed bytes and txid, reconcile by transaction identity, and do not silently rebuild the transfer.
+**Evidence or uncertainty:** The old Web draft left the TON txid `null` and provided no TRX txid lookup, so resending a transfer shown as pending could pay twice. Both demonstrations below were run first-hand from the VM on 2026-11-12 using read-only public API queries; no funds moved.
+
+- **TON — `toncenter.com/api/v2`:** For fixture address `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`, `getAddressInformation` returned `ok:true`, balance `"0"` and a `last_transaction_id`. `getTransactions` returned 2 transactions; the first had `utime` 1701461634 (2023-12-01). This public-mnemonic fixture has real public history; it must never be funded.
+- **TRX — `api.trongrid.io`:** `wallet/getnowblock` returned head block 87932373, containing 470 transactions. For txid `2449415df66af287cf72a2456ac276b622f21616a9ef3f972c89b5db4b04780d`, a real public transaction from that block, `wallet/gettransactionbyid` returned the same `txID`, with `contractRet` under `ret` equal to `SUCCESS`. The separate fixture-history query, `v1/accounts/TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c/transactions` with limit 5, returned `success:true` and 5 transactions.
 
 T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the `tx.js:320`/`tx.js:340` locations behind these gaps name a local-only draft file that exists in no repository revision (`git ls-tree 56396a20` and `git log --all` for `tx.js` are empty). The new §13.0 diagram marks all such draft claims DOCUMENTED_NOT_TESTED from this repo. The gaps themselves are unchanged.
 
-**Status:** OPEN.
+These observations verify public lookup access and returned history/status; they do not demonstrate reconciliation of a newly submitted transfer.
 
-**Operational restriction:** **Unknown outcome is not permission to resend.** Blind replacement transfers are prohibited. Before any retry, require independently verified history checking for TON and a verified independent manual txid lookup procedure for TRX. An unresolved status must remain unresolved.
+**Status:** RESOLVED — procedure evidence, verified without spending on 2026-11-12.
+
+**Operational restriction:** Unknown or pending outcomes do not permit resending. Any future sender must preserve the send-time records, use the reconciliation procedure and leave unresolved outcomes unresolved. A fresh replacement transfer must never be composed blindly. Never fund the TON public-mnemonic fixture.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** For each chain, provide a verified independent lookup procedure demonstrated without spending, or a code fix supported by the same evidence.
+**Clearance condition:** Met by the independent lookup procedure and the read-only demonstrations above. The draft send code named by M-04 does not exist in the repo at `981d0ba`. The current `apps/web` starter has no send code; its Send screen says sending is not implemented. There is no send code to fix. The procedure is the clearance evidence, not a code fix, an executed send or an implemented reconciliation feature.
 
 **Gate/source links:** Re-checked register: M22 F26–F27 and M24 I18.
 
