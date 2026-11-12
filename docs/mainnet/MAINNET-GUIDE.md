@@ -647,6 +647,19 @@ The claim of “10 minutes of inactivity” is inaccurate: the timer re-arms onl
 
 > **Warning** If using the Web draft browser vault, keep independent offline recovery material and do not rely on browser storage as your only copy. It is weaker storage than an offline bundle: browser compromise can expose keys, and clearing browser data can erase the only copy and strand funds.
 
+#### Network identifiers and migration
+
+The Web draft browser vault currently uses the same AAD, `bawa-web-vault-v1`, and database, `bawa-web-wallet`, for both testnet and mainnet, making the two vaults indistinguishable.
+
+The decided identifiers are:
+
+- **Testnet:** retain AAD `bawa-web-vault-v1` and database `bawa-web-wallet`.
+- **Mainnet:** use AAD `bawa-web-vault-v1-mainnet` and database `bawa-web-wallet-mainnet`.
+
+Changing the AAD requires compatible decryption and re-sealing; changing the database name requires explicit discovery or migration. Neither is a cosmetic rename.
+
+To migrate an existing vault, first verify independent offline recovery material. Then open the vault with the old identifiers, re-seal it under the new identifiers, and verify both decryption and address reproduction. Only then retire the old store.
+
 #### Android Keystore vault
 
 The Android vault is Keystore-bound.
@@ -896,6 +909,12 @@ The following order is **provisional and maintainer-chosen**, not a measured ran
 | Next candidate | `eth-mainnet.public.blastapi.io` |
 
 In the provider comparison **checked 2026-11-09 on `muse-vm`**, all four returned byte-identical values: block `26377173` and `gasPrice 0.13 gwei`. This is **not four independent confirmations**.
+
+A live re-check from muse-vm on 2026-11-12 at about 08:03 UTC, using read-only JSON-RPC only, found the same pattern: all four returned identical values at the same instant — block 0x192cb61 (26,397,537), gasPrice 0x2e8349f (48,772,255 wei; approximately 0.0488 gwei), and identical feeHistory baseFeePerGas arrays.
+
+LlamaRPC still returned HTTP 525. Cloudflare still answered chainId 0x1 only; blockNumber, gasPrice and feeHistory failed with error -32046. Ankr still returned HTTP 200 with JSON-RPC error -32000 (key required).
+
+Agreement on canonical chain data does not prove independence. Two demonstrably independent sources are still required.
 
 For corroboration, cross-check against **two demonstrably independent sources**. A different hostname and matching numbers do not demonstrate independence. Record why the chosen sources are independent before counting their agreement as corroboration. The supplied checks demonstrate **no verified independent pair**; selecting two entries from this table does not fill that gap.
 
@@ -1726,6 +1745,14 @@ The Web broadcast paths are testnet submission implementations. HTTP 200 probes 
 
 **Scope — TON send is out of scope for this section.** The repository generates a single TON deposit address and contains no TON signing, composition or broadcast code. The Android draft refuses TON signing (“TON signing is unimplemented in this build”); the Web draft has only a testnet broadcast submission implementation. This guide therefore gives no TON send procedure, no broadcast instructions and no rehearsal procedure for TON. Funding TON without a send path means relying on an external wallet for withdrawal (see the loss mode above).
 
+**Additional gaps in the Android draft send path.**
+
+**Zero-amount sends.** Zero-amount sends are allowed. **Loss mode:** fees spent without transferring value. **Stop:** do not sign or broadcast when the send amount is zero.
+
+**Fee estimation.** Fee estimation is incomplete on three chains and unit-confused on the fourth. **Loss mode:** unintended fee expenditure based on an incomplete or misread estimate. **Stop:** do not sign or broadcast unless the estimate is complete and its units are verified.
+
+**TON confirmation.** The confirmation tracker `TonSeqnoTracker` does not exist. **Loss mode:** duplicate-payment risk if an unresolved send is mistaken for a failure and paid again. **Stop:** do not treat a send as confirmed without verification, or repeat the payment while its outcome remains unresolved.
+
 ### 13.8 TON wallet identity — the 698983191 check
 
 For the published vector, Core **4.8.4** returns:
@@ -1924,16 +1951,14 @@ Creating a Bitcoin wallet or generating an address incurs no network fee. Receiv
 
 The recorded network conditions were quiet. **No congested-rate example was found.** Gap G1 remains open: a congestion example must follow m12 §1.2 using `https://mempool.space/graphs`, identify a dated interval, and retain its source and check time. No spike rate is supplied here.
 
-### Bitcoin fee disagreement — unresolved
+### Bitcoin fee disagreement — units resolved
 
-The same evidence window contains a sharply different estimator record:
+| Check date/time | mempool.space `fastestFee` (sat/vB) | blockstream.info `"1"` (sat/vB) |
+|---|---:|---:|
+| 2026-11-09 | 3 | 0.972 |
+| 2026-11-12, about 07:59 UTC | 2 | 2.004 |
 
-| Source and check time | Dated estimate as recorded | Status |
-|---|---|---|
-| mempool.space recommended set; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `fastestFee`: **3 sat/vB** | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
-| blockstream.info fee-estimates; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `"1": 0.972 BTC/kB (≈97 sat/vB)`, `"6": 0.685`, `"504": 0.10` | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
-
-The Blockstream units and parenthetical conversion above are reproduced **as recorded**, not independently validated. The evidence reports them as sharply higher than the mempool.space recommendation. No reconciliation is established here, and this record is not a validated alternative sending rate.
+The primary Esplora API documentation states that `GET /fee-estimates` returns sat/vB, not BTC/kB. The guide's BTC/kB label and approximately 97 sat/vB reading were incorrect; its conversion used ×100 instead of ×100,000. On 9 November, mempool's rate was about 3.1 times blockstream's; why the models differed remains unexplained. The 12 November live re-check showed agreement within 0.2%. The 2026-11-09 blockstream record also gave `"6": 0.685` and `"504": 0.10` sat/vB. Always show both sources with their check time and pause signing on a material unexplained disagreement. Both rows are dated observations, **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** as sending rates.
 
 Prefer the mempool.space recommended set for review, while retaining the independent cross-check. Do not average the sources, silently select the higher quote, invent an explanation, or reuse this discrepancy as a congestion example. **If a material disagreement remains unexplained, pause signing.**
 
@@ -2141,7 +2166,9 @@ Do not smooth over the Web draft’s self-transfer mismatch. Its plain self-tran
 The separate **zero-amount self-transfer at 37,973 gas** also cannot stand in for a real transfer. It understates a real transfer and must not be quoted as its gas requirement or cost.  
 *Source: m08 F2.8. Check for both comparisons: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-**Real USDC transfer gas and cost: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** No genuine transfer figure has been verified. The ETH builder is not enough: a genuine ERC-20 transfer procedure is needed before this guide can support a USDC send or quote its cost.  
+A verified third-party mainnet USDC transfer—not our own send—used 40,348 gas (0x9d9c), with a 65,000 gas limit: transaction `0xb57bf3aca3305caaf5ef7cb4bfa2dd83fb9ad656ed17fef15b16d737f7dc44f9`, block `0x192cb59` (26,397,529), status `0x1`, checked 12 November 2026 at about 08:03 UTC. It was classified as a plain transfer because its destination is the USDC contract, its value is zero and its 68-byte input has selector `0xa9059cbb`. The receipt was read on both publicnode and drpc with identical gasUsed—consistency, not independence. This dated observation is not a standing fee; gas used varies with warm versus cold storage.
+
+**Real USDC transfer gas: one dated observed receipt (40,348 gas, see above); the cost of a USDC send remains UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** A genuine ERC-20 transfer procedure is still needed before this guide can support a USDC send or quote its cost as a standing figure.  
 *Source: m08 F3.*
 
 Before any USDC authorisation, verify the Ethereum token contract and recipient to prevent a **wrong address**; check the six-decimal conversion and displayed amount to prevent a **wrong amount**; establish the transaction and nonce status to avoid a **stuck transaction**; require a reviewed transfer path and fee basis to limit a **lost fee**; and reject unexpected approvals or spender permissions that could enable **theft**. Stop while the ERC-20 procedure or fee basis remains unverified.
@@ -3345,7 +3372,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §10.
 
-**Evidence or uncertainty:** M22 F39 identifies the shared Web identifiers. M19 F-D2 records the need for distinct mainnet identifiers, which remain undecided. M25 F09–F10 identifies related Android limitations: there is no network column; `onUpgrade` throws; and `listWallets` hardcodes `"testnet"`. A copied vault or database is not a portable backup, because the Keystore key does not survive uninstall or a device move.
+**Evidence or uncertainty:** M22 F39 identifies the shared Web identifiers. M19 F-D2 records the need for distinct mainnet identifiers. Decided identifiers (2026-11-12, T01 lane): testnet keeps AAD `bawa-web-vault-v1` and database `bawa-web-wallet`; mainnet uses AAD `bawa-web-vault-v1-mainnet` and database `bawa-web-wallet-mainnet`. Section 10 now describes the limitation and migration requirements: verify independent offline recovery material first, then decrypt with old identifiers, re-seal under new ones, verify decryption and address reproduction, and only then retire the old store. M25 F09–F10 identifies related Android limitations: there is no network column; `onUpgrade` throws; and `listWallets` hardcodes `"testnet"`. A copied vault or database is not a portable backup, because the Keystore key does not survive uninstall or a device move.
 
 **Status:** OPEN.
 
@@ -3353,7 +3380,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Distinct identifiers must be decided, and a fixture-only migration must be demonstrated with recoverability verified first.
+**Clearance condition:** Distinct identifiers are decided (see Evidence). Still required: a fixture-only migration demonstrated with recoverability verified first. That demonstration is blocked: the Web draft code is local-only and not in the repository, and the in-repo Web starter has no vault code at all, so there is nothing in-repo to migrate yet.
 
 **Gate/source links:** Re-checked register: M22 F39, M19 F-D2 and M25 F09–F10.
 
@@ -3370,7 +3397,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §13.
 
-**Evidence or uncertainty:** M25 F13–F18; M24 I11/I12.
+**Evidence or uncertainty:** M25 F13–F18; M24 I11/I12. Section 13 already identifies the chain-ID check claim, the ETH-only send path, the UNKNOWN broadcast timeout and the TON silent zero as missing controls; the remaining gaps (zero-amount sends allowed; fee estimation incomplete on three chains and unit-confused on the fourth; `TonSeqnoTracker` does not exist) now also have missing-control descriptions, loss modes and Stop conditions in section 13.
 
 T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the `SigningCoordinator`, `EthSepoliaAdapter`, `EthSendComposer` and `NetworkConfig` locations behind these gaps name local-only Android draft files that exist in no repository revision (no such `.kt` file exists at `981d0ba` or in repo history). The new §13.0 diagram marks all such draft claims DOCUMENTED_NOT_TESTED from this repo. The gaps themselves are unchanged.
 
@@ -3380,7 +3407,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Require per-gap evidence for chain-ID enforcement, send-path implementation, timeout policy and the TON confirmation mechanism. Each gap must be demonstrated as addressed on the actual build or explicitly excluded from scope.
+**Clearance condition:** Per-gap disposition (2026-11-12, T01 lane): chain-ID check claim — documented, unfixed; ETH-only send path — documented, unfixed; UNKNOWN broadcast timeout — documented, unfixed; TON silent zero — documented, unfixed; zero-amount sends allowed — documented, unfixed; fee estimation incomplete on three chains and unit-confused on the fourth — documented, unfixed; `TonSeqnoTracker` does not exist — documented, unfixed. Code fixes for every listed missing control are still required; documentation is not code remediation. No code fix is possible in this repository: the Android validation draft is local-only, was never compiled into an APK and never ran on a device, and the in-repo Android starter states "Sending is not implemented in this starter" and contains no `SigningCoordinator`, send composer or fee code. Each gap must be demonstrated as addressed on the actual build or explicitly excluded from scope.
 
 **Gate/source links:** Re-checked register: M25 F13–F18 and M24 I11/I12.
 
@@ -3394,17 +3421,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §14.
 
-**Evidence or uncertainty:** M07 F3 records the live check at 2026-11-09 11:54 UTC: the disagreement was reported, not resolved. OI-M07-1 remains open. OI-M07-3 records that the blockstream.info `fee-estimates` unit label, `BTC/kB`, has not been independently verified against a live decoded transaction.
+**Evidence or uncertainty:** M07 F3 records the live check at 2026-11-09 11:54 UTC: the disagreement was reported, not resolved. OI-M07-1 remains open. OI-M07-3 records that the blockstream.info `fee-estimates` unit label, `BTC/kB`, has not been independently verified against a live decoded transaction. Resolved 2026-11-12 (T01 lane): the primary Esplora API documentation states `GET /fee-estimates` returns estimated feerates in sat/vB, not BTC/kB. The guide's old "0.972 BTC/kB (about 97 sat/vB)" incorrectly used ×100 instead of ×100,000. Correct reading for 2026-11-09: blockstream "1" 0.972 sat/vB versus mempool.space fastestFee 3 sat/vB (3.1×, not 32×). Live re-check, 2026-11-12 about 07:59 UTC, muse-vm: mempool fastestFee 2 sat/vB; blockstream "1" 2.004 sat/vB — agreement within 0.2%. Section 14 now contains the corrected table and live re-check.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — the 2026-11-09 model difference remains unexplained and is not blocking.
 
 **Operational restriction:** Never quote one fee source alone. Show both sources with the check time, raw values and stated units, and flag the disagreement without resolving it. Prefer the mempool.space recommended set, while still showing the other source and the discrepancy. Re-check both sources at send time.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite evidence resolving the units or interpretation of the blockstream.info estimates, or a documented single-primary-source rule that continues to disclose the disagreement.
+**Clearance condition:** Met 2026-11-12 — the primary Esplora API documentation plus the live re-check at 2026-11-12 ~07:59 UTC resolve the units/interpretation (see Evidence). Standing rule retained: show both sources with check time; pause signing on a material unexplained disagreement.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M07 F3; OI-M07-1; OI-M07-3; [mempool.space recommended fees](https://mempool.space/api/v1/fees/recommended); [blockstream.info fee estimates](https://blockstream.info/api/fee-estimates).
+**Gate/source links:** Register addendum, 2026-11-09 — M07 F3; OI-M07-1; OI-M07-3; [mempool.space recommended fees](https://mempool.space/api/v1/fees/recommended); [blockstream.info fee estimates](https://blockstream.info/api/fee-estimates); [Esplora API — GET /fee-estimates returns sat/vB](https://github.com/Blockstream/esplora/blob/HEAD/API.md); T01 live re-check 2026-11-12 ~07:59 UTC (lane evidence/m07-*.json).
 
 ### M-08 — TRON energy estimation: prescribed method is unavailable on the primary endpoint
 
@@ -3426,11 +3453,11 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 ### M-09 — ETH real-transfer gas is unverified; the “independent” RPCs are one upstream
 
-**Question/risk:** No real-transfer gas figure is verified. The zero-amount self-transfer figure of 37,973 gas understates a real transfer and must not be presented as its cost. publicnode, drpc, 1rpc and blast returned byte-identical values: these represent the same upstream, not independent confirmations.
+**Question/risk:** ETH real-transfer gas now has a dated observed example, not a standing fee; the “independent” RPCs share one upstream. The zero-amount self-transfer figure of 37,973 gas understates a real transfer and must not be presented as its cost.
 
 **Affected sections:** §11 and §14.
 
-**Evidence or uncertainty:** M08 records USDC as verified on-chain, but the funded USDC transfer call for 1.00 reverts with “exceeds balance”. Blockscout’s mainnet blocks endpoint returned HTTP 200 with `base_fee_per_gas` of 126829043 wei, approximately 0.127 gwei; adding `?limit=1` returned HTTP 422. The token-holders endpoint failed twice. Etherscan’s USDC page returned HTTP 403 bot protection.
+**Evidence or uncertainty:** M08 records USDC as verified on-chain, but the funded USDC transfer call for 1.00 reverts with “exceeds balance”. Blockscout’s mainnet blocks endpoint returned HTTP 200 with `base_fee_per_gas` of 126829043 wei, approximately 0.127 gwei; adding `?limit=1` returned HTTP 422. The token-holders endpoint failed twice. Etherscan’s USDC page returned HTTP 403 bot protection. Read-only live re-check, 2026-11-12 about 08:03 UTC (T01 lane): verified figure from third-party mainnet plain USDC transfer 0xb57bf3aca3305caaf5ef7cb4bfa2dd83fb9ad656ed17fef15b16d737f7dc44f9 — block 26,397,529, status 0x1, gasUsed 40,348. Four listed RPCs returned identical values simultaneously: block 26,397,537, gasPrice about 0.0488 gwei, identical feeHistory. LlamaRPC still returns HTTP 525; Cloudflare still answers chainId only; authenticated Ankr verification remains blocked pending an API key.
 
 **Status:** OPEN.
 
@@ -3438,7 +3465,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite a funded USDC estimate and a receipt from a separately authorised small send, together with evidence of a second independent RPC source and matched-block cross-checks. Both the transfer evidence and the source-independence requirement must be met.
+**Clearance condition:** Receipt from a separately authorised small send following M-35 authorisation, plus a genuinely independent second source. Blockers: receipt from a separately authorised small send still required (M-35 authorisation not granted here); genuinely independent second source still not established. Matched-block cross-checks were performed 2026-11-12 (block 26,397,537, identical baseFeePerGas arrays across four hostnames) — consistency, not independence.
 
 **Gate/source links:** Register addendum, 2026-11-09 — M08 evidence and the M-09 clearance requirements.
 

@@ -98,6 +98,8 @@ const engineDir = join(root, 'tools', 'hdwallet-gen');
 runCommand('engine-setup', 'npm', ['ci', '--no-audit', '--no-fund'], engineDir);
 runCommand('registry-validate', process.execPath, ['scripts/validate-registry.mjs']);
 runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.mjs']);
+// T01: register-row regression tests (M-05/M-06/M-07/M-09 guide claims).
+runCommand('register-t01-tests', process.execPath, ['--test', 'tests/register-t01.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
 runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/mainnet-derivation-vectors.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs']);
