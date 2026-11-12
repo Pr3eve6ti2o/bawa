@@ -60,7 +60,7 @@ Appendix. UI templates (pointer)
 
 This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa` at `56396a20`). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
 
-Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (README §§18–19).
+Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (README §§18–19 (README.md:1160-1202 at 56396a20)).
 
 The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethereum `m/44'/60'`, TRON `m/44'/195'` and TON `m/44'/607'`. The testnet4 derivation deviation disappears on mainnet; do not “fix” the Bitcoin mainnet path to `m/84'/1'`.
 
@@ -70,7 +70,7 @@ The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethere
 - **No security, audit or production-readiness claim.** Do not treat the repository or this guide as audited or production-ready.
 - **No hardware-wallet support or multisig.** Neither is provided by the repository.
 - **No verified sending procedure.** The repository contains no transaction construction or signing code (README L1197). Signing exists only in the separate Web/Android validation drafts. No send/sign/broadcast flow has been exercised on-chain on any network. Every send procedure in this guide is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **Testnet gates are not mainnet authorisation.** README §18 places any mainnet work outside the testnet guide set as a separate, reviewed change. Passing the testnet gates does not authorise it.
+- **Testnet gates are not mainnet authorisation.** README §18 (README.md:1160-1192 at 56396a20) places any mainnet work outside the testnet guide set as a separate, reviewed change. Passing the testnet gates does not authorise it.
 
 ### Mainnet warnings
 
@@ -285,7 +285,7 @@ Gate status below is the **2026-11-09 baseline**, not a statement that the gates
 - [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `0b2aa295`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
-- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
+- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18 (README.md:1160-1192 at 56396a20)]
 - [ ] **Rehearsal gates respected.** Follow the ladder: testnet first (**FAIL until executed**) → unfunded mainnet watch-only check → small mainnet receive → small mainnet send → normal use (**not cleared**). The small receive and small send are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. Do not advance beyond an unpassed rung. A pass covers only the wallet, chain, network, derivation policy and signing route actually rehearsed. [M27]
 
 ## 5. Clone and pin with a worktree
@@ -469,7 +469,7 @@ Carry out this procedure without funding an address. Behaviour that requires spe
 
    The BIP-39 passphrase remains empty under this policy. A wrong BIP-39 passphrase yields a different valid wallet with no error; successful bundle decryption cannot detect that mistake. [M02, M01, M16-F02]
 
-   This round trip checks decryption of the backup bundle with its matching data key. **It is not the recovery rehearsal in README §18.** Watch-only derivation belongs in §8, and wallet comparison belongs in §9.
+   This round trip checks decryption of the backup bundle with its matching data key. **It is not the recovery rehearsal in README §18 (README.md:1160-1192 at 56396a20).** Watch-only derivation belongs in §8, and wallet comparison belongs in §9.
 
 ### Offline regression fixtures
 
@@ -592,7 +592,7 @@ Mark the personal-wallet comparison as passed only when the complete derived add
 
 **Any mismatch is a hard stop**, not a warning to work around. Do not send a small deposit as a diagnostic. Do not substitute a valid checksum, successful decryption or a plausible balance for this comparison. Missing independent originals block the funding gate. [M16-F36; M16-F42]
 
-A pass does not establish that you can recover and use the wallet after losing the original installation. **End-to-end recovery and use, including send/sign/broadcast: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** Send/sign/broadcast was not exercised in either verification round: there were no testnet or mainnet funds, and the repo has no signing code. A decrypt round trip is not the recovery rehearsal; the rehearsal gate remains **FAIL** until executed, as required by README §18. Follow §10 and §16 for the rehearsal ladder rather than treating these component results as a substitute. [M27 §2.5/§8; M16-F14; README §18]
+A pass does not establish that you can recover and use the wallet after losing the original installation. **End-to-end recovery and use, including send/sign/broadcast: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** Send/sign/broadcast was not exercised in either verification round: there were no testnet or mainnet funds, and the repo has no signing code. A decrypt round trip is not the recovery rehearsal; the rehearsal gate remains **FAIL** until executed, as required by README §18 (README.md:1160-1192 at 56396a20). Follow §10 and §16 for the rehearsal ladder rather than treating these component results as a substitute. [M27 §2.5/§8; M16-F14; README §18 (README.md:1160-1192 at 56396a20)]
 
 ### 6. Address discovery procedure
 
@@ -722,7 +722,7 @@ The repo has no single-holder continuity procedure; `docs/08` §20 places this b
 > **Never** When planning inheritance, never put seed words in a will: anyone who obtains the words may be able to spend the funds. Check local law and ask a solicitor. Any further estate wording requires solicitor review.
 ### Recovery
 
-Recovery reproduces the preserved wallet from its original material and settings. It does not generate a replacement wallet. Follow the twelve steps below, in order (M16 F42). They subsume the nine steps in `docs/RECOVERY.md`, Part 1, with the decrypt-tool, backup-gate, network-verification and staged-funding steps made explicit. Each **HARD STOP** is a stop, not a warning: do not proceed past it until the stated condition is met.
+Recovery reproduces the preserved wallet from its original material and settings. It does not generate a replacement wallet. Follow the twelve steps below, in order (M16 F42). They subsume the nine steps in `docs/RECOVERY.md`, Part 1 (docs/RECOVERY.md:89-236 at 56396a20), with the decrypt-tool, backup-gate, network-verification and staged-funding steps made explicit. Each **HARD STOP** is a stop, not a warning: do not proceed past it until the stated condition is met.
 
 #### Recovery procedure
 
@@ -787,7 +787,7 @@ The published addresses below are regression targets only:
 
 **Mismatch decision tree**
 
-Use the checks in this order, following README §13:
+Use the checks in this order, following README §13 (README.md:952-1013 at 56396a20):
 
 1. **Stop on a whole-address mismatch.** Do not assume that the result is an empty wallet.
 2. **Check the BIP-39 passphrase first.** Confirm the original value and policy exactly. Bawa’s empty BIP-39 passphrase policy is not a fallback for a wallet created with a non-empty BIP-39 passphrase.
@@ -830,7 +830,7 @@ Account for all transient copies and remove transient secrets when the checks ar
 
 #### Rehearsal status
 
-The recorded recovery rehearsal status is **FAIL** (README §18): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
+The recorded recovery rehearsal status is **FAIL** (README §18 (README.md:1160-1192 at 56396a20)): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
 
 The required staged protocol is:
 
@@ -1105,7 +1105,7 @@ The whole send path is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. The loss mod
 
 Any later attempt still carries **wrong network, wrong address, wrong amount, stuck transaction and theft** risks; it must pass the same refreshed checks, with secrets kept local. Submission acceptance, inclusion, execution success and finality are distinct: acceptance does not establish the other three. A broadcast timeout means **UNKNOWN**, not confirmed failure. Reconcile by transaction ID (txid) before any retry. Never retry an ambiguous submission blindly, and never auto-create a replacement. TRX has no txid lookup adapter: manual refresh only, with no supplied manual investigation procedure. Stop while the outcome is ambiguous or cannot be reconciled; a refresh alone is not permission to retry.
 
-Creating a wallet needs no paid service. A paid RPC tier is an optional upgrade, never a requirement. Explorer paid-plan prices are **UNVERIFIED** and are not quoted here.
+Creating a wallet needs no paid service. A paid RPC tier is an optional upgrade, never a requirement. Explorer pricing is partially verified: Etherscan's displayed Free–Professional tiers were checked live against its official page on 2026-11-12, while TronGrid's documented custom-only terms await live confirmation and TonAPI's rates and Etherscan Pro Plus remain primary-unverified; this guide links to official pricing/contact pages rather than quoting prices as standing rates (see M-43).
 
 ### First funding
 
@@ -2291,15 +2291,15 @@ Freezing allocates renewable resources by **stake share**. There is no fixed sta
 
 `feeLimit` is the **smart-contract energy budget only**. It is not an upfront flat fee and does not cover native bandwidth or account activation. Only unused portions of the native fee and fee-limit budget are returnable; resources already consumed are not restored merely because execution failed.
 
-There is an internal rate conflict in the evidence. The m12 summary assigns **0.001 TRX per energy unit**, but the measured chain parameters distinguish the energy price from the bandwidth price. That common-rate energy claim is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. The dated arithmetic below uses the measured energy parameter, not that shorthand.  
-*Sources: m12 §3; m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
+There was an internal rate conflict in the evidence. The m12 summary assigns **0.001 TRX per energy unit**, but the measured chain parameters distinguish the energy price from the bandwidth price. That shorthand is **REFUTED**: a live re-check on 2026-11-12 returned `getEnergyFee: 100` SUN per energy unit (0.0001 TRX) and `getTransactionFee: 1000` SUN per bandwidth point — the 0.001 TRX figure is the bandwidth price, not the energy price. TRON's own documentation confirms the same rate ("EnergyPrice ... is governed by the chain parameter `getEnergyFee`. The current value is 100 sun per Energy"). The dated arithmetic below uses the measured energy parameter, not that shorthand.  
+*Sources: m12 §3; m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm. Re-check: 2026-11-12, muse-vm — `wallet/getchainparameters`; developers.tron.network/docs/set-feelimit.*
 
 #### Procedure: establish the resource position before signing
 
 1. **Check activation and available resources.** Use `wallet/getaccount` and `wallet/getaccountresource`, or inspect the corresponding account information in TronScan. Do not assume that a new address is activated or that a nominal free-bandwidth limit is available.
 2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation.  
    *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
-3. **Estimate contract execution.** `estimateenergy` was unavailable on TronGrid mainnet at the check, returning “this node does not support estimate energy”. A `triggerconstantcontract` dry run is the alternative in the supplied evidence. A reverted dry run is not a successful-transfer estimate.
+3. **Estimate contract execution.** `estimateenergy` was unavailable on TronGrid mainnet at the check, returning “this node does not support estimate energy”, and a re-test on 2026-11-12 returned the same `CONTRACT_VALIDATE_ERROR`. A `triggerconstantcontract` dry run is the working method: a first-hand dry run on 2026-11-12 simulated a 1 USDT transfer from a funded holder and returned `result: true` with `energy_used: 64285` and `energy_penalty: 49635` (base energy 14,650). A reverted dry run is not a successful-transfer estimate. The penalty is part of the total, not additional: the dynamic energy model raises consumption, not the per-unit price, so uncovered energy is priced at the live `getEnergyFee` (100 SUN per unit at the check). See M-08 for the exact recorded procedure.
 4. **Recheck close to signing.** Activation, available resources, the live burn parameters and the intended budget must still match the proposed operation.
 
 Locally check the recipient or contract against the intended destination to prevent a **wrong address**; compare the displayed value with the intended value to prevent a **wrong amount**; investigate unresolved broadcasts for a **stuck transaction**; review resource coverage and all applicable charges to limit a **lost fee**; and reject unrecognised contracts, permissions or signing requests that could enable **theft**. Stop if the dry run fails, the current energy price cannot be reconciled, earlier transaction status is unresolved or any signing detail differs from the reviewed operation.
@@ -2329,17 +2329,19 @@ The source’s stated multiplier between the draft budget and the network ceilin
 
 There is no single verified USDT transfer cost to quote from this evidence.
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — existing-holder estimates.** Tronsave, dated **28 October 2026**, supplied **64,285 energy**, corresponding to **≈6.43 TRX ≈$2.04** under the baseline arithmetic. Dwellir, dated **3 November 2026**, quoted **$2.07**. These are secondary-source estimates, not a verified Bawa transfer receipt or an all-in fee promise.  
-  *Source record: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — existing-holder estimates.** Tronsave, dated **28 October 2026**, supplied **64,285 energy**, corresponding to **≈6.43 TRX ≈$2.04** under the baseline arithmetic. Dwellir, dated **3 November 2026**, quoted **$2.07**. These are secondary-source estimates, not a verified Bawa transfer receipt or an all-in fee promise. The Tronsave figure is now reproduced first-hand: a `triggerconstantcontract` dry run on 2026-11-12 returned the same **64,285 energy** for a 1 USDT transfer (see M-08). The energy figure is reproduced; the all-in fee still needs the small-amount rehearsal.  
+  *Source record: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm. Dry-run reproduction: 2026-11-12, muse-vm.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — base-energy claims and range.** Secondary sources conflict between **65,000** and **14,650 energy**, both described as base energy for a USDT transfer. No verified reconciliation is supplied. The proposed **13,000–65,000 energy** range is also unverified and must not be presented as an empirical operating range.  
-  *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
+- **Base-energy claims reconciled.** Secondary sources quoted **65,000** and **14,650 energy**, both described as base energy for a USDT transfer. They measure different quantities, not conflicting ones: the 2026-11-12 dry run returned **14,650 base energy** and **49,635 dynamic-energy penalty**, totalling **64,285 energy** — the penalty is part of the total (TRON docs: "Subtract `energy_penalty` from `energy_used` if you want only the base Energy"). The proposed **13,000–65,000 energy** range spans base to penalised total and must not be presented as an empirical operating range.  
+  *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm. Reconciliation: 2026-11-12 dry run, muse-vm; developers.tron.network/docs/set-feelimit.*
 
 - **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — new-holder cost.** No defensible total was established. Extra bandwidth and activation must be accounted for; the existing-holder estimate cannot simply be carried across.  
   *Sources: m09 F07–F10; m12 §3.*
 
 The record also contains a **reverted dry run for 1 USDT**, reporting **8,624 energy** and **6,640 penalty**. These are failed-simulation readings, not a transfer receipt. They must never be quoted as a USDT transfer cost.  
 *Source: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
+
+The record now also contains a **successful dry run for 1 USDT**, dated **2026-11-12**: `wallet/triggerconstantcontract` on the USDT contract, simulating a transfer from a holder with 15,395,989,209 units to an existing holder, returned `result: {"result": true}` with `energy_used: 64285`, `energy_penalty: 49635` and a Transfer log of 1,000,000 units. That is a simulated energy estimate, not a transfer receipt: it prices the energy of the simulated call (64,285 × 100 SUN = 6,428,500 SUN = 6.4285 TRX if all energy is uncovered), before bandwidth and any other charges. See M-08 for the exact procedure.
 
 #### Mistakes: failed calls, extra charges and locked funds
 
@@ -2848,7 +2850,7 @@ The available evidence supplies no command for the following required checks. Th
 | M06 R09 | **BLOCKED** |
 | M06 R10 | **BLOCKED** |
 
-The **README §18 recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
+The **README §18 (README.md:1160-1192 at 56396a20) recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
 
 Keep these verification claims separate:
 
@@ -3122,7 +3124,7 @@ A status change must cite inspectable evidence meeting the entry’s clearance c
 
 A shared issue requires **two scope-specific rows**: an **OI row in Doc 3** and an **M- row in Doc 4**. Cross-link them, but do not merge their authority. Closing either row does not close the other; each needs its own scope-appropriate clearance evidence.
 
-**README §18 is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
+**README §18 (README.md:1160-1192 at 56396a20) is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
 
 ## 18. Troubleshooting and FAQ
 
@@ -3153,7 +3155,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### The recorded address has no current balance
 
-**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README §13 empty-passphrase instruction and its “never sent” conclusion must not be applied as written. (M16-F45)
+**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README §13 empty-passphrase instruction (README.md:985 at 56396a20) and its “never sent” conclusion must not be applied as written. (M16-F45)
 
 **Action:** reproduce the recorded address with the recorded path and passphrase policy, using the ordered checks above. Keep address reproduction, current balance, transaction history and address discovery separate. Examine independent transaction evidence on the recorded network. (M16-F43, M16-F45)
 
@@ -3403,7 +3405,7 @@ Every value in Doc 4 must retain a trace to its supporting slice and finding, ve
 
 ## 21. Mainnet open-items register
 
-This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5274). [README §18](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md) is a **testnet-only gate catalogue — not mainnet authorisation**.
+This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5274). [README §18 (README.md:1160-1192)](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md#L1160) is a **testnet-only gate catalogue — not mainnet authorisation**.
 
 Under M36 F7, M-series IDs are allocated only to actual items, not placeholders. A shared issue has two scope-specific rows: an OI row in Doc 3 and an M- row here, with the M- row linking to its OI counterpart. Closing either row does not close the other. Every status change must cite evidence meeting that row’s clearance condition. Registering a gap does not clear it.
 
@@ -3567,17 +3569,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §14.
 
-**Evidence or uncertainty:** M09 F09 records `CONTRACT_VALIDATE_ERROR` with the message “this node does not support estimate energy”. F10 requires a token-call budget to be derived rather than copying the native example’s 1,000,000 SUN. F11 clarifies that the Android guide never names `estimateenergy`: it prescribes “a documented Nile energy-estimation or simulation method”. The mainnet change is therefore narrowed to naming `triggerconstantcontract`.
+**Evidence or uncertainty:** M09 F09 records `CONTRACT_VALIDATE_ERROR` with the message “this node does not support estimate energy”. A re-test on 2026-11-12 returned the same error on TronGrid mainnet. F10 requires a token-call budget to be derived rather than copying the native example’s 1,000,000 SUN. F11 clarifies that the Android guide never names `estimateenergy`: it prescribes “a documented Nile energy-estimation or simulation method”. The mainnet method is therefore `triggerconstantcontract`. Successful dry run recorded 2026-11-12 (read-only simulation; no signing, no broadcast, nothing moved): `POST https://api.trongrid.io/wallet/triggerconstantcontract`, contract `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`, `transfer(address,uint256)`, owner `4101b9f7b1756add6eb67f9825159577c08e845777` (a holder with 15,395,989,209 USDT units, confirmed by a `balanceOf` constant call), recipient `fa2a47bab7096216a6931cbd2fbad89f907f64b8`, amount 1,000,000 units (1 USDT), calldata `a9059cbb` + 32-byte recipient + 32-byte amount. Response: HTTP 200, `result: {"result": true}`, `energy_used: 64285`, `energy_penalty: 49635`, Transfer log value 1,000,000; ref block 87,932,2xx, timestamp 1794470603234 ms. Caller and recipient are public on-chain addresses from a real mainnet USDT Transfer event (block 87932229, tx `a1886dc3a91cb81c3086059b69e879dd445d7b2fe84a562bb32a709e0270f1b6`), used as simulated caller/recipient only. The penalty is part of the total: base energy 14,650 (TRON docs: "Subtract `energy_penalty` from `energy_used` if you want only the base Energy"; developers.tron.network/docs/set-feelimit). Priced at the live `getEnergyFee` of 100 SUN/unit, the simulated energy is 6,428,500 SUN = 6.4285 TRX if all energy is uncovered; bandwidth is separate.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — the dry-run branch of the clearance condition is met by the successful mainnet dry-run energy estimate recorded above, with the exact procedure. The small-amount rehearsal under H-04 remains the route for verifying a real-transfer cost.
 
-**Operational restriction:** Teach the `triggerconstantcontract` dry-run procedure. Convert a successful energy estimate to SUN using the live energy rate, assess bandwidth separately, and choose an explicitly approved `fee_limit` above the priced estimate. Successful-transfer energy remains `UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL`.
+**Operational restriction:** Teach the `triggerconstantcontract` dry-run procedure. Convert a successful energy estimate to SUN using the live energy rate, assess bandwidth separately, and choose an explicitly approved `fee_limit` above the priced estimate. A dry run is a simulation, not a broadcast or a measured transaction fee. Successful-transfer energy as an all-in cost remains `UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL` under H-04.
 
 **Blocks writing completion:** No.
 
 **Clearance condition:** A successful dry-run energy estimate for a token transfer on mainnet, recorded with the exact procedure, or the small-amount rehearsal under H-04. Any status change must cite the qualifying record.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M09 F09–F11 and the H-04 small-amount rehearsal gate.
+**Gate/source links:** Register addendum, 2026-11-09 — M09 F09–F11 and the H-04 small-amount rehearsal gate. Dry-run evidence 2026-11-12: TronGrid `wallet/triggerconstantcontract`, `wallet/getchainparameters` and the `wallet/estimateenergy` re-test (T02 lane evidence); developers.tron.network/docs/set-feelimit (`energy_used` / `energy_penalty`) and /docs/resource-model.
 
 ### M-09 — ETH real-transfer gas is unverified; the “independent” RPCs are one upstream
 
@@ -3728,7 +3730,7 @@ M12 also records gaps G1–G10 with check procedures. Arithmetic re-verified 202
 
 **Evidence/uncertainty:**
 
-- M16 F45 identifies the README §13 overclaim and the unqualified assumption of an empty BIP-39 passphrase.
+- M16 F45 identifies the README §13 (README.md:952-1013 at 56396a20) overclaim and the unqualified assumption of an empty BIP-39 passphrase.
 - M16 F47 records that Web import skips the backup gate, while Android uses a 3-word quiz rather than the required 24-word re-entry. These are funding-gate defects, not UX differences.
 - M16 F22–F23 records that Web deletion requires the vault passphrase and Android import refuses while a bundle exists. The only escapes identified are undocumented out-of-app clears.
 - M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten.
@@ -3736,13 +3738,13 @@ M12 also records gaps G1–G10 with check procedures. Arithmetic re-verified 202
 
 **Status:** RESOLVED 2026-11-12 — §10 prose now follows M16 F42's 12-step order; Android deletion prerequisites established; README §13 corrected per M16 F45 (see Evidence). Carve-outs, still open: the Web import backup-gate skip and the Android 3-word quiz remain draft code defects (Doc 3 OI-071); this row's prose clearance does not clear them.
 
-**Operational restriction:** Do not repeat README §13’s conclusions without qualification. Require the recorded BIP-39 passphrase policy, not an automatic empty BIP-39 passphrase fallback. Separate address reproduction, current balance, transaction history and address discovery. Do not equate `setBackupConfirmed` or quiz success with complete recovery verification. Repeat complete recovery-material verification immediately before destructive reset instructions.
+**Operational restriction:** Do not repeat the conclusions of README §13 (README.md:952-1013 at 56396a20) without qualification. Require the recorded BIP-39 passphrase policy, not an automatic empty BIP-39 passphrase fallback. Separate address reproduction, current balance, transaction history and address discovery. Do not equate `setBackupConfirmed` or quiz success with complete recovery verification. Repeat complete recovery-material verification immediately before destructive reset instructions.
 
 **Blocks writing completion:** No.
 
 **Clearance condition:** §10 prose follows M16 F42’s 12-step order, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android. Met 2026-11-12 (T04): §10 "Recovery procedure" is now the 12-step F42 order with per-step hard stops; §10 carries the Android deletion prerequisites (no passphrase requirement evidenced, authorisation unimplemented, inventory coverage unverified, import refuses while a bundle exists); README §13 "Wallet looks empty after restore" corrected per M16 F45.
 
-**Gate/source links:** Re-checked register, 9 November 2026: M16 F45, F47, F22–F23, F24 and F42. [Repository at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20): README §13.
+**Gate/source links:** Re-checked register, 9 November 2026: M16 F45, F47, F22–F23, F24 and F42. [Repository at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20): README §13 (README.md:952-1013 at 56396a20).
 
 ### M-17 — Faucet links have no mainnet equivalent; stale testnet endpoints pass connectivity checks
 
@@ -4330,11 +4332,11 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §18.
 
-**Evidence or uncertainty:** M16 open item 6.
+**Evidence or uncertainty:** M16 open item 6. Line-numbered text at 56396a20 was obtained from the lane clone (`git show 56396a20:...`) and checked before publishing the references below. Anchors: `README.md:881-951` (§12 Recovery), `README.md:952-1013` (§13 Troubleshooting), `README.md:985` (the "Wallet looks empty after restore" row — the empty-passphrase instruction and "never sent" conclusion cited in §18), `README.md:1160-1192` (§18 Gates), `README.md:1193-1202` (§19). `docs/RECOVERY.md` has no numbered §§12/13/18; it is organised in Parts: Part 1 is `docs/RECOVERY.md:20-236`, with its nine steps starting at L89, L101, L113, L131, L152, L184, L198, L218 and L228. The §18 citations below now carry these file:line references.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — the clearance condition is met: line-numbered text at 56396a20 was obtained before publishing the file:line references, and the references are now supplied in the guide. This resolution covers the citations only; it does not certify the underlying recovery or troubleshooting content.
 
-**Operational restriction:** §18 cites sections and steps, not file:line.
+**Operational restriction:** Cite these sections by file:line at 56396a20 (see Evidence). Do not publish section-only citations for them.
 
 **Blocks writing completion:** No.
 
@@ -4348,11 +4350,11 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §11; §20.
 
-**Evidence or uncertainty:** m32 F18; M31 (prices not re-checked 2026-11-09; D17 price evidence dated 2026-11-08).
+**Evidence or uncertainty:** m32 F18; M31 (prices not re-checked 2026-11-09; D17 price evidence dated 2026-11-08). Partial check 2026-11-12: Etherscan's official API pricing page (etherscan.io/api/pricing) was opened live on 2026-11-12 at 08:10 UTC and listed Free $0 (3 calls/s, 100,000/day, selected chains 90%, community endpoints), Lite $49/mo (5/s, 100k/day, all chains), Standard $199/mo (10/s, 200k/day, Pro endpoints), Advanced $299/mo (20/s, 500k/day) and Professional $399/mo (30/s, 1M/day). No Pro Plus price appeared on that page; the secondary-reported $899/mo is NOT verified by this primary check. TronGrid's official price page (trongrid.io/price), via a documented-terms review dated 2026-11-06 plus corroborating secondary sources, lists Basic Free 100,000 requests/day and Trial Limited Free 500,000/day (3 API keys each), with paid plans Custom-only (contact the TRON team) — no public numeric paid price exists; this is NOT a direct live primary-page check on 2026-11-12. TonAPI rates were corroborated by two independent secondary checks (2026-11-06 and 2026-11-11, agreeing): REST Free 1 RPS, Lite $9.90/mo (10 RPS), Standard $95 (100 RPS), Plus $290 (300 RPS), Heavy $890 (1,000 RPS); liteserver Lite $50/mo, Standard $200/mo — its own pricing page was not opened. All figures are dated snapshots, not standing prices.
 
-**Status:** OPEN.
+**Status:** OPEN — partially cleared 2026-11-12 (Etherscan Free–Professional primary-verified as a dated snapshot; TronGrid custom-only terms and TonAPI rates await a direct live primary-page check; Etherscan Pro Plus primary-unverified).
 
-**Operational restriction:** Link only, never quote prices.
+**Operational restriction:** Link only, never quote prices as standing rates. Guide prose links to official pricing/contact pages; any retained figures belong only in explicitly dated evidence snapshots identifying the source and verification level. Do not promote secondary-only claims to primary-verified facts. Re-check official pricing — or obtain a current custom quote — before budgeting or purchasing.
 
 **Blocks writing completion:** No.
 
@@ -4366,11 +4368,11 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected sections:** §14.
 
-**Evidence or uncertainty:** m12 §3; §14 uses the measured value and flags the shorthand UNVERIFIED.
+**Evidence or uncertainty:** m12 §3; §14 uses the measured value. Settled 2026-11-12 by a live re-check: `wallet/getchainparameters` on TronGrid mainnet returned `getEnergyFee: 100` SUN per energy unit (0.0001 TRX) and `getTransactionFee: 1000` SUN per bandwidth point. The 0.001 TRX figure (= 1,000 SUN) is the bandwidth price, so the shorthand conflated the bandwidth and energy rates and is wrong by 10×. The same value is recorded in both slices' own chain-parameter checks (m09: "getEnergyFee = 100 SUN per energy unit"; m12: "energy fee 100 SUN/unit" and "E × 100 SUN = E × 0.0001 TRX") and in TRON's own documentation ("The current value is 100 sun per Energy", developers.tron.network/docs/set-feelimit). The "0.001 TRX per energy unit" wording itself was not found verbatim in the accessible m09/m12 slice text; both slices' own records state 100 SUN/unit. A successful 2026-11-12 dry run cross-checks the rate: 64,285 energy × 100 SUN = 6,428,500 SUN = 6.4285 TRX, reproducing the Tronsave figure.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — the value is settled at 100 SUN/unit (0.0001 TRX) by the live chain parameter, both slices' own records and TRON's documentation. The shorthand must not be quoted as an energy rate.
 
-**Operational restriction:** Use 100 SUN/unit for TRON energy arithmetic until settled; do not quote 0.001 TRX/unit.
+**Operational restriction:** Use 100 SUN/unit for TRON energy arithmetic; do not quote 0.001 TRX/unit as an energy rate. 0.001 TRX is the bandwidth price (per point), not the energy price. Re-check live parameters before execution, since chain parameters can change.
 
 **Blocks writing completion:** No.
 
