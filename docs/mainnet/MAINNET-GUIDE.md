@@ -691,6 +691,18 @@ Web UI deletion requires the vault unlock passphrase: it calls `openVault` befor
 
 > **Stop** If you have forgotten the vault unlock passphrase, do not clear storage or app data unless you have checked that independent recovery material survives. The only escapes are undocumented out-of-app storage clears or app-data clears, and they destroy the local vault. That loss is catastrophic if no independent recovery material remains.
 
+#### Android deletion prerequisites (established 2026-11-12)
+
+Do not copy the Web deletion rule across to Android. The Android draft evidence (ANDROID-GUIDE.md, draft as of 2026-11-08) establishes the following, and nothing more:
+
+- `WalletSession.delete(walletId)` deletes the wallet.
+- No user-passphrase requirement for Android deletion is evidenced in the draft. Deletion authorisation is an unimplemented adapter requirement in the draft: do not present authorisation as a delivered control.
+- Full-inventory coverage of the delete is unverified: whether Keystore entries, secret containers, engine caches, generated QR artefacts and app-controlled backups are removed is not established.
+- Android import refuses while a bundle exists, so deletion is a prerequisite to replacement import: check first that independent recovery material survives, then delete, then import.
+- Clearing app data or uninstalling destroys the Keystore-bound vault, because the Keystore key does not survive uninstall or a device move. That is a destructive reset, not a passphrase recovery.
+
+The draft observations above refer to the older Android validation draft; the current starter in `apps/android` does not contain `WalletSession`.
+
 ### Changing the vault unlock passphrase
 
 No in-place change operation for the vault unlock passphrase exists — not in the repo, not in the Web draft, and not in the Android draft. First-hand check at `981d0ba` (T14 lane, 2026-11-12): the Web starter states "No vault. No PIN." and the Android starter states "No vault / No PIN"; the Web guide sets a vault unlock passphrase policy (minimum length unset, OI-046) but specifies no change procedure; Android guide §E specifies the vault envelope and unlock lifecycle but no change procedure; `docs/08` and `RECOVERY.md` describe changing the vault password only as part of migrating to a fresh seed, never as an in-place operation. Do not copy the Web rule across to Android, and do not treat a BIP-39 passphrase change as a vault change: changing the BIP-39 passphrase derives a different wallet, not the same wallet with a new password.
@@ -706,31 +718,38 @@ The repo has no single-holder continuity procedure; `docs/08` §20 places this b
 > **Never** When planning inheritance, never put seed words in a will: anyone who obtains the words may be able to spend the funds. Check local law and ask a solicitor. Any further estate wording requires solicitor review.
 ### Recovery
 
-Recovery reproduces the preserved wallet from its original material and settings. It does not generate a replacement wallet. Follow the nine steps in `docs/RECOVERY.md`, Part 1, in order.
+Recovery reproduces the preserved wallet from its original material and settings. It does not generate a replacement wallet. Follow the twelve steps below, in order (M16 F42). They subsume the nine steps in `docs/RECOVERY.md`, Part 1, with the decrypt-tool, backup-gate, network-verification and staged-funding steps made explicit. Each **HARD STOP** is a stop, not a warning: do not proceed past it until the stated condition is met.
 
 #### Recovery procedure
 
-1. **Establish the backup and independent comparison targets.** Identify the preserved material, its decryption prerequisites and independent, pre-existing records of the wallet’s public addresses and settings. Outputs generated during this recovery are not independent comparison targets.
+1. **Establish the original material and comparison record.** Require the mnemonic backup, any separate BIP-39 passphrase backup, and independent, pre-existing records of the wallet’s public addresses and settings, with their decryption prerequisites. Outputs generated during this recovery are not independent comparison targets. Use a clean, trusted machine for the recovery; do not substitute the original live setup for a recovery from preserved material. **HARD STOP:** missing required recovery material or independent targets.
 
-2. **Use a clean, trusted machine.** Do not substitute the original live setup for a recovery from preserved material.
+2. **Establish the decrypt-tool procedure.** Identify the actual tool, the compatible backup format, the unlocking credential, the output type and the output handling. For the repo bundle the tool is `decrypt_seed.py` (AES-256-GCM, AAD `nova-shop-seed-v1`, data key via `BAWA_DATA_KEY` as hexadecimal encoding of exactly 32 bytes; mnemonic to `/dev/tty` by default). Keep secret recovery material out of public records, network lookups and research artefacts. **HARD STOP:** an unsupported format or an unverified tool-to-import hand-off.
 
-3. **Recover the mnemonic from the preserved material.** If using `decrypt_seed.py`, check the process’s exit status and follow the decryption and plaintext-handling requirements below. `--force` and `--regenerate` are excluded from recovery.
+3. **Decrypt the backup where encryption is used.** Use the documented tool and its backup-unlocking credential. That credential must not be confused with a BIP-39 passphrase. Check the process’s exit status and follow the decryption and plaintext-handling requirements below. `--force` and `--regenerate` are excluded from recovery. **HARD STOP:** decryption or format failure, or an output that the import workflow does not support. Successful decryption advances only to the next stage.
 
-4. **Validate the mnemonic and exact BIP-39 passphrase policy.** Check the BIP-39 word list and checksum locally with an independently assessed method. Confirm the original wallet’s exact BIP-39 passphrase policy. Bawa’s policy is **BIP-39, 256-bit entropy, 24 words and an empty BIP-39 passphrase**.
+4. **Check and import the recovered mnemonic.** Require the original word order, a supported length and the recorded BIP-39 passphrase policy. Check the BIP-39 word list and checksum locally with an independently assessed method. Confirm the original wallet’s exact BIP-39 passphrase policy. Bawa’s policy is **BIP-39, 256-bit entropy, 24 words and an empty BIP-39 passphrase**. Mnemonic and checksum validation remains an input check, not wallet verification. **HARD STOP:** invalid or unsupported recovery material, or an unresolved passphrase policy.
 
-5. **Restore the chain, derivation and address settings for each asset.** Restore the recorded address indices as well as the paths and network settings. These paths are already mainnet paths; the testnet4 deviation does not apply on mainnet.
+5. **Complete the post-import backup gate.** Require full ordered re-entry for the mnemonic length supported by the stated workflow; the documented Android 24-word route requires all 24 words. Neither automatic confirmation nor the three-word quiz satisfies that requirement. **HARD STOP:** failed, skipped or unavailable confirmation. A silently confirmed import conceals that the backup gate never occurred: do not treat import or quiz completion as a passed gate.
+
+6. **Apply the recorded derivation and wallet configuration.** Restore the recorded address indices as well as the curves, complete paths, address policy, network settings and all TON fields. These paths are already mainnet paths; the testnet4 deviation does not apply on mainnet. Do not retain testnet defaults or silently substitute wallet defaults.
 
    - **BTC:** `m/84'/0'/0'/0/i`, with native SegWit. A `tb1q` result is not the required mainnet `bc1q` result. Editing the prefix does not repair the derivation.
    - **ETH:** `m/44'/60'/0'/0/i`, with Ethereum mainnet selected explicitly. An Ethereum address alone does not identify the network. Verify the chain ID, RPC endpoint, network name, native currency and explorer separately.
    - **TRX:** `m/44'/195'/0'/0/i`, with explicit TRON mainnet configuration.
+   - **TON:** reproduce all five recorded fields: **contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID**. The path `m/44'/607'/0'` is generation-only, not an evidenced mainnet restoration recipe. TON mainnet restore remains unevidenced: do not fill missing settings with guessed defaults or claim a completed TON rehearsal.
 
-6. **Restore TON configuration exactly.** Reproduce all five recorded fields: **contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID**. The path `m/44'/607'/0'` is generation-only, not an evidenced mainnet restoration recipe. TON mainnet restore remains unevidenced: do not fill missing settings with guessed defaults or claim a completed TON rehearsal.
+7. **Derive and compare the public outputs.** Present BTC, ETH, TRX and TON in that order for the assets included. Require whole-address equality against the independent, pre-existing records—not matching prefixes, suffixes or shortened displays. Public fixtures are not evidence of your wallet’s identity. Apply the verification-tool requirements below. Repeat the recovery and address comparison independently where practical, using the pre-existing records rather than newly generated “expected” outputs. **HARD STOP:** any mismatch; enter the ordered decision tree below.
 
-7. **Derive known public addresses and compare whole addresses.** Require whole-address equality against the independent, pre-existing records—not matching prefixes, suffixes or shortened displays. Public fixtures are not evidence of your wallet’s identity. Apply the verification-tool requirements below.
+8. **Complete network verification.** Require agreement with the recorded mainnet context, including the separate EVM checks and the BTC/TON presentation checks. **HARD STOP:** network ambiguity, even where an address matches.
 
-8. **Repeat independently where practical.** Repeat the recovery and address comparison independently, using the pre-existing records rather than newly generated “expected” outputs.
+9. **Close the pre-funding record.** Record completion of the backup gate, the comparison results and the network checks without overwriting the originals. Keep the result record public-only and state the scope checked and outcome. Account for and remove transient secrets; do not claim that deleting one named file proves complete erasure. **HARD STOP:** an incomplete required record or unresolved check.
 
-9. **Record the result, remove transient secrets and apply the funding gate.** Keep the result record public-only and state the scope checked and outcome. Account for and remove transient secrets; do not claim that deleting one named file proves complete erasure. No real deposit may precede the funding gate.
+10. **Permit the post-match small receive.** This is the first funding event and must not occur earlier. No real deposit may precede the funding gate, and the independent security review is mandatory before introducing any real funds, including funds for this stage (§17, rung 3).
+
+11. **Verify and record that receipt.** Apply the receipt checks and append actual transaction evidence. **HARD STOP:** receipt failure or disagreement; no additional diagnostic funding.
+
+12. **Only then permit further intended funding.** Retain the explicit limitation that this procedure has not, by receipt alone, demonstrated spending capability.
 
 #### Validation and the funding gate
 
@@ -1264,7 +1283,9 @@ You are using a deprecated V1 endpoint…
 
 Recognise `status "0"` / `NOTOK` as a **failed lookup**, never as zero balance or absent history. `curl -f` cannot detect this application-level failure from the HTTP status alone.
 
-**The ETH history route remains open.** Etherscan V2 requires an API key and was not live-tested here; it is not an established fallback in this guide. If a payment decision requires history or transaction status that these checks do not establish, stop rather than infer receipt, absence or a need to pay again.
+**The ETH history route is Blockscout, verified live 2026-11-12 from two egresses (hatch and `muse-vm`).** `GET https://eth.blockscout.com/api/v2/addresses/0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7/transactions` returns HTTP 200 with 48 items for the fixture address; the first item is a successful transfer to the fixture address (`0x0cf75c8f0889930c87d08b69ba2ce2bc2f497d950f487082c0d741c5d3c83b62`, `result: success`, `status: ok`). The address endpoint for the same fixture returns HTTP 200 with `coin_balance: "0"` and `has_token_transfers: true`. Use the bare URL with no query parameters: `?limit=1` and `?page_size=1` both return HTTP 422 ("Unexpected field"). A history lookup still discloses the address to the operator; keep it a targeted check, not whole-wallet polling.
+
+Etherscan V2 is not an established fallback in this guide. Its documented route is `https://api.etherscan.io/v2/api` with `chainid=1` for Ethereum and an API key (`docs.etherscan.io/make-your-first-call`, updated 2026-11-04: "You need an API key first"); V1 was fully deprecated 2025-08-15. A keyless V2 probe from both egresses on 2026-11-12 returned HTTP 200 with `{"status":"0","message":"NOTOK","result":"Missing/Invalid API Key"}`, confirming the endpoint shape and the key requirement live. No authenticated V2 history lookup was run (no key held), so V2 remains untested end-to-end. If a payment decision requires history or transaction status that these checks do not establish, stop rather than infer receipt, absence or a need to pay again.
 
 #### TRON — head and account observations, not transfer reconciliation
 
@@ -3240,6 +3261,8 @@ A link is verified by **destination content**, not by HTTP status alone. A **403
 
 All counts above, and the category tallies below, belong to the **2026-11-09** snapshot. [M31]
 
+**Re-check 2026-11-12 (T04, non-VM routes).** The five links that were unverified or VM-blocked at the baseline were re-checked outside `muse-vm`: WCAG 2.2, the CoinsPaid hot-wallet page, the CISA backup PDF and the Keycard Shell product page are **LIVE** by destination content from the hatch egress, and the Medium SIM-swap article is **LIVE** by full-text browser fetch. The 2026-11-09 table above is the baseline and is unchanged; the re-check verdicts in the entries below carry their own date. A link live at either check can move: re-check again before publication.
+
 ### Primary references
 
 #### Standards
@@ -3268,7 +3291,7 @@ Carry these access and citation qualifications:
 - **Authenticated Maven registry:** `https://maven.pkg.github.com/trustwallet/wallet-core`. Its anonymous check returned **404 by design**, because authentication is required. This is not evidence of authenticated availability. Label the registry as authenticated and reject unverified mirrors. [M31 F04]
 - **PyPI:** cite the concrete [bip-utils project page](https://pypi.org/project/bip-utils/). Remove the PyPI JSON template URL: it returned 404 and is not a project reference. [M31 F02]
 - **npm:** cite the [registry record for `@hdwallet/core`](https://registry.npmjs.org/@hdwallet/core), marked **LIVE-via-registry**. The package page was blocked with 403. [M31 F10]
-- **WCAG 2.2:** retain **EXISTS-VM-BLOCKED**, not LIVE. The existence evidence records the W3C Recommendation of **5 October 2023**, revised **12 December 2024**, and **ISO/IEC 40500:2025**. This is existence evidence only: re-check outside the VM before attributing requirements to the document. [M31 F11]
+- **WCAG 2.2:** **LIVE on re-check 2026-11-12** (non-VM route: HTTP 200, title "Web Content Accessibility Guidelines (WCAG) 2.2"). At the 2026-11-09 baseline it was EXISTS-VM-BLOCKED. The existence evidence records the W3C Recommendation of **5 October 2023**, revised **12 December 2024**, and **ISO/IEC 40500:2025**. [M31 F11; T04 re-check 2026-11-12]
 
 #### Chain documentation
 
@@ -3291,7 +3314,7 @@ The [TON JSON-RPC endpoint](https://toncenter.com/api/v2/jsonRPC) is **LIVE (POS
 
 **M31 tally: 26 links — 24 LIVE, 1 LIVE-via-support and 1 UNVERIFIED shop page because of rate limiting.**
 
-- **Keycard Shell:** the product page remains **UNVERIFIED (shop rate-limited)**. It returned 429 with `local_rate_limited`; it was not established to be dead. Use the checked official Keycard root recorded in M31 as the fallback, and re-check the product page after the limit resets. [M31 F08]
+- **Keycard Shell:** the product page is **LIVE on re-check 2026-11-12** (non-VM route: HTTP 200, title "Keycard Shell – Open-Source Air-Gapped Crypto Hardware Wallet"). At the baseline it was UNVERIFIED (shop rate-limited, 429 `local_rate_limited`); it was not established to be dead. [M31 F08; T04 re-check 2026-11-12]
 - **BitBox:** cite the checked support site, `support.bitbox.swiss`, as **LIVE-via-support**. The homepage was blocked with 403, so the support-site result must not be presented as homepage verification. [M31 F09]
 
 #### Security references
@@ -3303,9 +3326,9 @@ The vendor checks establish link availability, **not current prices**. D17’s p
 
 Keep the unresolved sources visible in the evidence record:
 
-- **CoinsPaid hot-wallet page — UNVERIFIED, 403.** Do not source hot-wallet claims to it. No replacement was checked. [M31 F12]
-- **CISA backup PDF — UNVERIFIED, 403.** The [NCSC small-organisations guide to cyber security](https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security) was **LIVE**, but it is a replacement candidate only. Verify its scope against the intended claim before substituting it for the PDF. [M31 F13]
-- **Medium SIM-swap article — UNVERIFIED, 403.** The checked replacements are [Own Your Online’s SIM-swapping guide](https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/) and [CryptoWatchdog’s SIM-swap article](https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20), both **LIVE** at the baseline check. [M31 F14]
+- **CoinsPaid hot-wallet page — LIVE on re-check 2026-11-12** (non-VM route: HTTP 200, title "Hot Wallet Hacks & Risks: How to Protect Your Crypto Assets | Coinspaid"). At the baseline it was UNVERIFIED (403 from `muse-vm`; the VM still returns 403 on re-check). Hot-wallet claims may now be sourced to it, with the check date. [M31 F12; T04 re-check 2026-11-12]
+- **CISA backup PDF — LIVE on re-check 2026-11-12** (non-VM route: HTTP 200, `application/pdf`, Title "Data Backup Options", authors Paul Ruggiero and Matthew A. Heckathorn). At the baseline it was UNVERIFIED (403 from `muse-vm`; the VM still returns 403 on re-check). The [NCSC small-organisations guide to cyber security](https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security) was **LIVE** at the baseline and remains a supplementary source; verify its scope against the intended claim before substituting it for the PDF. [M31 F13; T04 re-check 2026-11-12]
+- **Medium SIM-swap article — LIVE on re-check 2026-11-12** (browser text fetch: full article verified — "SIM-Swap Attacks on Crypto Accounts: How They Work and How to Prevent One", Oct 7 2026, Terpin/Pinsky case and prevention). Direct curl returns 403 from both egresses (bot protection; a 403 is inconclusive, never proof of dead). The checked replacements are [Own Your Online’s SIM-swapping guide](https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/) and [CryptoWatchdog’s SIM-swap article](https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20), both **LIVE** at the baseline check. [M31 F14; T04 re-check 2026-11-12]
 
 ### Exclusions
 
@@ -3633,6 +3656,8 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Status:** OPEN.
 
+**Review 2026-11-12 (T04):** re-verified — §17 still records the independent-security-review gate as unperformed and sitting before rung 3 (before any small mainnet receive); the external review gate is OPEN in `docs/16`; no owner-approved loss limits and no rehearsal authorisation are recorded. Closure awaits T50 (Workstream 4 AI-led separate-context Astra security review) acceptance. This row stays OPEN.
+
 **Reviewer (AI-only, owner, 2026-11-11):** By owner decision of 2026-11-11, M-15's security review is AI-only: a separate-context Astra (gpt-6-astra, max reasoning) audit of a clean snapshot covering lanes T40–T49, with all actionable findings to be fixed and the corrected code to be re-audited. The separate-context audit is still pending. Astra also authored the implementation, so this is a second-pass review by the same model, not a fully independent audit. No human reviewer is sought, recommended, engaged or awaited. Opus was dropped by owner decision on 2026-11-10. An earlier Astra second-pass review was delivered with 44 findings (0 Critical, 5 High, 29 Medium and 10 Low), all fixed at commit `981d0ba`; that review is not the pending separate-context audit.
 
 **Operational restriction:** No funding until gates 1–6 are complete unfunded, loss limits are recorded and owner-approved, and the independent security review has taken place. Rehearsals require separate authorisation, must be bounded, and must use fresh disposable accounts.
@@ -3657,13 +3682,13 @@ M12 also records gaps G1–G10 with check procedures.
 - M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten.
 - M16 F42 supplies the required synthesis for §10: a 12-step ordered procedure with hard stops.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — §10 prose now follows M16 F42's 12-step order; Android deletion prerequisites established; README §13 corrected per M16 F45 (see Evidence). Carve-outs, still open: the Web import backup-gate skip and the Android 3-word quiz remain draft code defects (Doc 3 OI-071); this row's prose clearance does not clear them.
 
 **Operational restriction:** Do not repeat README §13’s conclusions without qualification. Require the recorded BIP-39 passphrase policy, not an automatic empty BIP-39 passphrase fallback. Separate address reproduction, current balance, transaction history and address discovery. Do not equate `setBackupConfirmed` or quiz success with complete recovery verification. Repeat complete recovery-material verification immediately before destructive reset instructions.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** §10 prose follows M16 F42’s 12-step order, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android.
+**Clearance condition:** §10 prose follows M16 F42’s 12-step order, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android. Met 2026-11-12 (T04): §10 "Recovery procedure" is now the 12-step F42 order with per-step hard stops; §10 carries the Android deletion prerequisites (no passphrase requirement evidenced, authorisation unimplemented, inventory coverage unverified, import refuses while a bundle exists); README §13 "Wallet looks empty after restore" corrected per M16 F45.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M16 F45, F47, F22–F23, F24 and F42. [Repository at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20): README §13.
 
@@ -3676,6 +3701,8 @@ M12 also records gaps G1–G10 with check procedures.
 **Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/get` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
 
 **Status:** OPEN.
+
+**Verification 2026-11-12 (T04):** grep of Doc 4 finds both faucet URLs only as §11 "Delete, without replacement" items and prose; no usable faucet link remains in this guide. Still blocked on the clearance condition below (M-20/OI-098 endpoint-identity re-verification).
 
 **Operational restriction:** Delete both faucet links and their dependent steps. Do not invent replacement funding endpoints. Teach endpoint-identity checks using genesis/chain-ID evidence, never network identification by URL shape alone. HTTP 200 is not proof of network selection.
 
@@ -3695,13 +3722,17 @@ M12 also records gaps G1–G10 with check procedures.
 
 M11 records HTTP 403 responses on Etherscan pages due to bot protection and says the guide must not use Etherscan as a verification command. M08 also records HTTP 403 on the Etherscan USDC page.
 
-**Status:** OPEN.
+**Replacement explorer, live-tested 2026-11-12 (T04, two egresses):** Blockscout `GET https://eth.blockscout.com/api/v2/addresses/0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7/transactions` (bare URL; `?limit=1` and `?page_size=1` both return HTTP 422 "Unexpected field") returns HTTP 200 with 48 items for the fixture address; the first item is a successful transfer to the fixture address. The address endpoint for the same fixture returns HTTP 200 with `coin_balance: "0"` and `has_token_transfers: true`. §12 now cites Blockscout as the ETH history route.
+
+**Etherscan V2, checked 2026-11-12 (T04):** documented route `https://api.etherscan.io/v2/api` with `chainid=1` and an API key (`docs.etherscan.io/make-your-first-call`, updated 2026-11-04: "You need an API key first"); V1 fully deprecated 2025-08-15. A keyless V2 probe from both egresses returned HTTP 200 with `{"status":"0","message":"NOTOK","result":"Missing/Invalid API Key"}`, confirming the endpoint shape and the key requirement live. No authenticated V2 history lookup was run (no key held): V2 remains untested end-to-end. In this guide V1 appears only as the labelled §12 failure demonstration, not as a working route; the `docs/06:287/731` citations refer to the M18 research slice.
+
+**Status:** RESOLVED 2026-11-12 — replacement-explorer branch: Blockscout history route live-tested with dated verification. Etherscan V2 remains untested with a key (limitation, not a blocker).
 
 **Operational restriction:** Do not cite Etherscan V1. Do not use Etherscan pages as a verification command without a live-tested route.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** A live-tested Etherscan V2 route with its API-key requirements stated, or a replacement explorer with dated verification.
+**Clearance condition:** A live-tested Etherscan V2 route with its API-key requirements stated, or a replacement explorer with dated verification. Met 2026-11-12 (T04) on the replacement-explorer branch: Blockscout history route, `GET https://eth.blockscout.com/api/v2/addresses/0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7/transactions`, HTTP 200, 48 items, verified from two egresses.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M18 F10; M11; M08. [Repository docs at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20/docs): docs/06:287 and docs/06:731.
 ### M-19 — Link library: 4 dead links, 4 links unverified from the VM
@@ -3720,13 +3751,15 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 
 The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 DevSecOps and 12 other.
 
-**Status:** OPEN (4 links).
+**Re-check 2026-11-12 (T04, non-VM routes):** all five previously unverified/VM-blocked links re-checked outside `muse-vm` with destination content verified — WCAG 2.2 (`https://www.w3.org/TR/WCAG22/`, HTTP 200, title "Web Content Accessibility Guidelines (WCAG) 2.2"); CoinsPaid hot-wallet page (`https://coinspaid.com/knowledge-base/hot-wallet-hacks-and-risks/`, HTTP 200, title "Hot Wallet Hacks & Risks: How to Protect Your Crypto Assets | Coinspaid"); CISA backup PDF (`https://www.cisa.gov/sites/default/files/publications/data_backup_options.pdf`, HTTP 200, `application/pdf`, Title "Data Backup Options", authors Paul Ruggiero and Matthew A. Heckathorn); Keycard Shell (`https://keycard.tech/products/keycard-shell`, HTTP 200, title "Keycard Shell – Open-Source Air-Gapped Crypto Hardware Wallet"); Medium SIM-swap article (`https://coinscapture.medium.com/sim-swap-attacks-on-crypto-accounts-how-they-work-and-how-to-prevent-one-245b4c2d3f00`, full article text verified via browser fetch — direct curl returns 403 from both egresses, bot protection; a 403 is inconclusive, never proof of dead). All five are LIVE. From `muse-vm` on the same date: WCAG 200, Keycard 200, CoinsPaid 403, CISA 403 — the VM block persists for CoinsPaid/CISA, which is why the non-VM route is the clearance evidence. §20 verdicts updated with the re-check date; the 2026-11-09 baseline is preserved.
 
-**Operational restriction:** Use the verified replacements, including M31’s operator-verified replacement URLs for the NCSC guide, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article. Do not cite the 4 unverified links until a non-VM network re-check is recorded.
+**Status:** RESOLVED 2026-11-12 — recorded non-VM re-check of all five previously unverified/VM-blocked links; §20 verdicts updated. The 2026-11-09 baseline is preserved in §20.
+
+**Operational restriction:** The non-VM re-check is now recorded (2026-11-12); the five links may be cited with the re-check date. The verified replacements (NCSC guide, NZ government SIM-swap guide, cryptowatchdog SIM-swap article) remain valid alternates.
 
 **Blocks writing completion:** No — §20 remains link-only until the re-check lands.
 
-**Clearance condition:** A recorded non-VM re-check of WCAG 2.2, the CoinsPaid hot-wallet page, the CISA backup PDF and the Medium SIM-swap article, plus Keycard Shell.
+**Clearance condition:** A recorded non-VM re-check of WCAG 2.2, the CoinsPaid hot-wallet page, the CISA backup PDF and the Medium SIM-swap article, plus Keycard Shell. Met 2026-11-12 (T04): all five re-checked from non-VM routes with destination content verified (see Evidence).
 
 **Gate/source links:** Re-checked register (2026-11-09), M-19; M31 for the audit, operator-verified replacement URLs and outstanding network checks.
 

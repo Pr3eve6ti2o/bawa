@@ -1034,7 +1034,7 @@ For balances and tracking:
 | --- | --- |
 | EVM address matches but balance is zero | Check the chain ID, RPC endpoint, network name, native currency and explorer. The same address can exist on multiple EVM networks. |
 | Tracker misses a payment | Check for a wrong index, index allocation DB issues, a gap-window issue, a wrong branch, indexer lag, an RPC error, a reorg, a token contract mismatch or the wrong network. This is why an address allocation table is so important. |
-| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and empty passphrase. If it matches, the funds are on the recorded path and your restore used a different path or passphrase — re-check each item in the ordered comparison above. If the recorded first address itself shows no funds on the recorded network, the funds were never sent to that address. Never re-fund a guess. |
+| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and recorded BIP-39 passphrase policy. If it matches, the restore used the recorded inputs — that alone does not prove funds exist. If the recorded first address itself shows no funds on the recorded network, do not conclude the funds were never sent to that address: the address may have received and subsequently spent funds. Separate address reproduction from current balance, transaction history and address discovery, and check independent transaction evidence on the recorded network. Never re-fund a guess. |
 
 For negative and security cases:
 
