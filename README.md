@@ -373,6 +373,19 @@ One home per subject: tool selection in docs/03, chain registry in docs/12, Wall
 
 Start at the repository root. Stop if either install fails; the tools command returns to the root only if its install completes.
 
+Select Node 22 first. The repository enforces its declared Node range (`>=22 <23`): each engines-declaring package carries a `.npmrc` with `engine-strict=true`, so `npm install` and `npm ci` fail with `EBADENGINE` on any other Node release (verified 2026-11-12: Node v24.22.2 and Node v20.19.5 fail; Node v22.23.4 passes). Invoking a Node 22 `npm` by absolute path does not select Node 22: npm's `#!/usr/bin/env node` shebang selects `node` from PATH, so it can still run under the system Node. Set PATH first, then check the executable and version in the same shell:
+
+```sh
+export PATH="/path/to/node22/bin:$PATH"
+hash -r
+
+which node
+node --version
+which npm
+```
+
+Do not continue unless `which node` points to the selected Node 22 installation's `bin/node`, `node --version` reports a Node 22 release, and `which npm` points to that installation's `bin/npm`.
+
 **Step 1 — root install**
 
 The repository root has no dependencies: `npm install` at the root installs nothing, and `npm ls --depth=0` cannot check a lockfile's selected package and version against the root because no root lockfile exists. Skip this step and proceed to Step 2.
@@ -1007,11 +1020,11 @@ This is the canonical home for repo-level troubleshooting; the Web and Android g
 
 | Symptom | What to check or do |
 | --- | --- |
-| `npm install` fails | Check your Node and npm versions against §3. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
+| `npm install` fails | Check your Node and npm versions against §3. If the failure names `EBADENGINE`, the Node release is outside the declared `>=22 <23` range: the repository enforces the range, so switch to Node 22 (§6) — the install cannot proceed on another Node. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
 | No-TTY refusal | `FATAL: no controlling terminal — refusing to run; generate the wallet interactively`, exit 1. This is expected. Run from a real interactive terminal; never defeat the check. |
 | Derived address mismatch | Follow the ordered comparison below. |
 
-Both Node packages require Node `>=22 <23`, and CI uses Node 22. Use Node 22 for the documented setup. An operator-verified installation under Node v24.22.2 emitted EBADENGINE because that runtime is outside the declared range, but installation completed and the syntax check and smoke suite passed with Wallet Core 4.8.4. This observation does not extend the declared Node support range.
+Both Node packages require Node `>=22 <23`, and CI uses Node 22. Use Node 22 for the documented setup. Since 2026-11-12 the repository enforces that range: an installation under Node v24.22.2 fails with `EBADENGINE` (exit 1) instead of completing. Before enforcement, an operator-verified installation under Node v24.22.2 emitted the same warning but completed, and the syntax check and smoke suite passed with Wallet Core 4.8.4. That observation does not extend the declared Node support range.
 
 For an address mismatch, compare these in order:
 

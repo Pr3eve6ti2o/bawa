@@ -92,6 +92,8 @@ The repository root declares no dependencies, so skip root `npm install`. Runnin
 
 Install the wallet-core tooling at its package boundary: enter it with `cd tools/hdwallet-gen`, run `npm install`, then return to the repository root with `cd ../..`.
 
+Engine enforcement (OI-095, verified 2026-11-12): each engines-declaring package — the repository root, `tools/`, `tools/hdwallet-gen/` and `apps/web/` — carries a `.npmrc` with `engine-strict=true`. `npm install` and `npm ci` therefore fail with `EBADENGINE` on any Node release outside `>=22 <23` (Node v24.22.2 and Node v20.19.5 fail; Node v22.23.4 passes). `npm run` does not enforce engines, so `npm run check` can still pass on another Node; that does not make the installation supported. Regression test: `node --test tests/npm-engine-strict.test.mjs`.
+
 Treat these as unlocked dependency installs, not as evidence of a reproducible dependency graph or passing tests.
 
 ### Release blockers
