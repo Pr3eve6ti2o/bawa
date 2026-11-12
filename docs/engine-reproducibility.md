@@ -2,19 +2,20 @@
 
 - **Repository:** `Pr3eve6ti2o/bawa`
 - **Source baseline:** `51c7e39`; Phase 3 complete.
-- **Evidence date:** 2026-11-10.
+- **Evidence date:** 2026-11-10 (baseline); 4.9.1 qualification 2026-11-12 (T20).
 - **Recorded H7 results:** suite **92/92**, differential test **PASS**, fixtures **exact**.
+- **Recorded T20 results (2026-11-12):** differential run of 4.9.1 against 4.8.4 — tools smoke 130 ok / 0 fail on both; 9 derive + 9 compare addresses identical; TON fixture PASS; EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12; web vitest 28/28, tsc + build exit 0 on both; mainnet endpoints eth_chainId 0x1 on two public RPCs (read-only).
 
 Version checks and environment observations below were recorded first-hand on 2026-11-10. Historical guide and Android-draft evidence is identified separately; citing it does not imply a re-test. **PROPOSED** and **OPEN** items are not validated toolchain choices.
 
 ## 1. Engine decision
 
-**DECISION — STAY on Trust Wallet Core 4.8.4 as the tool pin.**
+**DECISION (proposed, T20 2026-11-12) — UPGRADE the tool pin to Trust Wallet Core 4.9.1, subject to owner approval.**
 
-This is the Phase 4 resolution against **Doc 4, M-21**: retain the verified pin rather than adopt an upgrade candidate.
+This replaces the Phase 4 resolution against **Doc 4, M-21** (stay on 4.8.4) on the strength of the T20 qualification run recorded below. Merging this change is the approval; until then 4.8.4 remains the selected tool pin.
 
-- **4.8.4 — selected and verified.** It is pinned in `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json`. The supporting H7 evidence is the 92/92 suite result, a passing differential test and exact fixtures.
-- **4.9.1 — upgrade candidate, not selected.** Its presence on the npm registry was verified first-hand on 2026-11-10. It is **not installed or tested here**. Registry availability is not compatibility or reproducibility evidence.
+- **4.8.4 — previously selected and verified; superseded as the active pin.** It was pinned in `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json`. The supporting H7 evidence is the 92/92 suite result, a passing differential test and exact fixtures.
+- **4.9.1 — selected (proposed upgrade, T20 2026-11-12).** Installed and tested in scratch copies against 4.8.4: tools smoke 130 ok / 0 fail on both versions, exact fixtures, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery, web vitest 28/28 with tsc + build exit 0 on both. No regressions found; the only measured differences are WASM +33,286 bytes and bundle +14.87 kB. The 4.9.1 / 4.9.2 npm packages are byte-identical except the version field, so D21/D30/D31 evidence on 4.9.2 applies at the artifact level.
 - **4.9.2 — guides’ reference engine only.** It is a prerelease per **Doc 4, M-21**, referenced at tag `17e3cd4`, dated 2026-11-06. Signing demos D21/D31 were recorded on it. In-browser send, sign and broadcast were never exercised. It is not this tool’s pin.
 - **4.8.5, 4.8.6, 4.8.7 and 4.9.0** also exist on npm, verified on 2026-11-10. None was evaluated or selected.
 
@@ -29,7 +30,7 @@ An upgrade requires a **separate decision**, followed by an intentional update o
 3. The Python differential test.
 4. Exact comparison against the existing fixtures.
 
-Do not regenerate fixtures merely to make a changed engine pass. Any intended derivation or fixture-contract change requires its own decision. Until the upgrade evidence is recorded and accepted, **4.8.4 remains the selected tool pin**.
+Do not regenerate fixtures merely to make a changed engine pass. Any intended derivation or fixture-contract change requires its own decision. Upgrade evidence was recorded by T20 on 2026-11-12 (see §1); acceptance is the owner's decision, expressed by merging this change.
 
 ## 2. Pinned toolchain
 
@@ -37,7 +38,7 @@ The table distinguishes declared constraints, checked-in pins and observed runti
 
 | Component | Pin or recorded value | Where the pin lives / evidence | Status |
 |---|---|---|---|
-| Trust Wallet Core, generator | **4.8.4** | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified |
+| Trust Wallet Core, generator | **4.9.1** (proposed; was 4.8.4) | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified (T20 qualification 2026-11-12) |
 | Node.js requirement | `>=22 <23`; CI uses Node 22 | Recorded runtime policy; CI Node selection | verified |
 | Node.js on this VM | `v24.22.2` | VM observation; not the declared project range | observed — deviation |
 | Python requirement | `>=3.11`; CI uses 3.13 | Recorded runtime policy; CI Python selection | verified |

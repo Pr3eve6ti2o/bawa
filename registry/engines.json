@@ -13,19 +13,19 @@
       "reviewed_at": "2026-11-10",
       "chains": ["btc", "eth", "trx", "ton"],
       "operations": ["generate", "derive", "watch-only"],
-      "notes": "Verified tool pin in tools/hdwallet-gen; npm test 92 checks pass at H7. Tooling baseline only — not proof of complete wallet readiness."
+      "notes": "Previously verified tool pin in tools/hdwallet-gen; npm test 92 checks pass at H7. Superseded as the active pin by 4.9.1 (proposed, T20 2026-11-12). Tooling baseline only — not proof of complete wallet readiness."
     },
     {
       "id": "trust-wallet-core-4-9-1",
       "name": "Trust Wallet Core 4.9.1",
-      "status": "PROPOSED",
+      "status": "IMPLEMENTED_AND_VERIFIED",
       "source": "trustwallet/wallet-core",
       "revision": "4.9.1",
       "licence": "Apache-2.0",
-      "reviewed_at": "2026-11-10",
+      "reviewed_at": "2026-11-12",
       "chains": ["btc", "eth", "trx", "ton"],
       "operations": ["generate", "derive", "watch-only"],
-      "notes": "Doc 4 M-21 upgrade candidate. Not installed or tested; no Android AAR for any version."
+      "notes": "Qualified by T20 on 2026-11-12 (differential run vs 4.8.4: tools smoke 130 ok / 0 fail, 9+9 fixture addresses identical, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12, web vitest 28/28, tsc + build exit 0). Upgrade proposed; applying the pin change needs the owner decision. No Android AAR for any version."
     },
     {
       "id": "trust-wallet-core-4-9-2",

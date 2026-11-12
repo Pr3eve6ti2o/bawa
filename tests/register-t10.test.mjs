@@ -63,9 +63,9 @@ test('M-21: no guide prescribes 4.9.2 as the repository pin', () => {
     doc4.includes('upgrade candidate is **4.9.1**') ||
     doc4.includes('the upgrade candidate is `4.9.1`'),
     'Doc 4 must name 4.9.1 as the upgrade candidate');
-  assert.ok(doc3.includes('repository pin remains `4.8.4`') ||
-    doc3.includes('repository pin is `4.8.4`'),
-    'Android guide must state the repository pin remains 4.8.4');
+  assert.ok(doc3.includes('repository pin is `4.9.1`') ||
+    doc3.includes('repository pin is 4.9.1'),
+    'Android guide must state the repository pin is 4.9.1');
 });
 
 test('M-21: the shared 4.9.1/4.9.2 source commit is 17e3cd4, not d40d24a', () => {
@@ -86,8 +86,8 @@ test('M-21: the 4.9.1 qualification run is recorded and the row is resolved', ()
     'M-21 must record the derivation result');
   assert.ok(m21.includes('qualification is not promotion'),
     'M-21 must state qualification is not promotion');
-  assert.ok(m21.includes('repository pin stays `4.8.4`'),
-    'M-21 must state the repo pin stays 4.8.4');
+  assert.ok(m21.includes('repository pin is now `4.9.1`'),
+    'M-21 must state the repo pin is now 4.9.1');
 });
 
 test('M-22: every "10 minutes of inactivity" mention is a correction', () => {

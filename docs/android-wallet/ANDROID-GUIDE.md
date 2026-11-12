@@ -1,7 +1,7 @@
 ---
 title: Building the Bawa Android wallet
 seoTitle: Build a non-custodial testnet-only Android wallet with Bawa
-description: A how-to guide for building a non-custodial, testnet-only Android wallet (Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet) from the Bawa repository, using Trust Wallet Core 4.9.2 as its testnet source-build pin (a GitHub prerelease; the repository pin is 4.8.4, upgrade candidate 4.9.1 — see section B.6 and Doc 4 section 21 M-21).
+description: A how-to guide for building a non-custodial, testnet-only Android wallet (Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet) from the Bawa repository, using Trust Wallet Core 4.9.2 as its testnet source-build pin (a GitHub prerelease; the repository pin is 4.9.1 (upgraded 2026-11-12) — see section B.6 and Doc 4 section 21 M-21).
 last-updated: 2026-11-08
 ---
 
@@ -15,7 +15,7 @@ _How-to guide. Read from top to bottom on your first pass._
 > - Verified on: 2026-11-08.
 > - Verification scope: rewrite of sections A–K of the Android guide, against the pinned repository at e3b65fb832db287fdc8d54794980dd0b3456cc12 and the validation drafts.
 > - Repository commit: e3b65fb832db287fdc8d54794980dd0b3456cc12 (Pr3eve6ti2o/bawa).
-> - Tool versions (observed, not declared pins): Node v24.22.2; Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2; Trust Wallet Core 4.8.4 WASM for the fixture verification runs; Core 4.9.2 is the testnet source-build pin this guide prescribes for the demonstrated scope (a GitHub prerelease, not a stable release); the repository pin remains 4.8.4 and the upgrade candidate is 4.9.1 (Doc 4 section 21 M-21).
+> - Tool versions (observed, not declared pins): Node v24.22.2; Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2; Trust Wallet Core 4.9.1 WASM for the fixture verification runs; Core 4.9.2 is the testnet source-build pin this guide prescribes for the demonstrated scope (a GitHub prerelease, not a stable release); the repository pin is 4.9.1 (upgraded 2026-11-12) (Doc 4 section 21 M-21).
 > - Environment/runner: muse-vm (Boxd, Ubuntu 24.04.5 LTS).
 > - Actually run: Core 4.8.4 fixture verification (12 checks, all pass — see section D.7); TON path confirmation (m/44'/607'/0'); Core tag resolution (4.9.2 → 17e3cd4d…, 4.8.4 → d40d24a… via the GitHub API); first-hand reads of the pinned repo files, the validation draft's build files, NetworkConfig.kt, Fixtures.kt, TonConfig.kt and VaultEnvelope.kt.
 > - Not run / unresolved: no Gradle build, no APK, no device or emulator run, no Core AAR build; the Android wallet creation, restore and testnet spend as specified here have not been exercised end to end; verification ran on Node 24, outside the declared >=22 <23 range; the EIP-1559 proof and the full verification pass were run against 4.8.4, not 4.9.2; the on-device fixture gate has never run. (Live creation and restore were exercised for the repository CLI tools (V1) and live 24-word creation for the web draft in a real browser (V2); send, signing and broadcast were exercised nowhere.)
@@ -555,7 +555,7 @@ Include the Core release reference, module pin locations, SDK root and installed
 
 ### B.6 Trust Wallet Core pin
 
-Pin Trust Wallet Core to exactly `4.9.2` for the Bawa Android wallet's testnet-only builds. This is the testnet source-build pin for the scope demonstrated on 4.9.2 (the D21 construction/signing demonstration); `4.9.2` is a GitHub prerelease, not a stable release. It is not the repository pin — the repository pin remains `4.8.4` — and it is not the upgrade candidate — the upgrade candidate is `4.9.1`, pending its own qualification run (Doc 4 section 21 M-21). Do not present this testnet-build pin as the repository pin, and never relabel 4.9.2 demonstration results as 4.9.1 results.
+Pin Trust Wallet Core to exactly `4.9.2` for the Bawa Android wallet's testnet-only builds. This is the testnet source-build pin for the scope demonstrated on 4.9.2 (the D21 construction/signing demonstration); `4.9.2` is a GitHub prerelease, not a stable release. It is not the repository pin — the repository pin is `4.9.1` (upgraded 2026-11-12 after its qualification run) (Doc 4 section 21 M-21). Do not present this testnet-build pin as the repository pin, and never relabel 4.9.2 demonstration results as 4.9.1 results.
 
 - **Upstream repository:** `https://github.com/trustwallet/wallet-core.git`
 - **Git tag:** `4.9.2`
@@ -615,7 +615,7 @@ Where you consume Core as a Maven module, require `strictly("4.9.2")` in the dep
 
 Reject the `4.6.0` Maven Central republish because it would break the exact `4.9.2` pin. Availability on Maven Central does not make a different Core release an acceptable substitute. Do not relabel a `4.6.0` artefact as `4.9.2`.
 
-The repository pin, `4.8.4` at commit `d40d24a63d92619167903369308bf0e2f7eb3a59`, is NOT superseded by this testnet-build pin: it remains the repository version until `4.9.1` passes its qualification run (Doc 4 section 21 M-21). Do not build the repository tools against `4.9.2`.
+The repository pin is now `4.9.1` (upgraded 2026-11-12 after its qualification run; the former pin `4.8.4` at commit `d40d24a63d92619167903369308bf0e2f7eb3a59` is superseded). This testnet-build pin does not supersede the repository pin (Doc 4 section 21 M-21). Do not build the repository tools against `4.9.2`.
 
 **Open item (OI-004):** The EIP-1559 demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 

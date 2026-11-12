@@ -26,7 +26,7 @@ Keep the repository checkout intact: `@bawa/contracts` is a local `file:` depend
 - Import one extended public key (xpub) per supported chain: BTC, ETH and TRX.
   Keys are validated before storage.
 - Derive the first five addresses per chain, at indices 0–4, in the browser.
-  The engine is `@trustwallet/wallet-core` 4.8.4, the repository's Phase 4 pin, loaded as WASM.
+  The engine is `@trustwallet/wallet-core` 4.9.1, loaded as WASM.
   Derivation uses `HDWallet.getPublicKeyFromExtended` and
   `CoinTypeExt.deriveAddressFromPublicKey`.
 - Display a derived address on the Receive screen with a QR code using `qrcode.react`.

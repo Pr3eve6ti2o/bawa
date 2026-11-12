@@ -32,13 +32,13 @@ describe('stale data', () => {
 
       assert.equal(
         manifest.dependencies?.['@trustwallet/wallet-core'],
-        '4.8.4',
-        `${packagePath} must pin @trustwallet/wallet-core to 4.8.4`,
+        '4.9.1',
+        `${packagePath} must pin @trustwallet/wallet-core to 4.9.1`,
       );
 
       const lockPath = `${directory}/package-lock.json`;
       assert.ok(
-        read(lockPath).includes('"@trustwallet/wallet-core": "4.8.4"'),
+        read(lockPath).includes('"@trustwallet/wallet-core": "4.9.1"'),
         `${lockPath} must contain the declared wallet-core pin`,
       );
     }

@@ -14,6 +14,6 @@
   "keywords": ["hd-wallet", "bip32", "bip39", "bip44", "bip84", "bitcoin", "ethereum", "tron", "ton"],
   "license": "MIT",
   "dependencies": {
-    "@trustwallet/wallet-core": "4.8.4"
+    "@trustwallet/wallet-core": "4.9.1"
   }
 }
