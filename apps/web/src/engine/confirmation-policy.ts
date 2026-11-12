@@ -231,3 +231,240 @@ export function assessConfirmation(
     reason: 'ETH: ' + confirmations + ' confirmations but inclusion is not finalised; 12 alone is insufficient.',
   };
 }
+
+
+// ---- TRON / TON confirmation policy (T16, merged by the coordinator) ----
+// T15's BTC/ETH evaluator above and this TRX/TON section share one file
+// because both lanes wrote apps/web/src/engine/confirmation-policy.ts.
+// POLICY_VERSION 'trx-ton-1' covers the TRX/TON evaluators below only.
+// Confirmation policy evaluator (TRON/TON). Pure functions over
+// already-fetched chain observations: no network, no keys, no funds.
+// TRON: a block is solidified once at least 19 distinct active Super
+// Representatives of 27 each produced a block at that height or above
+// (TRON developer docs, consensus/DPoS; walletsolidity/getnowblock is
+// the latest solidified block). Raw head height, elapsed time and
+// block depth are never evidence. Confirmation is a policy, not a
+// finality guarantee.
+
+export const POLICY_VERSION = 'trx-ton-1';
+export const TRX_REQUIRED_SUPER_REPRESENTATIVES = 19;
+export const TRX_TOTAL_SUPER_REPRESENTATIVES = 27;
+
+export type ConfirmationState =
+  | 'seen'
+  | 'included'
+  | 'confirmed'
+  | 'reorged'
+  | 'unknown';
+
+export type Evaluation = {
+  state: ConfirmationState;
+  confirmed: boolean;
+  reason: string;
+  policyVersion: string;
+};
+
+export interface TronObservation {
+  txid: string;
+  included: boolean;
+  blockNumber: number | null;
+  contractRet: 'SUCCESS' | 'FAILED' | null;
+  solidifiedBlockNumber: number | null;
+  distinctSolidifyingSRs: number | null;
+  dataAvailable: boolean;
+  stale: boolean;
+}
+
+export function evaluateTron(obs: TronObservation): Evaluation {
+  // Fail closed on unavailable or stale chain data, or on missing
+  // inclusion/execution facts. The two solidification evidence paths
+  // are alternatives (see below), so they are not in this gate: a
+  // solidified-block number OR an explicit distinct-SR count suffices.
+  if (
+    !obs.dataAvailable ||
+    obs.stale ||
+    obs.blockNumber === null ||
+    obs.contractRet === null
+  ) {
+    return {
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  if (!obs.included) {
+    return {
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  if (obs.contractRet === 'FAILED') {
+    return {
+      state: 'included',
+      confirmed: false,
+      reason: 'execution-failed',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  // No solidification evidence at all: unavailable, not "unconfirmed".
+  if (
+    obs.solidifiedBlockNumber === null &&
+    obs.distinctSolidifyingSRs === null
+  ) {
+    return {
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  const confirmed =
+    (obs.solidifiedBlockNumber !== null &&
+      obs.solidifiedBlockNumber >= obs.blockNumber) ||
+    (obs.distinctSolidifyingSRs !== null &&
+      obs.distinctSolidifyingSRs >= TRX_REQUIRED_SUPER_REPRESENTATIVES);
+
+  return {
+    state: confirmed ? 'confirmed' : 'included',
+    confirmed,
+    reason: confirmed ? 'solidified' : 'included-not-solidified',
+    policyVersion: POLICY_VERSION,
+  };
+}
+
+/**
+ * TON policy is 1 masterchain seqno after inclusion plus an outgoing-message
+ * outcome check (TON Docs, payment-processing overview: finality after a
+ * single masterchain block confirmation).
+ *
+ * Count masterchain seqno from inclusion, never the wallet account seqno
+ * and never wall-clock time. A masterchain head alone, a fee estimate,
+ * or a simulation is never confirmation.
+ */
+export const TON_REQUIRED_MASTERCHAIN_SEQNO = 1;
+
+export interface TonObservation {
+  txid: string;
+  included: boolean;
+  shardBlockId: string | null;
+  inclusionAnchorSeqno: number | null;
+  currentMasterchainSeqno: number | null;
+  outMessageOutcome: 'delivered' | 'bounced' | 'failed' | 'aborted' | null;
+  dataAvailable: boolean;
+  stale: boolean;
+}
+
+export function evaluateTon(obs: TonObservation): Evaluation {
+  // Fail closed on unavailable or stale chain data, or on missing
+  // inclusion identity / current head. The anchor seqno and the
+  // outgoing-message outcome are progressive, not gating facts: with
+  // fresh data, a null anchor means "not yet anchored" and a null
+  // outcome means "outcome not yet observed", so the transaction is
+  // 'included', not 'unknown'. Only dataAvailable / stale report
+  // genuinely unavailable chain data.
+  if (
+    !obs.dataAvailable ||
+    obs.stale ||
+    obs.shardBlockId === null ||
+    obs.currentMasterchainSeqno === null
+  ) {
+    return {
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  if (!obs.included) {
+    return {
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+      policyVersion: POLICY_VERSION,
+    };
+  }
+
+  const confirmed =
+    obs.inclusionAnchorSeqno !== null &&
+    obs.currentMasterchainSeqno >= obs.inclusionAnchorSeqno &&
+    obs.outMessageOutcome === 'delivered';
+
+  return {
+    state: confirmed ? 'confirmed' : 'included',
+    confirmed,
+    reason: confirmed
+      ? 'masterchain-anchored-and-delivered'
+      : 'included-not-anchored',
+    policyVersion: POLICY_VERSION,
+  };
+}
+
+export type Transition = {
+  state: ConfirmationState;
+  manualReview: boolean;
+  reason: string;
+};
+
+export function transition(
+  current: ConfirmationState,
+  evaluation: Evaluation,
+  wasSettled: boolean,
+): Transition {
+  if (
+    current === 'confirmed' &&
+    evaluation.state === 'unknown' &&
+    evaluation.reason === 'not-included'
+  ) {
+    return {
+      state: 'reorged',
+      manualReview: wasSettled,
+      reason: 'reorged-after-confirmation',
+    };
+  }
+
+  if (evaluation.state === 'unknown') {
+    return {
+      state: current,
+      manualReview: false,
+      reason: 'stale-or-unavailable-preserved',
+    };
+  }
+
+  if (current === 'reorged' && evaluation.state === 'included') {
+    return {
+      state: 'included',
+      manualReview: false,
+      reason: 'reobserved-reapply-threshold',
+    };
+  }
+
+  if (current === 'included' && evaluation.state === 'confirmed') {
+    return {
+      state: 'confirmed',
+      manualReview: false,
+      reason: evaluation.reason,
+    };
+  }
+
+  if (current === 'seen' && evaluation.state === 'confirmed') {
+    return {
+      state: 'included',
+      manualReview: false,
+      reason: 'cannot-skip-inclusion',
+    };
+  }
+
+  return {
+    state: current,
+    manualReview: false,
+    reason: 'state-preserved',
+  };
+}

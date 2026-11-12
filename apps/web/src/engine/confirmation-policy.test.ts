@@ -4,6 +4,15 @@ import {
   BTC_CONFIRMATIONS_REQUIRED,
   ETH_CONFIRMATIONS_MINIMUM,
   type ConfirmationObservation,
+  POLICY_VERSION,
+  TRX_REQUIRED_SUPER_REPRESENTATIVES,
+  TRX_TOTAL_SUPER_REPRESENTATIVES,
+  TON_REQUIRED_MASTERCHAIN_SEQNO,
+  evaluateTron,
+  evaluateTon,
+  transition,
+  type TronObservation,
+  type TonObservation,
 } from './confirmation-policy';
 
 // Fixture observations use invented block hashes; no live chain, no
@@ -226,3 +235,369 @@ describe('confirmation policy failures fail closed', () => {
     expect(result.settlementEligible).toBe(false);
   });
 });
+
+// ---- TRX / TON confirmation policy tests (T16, merged by the coordinator) ----
+function tronObs(overrides: Partial<TronObservation> = {}): TronObservation {
+  return {
+    txid: 'trx-tx-1',
+    included: true,
+    blockNumber: 100,
+    contractRet: 'SUCCESS',
+    solidifiedBlockNumber: 100,
+    distinctSolidifyingSRs: null,
+    dataAvailable: true,
+    stale: false,
+    ...overrides,
+  }
+}
+
+function tonObs(overrides: Partial<TonObservation> = {}): TonObservation {
+  return {
+    txid: 'ton-tx-1',
+    included: true,
+    shardBlockId: 'shard-1',
+    inclusionAnchorSeqno: 50,
+    currentMasterchainSeqno: 50,
+    outMessageOutcome: 'delivered',
+    dataAvailable: true,
+    stale: false,
+    ...overrides,
+  }
+}
+
+describe('confirmation policy constants', () => {
+  it('exports the fixed policy version and thresholds', () => {
+    expect(POLICY_VERSION).toBe('trx-ton-1')
+    expect(TRX_REQUIRED_SUPER_REPRESENTATIVES).toBe(19)
+    expect(TRX_TOTAL_SUPER_REPRESENTATIVES).toBe(27)
+    expect(TON_REQUIRED_MASTERCHAIN_SEQNO).toBe(1)
+  })
+})
+
+describe('evaluateTron', () => {
+  it('confirms when the solidified block number equals the inclusion block number', () => {
+    const evaluation = evaluateTron(tronObs())
+
+    expect(evaluation).toMatchObject({
+      state: 'confirmed',
+      confirmed: true,
+      policyVersion: POLICY_VERSION,
+    })
+  })
+
+  it('remains included when the solidified block number is one below the inclusion block', () => {
+    const evaluation = evaluateTron(
+      tronObs({ solidifiedBlockNumber: 99 }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'included',
+      confirmed: false,
+    })
+  })
+
+  it('confirms with 19 distinct solidifying SRs and no solidified block number', () => {
+    const evaluation = evaluateTron(
+      tronObs({
+        solidifiedBlockNumber: null,
+        distinctSolidifyingSRs: 19,
+      }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'confirmed',
+      confirmed: true,
+    })
+  })
+
+  it('remains included with only 18 distinct solidifying SRs', () => {
+    const evaluation = evaluateTron(
+      tronObs({
+        solidifiedBlockNumber: null,
+        distinctSolidifyingSRs: 18,
+      }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'included',
+      confirmed: false,
+    })
+  })
+
+  it('does not confirm a FAILED execution despite otherwise confirming fields', () => {
+    const evaluation = evaluateTron(tronObs({ contractRet: 'FAILED' }))
+
+    expect(evaluation.state).not.toBe('confirmed')
+    expect(evaluation.confirmed).toBe(false)
+  })
+
+  it('returns unknown when the contract result is unavailable', () => {
+    const evaluation = evaluateTron(tronObs({ contractRet: null }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns unknown for unavailable data despite otherwise confirming fields', () => {
+    const evaluation = evaluateTron(tronObs({ dataAvailable: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns unknown for stale data despite otherwise confirming fields', () => {
+    const evaluation = evaluateTron(tronObs({ stale: true }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns unknown when the inclusion block number is null', () => {
+    const evaluation = evaluateTron(tronObs({ blockNumber: null }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns not-included when available data reports no inclusion', () => {
+    const evaluation = evaluateTron(tronObs({ included: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+    })
+  })
+})
+
+describe('evaluateTon', () => {
+  it('confirms when the current masterchain seqno equals the inclusion anchor', () => {
+    const evaluation = evaluateTon(tonObs())
+
+    expect(evaluation).toMatchObject({
+      state: 'confirmed',
+      confirmed: true,
+      policyVersion: POLICY_VERSION,
+    })
+  })
+
+  it('remains included when the current masterchain seqno is one below the inclusion anchor', () => {
+    const evaluation = evaluateTon(
+      tonObs({ currentMasterchainSeqno: 49 }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'included',
+      confirmed: false,
+    })
+  })
+
+  it('remains included when the inclusion anchor seqno is null', () => {
+    const evaluation = evaluateTon(
+      tonObs({ inclusionAnchorSeqno: null }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'included',
+      confirmed: false,
+    })
+  })
+
+  it('does not confirm a bounced out-message despite otherwise confirming fields', () => {
+    const evaluation = evaluateTon(
+      tonObs({ outMessageOutcome: 'bounced' }),
+    )
+
+    expect(evaluation.state).not.toBe('confirmed')
+    expect(evaluation.confirmed).toBe(false)
+  })
+
+  it('does not confirm a failed out-message despite otherwise confirming fields', () => {
+    const evaluation = evaluateTon(
+      tonObs({ outMessageOutcome: 'failed' }),
+    )
+
+    expect(evaluation.state).not.toBe('confirmed')
+    expect(evaluation.confirmed).toBe(false)
+  })
+
+  it('does not confirm an aborted out-message despite otherwise confirming fields', () => {
+    const evaluation = evaluateTon(
+      tonObs({ outMessageOutcome: 'aborted' }),
+    )
+
+    expect(evaluation.state).not.toBe('confirmed')
+    expect(evaluation.confirmed).toBe(false)
+  })
+
+  it('returns unknown when the shard block ID is null', () => {
+    const evaluation = evaluateTon(tonObs({ shardBlockId: null }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+    })
+  })
+
+  it('returns unknown for unavailable data despite otherwise confirming fields', () => {
+    const evaluation = evaluateTon(tonObs({ dataAvailable: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns unknown for stale data despite otherwise confirming fields', () => {
+    const evaluation = evaluateTon(tonObs({ stale: true }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns unknown when the current masterchain seqno is null', () => {
+    const evaluation = evaluateTon(
+      tonObs({ currentMasterchainSeqno: null }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+  })
+
+  it('returns not-included when available data reports no inclusion', () => {
+    const evaluation = evaluateTon(tonObs({ included: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+    })
+  })
+})
+
+describe('transition', () => {
+  it('moves included to confirmed after a confirmed evaluation', () => {
+    const evaluation = evaluateTron(tronObs())
+
+    expect(evaluation).toMatchObject({
+      state: 'confirmed',
+      confirmed: true,
+    })
+
+    const result = transition('included', evaluation, false)
+
+    expect(result.state).toBe('confirmed')
+  })
+
+  it('reorgs a settled confirmed transaction that is no longer included and requires manual review', () => {
+    const evaluation = evaluateTron(tronObs({ included: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+    })
+
+    const result = transition('confirmed', evaluation, true)
+
+    expect(result).toMatchObject({
+      state: 'reorged',
+      manualReview: true,
+    })
+  })
+
+  it('reorgs an unsettled confirmed transaction that is no longer included without manual review', () => {
+    const evaluation = evaluateTron(tronObs({ included: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'not-included',
+    })
+
+    const result = transition('confirmed', evaluation, false)
+
+    expect(result).toMatchObject({
+      state: 'reorged',
+      manualReview: false,
+    })
+  })
+
+  it('moves reorged to included, not confirmed, after an included evaluation', () => {
+    const evaluation = evaluateTron(
+      tronObs({ solidifiedBlockNumber: 99 }),
+    )
+
+    expect(evaluation).toMatchObject({
+      state: 'included',
+      confirmed: false,
+    })
+
+    const result = transition('reorged', evaluation, true)
+
+    expect(result.state).toBe('included')
+  })
+
+  it('does not allow seen to skip inclusion after a confirmed evaluation', () => {
+    const evaluation = evaluateTon(tonObs())
+
+    expect(evaluation).toMatchObject({
+      state: 'confirmed',
+      confirmed: true,
+    })
+
+    const result = transition('seen', evaluation, false)
+
+    expect(result).toMatchObject({
+      state: 'included',
+      reason: 'cannot-skip-inclusion',
+    })
+  })
+
+  it('preserves confirmed when the evaluation is unknown due to unavailable data', () => {
+    const evaluation = evaluateTron(tronObs({ dataAvailable: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+
+    const result = transition('confirmed', evaluation, true)
+
+    expect(result.state).toBe('confirmed')
+  })
+
+  it('preserves included when the evaluation is unknown due to unavailable data', () => {
+    const evaluation = evaluateTon(tonObs({ dataAvailable: false }))
+
+    expect(evaluation).toMatchObject({
+      state: 'unknown',
+      confirmed: false,
+      reason: 'unavailable-chain-data',
+    })
+
+    const result = transition('included', evaluation, false)
+
+    expect(result.state).toBe('included')
+  })
+})
