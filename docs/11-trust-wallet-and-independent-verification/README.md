@@ -245,23 +245,25 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Neither tool's output distinguishes bad-checksum from wrong-version rejection.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Each tool's validator message distinguishes bad-checksum from wrong-version rejection for the test-vector-5 pair below.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; the tool output does not distinguish it from a wrong-version failure.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core pin: no address, exit 2 with `extended key checksum verification failed` on stderr. `compare.js` exits 1 with `FATAL: btc: extended key checksum verification failed` and no address. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; its validator message distinguishes it from the version-mismatch vector below.
 
 - **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect; the tool output does not distinguish it from a bad-checksum failure.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core pin: no address, exit 2 with `extended public key required (private extended keys are rejected)` on stderr. `compare.js` exits 1 with `FATAL: btc: extended public key required (private extended keys are rejected)` and no address. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect: its public-key version bytes are paired with a private-key payload, so the validator reports a private-key rejection rather than a wrong-version message.
+
+  > Note: an earlier revision of this section expected "exit 1 and an opaque WASM abort" for both vectors. That expectation is stale: both tools run `validateAccountKey` before WASM initialisation, so invalid input never reaches WASM. T20 confirmed the same behaviour on Trust Wallet Core 4.8.4 and 4.9.1, and the different validator messages distinguish the two vectors.
 
 ### Fixture and parity gaps
 
