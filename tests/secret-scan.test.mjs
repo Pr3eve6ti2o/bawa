@@ -314,4 +314,22 @@ describe('secret-scan (F-25/26)', () => {
     git(root, ['add', '.']);
     assert.equal(secretScan(root), true);
   });
+
+  test('T35: the exact reviewed privateKey protobuf lines pass, a literal key in the same files fails', () => {
+    // tools/mainnet-signing/local-signing.mjs — wallet-core SigningInput
+    // protobuf field assignments; the value is a runtime variable, never
+    // a literal secret. Two distinct exact lines (one covers 3 occurrences).
+    write(root, 'tools/mainnet-signing/local-signing.mjs', '    privateKey: [priv],\n    privateKey: priv,\n    privateKey: priv,\n    privateKey: priv,\n');
+    // tests/mainnet-signing.test.mjs — the same field in a test fixture.
+    write(root, 'tests/mainnet-signing.test.mjs', '      privateKey: priv(1),\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), true, 'the reviewed privateKey lines must pass');
+
+    // Plant a NON-exempt literal key in each file. Built by
+    // concatenation: written out in full, the test file itself would
+    // trip the gate it is testing.
+    write(root, 'tools/mainnet-signing/local-signing.mjs', '    private' + 'Key: "1111111111111111111111111111111111111111111111111111111111111111",\n');
+    write(root, 'tests/mainnet-signing.test.mjs', '      private' + 'Key: "1111111111111111111111111111111111111111111111111111111111111111",\n');
+    assert.equal(secretScan(root), false, 'a literal private key must fail in each previously exempted file');
+  });
 });

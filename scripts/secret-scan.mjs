@@ -588,6 +588,28 @@ export const secretAllowlist = [
     pattern: 2,
     line: 'seed = Bip39SeedGenerator(MNEMONIC).Generate()',
   },
+  // T35 (local signing): wallet-core SigningInput protobuf field
+  // assignments. The value is a runtime variable (a Uint8Array/Buffer
+  // holding a temporary key), never a literal secret. Pattern 2
+  // branch B flags any privateKey: line, so these exact statements
+  // are exempted; a different line text (e.g. with a literal key)
+  // still fails the gate. One entry covers the three identical
+  // 'privateKey: priv,' occurrences in local-signing.mjs.
+  {
+    file: 'tests/mainnet-signing.test.mjs',
+    pattern: 2,
+    line: 'privateKey: priv(1),',
+  },
+  {
+    file: 'tools/mainnet-signing/local-signing.mjs',
+    pattern: 2,
+    line: 'privateKey: [priv],',
+  },
+  {
+    file: 'tools/mainnet-signing/local-signing.mjs',
+    pattern: 2,
+    line: 'privateKey: priv,',
+  },
 ];
 
 const displayPath = file => JSON.stringify(file).slice(1, -1);
