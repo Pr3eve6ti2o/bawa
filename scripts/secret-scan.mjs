@@ -174,6 +174,20 @@ export const secretAllowlist = [
     pattern: 2,
     line: 'mnemonic = " ".join(["abandon"] * 23 + ["art"])',
   },
+  // test/fixture-oracle.py (T09): the same published 15-word fixture
+  // vector and the same two statements already exempted for
+  // test/differential_test.py above (F-26). The seed line occurs twice
+  // (lines 62, 236); one entry covers both, as with test_make_wallet.
+  {
+    file: 'test/fixture-oracle.py',
+    pattern: 2,
+    line: 'MNEMONIC = (',
+  },
+  {
+    file: 'test/fixture-oracle.py',
+    pattern: 2,
+    line: 'seed = Bip39SeedGenerator(MNEMONIC).Generate()',
+  },
 ];
 
 const displayPath = file => JSON.stringify(file).slice(1, -1);

@@ -50,13 +50,17 @@ describe('secret-scan (F-25/26)', () => {
     // test/test_make_wallet.py — the exact reviewed line (x3).
     const reviewed = '        mnemonic = " ".join(["abandon"] * 23 + ["art"])\n';
     write(root, 'test/test_make_wallet.py', reviewed.repeat(3));
+    // test/fixture-oracle.py — the exact reviewed lines (MNEMONIC = (
+    // plus the seed line twice, as in the real file, lines 62 and 236).
+    write(root, 'test/fixture-oracle.py', 'MNEMONIC = (\n    "ripple scissors kick mammal hire column oak again sun offer wealth "\n    "tomorrow wagon turn fatal"\n)\n\n\ndef oracle_addresses():\n    seed = Bip39SeedGenerator(MNEMONIC).Generate()\n\n\ndef wrong_path():\n    seed = Bip39SeedGenerator(MNEMONIC).Generate()\n');
     git(root, ['add', '.']);
     assert.equal(secretScan(root), true, 'the reviewed lines must pass');
 
-    // Plant a NON-exempt secret assignment in each of the three files.
+    // Plant a NON-exempt secret assignment in each of the four files.
     write(root, 'tools/decrypt_seed.py', 'mnemonic = "hunter2 hunter2 hunter2 hunter2"\n');
     write(root, 'test/differential_test.py', 'seed = "abcdef0123456789"\n');
     write(root, 'test/test_make_wallet.py', 'private_key = "0x1234"\n');
+    write(root, 'test/fixture-oracle.py', 'mnemonic = "hunter2 hunter2 hunter2 hunter2"\n');
     assert.equal(
       secretScan(root),
       false,
