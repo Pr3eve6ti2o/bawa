@@ -1,0 +1,11 @@
+# OSV-Scanner configuration for Bawa (T38, snapshot 981d0ba).
+# Pinned tool: OSV-Scanner v2.7.1 (see docs/security/AUDIT-TOOLCHAIN.md).
+# This file intentionally contains NO active overrides or ignores:
+# nothing is suppressed. Add entries here only with a recorded
+# reason (advisory ID, reachability judgement, date) — never to
+# silence a finding without evidence.
+# Run: osv-scanner --lockfile tools/hdwallet-gen/package-lock.json \
+#        --lockfile apps/web/package-lock.json \
+#        --lockfile requirements.txt
+# Or recursive: osv-scanner --recursive .
+# Reference: https://google.github.io/osv-scanner/configuration/

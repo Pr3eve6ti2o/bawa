@@ -1,0 +1,75 @@
+# Security audit scans — MANUAL ONLY (workflow_dispatch).
+# Added by T38 (W4 research). Runs the pinned toolchain from
+# docs/security/AUDIT-TOOLCHAIN.md. Never runs on push/PR, so it
+# cannot fail CI; every scan step is continue-on-error and the raw
+# logs are uploaded as an artifact for the audit lanes to read.
+# Action versions: checkout/setup-node/setup-python match the repo's
+# own ci.yml; setup-go v5 + Go 1.27.3 per the OSV-Scanner v2.7.1
+# changelog. Re-pin to SHAs at merge time if the repo's policy
+# requires it.
+name: Security audit (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-scans:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: npm audit (hdwallet-gen)
+        continue-on-error: true
+        working-directory: tools/hdwallet-gen
+        run: npm audit --omit=dev
+
+      - name: npm audit (web)
+        continue-on-error: true
+        working-directory: apps/web
+        run: npm audit
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install audit tools (pinned)
+        continue-on-error: true
+        run: python -m pip install pip-audit==2.10.1 bandit==1.9.4 ruff==0.17.4 semgrep==1.185.0
+
+      - name: pip-audit
+        continue-on-error: true
+        run: pip-audit -r requirements.txt
+
+      - name: Bandit
+        continue-on-error: true
+        run: bandit -r tools test
+
+      - name: Ruff (security rules)
+        continue-on-error: true
+        run: ruff check --select S tools test
+
+      - name: Semgrep
+        continue-on-error: true
+        run: semgrep scan --config p/javascript --config p/typescript --config p/python --config p/kotlin --config p/security-audit --config p/secrets
+
+      - name: Setup Go (for OSV-Scanner)
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+
+      - name: OSV-Scanner
+        continue-on-error: true
+        run: |
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.7.1
+          osv-scanner --lockfile tools/hdwallet-gen/package-lock.json --lockfile apps/web/package-lock.json --lockfile requirements.txt
