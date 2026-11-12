@@ -261,7 +261,7 @@ research_only:
     name: XChain Platform Wallet
     repository: https://github.com/XChain-Platform/xchain-wallet
     pinned_commit: 3e550d05e913e29e5c3cf24527bf504f1a4fe942
-    licence: AGPL-3.0
+    licence: AGPL-3.0-or-later
     status: architecture_reference_only
     reason: Separate large wallet platform and AGPL-3.0 obligations; do not offer it as a normal copyable template without explicit licensing approval.
   - id: REF-03

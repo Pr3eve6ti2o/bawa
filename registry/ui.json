@@ -1,7 +1,7 @@
 {
   "registry": "ui",
   "version": 1,
-  "updated": "2026-11-10",
+  "updated": "2026-11-12",
   "entries": [
     {
       "id": "web-01-token-ui",
@@ -173,18 +173,17 @@
       "id": "research-xchain-platform",
       "name": "XChain Platform Wallet",
       "status": "OPEN",
-      "source": "xchainjs/xchainjs-lib",
+      "source": "XChain-Platform/xchain-wallet",
       "revision": "3e550d05e913e29e5c3cf24527bf504f1a4fe942",
-      "licence": "AGPL-3.0",
-      "reviewed_at": "2026-11-10",
+      "licence": "AGPL-3.0-or-later",
+      "reviewed_at": "2026-11-12",
       "chains": [
-        "btc",
-        "eth"
+        "btc"
       ],
       "operations": [
         "ui"
       ],
-      "notes": "Research-only. Reciprocal licence (AGPL-3.0): do not copy without an explicit licensing decision. FINDING (Phase 5): the recorded pin 3e550d05 does NOT resolve in xchainjs/xchainjs-lib (GitHub API: 'No commit found for SHA'; git fetch: 'not our ref') \u2014 the pin is UNVERIFIED. The recorded source org case was also corrected (XChainJS -> xchainjs)."
+      "notes": "Pin 3e550d05e913e29e5c3cf24527bf504f1a4fe942 verified as master HEAD, commit 2026-11-01, release v0.342.1. AGPL-3.0-or-later confirmed in package.json, README SPDX line and LICENSE.md (full AGPL v3 text). Self-custodial multi-chain React wallet: web, Chrome extension, desktop, Android. BTC/LTC/DOGE at launch; no ETH at this pin. LTC/DOGE are outside the registry chain enum. The old UNVERIFIED finding tested the wrong repo: xchainjs/xchainjs-lib, a separate MIT-licensed THORChain client library; this pin returns 'not our ref' there. Research-only; no copying without a licensing decision."
     },
     {
       "id": "research-owasp-wcag",
