@@ -935,7 +935,7 @@ Treat this as a per-input payment gate, not just an RPC test:
 
 #### Draft edits to review at this revision
 
-Endpoint responses do not prove that these code changes have been made.
+Endpoint responses do not prove that these code changes have been made. Locations below are Web validation-draft paths (local-only, in no repository), not repository paths.
 
 | Location | Required mainnet edit or behaviour |
 |---|---|
@@ -984,7 +984,7 @@ Before issuing receiving instructions or considering a send, check all five loss
 
 ### The draft retargeting checklist (file:line)
 
-This checklist covers the Web draft in `Pr3eve6ti2o/bawa@56396a20`, checked **2026-11-09** on `muse-vm`. It describes the changes needed, not a completed mainnet retarget.
+This checklist covers the local-only Web validation draft (`app-web/`), which is in no repository and is not part of `Pr3eve6ti2o/bawa@56396a20`; it was checked **2026-11-09** on `muse-vm`. Its `file:line` paths are draft locations, not repository paths. It describes the changes needed, not a completed mainnet retarget.
 
 1. **Change the endpoint defaults — `src/connectivity.js:53-58`.**  
    At that check, all defaults in this block selected testnet. Mainnet endpoint edits must be made in `src/connectivity.js`: `.env.example` is **not a working override** for this draft. Editing the example environment file does not retarget the Web lane.
@@ -1532,6 +1532,102 @@ The loss modes for a funded attempt remain **wrong address, wrong network, wrong
 
 This section states what sending and signing Bawa and the drafts can and cannot do. It contains no send procedure for any chain. TON is generation-only in the repository: it can be received, not sent, from Bawa or the drafts. A reader who funds TON must withdraw through an external wallet; an end-to-end external withdrawal workflow is unconfirmed (M-39), and @ton/ton is the documented expert-assisted route. Nothing in this section authorises a send, and no send has been exercised on any network.
 
+### 13.0 Mainnet wallet flow — what exists, what does not, and where the gates sit
+
+This guide previously carried no diagram: the flow below is the first one, added 2026-11-12 (T08 diagram audit) and traced to code that exists at `981d0ba`. Read it as the boundary map for the rest of this section. Every box names its scope — in-repo code, local-only draft, or external service — so that no testnet pass and no draft claim reads as mainnet assurance (M-32). The hard gate in the middle is the whole point: everything above it exists and is read-only; everything below it is absent, unexercised, or separately gated.
+
+```text
+MAINNET WALLET FLOW — what exists, what does not, and where the gates sit
+(Bawa at 981d0ba; Doc 4 §§7-8, 11-14, 17; §21 M-03/M-04/M-06/M-31/M-35/M-39)
+
+  TRUSTED MACHINE (offline generation)          WATCH-ONLY SIDE (public-only rule)
+  ┌─────────────────────────────────┐            ┌──────────────────────────────┐
+  │ tools/make_wallet.py            │  seed.enc  │ tools/hdwallet-gen/          │
+  │ 24 words, BIP-39, empty pass    │  .json     │  derive.js / derive_daemon.js│
+  │ AES-256-GCM, AAD nova-shop-     │ ──────────>│  validate the xpub BEFORE    │
+  │ seed-v1; .env gets XPUB_*,      │  (paired   │  WASM: xpub in, address out. │
+  │ TON_DEPOSIT_ADDRESS.            │   + key)   │  BTC/ETH/TRX only.           │
+  │ NO signing / NO broadcast.      │            │  NO TON derivation.          │
+  └─────────────────────────────────┘            │  compare.js does NOT enforce │
+                                                 │  public-only: it accepts     │
+          ▲ POLICY, not a demonstrated ──────────│  private keys (OI-096). The  │
+          │ property: chain adapters NEVER      │  public-only boundary is a   │
+          │ receive secrets (AGENTS.md), but    │  rule + pre-flight checks,   │
+          │ compare.js can receive a private    │  not a property of the tool. │
+          │ key in practice — hence the          │  Independent bip_utils cross-│
+          │ bip_utils cross-check (§9, §13.10). │  check required (§9, §13.10).│
+                                                 │  derive.js: valid-looking    │
+                                                 │  wrong-branch addresses.    │
+                                                 └──────────────┬───────────────┘
+                                                                │ read-only
+                                                                ▼
+                                    ┌───────────────────────────────────────────┐
+                                    │ PUBLIC MAINNET ENDPOINTS (§11, read-only) │
+                                    │ BTC mempool.space/api · ETH PublicNode    │
+                                    │ RPC (chainId must read 0x1) · TRON       │
+                                    │ api.trongrid.io (no chain ID: binding =  │
+                                    │ endpoint + recent block) · TON            │
+                                    │ toncenter.com/api/v2 (wallet ID          │
+                                    │ 698983191, NOT draft 0). HTTP 200 is    │
+                                    │ NOT proof of network selection.           │
+                                    └───────────────────────────────────────────┘
+                                                                │
+                          ══════════ HARD GATE — NOTHING BELOW EXISTS ══════════
+                          │ §17: every mainnet gate UNPERFORMED. M-31/M-15:   │
+                          │ independent security review BEFORE rung 3 (small   │
+                          │ mainnet receive). M-35: NO live send/sign/broadcast│
+                          │ ever exercised on any network; execution NOT       │
+                          │ authorised; rung 4 needs a separately reviewed +   │
+                          │ authorised small-amount procedure (tiny amounts    │
+                          │ approved FOR REVIEW ONLY, 2026-11-10).             │
+                          ══════════════════════════════════════════════════════
+                                                                │
+                                                                ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ NOT IN REPO — local-only validation drafts (unverifiable from this tree)   │
+  │ Web draft app-web/ (tx.js, connectivity.js, main.js) and Android draft     │
+  │ (SigningCoordinator.kt, EthSepoliaAdapter.kt, EthSendComposer.kt,           │
+  │ NetworkConfig.kt, TonConfig.kt). WEB-GUIDE: "local-only, in no repository".│
+  │ Absent from git ls-tree 56396a20 and from all repo history at 981d0ba.     │
+  │ Draft claims in §13 (Sepolia chainId 11155111, txMode 1, TRX feeLimit      │
+  │ 1,000,000 SUN, reconcileTx table, TonTestnetAdapter silent zero) are       │
+  │ DOCUMENTED_NOT_TESTED from this repo. Do NOT cite their file:line paths    │
+  │ as repo locations.                                                          │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │ IN-REPO STARTERS (present at 981d0ba, send DISABLED by construction)        │
+  │ apps/web (TS): Send screen disabled — preventDefault + disabled fieldset   │
+  │ (send.tsx); watch-only derivation only, BTC/ETH/TRX (boundary.ts);         │
+  │ network-selection defaults testnet.                                         │
+  │ apps/android (UI starter): "no signing, broadcast or transaction-          │
+  │ construction code" (ManagementScreens.kt). No SigningCoordinator.           │
+  ├─────────────────────────────────────────────────────────────────────────────┤
+  │ EXTERNAL SIGNER — NONE NAMED (M-39; §14 boundary table: all four chains   │
+  │ "Not established by the evidence — blocked"). TON: @ton/ton is the         │
+  │ documented expert-assisted route only; NO GUI withdrawal demonstrated.     │
+  │ Per-chain send capability (§13.7): BTC/ETH/TRX draft-only, TON             │
+  │ generation-only (single deposit address, no xpub, no send).                │
+  │ Confirmation policy (M-13/M-38 values): BTC 6 · ETH finalised (+12 extra  │
+  │ minimum, unsourced) · TRX 19 distinct SRs · TON 1 masterchain seqno.      │
+  │ Values resolved; ENFORCEMENT not demonstrated in any draft; see §11.     │
+  └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+Traced references (all verified first-hand at `981d0ba`): generation —
+`tools/make_wallet.py`, `tools/decrypt_seed.py`, AAD `nova-shop-seed-v1`
+(§7); derivation — `tools/hdwallet-gen/derive.js` (paths `m/84'/0'/0'/0/i`,
+`m/44'/60'/0'/0/i`, `m/44'/195'/0'/0/i`; `MAX_INDEX 2147483647`),
+`derive_daemon.js` (`MAX_XPUB_LENGTH 200`, `MAX_LINE_LENGTH 4096`) (§8);
+OI-096 — M-01/M-02, §8 STOP box, §13.10, §17; Web starter —
+`apps/web/src/engine/boundary.ts` (`ChainId` `btc`/`eth`/`trx`; Core 4.8.4),
+`apps/web/src/screens/send.tsx` (Send disabled), `network-selection.tsx`
+(testnet defaults); Android starter —
+`apps/android/.../ui/screens/ManagementScreens.kt:40`; no-signing rule —
+`AGENTS.md`, §13.1, §14 boundary table, §17 never-claim rules; drafts
+absent — `git ls-tree 56396a20 -- app-web` empty, `git log --all` for
+`tx.js` / `SigningCoordinator*` / `connectivity.js` empty, WEB-GUIDE
+"local-only, in no repository"; gates — §17 rehearsal ladder, M-31, M-15,
+M-35; endpoints — §11 replacement table and read-only checks (2026-11-09).
+
 ### 13.1 What Bawa is and is not — the no-signing boundary
 
 Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/09` separates signing from tracking: “Signing remains a trusted-side operation.”
@@ -1543,6 +1639,8 @@ Mistaking tracking for transaction preparation or approval creates **wrong-netwo
 ### 13.2 What the drafts actually contain
 
 The validation drafts do not establish a mainnet sending path.
+
+All `file:line` paths in this section name local-only draft files (WEB-GUIDE: "local-only, in no repository"). None of them exists in the repository at `981d0ba` or at `56396a20`, so they are evidence locations for the 2026-11-09 check, not checkout paths. See the diagram in §13.0.
 
 - **Web draft:** `app-web/src/tx.js` is the programme’s only signing implementation. Its transaction tests are fully mocked. Send, sign and broadcast were never exercised live in a browser or on any network. Those live paths are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Android draft:** `SigningCoordinator.kt` was never compiled into an APK and never run on a device; there was no AAR. Source-level coordinator checks are not evidence of a working device signing capability. Device operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
@@ -3209,6 +3307,8 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Evidence or uncertainty:** M25 F11 shows that `TonConfig.validate()` checks format only; Create defaults `walletIdText` to `"0"`; and Import hardcodes `0L`. The draft’s own test asserts that `(v4r2, 0L, 0, testnet, UQC7…)` is `VALID`. `698983191` appears nowhere in the Android draft code. M22 F32 identifies the Web draft’s two recorded `0` entries at `main.js:502` and `main.js:526`. M10 F7 and M03 F21 record the measured result that wallet ID `0` gives a different address. Cross-wallet recovery evidence under M23 F36 and M22 F44 remains unverified.
 
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram pins the TON triple `(v4r2, 698983191, 0)` and labels the draft `0` as wrong. The `main.js:502`/`main.js:526` locations name a local-only draft file absent from every repository revision. The defect itself is unchanged.
+
 **Status:** OPEN.
 
 **Operational restriction:** The guide must pin **Wallet V4 R2 with wallet ID `698983191`** and explicitly flag both Web draft entries recording `0` as wrong. Require an independent address-reproduction check before receiving funds. The code must default to `698983191` and add a triple-versus-address consistency check. Correcting this default is a derivation-correctness fix, not a mainnet substitution.
@@ -3226,6 +3326,8 @@ Those entries appear later in this register. All other rows, including M-01–M-
 **Affected sections:** §12 and §13.
 
 **Evidence or uncertainty:** M22 F26 and F27 identify the TON and TRX reconciliation gaps. M24 I18 sets the rule for an unknown broadcast outcome: persist the signed bytes and txid, reconcile by transaction identity, and do not silently rebuild the transfer.
+
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the `tx.js:320`/`tx.js:340` locations behind these gaps name a local-only draft file that exists in no repository revision (`git ls-tree 56396a20` and `git log --all` for `tx.js` are empty). The new §13.0 diagram marks all such draft claims DOCUMENTED_NOT_TESTED from this repo. The gaps themselves are unchanged.
 
 **Status:** OPEN.
 
@@ -3269,6 +3371,8 @@ Those entries appear later in this register. All other rows, including M-01–M-
 **Affected section:** §13.
 
 **Evidence or uncertainty:** M25 F13–F18; M24 I11/I12.
+
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the `SigningCoordinator`, `EthSepoliaAdapter`, `EthSendComposer` and `NetworkConfig` locations behind these gaps name local-only Android draft files that exist in no repository revision (no such `.kt` file exists at `981d0ba` or in repo history). The new §13.0 diagram marks all such draft claims DOCUMENTED_NOT_TESTED from this repo. The gaps themselves are unchanged.
 
 **Status:** OPEN.
 
@@ -3832,6 +3936,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - M20 records that V2/D21 stop at construction/signing. Send/sign/broadcast/confirmation remains UNVERIFIED.
 - M19 records the verification-block contradiction between L13–L19 and L70–L72.
 
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram labels every box with its scope — in-repo code, local-only draft, testnet-default starter, or mainnet read-only — so no testnet pass and no draft claim in it reads as mainnet assurance. The discipline itself is unchanged.
+
 **Status:** OPEN (standing discipline).
 
 **Operational restriction:** Every claim must carry its verification scope: fixture/offline, controllable testnet or authorised rehearsal. No chain inherits another’s pass (M24 I17). A pass applies only to the wallet, chain, network, derivation policy and signing route actually rehearsed (M27 hard rule).
@@ -3900,6 +4006,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision.
 
 T13 re-check 2026-11-12: M-35 remains OPEN; rehearsal execution remains unauthorised. At 981d0ba, the guide consistently states no rehearsal procedure exists or is authorised. Review-only amounts appear only in the row, release-gates doc and implementation plan, never as a procedure. The 2026-11-10 rehearsal-procedure draft is absent from the repo; OI-097’s QR-scan step remains undrafted, requiring a reviewer decision.
+
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram states this boundary visually — a hard gate between the read-only watch-only side and everything below it, with the note that no live send/sign/broadcast has ever been exercised on any network and execution is NOT authorised. The diagram adds no procedure and changes no status.
 
 **Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
 
@@ -3980,6 +4088,8 @@ T13 re-check 2026-11-12: M-38 remains RESOLVED (2026-11-10), confirmed at 981d0b
 **Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON). M-39 lane findings accepted 2026-11-10 (owner decision): NO GUI wallet is confirmed able to withdraw TON from a Bawa deposit address — a BIP-39 import mode reproducing Bawa's derivation is unverified for every candidate checked. Verified hands-on instead: `@ton/ton` reproduces the fixture address exactly from the published public key (9/9 local checks) and the on-chain query confirms the deployed V4R2 wallet matches (code hash, wallet ID 698983191, public key) — `@ton/ton` is the documented expert-assisted route. GUI watch-only import was NOT performed (no desktop browser on the test VM).
 
 T13 re-check 2026-11-12: M-39 remains OPEN at 981d0ba. §14 matches “Not established by the evidence — blocked” exactly for all four chains. docs/11 and the engine-reproducibility record corroborate the @ton/ton expert-assisted route; “9/9 local checks” cites only an off-tree lane file, with no in-repo record. GUI watch-only testing still needs a desktop; none is available on the VM.
+
+T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram shows “EXTERNAL SIGNER — NONE NAMED” for all four chains and names `@ton/ton` as the expert-assisted TON route only, with no GUI withdrawal demonstrated. The diagram adds no route and changes no status.
 
 **Status:** OPEN (findings accepted 2026-11-10; GUI withdrawal route unverified).
 
