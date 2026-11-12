@@ -1,0 +1,46 @@
+{
+  "startedAt": "2026-11-12T10:09:40.958Z",
+  "chains": {
+    "BTC": {
+      "ok": false,
+      "error": "SourceDisagreementError: BTC fee sources disagree: mempool.space 4 sat/vB vs blockstream.info 2.005 sat/vB (gap exceeds 1 sat/vB and 25% of the smaller rate)"
+    },
+    "ETH-legacy": {
+      "ok": false,
+      "error": "FetchFailureError: JSON-RPC eth_feeHistory at https://cloudflare-eth.com returned an error or no result"
+    },
+    "ETH-eip1559": {
+      "ok": false,
+      "error": "FetchFailureError: JSON-RPC eth_feeHistory at https://cloudflare-eth.com returned an error or no result"
+    },
+    "TRON": {
+      "ok": true,
+      "quote": "406200",
+      "unit": "SUN",
+      "expiresAtMs": 1794478211902,
+      "sources": [
+        {
+          "url": "https://api.trongrid.io/wallet/triggerconstantcontract",
+          "statedUnit": "energy",
+          "rawValue": "4062"
+        }
+      ]
+    },
+    "TON": {
+      "ok": false,
+      "error": "FetchFailureError: fetch failed for https://toncenter.com/api/v2/estimateFee: HTTP 422"
+    }
+  },
+  "btcRaw": {
+    "mempoolFastestFee": 4,
+    "blockstream1": 2.005
+  },
+  "btcInterpretations": {
+    "satPerVbReading": 2.005,
+    "note": "Live values are sat/vB-scale (see probe-2026-11-12.json): blockstream \"1\" reads as sat/vB, not BTC/kB. The guide BTC/kB label and ~97 annotation were misreadings."
+  },
+  "tronUsdtFullHex": "41a614f803b6fd780986a42c78ec9c7f77e6ded13c710277f5",
+  "tronUsdtHex": "41a614f803b6fd780986a42c78ec9c7f77e6ded13c",
+  "tronUsdtHexMatchesPublished": true,
+  "finishedAt": "2026-11-12T10:09:41.947Z"
+}
