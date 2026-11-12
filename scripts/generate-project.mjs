@@ -28,6 +28,7 @@ import {
 } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateAll } from './validate-registry.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const generatedRoot = join(repoRoot, 'generated');
@@ -188,6 +189,20 @@ function main() {
     }
   }
   if (!profileId) return usageError('a profile id is required');
+
+  // T46: validate the registry before consuming profile metadata.
+  // A separate quality gate does not protect a direct invocation.
+  const registryCheck = validateAll(
+    join(repoRoot, 'registry'),
+    undefined,
+    repoRoot,
+  );
+  if (registryCheck.errors.length > 0) {
+    for (const error of registryCheck.errors) {
+      console.error(`generate-project: ${error}`);
+    }
+    return 1;
+  }
 
   const profiles = JSON.parse(
     readFileSync(join(repoRoot, 'registry', 'profiles.json'), 'utf8'),

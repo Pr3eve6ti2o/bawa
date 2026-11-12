@@ -237,3 +237,174 @@ test('schema files are valid JSON and declare draft 2020-12', () => {
     );
   }
 });
+
+// T46: registry-claims, engine-pin and profile-asset checks. The
+// fixture is a minimal repo scaffold (registry + tool pin + ai files)
+// so validateAll can run with an explicit repo root.
+const PROFILE_IDS = [
+  'hd-wallet-cli',
+  'bitcoin-wallet',
+  'evm-wallet',
+  'multichain-wallet',
+  'web-wallet',
+  'android-wallet',
+  'watch-only-wallet',
+];
+
+function promptFile(id) {
+  return id === 'hd-wallet-cli' ? 'create-hd-wallet.md' : `create-${id}.md`;
+}
+
+function makeRepoFixture(t, { pin = '4.8.4' } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bawa-t46-repo-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const registry = path.join(root, 'registry');
+  fs.cpSync(registryDir, registry, { recursive: true, dereference: true });
+  const toolDir = path.join(root, 'tools', 'hdwallet-gen');
+  fs.mkdirSync(toolDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(toolDir, 'package.json'),
+    `${JSON.stringify({ name: 'bawa-hd-wallet-core-tools', dependencies: { '@trustwallet/wallet-core': pin } }, null, 2)}\n`,
+    'utf8',
+  );
+  for (const id of PROFILE_IDS) {
+    fs.mkdirSync(path.join(root, 'ai', 'profiles'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'ai', 'prompts'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'ai', 'profiles', `${id}.md`), `# ${id}\n`, 'utf8');
+    fs.writeFileSync(path.join(root, 'ai', 'prompts', promptFile(id)), `# ${id}\n`, 'utf8');
+  }
+  return { root, registry };
+}
+
+function mutateFixtureProfile(fixture, id, mutate) {
+  const filename = path.join(fixture.registry, 'profiles.json');
+  const profiles = readJson(filename);
+  const profile = profiles.find((entry) => entry.id === id);
+  assert.ok(profile, `Expected a ${id} profile`);
+  mutate(profile);
+  fs.writeFileSync(filename, `${JSON.stringify(profiles, null, 2)}\n`, 'utf8');
+}
+
+test('T46: an implemented send claim is rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = ['send'];
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assertErrorMentions(errors, 'web-wallet');
+  assert.ok(
+    errors.some((error) => /\bsend\b/i.test(error)),
+    `Expected a send-claim error; received:\n${errors.join('\n') || '(none)'}`,
+  );
+});
+
+test('T46: send/sign/broadcast wording variants are rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = [
+      'Sending BTC to friends',
+      'SIGNING support',
+      'broadcasting transactions',
+    ];
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  for (const wording of ['Sending BTC', 'SIGNING', 'broadcasting']) {
+    assert.ok(
+      errors.some((error) => error.includes(wording)),
+      `Expected an error mentioning "${wording}"; received:\n${errors.join('\n') || '(none)'}`,
+    );
+  }
+});
+
+test('T46 re-audit: euphemistic capability claims are rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = [
+      'sent transactions',
+      'signature creation',
+      'submit transactions',
+    ];
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  for (const wording of ['sent transactions', 'signature creation', 'submit transactions']) {
+    assert.ok(
+      errors.some((error) => error.includes(wording)),
+      `Expected an error mentioning "${wording}"; received:\n${errors.join('\n') || '(none)'}`,
+    );
+  }
+});
+
+test('T46: implemented/missing overlap is rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    assert.ok(profile.implemented.includes('receive-QR display'));
+    profile.missing = [...profile.missing, 'receive-QR display'];
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assert.ok(
+    errors.some((error) => /both implemented\[\] and missing\[\]/i.test(error)),
+    `Expected an overlap error; received:\n${errors.join('\n') || '(none)'}`,
+  );
+});
+
+test('T46: implemented must be an array of strings', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = 'send';
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assertErrorMentions(errors, 'web-wallet');
+});
+
+test('T46: coordinated wrong engine versions are rejected by the tool pin', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateRegistry(fixture.registry, 'profiles', (profiles) => {
+    for (const profile of profiles) profile.engine.version = '4.9.1';
+  });
+  mutateRegistry(fixture.registry, 'engines', (entries) => {
+    for (const entry of entries) {
+      if (typeof entry.name === 'string' && entry.name.includes('Trust Wallet Core')) {
+        entry.revision = '4.9.1';
+      }
+    }
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assert.ok(
+    errors.some((error) => error.includes("does not match the tools/hdwallet-gen pin '4.8.4'")),
+    `Expected a pin-mismatch error; received:\n${errors.join('\n') || '(none)'}`,
+  );
+});
+
+test('T46: a non-exact tool pin is rejected', async (t) => {
+  const fixture = makeRepoFixture(t, { pin: '^4.8.4' });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assert.ok(
+    errors.some((error) => /exact X\.Y\.Z/i.test(error)),
+    `Expected a non-exact-pin error; received:\n${errors.join('\n') || '(none)'}`,
+  );
+});
+
+test('T46: a missing profile prompt file is rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  fs.rmSync(path.join(fixture.root, 'ai', 'prompts', 'create-web-wallet.md'));
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assertErrorMentions(errors, 'create-web-wallet.md');
+});
+
+test('T46: a missing profile file is rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  fs.rmSync(path.join(fixture.root, 'ai', 'profiles', 'web-wallet.md'));
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assertErrorMentions(errors, 'ai/profiles/web-wallet.md');
+});
+
+test('T46 re-audit: a symlinked profile file pointing outside is rejected', async (t) => {
+  const fixture = makeRepoFixture(t);
+  const outside = path.join(fixture.root, 'outside.md');
+  fs.writeFileSync(outside, '# outside\n', 'utf8');
+  const link = path.join(fixture.root, 'ai', 'profiles', 'web-wallet.md');
+  fs.rmSync(link);
+  fs.symlinkSync(outside, link, 'file');
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assertErrorMentions(errors, 'ai/profiles/web-wallet.md');
+});

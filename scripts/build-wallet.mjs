@@ -18,6 +18,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'n
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classifyRequest, findRefusal } from './classify-request.mjs';
+import { validateAll } from './validate-registry.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const notes = [
@@ -119,6 +120,20 @@ function main() {
     console.log(reportPath);
     console.log('build-wallet: REFUSED');
     return 2;
+  }
+
+  // T46: validate the registry before trusting it. A separate quality
+  // gate does not protect a direct one-prompt invocation: fail closed.
+  const registryCheck = validateAll(
+    join(repoRoot, 'registry'),
+    undefined,
+    repoRoot,
+  );
+  if (registryCheck.errors.length > 0) {
+    for (const error of registryCheck.errors) {
+      console.error(`build-wallet: ${error}`);
+    }
+    return 1;
   }
 
   const profiles = JSON.parse(

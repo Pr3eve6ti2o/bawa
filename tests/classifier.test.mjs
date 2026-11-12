@@ -173,3 +173,146 @@ describe('findRefusal()', () => {
     );
   });
 });
+
+// T46: negator scope — a negator in an unrelated clause must not
+// suppress a refusal (clause separators bound the negation).
+describe('T46 negator scope', () => {
+  test('a negator across a comma does not negate mainnet', () => {
+    assert.equal(
+      negated('mainnet', 'Build a web wallet with no ads, mainnet support'),
+      false,
+    );
+    assert.equal(
+      findRefusal('Build a web wallet with no ads, mainnet support'),
+      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+    );
+    assert.equal(
+      findRefusal('Build a web wallet with no ads and no tracking, mainnet please'),
+      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+    );
+  });
+
+  test('a negator across a comma does not negate send', () => {
+    assert.equal(
+      findRefusal('Build a wallet with no fees, send BTC daily'),
+      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+    );
+    assert.equal(
+      findRefusal('Build a wallet, not complicated, send funds'),
+      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+    );
+  });
+
+  test('an affirmative occurrence still counts when another is negated', () => {
+    assert.equal(negated('send', 'Send BTC, no send on mainnet'), false);
+    assert.equal(
+      findRefusal('Send BTC, no send on mainnet'),
+      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.',
+    );
+  });
+
+  test('direct negation still works (controls)', () => {
+    assert.equal(negated('mainnet', 'Build a web wallet with no mainnet'), true);
+    assert.equal(findRefusal('Build a web wallet with no mainnet'), null);
+  });
+});
+
+// T46: spelling normalisation and send synonyms.
+describe('T46 spelling and synonyms', () => {
+  test('"main-net" and "main net" are refused as mainnet', () => {
+    assert.equal(
+      findRefusal('Build a web wallet for main-net use'),
+      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+    );
+    assert.equal(
+      findRefusal('Build a web wallet for main net'),
+      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+    );
+    // T46 re-audit residual: U+2011 non-breaking hyphen must not evade it.
+    assert.equal(
+      findRefusal('Build a web wallet for main\u2011net use'),
+      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+    );
+  });
+
+  test('transfer / pay / withdraw with a value word are refused as send', () => {
+    const signing =
+      'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.';
+    assert.equal(
+      findRefusal('Build a web wallet to transfer BTC to friends'),
+      signing,
+    );
+    assert.equal(
+      findRefusal('Build a web wallet to pay friends in BTC'),
+      signing,
+    );
+    assert.equal(
+      findRefusal('Build a web wallet so I can withdraw BTC'),
+      signing,
+    );
+  });
+
+  test('TON transfer is refused as TON send', () => {
+    assert.equal(
+      findRefusal('Build a TON wallet that can transfer funds'),
+      'I cannot provide TON send; TON is generation-only in the proposed multichain profile.',
+    );
+  });
+
+  test('synonyms without a value word do not false-positive', () => {
+    assert.equal(
+      findRefusal('Build a web wallet, pay attention to the design'),
+      null,
+    );
+    assert.equal(
+      findRefusal('Build a web wallet supporting file transfer of backups'),
+      null,
+    );
+  });
+});
+
+// T46: a named non-ETH EVM chain fails closed instead of silently
+// routing to the ETH-only evm-wallet profile.
+describe('T46 non-ETH EVM chain', () => {
+  test('Polygon is unclassifiable, not evm-wallet', () => {
+    assert.deepEqual(classifyRequest('Build an EVM wallet for Polygon'), {
+      unclassifiable: true,
+      reason: 'non-ETH EVM chain requested: polygon; the evm-wallet profile covers ETH derivation only',
+    });
+    assert.deepEqual(
+      classifyRequest('Build an EVM wallet for ETH and Polygon'),
+      {
+        unclassifiable: true,
+        reason: 'non-ETH EVM chain requested: polygon; the evm-wallet profile covers ETH derivation only',
+      },
+    );
+    // T46 re-audit residual: Mantle and other listed chains behave the same.
+    assert.deepEqual(
+      classifyRequest('Build an Ethereum-compatible EVM wallet for Mantle'),
+      {
+        unclassifiable: true,
+        reason: 'non-ETH EVM chain requested: mantle; the evm-wallet profile covers ETH derivation only',
+      },
+    );
+  });
+
+  test('a negated non-ETH chain does not block ETH routing', () => {
+    assert.deepEqual(classifyRequest('Build an EVM wallet, no Polygon'), {
+      profile: 'evm-wallet',
+    });
+  });
+
+  test('"base fee" is not a chain name; "Base chain" is', () => {
+    assert.deepEqual(
+      classifyRequest('Build an EVM wallet with base fee support'),
+      { profile: 'evm-wallet' },
+    );
+    assert.deepEqual(
+      classifyRequest('Build an EVM wallet for Base chain'),
+      {
+        unclassifiable: true,
+        reason: 'non-ETH EVM chain requested: base chain; the evm-wallet profile covers ETH derivation only',
+      },
+    );
+  });
+});
