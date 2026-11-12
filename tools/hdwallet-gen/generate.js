@@ -92,60 +92,119 @@ function acquirePublishLock(encPath) {
   const lockPath = encPath + ".lock";
   const deadline = Date.now() + 10000;
   const waitState = new Int32Array(new SharedArrayBuffer(4));
-  let lockFd;
 
-  // T40-F3 (fail-closed): an existing lock is NEVER removed by a
-  // contender. Automatic reclamation of dead-PID or malformed locks was
-  // removed: stale observation plus pathname deletion is not atomic, so
-  // a contender could unlink a live holder's lock and both processes
-  // could publish concurrently (empty-file window, plus a raw EEXIST
-  // escaping from the reclaim retry). A lock left by a crashed run now
-  // refuses until the operator removes it after confirming no
-  // generation is running; the refusal names the lock path.
   for (;;) {
+    let lockFd;
     try {
       lockFd = fs.openSync(lockPath, "wx", 0o600);
-      break;
     } catch (err) {
       if (err.code !== "EEXIST") {
         throw err;
       }
+
+      let live = false;
+      try {
+        const pidText = fs.readFileSync(lockPath, "utf8").trim();
+        const pid = Number(pidText);
+        if (/^\d+$/.test(pidText) && Number.isSafeInteger(pid) && pid > 0) {
+          try {
+            process.kill(pid, 0);
+            live = true;
+          } catch (killErr) {
+            // EPERM means the process exists but belongs to another
+            // user: the lock is live and must NOT be stolen. Any other
+            // probe failure (ESRCH = dead PID) permits reclamation.
+            if (killErr.code === "EPERM") live = true;
+          }
+        }
+      } catch (_) {
+        // An unreadable lock or unsuccessful PID probe permits reclamation.
+      }
+
+      if (!live) {
+        // T44-F8: reclaim by renaming the stale lock aside, never by
+        // unlinking it. An unlink can remove a FRESH lock created by
+        // another process between our liveness probe and the unlink,
+        // letting two publishers proceed at once; the rename is atomic,
+        // so only one reclaimer wins it. Losing the rename or the
+        // exclusive create means another process won — loop back and
+        // wait on the live holder instead of throwing.
+        const stalePath =
+          lockPath + ".stale." + process.pid + "." + crypto.randomBytes(4).toString("hex");
+        try {
+          fs.renameSync(lockPath, stalePath);
+        } catch (renameErr) {
+          if (renameErr.code !== "ENOENT") throw renameErr;
+          continue; // Another reclaimer won the rename; retry from the top.
+        }
+        try {
+          fs.unlinkSync(stalePath);
+        } catch (_) {
+          // Best-effort cleanup of our own renamed stale file.
+        }
+        try {
+          lockFd = fs.openSync(lockPath, "wx", 0o600);
+        } catch (createErr) {
+          if (createErr.code !== "EEXIST") throw createErr;
+          continue; // Another publisher created a live lock; wait on it.
+        }
+      } else {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
+          throw new Error("seed bundle publish already in progress for " + encPath);
+        }
+        Atomics.wait(waitState, 0, 0, Math.min(100, remaining));
+        continue;
+      }
     }
+
+    // We hold a fresh exclusive create: write our PID, then VERIFY the
+    // live path still holds it (T44-F8 re-audit, Astra s5). A concurrent
+    // reclaimer may have renamed our lock aside between our create and
+    // our write — the write would then land in a deleted inode and we
+    // would wrongly believe we hold the lock. If the live file is not
+    // ours, release nothing (it is not ours to remove) and retry.
+    let lockFdNeedsClose = true;
+    try {
+      fs.writeFileSync(lockFd, String(process.pid));
+      // Do not retry close if it throws; the fd may already be released.
+      lockFdNeedsClose = false;
+      fs.closeSync(lockFd);
+    } catch (err) {
+      if (lockFdNeedsClose) {
+        try {
+          fs.closeSync(lockFd);
+        } catch (_) {
+          // Preserve the original acquisition error.
+        }
+      }
+      releasePublishLock(lockPath, process.pid);
+      throw err;
+    }
+
+    let owned = false;
+    try {
+      owned = fs.readFileSync(lockPath, "utf8").trim() === String(process.pid);
+    } catch (_) {
+      owned = false;
+    }
+    if (owned) return lockPath;
 
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
-      throw new Error(
-        "seed bundle publish already in progress for " + encPath +
-          "; if no generation is running, remove the stale lock file " +
-          lockPath + " and retry"
-      );
+      throw new Error("seed bundle publish already in progress for " + encPath);
     }
     Atomics.wait(waitState, 0, 0, Math.min(100, remaining));
   }
-
-  let lockFdNeedsClose = true;
-  try {
-    fs.writeFileSync(lockFd, String(process.pid));
-    // Do not retry close if it throws; the fd may already be released.
-    lockFdNeedsClose = false;
-    fs.closeSync(lockFd);
-  } catch (err) {
-    if (lockFdNeedsClose) {
-      try {
-        fs.closeSync(lockFd);
-      } catch (_) {
-        // Preserve the original acquisition error.
-      }
-    }
-    releasePublishLock(lockPath);
-    throw err;
-  }
-
-  return lockPath;
 }
 
-function releasePublishLock(lockPath) {
+// T44-F8: release only a lock we still own. The old unconditional
+// unlink could remove a DIFFERENT process's lock if ours had been
+// reclaimed and recreated while we held it.
+function releasePublishLock(lockPath, pid) {
   try {
+    const owner = fs.readFileSync(lockPath, "utf8").trim();
+    if (pid !== undefined && owner !== String(pid)) return;
     fs.unlinkSync(lockPath);
   } catch (_) {
     // Ignore ENOENT and all other cleanup errors; release must never throw.
@@ -409,7 +468,7 @@ async function main() {
     }
     checks.push({ name: "bundle_verified", ok: true });
     } finally {
-      releasePublishLock(lockPath);
+      releasePublishLock(lockPath, process.pid);
     }
   } finally {
     dataKey.fill(0);

@@ -21,21 +21,6 @@ import sys
 import threading
 
 BASE = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
-TARGET_KEYS = {"XPUB_BTC", "XPUB_ETH", "XPUB_TRX", "TON_DEPOSIT_ADDRESS"}
-
-
-def _env_keys(text: str) -> set[str]:
-    keys = set()
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        left = line.split("=", 1)[0].strip()
-        if left.startswith("export "):
-            left = left[7:].strip()
-        if re.fullmatch(r"[A-Z_][A-Z0-9_]*", left):
-            keys.add(left)
-    return keys
 
 
 def _copy_0600(src: str, dst: str) -> None:
@@ -44,6 +29,40 @@ def _copy_0600(src: str, dst: str) -> None:
     os.makedirs(os.path.dirname(dst), mode=0o700, exist_ok=True)
     shutil.copyfile(src, dst)
     os.chmod(dst, 0o600)
+
+
+def _clean_text(value) -> bool:
+    """Printable single-line text: no control characters, no leading or
+    trailing whitespace. Generator values are interpolated verbatim
+    into .env KEY=value lines, so a newline inside one would smuggle
+    an extra assignment (T44-F4)."""
+    return (
+        isinstance(value, str)
+        and value != ""
+        and value == value.strip()
+        and all(0x20 <= ord(ch) <= 0x7E for ch in value)
+    )
+
+
+def _reject_hex_seed_strings(data) -> None:
+    """No 64-hex string anywhere in generator stdout: a hex-encoded
+    seed has no legitimate place in the ten-key public schema, and the
+    word-run detector cannot see it (T44-F18)."""
+    def _walk(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                _walk(key)
+                _walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                _walk(value)
+        elif isinstance(node, str):
+            if re.fullmatch(r"[0-9a-fA-F]{64}", node):
+                raise SystemExit(
+                    "generator stdout malformed: 64-hex string present"
+                )
+
+    _walk(data)
 
 
 def validate_public_stdout(data) -> None:
@@ -72,6 +91,50 @@ def validate_public_stdout(data) -> None:
             raise SystemExit(
                 f"generator stdout malformed: {key} must start with {prefix}"
             )
+    # T44-F4: shapes, not just prefixes. The three extended keys are
+    # interpolated verbatim into .env KEY=value lines: a value holding
+    # a newline would inject an extra assignment, and a value that is
+    # not even a Base58 extended key must not reach .env at all.
+    for key in ("btc_zpub", "eth_xpub", "trx_xpub"):
+        value = data[key]
+        if not re.fullmatch(r"[1-9A-HJ-NP-Za-km-z]{100,120}", value):
+            raise SystemExit(
+                f"generator stdout malformed: {key} must be a 100-120 "
+                "character Base58 extended key"
+            )
+    if not re.fullmatch(r"[EU]Q[A-Za-z0-9_-]{46}", data["ton_address"]):
+        raise SystemExit(
+            "generator stdout malformed: ton_address must be a "
+            "48-character user-friendly TON address"
+        )
+    if data["ton_path"] != "m/44'/607'/0'":
+        raise SystemExit(
+            "generator stdout malformed: ton_path must be m/44'/607'/0'"
+        )
+    if not re.fullmatch(r"\d+\.\d+\.\d+", data["wallet_core_version"]):
+        raise SystemExit(
+            "generator stdout malformed: wallet_core_version must be "
+            "a semantic version"
+        )
+    # T44-F4/F18: every string in the document must be clean
+    # single-line printable text, and none may be a 64-hex string.
+    def _check_clean(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                _check_clean(key)
+                _check_clean(value)
+        elif isinstance(node, list):
+            for value in node:
+                _check_clean(value)
+        elif isinstance(node, str):
+            if not _clean_text(node):
+                raise SystemExit(
+                    "generator stdout malformed: string value is not "
+                    "clean single-line printable text"
+                )
+
+    _check_clean(data)
+    _reject_hex_seed_strings(data)
     for key in (
         "ton_address", "ton_path", "ton_note", "seed_encrypted_to",
         "wallet_core_version",

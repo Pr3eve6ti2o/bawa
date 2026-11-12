@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync, lstatSync, readFileSync,
-} from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { secretScan } from './secret-scan.mjs';
+import { lockfiles } from './check-lockfiles.mjs';
 import { verdict } from './gate-verdict.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,51 +40,12 @@ function runCommand(name, executable, commandArgs, cwd = root) {
   });
 }
 
-// Reject symlinked parent directories rather than reading outside the worktree.
-function inspect(file) {
-  const parts = file.split('/');
-  if (isAbsolute(file) || parts.some(part => !part || part === '.' || part === '..')) {
-    throw new Error('Invalid repository path');
-  }
-  let absolute = root;
-  for (let index = 0; index < parts.length; index += 1) {
-    absolute = join(absolute, parts[index]);
-    const stat = lstatSync(absolute);
-    if (index === parts.length - 1) return { absolute, stat };
-    if (!stat.isDirectory()) throw new Error('Non-directory parent');
-  }
-}
-
-function lockfiles() {
-  const files = [
-    'apps/web/package-lock.json',
-    'tools/hdwallet-gen/package-lock.json',
-  ];
-  // F-27: parse each lockfile as JSON and verify BOTH the spec and the
-  // resolution are 4.8.4. A string-presence check would pass a lockfile
-  // that merely mentions the pin in a comment or another entry.
-  let passed = true;
-  for (const file of files) {
-    try {
-      if (!existsSync(join(root, file))) throw new Error('Missing lockfile');
-      const { absolute, stat } = inspect(file);
-      if (!stat.isFile()) throw new Error('Not a regular lockfile');
-      const lock = JSON.parse(readFileSync(absolute, 'utf8'));
-      const spec = lock?.packages?.['']?.dependencies?.['@trustwallet/wallet-core'];
-      const resolved = lock?.packages?.['node_modules/@trustwallet/wallet-core']?.version;
-      if (spec !== '4.8.4' || resolved !== '4.8.4') {
-        console.error(
-          `  ${file}: wallet-core pin must be 4.8.4 (spec: ${spec ?? 'missing'}, resolved: ${resolved ?? 'missing'})`,
-        );
-        passed = false;
-      }
-    } catch {
-      console.error(`  ${file}: lockfile is missing or unreadable`);
-      passed = false;
-    }
-  }
-  return passed;
-}
+// The lockfile pin check runs FIRST (T44-F5): it used to run last,
+// after `npm ci` had already installed — and the suites had already
+// executed — whatever a tampered lockfile said. A wrong pin, a
+// non-registry resolved URL or a missing integrity hash must fail the
+// run before any dependency code is installed or run.
+check('lockfiles', () => lockfiles(root));
 
 // The engine-dependent gates (negative-inputs shells out to derive.js /
 // compare.js; the engine suite needs the tools) require the
@@ -102,7 +61,7 @@ runCommand('registry-tests', process.execPath, ['--test', 'tests/registry.test.m
 runCommand('register-t01-tests', process.execPath, ['--test', 'tests/register-t01.test.mjs']);
 runCommand('negative-inputs', process.execPath, ['--test', 'tests/negative-inputs.test.mjs']);
 runCommand('engine-suite', process.execPath, ['--test', 'test/smoke.test.js']);
-runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/mainnet-derivation-vectors.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs', 'tests/mainnet-guards.test.mjs', 'tests/mainnet-unsigned-tx.test.mjs']);
+runCommand('phase9-tests', process.execPath, ['--test', 'tests/chain-fixtures.test.mjs', 'tests/mainnet-derivation-vectors.test.mjs', 'tests/failure-modes.test.mjs', 'tests/stale-data.test.mjs', 'tests/secrets-dir.test.mjs', 'tests/mainnet-guards.test.mjs', 'tests/mainnet-unsigned-tx.test.mjs', 'tests/publish-lock.test.mjs', 'tests/lockfiles.test.mjs', 'tests/secret-scan.test.mjs']);
 runCommand('mainnet-fees-tests', process.execPath, ['--test', 'tests/mainnet-fees.test.mjs']);
 
 const web = join(root, 'apps/web');
@@ -128,7 +87,6 @@ if (args.includes('--skip-android')) {
 }
 
 check('secret-scan', () => secretScan(root));
-check('lockfiles', lockfiles);
 
 // F-41: the verdict names skips. 'quality-gates: OK' only with no
 // failures AND no skips; exit 0 is preserved for intentional

@@ -98,7 +98,7 @@ if (platform !== 'android') {
     modulesExist ? 'PASS' : 'SKIP',
     modulesExist
       ? 'apps/web/node_modules: exists'
-      : 'apps/web/node_modules: missing; run npm install in apps/web'
+      : 'apps/web/node_modules: missing; run npm ci in apps/web'
   );
 } else {
   report('SKIP', 'apps/web/package.json: web not selected');

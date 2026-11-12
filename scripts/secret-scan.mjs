@@ -133,10 +133,57 @@ function collectFiles(root, onReadError) {
   }).sort();
 }
 
+// Shared alternation for pattern 2 (used four times in one RegExp, so
+// it is defined once and cannot drift between the branches).
+const seedKeyAlternatives = String.raw`mnemonic(?:[_ -]?(?:words|phrase))?|recovery[_ -]?phrase|seed(?:[_ -]?phrase)?|priv(?:ate)?[_ -]?key(?:[_ -]?hex)?|secret[_ -]?key|passphrase`;
+
 export const secretPatterns = [
-  /xprv[1-9A-HJ-NP-Za-km-z]{100,}/,
-  /zprv[1-9A-HJ-NP-Za-km-z]{100,}/,
-  /^\s*(mnemonic|seed|private[_ ]?key)\s*[:=]\s*\S+/i,
+  // T44-F1: every documented private extended-key prefix, not just
+  // xprv/zprv. The repo's own redaction policy lists xprv, yprv, zprv,
+  // Yprv, Zprv, tprv, uprv, vprv (docs/05-watch-only/README.md,
+  // docs/14-wallet-app-implementation/README.md); the gate previously
+  // missed yprv/tprv/vprv/uprv/Yprv/Zprv entirely, so such a literal
+  // committed cleanly. Base58 run length 100+ as before.
+  /[xyzYZuUvVtT]prv[1-9A-HJ-NP-Za-km-z]{100,}/,
+  // T44-F2 (s4b re-audit): WIF private keys — 51 or 52 Base58
+  // characters. 51: uncompressed (5) and testnet uncompressed (9);
+  // 52: compressed mainnet (K/L) and testnet (c). The first fix
+  // covered 51-char 5/K/L only and missed compressed and testnet WIF.
+  /\b[5KL9c][1-9A-HJ-NP-Za-km-z]{50,51}\b/,
+  // T44-F3 (s4b re-audit): seed-material assignment spellings. The
+  // first fix covered the spellings but the anchor missed the forms
+  // secrets actually take in committed code: declarations, exports,
+  // member assignments and JSON objects with a quoted key and a
+  // quoted value. Aliases added:
+  // privkey / priv_key, private-key, private_key_hex,
+  // recovery_phrase, passphrase. Four branches: (A) a declaration
+  // whose value must be a literal (quote, backtick or [), so a
+  // legitimate const mnemonic = w.mnemonic() does not flag; (B) the
+  // plain anchored form, any value, which is why the reviewed
+  // call-value lines stay in the allowlist; (C) a member assignment
+  // with a literal value; (D) an object property at a line start,
+  // { or , boundary, quoted or unquoted key, literal value — this
+  // is what catches an unquoted property key (s8 High: the old
+  // quoted-key branch missed unquoted properties) and a property
+  // on its own line of pretty-printed JSON (s9 High: the { or ,
+  // must be on the same line as the key, so an indented property
+  // was missed) while NOT flagging a ternary such as "mnemonic" :
+  // "seed" (s8 Low: the old branch matched any quoted key
+  // followed by a colon, including ternary operands). The member
+  // branch (C) accepts = only (s9 Low: a member followed by a
+  // colon is a ternary, e.g. wallet.mnemonic : "", not an
+  // assignment).
+  // The separator cannot be part of == (lookahead), so comparisons
+  // do not flag. Deliberately NOT covered: generic credential words
+  // (password, api_key, token, bare secret) — the gate's contract is
+  // wallet seed material, and those words appear legitimately in
+  // tests and docs. Multiline values (key on one line, value on the
+  // next) and indirect references (const mnemonic = getMnemonic())
+  // are not detected: the gate is line-based and literal-based.
+  new RegExp(
+    String.raw`^\s*(?:(?:export|const|let|var)\s+){1,2}(${seedKeyAlternatives})\s*[:=](?!=)\s*["'\x60\[]|^\s*(${seedKeyAlternatives})\s*[:=](?!=)\s*\S+|\.(${seedKeyAlternatives})\s*=(?!=)\s*["'\x60\[]|(?:^|\{|,)\s*["']?(${seedKeyAlternatives})["']?\s*:\s*["'\x60\[]`,
+    "i",
+  ),
 ];
 
 // Known published BIP-32 test vectors ("test vector, never for funds"):
@@ -230,8 +277,8 @@ export function secretScan(root) {
           entry.pattern === patternIndex &&
           entry.line === trimmed);
         if (allowed) return false;
-        // Patterns 0/1 (xprv/zprv) test the scrubbed line; pattern 2
-        // (secret assignment) tests the raw line.
+        // Patterns 0/1 (private extended keys, WIF) test the scrubbed
+        // line; pattern 2 (secret assignment) tests the raw line.
         return pattern.test(patternIndex < 2 ? scrubbed : line);
       })) {
         // Report locations only, never the matching text.

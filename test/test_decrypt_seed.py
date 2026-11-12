@@ -73,6 +73,16 @@ class TestDecryptMnemonicValidation(unittest.TestCase):
             with self.assertRaises(ValueError):
                 decrypt(path, key)
 
+    def test_wrong_key_refused_as_value_error(self):
+        # T44-F10: a wrong key must raise the clean ValueError, not
+        # leak cryptography's InvalidTag out of decrypt().
+        key = os.urandom(32)
+        wrong_key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            with self.assertRaises(ValueError):
+                decrypt(path, wrong_key)
+
 
 class TestReadKey(unittest.TestCase):
     def test_env_key_warns_and_names_only_the_variable(self):
@@ -125,6 +135,26 @@ class TestMainStdout(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, "")
         self.assertIn("not a valid BIP-39 mnemonic", result.stderr)
+
+    def test_stdout_wrong_key_exits_one_without_traceback(self):
+        # T44-F10: the CLI must report a clean error, never a traceback.
+        key = os.urandom(32)
+        wrong_key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            env = dict(os.environ, BAWA_DATA_KEY=wrong_key.hex())
+            result = subprocess.run(
+                [sys.executable, os.path.join(TOOLS_DIR, "decrypt_seed.py"),
+                 "--stdout", path],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertIn("authentication failed", result.stderr)
 
 
 if __name__ == "__main__":

@@ -109,7 +109,16 @@ def decrypt(path: str, key: bytes) -> str:
         raise ValueError("malformed encrypted artifact") from exc
     if len(nonce) != 12 or len(ciphertext) < 16:
         raise ValueError("malformed AES-GCM artifact")
-    plain = AESGCM(key).decrypt(nonce, ciphertext, AAD)
+    # T44-F10: a wrong key or tampered ciphertext raises
+    # cryptography.exceptions.InvalidTag, which main() does not catch
+    # (ValueError/OSError only) — it escaped as an unhandled traceback.
+    # Map it to the same clean ValueError as every other refusal.
+    from cryptography.exceptions import InvalidTag
+
+    try:
+        plain = AESGCM(key).decrypt(nonce, ciphertext, AAD)
+    except InvalidTag:
+        raise ValueError("seed bundle authentication failed") from None
     try:
         text = plain.decode("utf-8")
     except UnicodeDecodeError:

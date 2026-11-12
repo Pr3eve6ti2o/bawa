@@ -169,6 +169,54 @@ test('send marked IMPLEMENTED_AND_VERIFIED triggers the hard rule', async (t) =>
   );
 });
 
+test('T44-F9: a profile platform outside the enum is rejected', async (t) => {
+  const dir = makeFixture(t);
+  mutateRegistry(dir, 'profiles', (profiles) => {
+    profiles[0].platform = 'ios';
+  });
+
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected an unknown platform to be rejected');
+  assertErrorMentions(errors, 'platform');
+});
+
+test('T44-F9: a profile claiming send as implemented triggers the hard rule', async (t) => {
+  const dir = makeFixture(t);
+  mutateRegistry(dir, 'profiles', (profiles) => {
+    profiles[0].implemented = [...(profiles[0].implemented ?? []), 'send'];
+  });
+
+  const { errors } = await validateAll(dir);
+  assert.ok(
+    errors.some((error) =>
+      /hard[\s-]*rule/i.test(error) && /\bsend\b/i.test(error),
+    ),
+    `Expected the send hard-rule error; received:\n${errors.join('\n') || '(none)'}`,
+  );
+});
+
+test('T44-F9: a profile implemented list that is not an array of strings is rejected', async (t) => {
+  const dir = makeFixture(t);
+  mutateRegistry(dir, 'profiles', (profiles) => {
+    profiles[0].missing = 'send';
+  });
+
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected a non-array missing list to be rejected');
+  assertErrorMentions(errors, 'missing');
+});
+
+test('T44-F9: a profile with empty chains is rejected', async (t) => {
+  const dir = makeFixture(t);
+  mutateRegistry(dir, 'profiles', (profiles) => {
+    profiles[0].chains = [];
+  });
+
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected empty chains to be rejected');
+  assertErrorMentions(errors, 'chains');
+});
+
 test('every profile contains all required profile schema fields', () => {
   const { entries: profiles } = readRegistry(registryDir, 'profiles');
   assert.equal(profiles.length, 7);

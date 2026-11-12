@@ -34,12 +34,13 @@ describe('generate.js publish (F-12/F-13)', () => {
     }
   });
 
-  test('stale lock from a dead PID or malformed content is NOT stolen (T40-F3 fail-closed)', () => {
-    // T40-F3: automatic reclamation was removed — a contender unlinking a
-    // lock it observed as stale could unlink a live holder's lock (the
-    // empty-file window), so both processes could publish concurrently.
-    // A stale lock now waits the bounded 10 s, refuses, names the lock
-    // file for manual cleanup, and leaves the file in place.
+  test('stale lock from a dead PID or malformed content IS reclaimed via rename-aside (T44-F8 supersedes T40-F3)', () => {
+    // T44-F8 supersedes T40-F3: automatic reclamation was restored, but
+    // only for provably-dead PIDs (or malformed content), via an atomic
+    // rename-aside — never an unlink — plus a post-write ownership check,
+    // so a contender cannot steal a live holder's lock. A live lock still
+    // waits the bounded 10 s then refuses (next test). Reclaim must be
+    // prompt (no 10 s wait) and the lock must end up owned by us.
     const dir = mkdtempSync(join(tmpdir(), 'gen-pub-'));
     try {
       const encPath = join(dir, 'seed.enc.json');
@@ -47,13 +48,13 @@ describe('generate.js publish (F-12/F-13)', () => {
       for (const stale of ['999999', 'not-a-pid']) {
         writeFileSync(lockPath, stale);
         const start = Date.now();
-        assert.throws(
-          () => acquirePublishLock(encPath),
-          /seed bundle publish already in progress.*remove the stale lock file/
-        );
+        const acquired = acquirePublishLock(encPath);
         const waited = Date.now() - start;
-        assert.ok(waited >= 9000 && waited < 20000, `bounded wait was ${waited} ms, expected ~10000`);
-        assert.equal(readFileSync(lockPath, 'utf8'), stale);
+        assert.equal(acquired, lockPath);
+        assert.ok(waited < 5000, `reclaim took ${waited} ms, expected prompt (<5000)`);
+        assert.equal(readFileSync(lockPath, 'utf8'), String(process.pid));
+        releasePublishLock(lockPath, process.pid);
+        assert.equal(existsSync(lockPath), false);
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });

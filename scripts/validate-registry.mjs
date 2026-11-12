@@ -43,6 +43,23 @@ export function validateStructure(files) {
       checkRequired(profile, profileSchema.required, label, errors);
       checkEnum(id, profileSchema.properties.id.enum, `${label}.id`, errors);
       checkEnum(profile?.status, profileSchema.properties.status.enum, `${label}.status`, errors);
+      // T44-F9: the hand-rolled validator enforced only id/status, but
+      // the schema also constrains platform, chains and the
+      // implemented/missing lists — and generate-project.mjs +
+      // build-wallet.mjs trust all of them. Enforce them here.
+      checkEnum(profile?.platform, ['cli', 'web', 'android'], `${label}.platform`, errors);
+      if (!Array.isArray(profile?.chains) || profile.chains.length === 0) {
+        errors.push(`ERROR ${label}.chains: expected a non-empty array`);
+      }
+      for (const field of ['implemented', 'missing']) {
+        const value = profile?.[field];
+        if (
+          value !== undefined &&
+          (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))
+        ) {
+          errors.push(`ERROR ${label}.${field}: expected an array of strings`);
+        }
+      }
 
       if (id !== undefined) {
         if (ids.has(id)) {
@@ -143,6 +160,20 @@ export function validateReferences(files) {
       errors.push(
         `ERROR ${label}.engine.version: must match the revision of a Trust Wallet Core entry in engines.json`,
       );
+    }
+
+    // T44-F9: the send/sign/broadcast hard rule also applies to a
+    // profile's own implemented list — a profile claiming `send` as
+    // implemented would make build-wallet.mjs report it as implemented.
+    // Exact-element match: `missing` lists legitimately name them.
+    if (Array.isArray(profile?.implemented)) {
+      for (const operation of ['send', 'sign', 'broadcast']) {
+        if (profile.implemented.includes(operation)) {
+          errors.push(
+            `ERROR ${label}.implemented: hard rule forbids claiming ${operation} as implemented`,
+          );
+        }
+      }
     }
 
     const foundation = profile?.ui?.foundation;

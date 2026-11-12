@@ -185,4 +185,4 @@ process.stdin.on("error", () => process.exit(1));
     rl.close();
     process.exit(0);
   });
-})().catch((e) => { console.error("FATAL: " + (e && e.message)); process.exit(1); });
+})().catch((e) => { console.error("FATAL: " + redact(e && e.message)); process.exit(1); });

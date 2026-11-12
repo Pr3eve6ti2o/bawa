@@ -176,6 +176,60 @@ class TestValidatePublicStdout(unittest.TestCase):
         with self.assertRaises(SystemExit):
             validate_public_stdout(data)
 
+    def test_newline_in_xpub_rejected(self):
+        # T44-F4: a newline inside an xpub would inject an extra
+        # assignment into the .env file it is interpolated into.
+        data = _legitimate_stdout()
+        data["btc_zpub"] = _legitimate_stdout()["btc_zpub"] + "\nEVIL=1\n"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_control_char_in_ton_address_rejected(self):
+        data = _legitimate_stdout()
+        data["ton_address"] = _legitimate_stdout()["ton_address"] + "\rEVIL=1"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_escape_sequence_in_xpub_rejected(self):
+        # T44-F4 (Astra s2): ANSI escapes in a printed xpub could clear
+        # the operator's terminal and hide earlier output.
+        data = _legitimate_stdout()
+        data["eth_xpub"] = "xpub" + "1" * 107 + "\x1b[2J\x1b[H"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_short_xpub_rejected(self):
+        data = _legitimate_stdout()
+        data["eth_xpub"] = "xpub123"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_bad_ton_address_rejected(self):
+        data = _legitimate_stdout()
+        data["ton_address"] = "not-a-ton-address"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_bad_ton_path_rejected(self):
+        data = _legitimate_stdout()
+        data["ton_path"] = "m/44'/60'/0'"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_bad_version_rejected(self):
+        data = _legitimate_stdout()
+        data["wallet_core_version"] = "4.8.4\nEVIL=1"
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
+    def test_64_hex_string_rejected(self):
+        # T44-F18: a hex-encoded seed has no legitimate place in the
+        # public schema, even tucked into samples.
+        data = _legitimate_stdout()
+        data["samples"]["btc1"] = "ab" * 32
+        with self.assertRaises(SystemExit):
+            validate_public_stdout(data)
+
 
 class TestAssertBundleDecrypts(unittest.TestCase):
     def _write_bundle(self, plaintext, key, tmp):
