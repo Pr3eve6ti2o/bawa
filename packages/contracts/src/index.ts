@@ -1,10 +1,13 @@
-// Chains supported for public-key-only address derivation by the Web starter.
-export type ChainId = 'btc' | 'eth' | 'trx';
+// Chains supported for watch-only import by the Web starter: xpub
+// derivation for btc/eth/trx, TON public-address import only.
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';
 
 // Alias for chains supported by the watch-only starter.
 export type SupportedChain = ChainId;
 
-// TON is documented-only, generation-only with no xpub, and unsupported by the Web starter.
+// TON is watch-only address import only in the Web starter; no
+// derivation, no send. TON has no xpub: its path m/44'/607'/0' is
+// fully hardened, so one wallet is one public address.
 export type DocumentedChain = ChainId | 'ton';
 
 // Type-only signature for an indexed address derivation path.
@@ -40,10 +43,31 @@ export interface DerivedAddress {
   address: string;
 }
 
+// Validation results for a user-supplied TON public address
+// (watch-only import only). Mirrors the TON rules in
+// apps/web/src/engine/destination.ts (TEP-0002 tags, workchain,
+// CRC16-XMODEM), plus a secret-like rejection for pasted secrets.
+export type TonAddressValidation =
+  | { ok: true; form: 'bounceable' | 'non-bounceable' | 'raw'; workchain: 0 | -1 }
+  | {
+      ok: false;
+      reason:
+        | 'empty'
+        | 'invalid-length'
+        | 'invalid-character'
+        | 'invalid-checksum'
+        | 'unsupported-version'
+        | 'wrong-network'
+        | 'invalid-format'
+        | 'secret-like';
+      message: string;
+    };
+
 // Watch-only wallet metadata containing a user-supplied extended public key.
 export interface WatchOnlyWallet {
   chain: ChainId;
   // Public extended key, including BTC zpub; this field must never hold a private extended key.
+  // For ton it holds the validated TON public address instead (TON has no xpub).
   xpub: string;
   label: string;
   derivedCount: number;

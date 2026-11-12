@@ -8,6 +8,7 @@ const CHAINS = [
   { id: 'btc', name: 'Bitcoin' },
   { id: 'eth', name: 'Ethereum' },
   { id: 'trx', name: 'TRON' },
+  { id: 'ton', name: 'TON' },
 ] as const;
 
 async function copyAddress(address: string): Promise<void> {
@@ -36,7 +37,7 @@ export function DashboardScreen() {
         </Card>
       ) : importedChains.length === 0 ? (
         <Card className="space-y-4 p-6">
-          <p>No wallets yet — import an extended public key to see derived addresses.</p>
+          <p>No wallets yet — import a watch-only wallet to see its addresses.</p>
           <Link
             to="/import-wallet"
             className="inline-block font-medium underline underline-offset-4"
@@ -54,14 +55,13 @@ export function DashboardScreen() {
               <Card key={id} className="min-w-0 space-y-4 p-6">
                 <h2 className="text-xl font-semibold">{name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {chainAddresses.length} derived{' '}
-                  {chainAddresses.length === 1 ? 'address' : 'addresses'}
+                  {id === 'ton' ? '1 imported address' : `${chainAddresses.length} derived ${chainAddresses.length === 1 ? 'address' : 'addresses'}`}
                 </p>
 
                 {firstAddress ? (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">
-                      First derived address (index 0)
+                      {id === 'ton' ? 'Imported address (watch-only)' : 'First derived address (index 0)'}
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
                       <code className="min-w-0 flex-1 break-all text-sm">

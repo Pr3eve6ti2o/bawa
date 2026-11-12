@@ -4299,6 +4299,8 @@ T13 re-check 2026-11-12: M-39 remains OPEN at 981d0ba. §14 matches “Not estab
 
 T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed, see T08 RUN-LOG.jsonl): the new §13.0 diagram shows “EXTERNAL SIGNER — NONE NAMED” for all four chains and names `@ton/ton` as the expert-assisted TON route only, with no GUI withdrawal demonstrated. The diagram adds no route and changes no status.
 
+R01 re-check 2026-11-12 (Sol, API 2; base tip `3cfd5d2`): the in-app TON watch-only import is now implemented in the Web starter (`apps/web` TON tab: public-address validation of tag, workchain and CRC16, Receive QR + copy; unit tests pass; live-browser run not done), and the external GUI watch-only workflow is documented in `docs/05-watch-only/GUI-WATCH-ONLY-WORKFLOW.md`. The external GUI watch-only test itself was still NOT performed: no desktop machine is available on the test VM. M-39 stays OPEN.
+
 **Status:** OPEN (findings accepted 2026-11-10; GUI withdrawal route unverified).
 
 **Operational restriction:** No application-specific restore instructions given; this guide must not imply the repository builds, signs or submits transfers. Do not claim a working GUI withdrawal until one has actually been demonstrated.

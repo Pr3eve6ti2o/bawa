@@ -1,6 +1,7 @@
 import { initWasm } from '@trustwallet/wallet-core';
+import type { TonAddressValidation } from '@bawa/contracts';
 
-export type ChainId = 'btc' | 'eth' | 'trx';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -26,9 +27,13 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   btc: ['0488b21e', '049d7cb2', '04b24746'],
   eth: ['0488b21e'],
   trx: ['0488b21e'],
+  // TON has no xpub, so no extended-key version is allowed for it.
+  // validateExtendedKey is never called for ton (validateWatchOnlyImport
+  // routes ton to validateTonAddress); the empty list is a backstop.
+  ton: [],
 };
 
-const DERIVATION_PREFIXES: Readonly<Record<ChainId, string>> = {
+const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton'>, string>> = {
   btc: "m/84'/0'/0'/0",
   eth: "m/44'/60'/0'/0",
   trx: "m/44'/195'/0'/0",
@@ -224,6 +229,185 @@ export async function validateExtendedKey(
   return { ok: true };
 }
 
+// CRC16-XMODEM (poly 0x1021, init 0x0000, MSB-first, no lookup table),
+// the checksum of TON user-friendly addresses (TEP-0002). Same
+// algorithm as destination.ts.
+function crc16Xmodem(data: Uint8Array): number {
+  let crc = 0x0000;
+  for (const byte of data) {
+    crc ^= byte << 8;
+    for (let bit = 0; bit < 8; bit++) {
+      crc =
+        (crc & 0x8000) !== 0
+          ? ((crc << 1) ^ 0x1021) & 0xffff
+          : (crc << 1) & 0xffff;
+    }
+  }
+  return crc;
+}
+
+// TON friendly addresses contain complete, unpadded base64 quartets.
+// Decodes standard base64 (after normalising base64url '-'/'_' to
+// '+/'), so the same address is accepted in either spelling, like
+// destination.ts. No atob, no Buffer: runs in browser and Node alike.
+function decodeTonBase64(value: string): Uint8Array | null {
+  if (value.length % 4 !== 0) {
+    return null;
+  }
+  const alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const bytes = new Uint8Array((value.length / 4) * 3);
+  let offset = 0;
+  for (let i = 0; i < value.length; i += 4) {
+    const a = alphabet.indexOf(value.charAt(i));
+    const b = alphabet.indexOf(value.charAt(i + 1));
+    const c = alphabet.indexOf(value.charAt(i + 2));
+    const d = alphabet.indexOf(value.charAt(i + 3));
+    if (a < 0 || b < 0 || c < 0 || d < 0) {
+      return null;
+    }
+    bytes[offset] = (a << 2) | (b >>> 4);
+    bytes[offset + 1] = ((b & 0x0f) << 4) | (c >>> 2);
+    bytes[offset + 2] = ((c & 0x03) << 6) | d;
+    offset += 3;
+  }
+  return bytes;
+}
+
+// TON watch-only import validation (R01, Sol-authored, hands-on
+// verified against the P1 vectors). Pure and synchronous: no WASM, no
+// private-key material. TON has no xpub and exactly one address per
+// wallet, so this validates a public address, not an extended key.
+// Semantics mirror destination.ts validateTon: tag 0x11 bounceable /
+// 0x51 non-bounceable (0x80 testnet flag rejected), workchain 0x00/0xff,
+// CRC16-XMODEM over the first 34 bytes; raw "0:"/"-1:" + 64 hex has no
+// checksum by design. Inputs containing whitespace or a private-key
+// prefix are secret-like and rejected without echoing the input.
+export function validateTonAddress(address: string): TonAddressValidation {
+  const value = address.trim();
+
+  if (value.length === 0) {
+    return { ok: false, reason: 'empty', message: 'Enter a TON address.' };
+  }
+
+  if (/\s/.test(value) || /^(?:xprv|zprv|tprv|yprv)/i.test(value)) {
+    return {
+      ok: false,
+      reason: 'secret-like',
+      message: 'Use a public TON address only.',
+    };
+  }
+
+  const rawMatch = /^(0|-1):[0-9a-fA-F]{64}$/.exec(value);
+  if (rawMatch !== null) {
+    const workchain: 0 | -1 = rawMatch[1] === '0' ? 0 : -1;
+    return { ok: true, form: 'raw', workchain };
+  }
+
+  // Bare public-key hex is not an address, regardless of its length.
+  if (/^-?\d+:/.test(value) || /^[0-9a-fA-F]{64}$/.test(value)) {
+    return {
+      ok: false,
+      reason: 'invalid-format',
+      message: 'Invalid TON address format.',
+    };
+  }
+
+  if (value.length !== 48) {
+    return {
+      ok: false,
+      reason: 'invalid-length',
+      message: 'Invalid TON address length.',
+    };
+  }
+
+  if (!/^[A-Za-z0-9+/=_-]{48}$/.test(value)) {
+    return {
+      ok: false,
+      reason: 'invalid-character',
+      message: 'Invalid TON address characters.',
+    };
+  }
+
+  const bytes = decodeTonBase64(value.replace(/-/g, '+').replace(/_/g, '/'));
+  if (bytes === null) {
+    return {
+      ok: false,
+      reason: 'invalid-character',
+      message: 'Invalid TON address characters.',
+    };
+  }
+  if (bytes.length !== 36) {
+    return {
+      ok: false,
+      reason: 'invalid-length',
+      message: 'Invalid TON address length.',
+    };
+  }
+
+  const tag = bytes[0]!;
+  const baseTag = tag & 0x7f;
+  if (baseTag !== 0x11 && baseTag !== 0x51) {
+    return {
+      ok: false,
+      reason: 'unsupported-version',
+      message: 'Unsupported TON address tag.',
+    };
+  }
+  if ((tag & 0x80) !== 0) {
+    return {
+      ok: false,
+      reason: 'wrong-network',
+      message: 'Testnet TON addresses are not supported.',
+    };
+  }
+
+  const workchainByte = bytes[1]!;
+  if (workchainByte !== 0x00 && workchainByte !== 0xff) {
+    return {
+      ok: false,
+      reason: 'unsupported-version',
+      message: 'Unsupported TON workchain.',
+    };
+  }
+
+  const storedCrc = (bytes[34]! << 8) | bytes[35]!;
+  if (crc16Xmodem(bytes.subarray(0, 34)) !== storedCrc) {
+    return {
+      ok: false,
+      reason: 'invalid-checksum',
+      message: 'Invalid TON address checksum.',
+    };
+  }
+
+  const workchain: 0 | -1 = workchainByte === 0x00 ? 0 : -1;
+  return {
+    ok: true,
+    form: baseTag === 0x11 ? 'bounceable' : 'non-bounceable',
+    workchain,
+  };
+}
+
+// Watch-only import validation for any chain: TON validates a public
+// address, btc/eth/trx validate an extended public key.
+export async function validateWatchOnlyImport(
+  chain: ChainId,
+  value: string,
+): Promise<{ ok: true } | { ok: false; reason: string; message: string }> {
+  if (chain === 'ton') {
+    const validation = validateTonAddress(value);
+    if (!validation.ok) {
+      return {
+        ok: false,
+        reason: validation.reason,
+        message: validation.message,
+      };
+    }
+    return { ok: true };
+  }
+  return validateExtendedKey(value, chain);
+}
+
 export async function deriveAddress(
   chain: ChainId,
   xpub: string,
@@ -231,6 +415,19 @@ export async function deriveAddress(
 ): Promise<string> {
   if (!Number.isInteger(index) || index < 0 || index > 2147483647) {
     throw new Error('index out of range');
+  }
+
+  // TON has exactly one address per wallet (fully hardened path): the
+  // imported public address itself, at index 0 only. No WASM call.
+  if (chain === 'ton') {
+    if (index !== 0) {
+      throw new Error('index out of range');
+    }
+    const tonValidation = validateTonAddress(xpub);
+    if (!tonValidation.ok) {
+      throw new Error(tonValidation.message);
+    }
+    return xpub.trim();
   }
 
   const key = xpub.trim();
@@ -278,6 +475,12 @@ export async function deriveAddresses(
 ): Promise<string[]> {
   if (!Number.isInteger(count) || count < 1 || count > 20) {
     throw new Error('count out of range');
+  }
+
+  // TON has one address; callers must use derivedCount 1. The count is
+  // still range-checked above so a bad count fails the same way.
+  if (chain === 'ton') {
+    return [await deriveAddress(chain, xpub, 0)];
   }
 
   const addresses: string[] = [];

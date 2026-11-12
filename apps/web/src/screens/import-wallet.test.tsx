@@ -36,6 +36,114 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+describe.sequential('ImportWalletScreen TON (R01)', () => {
+  const TON_ADDRESS = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+
+  async function mountImportScreen() {
+    const previousUrl = window.location.href;
+    const previousState = window.history.state;
+    const previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+    window.history.pushState({}, '', '/import-wallet');
+    await act(async () => {
+      root.render(<App />);
+    });
+    return {
+      div,
+      cleanup: async () => {
+        try {
+          await act(async () => {
+            root.unmount();
+          });
+        } finally {
+          div.remove();
+          window.history.replaceState(previousState, '', previousUrl);
+          if (previousActEnvironment === undefined) {
+            delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+          } else {
+            testGlobal.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+          }
+        }
+      },
+    };
+  }
+
+  async function clickButton(div: HTMLDivElement, text: string) {
+    const button = [...div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    expect(button).not.toBeUndefined();
+    await act(async () => {
+      button!.click();
+    });
+  }
+
+  it('switches the label to TON public address when TON is clicked', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickButton(div, 'TON');
+      expect(
+        div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
+      ).toBe('TON public address');
+      expect(div.textContent).toContain('No child addresses are derived');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('shows a valid TON wallet in the imported list', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickButton(div, 'TON');
+      const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, TON_ADDRESS);
+      });
+      await clickButton(div, 'Add');
+      // The imported list truncates the address (first 12 + last 8
+      // chars); the full address never appears in the DOM.
+      await act(async () => {
+        for (let i = 0; i < 20 && !div.textContent?.includes('UQC7gZvGVdCx'); i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(div.textContent).toContain('UQC7gZvGVdCx');
+      expect(div.textContent).toContain('mM5wD3zn');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('clears a rejected mnemonic on the TON tab and shows a secret-free error', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickButton(div, 'TON');
+      const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, TEST_MNEMONIC);
+      });
+      expect(input!.value).toBe(TEST_MNEMONIC);
+      await clickButton(div, 'Add');
+      await act(async () => {
+        for (let i = 0; i < 20 && input!.value !== ''; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(input!.value).toBe('');
+      expect(div.textContent).toContain('input was cleared');
+      expect(div.textContent).not.toContain(TEST_MNEMONIC);
+      expect(div.innerHTML).not.toContain(TEST_MNEMONIC);
+    } finally {
+      await cleanup();
+    }
+  });
+});
+
 describe.sequential('ImportWalletScreen (T41)', () => {
   it('clears a pasted mnemonic from the field when validation rejects it', async () => {
     const previousUrl = window.location.href;

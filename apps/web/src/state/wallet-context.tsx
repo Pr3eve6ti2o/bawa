@@ -3,9 +3,9 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { deriveAddresses, validateExtendedKey } from '../engine/boundary';
+import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
 
-const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx'];
+const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 // Maximum wallet-label length enforced at the storage boundary (T43
 // r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
 // characters, an xprv is 111, and a 32-byte data key in hex is 64, so
@@ -19,7 +19,7 @@ const STORAGE_KEY = 'bawa-watch-only-xpubs';
 export const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
 const perChain = <T,>(make: () => T): PerChain<T> => ({
-  btc: make(), eth: make(), trx: make(),
+  btc: make(), eth: make(), trx: make(), ton: make(),
 });
 
 interface WalletState {
@@ -102,7 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     setChain(chain, 'loading');
     try {
-      const addresses = await deriveAddresses(chain, wallet.xpub, 5);
+      const addresses = await deriveAddresses(chain, wallet.xpub, wallet.derivedCount);
       if (request !== derivations.current[chain]) return;
       setChain(chain, 'ready', addresses.map((address, index) => ({ chain, index, address })));
     } catch (error: unknown) {
@@ -121,7 +121,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const request = ++additions.current[chain];
     const epoch = lifetime.current;
     const publicKey = xpub.trim();
-    const validation = await validateExtendedKey(publicKey, chain);
+    const validation = await validateWatchOnlyImport(chain, publicKey);
     if (!validation.ok) throw new Error(validation.message);
     if (epoch !== lifetime.current || request !== additions.current[chain]) return;
     changed.current[chain] = true;
@@ -129,7 +129,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (trimmedLabel.length > LABEL_MAX_LENGTH) {
       throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
     }
-    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: 5 };
+    // For TON, xpub holds the validated TON public address (see
+    // contracts). TON has one address because its path is fully hardened.
+    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: chain === 'ton' ? 1 : 5 };
     await putWallet(chain, wallet);
   }, [putWallet]);
 
@@ -171,9 +173,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const rawLabel = typeof entry.label === 'string' ? entry.label.trim() : '';
       const label = rawLabel.length > LABEL_MAX_LENGTH ? '' : rawLabel;
       try {
-        const validation = await validateExtendedKey(publicKey, chain);
+        const validation = await validateWatchOnlyImport(chain, publicKey);
         if (!cancelled && !changed.current[chain] && validation.ok) {
-          const wallet = { chain, xpub: publicKey, label, derivedCount: 5 };
+          // For TON, xpub holds the validated TON public address (see
+          // contracts). TON has one address because its path is fully hardened.
+          const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
           void putWallet(chain, wallet);
         }
       } catch {

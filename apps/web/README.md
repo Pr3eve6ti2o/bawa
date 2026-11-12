@@ -55,7 +55,7 @@ Derivation policy, where `i` is the address index:
   [`tools/hdwallet-gen/generate.js`](../../tools/hdwallet-gen/generate.js) outside the browser.
   Import only the resulting extended public keys into this app, never secret output.
   The creation and mnemonic-backup screens do not generate or reveal secret material.
-- **TON:** not supported by this starter.
+- **TON:** watch-only import of a public address only; no derivation, no send.
 
 ## Security notes
 

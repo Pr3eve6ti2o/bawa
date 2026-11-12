@@ -17,7 +17,7 @@ export function AssetDetailScreen() {
   const { xpubs, addresses, uiState, errors, refreshChain, setSelectedChain } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
 
-  if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx') {
+  if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
     return (
       <main className="mx-auto max-w-3xl p-6">
         <h1 className="text-2xl font-semibold">Unknown chain</h1>
@@ -63,14 +63,20 @@ export function AssetDetailScreen() {
         <CardContent className="pt-6">
           <dl className="space-y-4">
             <div>
-              <dt className="text-sm text-muted-foreground">Imported xpub</dt>
+              <dt className="text-sm text-muted-foreground">{chain === 'ton' ? 'Imported TON address' : 'Imported xpub'}</dt>
               <dd className="break-all font-mono text-sm">
                 {xpub ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}` : 'Not imported'}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-muted-foreground">Derivation path</dt>
-              <dd className="break-all text-sm"><code>{DERIVATION_PATHS[chain]}</code></dd>
+              <dt className="text-sm text-muted-foreground">Derivation</dt>
+              <dd className="break-all text-sm">
+                {chain === 'ton' ? (
+                  'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
+                ) : (
+                  <code>{DERIVATION_PATHS[chain]}</code>
+                )}
+              </dd>
             </div>
           </dl>
         </CardContent>
@@ -78,7 +84,7 @@ export function AssetDetailScreen() {
 
       <section aria-labelledby="derived-addresses-heading" className="space-y-3">
         <h2 id="derived-addresses-heading" className="text-lg font-semibold">
-          Derived addresses
+          {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
         </h2>
         {state === 'loading' ? (
           <div role="status">

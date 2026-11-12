@@ -1286,7 +1286,7 @@ negative-input tests 36/36; Web starter 25 tests plus build and preview HTTP che
 Android starter 17 unit tests plus APK build and emulator install/launch; quality gates 11/11;
 clean-checkout tests 3/3. The on-device Android Add-button acceptance path is **NOT VERIFIED**.
 Still open: independent external review (M-31/M-15) has no designated reviewer;
-M-35 rehearsal execution needs separate approval; M-39 GUI watch-only test needs a desktop machine;
+M-35 rehearsal execution needs separate approval; M-39 GUI watch-only test needs a desktop machine (in-app TON watch-only workflow implemented, R01 2026-11-12);
 mainnet activation needs separate approval; on-device Android derivation is **OPEN**
 (no Trust Wallet Core AAR exists for any version). The Doc 4 §5 step-4 SHA still names
 H5 (`d2f0960c`) while `main` has advanced; refresh that SHA on the next Doc 4 re-issue.

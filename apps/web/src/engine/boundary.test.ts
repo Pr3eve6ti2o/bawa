@@ -6,6 +6,7 @@ import {
   deriveAddresses,
   isEngineReady,
   validateExtendedKey,
+  validateTonAddress,
 } from './boundary';
 
 const btcZpub =
@@ -315,5 +316,75 @@ describe.sequential('watch-only engine boundary', () => {
   it('is initialised after a successful derivation', async () => {
     await deriveAddress('btc', btcZpub, 0);
     expect(isEngineReady()).toBe(true);
+  });
+});
+
+describe('TON watch-only address validation (R01)', () => {
+  const address = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+
+  it.each([
+    [
+      'non-bounceable',
+      address,
+      { ok: true, form: 'non-bounceable', workchain: 0 },
+    ],
+    [
+      'bounceable',
+      'EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi',
+      { ok: true, form: 'bounceable', workchain: 0 },
+    ],
+    [
+      'raw',
+      '0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f',
+      { ok: true, form: 'raw', workchain: 0 },
+    ],
+    [
+      'workchain -1',
+      'Ef-7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD95q',
+      { ok: true, form: 'bounceable', workchain: -1 },
+    ],
+  ] as const)('accepts %s', (_name, input, expected) => {
+    expect(validateTonAddress(input)).toMatchObject(expected);
+  });
+
+  it.each([
+    [
+      'invalid checksum',
+      'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zm',
+      'invalid-checksum',
+    ],
+    [
+      'testnet address',
+      'kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo',
+      'wrong-network',
+    ],
+    [
+      'unsupported tag',
+      'IQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD9Sp',
+      'unsupported-version',
+    ],
+    ['12-word mnemonic', 'abandon '.repeat(11) + 'about', 'secret-like'],
+    [
+      'bare 64-hex address',
+      'bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f',
+      'invalid-format',
+    ],
+    [
+      '47-character address',
+      'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3z',
+      'invalid-length',
+    ],
+    ['empty input', '', 'empty'],
+    ['whitespace input', ' \t\n ', 'empty'],
+  ] as const)('rejects %s', (_name, input, reason) => {
+    expect(validateTonAddress(input)).toMatchObject({ ok: false, reason });
+  });
+
+  it('returns exactly the supplied address when five addresses are requested', async () => {
+    await expect(deriveAddresses('ton', address, 5)).resolves.toEqual([address]);
+  });
+
+  it('rejects derivation at index 1', async () => {
+    await expect(deriveAddress('ton', address, 1)).rejects.toThrow();
   });
 });

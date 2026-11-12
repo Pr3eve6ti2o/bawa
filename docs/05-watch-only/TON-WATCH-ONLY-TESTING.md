@@ -6,6 +6,15 @@ address reconstruction in §6 was re-verified first-hand on 2026-11-12.
 Lane T24, base tip `981d0ba`. This document does not claim a working GUI
 withdrawal route. M-39 stays OPEN.
 
+R01 update 2026-11-12 (Sol, API 2; base tip `3cfd5d2`): the **in-app**
+TON watch-only import is now implemented in the Web starter (TON tab on
+the import screen; public-address validation — tag, workchain, CRC16;
+Receive QR + copy; unit tests pass; live-browser run still not done),
+and the step-by-step GUI workflow is documented in
+[GUI-WATCH-ONLY-WORKFLOW.md](GUI-WATCH-ONLY-WORKFLOW.md). The **external
+GUI** watch-only import below stays `DOCUMENTED_NOT_TESTED`: no desktop
+machine is available on the test VM, so no GUI import was performed.
+
 ## 1. Scope and verdict
 
 Bawa generates one TON deposit address per wallet and cannot send TON.
