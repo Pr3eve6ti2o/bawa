@@ -1572,6 +1572,8 @@ The required correction is code-level enforcement binding the intended network t
 
 The Web draft contains `buildIntent`, `reviewOf`, `approveIntent` and `hashIntent`, with per-chain signers that verify the signed result against the approved payload. The Android coordinator refuses undecodable actions and missing sender or recipient information, and refuses signing if the payload has changed after approval. These are draft controls, not evidence of live enforcement. Their runtime behaviour is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**; the Android checks do not supply the semantic validation missing above.
 
+At this commit (`981d0ba`), the named functions (`buildIntent`, `reviewOf`, `approveIntent`, `hashIntent`) and files (`tx.js`, `SigningCoordinator.kt`, `EthSepoliaAdapter.kt`) are not present in this repository. They must not be treated as in-repo code until their location is recorded. The approval-validity question remains open under M-37.
+
 To prevent **wrong-network, wrong-address, wrong-amount and lost-fee** outcomes, approval must bind to the exact payload signed. The review must decode and cover the network, sending account, recipient, value, every output including change, and fees. The reviewed intent must be frozen. Signing must refuse a changed payload, and the signed result must be verified against the approval before finalisation or broadcast.
 
 **Stop if a required review item is missing or undecodable, if the payload changes after approval, or if the signed result cannot be matched to the approval.** Payload equality alone does not establish that the review described the payload correctly. See §17.
@@ -3887,6 +3889,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision.
 
+T13 re-check 2026-11-12: M-35 remains OPEN; rehearsal execution remains unauthorised. At 981d0ba, the guide consistently states no rehearsal procedure exists or is authorised. Review-only amounts appear only in the row, release-gates doc and implementation plan, never as a procedure. The 2026-11-10 rehearsal-procedure draft is absent from the repo; OI-097’s QR-scan step remains undrafted, requiring a reviewer decision.
+
 **Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
 
 **Operational restriction:** No real funds move on the strength of this guide; no rehearsal procedure may be improvised from the capability table; §13 states the boundary only. No funds move without separate explicit approval.
@@ -3904,6 +3908,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Affected sections:** §13; §15; §17.
 
 **Evidence or uncertainty:** M17 F3, O6.
+
+T13 re-check 2026-11-12: M-36 remains OPEN. At 981d0ba, no threshold is stated anywhere: ‘larger amounts’ occurs only in gap-defining statements (the M-36 row, carried-forward item 5, the appendix note and this re-check note). §13 presents hardware/PSBT as direction only and states Bawa contains no PSBT code.
 
 **Status:** OPEN.
 
@@ -3923,6 +3929,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence or uncertainty:** M24-G07, G24.
 
+T13 re-check 2026-11-12 (`981d0ba`): cited functions/files and `reviewToken`/`decodedSummary` are absent from tracked files, untracked `generated/` output and branch history. The Web starter states sending is unimplemented and has no signing, broadcast or transaction-construction code. The guide specifies no approval duration; there is no in-repo approval implementation. Clearance needs a maintainer-defined finite validity policy and offline expiry/mutation tests; those tests require locating and recording the draft implementation or implementing approval in-repo. M-37 remains OPEN.
+
 **Status:** OPEN.
 
 **Operational restriction:** Approval expiry prevents further signing under that approval; it does not revoke signed bytes, cancel a submitted transaction, or prove funds remain unspent.
@@ -3941,6 +3949,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, 12 is retained by owner decision as an unsourced extra wallet minimum; finalised inclusion remains mandatory); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` is the latest solidified block).
 
+T13 re-check 2026-11-12: M-38 remains RESOLVED (2026-11-10), confirmed at 981d0ba against bitcoin.org, ethereum.org PoS and TRON primary sources. The §16 table matches the row, including ETH “12” qualified as an unsourced extra minimum; ethereum.org’s “12” denotes the 12-second slot.
+
 **Status:** RESOLVED 2026-11-10 (owner decision).
 
 **Operational restriction:** Present BTC 6, ETH `finalized` and TRX 19 SR as confirmed against current chain documentation (qualified as above). The ETH "12" is retained as an extra minimum without primary-source support — present it as such, never as a sourced threshold.
@@ -3958,6 +3968,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Affected sections:** §7; §10; §13; §14.
 
 **Evidence or uncertainty:** M16 open item 2; M16-F09; §14 boundary table ("not established by the evidence — blocked" for BTC/ETH/TRX/TON). M-39 lane findings accepted 2026-11-10 (owner decision): NO GUI wallet is confirmed able to withdraw TON from a Bawa deposit address — a BIP-39 import mode reproducing Bawa's derivation is unverified for every candidate checked. Verified hands-on instead: `@ton/ton` reproduces the fixture address exactly from the published public key (9/9 local checks) and the on-chain query confirms the deployed V4R2 wallet matches (code hash, wallet ID 698983191, public key) — `@ton/ton` is the documented expert-assisted route. GUI watch-only import was NOT performed (no desktop browser on the test VM).
+
+T13 re-check 2026-11-12: M-39 remains OPEN at 981d0ba. §14 matches “Not established by the evidence — blocked” exactly for all four chains. docs/11 and the engine-reproducibility record corroborate the @ton/ton expert-assisted route; “9/9 local checks” cites only an off-tree lane file, with no in-repo record. GUI watch-only testing still needs a desktop; none is available on the VM.
 
 **Status:** OPEN (findings accepted 2026-11-10; GUI withdrawal route unverified).
 
