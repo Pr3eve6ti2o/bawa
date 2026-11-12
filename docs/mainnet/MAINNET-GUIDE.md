@@ -2537,6 +2537,17 @@ Use this procedure for each payment:
 
 > **Stop** If you cannot establish the recipient outside history, any character differs, or the signing display cannot show the full destination, do not sign. Resolve the discrepancy and complete both checks before proceeding. Continuing can transfer funds to an attacker even when an earlier test payment succeeded.
 
+#### Per-chain poisoning forms
+
+The three forms do not land the same way on every chain. The table states, per chain, the address representation, how poisoning appears, and what the test-transfer limit means there.
+
+| Chain | Address representation | How poisoning appears | Test-transfer limit here |
+|---|---|---|---|
+| Bitcoin | bech32 (`bc1q...`) or legacy base58 | Zero-value or dust history entries; no token approvals and no fake-token form. Lookalikes differ in middle characters hidden by truncated displays. | Check the full address against the original verified source for the actual payment; never reselect it from history. |
+| Ethereum (and BNB Smart Chain) | `0x` hex with EIP-55 mixed-case checksum | Zero-value and dust entries also occur; fake-token poisoning uses a counterfeit ERC-20 whose Transfer events mimic the real token. | Check the full address against the original verified source for the actual payment; never reselect it from history. |
+| TRON | Base58check, starting with `T` | Fake-token poisoning uses a counterfeit TRC-20; TRC-20 approvals mirror ERC-20 (`approve` / `allowance` / `transferFrom`). | Check the full address against the original verified source for the actual payment; never reselect it from history. |
+| TON | Same account in three forms: bounceable `EQ...`, non-bounceable `UQ...`, raw `0:hex`. The guide requires the UQ form for receiving instructions. | A Jetton transfer can mimic a real one in history. | Non-bounceable transfers to a wrong address can leave funds inaccessible because they do not bounce. Check the full address against the original verified source for the actual payment; never reselect it from history. |
+
 #### Ice phishing, drainers and Permit/Permit2
 
 Ice phishing seeks an authorisation, not necessarily your seed words. A drainer can obtain a signed approval or permit through a legitimate-looking site. A trusted URL and an audited contract are not sufficient protection: you still need to establish what the particular request authorises and who receives that authority.
@@ -3475,17 +3486,17 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary Uniswap document was **not opened**, and its re-check remains outstanding. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
+**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary-document re-check is now complete, first-hand, 2026-11-12. The primary Uniswap Permit2 overview (updated 2026-08-27) confirms two independent modules, `AllowanceTransfer` and `SignatureTransfer`; `SignatureTransfer` bypasses only the in-Permit2 allowance; a one-time standard ERC-20 approval of the Permit2 contract remains the prerequisite (commonly `type(uint256).max`). The Allowance Transfer page (updated 2026-08-25) records the `approve` / `permit` / `transferFrom` entry points, `approve(token, spender, amount, expiration)`, nonces packed per owner, token and spender, and expiration `0` expiring at `block.timestamp`. The Signature Transfer page (updated 2026-04-09) records the one-time nonce-scoped transfer, the unordered nonce bitmap with each nonce single-use, and the signature deadline. Invalidation is NOT described on the docs overview pages; it is verified instead against the primary source, Uniswap/permit2: `IAllowanceTransfer.sol` / `AllowanceTransfer.sol` expose `invalidateNonces(token, spender, newNonce)` and `lockdown` (sets the allowance to 0), and `SignatureTransfer` exposes `invalidateUnorderedNonces(wordPos, mask)`. `lockdown` sets the allowance to 0 without advancing the nonce, so it does not invalidate outstanding permit signatures — matching §15's existing wording. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
 
-**Status:** OPEN — primary-doc re-check outstanding.
+**Status:** RESOLVED 2026-11-12 — primary-doc re-check complete; invalidation verified against the primary source.
 
 **Operational restriction:** Teach both the token’s allowance to Permit2 and the permissions within Permit2. Inspect the chain, token, spender, amount, expiry and authority before signing. Never assume that disconnecting or using a clearing action cancels outstanding signatures.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite a re-check against the primary Uniswap Permit2 documentation covering expiry, invalidation, revocation and re-approval behaviour.
+**Clearance condition:** Met 2026-11-12 — the re-check against the primary Uniswap Permit2 documentation covers expiry, the two-path model, the token-approval prerequisite and re-approval; invalidation and revocation behaviour are verified against the primary Permit2 source code, since the docs overview pages do not describe them.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; [primary Uniswap Permit2 documentation — re-check target, not yet checked](https://docs.uniswap.org/contracts/permit2/overview).
+**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; primary re-check 2026-11-12 — [Permit2 overview](https://docs.uniswap.org/contracts/permit2/overview); [Allowance Transfer](https://developers.uniswap.org/docs/protocols/permit2/concepts/allowance-transfer); [Signature Transfer](https://developers.uniswap.org/docs/protocols/permit2/concepts/signature-transfer); [IAllowanceTransfer.sol](https://github.com/Uniswap/permit2/blob/cc56ad0f3439c502c246fc5cfcc3db92bb8b7219/src/interfaces/IAllowanceTransfer.sol); [AllowanceTransfer.sol](https://github.com/Uniswap/permit2/blob/main/src/AllowanceTransfer.sol); [SignatureTransfer.sol](https://github.com/Uniswap/permit2/blob/main/src/SignatureTransfer.sol).
 
 ### M-11 — TRON approval mechanics differ from EVM revocation tooling
 
@@ -3493,35 +3504,36 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M15’s TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. It separately records `AccountPermissionUpdateContract`, ID 46, with a reported figure of approximately $129M. The supplied TRON revocation route is TronScan’s account-page **Approval** tab → **Cancel Contract Approval**, pending a live re-check. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20 still requires verification of TRON’s TRC-20 approval, allowance, delegated-transfer mechanics and revocation; EVM or Permit2 wording must not be copied across without that verification.
+**Evidence or uncertainty:** M15's TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. The TRC-20 mechanics are now verified against the primary TRON documentation: the TRC-20 protocol interface (developers.tron.network, updated 2026-09-18) requires `approve(address _spender, uint _value)`, `allowance(address _owner, address _spender)` and `transferFrom(address _from, address _to, uint _value)`; `approve` authorises a spender to transfer up to the stated value, `transferFrom` requires a prior `approve`, and a successful `approve` fires the `Approval` event. The TRC-20 contract-interaction page adds the nonzero-to-nonzero rule: first submit `approve(spender, 0)`, wait until that transaction is solidified and succeeds, then submit the new allowance, else the spender may use the old allowance before the update is confirmed and then the new allowance after it takes effect. `AccountPermissionUpdateContract`, ID 46, is verified against the TRON Account Permission Management documentation (developers.tron.network, updated 2026-09-18): it updates all permission structures at once (all-or-nothing, the full set must be resubmitted); it is normally authorised by the current owner permission, or by an active permission whose `operations` bitmap enables ID 46; the fee is 100 TRX per update plus a 1 TRX multi-signature surcharge; if the owner permission cannot meet its threshold and no usable active permission enables ID 46, the account's permissions cannot be changed again. The reported figure of approximately $129M relates to one case involving this mechanism; the case date is unverified here. The supplied TRON revocation route — TronScan's account-page **Approval** tab → **Cancel Contract Approval** — is STILL unverified: the TronScan homepage loads (live blocks visible in a text fetch on 2026-11-12), but the account page is a JavaScript app, so the Approval tab and its Cancel button cannot be verified by a text fetch; that step needs a live browser session. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20's TRON items are therefore verified except for the TronScan UI route; EVM or Permit2 wording must not be copied across without that verification.
 
-**Status:** OPEN.
+**Status:** OPEN — TRC-20 mechanics and `AccountPermissionUpdateContract` verified 2026-11-12; TronScan Approval-tab route still unverified.
 
 **Operational restriction:** Do not present Revoke.cash as a TRON revocation route. Do not copy EVM approval wording to TRON or present the supplied TronScan route as live-verified.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite a live re-check of TronScan’s account-page **Approval → Cancel Contract Approval** route and verified TRC-20 approval, allowance and delegated-transfer mechanics.
+**Clearance condition:** Cite a live browser re-check of TronScan's account-page **Approval → Cancel Contract Approval** route. (The verified TRC-20 approval, allowance and delegated-transfer mechanics above meet the second half of the original condition.)
 
-**Gate/source links:** Register addendum, 2026-11-09 — M15 TRX row; M13 F20; [TronScan — Approval-tab route awaiting live re-check](https://tronscan.org/).
+**Gate/source links:** Register addendum, 2026-11-09 — M15 TRX row; M13 F20; TRC-20 + permission verification 2026-11-12 — [TRC-20 protocol interface](https://developers.tron.network/docs/trc20-protocol-interface); [TRC-20 contract interaction](https://developers.tron.network/docs/trc20-contract-interaction); [Account Permission Management](https://developers.tron.network/docs/multi-signature); [TronScan — Approval-tab route awaiting live browser re-check](https://tronscan.org/).
 
 ### M-12 — Address-poisoning taxonomy; the test-payment habit is defeated
 
-**Question/risk:** Address poisoning has three forms: zero-value, dust and fake-token. Only zero-value poisoning is covered in the repo. A small test transfer validates only that payment: the victim can later take a different, poisoned address from history for the main payment, defeating the test-payment habit.
+**Question/risk:** Address poisoning has three forms: zero-value, dust and fake-token. All three are taught in §15 and §2 (see Evidence). A small test transfer validates only that payment: the victim can later take a different, poisoned address from history for the main payment, defeating the test-payment habit.
 
 **Affected sections:** §15 and §12.
 
-**Evidence or uncertainty:** M15 F1 records the December 2025 $50M poisoning case and Laplas, November 2022, using clipboard substitution with a convincing lookalike. Dust and fake-token poisoning are unnamed anywhere in the repo. M13 F07 establishes that a small test transfer limits only that test’s loss: the full-address check must be repeated for the actual transfer.
+**Evidence or uncertainty:** M15 F1 records the December 2025 $50M poisoning case and Laplas, November 2022, using clipboard substitution with a convincing lookalike. The row's earlier statement that dust and fake-token poisoning are unnamed anywhere in the repo is stale: the three-form taxonomy has been present since the guide's initial commit (`42eab79`), at §15 (Address poisoning) and §2, and §15 now also tabulates the per-chain forms (see 'Per-chain poisoning forms', added 2026-11-12). M13 F07 establishes that a small test transfer limits only that test's loss: the full-address check must be repeated for the actual transfer. Both starters have no history-rendering code surface for this: the Web `transaction-history.tsx` and Android `TransactionHistoryScreen` are empty states (no provider, no history), both send forms are unimplemented, and neither starter offers history-based recipient selection — so there is no in-app history from which a poisoned address could be reselected. The remaining per-chain work in M13 F20 (mechanisms, address representation, history rendering, test-transfer limits) is covered for mechanisms, representation and test-transfer limits by the §15 table; history rendering has no draft implementation to verify.
 
-**Status:** OPEN.
+**Status:** RESOLVED 2026-11-12 — taxonomy evidenced and per-chain forms tabulated in §15; no draft code surface for history-based reselection. Re-opens only on a cited further item from M13 F20.
 
 **Operational restriction:** Teach all three forms. Use an independently verified address-book entry, never an address copied from history. Compare the whole address, including for the actual transfer after a test. A test transfer validates nothing beyond that payment.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** None needed beyond correct prose for the taxonomy, which is evidenced. The open part is the per-chain work in M13 F20: address-poisoning mechanisms, address representation, history rendering and test-transfer limits. Writing the taxonomy correctly does not clear those outstanding items.
+**Clearance condition:** Met 2026-11-12 — the taxonomy prose is evidenced (§15, §2) and the per-chain mechanisms, address representation and test-transfer limits are tabulated in §15. No code fix was possible or needed: neither starter renders history or selects recipients from it.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M15 F1; M13 F07; M13 F20 open items.
+**Gate/source links:** Register addendum, 2026-11-09 — M15 F1; M13 F07; M13 F20 open items; §15 per-chain table added 2026-11-12; Web `apps/web/src/screens/transaction-history.tsx` and Android `ManagementScreens.kt` empty-state history screens (no history-based recipient selection).
+
 ### M-13 — TON confirmation threshold (decided 2026-11-10)
 
 **Question/risk:** No TON confirmation/finality threshold exists in any guide. Inventing one would present an unverified settlement claim for real funds.
