@@ -549,6 +549,12 @@ export const knownTestVectors = [
   'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL',
   'zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE',
   'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76',
+  // R03: synthetic version-mismatch fixtures from test/smoke.test.js
+  // (VER_0295B005 / VER_02AA7A99, T40-F2) — rejection fixtures for
+  // validateExtendedKey, never real keys. Scrubbed like the vectors
+  // above; any other private extended key literal still fails.
+  'YprvAUcRCyQ3qDCdyfFffou2tZLydpCn5NWe8YhoeoBGhyfK833zgehK7d972cxHm7HTEbjC2XT68GhGxdVbiWQ5jER4GR2egAtGcgBtB4bVYDG',
+  'ZprvAoSgWe4xytk7pxSnWAgf6eSUonME1zW93fE2SC5A5z3CB8sDwJrsjgoF3pusm1wNeEqzn13eaw3pqv7ASCp6XU6f8kj5G5hktQFXZczz4kw',
 ];
 
 // Exceptions apply only to these exact trimmed statements, not entire files.
@@ -609,6 +615,58 @@ export const secretAllowlist = [
     file: 'tools/mainnet-signing/local-signing.mjs',
     pattern: 2,
     line: 'privateKey: priv,',
+  },
+  // R03: the 9 pre-existing gate failures at 3cfd5d2 (7 test fixtures
+  // + 2 make_wallet.py runtime statements). Each entry is one exact
+  // trimmed line; any other line text still fails the gate.
+  // The five test-line entries are split inside the seed-key word: a
+  // naive single-string entry would itself trip pattern 2 branch D in
+  // this file if ever re-quoted with double quotes, since the flagged
+  // key-colon-literal text would then sit on the entry source line.
+  // The joined value is the exact trimmed test line.
+  {
+    file: 'tests/mainnet-guards.test.mjs',
+    pattern: 2,
+    line: 'assert.equal(out, \'seed_phra' +
+      'se: [REDACTED]\');',
+  },
+  {
+    file: 'tests/mainnet-unsigned-tx.test.mjs',
+    pattern: 2,
+    line: 'assert.throws(() => buildBtcP2wpkhUnsignedTx({ ...good(), privat' +
+      'eKey: \'00\'.repeat(32) }), /Invalid/);',
+  },
+  {
+    file: 'tests/mainnet-unsigned-tx.test.mjs',
+    pattern: 2,
+    line: 'assert.throws(() => buildBtcP2wpkhUnsignedTx({ ...good(), mnemon' +
+      'ic: \'abandon \'.repeat(11) + \'about\' }), /Invalid/);',
+  },
+  {
+    file: 'tests/mainnet-unsigned-tx.test.mjs',
+    pattern: 2,
+    line: 'assert.throws(() => buildEthLegacyUnsignedTx({ ...ethLegacyInput(), se' +
+      'ed: \'abandon\' }), /Invalid/);',
+  },
+  {
+    file: 'tests/mainnet-unsigned-tx.test.mjs',
+    pattern: 2,
+    line: 'assert.throws(() => buildTonV4R2UnsignedTransfer({ ...good(), privat' +
+      'eKey: \'00\'.repeat(32) }), /Invalid/);',
+  },
+  // tools/make_wallet.py — runtime derivation/decryption into a
+  // variable, never a literal secret. Same statements already
+  // allowlisted for test/differential_test.py, test/fixture-oracle.py
+  // and tools/decrypt_seed.py respectively.
+  {
+    file: 'tools/make_wallet.py',
+    pattern: 2,
+    line: 'seed = Bip39SeedGenerator(mnemonic).Generate()',
+  },
+  {
+    file: 'tools/make_wallet.py',
+    pattern: 2,
+    line: 'mnemonic = assert_bundle_decrypts(reported, data_key)',
   },
 ];
 

@@ -332,4 +332,39 @@ describe('secret-scan (F-25/26)', () => {
     write(root, 'tests/mainnet-signing.test.mjs', '      private' + 'Key: "1111111111111111111111111111111111111111111111111111111111111111",\n');
     assert.equal(secretScan(root), false, 'a literal private key must fail in each previously exempted file');
   });
+
+  test('R03: the 9 reviewed lines pass, a non-exempt literal in each file fails', () => {
+    // test/smoke.test.js — synthetic version-mismatch fixtures
+    // (VER_0295B005 / VER_02AA7A99, T40-F2): rejection fixtures for
+    // validateExtendedKey, never real keys. Added to knownTestVectors.
+    write(root, 'test/smoke.test.js', '  VER_0295B005: "YprvAUcRCyQ3qDCdyfFffou2tZLydpCn5NWe8YhoeoBGhyfK833zgehK7d972cxHm7HTEbjC2XT68GhGxdVbiWQ5jER4GR2egAtGcgBtB4bVYDG",\n  VER_02AA7A99: "ZprvAoSgWe4xytk7pxSnWAgf6eSUonME1zW93fE2SC5A5z3CB8sDwJrsjgoF3pusm1wNeEqzn13eaw3pqv7ASCp6XU6f8kj5G5hktQFXZczz4kw",\n');
+    // tests/mainnet-guards.test.mjs — redaction assertion, not a secret.
+    write(root, 'tests/mainnet-guards.test.mjs', '    assert.equal(out, \'seed_phrase: [REDACTED]\');\n');
+    // tests/mainnet-unsigned-tx.test.mjs — negative-test inputs.
+    // Built by concatenation: written out in full, the test file
+    // itself would trip the gate it is testing.
+    const unsignedTx = '    assert.throws(() => buildBtcP2wpkhUnsignedTx({ ...good(), privat' +
+      'eKey: \'00\'.repeat(32) }), /Invalid/);\n' +
+      '    assert.throws(() => buildBtcP2wpkhUnsignedTx({ ...good(), mnemon' +
+      'ic: \'abandon \'.repeat(11) + \'about\' }), /Invalid/);\n' +
+      '    assert.throws(() => buildEthLegacyUnsignedTx({ ...ethLegacyInput(), se' +
+      'ed: \'abandon\' }), /Invalid/);\n' +
+      '    assert.throws(() => buildTonV4R2UnsignedTransfer({ ...good(), privat' +
+      'eKey: \'00\'.repeat(32) }), /Invalid/);\n';
+    write(root, 'tests/mainnet-unsigned-tx.test.mjs', unsignedTx);
+    // tools/make_wallet.py — runtime derivation/decryption into a
+    // variable, never a literal secret.
+    write(root, 'tools/make_wallet.py', '    seed = Bip39SeedGenerator(mnemonic).Generate()\n        mnemonic = assert_bundle_decrypts(reported, data_key)\n');
+    git(root, ['add', '.']);
+    assert.equal(secretScan(root), true, 'the 9 reviewed lines must pass');
+
+    // Plant a NON-exempt literal in each file. A different extended
+    // key, a different privateKey value, a literal-valued redaction
+    // line, and a literal seed assignment must all fail.
+    write(root, 'test/smoke.test.js', '  VER_OTHER: "Yprv' + '1'.repeat(105) + '",\n');
+    write(root, 'tests/mainnet-guards.test.mjs', '    assert.equal(out, \'seed_phra' + 'se: "hunter2 hunter2"\');\n');
+    write(root, 'tests/mainnet-unsigned-tx.test.mjs', '    assert.throws(() => buildBtcP2wpkhUnsignedTx({ ...good(), privat' + 'eKey: \'11\'.repeat(32) }), /Invalid/);\n');
+    write(root, 'tools/make_wallet.py', '    seed = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"\n');
+    assert.equal(secretScan(root), false, 'a non-exempt literal must fail in each previously exempted file');
+  });
 });
