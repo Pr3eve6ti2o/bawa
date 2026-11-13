@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06) is a separate, uncompleted step; do not present 4.9.2 as the installed pin until the manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.3 (the current latest stable) is a separate, uncompleted step; do not present 4.9.2 or 4.9.3 as the installed pin until the manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
@@ -355,7 +355,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 
   This layer has no runnable procedure in this guide yet.
 
-- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
+- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
 
   Use `test/differential_test.py` to independently check these published index-zero fixtures:
 
@@ -422,7 +422,7 @@ Use this nine-step checklist as work to complete, not as evidence of completion.
 
 1. **Establish the security scope.** Keep the app scoped to testnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
 
-2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools and both platform drafts, and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
+2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
 
 3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `NOVA_ENV`. Preserve the frozen identifier and use published fixtures, never customer wallet material.
 

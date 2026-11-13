@@ -274,7 +274,7 @@ Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do no
 
 ### Signing boundary
 
-Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tooling and both platform drafts pin version `4.8.4` at base commit `754721cd`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
+Keep the implementation boundary explicit: Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core (the repository tools pin `4.8.4` at base commit `754721cd`; the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy), and the Android AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`). Allow only the separate signer to create spending signatures. Require review of the destination, amount, change and fee on the signer’s own screen before it signs.
 
 Give the signer an immutable unsigned transaction, an explicit chain/network context and the minimum evidence needed to validate the proposed spend. For Bitcoin, include previous-output information sufficient to check input values and scripts. Identify signing keys through a locally authorised key reference, not by passing private keys through application messages.
 

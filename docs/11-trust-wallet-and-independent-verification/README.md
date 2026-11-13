@@ -310,7 +310,7 @@ Report source checks as “source-verified against the Trust Wallet Core 4.9.2 t
 
 Do not expect Wallet Core to communicate with blockchain nodes, fetch balances or broadcast transactions. Keep those tasks in Bawa’s application and infrastructure code.
 
-Keep the independent verifier pinned to [bip-utils](https://pypi.org/project/bip-utils/) 2.12.2. Consult its documentation for coverage of its separate implementations of HD-wallet standards and chain-specific key and address schemes. Use it only for standards and paths supported by both implementations.
+Keep the independent verifier pinned to [bip-utils](https://pypi.org/project/bip-utils/) 2.12.3. Consult its documentation for coverage of its separate implementations of HD-wallet standards and chain-specific key and address schemes. Use it only for standards and paths supported by both implementations.
 
 Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failure to investigate, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
 
@@ -342,7 +342,7 @@ python3 test/differential_test.py
 
 ### Independent verification and chain fixtures
 
-`bip_utils` is pinned to **2.12.2** for verification tests. It provides a separate implementation against which to check the Trust Wallet Core generator. The runtime generation code does **not** import it.
+`bip_utils` is pinned to **2.12.3** for verification tests. It provides a separate implementation against which to check the Trust Wallet Core generator. The runtime generation code does **not** import it.
 
 The [bip_utils documentation](https://pypi.org/project/bip-utils/) lists implementations of BIP-39, BIP-32, BIP-44, BIP-49 and BIP-84, together with P2PKH, P2SH and P2WPKH address generation and Base58/Bech32 encoding. The BIP specifications define the standards; library documentation establishes which combinations an implementation supports. Neither a feature list nor a library version proves that a particular repository test has run.
 

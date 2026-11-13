@@ -69,9 +69,9 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.3` (latest stable, published ~2026-11-11; `4.9.2` was a GitHub pre-release published 2026-11-06, tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`) | Not yet re-pinned or re-verified; the EIP-1559 construction/signing demonstration was on Core `4.9.2` only (D21, 2026-11-08); in-browser proof, send, sign and broadcast remain open. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
-| bip-utils | Python | `==2.12.2` | `==2.12.2` | Pinned |
+| bip-utils | Python | `==2.12.3` | `==2.12.3` | Pinned |
 | Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
 | Python | repo | `>=3.11` | Unresolved (tested 3.12.3; CI uses 3.13) | Range, not a pin |
 | npm | repo | no version specified | Unresolved | Unresolved required pin; resolve before any npm-based release validation |
@@ -126,9 +126,9 @@ Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned
 
 ## Release metadata
 
-Treat the current version metadata as inconsistent. `CHANGELOG.md` heads with `1.2.0`, while both `package.json` files say `1.1.0`. No changelog entry carries a date.
+The follow-up changelog correction has resolved the version mismatch. `CHANGELOG.md` now heads `[Unreleased]` then `[1.1.0]` (“date not evidenced”), matching both `package.json` files at `1.1.0`. `1.2.0` was never released.
 
-Keep both package versions at `1.1.0`. `1.2.0` was never released. The changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12, 8 November 2026, success; D09). The merge was pushed at 754721cd without updating `CHANGELOG.md`. Update the changelog in a follow-up commit: place the outstanding changes under `Unreleased` and record the CI correction in its `Fixed` subsection.
+Keep both package versions at `1.1.0`. The changelog's CI bullet describes the workflow's steps accurately, and a passing run exists (run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12, 8 November 2026, success; D09). The remaining metadata gaps are still open: `git tag` is empty (zero tags), and there are no release dates, only “date not evidenced”. Keep `Unreleased` at the top and record the CI correction in its `Fixed` subsection.
 
 Semantic Versioning adherence: not established by the available evidence.
 
@@ -882,7 +882,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at version `4.8.4`; the release pin is 4.9.2 (see Version pins above).
+The tooling package declares `@trustwallet/wallet-core` at `4.8.4`, which `npm ci` installs; `4.9.2` was the required release-verification pin in the Version pins table above (D21 construction/signing demonstration only, not the installed pin). With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
 ```bash
 cd tools/hdwallet-gen
@@ -941,7 +941,7 @@ python -m pip install -r requirements.txt
 `requirements.txt` pins:
 
 - `cryptography==50.0.2`
-- `bip-utils==2.12.2`
+- `bip-utils==2.12.3`
 
 Keep those pins. Bawa does not document substitute versions for installation failures; confirm a supported remedy with the maintainer rather than editing the requirements to make installation proceed.
 
@@ -1380,7 +1380,7 @@ Tagged release
 
 OI-065 — Operational/security ownership and a vulnerability-disclosure procedure are not established by the supplied evidence. Obtain maintainer-approved responsibilities, a reporting channel, and handling/escalation instructions, and publish them here. No reporting channel or response commitment is claimed meanwhile. Owner: W2 (documentation closure).
 
-The guides give no incident-response playbook today beyond this section. Use the playbook created here in docs/10 for the operations-side response, and cross-reference [docs/15](docs/15-threat-model-and-theft-prevention/README.md) for the holder-side playbook. Do not treat these instructions as evidence that any incident has been rehearsed or any response tested.
+The guides give no incident-response playbook today beyond this section. Use the playbook created here in docs/10 for the operations-side response, and cross-reference [docs/15](../15-threat-model-and-theft-prevention/README.md) for the holder-side playbook. Do not treat these instructions as evidence that any incident has been rehearsed or any response tested.
 
 Follow each scenario in order: contain first, choose trusted-device recovery or fresh-seed migration, revoke approvals and sessions, then escalate and review before resuming. Preserve devices and incident records throughout.
 

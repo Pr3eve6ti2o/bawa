@@ -4982,9 +4982,9 @@ Establish the following release procedure before considering testnet distributio
 
 1. **Reconcile version metadata and define the tagging sequence.**
 
-   **VERIFIED** — As of 2026-11-08, `CHANGELOG` says **1.2.0**, while `package.json` says **1.1.0** (R16 F2). `git tag` is empty: zero tags exist (R16 F4).
+   **VERIFIED** — As of 2026-11-13, `CHANGELOG.md` says **1.1.0**, matching both `package.json` files at **1.1.0** (R16 F2 resolved). `git tag` is still empty: zero tags exist (R16 F4 still open).
 
-   Choose and record the release version, then align the metadata. Do not treat 1.2.0 as a reconciled release version. Place tag creation after the required build and runtime gates in the release procedure you establish.
+   Choose and record the release version, then align the metadata. Do not treat 1.2.0 as a reconciled release version. It was never released. Place tag creation after the required build and runtime gates in the release procedure you establish.
 
 **Warning** — A proof on another Core version does not establish compatibility with the selected pin. Require a rerun before publication; check that the resulting evidence covers the pinned version.
 

@@ -74,7 +74,7 @@ See [Testing](docs/TESTING.md).
 
 `@trustwallet/wallet-core` is the wallet-crypto engine. `bip-utils` is a pinned reference-test dependency only. `@hdwallet/core` is not used by the runtime.
 
-The wallet package pins `@trustwallet/wallet-core` to `4.8.4` and declares Node `>=22 <23`. Python requirements pin `cryptography==50.0.2` and `bip-utils==2.12.2`.
+The wallet package pins `@trustwallet/wallet-core` to `4.8.4` and declares Node `>=22 <23`. Python requirements pin `cryptography==50.0.2` and `bip-utils==2.12.3`.
 
 ## Production status
 

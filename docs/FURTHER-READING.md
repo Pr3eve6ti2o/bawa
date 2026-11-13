@@ -42,8 +42,8 @@ Use these for integration guidance on multi-coin wallet creation and import, add
 | Source | How to use it |
 | --- | --- |
 | [Wallet Core repository README](https://github.com/trustwallet/wallet-core) | Read the README for the upstream, cross-platform wallet library on which Bawa's tools depend. |
-| [Wallet Core releases](https://github.com/trustwallet/wallet-core/releases) | Check release notes and tags for the upstream library, including the pinned 4.9.2 release. |
-| [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2) | The pinned upstream reference (tag 4.9.2, commit 17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3); re-pin and re-verify whenever the Core pin moves. |
+| [Wallet Core releases](https://github.com/trustwallet/wallet-core/releases) | Check release notes and tags: the repository tools' installed pin is `4.8.4`; the latest stable is `4.9.3` (not yet adopted). |
+| [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2) | The demonstrated reference version (D21 construction/signing only, 2026-11-08; GitHub pre-release, tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`); re-pin and re-verify whenever the Core pin moves. |
 | [Wallet Core registry (4.9.2)](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.2/registry.json) | The upstream registry data interpreted by docs/12; pinned at tag 4.9.2. |
 | [Wallet Core BC footguns (4.9.2)](https://github.com/trustwallet/wallet-core/blob/4.9.2/docs/bc-footguns.md) | Known backward-compatibility constraints for Wallet Core, recorded from real incidents; added upstream with 4.8.7. |
 

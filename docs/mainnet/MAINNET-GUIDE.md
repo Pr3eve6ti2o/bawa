@@ -392,7 +392,7 @@ For the procedures, see **Doc 1 §6 (Node)** and **Doc 1 §7 (Python)**. Install
 Match these repo pins:
 - **Node 22.23.4**, within the repo range `>=22 <23` (M05).
 - **Trust Wallet Core 4.8.4** (M05 F11).
-- Python packages **`cryptography==50.0.2`** and **`bip-utils==2.12.2`** (M05).
+- Python packages **`cryptography==50.0.2`** and **`bip-utils==2.12.3`** (M05).
 
 **Standing environment note:** verification ran on **Node v24.22.2**, outside the repo range. Node v24 is not a supported configuration (M05/M06; verify2 T1 environment failure). Anything installed outside the pins is untested against the repo.
 
@@ -3003,9 +3003,9 @@ Version records at the **2026-11-09 baseline**: (M05)
 
 | Component | Recorded pin | Candidate or constraint |
 |---|---|---|
-| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.1**, the latest stable at the baseline; SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: it was npm `latest`, but a GitHub prerelease. |
+| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
 | Node | **22.23.4**; repo range `>=22 <23` | Node **v24** is outside that range. |
-| bip-utils | **2.12.2** | **2.12.3** is the candidate; it postdates the mnemonic-in-exceptions fix. |
+| bip-utils | **2.12.3** (adopted 2026-11-13: differential test PASS, identical BTC/ETH addresses, 14/14 unit tests) | none — 2.12.3 is the current latest stable and the adopted pin |
 
 **A candidate is not a pin. No version is qualified for mainnet until it passes the promotion checks.** (M05 F7)
 

@@ -222,7 +222,7 @@ The Android guide uses the same repo canonical ripple pair (Android guide, secti
    . .venv/bin/activate
    ```
 
-2. **Install from the repo’s `requirements.txt`.** It pins `cryptography==50.0.2` and `bip-utils==2.12.2`.
+2. **Install from the repo’s `requirements.txt`.** It pins `cryptography==50.0.2` and `bip-utils==2.12.3`.
 
    ```sh
    python3 -m pip install -r requirements.txt
@@ -654,7 +654,7 @@ Never combine these counts. Neither separate suite establishes live-network cove
 
    ```text
    cryptography==50.0.2
-   bip-utils==2.12.2
+   bip-utils==2.12.3
    ```
 
 3. Run the supplied reproduction command inside that environment:

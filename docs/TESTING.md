@@ -28,7 +28,7 @@ Trust Wallet Core ──────┐
 bip_utils ──────────────┘
 ~~~
 
-The pinned bip-utils==2.12.2 dependency is not imported by runtime wallet-generation code.
+The pinned bip-utils==2.12.3 dependency is not imported by runtime wallet-generation code.
 
 Run from the repository root:
 
