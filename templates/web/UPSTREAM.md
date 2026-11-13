@@ -101,8 +101,8 @@ Do not proceed on the strength of this record without reassessment if:
   apps/web/package-lock.json, 295 packages): react/react-dom 19.2.5,
   react-router 7.14.0, vite 8.0.7, typescript 5.9.3, tailwindcss 4.2.4,
   vitest 4.1.3, jsdom 31.0.0, qrcode.react 4.2.0, @trustwallet/wallet-core
-  4.8.4 (the repo pin, Phase 4 decision).
-- WASM loading: the wallet-core 4.8.4 Emscripten build rejects both
+  4.9.3 (the repo pin, upgraded 2026-11-13; the former pin 4.9.1 is superseded).
+- WASM loading: the wallet-core 4.9.3 Emscripten build rejects both
   `locateFile` and `wasmBinary` (not in INCOMING_MODULE_JS_API —
   verified first-hand: both abort, no-args `initWasm()` works in Node).
   The loader resolves `wallet-core.wasm` relative to the page URL in the

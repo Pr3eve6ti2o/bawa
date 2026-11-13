@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { WatchOnlyWallet } from '@bawa/contracts';
-import { validateExtendedKey, type ChainId } from '../engine/boundary';
+import { validateWatchOnlyImport, type ChainId } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Badge } from '../ui/components/badge';
@@ -10,7 +10,19 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { toast } from '../ui/components/toast';
 
-const chains: ChainId[] = ['btc', 'eth', 'trx'];
+const chains: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+
+type ImportInputConfig = {
+  label: string;
+  placeholder: string;
+};
+
+const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
+  btc: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  eth: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  trx: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  ton: { label: 'TON public address', placeholder: 'UQ… or 0:…' },
+};
 
 export function ImportWalletScreen() {
   const { xpubs, addXpub } = useWallet();
@@ -28,18 +40,32 @@ export function ImportWalletScreen() {
     if (isAdding) return;
 
     const publicKey = xpub.trim();
-    const validation = await validateExtendedKey(publicKey, chain);
+    // T41: clear the draft immediately. A pasted mnemonic or private key
+    // must not linger in the field (and in React state / the DOM) after
+    // a rejected submission; the old code returned on validation failure
+    // with the input still populated.
+    setXpub('');
+    // T43 r2b Fix (a): validate before setting the adding state, so a
+    // rejected value reports its specific error and returns early.
+    const validation = await validateWatchOnlyImport(chain, publicKey);
     if (!validation.ok) {
-      setError(validation.message || 'Enter a valid extended public key.');
+      // Clear again inside the failure block (already cleared above by
+      // the T41 step): the rejection path must clear before reporting.
+      setXpub('');
+      setError(`${validation.message || (chain === 'ton' ? 'Invalid TON address.' : 'Invalid extended public key.')} The input was cleared; never paste a mnemonic, seed or private key here.`);
       return;
     }
-
     setError(null);
     setIsAdding(true);
     try {
+      const validation = await validateWatchOnlyImport(chain, publicKey);
+      if (!validation.ok) {
+        // Secret-free error: never echo the rejected input back.
+        setError(`Invalid ${chain === 'ton' ? 'TON address' : 'extended public key'}. The input was cleared; never paste a mnemonic, seed or private key here.`);
+        return;
+      }
       await addXpub(chain, publicKey, label.trim());
       toast.success('Watch-only wallet added.');
-      setXpub('');
       setLabel('');
     } catch {
       setError('The wallet could not be added. Please try again.');
@@ -53,8 +79,14 @@ export function ImportWalletScreen() {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Import a watch-only wallet</h1>
         <p id="watch-only-notice" className="text-sm text-muted-foreground">
-          Only extended PUBLIC keys are accepted. Private extended keys (xprv/zprv)
-          are rejected. Never paste a mnemonic, seed or private key here.
+          Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
+          are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
+          Never paste a mnemonic, seed or private key here.
+          An extended public key lets its holder track this account&apos;s
+          derivable addresses, balances and transaction history. Imported
+          keys are stored in this browser (localStorage) and stay stored
+          when the wallet is locked; they are readable by this site&apos;s
+          scripts and by extensions with access to this site.
         </p>
       </header>
 
@@ -82,7 +114,7 @@ export function ImportWalletScreen() {
         </fieldset>
 
         <div className="space-y-2">
-          <Label htmlFor="wallet-xpub">Extended public key (xpub)</Label>
+          <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
           <Input
             id="wallet-xpub" name="xpub" type="text"
             value={xpub}
@@ -91,10 +123,16 @@ export function ImportWalletScreen() {
               setError(null);
             }}
             autoComplete="off" autoCapitalize="none" spellCheck={false}
-            placeholder="xpub…" required disabled={isAdding}
+            placeholder={inputConfigByChain[chain].placeholder} required disabled={isAdding}
             aria-invalid={error !== null}
             aria-describedby={error ? 'watch-only-notice import-error' : 'watch-only-notice'}
           />
+          {chain === 'ton' && (
+            <p className="text-sm text-muted-foreground">
+              Single public address. No child addresses are derived: the TON path is fully hardened.
+              Watch-only only — this starter cannot send or withdraw TON.
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -104,7 +142,9 @@ export function ImportWalletScreen() {
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
+            maxLength={40}
           />
+          <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
         </div>
 
         {error && (

@@ -245,23 +245,25 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Neither tool's output distinguishes bad-checksum from wrong-version rejection.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.9.3 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Each tool's validator message distinguishes bad-checksum from wrong-version rejection for the test-vector-5 pair below.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.9.3 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.9.3 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; the tool output does not distinguish it from a wrong-version failure.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core pin: no address, exit 2 with `extended key checksum verification failed` on stderr. `compare.js` exits 1 with `FATAL: btc: extended key checksum verification failed` and no address. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; its validator message distinguishes it from the version-mismatch vector below.
 
 - **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect; the tool output does not distinguish it from a bad-checksum failure.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core pin: no address, exit 2 with `extended public key required (private extended keys are rejected)` on stderr. `compare.js` exits 1 with `FATAL: btc: extended public key required (private extended keys are rejected)` and no address. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect: its public-key version bytes are paired with a private-key payload, so the validator reports a private-key rejection rather than a wrong-version message.
+
+  > Note: an earlier revision of this section expected "exit 1 and an opaque WASM abort" for both vectors. That expectation is stale: both tools run `validateAccountKey` before WASM initialisation, so invalid input never reaches WASM. T20 confirmed the same behaviour on Trust Wallet Core 4.8.4 and 4.9.1, and the different validator messages distinguish the two vectors.
 
 ### Fixture and parity gaps
 
@@ -304,7 +306,7 @@ For the standards and paths covered by Bawa’s differential tests, require Wall
 
 ### Use the reference engine and independent verifier
 
-Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
+Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. This reference-engine role records the version the guides’ verification evidence was produced against; it does not make `4.9.2` the pin. `4.9.2` is a GitHub prerelease; the repository pin is now `4.9.3` (upgraded 2026-11-13 after its qualification run, R08/E02; the former pin `4.9.1` is superseded) (Doc 4 section 21 M-21). Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
 
 Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
 
@@ -498,7 +500,7 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 
 ### CI discipline, reproducible checks and build verification
 
-Use Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) in place of the superseded 4.8.4 pin.
+Use the repository pin, Trust Wallet Core **4.9.3**, in CI (upgraded 2026-11-13, E02). Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) is the version the D21 EIP-1559 demonstration ran on; it is a GitHub prerelease, not the pin, and it does not supersede `4.9.3`. The 4.9.3 qualification run is complete (Doc 4 section 21 M-21, R08; applied by E02).
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. Do not carry that demonstration forward as proof of the in-browser flow.
 

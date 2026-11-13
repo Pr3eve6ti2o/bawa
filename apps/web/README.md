@@ -6,7 +6,7 @@ stores or displays a mnemonic, seed, private key, private extended key, vault ke
 
 ## Install, develop, build and test
 
-Use Node.js `>=22 <23`. The package is `bawa-web` and is private. Run these commands from the
+Use Node.js `>=22 <23`. The range is enforced: `apps/web/.npmrc` sets `engine-strict=true`, so `npm ci` fails with `EBADENGINE` on any other Node release. The package is `bawa-web` and is private. Run these commands from the
 repository root:
 
     cd apps/web
@@ -26,7 +26,7 @@ Keep the repository checkout intact: `@bawa/contracts` is a local `file:` depend
 - Import one extended public key (xpub) per supported chain: BTC, ETH and TRX.
   Keys are validated before storage.
 - Derive the first five addresses per chain, at indices 0–4, in the browser.
-  The engine is `@trustwallet/wallet-core` 4.8.4, the repository's Phase 4 pin, loaded as WASM.
+  The engine is `@trustwallet/wallet-core` 4.9.3, loaded as WASM.
   Derivation uses `HDWallet.getPublicKeyFromExtended` and
   `CoinTypeExt.deriveAddressFromPublicKey`.
 - Display a derived address on the Receive screen with a QR code using `qrcode.react`.
@@ -55,7 +55,7 @@ Derivation policy, where `i` is the address index:
   [`tools/hdwallet-gen/generate.js`](../../tools/hdwallet-gen/generate.js) outside the browser.
   Import only the resulting extended public keys into this app, never secret output.
   The creation and mnemonic-backup screens do not generate or reveal secret material.
-- **TON:** not supported by this starter.
+- **TON:** watch-only import of a public address only; no derivation, no send.
 
 ## Security notes
 
@@ -70,6 +70,18 @@ Derivation policy, where `i` is the address index:
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
 - Testnet only by policy; mainnet is out of scope. The derivation paths are not a
   network-enforcement mechanism.
+- Content-Security-Policy (T47): `src/app/security-headers.ts` is the single source
+  of truth. The strict policy (`script-src 'self' 'wasm-unsafe-eval'`, no inline
+  scripts, `object-src 'none'`, `frame-ancestors 'none'`) is served as an HTTP
+  header by `vite preview` and injected as a `<meta>` tag into `dist/index.html`
+  at build time only — Vite dev injects an inline react-refresh preamble, so a
+  source-level meta tag would break `npm run dev`. Any production host serving
+  `dist/` must send the same `Content-Security-Policy` header (plus
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`); the meta tag alone
+  cannot enforce `frame-ancestors`.
+- WASM integrity (T47): `scripts/copy-wasm.mjs` refuses to copy a wallet-core.wasm
+  whose SHA-256 differs from the published @trustwallet/wallet-core@4.9.3 pin in
+  `scripts/wasm-integrity.mjs`. Bump the pin from the new published tarball only.
 
 ## File map
 

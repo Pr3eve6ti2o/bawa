@@ -98,8 +98,9 @@ fun CreateWalletScreen(vm: WalletViewModel) {
             "This starter cannot create a wallet on-device — there is no vault design yet, " +
                 "so no mnemonic is ever generated or shown here."
         )
-        Text("From the root of a fresh clone of the repo, run either:")
-        Text("python3 tools/make_wallet.py\nor\nnode tools/hdwallet-gen/generate.js")
+        Text("From the root of a fresh clone of the repo, run:")
+        Text("python3 tools/make_wallet.py")
+        Text("The wrapper verifies the encrypted backup independently; do not run the generator directly.")
         Text("Follow the on-screen steps and keep the printed 24 words offline.")
 
         PrimaryButton(
@@ -115,6 +116,7 @@ fun ImportWalletScreen(vm: WalletViewModel) {
     var xpub by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
     var validationMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
     val wallets by vm.wallets.collectAsState()
     val selectedChain by vm.selectedChain.collectAsState()
     val importedWallets = wallets.mapNotNull { (chain, wallet) ->
@@ -141,6 +143,7 @@ fun ImportWalletScreen(vm: WalletViewModel) {
                 val onSelect = {
                     vm.selectChain(chain)
                     validationMessage = null
+                    successMessage = null
                 }
                 if (chain == selectedChain) {
                     Button(onClick = onSelect, modifier = Modifier.weight(1f)) {
@@ -159,6 +162,7 @@ fun ImportWalletScreen(vm: WalletViewModel) {
             onValueChange = {
                 xpub = it
                 validationMessage = null
+                successMessage = null
             },
             label = { Text("Extended public key (xpub)") },
             singleLine = true,
@@ -170,6 +174,7 @@ fun ImportWalletScreen(vm: WalletViewModel) {
             onValueChange = {
                 label = it
                 validationMessage = null
+                successMessage = null
             },
             label = { Text("Label (optional)") },
             singleLine = true,
@@ -184,12 +189,17 @@ fun ImportWalletScreen(vm: WalletViewModel) {
                         xpub = ""
                         label = ""
                         validationMessage = null
+                        successMessage = "Watch-only wallet added for ${selectedChain.name}."
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Add")
+        }
+
+        successMessage?.let { message ->
+            Text(text = message, color = MaterialTheme.colorScheme.primary)
         }
 
         validationMessage?.let { message ->

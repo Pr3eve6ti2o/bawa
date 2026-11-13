@@ -3,7 +3,7 @@
 - Platform: cli
 - Status: DOCUMENTED_NOT_TESTED — Documented but not tested.
 - Chains: btc (m/84'/0'/0'/0/i)
-- Engine: trust-wallet-core 4.8.4 — IMPLEMENTED_AND_VERIFIED
+- Engine: trust-wallet-core 4.9.3 — IMPLEMENTED_AND_VERIFIED
 - UI: none / none — DOCUMENTED_NOT_TESTED
 - Verification: DOCUMENTED_NOT_TESTED
 
@@ -31,7 +31,7 @@
 
 ## Security notes
 
-- Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
+- Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
 - BTC watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status records derivation evidence, not verification of a complete Bitcoin wallet or every security boundary.
 - Key generation policy is BIP-39 with 24 words and an empty passphrase. BTC uses m/84'/0'/0'/0/i, with account 0 and receiving branch 0 fixed.
 - Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.

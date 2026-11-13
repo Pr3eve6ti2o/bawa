@@ -9,6 +9,7 @@ enum class Reason {
     INVALID_BASE58,
     INVALID_LENGTH,
     INVALID_CHECKSUM,
+    INVALID_DEPTH_METADATA,
     PRIVATE_KEY,
     VERSION_NOT_ALLOWED,
     INVALID_POINT
@@ -26,8 +27,13 @@ object ExtendedKeyValidator {
     private const val PAYLOAD_LENGTH = 78
     private const val KEY_DATA_OFFSET = 45
 
+    // T42: a valid 82-byte extended key needs at most 112 Base58 characters
+    // (ceil(82 * log(256) / log(58))); the shared Node validator caps here.
+    private const val MAX_BASE58_LENGTH = 112
+
     private val PRIVATE_VERSIONS = setOf(
         "0488ade4", "049d7878", "04b2430c",
+        "0295b005", "02aa7a99",
         "04358394", "044a4e28", "045f18bc"
     )
     private val FIELD_PRIME = BigInteger.ONE.shiftLeft(256)
@@ -37,6 +43,16 @@ object ExtendedKeyValidator {
 
     fun validate(xpub: String, chain: Chain): ValidationResult {
         val input = xpub.trim()
+
+        // T42: bound the input before the alphabet scan, like the shared Node
+        // validator. Without this, a huge pasted string is scanned in full
+        // by the alphabet precheck before decoding rejects it.
+        if (input.length > MAX_BASE58_LENGTH) {
+            return ValidationResult.Invalid(
+                Reason.INVALID_LENGTH,
+                "invalid extended key length"
+            )
+        }
 
         // Check the whole alphabet first so character errors take precedence over overflow.
         if (input.any { ALPHABET.indexOf(it) < 0 }) {
@@ -82,6 +98,15 @@ object ExtendedKeyValidator {
             return ValidationResult.Invalid(
                 Reason.INVALID_POINT,
                 "extended key contains an invalid secp256k1 public key point"
+            )
+        }
+
+        // T40-F1: depth-0 extended keys must have zero fingerprint and
+        // child number (matches tools/hdwallet-gen/extended-key.js check 5c).
+        if (decoded[4] == 0.toByte() && decoded.copyOfRange(5, 13).any { it != 0.toByte() }) {
+            return ValidationResult.Invalid(
+                Reason.INVALID_DEPTH_METADATA,
+                "depth-0 extended key must have zero fingerprint and child number"
             )
         }
 
@@ -144,7 +169,10 @@ object ExtendedKeyValidator {
             .add(BigInteger.valueOf(7L))
             .mod(FIELD_PRIME)
 
-        return ySquared == BigInteger.ZERO ||
-            ySquared.modPow(LEGENDRE_EXPONENT, FIELD_PRIME) == BigInteger.ONE
+        // T42: the Legendre symbol must be exactly 1, matching the shared
+        // Node validator. ySquared == 0 is not accepted as a special case;
+        // it is unreachable anyway (-7 is not a cubic residue mod p, so no x
+        // has x^3 + 7 == 0 mod p).
+        return ySquared.modPow(LEGENDRE_EXPONENT, FIELD_PRIME) == BigInteger.ONE
     }
 }

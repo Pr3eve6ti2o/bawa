@@ -1,10 +1,13 @@
-// Chains supported for public-key-only address derivation by the Web starter.
-export type ChainId = 'btc' | 'eth' | 'trx';
+// Chains supported for watch-only import by the Web starter: xpub
+// derivation for btc/eth/trx, TON public-address import only.
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';
 
 // Alias for chains supported by the watch-only starter.
 export type SupportedChain = ChainId;
 
-// TON is documented-only, generation-only with no xpub, and unsupported by the Web starter.
+// TON is watch-only address import only in the Web starter; no
+// derivation, no send. TON has no xpub: its path m/44'/607'/0' is
+// fully hardened, so one wallet is one public address.
 export type DocumentedChain = ChainId | 'ton';
 
 // Type-only signature for an indexed address derivation path.
@@ -26,8 +29,10 @@ export type ExtendedKeyValidation =
         | 'invalid-base58'
         | 'invalid-length'
         | 'invalid-checksum'
+        | 'invalid-depth-metadata'
         | 'private-key'
         | 'version-not-allowed'
+        | 'not-account-key'
         | 'invalid-point';
       message: string;
     };
@@ -39,10 +44,31 @@ export interface DerivedAddress {
   address: string;
 }
 
+// Validation results for a user-supplied TON public address
+// (watch-only import only). Mirrors the TON rules in
+// apps/web/src/engine/destination.ts (TEP-0002 tags, workchain,
+// CRC16-XMODEM), plus a secret-like rejection for pasted secrets.
+export type TonAddressValidation =
+  | { ok: true; form: 'bounceable' | 'non-bounceable' | 'raw'; workchain: 0 | -1 }
+  | {
+      ok: false;
+      reason:
+        | 'empty'
+        | 'invalid-length'
+        | 'invalid-character'
+        | 'invalid-checksum'
+        | 'unsupported-version'
+        | 'wrong-network'
+        | 'invalid-format'
+        | 'secret-like';
+      message: string;
+    };
+
 // Watch-only wallet metadata containing a user-supplied extended public key.
 export interface WatchOnlyWallet {
   chain: ChainId;
   // Public extended key, including BTC zpub; this field must never hold a private extended key.
+  // For ton it holds the validated TON public address instead (TON has no xpub).
   xpub: string;
   label: string;
   derivedCount: number;
@@ -108,4 +134,63 @@ export interface EngineBoundaryError {
     | 'wasm-init-failed'
     | 'derivation-failed';
   message: string;
+}
+
+// Chains supported for mainnet destination validation (T31). The Web
+// starter's ChainId ('btc' | 'eth' | 'trx') covers derivation; TON is
+// documented-only there, but mainnet destinations must be validated
+// for all four chains before any transaction preparation.
+export type DestinationChain = 'btc' | 'eth' | 'trx' | 'ton';
+
+// EIP-55 / checksum status of a validated destination. 'absent' is a
+// structurally valid address carrying no checksum (all-lowercase or
+// all-uppercase ETH); 'not-applicable' is a form with no checksum by
+// design (TON raw form).
+export type DestinationChecksum = 'verified' | 'absent' | 'not-applicable';
+
+// Validation result for a user-supplied mainnet destination address.
+// Reasons: 'empty' (blank input), 'invalid-format' (wrong shape, e.g.
+// missing 0x, unknown bech32 HRP, TRON hex wire form), 'invalid-length',
+// 'invalid-character', 'invalid-checksum' (Base58Check / bech32 /
+// bech32m / EIP-55 / TON CRC16 mismatch), 'wrong-network' (a testnet
+// address or testnet-only flag), 'unsupported-version' (an address
+// version or witness version this module does not accept).
+export type DestinationValidation =
+  | {
+      ok: true;
+      chain: DestinationChain;
+      checksum: DestinationChecksum;
+      addressType: string;
+    }
+  | {
+      ok: false;
+      chain: DestinationChain;
+      reason:
+        | 'empty'
+        | 'invalid-format'
+        | 'invalid-length'
+        | 'invalid-character'
+        | 'invalid-checksum'
+        | 'wrong-network'
+        | 'unsupported-version';
+      message: string;
+    };
+
+// Mainnet parameters selected for transaction preparation. Values are
+// pinned with provenance in MAINNET_PARAMS (destination.ts); the
+// confirmation thresholds are the register values (M-13,
+// user-approved 2026-11-10) and confirmation policy is not a finality
+// guarantee.
+export interface MainnetParams {
+  chain: DestinationChain;
+  network: string;
+  slip44CoinType: number;
+  derivationPrefix: string;
+  chainId: number | null;
+  addressPrefix: string;
+  confirmations: number;
+  confirmationsUnit: string;
+  confirmationsNote: string;
+  sources: readonly string[];
+  limitations: readonly string[];
 }

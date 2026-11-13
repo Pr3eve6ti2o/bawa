@@ -11,6 +11,7 @@ const VEC_MNEMONIC = "ripple scissors kick mammal hire column oak again sun offe
 const VEC = {
   btc: "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd",
   eth: "0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7",
+  ton: "UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn",
 };
 
 function addrFromExtended(core, xpub, coin, derivationPath) {
@@ -48,6 +49,69 @@ function verifySeedBundle(bundlePath, dataKey, expectedMnemonic) {
   }
 }
 
+// T41: pure helpers for the backup confirmations (unit-tested in
+// test/smoke.test.js). Normalisation is case- and whitespace-insensitive;
+// comparison is plain string equality — the expected values were just
+// displayed on this terminal, so there is no oracle to protect with a
+// constant-time compare.
+function normalizeWords(text) {
+  return text.trim().toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+}
+
+function wordsMatch(entered, expected) {
+  return normalizeWords(entered) === normalizeWords(expected);
+}
+
+function keyMatches(entered, dataKeyHex) {
+  return entered.trim().toLowerCase() === dataKeyHex.toLowerCase();
+}
+
+// T41: read exactly 32 raw key bytes from an inherited file descriptor
+// (the make_wallet.py pipe handoff). Throws on EOF, short reads, or a
+// non-numeric descriptor. R05 r2a: the descriptor is single-use and is
+// closed here on EVERY path, including a failed read — the old
+// caller-closes contract leaked the descriptor when the read threw.
+function readDataKeyFromFd(fd) {
+  if (!Number.isInteger(fd) || fd < 0) {
+    throw new Error("BAWA_DATA_KEY_FD must be a file descriptor number");
+  }
+  const buf = Buffer.alloc(32);
+  try {
+    let off = 0;
+    while (off < 32) {
+      const n = fs.readSync(fd, buf, off, 32 - off, null);
+      if (n === 0) throw new Error("BAWA_DATA_KEY_FD: unexpected EOF");
+      off += n;
+    }
+    return buf;
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      // A close failure is not fatal; the read result (or throw) stands.
+    }
+  }
+}
+
+// A symlinked secrets directory is refused wherever it can be returned:
+// a standalone generate.js run must not bypass the wrapper's refusal
+// (T43 r2a Fix 1 / F3). Ancestor symlinks are NOT checked — the secrets
+// directory itself must sit under trusted, non-attacker-writable
+// parents (documented assumption, matching make_wallet.py's guard).
+// A missing directory is fine: it is created later by main().
+function refuseSymlinkedDir(dir) {
+  let st;
+  try {
+    st = fs.lstatSync(dir);
+  } catch (err) {
+    if (err.code === "ENOENT") return;
+    throw err;
+  }
+  if (st.isSymbolicLink()) {
+    throw new Error("refusing symlinked secrets directory");
+  }
+}
+
 // Resolve the secrets directory. Canonical name BAWA_SECRETS_DIR;
 // NOVA_SECRETS_DIR is accepted during the one-release compatibility
 // window with a deprecation warning. Both names set to different values
@@ -75,104 +139,248 @@ function resolveSecretsDir(env = process.env) {
     console.error(
       "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR"
     );
-    return expand(fresh);
+    const resolved = expand(fresh);
+    refuseSymlinkedDir(resolved);
+    return resolved;
   }
-  if (fresh !== undefined) return expand(fresh);
+  if (fresh !== undefined) {
+    const resolved = expand(fresh);
+    refuseSymlinkedDir(resolved);
+    return resolved;
+  }
   if (legacy !== undefined) {
     console.error(
       "warning: NOVA_SECRETS_DIR is deprecated; use BAWA_SECRETS_DIR"
     );
-    return expand(legacy);
+    const resolved = expand(legacy);
+    refuseSymlinkedDir(resolved);
+    return resolved;
   }
-  return path.join(__dirname, "..", "..", "secrets");
+  const resolved = path.join(__dirname, "..", "..", "secrets");
+  refuseSymlinkedDir(resolved);
+  return resolved;
 }
 
 function acquirePublishLock(encPath) {
   const lockPath = encPath + ".lock";
   const deadline = Date.now() + 10000;
   const waitState = new Int32Array(new SharedArrayBuffer(4));
-  let lockFd;
 
-  for (;;) {
+  // Probe the lock by descriptor, never by pathname reads: the file is
+  // opened O_RDONLY|O_NOFOLLOW|O_NONBLOCK and identified by fstat, so a
+  // symlinked lock is never followed and a FIFO lock never blocks the
+  // open. Returns { live, exists, ino, dev }.
+  //
+  // Liveness is fail-closed (T43 r1a §3 / r1c §3): a lock whose owner
+  // cannot be established — unreadable, symlinked, or an unexpected
+  // probe/kill error — is LIVE. Only ESRCH, malformed PID content, or
+  // a non-regular FIFO establishes death. ENOENT means no lock is
+  // present (released between our create attempt and the probe).
+  // Malformed-but-readable content stays reclaimable: the tested
+  // contract reclaims dead-PID and malformed locks promptly.
+  const probeLock = () => {
+    let fd;
     try {
-      lockFd = fs.openSync(lockPath, "wx", 0o600);
-      break;
+      fd = fs.openSync(
+        lockPath,
+        fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK
+      );
     } catch (err) {
-      if (err.code !== "EEXIST") {
-        throw err;
-      }
+      if (err.code === "ENOENT") return { live: false, exists: false, ino: null, dev: null };
+      return { live: true, exists: true, ino: null, dev: null };
     }
-
-    let live = false;
     try {
-      const pidText = fs.readFileSync(lockPath, "utf8").trim();
+      const st = fs.fstatSync(fd);
+      if (!st.isFile()) {
+        // A FIFO (or other non-regular) lock has no owner to probe; it
+        // is reclaimable. A symlink never reaches here (O_NOFOLLOW).
+        return { live: false, exists: true, ino: st.ino, dev: st.dev };
+      }
+      const pidText = fs.readFileSync(fd, "utf8").trim();
       const pid = Number(pidText);
-      if (/^\d+$/.test(pidText) && Number.isSafeInteger(pid) && pid > 0) {
-        try {
-          process.kill(pid, 0);
-          live = true;
-        } catch (killErr) {
-          // EPERM means the process exists but belongs to another
-          // user: the lock is live and must NOT be stolen. Any other
-          // probe failure (ESRCH = dead PID) permits reclamation.
-          if (killErr.code === "EPERM") live = true;
+      if (!/^\d+$/.test(pidText) || !Number.isSafeInteger(pid) || pid <= 0) {
+        return { live: false, exists: true, ino: st.ino, dev: st.dev };
+      }
+      try {
+        process.kill(pid, 0);
+        return { live: true, exists: true, ino: st.ino, dev: st.dev };
+      } catch (killErr) {
+        // EPERM means the process exists but belongs to another user:
+        // the lock is live and must NOT be stolen. ESRCH (dead PID)
+        // permits reclamation. Any other probe failure fails closed.
+        if (killErr.code === "ESRCH") {
+          return { live: false, exists: true, ino: st.ino, dev: st.dev };
         }
+        return { live: true, exists: true, ino: st.ino, dev: st.dev };
       }
     } catch (_) {
-      // An unreadable lock or unsuccessful PID probe permits reclamation.
-    }
-
-    if (!live) {
+      return { live: true, exists: true, ino: null, dev: null };
+    } finally {
       try {
-        fs.unlinkSync(lockPath);
-      } catch (err) {
-        if (err.code !== "ENOENT") {
-          throw err;
-        }
+        fs.closeSync(fd);
+      } catch (_) {
+        // Ignore close errors on a probe descriptor.
       }
-
-      // Retry exclusive creation exactly once after reclaiming the lock.
-      lockFd = fs.openSync(lockPath, "wx", 0o600);
-      break;
     }
+  };
 
+  const waitOrThrow = () => {
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
       throw new Error("seed bundle publish already in progress for " + encPath);
     }
     Atomics.wait(waitState, 0, 0, Math.min(100, remaining));
-  }
+  };
 
-  let lockFdNeedsClose = true;
-  try {
-    fs.writeFileSync(lockFd, String(process.pid));
-    // Do not retry close if it throws; the fd may already be released.
-    lockFdNeedsClose = false;
-    fs.closeSync(lockFd);
-  } catch (err) {
-    if (lockFdNeedsClose) {
+  for (;;) {
+    let lockFd;
+    try {
+      lockFd = fs.openSync(lockPath, "wx", 0o600);
+    } catch (err) {
+      if (err.code !== "EEXIST") {
+        throw err;
+      }
+
+      const first = probeLock();
+      if (!first.exists) continue; // Released between create and probe.
+      if (first.live) {
+        waitOrThrow();
+        continue;
+      }
+
+      // Dead lock — but re-probe immediately before reclaiming (T43
+      // r1c §1): the rename below is pathname-based, so a fresh
+      // acquirer can slip in between a probe and the rename and have
+      // its live lock renamed aside. Reclaim only if the lock is still
+      // the same dead inode; otherwise loop and wait on whoever holds
+      // it now. This narrows the window to the second probe → rename
+      // gap; it does not close it — there is no pure-Node primitive
+      // for a conditional rename. R05 r2d sharpens the residual: two
+      // reclaimers can both finish their second probe on the same
+      // stale inode S; A renames S aside and creates its live lock,
+      // then B's pathname rename moves A's LIVE lock aside and B
+      // creates its own — both then believe they hold the lock, and
+      // with --force both can publish. The publish fence in
+      // publishSeedBundle is the second line of defence, and a
+      // kernel flock on a stable, never-unlinked inode remains the
+      // full fix (no Node stdlib binding exists for it).
+      const second = probeLock();
+      if (!second.exists) continue; // Vanished; re-create from the top.
+      if (second.live || second.ino !== first.ino || second.dev !== first.dev) {
+        waitOrThrow();
+        continue;
+      }
+
+      // T44-F8: reclaim by renaming the stale lock aside, never by
+      // unlinking it. An unlink can remove a FRESH lock created by
+      // another process between our liveness probe and the unlink,
+      // letting two publishers proceed at once; the rename is atomic,
+      // so only one reclaimer wins it. Losing the rename or the
+      // exclusive create means another process won — loop back and
+      // wait on the live holder instead of throwing.
+      const stalePath =
+        lockPath + ".stale." + process.pid + "." + crypto.randomBytes(4).toString("hex");
       try {
-        fs.closeSync(lockFd);
+        fs.renameSync(lockPath, stalePath);
+      } catch (renameErr) {
+        if (renameErr.code !== "ENOENT") throw renameErr;
+        continue; // Another reclaimer won the rename; retry from the top.
+      }
+      try {
+        fs.unlinkSync(stalePath);
       } catch (_) {
-        // Preserve the original acquisition error.
+        // Best-effort cleanup of our own renamed stale file.
+      }
+      try {
+        lockFd = fs.openSync(lockPath, "wx", 0o600);
+      } catch (createErr) {
+        if (createErr.code !== "EEXIST") throw createErr;
+        continue; // Another publisher created a live lock; wait on it.
       }
     }
-    releasePublishLock(lockPath);
-    throw err;
-  }
 
-  return lockPath;
+    // We hold a fresh exclusive create: write our PID, then VERIFY the
+    // live path still holds it (T44-F8 re-audit, Astra s5). A concurrent
+    // reclaimer may have renamed our lock aside between our create and
+    // our write — the write would then land in a deleted inode and we
+    // would wrongly believe we hold the lock. If the live file is not
+    // ours, release nothing (it is not ours to remove) and retry.
+    let lockFdNeedsClose = true;
+    try {
+      fs.writeFileSync(lockFd, String(process.pid));
+      // Do not retry close if it throws; the fd may already be released.
+      lockFdNeedsClose = false;
+      fs.closeSync(lockFd);
+    } catch (err) {
+      if (lockFdNeedsClose) {
+        try {
+          fs.closeSync(lockFd);
+        } catch (_) {
+          // Preserve the original acquisition error.
+        }
+      }
+      releasePublishLock(lockPath, process.pid);
+      throw err;
+    }
+
+    let owned = false;
+    try {
+      owned = fs.readFileSync(lockPath, "utf8").trim() === String(process.pid);
+    } catch (_) {
+      owned = false;
+    }
+    if (owned) return lockPath;
+
+    waitOrThrow();
+  }
 }
 
-function releasePublishLock(lockPath) {
+// T44-F8: release only a lock we still own. The old unconditional
+// unlink could remove a DIFFERENT process's lock if ours had been
+// reclaimed and recreated while we held it.
+function releasePublishLock(lockPath, pid) {
   try {
+    const owner = fs.readFileSync(lockPath, "utf8").trim();
+    if (pid !== undefined && owner !== String(pid)) return;
     fs.unlinkSync(lockPath);
   } catch (_) {
     // Ignore ENOENT and all other cleanup errors; release must never throw.
   }
 }
 
-function publishSeedBundle({ encPath, tmpPath, force }) {
+// Fsync a directory so a pathname change inside it (link, unlink,
+// rename) is durable across power loss, not just process survival.
+function fsyncDir(dir) {
+  const dirFd = fs.openSync(dir, "r");
+  try {
+    fs.fsyncSync(dirFd);
+  } finally {
+    fs.closeSync(dirFd);
+  }
+}
+
+// Publish a finished temp bundle at encPath. When the caller holds the
+// publish lock (lockPath + lockPid supplied), the lock must still name
+// our PID immediately before the atomic link/rename — a lock stolen
+// between acquisition and publication is refused instead of publishing
+// concurrently with the thief (T43 r1c §4 publish fence). The check is
+// advisory: a thief can still slip in between this read and the
+// link/rename. The directory is fsynced after publication so the
+// link/unlink/rename is durable (T43 r1b Fix 1 / c1b): neither the
+// temp-file fsync nor any earlier backup-directory fsync commits the
+// pathname change itself.
+function publishSeedBundle({ encPath, tmpPath, force, lockPath, lockPid }) {
+  if (lockPath !== undefined && lockPid !== undefined) {
+    let owner = null;
+    try {
+      owner = fs.readFileSync(lockPath, "utf8").trim();
+    } catch (_) {
+      owner = null;
+    }
+    if (owner !== String(lockPid)) {
+      throw new Error("publish lock lost for " + encPath);
+    }
+  }
   if (!force) {
     try {
       fs.linkSync(tmpPath, encPath);
@@ -185,6 +393,81 @@ function publishSeedBundle({ encPath, tmpPath, force }) {
     fs.unlinkSync(tmpPath);
   } else {
     fs.renameSync(tmpPath, encPath);
+  }
+  fsyncDir(path.dirname(encPath));
+}
+
+// Back up the existing bundle before a --force replacement (T43 r1b
+// Fix 2 / c1b). The source is opened O_NOFOLLOW and must be a regular
+// file, so a symlinked bundle path fails instead of backing up (or
+// chmodding) its target. Bytes are copied through descriptors into an
+// exclusively created 0600 file — no chmod-after-copy window — whose
+// name carries a random suffix: a bare millisecond timestamp can
+// collide on a rolled-back clock, and COPYFILE_EXCL would then fail
+// the run instead of preserving the old bundle. EEXIST retries up to
+// 5 times. The backup file and its directory are fsynced; a failed
+// copy unlinks the partial backup. Returns the backup path.
+function backupExistingBundle(encPath) {
+  let srcFd;
+  try {
+    srcFd = fs.openSync(encPath, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
+  } catch (err) {
+    if (err.code === "ELOOP") {
+      throw new Error("refusing symlinked seed bundle: " + encPath);
+    }
+    throw err;
+  }
+  try {
+    const st = fs.fstatSync(srcFd);
+    if (!st.isFile()) {
+      throw new Error("seed bundle is not a regular file: " + encPath);
+    }
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const backupPath =
+        encPath + ".bak." + stamp + "." + crypto.randomBytes(8).toString("hex");
+      let dstFd;
+      try {
+        dstFd = fs.openSync(backupPath, "wx", 0o600);
+      } catch (err) {
+        if (err.code === "EEXIST") continue;
+        throw err;
+      }
+      try {
+        const buf = Buffer.alloc(65536);
+        for (;;) {
+          const n = fs.readSync(srcFd, buf, 0, buf.length, null);
+          if (n === 0) break;
+          let off = 0;
+          while (off < n) {
+            off += fs.writeSync(dstFd, buf, off, n - off);
+          }
+        }
+        fs.fsyncSync(dstFd);
+      } catch (err) {
+        try {
+          fs.closeSync(dstFd);
+        } catch (_) {
+          // Preserve the original copy failure.
+        }
+        try {
+          fs.unlinkSync(backupPath);
+        } catch (_) {
+          // Best-effort cleanup of the partial backup.
+        }
+        throw err;
+      }
+      fs.closeSync(dstFd);
+      fsyncDir(path.dirname(encPath));
+      return backupPath;
+    }
+    throw new Error("could not create a backup name for " + encPath);
+  } finally {
+    try {
+      fs.closeSync(srcFd);
+    } catch (_) {
+      // Ignore close errors on the source descriptor.
+    }
   }
 }
 
@@ -216,6 +499,9 @@ async function main() {
   const v = HDWallet.createWithMnemonic(VEC_MNEMONIC, "");
   ok("vec_btc", v.getAddressForCoin(CoinType.bitcoin) === VEC.btc);
   ok("vec_eth", v.getAddressForCoin(CoinType.ethereum) === VEC.eth);
+  // TON triple check (M-03): wallet-core 4.9.3 defaults (V4 R2, wallet ID
+  // 698983191, subwallet 0) must reproduce the recorded fixture address.
+  ok("vec_ton", v.getAddressForCoin(CoinType.ton) === VEC.ton);
 
   const vBtcZpub = v.getExtendedPublicKeyAccount(
     Purpose.bip84, CoinType.bitcoin, Derivation.bitcoinSegwit, HDVersion.zpub, 0
@@ -302,10 +588,25 @@ async function main() {
   // data-key display strings (immutable JS strings, plus split()/toString()
   // copies). Secret-string copies stay at the confirmation minimum: one hex
   // display and one first-word comparison.
-  // The wrapper may supply the data key (BAWA_DATA_KEY_HEX) so it can
-  // independently verify the bundle afterwards; otherwise generate one.
-  // A supplied key must be exactly 64 hex characters (32 bytes).
+  // The wrapper may supply the data key over an inherited pipe
+  // (BAWA_DATA_KEY_FD) so it can independently verify the bundle
+  // afterwards; that replaces the old environment handoff
+  // (BAWA_DATA_KEY_HEX), which left the key visible in /proc/<pid>/environ
+  // to same-user processes. A directly-run generator still accepts
+  // BAWA_DATA_KEY_HEX (standalone use); otherwise a fresh key is generated.
+  // A supplied key must be exactly 32 raw bytes (fd) or 64 hex chars (env).
   const dataKey = (() => {
+    const fdRaw = process.env.BAWA_DATA_KEY_FD;
+    if (fdRaw !== undefined) {
+      if (!/^\d+$/.test(fdRaw)) {
+        throw new Error(
+          "BAWA_DATA_KEY_FD must be a file descriptor number"
+        );
+      }
+      const fd = Number(fdRaw);
+      // readDataKeyFromFd closes the descriptor on every path (R05 r2a).
+      return readDataKeyFromFd(fd);
+    }
     const supplied = process.env.BAWA_DATA_KEY_HEX;
     if (supplied === undefined) return crypto.randomBytes(32);
     if (!/^[0-9a-fA-F]{64}$/.test(supplied)) {
@@ -313,6 +614,14 @@ async function main() {
         "BAWA_DATA_KEY_HEX must be exactly 64 hex characters (32 bytes)"
       );
     }
+    // T43 r2a Fix 2: a supplied key travels in the process environment,
+    // visible to same-user and privileged local processes. Name the
+    // variable, never its value. The warning does not remove the
+    // exposure — a pipe/FD transfer would; this names it.
+    console.error(
+      "warning: BAWA_DATA_KEY_HEX was supplied via the process environment; " +
+        "the key is visible to same-user and privileged local processes"
+    );
     return Buffer.from(supplied, "hex");
   })();
   try {
@@ -320,14 +629,6 @@ async function main() {
     const cipher = crypto.createCipheriv("aes-256-gcm", dataKey, nonce);
     cipher.setAAD(Buffer.from("nova-shop-seed-v1", "utf8"));
     const encBody = Buffer.concat([cipher.update(mnemonic, "utf8"), cipher.final()]);
-
-    const show = (s) => fs.writeSync(tty, s);
-    show("\n" + "=".repeat(64) + "\n");
-    show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
-    show("=".repeat(64) + "\n");
-    show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
-      dataKey.toString("hex") + "\n");
-    show("=".repeat(64) + "\n");
 
     const ttyIn = fs.openSync("/dev/tty", "r");
     const readLine = (fd) => {
@@ -343,13 +644,52 @@ async function main() {
       return line;
     };
 
-    show("Type the first word of the seed phrase to confirm you wrote it down: ");
-    if (readLine(ttyIn).trim() !== mnemonic.trim().split(/\s+/)[0]) {
-      throw new Error("Seed phrase confirmation failed — not writing seed.enc.json");
+    const show = (s) => fs.writeSync(tty, s);
+    // T41: reveal step. The secrets below stay on this terminal's
+    // scrollback and in any session recording, so the operator must
+    // confirm a private, unrecorded session BEFORE they are shown.
+    show("PRIVACY CHECK — the seed phrase and data key are about to appear on this terminal.\n");
+    show("Make sure nobody can see this screen, nothing is recording the session,\n");
+    show("and screen sharing is off. Press Enter when ready (Ctrl-C to abort): ");
+    readLine(ttyIn);
+    show("\n" + "=".repeat(64) + "\n");
+    show("SEED PHRASE (24 words) — write down OFFLINE, never share:\n  " + mnemonic + "\n");
+    show("=".repeat(64) + "\n");
+    show("DATA KEY (hex) — save separately; never store it with the ciphertext:\n  " +
+      dataKey.toString("hex") + "\n");
+    show("Losing the data key makes the bundle undecryptable — there is no recovery.\n");
+    show("=".repeat(64) + "\n");
+
+    // T41: full re-entry confirmation (replaces the old first-word-only
+    // check, which passed a paper copy with any of words 2-24 wrong,
+    // missing, duplicated or reordered). The operator re-types all 24
+    // words from the written copy; entry may span several lines. The
+    // typed words echo — they were just displayed above, so echoing
+    // adds no new exposure. Any mismatch aborts before the bundle is
+    // written. This verifies transcription accuracy, not the medium:
+    // it cannot prove the words are on paper.
+    show("Re-type all 24 words from your written copy (several lines are fine):\n");
+    const enteredWords = [];
+    while (enteredWords.length < 24) {
+      const line = readLine(ttyIn);
+      const words = line.trim().split(/\s+/).filter(Boolean);
+      if (words.length === 0) {
+        if (enteredWords.length === 0) continue;
+        break;
+      }
+      enteredWords.push(...words);
     }
-    show("Type SAVED to confirm you stored the data key: ");
-    if (readLine(ttyIn).trim() !== "SAVED") {
-      throw new Error("Data key confirmation failed — not writing seed.enc.json");
+    if (!wordsMatch(enteredWords.join(" "), mnemonic)) {
+      throw new Error("Seed phrase confirmation failed — the re-typed words do not match; not writing seed.enc.json");
+    }
+
+    // T41: data-key re-entry (replaces the old "Type SAVED" step, which
+    // proved nothing about the saved copy). The operator re-types the
+    // key from the saved copy; echoing is harmless — the key was just
+    // displayed above. A mismatch aborts before the bundle is written.
+    show("Re-type the data key from your saved copy: ");
+    if (!keyMatches(readLine(ttyIn), dataKey.toString("hex"))) {
+      throw new Error("Data key confirmation failed — the re-typed key does not match; not writing seed.enc.json");
     }
     fs.closeSync(ttyIn);
     fs.closeSync(tty);
@@ -360,23 +700,7 @@ async function main() {
         if (!force) {
           throw new Error("Refusing to overwrite existing seed.enc.json; pass --force to replace");
         }
-        const backupPath = encPath + ".bak." + new Date().toISOString().replace(/[:.]/g, "-");
-        fs.copyFileSync(encPath, backupPath, fs.constants.COPYFILE_EXCL);
-        fs.chmodSync(backupPath, 0o600);
-
-        const backupFd = fs.openSync(backupPath, "r");
-        try {
-          fs.fsyncSync(backupFd);
-        } finally {
-          fs.closeSync(backupFd);
-        }
-
-        const backupDirFd = fs.openSync(secretsDir, "r");
-        try {
-          fs.fsyncSync(backupDirFd);
-        } finally {
-          fs.closeSync(backupDirFd);
-        }
+        backupExistingBundle(encPath);
       }
 
     const tmpPath = encPath + ".tmp." + process.pid + "." + crypto.randomBytes(8).toString("hex");
@@ -398,7 +722,15 @@ async function main() {
       // Do not retry close if it throws; the fd may already be released.
       tmpFdNeedsClose = false;
       fs.closeSync(tmpFd);
-      publishSeedBundle({ encPath, tmpPath, force });
+      // Verify the finished temp bundle BEFORE publication (T43 c1b):
+      // a post-publication failure does not roll the replacement back,
+      // so validity is established while the old bundle is still live.
+      // The post-publish verification below still runs: it catches
+      // corruption introduced by the publish step itself.
+      if (!verifySeedBundle(tmpPath, dataKey, mnemonic)) {
+        throw new Error("seed bundle verification failed");
+      }
+      publishSeedBundle({ encPath, tmpPath, force, lockPath, lockPid: process.pid });
     } catch (err) {
       if (tmpFdNeedsClose) {
         try {
@@ -426,7 +758,7 @@ async function main() {
     }
     checks.push({ name: "bundle_verified", ok: true });
     } finally {
-      releasePublishLock(lockPath);
+      releasePublishLock(lockPath, process.pid);
     }
   } finally {
     dataKey.fill(0);
@@ -438,7 +770,7 @@ async function main() {
     trx_xpub: trxXpub,
     ton_address: tonAddress,
     ton_path: CoinTypeExt.derivationPath(CoinType.ton),
-    ton_note: "single address per wallet; no xpub exported",
+    ton_note: "single address per wallet; no xpub exported; TON address not independently cross-checked",
     samples,
     checks,
     seed_encrypted_to: encPath,
@@ -453,4 +785,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { verifySeedBundle, resolveSecretsDir, acquirePublishLock, releasePublishLock, publishSeedBundle };
+module.exports = { verifySeedBundle, resolveSecretsDir, acquirePublishLock, releasePublishLock, publishSeedBundle, normalizeWords, wordsMatch, keyMatches, readDataKeyFromFd, backupExistingBundle };

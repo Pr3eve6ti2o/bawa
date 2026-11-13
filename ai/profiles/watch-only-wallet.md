@@ -3,7 +3,7 @@
 - Platform: cli
 - Status: DOCUMENTED_NOT_TESTED — Documented but not tested.
 - Chains: btc (m/84'/0'/0'/0/i), eth (m/44'/60'/0'/0/i), trx (m/44'/195'/0'/0/i)
-- Engine: trust-wallet-core 4.8.4 — IMPLEMENTED_AND_VERIFIED
+- Engine: trust-wallet-core 4.9.3 — IMPLEMENTED_AND_VERIFIED
 - UI: none / none — DOCUMENTED_NOT_TESTED
 - Verification: DOCUMENTED_NOT_TESTED
 
@@ -33,7 +33,7 @@
 
 - This profile holds no secrets and derives addresses from extended public keys only. It neither accepts nor creates mnemonics, seeds, private keys, private extended keys, vault keys or secret-bearing wallet handles.
 - Any upstream mnemonic-based generation occurs outside this profile, inside the trusted key/vault boundary, and follows BIP-39 with 24 words and an empty passphrase.
-- Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
+- Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
 - BTC, ETH and TRX watch-only derivation through the repository tools is IMPLEMENTED_AND_VERIFIED. The engine status covers those derivation primitives only. The watch-only wallet product has not been built and remains DOCUMENTED_NOT_TESTED.
 - Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Address derivation uses the corresponding extended public keys, not private key material.
 - TON is excluded because it has no xpub; its generation-only route is not part of this watch-only profile.

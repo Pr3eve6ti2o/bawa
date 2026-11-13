@@ -310,7 +310,7 @@ BIP-32â€™s secp256k1 extended-key machinery is not a drop-in interface for TONâ€
 ```javascript
 ton_address = w.getAddressForCoin(CoinType.ton);
 ton_path = CoinTypeExt.derivationPath(CoinType.ton);
-ton_note = "single address per wallet; no xpub exported";
+ton_note = "single address per wallet; no xpub exported; TON address not independently cross-checked";
 ```
 
 The literal path is `m/44'/607'/0'`: the account node, with no `/0/0`. The curve is `ed25519`.

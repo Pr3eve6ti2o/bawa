@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
-import { join, resolve } from "node:path";
-import { readFileSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 
 export function loadJson(path) {
   try {
@@ -43,6 +43,23 @@ export function validateStructure(files) {
       checkRequired(profile, profileSchema.required, label, errors);
       checkEnum(id, profileSchema.properties.id.enum, `${label}.id`, errors);
       checkEnum(profile?.status, profileSchema.properties.status.enum, `${label}.status`, errors);
+      // T44-F9: the hand-rolled validator enforced only id/status, but
+      // the schema also constrains platform, chains and the
+      // implemented/missing lists — and generate-project.mjs +
+      // build-wallet.mjs trust all of them. Enforce them here.
+      checkEnum(profile?.platform, ['cli', 'web', 'android'], `${label}.platform`, errors);
+      if (!Array.isArray(profile?.chains) || profile.chains.length === 0) {
+        errors.push(`ERROR ${label}.chains: expected a non-empty array`);
+      }
+      for (const field of ['implemented', 'missing']) {
+        const value = profile?.[field];
+        if (
+          value !== undefined &&
+          (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))
+        ) {
+          errors.push(`ERROR ${label}.${field}: expected an array of strings`);
+        }
+      }
 
       if (id !== undefined) {
         if (ids.has(id)) {
@@ -145,6 +162,20 @@ export function validateReferences(files) {
       );
     }
 
+    // T44-F9: the send/sign/broadcast hard rule also applies to a
+    // profile's own implemented list — a profile claiming `send` as
+    // implemented would make build-wallet.mjs report it as implemented.
+    // Exact-element match: `missing` lists legitimately name them.
+    if (Array.isArray(profile?.implemented)) {
+      for (const operation of ['send', 'sign', 'broadcast']) {
+        if (profile.implemented.includes(operation)) {
+          errors.push(
+            `ERROR ${label}.implemented: hard rule forbids claiming ${operation} as implemented`,
+          );
+        }
+      }
+    }
+
     const foundation = profile?.ui?.foundation;
     if (foundation !== "none" && !foundationIds.has(foundation)) {
       errors.push(
@@ -197,7 +228,181 @@ export function validateReferences(files) {
   return errors;
 }
 
-export function validateAll(registryDir = "registry", schemaDir) {
+// T46: operation wording that must never appear in a profile's
+// implemented[] list. The only signing code in the repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented, so any implemented claim using these words (including
+// "sending", "signing", "broadcasting", "sent transactions",
+// "signature creation" and transaction-submission wording) is false
+// on its face. The words stay allowed in missing[], where they belong.
+// Lexical checks cannot catch every euphemism; this covers the direct
+// forms and the clearest near-synonyms.
+export const FORBIDDEN_IMPLEMENTED =
+  /\b(send(s|ing)?|sent|sign(s|ed|ing)?|signature(s)?|broadcast(s|ed|ing)?|submit(s|ted|ting)?|submission)\b/i;
+
+export function validateProfileClaims(files) {
+  const errors = [];
+  const profiles = Array.isArray(files.profiles)
+    ? files.profiles
+    : (files.profiles?.profiles ?? []);
+
+  profiles.forEach((profile, index) => {
+    const label = `profiles.json.profiles[${profile?.id ?? index}]`;
+
+    for (const field of ["implemented", "missing"]) {
+      const value = profile?.[field];
+      if (!Array.isArray(value)) {
+        errors.push(`ERROR ${label}.${field}: expected an array of strings`);
+        continue;
+      }
+      if (value.some((entry) => typeof entry !== "string")) {
+        errors.push(`ERROR ${label}.${field}: expected an array of strings`);
+      }
+    }
+
+    const implemented = Array.isArray(profile?.implemented)
+      ? profile.implemented
+      : [];
+    const missing = Array.isArray(profile?.missing) ? profile.missing : [];
+
+    for (const entry of implemented) {
+      if (typeof entry === "string" && FORBIDDEN_IMPLEMENTED.test(entry)) {
+        errors.push(
+          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims a send/sign/broadcast capability; the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented`,
+        );
+      }
+    }
+
+    const missingNormalized = new Set(
+      missing
+        .filter((entry) => typeof entry === "string")
+        .map((entry) => entry.trim().toLowerCase()),
+    );
+    for (const entry of implemented) {
+      if (
+        typeof entry === "string" &&
+        missingNormalized.has(entry.trim().toLowerCase())
+      ) {
+        errors.push(
+          `ERROR ${label}: entry ${JSON.stringify(entry)} appears in both implemented[] and missing[]`,
+        );
+      }
+    }
+  });
+
+  return errors;
+}
+
+// T46: the profile engine version must match the exact pin declared
+// by the tool that implements it (tools/hdwallet-gen/package.json),
+// not merely a revision listed in engines.json — agreement between
+// two registry files cannot catch a coordinated wrong version.
+export function validateEnginePin(files, repoRoot, strict) {
+  const errors = [];
+  const toolPkgPath = join(repoRoot, "tools", "hdwallet-gen", "package.json");
+  let toolPkg = null;
+  try {
+    toolPkg = JSON.parse(readFileSync(toolPkgPath, "utf8"));
+  } catch {
+    if (strict) {
+      errors.push(
+        `ERROR tools/hdwallet-gen/package.json: cannot read the engine pin anchor at ${toolPkgPath}`,
+      );
+    }
+    return errors;
+  }
+
+  const pin = toolPkg?.dependencies?.["@trustwallet/wallet-core"];
+  if (typeof pin !== "string" || !/^\d+\.\d+\.\d+$/.test(pin)) {
+    errors.push(
+      "ERROR tools/hdwallet-gen/package.json: engine pin for @trustwallet/wallet-core must be an exact X.Y.Z version, not a range or a missing value",
+    );
+    return errors;
+  }
+
+  const profiles = Array.isArray(files.profiles)
+    ? files.profiles
+    : (files.profiles?.profiles ?? []);
+  profiles.forEach((profile, index) => {
+    const label = `profiles.json.profiles[${profile?.id ?? index}]`;
+    if (profile?.engine?.name !== "trust-wallet-core") return;
+    if (profile.engine.version !== pin) {
+      errors.push(
+        `ERROR ${label}.engine.version: '${profile.engine.version}' does not match the tools/hdwallet-gen pin '${pin}'`,
+      );
+    }
+  });
+
+  return errors;
+}
+
+// T46: the prompt file per profile. The routing doc's "create-<id>.md"
+// shorthand does not hold for hd-wallet-cli, whose prompt is
+// create-hd-wallet.md; the mapping is explicit here.
+export const PROMPT_FILES = { "hd-wallet-cli": "create-hd-wallet.md" };
+
+export function validateProfileAssets(files, repoRoot, strict) {
+  const errors = [];
+  const aiDir = join(repoRoot, "ai");
+  if (!existsSync(aiDir)) {
+    if (strict) {
+      errors.push(`ERROR ai: directory missing at ${aiDir}`);
+    }
+    return errors;
+  }
+
+  const profiles = Array.isArray(files.profiles)
+    ? files.profiles
+    : (files.profiles?.profiles ?? []);
+  const profileDir = join(aiDir, "profiles");
+  const promptDir = join(aiDir, "prompts");
+
+  // T46 re-audit: resolve symlinks before the containment check. A
+  // lexical resolve() alone would accept an in-directory symlink
+  // pointing at a file outside the repo; the canonical path must stay
+  // inside the directory.
+  const isContainedFile = (dir, filename) => {
+    let realDir;
+    try {
+      realDir = realpathSync(dir);
+    } catch {
+      return false;
+    }
+    const target = resolve(dir, filename);
+    if (!target.startsWith(dir + sep)) return false;
+    try {
+      const realTarget = realpathSync(target);
+      return (
+        realTarget.startsWith(realDir + sep) && statSync(realTarget).isFile()
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  profiles.forEach((profile, index) => {
+    const id = profile?.id;
+    const label = `profiles.json.profiles[${id ?? index}]`;
+    if (
+      typeof id !== "string" ||
+      id.includes("/") ||
+      id.includes("\\") ||
+      id.includes("..")
+    ) {
+      errors.push(`ERROR ${label}.id: '${String(id)}' is not a safe profile id`);
+      return;
+    }
+    if (!isContainedFile(profileDir, `${id}.md`)) {
+      errors.push(`ERROR ${label}: profile file missing: ai/profiles/${id}.md`);
+    }
+    const promptFile = PROMPT_FILES[id] ?? `create-${id}.md`;
+    if (!isContainedFile(promptDir, promptFile)) {
+      errors.push(`ERROR ${label}: prompt file missing: ai/prompts/${promptFile}`);
+    }
+  });
+
+  return errors;
+}
+
+export function validateAll(registryDir = "registry", schemaDir, repoRoot) {
   // The schema directory defaults to <registryDir>/schemas, so a single
   // absolute registry directory works from any working directory. An
   // explicit schemaDir overrides it.
@@ -224,7 +429,22 @@ export function validateAll(registryDir = "registry", schemaDir) {
     }
   }
 
-  const errors = validateStructure(files).concat(validateReferences(files));
+  // The repository root defaults to the registry directory's parent.
+  // Callers that pass repoRoot explicitly (the generators) get strict
+  // anchor enforcement: a missing tool manifest or ai/ directory is
+  // an error, not a silent skip. A standalone registry copy validated
+  // without an explicit root skips anchor checks whose files are
+  // absent, and validates structure, references and claims only.
+  const resolvedRepoRoot = repoRoot
+    ? resolve(repoRoot)
+    : dirname(resolve(registryDir));
+  const strict = repoRoot !== undefined && repoRoot !== null;
+
+  const errors = validateStructure(files)
+    .concat(validateReferences(files))
+    .concat(validateProfileClaims(files))
+    .concat(validateEnginePin(files, resolvedRepoRoot, strict))
+    .concat(validateProfileAssets(files, resolvedRepoRoot, strict));
   const entries = [
     Array.isArray(files.profiles) ? files.profiles : files.profiles?.profiles,
     files.capabilities?.entries,

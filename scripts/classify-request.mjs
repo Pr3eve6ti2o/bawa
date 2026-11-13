@@ -11,8 +11,6 @@
 // ai/request-routing.md ("Unsupported requests") or null. Checked
 // BEFORE classification (F-31).
 
-const NEGATORS = ['without', 'no', 'not', 'never'];
-
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -21,10 +19,36 @@ function word(token, text) {
   return new RegExp(`\\b${escapeRegExp(token)}\\b`).test(text);
 }
 
-// negated(token, request): true when `token` appears in `request` as a
-// whole word/phrase and a negator (without/no/not/never) appears as a
-// whole word within ~30 characters before that occurrence, in the same
-// span (F-22). Matching is case-insensitive.
+// Clause separators: a negator stops applying at a clause boundary.
+// T46: the 30-character window alone let a negator from an unrelated
+// clause suppress a refusal ("with no ads, mainnet support" escaped
+// the mainnet refusal; "with no fees, send BTC" escaped the send
+// refusal). A negator counts only when no separator intervenes between
+// it and the token. "or" is deliberately NOT a separator: "without
+// secrets or signing" is one coordinated negation.
+const SEPARATOR = /[,;:!?.\r\n\u2014\u2013]|\bbut\b/;
+
+// occurrenceNegated(text, tokenIndex): true when a negator word
+// (without/no/not/never) appears as a whole word within ~30 characters
+// before this occurrence, in the same clause (F-22, T46). Matching is
+// case-insensitive; `text` must already be lower-cased.
+function occurrenceNegated(text, tokenIndex) {
+  const windowStart = Math.max(0, tokenIndex - 30);
+  const windowText = text.slice(windowStart, tokenIndex);
+  const negatorPattern = /\b(without|no|not|never)\b/g;
+  let negatorMatch;
+  while ((negatorMatch = negatorPattern.exec(windowText)) !== null) {
+    const afterNegator = windowText.slice(
+      negatorMatch.index + negatorMatch[0].length,
+    );
+    if (!SEPARATOR.test(afterNegator)) return true;
+  }
+  return false;
+}
+
+// negated(token, request): true when `token` appears in `request` and
+// EVERY occurrence is scoped-negated. An affirmative occurrence must
+// still count (T46): "send BTC, no send on mainnet" is a send request.
 export function negated(token, request) {
   const text = request.toLowerCase();
   const pattern = new RegExp(
@@ -32,12 +56,12 @@ export function negated(token, request) {
     'g',
   );
   let match;
+  let found = false;
   while ((match = pattern.exec(text)) !== null) {
-    const windowStart = Math.max(0, match.index - 30);
-    const window = text.slice(windowStart, match.index);
-    if (NEGATORS.some((negator) => word(negator, window))) return true;
+    found = true;
+    if (!occurrenceNegated(text, match.index)) return false;
   }
-  return false;
+  return found;
 }
 
 // A token counts as requested only when it appears and is not negated.
@@ -50,6 +74,53 @@ function requestedPhrase(phrase, request) {
   const text = request.toLowerCase();
   return text.includes(phrase) && !negated(phrase, request);
 }
+
+// T46: outgoing-transaction synonyms for "send". A synonym counts only
+// when a value/recipient word appears within ~30 characters, so "file
+// transfer" or "pay attention" do not trigger the signing refusal,
+// while "transfer BTC", "pay friends in BTC" and "withdraw BTC" do.
+const SEND_SYNONYMS = [
+  'transfer', 'transfers', 'transferring', 'transferred',
+  'pay', 'pays', 'paying', 'paid',
+  'withdraw', 'withdraws', 'withdrawing', 'withdrawal', 'withdrawals',
+];
+const SEND_VALUE_WORDS = [
+  'btc', 'bitcoin', 'eth', 'ethereum', 'trx', 'tron', 'ton',
+  'funds', 'coins', 'tokens', 'money', 'crypto',
+  'friends', 'someone', 'address',
+];
+
+function sendSynonymRequested(request) {
+  const text = request.toLowerCase();
+  for (const synonym of SEND_SYNONYMS) {
+    const pattern = new RegExp(`\\b${escapeRegExp(synonym)}\\b`, 'g');
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      if (occurrenceNegated(text, match.index)) continue;
+      const context = text.slice(
+        Math.max(0, match.index - 30),
+        Math.min(text.length, match.index + match[0].length + 30),
+      );
+      if (SEND_VALUE_WORDS.some((value) => word(value, context))) return true;
+    }
+  }
+  return false;
+}
+
+// T46: EVM chains outside the evm-wallet profile's ETH-only scope.
+// A request naming one must not silently route to evm-wallet (the
+// routing doc: ask a clarifying question when a non-ETH chain is
+// named; the CLI cannot ask, so it fails closed as unclassifiable).
+// "base" is covered only as a chain phrase: bare "base" false-positives
+// on "base fee".
+const NON_ETH_EVM_CHAINS = [
+  'polygon', 'matic', 'bsc', 'binance smart chain', 'bnb chain',
+  'bnb smart chain', 'arbitrum', 'optimism', 'base chain', 'base network',
+  'avalanche', 'avax', 'fantom', 'gnosis', 'celo',
+  'zksync', 'linea', 'scroll', 'mantle', 'blast', 'cronos',
+  'moonbeam', 'moonriver', 'metis', 'sei', 'kava', 'harmony',
+  'mode', 'taiko', 'injective', 'zkevm', 'polygon zkevm',
+];
 
 export function classifyRequest(request) {
   const lower = request.toLowerCase();
@@ -76,14 +147,19 @@ export function classifyRequest(request) {
   } else if (word('multi-chain', lower) || word('multichain', lower)) {
     return { profile: 'multichain-wallet' };
   } else if (
-    word('hd', lower) ||
-    lower.includes('hierarchical deterministic') ||
-    word('cli', lower) ||
-    lower.includes('command-line') ||
-    lower.includes('command line')
+    requested('hd', request) ||
+    requestedPhrase('hierarchical deterministic', request) ||
+    requested('cli', request) ||
+    requestedPhrase('command-line', request) ||
+    requestedPhrase('command line', request)
   ) {
     return { profile: 'hd-wallet-cli' };
-  } else if (word('bitcoin', lower) || word('btc', lower)) {
+  } else if (
+    (requested('bitcoin', request) || requested('btc', request)) &&
+    (requested('evm', request) || requested('ethereum', request) || requested('eth', request))
+  ) {
+    return { ambiguous: 'split' };
+  } else if (requested('bitcoin', request) || requested('btc', request)) {
     const generationLanguage =
       lower.includes('generat') ||
       lower.includes('mnemonic') ||
@@ -99,7 +175,20 @@ export function classifyRequest(request) {
       return { profile: 'watch-only-wallet' };
     }
     return { profile: 'bitcoin-wallet' };
-  } else if (word('evm', lower) || word('ethereum', lower) || word('eth', lower)) {
+  } else if (requested('evm', request) || requested('ethereum', request) || requested('eth', request)) {
+    // T46: a named non-ETH EVM chain fails closed instead of silently
+    // routing to the ETH-only evm-wallet profile.
+    const nonEthChain = NON_ETH_EVM_CHAINS.find((chain) =>
+      chain.includes(' ')
+        ? requestedPhrase(chain, request)
+        : requested(chain, request),
+    );
+    if (nonEthChain) {
+      return {
+        unclassifiable: true,
+        reason: `non-ETH EVM chain requested: ${nonEthChain}; the evm-wallet profile covers ETH derivation only`,
+      };
+    }
     return { profile: 'evm-wallet' };
   } else if (hasWatchOnly) {
     return { profile: 'watch-only-wallet' };
@@ -114,7 +203,7 @@ const REFUSAL_TON_SEND =
 const REFUSAL_TON_XPUB =
   'I cannot provide TON xpub support; the proposed TON scope has no xpub support.';
 const REFUSAL_SIGNING =
-  'I cannot claim signing or broadcast support without an engine that implements them; no signing or broadcast code exists in this repository.';
+  'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.';
 const REFUSAL_MAINNET =
   'I cannot support mainnet use without separate approval; the default scope is testnet.';
 const REFUSAL_SWAPS =
@@ -146,7 +235,9 @@ export function findRefusal(request) {
   const hasTon = word('ton', lower);
 
   // 1. TON send.
-  if (hasTon && requested('send', request)) return REFUSAL_TON_SEND;
+  if (hasTon && (requested('send', request) || sendSynonymRequested(request))) {
+    return REFUSAL_TON_SEND;
+  }
 
   // 2. TON xpub.
   if (
@@ -166,11 +257,17 @@ export function findRefusal(request) {
     (word('signing', signText) && !negated('signing', request)) ||
     (word('signature', signText) && !negated('signature', request)) ||
     (word('broadcast', lower) && !negated('broadcast', request)) ||
-    (word('send', lower) && !negated('send', request));
+    (word('send', lower) && !negated('send', request)) ||
+    sendSynonymRequested(request);
   if (wantsSigning) return REFUSAL_SIGNING;
 
-  // 4. Mainnet.
-  if (requested('mainnet', request)) return REFUSAL_MAINNET;
+  // 4. Mainnet. T46: normalise "main-net" / "main net" spellings so
+  // they cannot evade the whole-word "mainnet" check; negation is
+  // preserved because requested() still applies the negator rule.
+  // The separator class covers Unicode hyphens too (U+2010-U+2014,
+  // U+2212): "main‑net" with a non-breaking hyphen must not evade it.
+  const normalized = lower.replace(/\bmain[\s\-\u2010\u2011\u2012\u2013\u2014\u2212]+net\b/g, 'mainnet');
+  if (requested('mainnet', normalized)) return REFUSAL_MAINNET;
 
   // 5. Swaps, staking or bridges.
   if (

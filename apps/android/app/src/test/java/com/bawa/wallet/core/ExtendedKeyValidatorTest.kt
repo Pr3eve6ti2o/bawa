@@ -98,6 +98,110 @@ class ExtendedKeyValidatorTest {
     }
 
     @Test
+    fun smallXNonResiduePointIsRejected() {
+        // T42: Legendre branch — x = 5 gives y^2 = 132, a non-residue mod p.
+        val payload = base58Decode(btcZpub).copyOfRange(0, 78)
+        payload[45] = 0x02
+        payload.fill(0.toByte(), fromIndex = 46, toIndex = 78)
+        payload[77] = 5.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        val result = ExtendedKeyValidator.validate(mutated, Chain.BTC)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_POINT, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun smallXValidPointIsAccepted() {
+        // T42: Legendre branch — x = 1 gives y^2 = 8, a quadratic residue.
+        val payload = base58Decode(btcZpub).copyOfRange(0, 78)
+        payload[45] = 0x02
+        payload.fill(0.toByte(), fromIndex = 46, toIndex = 78)
+        payload[77] = 1.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        assertEquals(
+            ValidationResult.Valid,
+            ExtendedKeyValidator.validate(mutated, Chain.BTC)
+        )
+    }
+
+    @Test
+    fun overLongInputIsRejected() {
+        val overLong = "1".repeat(200)
+        val result = ExtendedKeyValidator.validate(overLong, Chain.BTC)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_LENGTH, (result as ValidationResult.Invalid).reason)
+
+        val justOver = "z".repeat(113)
+        val result2 = ExtendedKeyValidator.validate(justOver, Chain.BTC)
+
+        assertTrue(result2 is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_LENGTH, (result2 as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun privateVersion0295b005IsRejected() {
+        // T40-F2: 0295b005 is in the documented 8-version private set
+        // (docs/05-watch-only/README.md) and in the shared Node validator.
+        val payload = base58Decode(ethXpub).copyOfRange(0, 78)
+        payload[0] = 0x02.toByte()
+        payload[1] = 0x95.toByte()
+        payload[2] = 0xb0.toByte()
+        payload[3] = 0x05.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        val result = ExtendedKeyValidator.validate(mutated, Chain.ETH)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.PRIVATE_KEY, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun privateVersion02aa7a99IsRejected() {
+        // T40-F2: 02aa7a99, same documented set as 0295b005.
+        val payload = base58Decode(ethXpub).copyOfRange(0, 78)
+        payload[0] = 0x02.toByte()
+        payload[1] = 0xaa.toByte()
+        payload[2] = 0x7a.toByte()
+        payload[3] = 0x99.toByte()
+        val mutated = base58Encode(withChecksum(payload))
+
+        val result = ExtendedKeyValidator.validate(mutated, Chain.ETH)
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.PRIVATE_KEY, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun depth0FingerprintIsRejected() {
+        // T40-F1: same vector as the shared Node validator's
+        // DEPTH0_FINGERPRINT regression (test/smoke.test.js).
+        val result = ExtendedKeyValidator.validate(
+            "xpub661MyMwTWkfYbGsHSkBPfK8hV3UhGjbN4hYBHFNRsZRFaUa3Eg5jKNwq1HMHBXDCDy9zSQTnhJgVAJY3gs8sTpDdrNWrHzwdEoY7Lf6dzxA",
+            Chain.BTC
+        )
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_DEPTH_METADATA, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
+    fun depth0ChildIsRejected() {
+        // T40-F1: same vector as the shared Node validator's
+        // DEPTH0_CHILD regression (test/smoke.test.js).
+        val result = ExtendedKeyValidator.validate(
+            "xpub661MyMwAqRbcHG7iAofhFTywCv8fdScxFvDJvpPZrQfnYjTChfcdCM7UWu179f4DmYcB4d3xuhXR1fFqeykXjsYQFQ9WHho2G6GX5dSHoAV",
+            Chain.BTC
+        )
+
+        assertTrue(result is ValidationResult.Invalid)
+        assertEquals(Reason.INVALID_DEPTH_METADATA, (result as ValidationResult.Invalid).reason)
+    }
+
+    @Test
     fun invalidBase58IsRejected() {
         val malformed = ethXpub.substring(0, 4) + '0' + ethXpub.substring(4)
 

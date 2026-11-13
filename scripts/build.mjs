@@ -55,7 +55,10 @@ function run(command, commandArgs, cwd) {
 }
 
 if (platform !== 'android') {
-  const installed = skipInstall || run('npm', ['install'], webDir);
+  // T44-F6: npm ci, not npm install — the lockfile is enforced, matching
+  // F-19/F-24 in build-wallet.mjs and quality-gates.mjs. `npm install`
+  // could silently resolve unpinned ranges and rewrite the lockfile.
+  const installed = skipInstall || run('npm', ['ci', '--no-audit', '--no-fund'], webDir);
   const ok = installed && run('npm', ['run', 'build'], webDir);
   console.log(`build web: ${ok ? 'PASS' : 'FAIL'}`);
   if (!ok) failures += 1;

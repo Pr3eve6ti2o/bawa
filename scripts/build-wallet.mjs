@@ -18,6 +18,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'n
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { classifyRequest, findRefusal } from './classify-request.mjs';
+import { validateAll } from './validate-registry.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const notes = [
@@ -32,7 +33,7 @@ const notes = [
 // carries implemented/missing for every profile (a04/a05).
 const fallbackImplemented = {
   cli: ['Derivation primitives via the repository tools (see security notes)'],
-  web: ['Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.8.4 WASM boundary', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'Receive-screen QR display of a derived address'],
+  web: ['Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.3 WASM boundary', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'Receive-screen QR display of a derived address'],
   android: ['Extended-public-key validation (no secrets, no derivation on-device)', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'QR display of an address'],
 };
 const fallbackMissing = {
@@ -121,6 +122,20 @@ function main() {
     return 2;
   }
 
+  // T46: validate the registry before trusting it. A separate quality
+  // gate does not protect a direct one-prompt invocation: fail closed.
+  const registryCheck = validateAll(
+    join(repoRoot, 'registry'),
+    undefined,
+    repoRoot,
+  );
+  if (registryCheck.errors.length > 0) {
+    for (const error of registryCheck.errors) {
+      console.error(`build-wallet: ${error}`);
+    }
+    return 1;
+  }
+
   const profiles = JSON.parse(
     readFileSync(resolve(repoRoot, 'registry/profiles.json'), 'utf8'),
   );
@@ -136,7 +151,7 @@ function main() {
     profileId = result.profile;
   } else if (result.ambiguous) {
     ambiguous = result.ambiguous;
-    console.error('build-wallet: split this request into one web-wallet build and one android-wallet build');
+    console.error('build-wallet: split this request into one build per requested profile');
   } else {
     // F-20: an unclassifiable request gets a JSON report with the
     // failure reason (not bare stderr), exit 2.

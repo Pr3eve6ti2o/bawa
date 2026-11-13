@@ -35,6 +35,12 @@ export function MnemonicBackupScreen() {
           Recovery uses <code>tools/decrypt_seed.py</code> with the seed bundle.
           Keep the bundle file for recovery.
         </p>
+        <p>
+          An extended public key alone cannot recover spending access — it
+          only restores watch-only monitoring. Spending access is restored
+          from the 24 words, or from the seed bundle together with its
+          data key.
+        </p>
       </section>
 
       <section aria-label="Backup guidance" className="space-y-3">

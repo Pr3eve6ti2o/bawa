@@ -281,19 +281,13 @@ These entries are research references, not selectable UI foundations.
 
 ### XChain Platform Wallet
 
-- **Recorded source:** `XChainJS/xchainjs-lib`
-- **Recorded pin:** `3e550d05e913e29e5c3cf24527bf504f1a4fe942`
-- **Pin status:** **UNVERIFIED — does not resolve**
-- **Recorded licence:** AGPL-3.0
+Source: [`XChain-Platform/xchain-wallet`](https://github.com/XChain-Platform/xchain-wallet), a self-custodial multi-chain React wallet for web, Chrome extension, desktop and Android. Pin `3e550d05e913e29e5c3cf24527bf504f1a4fe942` was verified as `master` HEAD, with commit date **2026-11-01** and release **v0.342.1**.
 
-The recorded source uses uppercase `XChainJS`; the organisation inspected is lowercase `xchainjs`. Verification against `xchainjs/xchainjs-lib` found:
+The licence at this pin is **AGPL-3.0-or-later**, confirmed by `package.json`, the README SPDX line and `LICENSE.md` containing the full AGPL v3 text. Launch chains are **Bitcoin, Litecoin and Dogecoin (BTC/LTC/DOGE)**. **ETH is not supported at this pin**; searches of `packages/` and `docs/` returned zero `ethereum` hits. The registry records `chains: ["btc"]` because its enum permits only `btc`, `eth`, `trx` and `ton`; LTC/DOGE cannot be represented in that array.
 
-- GitHub API response: `No commit found for SHA`.
-- Fetching the SHA fails with `not our ref`.
+The old **UNVERIFIED** finding tested the wrong repository. `xchainjs/xchainjs-lib` is a separate **MIT-licensed THORChain client library**, not this wallet. The pin does not exist there, and fetching it returns `not our ref`; that result does not invalidate the verified wallet pin.
 
-The pin must remain recorded as **UNVERIFIED**, not as an inspected or reproducible source revision.
-
-**Research only; never selectable. No code may be copied.** The reciprocal AGPL-3.0 licence requires an explicit licensing decision before any copying; no such decision is recorded here.
+Reviewed **2026-11-12**. Status remains **OPEN**, with operations `["ui"]`. This is a **research-only** candidate: **no copying without a licensing decision**.
 
 ### OWASP Wallet UX Security Handbook and WCAG 2.2
 
@@ -312,7 +306,7 @@ UX-security and accessibility references for **Phase 9**.
 | Draft treatment — Web | **OPEN in this record** | No draft-specific Web retain/adapt/replace decision is established here. The verified decision is the `token-ui` starter; that does not establish the treatment of any existing Web draft. |
 | Draft treatment — Android | **ADAPT, UI only** | WDK UI-only supplies the new shell; reuse reviewed draft UI where it fits. Acceptance is gated by Phase 7 build verification. Engine packaging, the missing AAR and Phase 4 binding remain **OPEN**. |
 | Visual direction | **Bawa Balanced — STYLE-04** remains the default | Pre-approved. All five directions are design references only, not implementation foundations. |
-| Licence posture | Retain the verified licence distinctions; research-only entries remain excluded from selection | AND-01–03: Apache-2.0. Edge: BSD-3-Clause, research only. XChain: recorded AGPL-3.0, unverified pin and no copying before an explicit licensing decision. AND-04 and OWASP/WCAG licence details remain **OPEN**. |
+| Licence posture | Retain the verified licence distinctions; research-only entries remain excluded from selection | AND-01–03: Apache-2.0. Edge: BSD-3-Clause, research only. XChain: AGPL-3.0-or-later, pin verified 2026-11-12, and no copying before an explicit licensing decision. AND-04 and OWASP/WCAG licence details remain **OPEN**. |
 
 ## Handoff to Phases 6–7
 
@@ -345,5 +339,5 @@ No additional Web-draft disposition is inferred from the foundation choice.
 - **AND-02:** current Gradle/Compose compatibility.
 - **AND-03:** wallet-screen coverage.
 - **AND-04:** licence for resulting code.
-- **XChain:** pin remains **UNVERIFIED**; copying remains blocked pending an explicit licensing decision. The entry stays research-only and never selectable.
+- **XChain:** pin verified 2026-11-12 in `XChain-Platform/xchain-wallet`; copying remains blocked pending an explicit licensing decision. The entry stays research-only and never selectable.
 - **OWASP/WCAG:** licence and pin details; retain them as Phase 9 references, not templates.

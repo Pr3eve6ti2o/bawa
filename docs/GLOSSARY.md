@@ -42,7 +42,7 @@ Reference. Terms are listed alphabetically in a single table.
 | **Indexer** | A system that makes chain history searchable. It does not hold keys. | docs/06, line 77 (§3, RPC is not an indexer) |
 | **Jetton** | A fungible token on TON. | Android guide; `docs/02` |
 | **Keystore** | A file or system store holding encrypted key material. This general concept is distinct from Bawa's vault, which is its encrypted seed bundle. | Supplied repo/corpus evidence (`e3b65fb832db287fdc8d54794980dd0b3456cc12`) |
-| **Mainnet** | The production network of a chain, where transactions move real value. Mainnet is outside this guide's scope. | Guide scope |
+| **Mainnet** | The production network of a chain, where transactions move real value. Whether a guide covers mainnet is stated in that guide's own scope; Doc 4 (MAINNET-GUIDE.md) is a mainnet guide. | Guide scope |
 | **Master key** | Use this term for the starting private key for BIP32 derivation. It is produced from the seed using HMAC-SHA512, together with a 32-byte chain code. | BIP32 |
 | **Masterchain** | The TON chain that coordinates workchains. | Android guide; `docs/02` |
 | **Mnemonic** | Use this term for a word sequence encoding the entropy and its checksum. Each 11-bit chunk selects a word from a 2,048-word list, producing 12, 15, 18, 21 or 24 words. | BIP39 |

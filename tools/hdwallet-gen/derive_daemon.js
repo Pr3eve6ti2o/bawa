@@ -1,12 +1,15 @@
 // derive_daemon.js — persistent public-only Trust Wallet Core derivation daemon.
 // JSONL request: {"chain":"btc|eth|trx","xpub":"...","index":5}
+// Optional "branch": 0 (receiving, default) or 1 (change). Any other value
+// is a bad request. The branch selects the BIP-44 change component only;
+// purpose, coin type and account stay fixed per chain (M-41).
 // JSONL response: {"ok":true,"address":"..."} or {"ok":false,"error":"..."}
 // Startup: {"ready":true}
 // Extended keys are validated via the shared module before any per-request WASM call.
 const { initWasm } = require("@trustwallet/wallet-core");
 const readline = require("readline");
 const { Transform } = require("stream");
-const { validateExtendedKey, redact } = require("./extended-key");
+const { validateAccountKey, redact } = require("./extended-key");
 
 const CHAINS = Object.create(null);
 CHAINS.btc = (coin) => coin.bitcoin;
@@ -14,9 +17,9 @@ CHAINS.eth = (coin) => coin.ethereum;
 CHAINS.trx = (coin) => coin.tron;
 
 const PATHS = Object.create(null);
-PATHS.btc = (i) => `m/84'/0'/0'/0/${i}`;
-PATHS.eth = (i) => `m/44'/60'/0'/0/${i}`;
-PATHS.trx = (i) => `m/44'/195'/0'/0/${i}`;
+PATHS.btc = (branch, i) => `m/84'/0'/0'/${branch}/${i}`;
+PATHS.eth = (branch, i) => `m/44'/60'/0'/${branch}/${i}`;
+PATHS.trx = (branch, i) => `m/44'/195'/0'/${branch}/${i}`;
 
 const ALLOWED_CHAINS = new Set(["btc", "eth", "trx"]);
 const MAX_XPUB_LENGTH = 200;
@@ -32,7 +35,16 @@ function onStdoutDrain() {
 }
 
 function reply(obj) {
-  if (process.stdout.write(JSON.stringify(obj) + "\n")) return;
+  let flushed;
+  try {
+    flushed = process.stdout.write(JSON.stringify(obj) + "\n");
+  } catch {
+    // A synchronously failed write (e.g. a destroyed stdout stream)
+    // must not become an uncaught exception; see the stdio error
+    // handlers below.
+    process.exit(1);
+  }
+  if (flushed) return;
 
   if (replyRl) replyRl.pause();
   if (waitingForDrain) return;
@@ -44,6 +56,18 @@ function reply(obj) {
 function fail(msg) {
   reply({ ok: false, error: redact(msg) });
 }
+
+// A broken stdio pipe must end the daemon cleanly, not crash it with an
+// uncaught EPIPE exception (T45 F-T45-2). Exit 1, not 0: the daemon can
+// no longer serve, so a supervisor with Restart=on-failure relaunches
+// it — the same exit code the uncaught crash produced, minus the stack
+// trace. No logging here: stderr may itself be broken, and logging to a
+// broken stream can throw again. (Astra's re-audit suggested exit 0 for
+// a peer disconnect; exit 1 was kept so the documented
+// Restart=on-failure recovery model and the pre-existing exit code are
+// unchanged — only the uncaught-exception crash is removed.)
+process.stdout.on("error", () => process.exit(1));
+process.stdin.on("error", () => process.exit(1));
 
 (async () => {
   const core = await initWasm();
@@ -106,20 +130,25 @@ function fail(msg) {
       let req;
       try { req = JSON.parse(line); } catch { return fail("bad json"); }
 
-      const { chain, xpub, index } = req || {};
+      const { chain, xpub, index, branch: branchRaw } = req || {};
+      // Branch defaults to receiving (0). Only the integers 0 and 1 are
+      // accepted: a non-integer, out-of-range or wrong-type branch is a bad
+      // request, never a silent receiving-branch default (M-41).
+      const branch = branchRaw === undefined ? 0 : branchRaw;
       if (
         !ALLOWED_CHAINS.has(chain) ||
         typeof xpub !== "string" || !xpub.trim() || xpub.length > MAX_XPUB_LENGTH ||
-        !Number.isInteger(index) || index < 0 || index > MAX_INDEX
+        !Number.isInteger(index) || index < 0 || index > MAX_INDEX ||
+        !Number.isInteger(branch) || (branch !== 0 && branch !== 1)
       ) return fail("bad request");
 
-      const validation = validateExtendedKey(xpub.trim(), chain);
+      const validation = validateAccountKey(xpub.trim(), chain);
       if (!validation.ok) return fail(validation.message);
 
       const coin = CHAINS[chain](core.CoinType);
       let pubkey;
       try {
-        pubkey = core.HDWallet.getPublicKeyFromExtended(xpub.trim(), coin, PATHS[chain](index));
+        pubkey = core.HDWallet.getPublicKeyFromExtended(xpub.trim(), coin, PATHS[chain](branch, index));
       } catch (e) {
         return fail("getPublicKeyFromExtended failed: " + (e && e.message));
       }
@@ -156,4 +185,4 @@ function fail(msg) {
     rl.close();
     process.exit(0);
   });
-})().catch((e) => { console.error("FATAL: " + (e && e.message)); process.exit(1); });
+})().catch((e) => { console.error("FATAL: " + redact(e && e.message)); process.exit(1); });

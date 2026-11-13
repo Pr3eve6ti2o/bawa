@@ -7,7 +7,7 @@
 const { initWasm } = require("@trustwallet/wallet-core");
 const fs = require("fs");
 const path = require("path");
-const { validateExtendedKey, redact } = require("./extended-key");
+const { validateAccountKey, redact } = require("./extended-key");
 
 const MAX_ENV_BYTES = 65536;
 const MAX_LINE_CHARS = 1024;
@@ -40,9 +40,34 @@ function resolveEnvPath() {
 // Read at most maxBytes bytes; refuse when the file is longer. A stat
 // size check alone does not bound the read (F-08): special files such
 // as /dev/zero report size 0 while yielding bytes indefinitely.
+// T44-F20: open non-blocking and refuse FIFOs/sockets before reading.
+// Opening a FIFO for reading blocks until a writer appears, so a
+// FIFO .env stalled automated runs indefinitely. Character devices
+// such as /dev/zero still go through the capped read, so the F-08
+// byte-cap refusal keeps its exact message (that behaviour is pinned
+// by tests/negative-inputs.test.mjs).
+// T43 r2a Fix 4 (partial): the open is also O_NOFOLLOW, so a symlinked
+// .env fails fast instead of opening an unrelated process-readable
+// file (c3b §1). A regular-file requirement is deliberately NOT added:
+// it would change the pinned /dev/zero refusal into a type error.
 function readFileCapped(filePath, maxBytes) {
-  const fd = fs.openSync(filePath, "r");
+  let fd;
   try {
+    fd = fs.openSync(
+      filePath,
+      fs.constants.O_RDONLY | fs.constants.O_NONBLOCK | fs.constants.O_NOFOLLOW
+    );
+  } catch (err) {
+    if (err.code === "ELOOP") {
+      throw new Error(`env file is a symlink: ${filePath}`);
+    }
+    throw err;
+  }
+  try {
+    const stat = fs.fstatSync(fd);
+    if (stat.isFIFO() || stat.isSocket()) {
+      throw new Error(`env file is not a readable file: ${filePath}`);
+    }
     const chunks = [];
     let total = 0;
     const buffer = Buffer.alloc(8192);
@@ -85,11 +110,31 @@ function addrFromXpub(core, xpub, coin, fullPath) {
     if (line.length > MAX_LINE_CHARS) {
       throw new Error(`env file line ${index + 1} exceeds ${MAX_LINE_CHARS} characters`);
     }
+    // T44-F19: an assignment-looking line that does not parse must fail
+    // loudly, not be silently skipped. An indented replacement (or a
+    // space before the '=') kept the stale key from the earlier line
+    // in force while the operator believed the rotation applied — the
+    // same hazard as F-06. A duplicate XPUB assignment is likewise
+    // refused: last-wins would silently pick whichever line the
+    // operator did not intend.
+    const trimmed = line.trimStart();
+    if (trimmed !== line && /^[A-Z_]+=/.test(trimmed)) {
+      throw new Error(`env file line ${index + 1} assignment for ${trimmed.split("=", 1)[0]} is indented; assignments must start at column 0`);
+    }
+    if (/^[A-Z_]+[ \t]+=/.test(line)) {
+      throw new Error(`env file line ${index + 1} assignment for ${line.split(/[ \t=]/, 1)[0]} has whitespace before '='; use KEY=value`);
+    }
     const m = line.match(/^([A-Z_]+)=(.*)$/);
     if (m) {
       const value = m[2].trim();
       if (value.length > MAX_VALUE_CHARS) {
         throw new Error(`env file line ${index + 1} value for ${m[1]} exceeds ${MAX_VALUE_CHARS} characters`);
+      }
+      if (
+        (m[1] === "XPUB_BTC" || m[1] === "XPUB_ETH" || m[1] === "XPUB_TRX") &&
+        Object.prototype.hasOwnProperty.call(env, m[1])
+      ) {
+        throw new Error(`env file line ${index + 1} duplicates assignment for ${m[1]}`);
       }
       env[m[1]] = value;
     }
@@ -101,7 +146,7 @@ function addrFromXpub(core, xpub, coin, fullPath) {
     ["trx", env.XPUB_TRX],
   ]) {
     if (!xpub) throw new Error(`missing ${chain} xpub in ${envPath}`);
-    const validation = validateExtendedKey(xpub, chain);
+    const validation = validateAccountKey(xpub, chain);
     if (!validation.ok) throw new Error(`${chain}: ${validation.message}`);
   }
 

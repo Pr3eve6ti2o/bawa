@@ -69,7 +69,7 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.3` | `4.9.3`; reference engine: `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
 | bip-utils | Python | `==2.12.2` | `==2.12.2` | Pinned |
 | Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
@@ -92,6 +92,8 @@ The repository root declares no dependencies, so skip root `npm install`. Runnin
 
 Install the wallet-core tooling at its package boundary: enter it with `cd tools/hdwallet-gen`, run `npm install`, then return to the repository root with `cd ../..`.
 
+Engine enforcement (OI-095, verified 2026-11-12): each engines-declaring package — the repository root, `tools/`, `tools/hdwallet-gen/` and `apps/web/` — carries a `.npmrc` with `engine-strict=true`. `npm install` and `npm ci` therefore fail with `EBADENGINE` on any Node release outside `>=22 <23` (Node v24.22.2 and Node v20.19.5 fail; Node v22.23.4 passes). `npm run` does not enforce engines, so `npm run check` can still pass on another Node; that does not make the installation supported. Regression test: `node --test tests/npm-engine-strict.test.mjs`.
+
 Treat these as unlocked dependency installs, not as evidence of a reproducible dependency graph or passing tests.
 
 ### Release blockers
@@ -104,25 +106,33 @@ Treat these as unlocked dependency installs, not as evidence of a reproducible d
 
 ## CI workflow
 
-Use the first-hand reading of `.github/workflows/ci.yml` on 8 November 2026 as the workflow record. The file defines one job, `static-checks`, on `ubuntu-latest`.
+Use the first-hand reading of `.github/workflows/ci.yml` as the workflow record. The file defines two jobs, `node-tests` and `python-tests`, on `ubuntu-24.04` (CI repair 2026-11-12, OI-075 partial fix; first GitHub run still required).
 
-Read the configured steps in this order:
+`node-tests`:
 
-1. Check out the repository with `actions/checkout@v4`.
-2. Set up Node 22 with `actions/setup-node@v4`.
-3. Run `npm install --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen`.
+1. Check out the repository with `actions/checkout` pinned to its full commit SHA.
+2. Set up Node 22.23.4 with `actions/setup-node` pinned to its full commit SHA; assert `node --version` is `v22.23.4` and `npm --version` is `10.9.9`.
+3. Run `npm ci --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen`.
 4. Run `npm run check`.
 5. Run `npm test`.
-6. Set up Python 3.13 with `actions/setup-python@v5`.
-7. Run `python -m pip install -r requirements.txt`.
-8. Run `python test/differential_test.py`.
-9. Apply `py_compile` to `tools/make_wallet.py` and `tools/decrypt_seed.py`.
+6. Assert live generation refuses without a controlling terminal (`generate.js` exits non-zero with the no-controlling-terminal message). Live generation never runs in CI by design; the refusal is the security control.
 
-Distinguish this configured sequence from successful execution at the pinned head.
+`python-tests`:
 
-Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags, no Dependabot, and a single job. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+1. Check out the same revision with `actions/checkout` pinned to its full commit SHA.
+2. Set up Python 3.13.18 with `actions/setup-python` pinned to its full commit SHA; assert `python --version` is `Python 3.13.18`.
+3. Run `python -m pip install -r requirements.txt`.
+4. Run `python test/differential_test.py` (BTC/ETH/TRX index 0–1, BTC change 0, TON address + SLIP-0010 pubkey, BIP-84 abandon anchors, Hardhat account 0, BIP-32 test-vector-1 xpubs — T30 extension, merged 92b2196).
+5. Run `python test/test_decrypt_seed.py` (decrypt round trip) and `python test/test_make_wallet.py`.
+6. Apply `py_compile` to `tools/make_wallet.py` and `tools/decrypt_seed.py`.
+7. Require non-empty output from each Python test run.
 
-Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install.
+Each job records the runner image identity (`ImageOS`/`ImageVersion` and `os-release`) for the evidence record. `permissions` is `contents: read` and nothing else. Dependabot is configured for GitHub Actions, npm (`tools/hdwallet-gen`) and pip (`.github/dependabot.yml`); major bumps of `@trustwallet/wallet-core` are ignored pending a qualification run.
+
+Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps after the 2026-11-12 repair: dependency scanning and secret scanning (scanner names unestablished, maintainer decision pending, OI-059/OI-077); build/reproduce/release-gate jobs (reproducible-build procedure unverified, OI-076); Python 3.13.18 was manifest-resolved but could not run on the lane VM (no 3.13 interpreter; the same tests pass on 3.12.3), so the first GitHub run is the 3.13 evidence. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC) on the previous single-job workflow: syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+
+Record the genuine omissions as dependency scanning, secret scanning and reproducible-build evidence.
+
 
 ## Release metadata
 
@@ -692,6 +702,8 @@ Implement the following requirements:
 - Set `permissions.contents` to `read` and all other permissions to `none`. Document and justify any exception.
 - Make `release-gate` require success and retained evidence from every preceding job, including both test jobs, `dependency-scan`, `secret-scan`, `build` and `reproduce`. Keep it blocked whenever a required job or gate lacks evidence.
 
+Status 2026-11-12 (OI-075 partial fix): the two test jobs, SHA pins, fixed runner label, lockfile-based install and Dependabot are implemented. The dependency-scan, secret-scan, build, reproduce and release-gate jobs are NOT implemented: scanner names are unestablished (maintainer decision pending, OI-059/OI-077) and the reproducible-build procedure is unverified (OI-076). The three release gates stay blocked (unverified).
+
 ### Record gate-specific evidence
 
 Maintain a public **TESTING** record linking the revision, public fixture sources, expected results backed by those sources, observed results and each gate’s status. Treat this as a proposed evidence record, not as confirmation that any gate has passed.
@@ -882,7 +894,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at version `4.8.4`; the release pin is 4.9.2 (see Version pins above).
+The tooling package declares `@trustwallet/wallet-core` at version `4.9.3` (upgraded 2026-11-13, E02); the release pin is 4.9.3 (see Version pins above).
 
 ```bash
 cd tools/hdwallet-gen
@@ -974,7 +986,7 @@ Keep recovery material out of the checkout and installation reports. `CONTRIBUTI
 
 A lockfile records the resolved dependency tree: exact package versions, including dependencies of dependencies, and integrity hashes. Version ranges in `package.json` alone can resolve differently on later installs. Without a lockfile, unchanged Bawa code can receive packages that were never part of the tested build.
 
-CI in `.github/workflows/ci.yml` currently runs `npm install --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen`, not `npm ci`, although `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12. Switching CI to `npm ci` is an open improvement (D23 F5).
+CI in `.github/workflows/ci.yml` now runs `npm ci --ignore-scripts --no-audit --no-fund` in `tools/hdwallet-gen` (switched from `npm install` in the 2026-11-12 OI-075 repair); `tools/hdwallet-gen/package-lock.json` exists at e3b65fb832db287fdc8d54794980dd0b3456cc12.
 
 ### Generate, review and test
 

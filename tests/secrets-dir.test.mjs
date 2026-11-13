@@ -1,5 +1,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveSecretsDir } from '../tools/hdwallet-gen/generate.js';
@@ -64,5 +66,33 @@ describe('secrets directory resolution (BAWA_SECRETS_DIR migration)', () => {
     assert.equal(result, '/tmp/same');
     assert.match(stderr, /NOVA_SECRETS_DIR/);
     assert.doesNotMatch(stderr, /\/tmp\/same/);
+  });
+
+  test('a symlinked secrets directory is refused (fresh and legacy names)', () => {
+    // T43 r2a Fix 1 / F3: a standalone generate.js run must not bypass
+    // the wrapper's refusal — resolveSecretsDir refuses every returned
+    // path that is a symlink.
+    const dir = fs.mkdtempSync(join(os.tmpdir(), 'bawa-secrets-dir-'));
+    try {
+      const target = join(dir, 'real');
+      fs.mkdirSync(target);
+      const link = join(dir, 'link');
+      fs.symlinkSync(target, link, 'dir');
+      assert.throws(
+        () => resolveSecretsDir({ BAWA_SECRETS_DIR: link }),
+        /refusing symlinked secrets directory/,
+      );
+      assert.throws(
+        () => resolveSecretsDir({ NOVA_SECRETS_DIR: link }),
+        /refusing symlinked secrets directory/,
+      );
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a missing secrets directory is fine (it is created later)', () => {
+    const missing = join(os.tmpdir(), `bawa-secrets-missing-${process.pid}`);
+    assert.equal(resolveSecretsDir({ BAWA_SECRETS_DIR: missing }), missing);
   });
 });

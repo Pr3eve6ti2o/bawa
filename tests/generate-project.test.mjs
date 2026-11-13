@@ -14,6 +14,7 @@ import {
   rmSync,
   symlinkSync,
   unlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -82,5 +83,145 @@ describe('generate-project containment (F-23)', () => {
     assert.notEqual(result.status, 0, result.stdout + result.stderr);
     assert.match(result.stderr, /refusing to write outside/i);
     assert.deepEqual(readdirSync(outsideDir), []);
+  });
+});
+
+// Regression tests for generate-project.mjs secret-file exclusion
+// (T49 F-01). The generator copies starter trees from the working copy,
+// not from git, so .gitignore does not stop a local secret file (.env,
+// keystore material, seed backups) from being shipped inside a
+// generated project. Planted contents are inert fake-only text, never
+// real secrets. Every planted file is removed in afterEach, even when
+// a test fails.
+describe('generate-project secret-file exclusion (T49 F-01)', () => {
+  // Paths relative to the starter root; the denylist must catch each
+  // one at any depth, including nested and upper-case variants.
+  const plantedWeb = [
+    '.env',
+    '.env.production',
+    '.ENV.upper',
+    'secrets/token.txt',
+    'src/__t49-nested__/.env',
+    'release.jks',
+    'src/__t49-nested__/.npmrc',
+    'cert.pem',
+    '__t49-test__.key',
+    'id_rsa_test',
+    'seed.enc.json.bak.2026-01-01T00-00-00.0123456789abcdef',
+    '.environment.ts',
+    '.env.example',
+    '__t49-control__.txt',
+  ];
+  const plantedAndroid = [
+    'keystore.properties',
+    'app/release.keystore',
+    'secrets/token.txt',
+    '__t49-control__.txt',
+  ];
+  const webOut = join(generatedRoot, '__t49-web__');
+  const androidOut = join(generatedRoot, '__t49-android__');
+  const linkPath = join(repoRoot, 'apps', 'web', '__t49-link__');
+
+  function plant(starter, relPaths) {
+    for (const rel of relPaths) {
+      const path = join(repoRoot, 'apps', starter, rel);
+      mkdirSync(join(path, '..'), { recursive: true });
+      writeFileSync(path, 'T49-TEST-ONLY-NOT-A-SECRET\n', 'utf8');
+    }
+  }
+
+  function unplant(starter, relPaths) {
+    for (const rel of relPaths) {
+      try {
+        unlinkSync(join(repoRoot, 'apps', starter, rel));
+      } catch {
+        // Already removed or never created.
+      }
+    }
+    rmSync(join(repoRoot, 'apps', starter, 'secrets'), { recursive: true, force: true });
+    rmSync(join(repoRoot, 'apps', starter, 'src', '__t49-nested__'), { recursive: true, force: true });
+  }
+
+  beforeEach(() => {
+    plant('web', plantedWeb);
+    plant('android', plantedAndroid);
+  });
+
+  afterEach(() => {
+    try {
+      unlinkSync(linkPath);
+    } catch {
+      // Already removed or never created.
+    }
+    unplant('web', plantedWeb);
+    unplant('android', plantedAndroid);
+    rmSync(webOut, { recursive: true, force: true });
+    rmSync(androidOut, { recursive: true, force: true });
+  });
+
+  test('web generation excludes planted secret files but copies normal files', () => {
+    const result = runGenerate(['web-wallet', '--out', webOut]);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const rel of plantedWeb) {
+      if (rel === '__t49-control__.txt' || rel === '.environment.ts' || rel === '.env.example') continue;
+      assert.equal(
+        existsSync(join(webOut, rel)),
+        false,
+        'planted file must not reach the generated project: ' + rel,
+      );
+    }
+    assert.equal(existsSync(join(webOut, 'secrets')), false);
+    assert.equal(
+      existsSync(join(webOut, '.npmrc')),
+      false,
+      'the starter\'s real .npmrc must not reach the generated project',
+    );
+    assert.equal(
+      existsSync(join(webOut, '__t49-control__.txt')),
+      true,
+      'ordinary files must still be copied',
+    );
+    assert.equal(
+      existsSync(join(webOut, '.environment.ts')),
+      true,
+      'a source file merely starting with .env must still be copied',
+    );
+    assert.equal(
+      existsSync(join(webOut, '.env.example')),
+      true,
+      'the documented .env.example template must still be copied',
+    );
+    assert.ok(existsSync(join(webOut, 'profile.json')));
+    assert.ok(existsSync(join(webOut, 'README-starter.md')));
+    assert.ok(existsSync(join(webOut, 'index.html')));
+  });
+
+  test('android generation excludes planted secret files but copies normal files', () => {
+    const result = runGenerate(['android-wallet', '--out', androidOut]);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const rel of plantedAndroid) {
+      if (rel === '__t49-control__.txt') continue;
+      assert.equal(
+        existsSync(join(androidOut, rel)),
+        false,
+        'planted file must not reach the generated project: ' + rel,
+      );
+    }
+    assert.equal(existsSync(join(androidOut, 'secrets')), false);
+    assert.equal(
+      existsSync(join(androidOut, '__t49-control__.txt')),
+      true,
+      'ordinary files must still be copied',
+    );
+    assert.ok(existsSync(join(androidOut, 'profile.json')));
+    assert.ok(existsSync(join(androidOut, 'README-starter.md')));
+    assert.ok(existsSync(join(androidOut, 'app', 'src', 'main', 'AndroidManifest.xml')));
+  });
+
+  test('a symlink inside a starter fails the run instead of being copied', () => {
+    symlinkSync(join(repoRoot, 'apps', 'web', '.env'), linkPath, 'file');
+    const result = runGenerate(['web-wallet', '--out', webOut]);
+    assert.notEqual(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stderr, /unsafe source entry/i);
   });
 });

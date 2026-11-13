@@ -437,7 +437,7 @@ A missing chain xpub throws, and the top-level handler exits with status `1`. Ch
 
 Supervise the calling application that owns the pipes. Do not send the daemon's stdout directly to the journal.
 
-Use an unprivileged user and fill in the placeholders for your installation:
+Use an unprivileged user and fill in the placeholders for your installation. The unit below runs the CALLER (the pipe-owning wrapper), never the daemon directly — `StandardInput`/`StandardOutput` here belong to the wrapper. The daemon's stdin/stdout are the JSONL pipes the wrapper creates and owns; the daemon must never inherit the unit's standard streams. Do NOT put `node tools/hdwallet-gen/derive_daemon.js` as `ExecStart` itself: with `StandardInput=null` it sees stdin EOF at once and exits 0 (not a failure, so `Restart=on-failure` does not act), and its JSONL replies would go to the journal instead of the caller.
 
 ```ini
 [Service]
@@ -448,6 +448,10 @@ ExecStart=<env-binary> -i PATH=<minimal-path> <pipe-owning-caller> -- node tools
 Restart=on-failure
 RestartSec=<restart-delay>
 NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateUsers=yes
+ProtectSystem=strict
+ProtectHome=yes
 StandardInput=null
 StandardOutput=journal
 StandardError=journal

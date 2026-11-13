@@ -1,6 +1,7 @@
 package com.bawa.wallet
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,6 +37,13 @@ import com.bawa.wallet.ui.screens.WelcomeScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // T47: block screenshots, screen recording and recent-apps
+        // thumbnails of receive QR codes and xpubs. UI hardening
+        // only — the starter holds no secrets.
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE,
+        )
         enableEdgeToEdge()
 
         setContent {

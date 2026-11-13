@@ -100,12 +100,18 @@ describe('chain fixtures', () => {
 
   test('derivation paths match the documented policy', () => {
     const source = readRepo('tools/hdwallet-gen/derive.js');
-    for (const path of [
-      "m/84'/0'/0'/0/",
-      "m/44'/60'/0'/0/",
-      "m/44'/195'/0'/0/",
+    // Since T14 (M-41) the paths are branch-templated, not literals:
+    // branch 0 instantiates to the documented receiving paths
+    // (m/84'/0'/0'/0/i, m/44'/60'/0'/0/i, m/44'/195'/0'/0/i) and
+    // branch 1 to the change path. The six fixture tests above prove
+    // the branch-0 instantiation by deriving the published addresses.
+    for (const template of [
+      "m/84'/0'/0'/${branch}/${i}",
+      "m/44'/60'/0'/${branch}/${i}",
+      "m/44'/195'/0'/${branch}/${i}",
+      "m/84'/0'/0'/1/${i}",
     ]) {
-      assert.ok(source.includes(path), `Missing documented derivation path ${path}`);
+      assert.ok(source.includes(template), `Missing documented derivation path template ${template}`);
     }
   });
 

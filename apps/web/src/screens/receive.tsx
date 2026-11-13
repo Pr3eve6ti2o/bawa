@@ -5,7 +5,7 @@ import { useWallet } from '../state/wallet-context';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 
-const CHAINS = ['btc', 'eth', 'trx'] as const;
+const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 export function ReceiveScreen() {
   const { addresses, selectedChain, setSelectedChain } = useWallet();
@@ -74,6 +74,13 @@ export function ReceiveScreen() {
           </p>
         </CardContent>
       </Card>
+
+      {selectedChain === 'ton' && (
+        <p className="text-sm text-muted-foreground">
+          This address can only receive. Withdrawing TON needs an external GUI wallet or
+          the @ton/ton expert-assisted route — see docs/05-watch-only/GUI-WATCH-ONLY-WORKFLOW.md.
+        </p>
+      )}
 
       <p className="text-sm text-muted-foreground">
         Only share this address to receive funds. Verify the address matches the one your

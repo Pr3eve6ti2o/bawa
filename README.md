@@ -373,6 +373,19 @@ One home per subject: tool selection in docs/03, chain registry in docs/12, Wall
 
 Start at the repository root. Stop if either install fails; the tools command returns to the root only if its install completes.
 
+Select Node 22 first. The repository enforces its declared Node range (`>=22 <23`): each engines-declaring package carries a `.npmrc` with `engine-strict=true`, so `npm install` and `npm ci` fail with `EBADENGINE` on any other Node release (verified 2026-11-12: Node v24.22.2 and Node v20.19.5 fail; Node v22.23.4 passes). Invoking a Node 22 `npm` by absolute path does not select Node 22: npm's `#!/usr/bin/env node` shebang selects `node` from PATH, so it can still run under the system Node. Set PATH first, then check the executable and version in the same shell:
+
+```sh
+export PATH="/path/to/node22/bin:$PATH"
+hash -r
+
+which node
+node --version
+which npm
+```
+
+Do not continue unless `which node` points to the selected Node 22 installation's `bin/node`, `node --version` reports a Node 22 release, and `which npm` points to that installation's `bin/npm`.
+
 **Step 1 — root install**
 
 The repository root has no dependencies: `npm install` at the root installs nothing, and `npm ls --depth=0` cannot check a lockfile's selected package and version against the root because no root lockfile exists. Skip this step and proceed to Step 2.
@@ -615,7 +628,7 @@ The paths must match Step 5, including any overrides. Compare all four public va
 
 `Encrypted recovery artifact: <path>` is program output. Keep it verbatim when recording that output.
 
-stdout JSON contains public material only: `btc_zpub`, `eth_xpub`, `trx_xpub`, `ton_address`, `ton_path`, `ton_note`, samples, checks, `seed_encrypted_to` and `wallet_core_version`. The `ton_note` value is `single address per wallet; no xpub exported`. Do not expect a TON xpub.
+stdout JSON contains public material only: `btc_zpub`, `eth_xpub`, `trx_xpub`, `ton_address`, `ton_path`, `ton_note`, samples, checks, `seed_encrypted_to` and `wallet_core_version`. The `ton_note` value is `single address per wallet; no xpub exported; TON address not independently cross-checked`. Do not expect a TON xpub. The TON address is not independently cross-checked by the wrapper (BTC/ETH/TRX roots are); see the R05 report.
 
 **Step 7 — Regenerate only after a verified backup**
 
@@ -1007,11 +1020,11 @@ This is the canonical home for repo-level troubleshooting; the Web and Android g
 
 | Symptom | What to check or do |
 | --- | --- |
-| `npm install` fails | Check your Node and npm versions against §3. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
+| `npm install` fails | Check your Node and npm versions against §3. If the failure names `EBADENGINE`, the Node release is outside the declared `>=22 <23` range: the repository enforces the range, so switch to Node 22 (§6) — the install cannot proceed on another Node. No root lockfile exists, so the check of the lockfile’s selected package/version cannot run against the repository root; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`. |
 | No-TTY refusal | `FATAL: no controlling terminal — refusing to run; generate the wallet interactively`, exit 1. This is expected. Run from a real interactive terminal; never defeat the check. |
 | Derived address mismatch | Follow the ordered comparison below. |
 
-Both Node packages require Node `>=22 <23`, and CI uses Node 22. Use Node 22 for the documented setup. An operator-verified installation under Node v24.22.2 emitted EBADENGINE because that runtime is outside the declared range, but installation completed and the syntax check and smoke suite passed with Wallet Core 4.8.4. This observation does not extend the declared Node support range.
+Both Node packages require Node `>=22 <23`, and CI uses Node 22. Use Node 22 for the documented setup. Since 2026-11-12 the repository enforces that range: an installation under Node v24.22.2 fails with `EBADENGINE` (exit 1) instead of completing. Before enforcement, an operator-verified installation under Node v24.22.2 emitted the same warning but completed, and the syntax check and smoke suite passed with Wallet Core 4.8.4. That observation does not extend the declared Node support range.
 
 For an address mismatch, compare these in order:
 
@@ -1034,7 +1047,7 @@ For balances and tracking:
 | --- | --- |
 | EVM address matches but balance is zero | Check the chain ID, RPC endpoint, network name, native currency and explorer. The same address can exist on multiple EVM networks. |
 | Tracker misses a payment | Check for a wrong index, index allocation DB issues, a gap-window issue, a wrong branch, indexer lag, an RPC error, a reorg, a token contract mismatch or the wrong network. This is why an address allocation table is so important. |
-| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and empty passphrase. If it matches, the funds are on the recorded path and your restore used a different path or passphrase — re-check each item in the ordered comparison above. If the recorded first address itself shows no funds on the recorded network, the funds were never sent to that address. Never re-fund a guess. |
+| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and recorded BIP-39 passphrase policy. If it matches, the restore used the recorded inputs — that alone does not prove funds exist. If the recorded first address itself shows no funds on the recorded network, do not conclude the funds were never sent to that address: the address may have received and subsequently spent funds. Separate address reproduction from current balance, transaction history and address discovery, and check independent transaction evidence on the recorded network. Never re-fund a guess. |
 
 For negative and security cases:
 
@@ -1273,7 +1286,7 @@ negative-input tests 36/36; Web starter 25 tests plus build and preview HTTP che
 Android starter 17 unit tests plus APK build and emulator install/launch; quality gates 11/11;
 clean-checkout tests 3/3. The on-device Android Add-button acceptance path is **NOT VERIFIED**.
 Still open: independent external review (M-31/M-15) has no designated reviewer;
-M-35 rehearsal execution needs separate approval; M-39 GUI watch-only test needs a desktop machine;
+M-35 rehearsal execution needs separate approval; M-39 GUI watch-only test needs a desktop machine (in-app TON watch-only workflow implemented, R01 2026-11-12);
 mainnet activation needs separate approval; on-device Android derivation is **OPEN**
 (no Trust Wallet Core AAR exists for any version). The Doc 4 §5 step-4 SHA still names
 H5 (`d2f0960c`) while `main` has advanced; refresh that SHA on the next Doc 4 re-issue.

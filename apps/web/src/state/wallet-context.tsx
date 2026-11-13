@@ -3,14 +3,23 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { deriveAddresses, validateExtendedKey } from '../engine/boundary';
+import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
 
-const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx'];
+const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+// Maximum wallet-label length enforced at the storage boundary (T43
+// r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
+// characters, an xprv is 111, and a 32-byte data key in hex is 64, so
+// no complete secret of those forms fits in 40 characters, while
+// ordinary labels ("Savings") are unaffected. This is a bound, not a
+// guarantee: a shorter complete secret (e.g. a 23-character Chinese
+// BIP-39 mnemonic, a 40-character Z85 key) or a secret fragment still
+// fits — see REPORT.md. The label input also carries maxLength={40}.
 // localStorage contains public watch-only data only (xpubs and labels), never secrets.
 const STORAGE_KEY = 'bawa-watch-only-xpubs';
+export const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
 const perChain = <T,>(make: () => T): PerChain<T> => ({
-  btc: make(), eth: make(), trx: make(),
+  btc: make(), eth: make(), trx: make(), ton: make(),
 });
 
 interface WalletState {
@@ -93,7 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     setChain(chain, 'loading');
     try {
-      const addresses = await deriveAddresses(chain, wallet.xpub, 5);
+      const addresses = await deriveAddresses(chain, wallet.xpub, wallet.derivedCount);
       if (request !== derivations.current[chain]) return;
       setChain(chain, 'ready', addresses.map((address, index) => ({ chain, index, address })));
     } catch (error: unknown) {
@@ -112,11 +121,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const request = ++additions.current[chain];
     const epoch = lifetime.current;
     const publicKey = xpub.trim();
-    const validation = await validateExtendedKey(publicKey, chain);
+    const validation = await validateWatchOnlyImport(chain, publicKey);
     if (!validation.ok) throw new Error(validation.message);
     if (epoch !== lifetime.current || request !== additions.current[chain]) return;
     changed.current[chain] = true;
-    const wallet = { chain, xpub: publicKey, label: label.trim(), derivedCount: 5 };
+    const trimmedLabel = label.trim();
+    if (trimmedLabel.length > LABEL_MAX_LENGTH) {
+      throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
+    }
+    // For TON, xpub holds the validated TON public address (see
+    // contracts). TON has one address because its path is fully hardened.
+    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: chain === 'ton' ? 1 : 5 };
     await putWallet(chain, wallet);
   }, [putWallet]);
 
@@ -151,12 +166,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const entry = saved[chain];
       if (changed.current[chain] || !isRecord(entry) || typeof entry.xpub !== 'string') return;
       const publicKey = entry.xpub.trim();
-      const label = typeof entry.label === 'string' ? entry.label.trim() : '';
+      // An over-long stored label is dropped to '' (T43 r2b Fix (b)):
+      // restore-to-'' rather than truncation, so a persisted prefix of
+      // a pasted secret is not kept. The persistence effect below then
+      // overwrites the stored label with ''.
+      const rawLabel = typeof entry.label === 'string' ? entry.label.trim() : '';
+      const label = rawLabel.length > LABEL_MAX_LENGTH ? '' : rawLabel;
       try {
-        const validation = await validateExtendedKey(publicKey, chain);
-        if (!cancelled && !changed.current[chain] && validation.ok) {
-          const wallet = { chain, xpub: publicKey, label, derivedCount: 5 };
-          void putWallet(chain, wallet);
+        const validation = await validateWatchOnlyImport(chain, publicKey);
+        if (!cancelled && !changed.current[chain]) {
+          if (validation.ok) {
+            // For TON, xpub holds the validated TON public address (see
+            // contracts). TON has one address because its path is fully hardened.
+            const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
+            void putWallet(chain, wallet);
+          }
+          // Keep well-formed non-account keys and labels visible and stored for
+          // investigation. putWallet triggers refreshChain; deriveAddresses ->
+          // deriveAddress enforces validateAccountKey and throws the not-account-key
+          // message before deriving any addresses. refreshChain catches the error
+          // and sets the chain to the error state with that message.
+          else if (validation.reason === 'not-account-key') {
+            const wallet = { chain, xpub: publicKey, label, derivedCount: chain === 'ton' ? 1 : 5 };
+            void putWallet(chain, wallet);
+          }
         }
       } catch {
         // Ignore corrupt or unverifiable entries; never restore unvalidated data.

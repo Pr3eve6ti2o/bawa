@@ -34,28 +34,67 @@ import warnings
 AAD = b"nova-shop-seed-v1"
 
 
+def _publish_no_clobber(tmp: str, dest: str) -> None:
+    """Atomically publish tmp at dest, refusing if dest exists.
+
+    R05 r2c: the preflight lexists check in main() is not atomic — a
+    destination created after the check was silently replaced by
+    os.replace. os.link fails with EEXIST instead, so a destination
+    that appears between the check and the publish is refused and the
+    existing file is left untouched. tmp and dest are in the same
+    directory, so the link cannot fail with EXDEV. tmp is unlinked
+    after a successful link; if that unlink raises, the caller's
+    finally still removes it and the error propagates while dest stays
+    published (the same shape as a directory-fsync failure below).
+    """
+    try:
+        os.link(tmp, dest)
+    except FileExistsError:
+        raise SystemExit(
+            "refusing to overwrite existing output file; remove it first"
+        ) from None
+    os.unlink(tmp)
+
+
 def _read_key() -> bytes:
     raw = os.environ.get("BAWA_DATA_KEY")
     if raw:
         # F-37: a key in the process environment is visible to other
         # processes running as the same user (and to privileged local
         # processes). Name the variable, never the value.
-        print(
-            "warning: BAWA_DATA_KEY read from the process environment; "
-            "the key is visible to same-user and privileged local "
-            "processes — prefer the non-echoing prompt",
-            file=sys.stderr,
-        )
-        key = bytes.fromhex(raw.strip())
-    else:
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("error", getpass.GetPassWarning)
-                key = bytes.fromhex(getpass.getpass("Bawa data key (hex): ").strip())
-        except getpass.GetPassWarning:
-            raise ValueError(
-                "terminal echo cannot be disabled; refusing to read data key"
-            ) from None
+            key = bytes.fromhex(raw.strip())
+        except ValueError:
+            # T41: an unusable env value must not hard-fail the recovery:
+            # warn (naming only the variable) and fall through to the
+            # prompt instead of aborting on a stale export.
+            print(
+                "warning: BAWA_DATA_KEY is not valid hex; ignoring it — "
+                "use the prompt (unset the variable to silence this)",
+                file=sys.stderr,
+            )
+        else:
+            if len(key) == 32:
+                print(
+                    "warning: BAWA_DATA_KEY read from the process environment; "
+                    "the key is visible to same-user and privileged local "
+                    "processes — prefer the non-echoing prompt",
+                    file=sys.stderr,
+                )
+                return key
+            print(
+                "warning: BAWA_DATA_KEY is not 32 bytes; ignoring it — "
+                "use the prompt (unset the variable to silence this)",
+                file=sys.stderr,
+            )
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            key = bytes.fromhex(getpass.getpass("Bawa data key (hex): ").strip())
+    except getpass.GetPassWarning:
+        raise ValueError(
+            "terminal echo cannot be disabled; refusing to read data key"
+        ) from None
     if len(key) != 32:
         raise ValueError("data key must be exactly 32 bytes")
     return key
@@ -65,7 +104,15 @@ def decrypt(path: str, key: bytes) -> str:
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
     try:
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        # O_NONBLOCK (T43 c3a §2 / r2a Fix 3): without it a FIFO at the
+        # path blocks the open forever with no writer; the fstat check
+        # below then rejects it promptly as a non-regular file.
+        fd = os.open(
+            path,
+            os.O_RDONLY
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0),
+        )
     except OSError as exc:
         if exc.errno in (errno.ELOOP, errno.EMLINK):
             raise ValueError("refusing symlinked encrypted artifact") from None
@@ -109,7 +156,16 @@ def decrypt(path: str, key: bytes) -> str:
         raise ValueError("malformed encrypted artifact") from exc
     if len(nonce) != 12 or len(ciphertext) < 16:
         raise ValueError("malformed AES-GCM artifact")
-    plain = AESGCM(key).decrypt(nonce, ciphertext, AAD)
+    # T44-F10: a wrong key or tampered ciphertext raises
+    # cryptography.exceptions.InvalidTag, which main() does not catch
+    # (ValueError/OSError only) — it escaped as an unhandled traceback.
+    # Map it to the same clean ValueError as every other refusal.
+    from cryptography.exceptions import InvalidTag
+
+    try:
+        plain = AESGCM(key).decrypt(nonce, ciphertext, AAD)
+    except InvalidTag:
+        raise ValueError("seed bundle authentication failed") from None
     try:
         text = plain.decode("utf-8")
     except UnicodeDecodeError:
@@ -136,6 +192,20 @@ def decrypt(path: str, key: bytes) -> str:
     return text
 
 
+def _assert_trusted_output_dir(output_dir):
+    st = os.stat(output_dir)
+    mode = st.st_mode
+    if (mode & 0o022) and not (mode & 0o1000):
+        raise SystemExit(
+            "refusing non-sticky group/other-writable output directory"
+        )
+    if (mode & 0o022) and st.st_uid not in (os.getuid(), 0):
+        raise SystemExit(
+            "refusing group/other-writable output directory not owned by "
+            "you or root; use a private directory"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         epilog="Key input: prefer the non-echoing prompt. BAWA_DATA_KEY "
@@ -154,21 +224,28 @@ def main() -> int:
     if args.output and os.path.islink(args.output):
         # NB: no os.path.exists() gate — islink() alone must catch dangling
         # symlinks too, otherwise a dangling symlink slips past this refusal
-        # (os.replace() would still not follow it, but the guard must mean
+        # (os.link() would still not follow it, but the guard must mean
         # what it says).
         raise SystemExit("refusing symlinked output path")
+
+    # T41: never silently destroy an existing file — a previous plaintext
+    # recovery could be the operator's only copy. Checked up front (like
+    # the symlink refusal) so a doomed run fails before the key prompt.
+    if args.output and os.path.lexists(args.output):
+        raise SystemExit(
+            "refusing to overwrite existing output file; remove it first"
+        )
 
     key = _read_key()
     mnemonic = decrypt(args.path, key)
 
     if args.output:
         output_dir = os.path.dirname(os.path.realpath(args.output))
-        os.makedirs(output_dir, exist_ok=True)
-        mode = os.stat(output_dir).st_mode
-        if (mode & 0o022) and not (mode & 0o1000):
-            raise SystemExit(
-                "refusing non-sticky group/other-writable output directory"
-            )
+        # T41: newly created parents must be private (mode 0o700), not
+        # the makedirs default 0o777 & ~umask. Pre-existing directories
+        # are left untouched (no chmod on a directory the operator owns).
+        os.makedirs(output_dir, mode=0o700, exist_ok=True)
+        _assert_trusted_output_dir(output_dir)
 
         fd, tmp = tempfile.mkstemp(
             prefix="seed-", suffix=".tmp", dir=output_dir
@@ -180,8 +257,22 @@ def main() -> int:
                 f.write(mnemonic + "\n")
                 f.flush()
                 os.fsync(f.fileno())
-            os.replace(tmp, args.output)
+            # R05 r2c: atomic no-clobber publish (see _publish_no_clobber).
+            # A destination that appeared after the up-front lexists
+            # check is refused instead of silently replaced.
+            _publish_no_clobber(tmp, args.output)
             published = True
+            # T41: fsync the directory so the link survives power loss.
+            # Durability (T43 r2a Fix 3): the link must be fsynced
+            # into the output directory; a file fsync alone does not
+            # commit the directory entry. If this fsync fails the file
+            # is already installed — the error reports that, it does
+            # not pretend the write was rolled back.
+            dir_fd = os.open(output_dir, os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
         finally:
             if not published:
                 try:

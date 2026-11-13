@@ -7,6 +7,7 @@ const chains = [
   { id: "btc", name: "Bitcoin" },
   { id: "eth", name: "Ethereum" },
   { id: "trx", name: "TRON" },
+  { id: "ton", name: "TON" },
 ] as const;
 
 export function WalletManagementScreen() {
@@ -40,13 +41,13 @@ export function WalletManagementScreen() {
                       type="button"
                       variant="outline"
                       onClick={() => removeXpub(id)}
-                      aria-label={`Remove ${name} wallet`}
+                      aria-label={`Forget stored ${name} key`}
                     >
-                      Remove
+                      Forget stored key
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <span className="sr-only">Extended public key: </span>
+                    <span className="sr-only">{id === "ton" ? "TON public address: " : "Extended public key: "}</span>
                     <code className="break-all text-sm">{shortXpub}</code>
                   </CardContent>
                 </Card>
@@ -61,7 +62,7 @@ export function WalletManagementScreen() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Import an extended public key to add a watch-only wallet.
+              Import a watch-only wallet to add it here.
             </p>
             <Link
               to="/import-wallet"
@@ -74,8 +75,23 @@ export function WalletManagementScreen() {
       )}
 
       <p className="text-sm text-muted-foreground">
-        Only extended public keys are stored (in localStorage). No secrets are stored anywhere in this starter.
+        Only extended public keys and TON public addresses are stored (in localStorage). No secrets are stored anywhere in this starter.
+        An extended public key lets its holder track this account&apos;s derivable addresses, balances and
+        transaction history. Stored keys stay stored when the wallet is locked; forgetting a key removes it
+        from this browser, but cannot revoke a copy someone already took.
       </p>
+
+      {hasWallets && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            for (const { id } of chains) removeXpub(id);
+          }}
+        >
+          Forget all stored keys
+        </Button>
+      )}
     </section>
   );
 }

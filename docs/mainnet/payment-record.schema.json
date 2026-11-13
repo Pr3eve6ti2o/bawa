@@ -1,0 +1,335 @@
+{
+  "$id": "https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/docs/mainnet/payment-record.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Storage format for the five-group payment record in Doc 4 \u00a712. This is a guide record format, not a Bawa API schema. Seeds, mnemonics, private keys and xpubs/zpubs have no place in this record. Validated by test/payment_record_check.py (stdlib-only structural and arithmetic checks), not a full JSON Schema validator.",
+  "properties": {
+    "created_utc": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "credit_settlement": {
+      "additionalProperties": false,
+      "properties": {
+        "credit_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "idempotency_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "journal_amount_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "journal_asset": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reversals_adjustments": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "settlement_line": {
+          "additionalProperties": false,
+          "properties": {
+            "allocation_atomic": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "fees_atomic": {
+              "description": "On-chain transaction fee for the observed transaction, recorded for the record. Only the recipient-borne part reduces the net value.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "net_value_atomic": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "recipient_borne_fees_atomic": {
+              "description": "Part of fees_atomic borne by the recipient; net_value_atomic must equal allocation_atomic minus this value.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "retained_record_reference": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "retained_record_reference",
+            "allocation_atomic",
+            "fees_atomic",
+            "recipient_borne_fees_atomic",
+            "net_value_atomic"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "credit_id",
+        "idempotency_key",
+        "journal_amount_atomic",
+        "journal_asset",
+        "reversals_adjustments",
+        "settlement_line"
+      ],
+      "type": "object"
+    },
+    "format_version": {
+      "const": "bawa-payment-record/1",
+      "type": "string"
+    },
+    "match": {
+      "additionalProperties": false,
+      "properties": {
+        "deduplication_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "evaluated_confirmations": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "policy_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "request_event_link": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "pending"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_event_link",
+        "deduplication_key",
+        "evaluated_confirmations",
+        "status",
+        "reason",
+        "policy_version"
+      ],
+      "type": "object"
+    },
+    "observation": {
+      "additionalProperties": false,
+      "properties": {
+        "amount_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "asset": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "block_identity": {
+          "additionalProperties": false,
+          "properties": {
+            "height": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "time": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "height",
+            "time"
+          ],
+          "type": "object"
+        },
+        "canonicality": {
+          "enum": [
+            "canonical",
+            "reorged",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "chain_network": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "cursor": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "memo_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output_identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "payer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recipient": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "txid": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "txid",
+        "chain_network",
+        "output_identity",
+        "cursor",
+        "block_identity",
+        "canonicality",
+        "payer",
+        "recipient",
+        "asset",
+        "amount_atomic",
+        "memo_tag"
+      ],
+      "type": "object"
+    },
+    "reconciliation": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_event_set": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "database_after_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "database_before_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "decision_reason": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "discrepancy_atomic": {
+          "type": "integer"
+        },
+        "repair": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resulting_status": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "total_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "accepted_event_set",
+        "total_atomic",
+        "database_before_atomic",
+        "database_after_atomic",
+        "discrepancy_atomic",
+        "repair",
+        "resulting_status",
+        "decision_reason"
+      ],
+      "type": "object"
+    },
+    "record_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "request": {
+      "additionalProperties": false,
+      "properties": {
+        "amount_atomic": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "amount_unit": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "asset": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "expiry": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "memo_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "network": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "policy_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "recipient": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "network",
+        "asset",
+        "recipient",
+        "amount_atomic",
+        "amount_unit",
+        "memo_tag",
+        "expiry",
+        "policy_version"
+      ],
+      "type": "object"
+    },
+    "source_note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "format_version",
+    "record_id",
+    "created_utc",
+    "request",
+    "observation",
+    "match",
+    "reconciliation",
+    "credit_settlement"
+  ],
+  "title": "Bawa payment record (reader-owned, guide format)",
+  "type": "object"
+}

@@ -6,6 +6,7 @@ const CHAINS = [
   { id: 'btc', symbol: 'BTC' },
   { id: 'eth', symbol: 'ETH' },
   { id: 'trx', symbol: 'TRX' },
+  { id: 'ton', symbol: 'TON' },
 ] as const;
 
 export function AssetListScreen() {
@@ -19,7 +20,7 @@ export function AssetListScreen() {
         {CHAINS.map(({ id, symbol }) => {
           const count = addresses[id].length;
           const detail = xpubs[id]
-            ? `${count} derived ${count === 1 ? 'address' : 'addresses'}`
+            ? (id === 'ton' ? '1 imported address' : `${count} derived ${count === 1 ? 'address' : 'addresses'}`)
             : 'Not imported';
 
           return (
@@ -46,7 +47,7 @@ export function AssetListScreen() {
       </ul>
 
       <p className="text-sm text-muted-foreground">
-        TON is not supported by this starter (generation-only in the repo).
+        TON is watch-only only in this starter: import a public address; it cannot send.
       </p>
     </main>
   );

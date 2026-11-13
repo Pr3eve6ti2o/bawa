@@ -5,7 +5,9 @@ import {
   deriveAddress,
   deriveAddresses,
   isEngineReady,
+  validateAccountKey,
   validateExtendedKey,
+  validateTonAddress,
 } from './boundary';
 
 const btcZpub =
@@ -175,6 +177,146 @@ describe.sequential('watch-only engine boundary', () => {
     });
   });
 
+  it('rejects a small-x non-residue point (Legendre branch, T42)', async () => {
+    const nonResidue = mutatePayload(btcZpub, (payload) => {
+      payload[45] = 0x02;
+      payload.fill(0, 46, 78);
+      payload[77] = 5;
+    });
+
+    await expect(validateExtendedKey(nonResidue, 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-point',
+    });
+  });
+
+  it('accepts the small-x valid point x=1 (Legendre branch, T42)', async () => {
+    const validSmall = mutatePayload(btcZpub, (payload) => {
+      payload[45] = 0x02;
+      payload.fill(0, 46, 78);
+      payload[77] = 1;
+    });
+
+    await expect(validateExtendedKey(validSmall, 'btc')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('rejects over-long input without scanning it (T42)', async () => {
+    await expect(validateExtendedKey('1'.repeat(200), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+    await expect(validateExtendedKey('z'.repeat(113), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+    await expect(validateExtendedKey('z'.repeat(1000000), 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'invalid-length',
+    });
+  });
+
+  it('rejects the two further private versions with the private-key reason (T40-F2)', async () => {
+    // 0295b005 and 02aa7a99 are in the documented 8-version private set
+    // (docs/05-watch-only/README.md) and in the shared Node validator;
+    // the web validator previously reported them as version-not-allowed.
+    for (const version of [
+      [0x02, 0x95, 0xb0, 0x05],
+      [0x02, 0xaa, 0x7a, 0x99],
+    ] as const) {
+      const privateVersion = mutatePayload(ethXpub, (payload) => {
+        payload[0] = version[0];
+        payload[1] = version[1];
+        payload[2] = version[2];
+        payload[3] = version[3];
+      });
+
+      await expect(
+        validateExtendedKey(privateVersion, 'eth'),
+      ).resolves.toMatchObject({
+        ok: false,
+        reason: 'private-key',
+      });
+    }
+  });
+
+  it('rejects depth-0 keys with nonzero fingerprint or child number (T40-F1)', async () => {
+    // Same vectors as the shared Node validator's DEPTH0_* regressions
+    // (test/smoke.test.js): depth 0 with fingerprint 00000001 / child 00000001.
+    const depth0Fingerprint =
+      'xpub661MyMwTWkfYbGsHSkBPfK8hV3UhGjbN4hYBHFNRsZRFaUa3Eg5jKNwq1HMHBXDCDy9zSQTnhJgVAJY3gs8sTpDdrNWrHzwdEoY7Lf6dzxA';
+    const depth0Child =
+      'xpub661MyMwAqRbcHG7iAofhFTywCv8fdScxFvDJvpPZrQfnYjTChfcdCM7UWu179f4DmYcB4d3xuhXR1fFqeykXjsYQFQ9WHho2G6GX5dSHoAV';
+
+    for (const key of [depth0Fingerprint, depth0Child]) {
+      await expect(validateExtendedKey(key, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'invalid-depth-metadata',
+      });
+    }
+  });
+
+  it.each(fixtures)(
+    'accepts the account-0 fixtures with validateAccountKey (R02-F01)',
+    async ({ chain, xpub }) => {
+      await expect(validateAccountKey(xpub, chain)).resolves.toMatchObject({
+        ok: true,
+      });
+    },
+  );
+
+  it('rejects non-account depths with validateAccountKey (R02-F01)', async () => {
+    for (const depth of [0, 1, 2, 4, 5]) {
+      const mutated = mutatePayload(btcZpub, (payload) => {
+        payload[4] = depth;
+        if (depth === 0) {
+          payload.fill(0, 5, 13);
+        }
+      });
+
+      await expect(validateExtendedKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: true,
+      });
+      await expect(validateAccountKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'not-account-key',
+      });
+    }
+  });
+
+  it('rejects depth-3 non-account-0 child numbers with validateAccountKey (R02-F01)', async () => {
+    for (const childNumber of [0x80000001, 0x00000000]) {
+      const mutated = mutatePayload(btcZpub, (payload) => {
+        payload[9] = (childNumber >>> 24) & 0xff;
+        payload[10] = (childNumber >>> 16) & 0xff;
+        payload[11] = (childNumber >>> 8) & 0xff;
+        payload[12] = childNumber & 0xff;
+      });
+
+      await expect(validateExtendedKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: true,
+      });
+      await expect(validateAccountKey(mutated, 'btc')).resolves.toMatchObject({
+        ok: false,
+        reason: 'not-account-key',
+      });
+    }
+  });
+
+  it('deriveAddress rejects a depth-2 key before core invocation (R02-F01)', async () => {
+    const depth2 = mutatePayload(btcZpub, (payload) => {
+      payload[4] = 2;
+    });
+
+    await expect(deriveAddress('btc', depth2, 0)).rejects.toThrow(
+      'extended key must be an account-level key (depth 3, account 0)',
+    );
+    await expect(deriveAddress('btc', btcZpub, 0)).resolves.toBe(
+      'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+    );
+  });
+
   it('rejects a character outside the base58 alphabet', async () => {
     const invalidBase58 = ethXpub.slice(0, 10) + '0' + ethXpub.slice(10);
 
@@ -235,5 +377,75 @@ describe.sequential('watch-only engine boundary', () => {
   it('is initialised after a successful derivation', async () => {
     await deriveAddress('btc', btcZpub, 0);
     expect(isEngineReady()).toBe(true);
+  });
+});
+
+describe('TON watch-only address validation (R01)', () => {
+  const address = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+
+  it.each([
+    [
+      'non-bounceable',
+      address,
+      { ok: true, form: 'non-bounceable', workchain: 0 },
+    ],
+    [
+      'bounceable',
+      'EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi',
+      { ok: true, form: 'bounceable', workchain: 0 },
+    ],
+    [
+      'raw',
+      '0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f',
+      { ok: true, form: 'raw', workchain: 0 },
+    ],
+    [
+      'workchain -1',
+      'Ef-7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD95q',
+      { ok: true, form: 'bounceable', workchain: -1 },
+    ],
+  ] as const)('accepts %s', (_name, input, expected) => {
+    expect(validateTonAddress(input)).toMatchObject(expected);
+  });
+
+  it.each([
+    [
+      'invalid checksum',
+      'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zm',
+      'invalid-checksum',
+    ],
+    [
+      'testnet address',
+      'kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo',
+      'wrong-network',
+    ],
+    [
+      'unsupported tag',
+      'IQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD9Sp',
+      'unsupported-version',
+    ],
+    ['12-word mnemonic', 'abandon '.repeat(11) + 'about', 'secret-like'],
+    [
+      'bare 64-hex address',
+      'bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f',
+      'invalid-format',
+    ],
+    [
+      '47-character address',
+      'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3z',
+      'invalid-length',
+    ],
+    ['empty input', '', 'empty'],
+    ['whitespace input', ' \t\n ', 'empty'],
+  ] as const)('rejects %s', (_name, input, reason) => {
+    expect(validateTonAddress(input)).toMatchObject({ ok: false, reason });
+  });
+
+  it('returns exactly the supplied address when five addresses are requested', async () => {
+    await expect(deriveAddresses('ton', address, 5)).resolves.toEqual([address]);
+  });
+
+  it('rejects derivation at index 1', async () => {
+    await expect(deriveAddress('ton', address, 1)).rejects.toThrow();
   });
 });

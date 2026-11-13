@@ -3,7 +3,7 @@
 - Platform: android
 - Status: STARTER_IMPLEMENTED_AND_VERIFIED — Starter implemented and verified within its documented scope; not a complete wallet.
 - Chains: btc (m/84'/0'/0'/0/i), eth (m/44'/60'/0'/0/i), trx (m/44'/195'/0'/0/i), ton (m/44'/607'/0' generation-only)
-- Engine: trust-wallet-core 4.8.4 — OPEN
+- Engine: trust-wallet-core 4.9.1 — OPEN
 - UI: wdk-starter-ui-only / and-01-wdk-starter-kotlin — IMPLEMENTED_AND_VERIFIED
 - Verification: PROPOSED
 
@@ -36,7 +36,7 @@
 
 ## Security notes
 
-- Trust Wallet Core 4.8.4 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.
+- Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.
 - No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. CLI generation and derivation evidence does not establish Android engine operation.
 - AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); 17 unit tests pass; emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.
 - The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.
@@ -53,7 +53,7 @@
 - starter builds from a clean checkout
 - 14-screen contract coverage checked against docs/14 section 5.1
 - the Tether WDK Starter foundation completes Phase 5 inspection before adoption and remains limited to the UI layer
-- an Android binding to Trust Wallet Core 4.8.4 is established and verified before Android generation or derivation is described as verified; Android AAR availability is not presumed
+- an Android binding to Trust Wallet Core 4.9.1 is established and verified before Android generation or derivation is described as verified; Android AAR availability is not presumed
 - the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only
 - any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet
 

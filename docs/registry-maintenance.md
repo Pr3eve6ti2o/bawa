@@ -78,10 +78,9 @@ licensing decision.
 
 A pin that does not resolve is `UNVERIFIED`. Preserve the failed lookup evidence;
 never silently substitute a plausible version, tag or commit. Any correction must
-be explicit and evidenced. The AGPL XChain entry remains research-only, and its pin
-is `UNVERIFIED`: it does not resolve in `xchainjs/xchainjs-lib`.
+be explicit and evidenced. The AGPL-3.0-or-later XChain entry remains `OPEN`, research-only, and never selectable; its pin `3e550d05e913e29e5c3cf24527bf504f1a4fe942` is verified as the `master` HEAD of `XChain-Platform/xchain-wallet` (commit 2026-11-01, release v0.342.1) and is absent from `xchainjs/xchainjs-lib`.
 
-The engine pin is `@trustwallet/wallet-core` **4.8.4**. A version change needs a
+The engine pin is `@trustwallet/wallet-core` **4.9.3**. A version change needs a
 separate recorded decision and a re-run of install, the suite, differential checks
 and fixtures. Registry checks are not a substitute for those runs.
 
@@ -117,5 +116,4 @@ and fixtures. Registry checks are not a substitute for those runs.
 The recorded baseline is 31 validated entries. `web-wallet` and `android-wallet`
 are `STARTER_IMPLEMENTED_AND_VERIFIED` since the acceptance programme (2026-11-10);
 they carried `IMPLEMENTED_AND_VERIFIED` in Phases 6–7 under the old label. Three UI entries remain
-research-only `OPEN`, and the XChain pin remains `UNVERIFIED`. This summary records
-the existing state; it is not fresh verification.
+research-only `OPEN`, and the XChain pin is verified in `XChain-Platform/xchain-wallet`; XChain remains never selectable, and no XChain code has been copied. The XChain pin verification is fresh evidence (2026-11-12); the rest of this summary records the existing state.

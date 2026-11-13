@@ -463,6 +463,62 @@ test("compare.js: refuses /dev/zero quickly instead of reading forever", () => {
   assert.match(result.stderr, /exceeds 65536 bytes/);
 });
 
+// T44-F19: an indented XPUB replacement fails loudly instead of being
+// silently skipped while the stale key from the earlier line stays in
+// force (same hazard as F-06).
+test("compare.js: rejects an indented XPUB_BTC replacement", () => {
+  const envFile = writeTempEnvText(
+    [
+      `XPUB_BTC=${FIXTURES.btc.xpub}`,
+      ` XPUB_BTC=${FIXTURES.eth.xpub}`,
+      `XPUB_ETH=${FIXTURES.eth.xpub}`,
+      `XPUB_TRX=${FIXTURES.trx.xpub}`,
+      "",
+    ].join("\n"),
+  );
+  const result = runCompare(envFile);
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /line 2 assignment for XPUB_BTC is indented/);
+});
+
+// T44-F19: a duplicate XPUB assignment fails loudly instead of last-wins
+// silently picking whichever line the operator did not intend.
+test("compare.js: rejects a duplicate XPUB_BTC assignment", () => {
+  const envFile = writeTempEnvText(
+    [
+      `XPUB_BTC=${FIXTURES.btc.xpub}`,
+      `XPUB_BTC=${FIXTURES.eth.xpub}`,
+      `XPUB_ETH=${FIXTURES.eth.xpub}`,
+      `XPUB_TRX=${FIXTURES.trx.xpub}`,
+      "",
+    ].join("\n"),
+  );
+  const result = runCompare(envFile);
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /line 2 duplicates assignment for XPUB_BTC/);
+});
+
+// T44-F20: a FIFO env file is refused quickly instead of blocking the
+// open indefinitely (no writer ever appears). The short spawn timeout
+// keeps a regression from hanging the suite (it fails the test instead).
+test("compare.js: refuses a FIFO env file quickly instead of hanging", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bawa-compare-fifo-"));
+  temporaryDirectories.add(directory);
+  const fifoPath = path.join(directory, "env.fifo");
+  const mkfifo = spawnSync("mkfifo", [fifoPath], { encoding: "utf8" });
+  assert.equal(mkfifo.status, 0, mkfifo.stderr);
+
+  const result = runCompare(null, { bawaEnvFile: fifoPath, timeout: 10_000 });
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /env file is not a readable file/);
+});
+
 // F-15: BAWA_ENV_FILE is the canonical selector and works silently.
 test("compare.js: BAWA_ENV_FILE selects the env file without a warning", () => {
   const envFile = writeTempEnv(VALID_ENV);
@@ -826,4 +882,20 @@ test("daemon: remains usable after a non-JSON line", async () => {
   assert.strictEqual(replies[0].ok, false, JSON.stringify(replies[0]));
   assert.strictEqual(replies[1].ok, true, JSON.stringify(replies[1]));
   assert.strictEqual(replies[1].address, FIXTURES.btc.address);
+});
+
+// T43 r2a Fix 4: a symlinked .env is refused fast instead of opening an
+// unrelated process-readable file (c3b §1).
+test("compare.js: refuses a symlinked env file", () => {
+  const target = writeTempEnv(VALID_ENV);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bawa-compare-symlink-"));
+  temporaryDirectories.add(directory);
+  const linkPath = path.join(directory, "env.link");
+  fs.symlinkSync(target, linkPath);
+
+  const result = runCompare(null, { bawaEnvFile: linkPath, timeout: 10_000 });
+
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /env file is a symlink/);
 });

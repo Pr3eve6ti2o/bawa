@@ -12,6 +12,7 @@ import contextlib
 import io
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -22,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from decrypt_seed import _read_key, decrypt
+from decrypt_seed import _assert_trusted_output_dir, _publish_no_clobber, _read_key, decrypt, main
 
 TOOLS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tools"))
 
@@ -72,6 +73,27 @@ class TestDecryptMnemonicValidation(unittest.TestCase):
             path = _write_bundle(b"abandon abandon", key, tmp)
             with self.assertRaises(ValueError):
                 decrypt(path, key)
+
+    def test_wrong_key_refused_as_value_error(self):
+        # T44-F10: a wrong key must raise the clean ValueError, not
+        # leak cryptography's InvalidTag out of decrypt().
+        key = os.urandom(32)
+        wrong_key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            with self.assertRaises(ValueError):
+                decrypt(path, wrong_key)
+
+    def test_fifo_bundle_refused_promptly(self):
+        # T43 c3a §2 / r2a Fix 3: without O_NONBLOCK a FIFO at the path
+        # blocks the open forever with no writer; the fstat check must
+        # refuse it as a non-regular file instead.
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            fifo = os.path.join(tmp, "seed.enc.json")
+            os.mkfifo(fifo)
+            with self.assertRaises(ValueError):
+                decrypt(fifo, key)
 
 
 class TestReadKey(unittest.TestCase):
@@ -125,6 +147,285 @@ class TestMainStdout(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, "")
         self.assertIn("not a valid BIP-39 mnemonic", result.stderr)
+
+    def test_stdout_wrong_key_exits_one_without_traceback(self):
+        # T44-F10: the CLI must report a clean error, never a traceback.
+        key = os.urandom(32)
+        wrong_key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            env = dict(os.environ, BAWA_DATA_KEY=wrong_key.hex())
+            result = subprocess.run(
+                [sys.executable, os.path.join(TOOLS_DIR, "decrypt_seed.py"),
+                 "--stdout", path],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertIn("authentication failed", result.stderr)
+
+
+class TestMainOutput(unittest.TestCase):
+    """T41: --output writes a private file and refuses to clobber."""
+
+    def _run_cli_output(self, plaintext, key, out_path, extra_env=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(plaintext, key, tmp)
+            env = dict(os.environ, BAWA_DATA_KEY=key.hex())
+            if extra_env:
+                env.update(extra_env)
+            result = subprocess.run(
+                [sys.executable, os.path.join(TOOLS_DIR, "decrypt_seed.py"),
+                 "--output", out_path, path],
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=30,
+            )
+            return result
+
+    def test_output_writes_0600_file(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = os.path.join(tmp, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(out_path).st_mode), 0o600)
+            with open(out_path, encoding="utf-8") as f:
+                self.assertEqual(f.read().strip(), _MNEMONIC_24)
+
+    def test_output_refuses_existing_destination(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = os.path.join(tmp, "recovered.txt")
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write("previous recovery — must survive\n")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 1)
+            with open(out_path, encoding="utf-8") as f:
+                self.assertEqual(
+                    f.read(), "previous recovery — must survive\n"
+                )
+
+    def test_output_refuses_symlink_destination(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            target = os.path.join(tmp, "target.txt")
+            link = os.path.join(tmp, "link.txt")
+            os.symlink(target, link)
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, link)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(os.path.exists(target))
+
+    def test_output_creates_private_parent_dirs(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            nested = os.path.join(tmp, "a", "b")
+            out_path = os.path.join(nested, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(nested).st_mode), 0o700)
+
+    def test_output_link_publish_is_no_clobber(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            output_dir = os.path.join(tmp, "output")
+            os.mkdir(output_dir, 0o700)
+            out_path = os.path.join(output_dir, "recovered.txt")
+            argv = ["decrypt_seed.py", "--output", out_path, bundle_path]
+            with mock.patch.object(sys, "argv", argv):
+                with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": key.hex()}):
+                    with mock.patch("os.link", side_effect=FileExistsError):
+                        with self.assertRaises(SystemExit) as caught:
+                            main()
+            self.assertEqual(
+                str(caught.exception),
+                "refusing to overwrite existing output file; remove it first",
+            )
+            self.assertFalse(
+                any(
+                    name.startswith("seed-") and name.endswith(".tmp")
+                    for name in os.listdir(output_dir)
+                )
+            )
+
+    def test_output_link_publish_preserves_existing_destination_on_race(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle_path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            output_dir = os.path.join(tmp, "output")
+            os.mkdir(output_dir, 0o700)
+            out_path = os.path.join(output_dir, "recovered.txt")
+            with open(out_path, "w", encoding="utf-8") as fh:
+                fh.write("previous recovery — must survive\n")
+            argv = ["decrypt_seed.py", "--output", out_path, bundle_path]
+            real_lexists = os.path.lexists
+            with mock.patch.object(sys, "argv", argv):
+                with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": key.hex()}):
+                    with mock.patch(
+                        "os.path.lexists",
+                        side_effect=lambda p: (
+                            False if p == out_path else real_lexists(p)
+                        ),
+                    ):
+                        with self.assertRaises(SystemExit) as caught:
+                            main()
+            self.assertEqual(
+                str(caught.exception),
+                "refusing to overwrite existing output file; remove it first",
+            )
+            with open(out_path, "r", encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), "previous recovery — must survive\n")
+            self.assertFalse(
+                any(
+                    name.startswith("seed-") and name.endswith(".tmp")
+                    for name in os.listdir(output_dir)
+                )
+            )
+
+    def test_output_allows_self_owned_sticky_writable_directory(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chmod(tmp, 0o1777)
+            out_path = os.path.join(tmp, "recovered.txt")
+            result = self._run_cli_output(_MNEMONIC_24.encode("utf-8"), key, out_path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(os.stat(out_path).st_mode), 0o600)
+
+    def test_trusted_output_dir_rejects_other_owned_writable_directory(self):
+        other_uid = os.getuid() + 1
+        self.assertNotIn(other_uid, (os.getuid(), 0))
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=other_uid)
+        with mock.patch("os.stat", return_value=fake_stat):
+            with self.assertRaises(SystemExit) as caught:
+                _assert_trusted_output_dir("output")
+        self.assertEqual(
+            str(caught.exception),
+            "refusing group/other-writable output directory not owned by you or root; "
+            "use a private directory",
+        )
+
+    def test_trusted_output_dir_allows_self_owned_writable_directory(self):
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=os.getuid())
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
+
+    def test_trusted_output_dir_allows_root_owned_writable_directory(self):
+        fake_stat = mock.Mock(st_mode=0o41777, st_uid=0)
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
+
+    def test_trusted_output_dir_rejects_non_sticky_writable_directory(self):
+        other_uid = os.getuid() + 1
+        self.assertNotIn(other_uid, (os.getuid(), 0))
+        fake_stat = mock.Mock(st_mode=0o40775, st_uid=other_uid)
+        with mock.patch("os.stat", return_value=fake_stat):
+            with self.assertRaises(SystemExit) as caught:
+                _assert_trusted_output_dir("output")
+        self.assertEqual(
+            str(caught.exception),
+            "refusing non-sticky group/other-writable output directory",
+        )
+
+    def test_trusted_output_dir_allows_private_directory(self):
+        fake_stat = mock.Mock(st_mode=0o40700, st_uid=os.getuid())
+        with mock.patch("os.stat", return_value=fake_stat):
+            _assert_trusted_output_dir("output")
+
+
+class TestPublishNoClobber(unittest.TestCase):
+    """R05 r2c: the --output publish is atomic no-clobber, not os.replace."""
+
+    def test_publishes_when_destination_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "seed-.tmp")
+            dest = os.path.join(tmp, "recovered.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("recovered words\n")
+            _publish_no_clobber(src, dest)
+            self.assertFalse(os.path.exists(src))
+            with open(dest, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "recovered words\n")
+
+    def test_refuses_destination_that_appeared_after_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "seed-.tmp")
+            dest = os.path.join(tmp, "recovered.txt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write("new recovery\n")
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write("previous recovery — must survive\n")
+            with self.assertRaises(SystemExit):
+                _publish_no_clobber(src, dest)
+            with open(dest, encoding="utf-8") as f:
+                self.assertEqual(
+                    f.read(), "previous recovery — must survive\n"
+                )
+            self.assertTrue(os.path.exists(src))
+
+
+class TestDecryptTamperAndSize(unittest.TestCase):
+    """T41: tampering and oversized bundles are refused."""
+
+    def test_tampered_ciphertext_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            with open(path, encoding="utf-8") as f:
+                bundle = json.load(f)
+            ct = bytearray(base64.b64decode(bundle["ciphertext_b64"]))
+            ct[0] ^= 0xFF
+            bundle["ciphertext_b64"] = base64.b64encode(bytes(ct)).decode()
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(bundle, f)
+            with self.assertRaises(ValueError):
+                decrypt(path, key)
+
+    def test_oversized_bundle_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "seed.enc.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("x" * 70000)
+            with self.assertRaises(ValueError):
+                decrypt(path, key)
+
+    def test_symlinked_bundle_rejected(self):
+        key = os.urandom(32)
+        with tempfile.TemporaryDirectory() as tmp:
+            real = _write_bundle(_MNEMONIC_24.encode("utf-8"), key, tmp)
+            link = os.path.join(tmp, "link.json")
+            os.symlink(real, link)
+            with self.assertRaises(ValueError):
+                decrypt(link, key)
+
+
+class TestReadKeyInvalidEnv(unittest.TestCase):
+    """T41: an unusable env key falls through to the prompt."""
+
+    def test_invalid_hex_env_falls_through_to_prompt(self):
+        key = os.urandom(32)
+        buf = io.StringIO()
+        with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": "not-hex!!"}):
+            with mock.patch("getpass.getpass", return_value=key.hex()):
+                with contextlib.redirect_stderr(buf):
+                    self.assertEqual(_read_key(), key)
+        self.assertIn("BAWA_DATA_KEY", buf.getvalue())
+        self.assertIn("ignoring it", buf.getvalue())
+
+    def test_wrong_length_env_falls_through_to_prompt(self):
+        key = os.urandom(32)
+        buf = io.StringIO()
+        with mock.patch.dict(os.environ, {"BAWA_DATA_KEY": "abcd"}):
+            with mock.patch("getpass.getpass", return_value=key.hex()):
+                with contextlib.redirect_stderr(buf):
+                    self.assertEqual(_read_key(), key)
+        self.assertIn("not 32 bytes", buf.getvalue())
 
 
 if __name__ == "__main__":
