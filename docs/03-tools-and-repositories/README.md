@@ -126,7 +126,7 @@ The table below is intentionally practical. “Recommended” does not mean “t
 | Cosmos JS | `cosmos/cosmjs` | Accounts, signing and chain interaction | Not a generic multi-chain key engine | Open source |
 | Cardano standard | Cardano CIPs | Key derivation/address policy | Do not substitute BIP-44 assumptions | Free specs |
 | Substrate accounts | `polkadot-js` | sr25519/ed25519/ecdsa + SS58 | Not a Bitcoin-style xpub system | Open source |
-| XRP app access | `xrpl/xrpl.js` | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
+| XRP app access | `XRPLF/xrpl.js` | XRPL client/wallet functionality | Not a universal blockchain SDK | Open source |
 | Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware + open source components |
 | Hardware signer | Ledger | Secure signing and device UX | Device-app development has its own SDK/review model | Hardware + developer stack |
 | Local EVM development | Foundry / Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
@@ -160,16 +160,16 @@ This is a dated snapshot. Verify the live provider page before purchasing.
 | Ankr | PAYG | Variable usage and indexed APIs |
 | GetBlock | Published paid tiers from about $49/mo | Multi-chain hosted RPC |
 | QuickNode | Paid plans | RPC/Streams and larger workloads |
-| Moralis | $149/mo Starter, annual billing | Higher-level wallet/token/NFT data |
+| Moralis | $149/mo Starter | Higher-level wallet/token/NFT data |
 | Self-hosted | Infrastructure cost | Privacy, control, custom indexing |
 
-### Current published figures checked on October 5, 2026
+### Provider-pricing snapshot — October 5, 2026
 
-- Alchemy: 30M Compute Units/month and 25 RPS on Free; PAYG starts at $0.525 per 1M CUs.
+- Alchemy: 30M Compute Units/month and 25 RPS on Free; PAYG $0.52 per 1M CUs (live rate re-checked 2026-11-13; $0.525 in the October 5 snapshot).
 - Infura: 3M daily credits and 500 credits/second on Core; Developer is $50/month; Team is $225/month.
 - Chainstack: 3M request units/month and 25 RPS on Developer; Growth $49/month; Pro $199/month; Business $499/month; Enterprise $990/month.
-- Helius: 1M credits and 10 RPS on Free; Developer $49/month; Business $499/month; Professional $999/month.
-- Ankr: current Advanced API documentation uses 1M API Credits = $0.10.
-- Moralis: Starter $149/month billed annually; Pro $249/month; Business $749/month.
+- Helius: 1M credits and 10 RPS on Free; Developer $49/month (10M credits, 50 RPS); Business $499/month; Professional $999/month.
+- Ankr: the October 5 snapshot records Advanced API pay-as-you-go pricing of 1M API Credits = $0.10 (live docs re-checked 2026-11-13).
+- Moralis: Starter $149/month; Pro $249/month; Business $749/month.
 
 Prices, quotas and supported networks change.

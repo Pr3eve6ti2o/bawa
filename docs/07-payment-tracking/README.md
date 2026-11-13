@@ -6,7 +6,7 @@ Wallet tracking asks what an address owns. Payment tracking asks whether an obse
 
 The wallet part and the payment part are different layers. A useful real-world example is the Telegram bot code in [Pr3eve6ti2o/nova-shop-assets](https://github.com/Pr3eve6ti2o/nova-shop-assets), especially [`bot/crypto_watcher.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_watcher.py) and [`bot/crypto_payments.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_payments.py).
 
-That code is **not a dependency of Bawa** and it does not turn Bawa into a service. It is simply a concrete example of what someone might build on top of the wallet/derivation layer.
+That code is **not a dependency of Bawa** and it does not turn Bawa into a service. It is simply a concrete example of what someone might build on top of the wallet/derivation layer. The example was checked against `nova-shop-assets` `main` on 2026-11-13; that file can change, so re-check the linked file before relying on the details.
 
 The important architecture is:
 
@@ -151,7 +151,7 @@ fulfill once
 record final state
 ```
 
-The Telegram example uses a database-backed payment record and a claim/finalization path to prevent a duplicate observation from delivering an order twice.
+The Telegram example uses a database-backed payment record and a claim/finalization path. Atomic claiming helps deduplicate processing; fulfillment must separately be idempotent.
 
 For a generic application, a useful uniqueness key might resemble:
 
@@ -396,7 +396,7 @@ payment request
 on-chain settlement
 ```
 
-Bitcoin uses BIP-321 for payment URIs. Ethereum has ERC-681 for payment-request URLs and can represent chain/token information.
+BIP-321 specifies Bitcoin payment URIs; wallet support varies. Ethereum has ERC-681 for payment-request URLs and can represent chain/token information.
 
 The useful design is:
 
@@ -449,7 +449,7 @@ The second problem includes the first, but adds an application state machine aro
 
 # The current Telegram bot is also a useful warning about source-of-truth drift
 
-The Telegram bot repository currently contains copies of wallet tooling under its own `tools/hdwallet-gen/` directory.
+The Telegram bot repository contains copies of wallet tooling under its own `tools/hdwallet-gen/` directory (checked against `nova-shop-assets` `main`, 2026-11-13).
 
 That creates a maintenance question:
 
@@ -530,11 +530,13 @@ The complete mental model is:
 
 That is the separation a professional HD-wallet guide should teach.
 
+Public derivation from the account root applies where the scheme supports non-hardened child derivation; for hardened-only schemes (for example SLIP-0010 Ed25519), use prederived public addresses and retained wallet configuration.
+
 ## Real application reference
 
 [`crypto_watcher.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_watcher.py) and [`crypto_payments.py`](https://github.com/Pr3eve6ti2o/nova-shop-assets/blob/main/bot/crypto_payments.py) are application examples above the wallet layer, not Bawa dependencies.
 
-The current watcher demonstrates a 60-second background loop, pending/underpaid deposits, multiple payment top-ups, chain-specific confirmation policies, atomic claiming/idempotent finalization, expiry and late-payment review, CryptoBot paid-invoice recovery, TON Connect recovery, chain-specific transaction retrieval and price-feed fallbacks.
+The current watcher demonstrates a 60-second background loop, pending/underpaid deposits, multiple payment top-ups, chain-specific confirmation policies, atomic claiming/idempotent finalization, expiry and late-payment review, CryptoBot paid-invoice recovery, TON Connect recovery, chain-specific transaction retrieval and price-feed fallbacks (checked against `nova-shop-assets` `main`, 2026-11-13).
 
 ## Minimum payment state
 

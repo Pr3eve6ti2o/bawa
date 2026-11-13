@@ -9,7 +9,7 @@ You do not need a paid indexer to start learning.
 A completely free personal tracker can be built from:
 
 ```text
-Bawa-derived public addresses
+Public addresses derived per the documented scheme
          ↓
 free RPC / public explorer API
          ↓
@@ -145,7 +145,7 @@ Current examples include:
 
 ### Alchemy
 
-Alchemy currently advertises a free tier with:
+Alchemy's October 5 snapshot records a free tier with:
 
 - 30 million Compute Units/month;
 - 25 requests/second;
@@ -165,26 +165,30 @@ You are still trusting a third party with your RPC traffic and depending on its 
 
 ### Infura
 
-Infura currently advertises a free Core tier with:
+Infura's October 5 snapshot records a free Core tier with:
 
 - 3 million daily credits;
 - a 500-credit/second rate limit;
-- access to supported networks and archive-data capabilities in the current plan description.
+- access to supported networks and archive-data capabilities in the plan description.
+
+The same snapshot records Developer at $50/month and Team at $225/month (live pricing page confirms these figures on 2026-11-13).
 
 See [Infura pricing](https://www.infura.io/pricing) and [pricing documentation](https://docs.infura.io/get-started/pricing/).
 
 ### GetBlock
 
-GetBlock currently lists a free shared-node tier and paid shared-node tiers. Its documentation describes the free tier as suitable for low-traffic use, while paid plans add higher capacity and features such as archive access depending on the plan/network.
+GetBlock's October 5 snapshot records a free shared-node tier and paid shared-node tiers. Its documentation describes the free tier as suitable for low-traffic use, while paid plans add higher capacity and features such as archive access depending on the plan/network.
 
 See [GetBlock plans](https://getblock.io/pricing-new/).
 
 ### Helius — Solana
 
-For Solana specifically, Helius currently lists:
+For Solana specifically, Helius's October 5 snapshot records:
 
 - Free: $0, 1M credits, 10 RPS;
 - Developer: $49/month, 10M credits, 50 RPS;
+- Business: $499/month;
+- Professional: $999/month;
 - larger tiers for higher throughput/data products.
 
 See [Helius pricing](https://www.helius.dev/pricing).
@@ -195,7 +199,7 @@ This is a good example of why chain-specific providers can be valuable: Solana's
 
 ### Ankr
 
-Ankr currently documents usage-based RPC pricing. Its published pricing maps API Credits to request costs; for example, its current documentation lists different credit costs for EVM and Solana RPC calls and a pay-as-you-go exchange rate of `0.10 USD = 1M API Credits`.
+Ankr's October 5 snapshot records Advanced API pay-as-you-go pricing. Its published pricing maps API Credits to request costs; for example, the snapshot records different credit costs for EVM and Solana RPC calls and a pay-as-you-go exchange rate of `0.10 USD = 1M API Credits` (live docs re-checked 2026-11-13).
 
 See [Ankr service plans](https://www.ankr.com/docs/rpc-service/service-plans/) and [Advanced API pricing](https://www.ankr.com/docs/advanced-api/pricing/).
 
@@ -203,9 +207,9 @@ This model is useful when you want to stay cheap but stop treating a free quota 
 
 ### Chainstack
 
-Chainstack's current published plans include a free Developer tier and progressively more capable paid tiers; its current pricing page lists:
+Chainstack's October 5 snapshot records a free Developer tier and progressively more capable paid tiers; its pricing page at the time lists:
 
-- Free: 3M request units/month;
+- Developer (free): 3M request units/month, 25 RPS;
 - Growth: $49/month;
 - Pro: $199/month;
 - Business: $499/month;
@@ -232,7 +236,7 @@ Examples include:
 
 ### Moralis
 
-Moralis currently offers higher-level wallet, token and NFT APIs, with the current Starter plan listed at $149/month when billed annually, followed by larger Pro and Business tiers.
+Moralis offers higher-level wallet, token and NFT APIs, with the Starter plan listed at $149/month, Pro at $249/month and Business at $749/month (October 5 snapshot; live pricing page confirms these figures on 2026-11-13).
 
 See [Moralis pricing](https://moralis.com/pricing/).
 
@@ -307,7 +311,7 @@ Do not self-host merely because someone on Twitter said “RPC providers are cen
 
 ## Current hosted-infrastructure snapshot — October 5, 2026
 
-These are current published planning figures, not permanent prices. Re-check the provider page before buying.
+These are the October 5, 2026 snapshot planning figures, not permanent prices. Re-check the provider page before buying.
 
 | Provider | Current published entry | Useful for |
 |---|---:|---|
@@ -317,9 +321,9 @@ These are current published planning figures, not permanent prices. Re-check the
 | Helius Free | $0 — 1M credits, 10 RPS | Solana |
 | Chainstack Developer | $0 — 3M request units/month, 25 RPS | Multi-chain RPC |
 | Ankr Advanced API | PAYG — 1M API credits = $0.10 | Variable/indexed API calls |
-| GetBlock Starter | $49/mo published paid entry | Multi-chain RPC |
+| GetBlock | Published paid tiers from about $49/mo | Multi-chain RPC |
 | QuickNode | Paid plans | RPC, streams and infrastructure |
-| Moralis Starter | $149/mo billed annually | Wallet/token/NFT indexed APIs |
+| Moralis Starter | $149/mo | Wallet/token/NFT indexed APIs |
 | Self-hosted | Infrastructure cost | Privacy, control, custom indexing |
 
 Primary sources: [Alchemy](https://www.alchemy.com/pricing), [Infura](https://www.infura.io/pricing), [Chainstack](https://chainstack.com/pricing/), [GetBlock](https://getblock.io/pricing/), [Ankr](https://www.ankr.com/docs/advanced-api/overview/), [Helius](https://www.helius.dev/pricing), [Moralis](https://moralis.com/pricing/).
@@ -375,7 +379,7 @@ database/index
 API query
 ```
 
-That is why indexer APIs cost more than a bare node endpoint.
+That is why indexing adds work and can cost more than a bare node endpoint; free indexed APIs also exist.
 
 ---
 

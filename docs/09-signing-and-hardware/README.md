@@ -60,7 +60,7 @@ That distinction should remain intact.
 
 # Bitcoin Descriptors & PSBT
 
-An xpub can be ambiguous for serious Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
+An xpub can be ambiguous for serious Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and wildcard derivation policy; record numeric import/scan ranges separately.
 
 [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://bips.dev/174/) for offline and hardware-backed transaction workflows.
 

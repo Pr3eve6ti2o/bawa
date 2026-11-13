@@ -71,9 +71,11 @@ Repository-level invariant checks. These are deliberately not presented as proof
 
 The README needs to be runnable, not merely descriptive.
 
+The implementation described here lives in the separate `main` branch snapshot `main@0b2aa29` (root package v1.1.0; Node >=22 <23; Python >=3.11), not in this docs-only branch. Use a separate checkout of that snapshot for the commands below.
+
 ## Prerequisites
 
-For the current reference tree:
+For that implementation snapshot:
 
 - a Unix-like environment is recommended for the interactive `/dev/tty` generation flow;
 - Node.js matching the repository's `package.json` engine requirement;
@@ -96,17 +98,11 @@ For a real installation, verify the commit/tag you intend to use before installi
 
 ## Node dependencies
 
-From the repository root:
-
-```bash
-npm install
-```
-
-If the root package is only an orchestration shell, install the wallet-core tooling as directed by its package boundary:
+The root package is an orchestration shell with no dependencies, so there is nothing to install at the root. Install the wallet-core tooling from the implementation checkout:
 
 ```bash
 cd tools/hdwallet-gen
-npm install
+npm ci
 cd ../..
 ```
 
@@ -123,10 +119,10 @@ That turns:
 into:
 
 ```text
-"install the exact dependency graph that was tested"
+"install the dependency graph recorded in the committed lockfile using `npm ci`; testing of that graph requires separate evidence"
 ```
 
-The reference rewrite intentionally calls out a missing production lockfile as a release blocker rather than pretending it is already solved.
+On `main@0b2aa29` the tooling lockfile `tools/hdwallet-gen/package-lock.json` is committed and pins `@trustwallet/wallet-core` 4.8.4; the dependency-free root package has no lockfile and needs none.
 
 ## Python environment
 

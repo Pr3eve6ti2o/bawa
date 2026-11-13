@@ -38,7 +38,7 @@ For a conventional BIP-39/BIP-32 wallet, that generally means preserving:
 
 ```text
 mnemonic
-+ BIP-39 passphrase policy
++ BIP-39 passphrase — exact value, securely recoverable (or explicitly empty) — and its policy
 + chain derivation policy
 + account selection
 + network
@@ -226,6 +226,6 @@ Start from:
 
 ## Recovery record
 
-mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration.
+mnemonic + exact BIP-39 passphrase, securely recoverable (or explicitly empty), + exact chain/path policy + account/branch + network + chain-specific configuration.
 
 Encryption at rest protects a stored artifact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics.

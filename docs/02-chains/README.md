@@ -38,7 +38,7 @@ The correct approach is therefore:
 
 Bitcoin is the cleanest place to learn the HD-wallet model.
 
-For Bawa's current implementation the intended account is:
+The intended Bawa Bitcoin derivation policy is:
 
 ```text
 m/84'/0'/0'
@@ -99,8 +99,10 @@ which outputs belong to us?
   ↓
 which remain unspent?
   ↓
-current spendable value
+current unspent value
 ```
+
+Spendability additionally depends on maturity and applicable spending constraints.
 
 That is fundamentally different from an EVM account balance.
 
@@ -108,7 +110,7 @@ That is fundamentally different from an EVM account balance.
 
 For serious watch-only or multisig work, do not stop at “I have an xpub”.
 
-Bitcoin Core's descriptor wallet model can retain the derivation origin, path and script policy needed for proper watch-only and external-signer workflows.
+Bitcoin Core's descriptor wallet model can retain the derivation origin, wildcard derivation policy and script policy needed for proper watch-only and external-signer workflows. Record numeric import/scan ranges separately.
 
 See Bitcoin Core's [descriptor documentation](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md).
 
@@ -165,7 +167,7 @@ The `60` is the Ethereum SLIP-0044 coin type.
 
 Ethereum tooling can expose the same BIP-39 mnemonic as an HD account and let you select account/address indexes.
 
-[viem](https://viem.sh/docs/accounts/local/mnemonicToAccount) currently documents `mnemonicToAccount`, based on BIP-39 plus an HD path, and internally uses `@scure/bip32` for BIP-32 derivation.
+[viem](https://viem.sh/docs/accounts/local/mnemonicToAccount) documents `mnemonicToAccount` for BIP-39/HD-path account derivation; check the selected release for implementation details.
 
 [ethers](https://docs.ethers.org/) is another mature choice for Ethereum application development and wallet handling.
 
@@ -203,7 +205,7 @@ m/44'/195'/0'/0/i
 
 where `195` is the TRON coin type.
 
-For Bawa, the account-level public root is treated as a watch-only input and addresses are derived at the external branch.
+Bawa's intended policy is to use the account-level public root as watch-only input and derive addresses on the external branch.
 
 The important lesson is that **similar cryptography does not mean identical addresses**.
 
@@ -251,7 +253,7 @@ Use the official TON ecosystem tooling listed in the [TON SDK documentation](htt
 
 For TypeScript:
 
-- [`@ton/core`](https://github.com/ton-org/ton) / the current TON core ecosystem for low-level primitives;
+- [`@ton/core`](https://github.com/ton-org/ton-core) / the current TON core ecosystem for low-level primitives;
 - [`@ton/ton`](https://github.com/ton-org/ton) for higher-level HTTP-oriented interaction.
 
 For Python/Go environments, TON's official SDK page also lists `tonutils` and `tonutils-go`.
@@ -264,7 +266,7 @@ Do not invent a fake “TON xpub” abstraction just to make TON look like Bitco
 
 Solana is another place where the generic BIP-44 mental model can become misleading.
 
-Solana account derivation commonly uses Ed25519 and ecosystem-specific derivation paths. Trust Wallet Core's current registry, for example, documents Solana derivation variants including:
+Solana account derivation commonly uses Ed25519 and ecosystem-specific derivation paths. Example Solana derivation policies include:
 
 ```text
 m/44'/501'/0'
@@ -282,7 +284,7 @@ When interoperability matters, use the exact derivation policy of the target wal
 
 ### Recommended JavaScript runtime
 
-The official Solana JavaScript SDK is moving toward **Solana Kit**. The current repository states that the 1.x `@solana/web3.js` branch is maintenance-only and that new development is happening in the newer Kit line.
+The official Solana JavaScript SDK is moving toward **Solana Kit**. For new JavaScript work, consider Solana Kit. Consult upstream release/support notices for `@solana/web3.js` 1.x compatibility and maintenance status.
 
 Use:
 
@@ -381,7 +383,7 @@ Again: use chain-native tooling where the cryptographic model or address encodin
 
 The XRP Ledger ecosystem has its own seed/account conventions and supports more than one key type.
 
-For JavaScript applications, use the maintained [xrpl.js](https://github.com/XRPLF/xrpl.js) ecosystem and the official [XRPL documentation](https://xrpl.org/docs/).
+For JavaScript applications, use the [xrpl.js](https://github.com/XRPLF/xrpl.js) ecosystem and the official [XRPL documentation](https://xrpl.org/docs/).
 
 The official JavaScript getting-started guide shows how to connect to the ledger, create/import wallets, query accounts and subscribe to ledger activity.
 

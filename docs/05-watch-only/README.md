@@ -49,6 +49,8 @@ The runtime should not be given an xprv “just because deriving the address was
 
 # Running the watch-only derivation tools
 
+These tools live in the implementation checkout (`main@0b2aa29`), not in this docs-only branch. Verify the CLI, protocol and rejection behaviour in that checkout before use.
+
 ## One-shot mode
 
 Suppose you already have a public extended key in an environment variable.

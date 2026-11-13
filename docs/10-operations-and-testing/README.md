@@ -6,9 +6,11 @@ Use this to install, run, test, troubleshoot and release the tooling without han
 
 The README needs to be runnable, not merely descriptive.
 
+The implementation described here lives in the separate `main` branch snapshot `main@0b2aa29` (root package v1.1.0; Node >=22 <23; Python >=3.11), not in this docs-only branch. Use a separate checkout of that snapshot for the commands below.
+
 ## Prerequisites
 
-For the current reference tree:
+For that implementation snapshot:
 
 - a Unix-like environment is recommended for the interactive `/dev/tty` generation flow;
 - Node.js matching the repository's `package.json` engine requirement;
@@ -31,17 +33,11 @@ For a real installation, verify the commit/tag you intend to use before installi
 
 ## Node dependencies
 
-From the repository root:
-
-```bash
-npm install
-```
-
-If the root package is only an orchestration shell, install the wallet-core tooling as directed by its package boundary:
+The root package is an orchestration shell with no dependencies, so there is nothing to install at the root. Install the wallet-core tooling from the implementation checkout:
 
 ```bash
 cd tools/hdwallet-gen
-npm install
+npm ci
 cd ../..
 ```
 
@@ -58,10 +54,10 @@ That turns:
 into:
 
 ```text
-"install the exact dependency graph that was tested"
+"install the dependency graph recorded in the committed lockfile using `npm ci`; testing of that graph requires separate evidence"
 ```
 
-The reference rewrite intentionally calls out a missing production lockfile as a release blocker rather than pretending it is already solved.
+On `main@0b2aa29` the tooling lockfile `tools/hdwallet-gen/package-lock.json` is committed and pins `@trustwallet/wallet-core` 4.8.4; the dependency-free root package has no lockfile and needs none.
 
 ## Python environment
 
@@ -168,6 +164,8 @@ This is why an address allocation table is so important.
 
 ## Personal wallet — $0
 
+That is $0 in tooling/API fees on hardware and connectivity you already have; free-tier limits apply.
+
 ```text
 Bawa / wallet SDK
       ↓
@@ -181,6 +179,8 @@ manual checks
 No server needed.
 
 ## Personal automated tracker — still $0
+
+That is still $0 in tooling/API fees on hardware and connectivity you already have; free-tier limits apply.
 
 ```text
 public addresses
@@ -321,7 +321,7 @@ Try:
 - oversized JSON lines;
 - invalid base58;
 - invalid mnemonic checksum;
-- wrong passphrase;
+- BIP-39 passphrase mismatch against a recorded expected address (no intrinsic passphrase rejection);
 - wrong AES authentication tag;
 - missing files;
 - symlinked paths.
@@ -392,7 +392,7 @@ Before calling an HD-wallet implementation “done”, check all of these.
 
 ```text
 [ ] mnemonic backup exists
-[ ] passphrase policy recorded
+[ ] exact BIP-39 passphrase securely recoverable (or explicitly empty) and its policy recorded
 [ ] chain paths recorded
 [ ] chain-specific configuration recorded
 [ ] encrypted artifact tested
