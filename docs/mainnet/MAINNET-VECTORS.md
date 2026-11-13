@@ -77,7 +77,7 @@ Account extended public keys (account 0):
 
 ## Hardhat anchor (account 0)
 
-- Words: `test` ten times, then `junk`
+- Words: `test` eleven times, then `junk`
 - Passphrase: empty
 - Path: `m/44'/60'/0'/0/0`
 - Expected ETH: `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
@@ -116,7 +116,7 @@ Every shared value agrees byte for byte across the implementations that
 cover it. Evidence: T30 lane (`bawa-fanout/T30/`), including the probe
 scripts and the `@ton/ton` check output.
 
-## Known limitation — TRON via a raw public key (Core 4.8.4)
+## Known limitation — TRON via a raw public key (Core 4.9.3)
 
 `CoinTypeExt.deriveAddressFromPublicKey(tron, pubkey)` aborts the WASM
 runtime when the public key comes from `getKey().getPublicKeySecp256k1()`
