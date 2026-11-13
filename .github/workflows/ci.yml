@@ -44,4 +44,4 @@ jobs:
         run: python test/differential_test.py
 
       - name: Compile Python tools
-        run: python -m py_compile tools/make_wallet.py tools/decrypt_seed.py
+        run: python -m py_compile tools/decrypt_seed.py

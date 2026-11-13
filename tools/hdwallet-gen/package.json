@@ -1,6 +1,6 @@
 {
   "name": "bawa-hd-wallet-core-tools",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Bawa HD wallet generation and watch-only address derivation tools backed by Trust Wallet Core WebAssembly.",
   "main": "generate.js",
@@ -14,6 +14,6 @@
   "keywords": ["hd-wallet", "bip32", "bip39", "bip44", "bip84", "bitcoin", "ethereum", "tron", "ton"],
   "license": "MIT",
   "dependencies": {
-    "@trustwallet/wallet-core": "4.8.4"
+    "@trustwallet/wallet-core": "4.9.3"
   }
 }

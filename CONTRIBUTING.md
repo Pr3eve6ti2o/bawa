@@ -7,7 +7,7 @@ Before opening a pull request:
 ~~~
 npm run check
 npm test
-python3 -m py_compile tools/make_wallet.py tools/decrypt_seed.py
+python3 -m py_compile tools/decrypt_seed.py
 python3 test/differential_test.py
 ~~~
 

@@ -14,9 +14,11 @@ Each README is organized around a job. Read only what you need, then follow the 
 - [08 — Security & Recovery](08-security-recovery/README.md)
 - [09 — Signing & Hardware](09-signing-and-hardware/README.md)
 - [10 — Operations & Testing](10-operations-and-testing/README.md)
+- [11 — Trust Wallet Core & Independent Verification](11-trust-wallet-and-independent-verification/README.md)
+- [12 — Chain Registry & Asset Metadata](12-chain-registry-and-assets/README.md)
 
 ## Recommended reading order
 
-Fundamentals → Chains → Tool Map → Generation → Watch-Only → Tracking → Payment Tracking → Security/Recovery → Signing → Operations/Testing.
+Fundamentals → Chains → Tool Map → Generation → Watch-Only → Tracking → Payment Tracking → Security/Recovery → Signing → Operations/Testing → Trust Wallet Core & Independent Verification → Chain Registry & Assets.
 
 The order is deliberate: first understand the rule, then choose software, then run it, then watch the network, then build application logic around what the network reports.

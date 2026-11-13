@@ -113,7 +113,7 @@ The table below is intentionally practical. “Recommended” does not mean “t
 | Read the wallet standards | BIPs / SLIPs | Normative derivation rules | Never replace standards with a blog post | Free |
 | BIP-39 implementation | `paulmillr/scure-bip39` | Small focused BIP-39 implementation | Do not assume BIP-39 defines chain-specific paths | Open source |
 | BIP-32 implementation | `paulmillr/scure-bip32` | Focused HD derivation | Not a blockchain SDK | Open source |
-| Broad multi-chain wallet crypto | `trustwallet/wallet-core` | Keys, derivation, addresses and signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.8.4 in its reference runtime |
+| Broad multi-chain wallet crypto | `trustwallet/wallet-core` | Keys, derivation, addresses and signing primitives across many chains | Not an RPC/indexing layer | Open source; Bawa pins 4.9.3 in its reference runtime |
 | Bitcoin app library | `bitcoinjs/bitcoinjs-lib` | Bitcoin transaction/address tooling | Not a universal wallet SDK | Open source |
 | Bitcoin full node | `bitcoin/bitcoin` | Full chain validation + node/wallet | Heavy for a simple personal tracker | Open source; storage/bandwidth required |
 | Bitcoin indexed API | `Blockstream/esplora` | Address/UTXO/tx history | Bitcoin/Liquid-centric | Open source; can self-host |

@@ -26,7 +26,6 @@ The generator does not need an online chain connection to create wallet material
 
 ## Current implementation
 
-- `tools/make_wallet.py` — orchestration, environment/bootstrap checks and backup handling.
 - `tools/hdwallet-gen/generate.js` — Trust Wallet Core generation and public-root export.
 - `tools/hdwallet-gen/derive.js` — one-shot public derivation.
 - `tools/hdwallet-gen/derive_daemon.js` — JSON-line daemon for repeated public derivation.

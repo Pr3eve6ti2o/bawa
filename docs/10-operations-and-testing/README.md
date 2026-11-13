@@ -31,13 +31,7 @@ For a real installation, verify the commit/tag you intend to use before installi
 
 ## Node dependencies
 
-From the repository root:
-
-```bash
-npm install
-```
-
-If the root package is only an orchestration shell, install the wallet-core tooling as directed by its package boundary:
+From the repository root, install the wallet-core tooling dependencies:
 
 ```bash
 cd tools/hdwallet-gen
@@ -45,9 +39,11 @@ npm install
 cd ../..
 ```
 
+The root `package.json` has no dependencies, so `npm install` at the repository root installs nothing.
+
 ### Lockfiles matter
 
-Before calling the repository production-ready, commit the lockfile generated from a clean install.
+`tools/hdwallet-gen/package-lock.json` now exists. Generated from a clean install with Node 22.23.4, it locks `@trustwallet/wallet-core` to `4.9.3`.
 
 That turns:
 
@@ -61,7 +57,9 @@ into:
 "install the exact dependency graph that was tested"
 ```
 
-The reference rewrite intentionally calls out a missing production lockfile as a release blocker rather than pretending it is already solved.
+The Python side still has only `requirements.txt`, with no lockfile.
+
+The production-release gate remains open: full published vector coverage, chain-specific fixtures, secret/dependency scanning, reproducible release artefacts, and external security review are still required.
 
 ## Python environment
 

@@ -24,12 +24,12 @@ function addrFromXpub(core, xpub, coin, fullPath) {
   const core = await initWasm();
   const { CoinType } = core;
   const jobs = [
-    ["btc", env.XPUB_BTC, CoinType.bitcoin, i => \`m/84'/0'/0'/0/\${i}\`],
-    ["eth", env.XPUB_ETH, CoinType.ethereum, i => \`m/44'/60'/0'/0/\${i}\`],
-    ["trx", env.XPUB_TRX, CoinType.tron, i => \`m/44'/195'/0'/0/\${i}\`],
+    ["btc", env.XPUB_BTC, CoinType.bitcoin, i => `m/84'/0'/0'/0/${i}`],
+    ["eth", env.XPUB_ETH, CoinType.ethereum, i => `m/44'/60'/0'/0/${i}`],
+    ["trx", env.XPUB_TRX, CoinType.tron, i => `m/44'/195'/0'/0/${i}`],
   ];
   for (const [chain, xpub, coin, pathFn] of jobs) {
-    if (!xpub) throw new Error(\`missing \${chain} xpub in \${envPath}\`);
+    if (!xpub) throw new Error(`missing ${chain} xpub in ${envPath}`);
     const addrs = [0, 1, 2].map(i => addrFromXpub(core, xpub, coin, pathFn(i)));
     console.log(chain, ...addrs);
   }

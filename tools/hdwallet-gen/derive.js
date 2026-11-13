@@ -11,9 +11,9 @@ const CHAINS = Object.assign(Object.create(null), {
   trx: (coin) => coin.tron,
 });
 const PATHS = Object.assign(Object.create(null), {
-  btc: (i) => \`m/84'/0'/0'/0/\${i}\`,
-  eth: (i) => \`m/44'/60'/0'/0/\${i}\`,
-  trx: (i) => \`m/44'/195'/0'/0/\${i}\`,
+  btc: (i) => `m/84'/0'/0'/0/${i}`,
+  eth: (i) => `m/44'/60'/0'/0/${i}`,
+  trx: (i) => `m/44'/195'/0'/0/${i}`,
 });
 
 const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
