@@ -1,0 +1,492 @@
+# M-35 — Small-Amount Mainnet Rehearsal Procedure (reviewed draft)
+
+> **Status of this document:** DRAFT for review. It is the reviewed
+> small-amount procedure required by the M-35 clearance condition
+> (Doc 4 §21, `docs/mainnet/MAINNET-GUIDE.md` — M-35), drafted by lane
+> E04 on 2026-11-13 from the M-35 row, the T35 local-signing module
+> (`tools/mainnet-signing/local-signing.mjs`, wallet-core 4.9.3) and the
+> T36 mainnet verification evidence. It is **not** execution
+> authorisation. Execution requires **all three** of: (a) this procedure
+> reviewed and accepted, (b) the rehearsal addresses funded as specified
+> in §2, (c) a separate explicit owner approval to execute, recorded
+> with the funding instruction. Until then, **no funds move**.
+>
+> **Amounts approved FOR REVIEW ONLY (owner decision 2026-11-10):**
+> BTC 0.0002, ETH 0.001, TRX 1 per move; TON 0.05 nominal
+> **receive-only** (no TON send is drafted or authorised).
+>
+> **Hard boundary:** this procedure moves **exactly four** rehearsal
+> amounts (one BTC send, one ETH send, one TRX send, one TON receipt)
+> and then **STOPS**. No further move, no second attempt, no larger
+> amount, no other chain, no token, no contract call, no allowance.
+> Anything beyond the four moves needs a new, separate authorisation.
+> No owner funds are touched without explicit instruction; the owner
+> funds the rehearsal addresses (§2) and names the return addresses
+> (§3) — the lane never holds, requests, or moves owner funds itself.
+
+## 0. What this rehearsal proves — and what it does not
+
+Proves, per chain: a funded temporary address can build an unsigned
+transaction with the repo tools (T33), sign it locally inside T25
+isolation (T35), pass the 11-check fail-closed preflight, broadcast
+the signed artifact through a public endpoint, and be confirmed
+on-chain with fee reconciliation (OI-099). For TON it proves receipt
+into a fresh V4R2 address and the read-only deployment/state check
+(OI-097), with no send.
+
+Does **not** prove: that the same flow is safe at any other amount,
+for any other destination, for tokens, for change-output spending
+beyond the single BTC change in §6 step D, or for production wallets.
+Offline signing success proves neither balance, unspentness, current
+nonce/seqno, block freshness, nor executability (T35 limitation 1).
+A rehearsal that passes is evidence for the M-35 clearance condition
+only; it does not clear M-31/M-15 or any release gate by itself.
+
+## 1. Preconditions (all must hold before §2)
+
+1.1. Working copy at the E04 base (`decad63`, wallet-core 4.9.3,
+WASM sha256
+`13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`).
+The T35 pipeline is prepared per §5: module loads, `WALLET_CORE_VERSION`
+is `'4.9.3'`, `assertNoNetworkCapability()` returns `true`, the
+11-check preflight runs, and the four T35/T25/T33/T32 suites pass
+(see §5 for the recorded results).
+
+1.2. Fresh temporary unfunded test credentials, one per chain
+(BTC, ETH, TRX, TON), generated with the repo tools inside a T25
+isolation handle (`credentialKind: 'temporary-unfunded'`) in an
+isolated non-repo directory on the execution machine. Only derived
+**addresses** are recorded outside isolation. Private keys and
+mnemonics are never printed, logged, committed, or copied. The
+credentials are retained in isolation only until the rehearsal ends
+(§8); they are destroyed with `destroyCredentialFile` (3-pass) plus
+`verifyNoCopies` once no funds remain under them (§8).
+
+1.3. The owner has (a) funded the rehearsal addresses per §2,
+(b) named one return address per chain per §3, and (c) given separate
+explicit approval to execute, recorded in the execution record.
+If any of (a)–(c) is missing, **STOP** — the rehearsal is
+BLOCKED ON FUNDING / BLOCKED ON APPROVAL, not executed.
+
+## 2. Funding requirement (exact)
+
+The owner funds each rehearsal address with the rehearsal amount
+**plus a bounded fee cap**. The cap is a procedure-defined maximum,
+not a fee prediction: the actual fee is taken from a live T32
+read-only quote at execution time (§6), and the move **STOPS** if the
+quoted fee exceeds the cap. Unspent fee allowance stays in the
+rehearsal address and is returned with the change / remainder per §8,
+never spent elsewhere.
+
+| Chain | Rehearsal amount | Fee cap (max) | **Total to fund** | Destination address (fund here) |
+| --- | --- | --- | --- | --- |
+| BTC | 0.0002 BTC (20,000 sats) | 0.0001 BTC (10,000 sats) | **0.0003 BTC** | `bc1qj02tuhr9jjagslhc5f3yqprefr8yu2dldekeap` |
+| ETH | 0.001 ETH (10^15 wei) | 0.001 ETH gas cap | **0.002 ETH** | `0x29b13A6a58BCA33a9523210215140464E32d4048` |
+| TRX | 1 TRX (1,000,000 SUN) | 5 TRX fee cap | **6 TRX** | `TSHZFz7LjRrBWzMPKFso96RF8xa1ZV4Yiy` |
+| TON | 0.05 TON (50,000,000 nanotons), receive-only | — (no send; receipt is the move) | **0.05 TON** | `UQC-_DawLza8DngabKXFFZ5l0VQMN_MqYg7tAHvR38lOg48b` |
+
+The addresses above are the fresh temporary rehearsal addresses
+generated by lane E04 on 2026-11-13 (see `E04-REPORT.md` §3 for the
+generation evidence: fresh random 24-word mnemonic, wallet-core
+4.9.3, BTC/ETH/TRX re-derived independently with the T35 module's
+own code, TON cross-checked with `derive-ton.js` from the Ed25519
+public key; balances confirmed zero before funding — BTC 0 txs via
+mempool.space, ETH `0x0` via ethereum.publicnode.com, TRX no
+account via TronGrid, TON balance 0 / `nonexist` via tonapi). The
+BTC change address for §6 step D is
+`bc1qz7kkw40pgt5rjwzaj3krvwxjx53e75umpfhlcm`
+(`m/84'/0'/0'/1/0`, same temporary account; balance 0, 0 txs).
+
+Why these caps: BTC live fee evidence (T32, 2026-11-12) is 1–4
+sat/vB; the T35 BTC fixture is 141 vB, so a live fee of a few hundred
+sats is expected and the 10,000-sat cap is a ~10–70× bound, not a
+target. ETH: the T35 fixture uses 21,000 gas at maxFee 20 gwei
+(maxFeeWei 420,000,000,000,000 = 0.00042 ETH); the 0.001 ETH cap
+bounds maxFeePerGas at ~47.6 gwei for a 21,000-gas transfer — if the
+live quote needs more, **STOP**. TRX: a native TRX transfer consumes
+bandwidth (and, for an unactivated destination, activation); the 5 TRX
+cap is a bound pending the live `getTronFee` quote. **Caveat
+(Astra review 2026-11-13, Medium): the cited evidence does not
+establish that 5 TRX avoids a STOP** — the 100 SUN/energy-unit rate
+supplies no resource-usage total for a native transfer. A STOP on
+the live quote is therefore a correct outcome, not a failure; the
+owner may raise the cap only by amending §2 before execution (a new
+review of the amended figure), never by an on-the-fly change at
+execution time. TON: no fee cap
+applies because no TON transaction is sent by the rehearsal; the 0.05
+TON **is** the receipt.
+
+Funding is the owner's action, from the owner's funds, to the
+addresses above. The lane never generates, requests, or handles the
+funding transaction. **No other address is funded. No address is
+funded twice.**
+
+## 3. Return addresses (owner-named, required before any send)
+
+Before any broadcast, the owner names **one return address per chain**
+(BTC, ETH, TRX) to which the rehearsal amount is sent. The return
+address must be:
+
+- an address the owner controls (or a second fresh temporary address
+  generated in the same isolated run, if the owner so instructs);
+- **different** from the rehearsal (sender) address;
+- format-validated by the repo tools (BTC bech32 `bc1q` P2WPKH,
+  ETH EIP-55, TRON Base58Check `T…`) and checked against the approval
+  by preflight check 3 (DESTINATION).
+
+If a return address is not named for a chain, that chain's send
+**does not execute** — funds stay in the rehearsal address until the
+owner names one or instructs their return. The BTC return is the
+payment output; the BTC **change** goes to a fresh change address
+`m/84'/0'/0'/1/0` derived from the same temporary account (§6 step D).
+
+## 4. Evidence artifacts (every step records one)
+
+Every step below names its artifact. Artifacts contain **hashes,
+addresses, amounts, check results and txids only** — never private
+keys, mnemonics, or signed-payload bytes beyond what a public
+broadcast requires. The per-chain evidence record is
+`buildEvidenceRecord()` from the T35 module (SHA-256 of unsigned and
+signed artifacts, sender, recipient, amount, fee, the 11 preflight
+checks, verification method/result, wallet-core version, timestamp,
+and the STOP note). Logs pass through T25 redaction
+(`redactText` / `containsSecret` / `guardedLog`).
+
+## 5. Pipeline preparation (done once, before funding — E04)
+
+Run in the snapshot with Node 22
+(`PATH=/home/boxd/workspace/android-tooling/node22/bin`):
+
+1. Install wallet-core 4.9.3 in `tools/hdwallet-gen`
+   (`npm ci`, exit 0) and verify the installed version is `4.9.3`
+   and `dist/lib/wallet-core.wasm` sha256 is
+   `13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`.
+2. `node --test tests/mainnet-signing.test.mjs` — recorded E04:
+   **19 pass, 0 fail, exit 0**.
+   `node --test tests/mainnet-guards.test.mjs` — **28 pass, 0 fail,
+   exit 0**. `node --test tests/mainnet-unsigned-tx.test.mjs` —
+   **25 pass, 0 fail, exit 0**. `node --test tests/mainnet-fees.test.mjs`
+   — **28 pass, 0 fail, exit 0**.
+3. Module load check: `WALLET_CORE_VERSION` is `'4.9.3'`,
+   `assertNoNetworkCapability()` returns `true`,
+   `PREFLIGHT_CHECKS` is the 11 checks
+   (1 ISOLATION, 2 NETWORK, 3 DESTINATION, 4 AMOUNT, 5 FEE,
+   6 CHANGE, 7 NONCE-SEQUENCE-EXPIRY, 8 REPLAY,
+   9 SIGNED-MATCHES-APPROVED, 10 SIGNATURE-VALID, 11 NO-BROADCAST).
+4. Record the results in the execution record. If any step fails,
+   **STOP** — the pipeline is not prepared and no execution is
+   attempted.
+
+## 6. Execution steps (one move per chain, in order)
+
+### Step A — Funding confirmation (read-only, all chains)
+
+For each rehearsal address, confirm the funded balance with a public
+read-only lookup (explorer / RPC `getBalance` or equivalent) and
+record address, balance, and the funding txid supplied by the owner.
+**STOP** if any balance is below its §2 total, or if any address
+shows an unexpected prior transaction. Balances are confirmed before
+any unsigned transaction is built.
+
+### Step B — Live fee quote (read-only, BTC/ETH/TRX)
+
+Call the T32 read-only fee module (`tools/mainnet-fees/fees.mjs`:
+`getBtcFee`, `getEthFee`, `getTronFee`) with the live sources it
+requires. The module fails closed on source disagreement, stale
+quotes, and insufficient funds (`amount + fee > balance`). Record the
+quote with its provenance. **STOP** if the quote fails closed, or if
+the quoted fee exceeds the §2 cap for that chain. (Known limitation,
+T32: ETH live quotes fail closed until a genuinely independent second
+RPC source is established — if `getEthFee` fails closed at execution
+time, the ETH move **does not execute**; that is a correct stop, not a
+reason to improvise a fee.)
+
+### Step C — Build the unsigned transaction (offline, T33)
+
+Build with the T33 builders in isolation:
+
+- BTC: `buildBtcP2wpkhUnsignedTx({ utxos, toAddress, amountSats:
+  '20000', feeSats, maxFeeSats: '10000', changeAddress })` — one
+  funded UTXO as input, payment 20,000 sats to the §3 return address,
+  change to `m/84'/0'/0'/1/0`. The funded UTXO set comes from the
+  read-only lookup in step A; the builder rejects inputs that do not
+  cover amount + fee and change below the 294-sat dust floor.
+- ETH: `buildEth1559UnsignedTx` (chainId 1, type 2), value
+  `1000000000000000` wei (0.001 ETH), gas 21,000, maxFee/priority
+  from the step B quote, nonce from the live read-only account state,
+  `to` the §3 return address.
+- TRX: `buildTronMainnetUnsignedTransfer` — amount 1,000,000 SUN to
+  the §3 return address, `refBlockId` from a **live** mainnet block
+  (the T33 fixture `refBlockId` is synthetic and format-only; a live
+  rehearsal must use a live block — record the block number and the
+  `refBlockId` used), `feeLimitSun` as quoted in step B.
+- TON: **no unsigned transaction is built.** The TON move is a
+  receipt (§7).
+
+### Step D — BTC change-output spend (OI-097 / M-27)
+
+The BTC move in step C **is** the change-output spend: it spends the
+funded UTXO and returns change to the fresh change branch address
+`m/84'/0'/0'/1/0`. Record the change address, the change value
+(`totalInput − payment − fee`), and the preflight check 6 (CHANGE)
+result. This closes the OI-097 step-(D) evidence requirement. (The
+rehearsal does **not** spend the change output again — spending the
+change is a further move and is out of scope.)
+
+### Step E — Local signing + independent verification (offline, T35)
+
+Sign in isolation with the T35 module
+(`signBtc` / `signEth` / `signTron`), each taking
+`(unsigned, approval, privateKey, isolation)` where the approval
+names the §3 return address, the §2 amount, the fee cap, and the
+live nonce/seqno/expiry. Each `sign*` returns the signed artifact
+only with its `verification` (independent `verify*`: own BIP-143
+sighash + secp256k1 for BTC; own RLP/keccak256/recovery for ETH;
+own protobuf parsing + recovery for TRON) and its `preflight`
+(11/11) attached. **STOP** if any verification is invalid or any
+preflight check fails — a failed preflight throws `PreflightError`
+with the check id; record it and do not proceed. Record the
+`buildEvidenceRecord()` output per chain.
+
+Known T35 deviations, recorded (not failures): BTC signer emits
+version 1 (T33 artifact is version 2) and fee = byteFee × vsize
+(141 sats in the fixture), so signed fee/change differ from the
+T33 `feeSats`/`changeSats` — the approval bound is what binds.
+TRON `ref_block_hash` is derived from the BlockHeader protobuf, so
+the signed `txID` differs from the T33 artifact's — verification is
+field-level for TRON.
+
+### Step F — Broadcast (operator step, outside the repo tools)
+
+**There is no broadcast path in the repo.** `broadcastTransaction`,
+`sendTransaction`, `transferToken`, `callContract` and
+`approveAllowance` in `tools/mainnet-tx/unsigned-tx.mjs` all throw
+(`'Disabled operation: offline unsigned native transactions only.'`),
+and `local-signing.mjs` has no network import, no `fetch(`, and no
+send function (preflight check 11 / `assertNoNetworkCapability()`).
+Broadcast is therefore a deliberate operator step, performed once per
+chain with a named public endpoint, and recorded:
+
+| Chain | Broadcast route (operator, public endpoint) |
+| --- | --- |
+| BTC | POST the signed hex to a public broadcast endpoint (e.g. mempool.space or blockstream.info broadcast API) |
+| ETH | `eth_sendRawTransaction` with the signed `0x02` envelope to a public RPC |
+| TRX | `wallet/broadcasttransaction` (TronGrid or equivalent public endpoint) with the signed transaction |
+
+Before broadcasting, record the locally computed txid/hash of the
+signed artifact. After broadcasting, record the returned txid and
+**verify it equals the locally computed one**; if it differs,
+**STOP** and record the mismatch — do not broadcast again, do not
+assume the first broadcast landed. Exactly one broadcast attempt per
+chain; a failed broadcast is recorded and the move is retried only
+under a new, separate approval (a retry is a new move, not a
+continuation).
+
+### Step G — On-chain confirmation (read-only)
+
+Confirm each broadcast transaction with a public read-only lookup
+and record txid, block height/hash, and confirmations. Thresholds
+(retained, M-24 J21): **BTC 6, ETH 12, TRX 19, TON 1 masterchain
+seqno**. A transaction below its threshold is *unconfirmed*, not
+*failed* — wait and re-check; do not re-broadcast. Record the
+explorer links. Confirmation is the evidence that closes the move.
+
+**Indeterminate settlement (Astra review 2026-11-13, Medium):** a
+matching returned txid does **not** prove on-chain confirmation, and
+a broadcast endpoint can time out after the transaction has already
+propagated. If confirmation cannot be established after re-checks
+over 24 hours (or the chain's threshold window, whichever is longer),
+or if the broadcast outcome is indeterminate for any reason, the move
+is recorded as **INDETERMINATE** — neither confirmed nor failed —
+and everything stops for that chain: do **not** re-broadcast, do not
+assume success or failure, do not spend any output of the
+indeterminate transaction, and seek a new explicit instruction. An
+indeterminate outcome is a finding in the execution record, not a
+pass.
+
+### Step H — Fee reconciliation (OI-099, per chain)
+
+Reconcile the actual fee from the confirmed on-chain record, not
+from the quote:
+
+- BTC: fee = total inputs − total outputs (must equal the signed
+  fee and be ≤ the §2 cap).
+- ETH: fee = `gasUsed × effectiveGasPrice` from the receipt (must
+  be ≤ the §2 gas cap).
+- TRX: fee + bandwidth/resource consumed + any activation cost from
+  the transaction info (must be ≤ the §2 cap).
+- TON: n/a for the send (no send); the receipt's message trace is
+  recorded in §7.
+
+Record quoted fee vs actual fee per chain. A mismatch beyond the
+cap, or an unreconcilable fee, is recorded as a finding and the
+rehearsal is reported as such — it does not silently pass.
+
+## 7. TON receive-only step (OI-097, no send)
+
+1. Record the fresh V4R2 wallet address (workchain 0, wallet ID
+   698983191) from §1.2.
+2. **Read-only deployment/state check (before receipt):** query the
+   account state via a public TON endpoint (toncenter or equivalent)
+   and record whether the wallet is deployed (code present) or
+   undeployed, plus `seqno` if deployed. A receive to an **undeployed**
+   V4R2 address is valid — deployment is not required to receive —
+   so "undeployed" is an expected observation, not a failure. This
+   is the OI-097 TON V4 R2 deployment check, exercised read-only.
+3. The owner sends **0.05 TON** to the address (§2). The lane sends
+   nothing.
+4. **Receipt confirmation:** re-query the balance and the message
+   trace; record the incoming message hash, amount (50,000,000
+   nanotons), sender, and the new `seqno`/state. Finality per TON
+   Docs (verified 2026-11-10): final after a single masterchain
+   block confirmation — record the masterchain block that references
+   the transaction (1 masterchain seqno step).
+5. **No TON send is constructed, signed, or broadcast.** The 0.05
+   TON remains in the temporary wallet until the owner instructs
+   its return (§8).
+
+## 8. Close-out
+
+1. **No further moves.** After the four moves (BTC, ETH, TRX sends;
+   TON receipt), the rehearsal is over. Any further transaction —
+   including returning change, sweeping remainders, or a retry —
+   needs a new separate authorisation and is recorded as a separate
+   execution, not as part of this rehearsal.
+2. **Remainders:** record the closing balance of each rehearsal
+   address (BTC change + unspent fee allowance, ETH remainder, TRX
+   remainder, TON 0.05). Return of remainders to the owner is by the
+   owner's instruction, under a new authorisation if it involves a
+   send from a rehearsal address. Residual funds are **not**
+   permission for another move (Astra review 2026-11-13, Medium):
+   the single-move scope in §6 ends with the four moves, and any
+   recovery of remainders is a separately authorised step — the
+   credentials stay retained until that authorisation clears the
+   balances (see (3)).
+3. **Credential destruction:** only once **no funds remain** under a
+   temporary credential, proven by a zero balance confirmed by a
+   read-only lookup on **every** address derived from that
+   credential — the rehearsal address, the BTC change address
+   (`m/84'/0'/0'/1/0`), the TON address, and any other derived
+   address — not the funding address alone (Astra review 2026-11-13,
+   Medium: spending the funded BTC UTXO can empty its funding
+   address while change remains at the change address, so a
+   funding-address-only zero check would strand funds). Funds
+   returned under (2) must be re-confirmed zero on all of those
+   addresses before destruction. Then destroy
+   its credential file with T25 `destroyCredentialFile` (3-pass
+   overwrite + fsync + unlink + dir fsync) and run `verifyNoCopies`
+   over the declared scope (isolated directory + lane directory,
+   excluding `.git` and `node_modules`). Record per-file destruction
+   results (`destroyed: true, bytes, passes: 3`) and the
+   `verifyNoCopies` result (`passed: true`, scanned-file count).
+   **Never destroy a credential while funds remain under it** — that
+   would strand the funds (cf. the 2026-10-08 stranded-deposit
+   lesson). If funds remain and no return instruction arrives, the
+   credentials are retained in isolation, the state is reported as
+   retained, and destruction is deferred — never improvised.
+4. **Execution record:** a single `M35-EXECUTION-RECORD.md` (or the
+   lane report) carrying §2 funding txids, §3 return addresses, the
+   step A–H artifacts and evidence records, the confirmation links,
+   the §H reconciliation, the §8 destruction results, and the
+   verdict. The record states the STOP conditions met and that no
+   further moves occurred.
+
+## 9. STOP conditions (any one stops the affected move; §9.6 stops all)
+
+1. Funding below the §2 total for any chain, or an unexpected prior
+   transaction on any rehearsal address (§6 step A).
+2. A live fee quote fails closed (T32) or exceeds the §2 cap
+   (§6 step B). For ETH, a failed-closed quote is a stop, never a
+   reason to guess a fee.
+3. Any preflight check fails, or any independent verification is
+   invalid (§6 step E). A `PreflightError` names its check id —
+   record it.
+4. The broadcast-returned txid differs from the locally computed
+   txid (§6 step F).
+5. A return address is not named for a chain (§3).
+6. **Any doubt about which network, address, amount, or credential
+   is in use; any secret material appearing in a log, file, or
+   output; any isolation-handle failure; any instruction to move
+   funds beyond the four rehearsal amounts.** Stop everything,
+   record the cause, and seek a new explicit instruction.
+7. The owner withdraws approval at any point — stop immediately,
+   including mid-sequence; moves already confirmed on-chain stand
+   as recorded facts, unconfirmed moves are not retried.
+8. **Indeterminate settlement (§6 step G):** confirmation cannot be
+   established after re-checks over 24 hours, or the broadcast
+   outcome is indeterminate (e.g. endpoint timeout after possible
+   propagation) — record the move as INDETERMINATE, do not
+   re-broadcast, do not spend any of its outputs, and seek a new
+   explicit instruction.
+
+## 10. OI-097 QR-scan step — reviewer decision (recorded)
+
+M-20 / OI-097 specifies "a five-step procedure including a QR scan,
+a BTC change-output spend and a TON V4 R2 deployment check". The
+verbatim M24 K21 text is not in the repository, so the five steps
+are reconstructed here as: (1) funding confirmation, (2) unsigned
+build, (3) local signing + preflight, (4) broadcast + confirmation,
+(5) fee reconciliation — with the BTC change-output spend (§6 step D)
+and the TON V4 R2 deployment check (§7) carried inside them.
+
+**Decision on the QR-scan step: NOT EXECUTED in this rehearsal.**
+Reason: the rehearsal's destinations are transcribed from the
+funding/return-address instruction and verified by two independent
+mechanical checks — preflight check 3 (DESTINATION: unsigned,
+signed, and approval addresses must agree exactly) and independent
+re-derivation of the rehearsal addresses from the temporary
+credentials. A QR scan would add a camera/input path that the
+offline signing pipeline does not implement, cannot evidence, and
+that would bring untrusted decoded input into the isolated
+environment; it proves nothing the DESTINATION check does not
+already prove. The step is therefore recorded as **deliberately
+omitted with reason**, not as undrafted — and the QR interface itself
+remains unrehearsed by this procedure (Astra review 2026-11-13,
+Low). A future rehearsal that
+needs to exercise a QR flow (e.g. a wallet UI) must draft it as its
+own step with its own evidence (scanned payload bytes hashed,
+decoded address verified against the approval). This decision is
+for the reviewer/owner to accept or overturn; overturning it adds a
+step, it does not change the amounts or the STOP conditions.
+
+## 11. What changes in the M-35 row when this procedure is accepted
+
+Acceptance of this procedure (review + funding + separate execution
+approval) satisfies the first two parts of the M-35 clearance
+condition ("a reviewed small-amount procedure exists, is separately
+authorised"); the third part ("executed with recorded evidence")
+is satisfied only by an actual funded execution under §§6–8 with
+the §8 execution record. Until execution, M-35 stays OPEN. This
+document changes no row status by itself — status changes are
+recorded by the coordinator/owner against the evidence.
+
+## Appendix — procedure metadata
+
+- Base: Bawa at `decad63` (82 commits on H9 `0b2aa295`), wallet-core
+  4.9.3, WASM sha256
+  `13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`.
+- Sources: M-35 row (Doc 4 §21); M-20 / OI-097; M-27 (change policy);
+  M-07/M-08/M-09/M-44 (fees, T32); M-24 J21 (confirmation thresholds);
+  T25 guards; T33 unsigned builders; T35 local signing
+  (`docs/mainnet/MAINNET-SIGNING.md`); T36 mainnet verification
+  report; owner decision 2026-11-10 (amounts, review only); owner
+  order 2026-11-13 ~14:08 IST (M-35 execution programme, E04 lane).
+- Authorship: drafted first-hand by lane E04 (Muse subagent) from the
+  cited sources; second-pass review by Astra (gpt-6-astra, max
+  reasoning, 1 call landed 2026-11-13, 575,487 ms, 2,292 chars):
+  7 findings — 1 Medium (TRX cap adequacy not established by the
+  cited evidence), 1 Medium (missing STOP for indeterminate
+  post-broadcast settlement), 2 Medium (zero-balance proof must
+  cover all derived addresses; no zero-balance teardown — residuals
+  are not permission for another move), 1 Low (QR omission leaves
+  that interface unrehearsed), 1 Low (BTC/ETH caps defensible),
+  1 Low (no duplicate-spend hole in the broadcast controls). All
+  four Medium findings were applied to the procedure (§2 TRX caveat,
+  §6 step G indeterminate settlement + §9 condition 8, §8 steps 2–3);
+  the QR Low is recorded in §10; the BTC/ETH and broadcast Lows
+  required no change. Prompt and answer saved verbatim in the lane
+  dir (`astra-review-prompt.md`, `astra-review-answer.md`).
+- History: the 2026-11-10 rehearsal-procedure draft (review only,
+  nothing executed) is absent from the repo; this document replaces
+  it as the draft of record. No transaction has been broadcast under
+  M-35.
