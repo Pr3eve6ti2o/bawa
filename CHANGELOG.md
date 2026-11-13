@@ -5,7 +5,7 @@
 - Changed CI to separate `node-tests`/`python-tests` jobs and `npm ci` instead of `npm install`; pinned the runner to `ubuntu-24.04`, all actions to full commit SHAs, and Node 22.23.4/Python 3.13.18 with CI version assertions.
 - Added CI coverage for previously unrun decrypt round-trip and make-wallet tests, and a regression check that live wallet generation refuses without a controlling terminal. The differential test's BTC/ETH/TRX index 0/1 coverage comes from the merged T30 extension.
 - Added Dependabot for GitHub Actions, npm and pip; ignore `@trustwallet/wallet-core` major bumps pending a qualification run.
-- The new workflow awaits its first GitHub Actions run; every step verified locally on Node 22.23.4 and Python 3.12.3.
+- As of 2026-11-13, the CI workflow has 51 GitHub Actions runs, with the latest run at branch tip `27ff384` completed successfully at 2026-11-13T16:39:49Z; every step verified locally on Node 22.23.4 and Python 3.12.3.
 
 - Added the Trust Wallet Core-backed wallet implementation under tools/.
 - Added a pinned bip_utils independent-reference test layer.

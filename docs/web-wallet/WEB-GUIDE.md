@@ -96,6 +96,8 @@ All links checked: **2026-11-08**.
    | esbuild — dev dependency | `0.25.5` | Exact pin: no `^` or `~`. |
    | http-server — dev dependency | Exact installed version; record during setup | Install it, record the installed version in `package.json` without `^` or `~`, and commit the lockfile with it. No numeric version is supplied here. |
 
+   The repository now pins Trust Wallet Core (`@trustwallet/wallet-core`) to `4.9.3` (upgraded on 2026-11-13 after qualification run R08/E02; see Doc 4, section 21, M-21). The table above records the pins verified on 2026-11-08 at `e3b65fb8` for the demonstrated scope.
+
    Use the declared Node range for your setup. Do not treat the observed out-of-range run as verification on a runtime within that range.
 
    Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and `4.9.1`/`4.9.2` added Zcash v5 transactions.

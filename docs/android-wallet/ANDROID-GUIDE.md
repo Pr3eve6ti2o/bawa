@@ -753,6 +753,8 @@ A complete fixture pass establishes daemon, loopback and SDK wiring only; it doe
 
 ### B.8 Project setup and verification
 
+The settings below are the B.1 verification-procedure pins for the upstream Core build, not the `apps/android` starter pins (Gradle 8.7, AGP 8.2.2, Kotlin 1.9.22, JDK 17, SDK 35).
+
 Take every verification input from the B.1 pin table: app JDK 21, Core JDK 17, SDK packages `platforms;android-34` and `build-tools;34.0.0`, CMake 3.18.1, and Core tag 4.9.2. Use its approved Gradle wrapper and plugin pins for the smoke build. Do not accept a newer wrapper, Android Gradle Plugin or SDK level because a project wizard selected it.
 
 Create two Gradle modules: `app` for screens and navigation, and `core` for the engine boundary and verification. Include `:app` and `:core` in `settings.gradle.kts`, and make `:app` depend on `:core`. Keep the upstream Core checkout separate from the Android project.
@@ -1604,7 +1606,7 @@ TRX — same mnemonic and passphrase; path: m/44'/195'/0'/0/0; address: TJ9VWHMs
 
 TON — same mnemonic and passphrase; ton_path: m/44'/607'/0'; contract: Wallet V4 R2; wallet ID / subwallet: 698983191 (0x29A9A317); workchain: 0; ed25519 public key: c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9; address (raw): 0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f; address: UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn. Source: V3 live verification, 8 November 2026 — Core 4.8.4, confirmed by an independent derivation (pure-stdlib SLIP-0010 with PyNaCl, plus @ton/ton). D.7 check 6 is now executable: derive at the path, build V4R2 with the recorded wallet ID, compare the address and run `validate`. Canonical record: Doc 1, docs/11, 'TON fixture (V3, 2026-11-08)'.
 
-The fixture mnemonic's entropy is `ba5821e8c356c05ba5f025d9532fe0f21f65d594`. Core's own test table uses the BIP-39 passphrase `TREZOR`, which gives a different seed and different addresses; Bawa uses the empty BIP-39 passphrase. Do not substitute the table's passphrase or its resulting expectations.
+The fixture mnemonic's entropy is `ba5821e8c356c05ba5f025d9532fe0f21f65d594`. Core's own test table uses the BIP-39 passphrase `TREZOR`, which gives a different seed and, by BIP-39's construction, different addresses; Bawa uses the empty BIP-39 passphrase. Do not substitute the table's passphrase or its resulting expectations.
 
 > The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 

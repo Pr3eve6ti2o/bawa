@@ -4,9 +4,9 @@
 #
 #    pip-compile --generate-hashes --output-file=/tmp/requirements.lock requirements.txt
 #
-bip-utils==2.12.2 \
-    --hash=sha256:385ecd943f74117c76c1fbb48dc15ec2a6ee8f425495dea3d43cc09cf0144b66 \
-    --hash=sha256:638856b9f40ee684c313bd4c7f00a16f322d25cb9236bd50f9e9f5751734dd97
+bip-utils==2.12.3 \
+    --hash=sha256:3b821882a3827b67bfd88976bfaf7df2b1d916ab4f70d5e307c9ff965057acea \
+    --hash=sha256:5413e9a6993fbdf5d288f16a49529571445045085b7025e7ef22abfec3ee504b
     # via -r requirements.txt
 bitarray==3.12.3 \
     --hash=sha256:00c446e4740dbc20dd11cf2ddd92ffd43b1c9c68cc2ecc79f8b085d4ed92d43f \
@@ -543,9 +543,6 @@ coincurve==21.0.0 \
     --hash=sha256:f57f07c44d14d939bed289cdeaba4acb986bba9f729a796b6a341eab1661eedc \
     --hash=sha256:f60ad56113f08e8c540bb89f4f35f44d434311433195ffff22893ccfa335070c \
     --hash=sha256:f920af756a98edd738c0cfa431e81e3109aeec6ffd6dffb5ed4f5b5a37aacba8
-    # via bip-utils
-crcmod==1.7 \
-    --hash=sha256:dc7051a0db5f2bd48665a990d3ec1cc305a466a77358ca4492826f41f283601e
     # via bip-utils
 cryptography==50.0.2 \
     --hash=sha256:0ddc924c04591c2811ca024d62ecad4f7f6f08af8939c211438f48a16bd23602 \

@@ -6,7 +6,7 @@ Independent verification of the OI-096 fix (commit d2f0960, hardened by
 bad-checksum and wrong-chain extended keys before WASM starts, and must
 derive exactly the addresses an independent implementation derives.
 
-Independence: every expected address comes from Python bip_utils 2.12.2
+Independence: every expected address comes from Python bip_utils 2.12.3
 applied to the published 15-word "ripple scissors..." test vector with an
 empty passphrase. The tools under test are exercised only as black-box
 subprocesses; their output is never trusted as its own evidence.

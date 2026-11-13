@@ -116,7 +116,7 @@ Use §§3–4 and 6–7 as the single canonical installation procedure for the w
 | Python virtual environment | Required; create `.venv` in §7. |
 | Git | Required |
 | `cryptography` | `cryptography==50.0.2` |
-| `bip-utils` | `bip-utils==2.12.2` |
+| `bip-utils` | `bip-utils==2.12.3` |
 
 Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) (see §18).
 | `@trustwallet/wallet-core` | `4.9.3`, published 2026-11-11 |
@@ -183,7 +183,7 @@ python3 - <<'PY'
 import json
 from urllib.request import urlopen
 
-for package, version in (("cryptography", "50.0.2"), ("bip-utils", "2.12.2")):
+for package, version in (("cryptography", "50.0.2"), ("bip-utils", "2.12.3")):
     with urlopen(f"https://pypi.org/pypi/{package}/{version}/json", timeout=30) as response:
         actual = json.load(response)["info"]["version"]
     if actual != version:
@@ -195,7 +195,7 @@ PY
 **Expected result**
 ```text
 cryptography==50.0.2
-bip-utils==2.12.2
+bip-utils==2.12.3
 ```
 
 Confirm the Wallet Core release in the npm registry.
@@ -348,7 +348,7 @@ Record full observed tool versions separately from these declared values.
 | Node | JavaScript runtime | `>=22 <23` | An exact full version within `>=22 <23` | Open — exact pin not recorded; live verification used Node v24.22.2, outside the declared range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). |
 | Python | Python runtime | `>=3.11` | An exact full version satisfying `>=3.11` | Open — exact pin not recorded. |
 | cryptography | Python dependency | `cryptography==50.0.2` | `cryptography==50.0.2` | Release verification not recorded. |
-| bip-utils | Python dependency | `bip-utils==2.12.2` | `bip-utils==2.12.2` | Release verification not recorded. |
+| bip-utils | Python dependency | `bip-utils==2.12.3` | `bip-utils==2.12.3` | Release verification not recorded. |
 | Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.9.3` (published 2026-11-11) | `4.9.3` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | npm | JavaScript dependency installation | No version specified | An exact full npm version | **Release blocker** — no version specified. |
 
@@ -491,10 +491,10 @@ Version: 50.0.2
 
 For `bip-utils`:
 ```text
-Version: 2.12.2
+Version: 2.12.3
 ```
 
-Keep `bip-utils==2.12.2` pinned for verification only; the runtime generation code does not import it.
+Keep `bip-utils==2.12.3` pinned for verification only; the runtime generation code does not import it.
 
 ## 8. Wallet generation
 
@@ -802,7 +802,7 @@ Runtime failures write `FATAL: ...` to stderr and exit with status 1. If you see
 
 Use `bip-utils` as an independent reference: Core is implementation A, and `bip-utils` is implementation B. A self-check can repeat the same wrong assumption on both sides.
 
-Pin `bip-utils==2.12.2`. It is verification-only and is not imported by runtime code. The reference test uses `Bip39SeedGenerator`, `Bip44` and `Bip84` with a published test vector. Never put a real wallet mnemonic or seed in CI fixtures.
+Pin `bip-utils==2.12.3`. It is verification-only and is not imported by runtime code. The reference test uses `Bip39SeedGenerator`, `Bip44` and `Bip84` with a published test vector. Never put a real wallet mnemonic or seed in CI fixtures.
 
 **Reported reference capture**
 
@@ -1217,7 +1217,7 @@ Assets: the mnemonic (24 words, BIP-39), the seed (64 bytes), the data key (256-
 
 Filesystem rules: secrets/ 0700; seed.enc.json 0600; seed-backup/ 0700; backup copy 0600; .env 0600. The seed bundle is verified with tools/decrypt_seed.py plus the separate offline data key — never with a vault unlock passphrase. Keep seed words, private signing keys and their extended forms out of public commits, issues, screenshots and support logs; the same applies to keys used to decrypt recovery data, .env files used in production, wallet-backup artefacts, account/service credentials.
 
-Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.2, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph. The missing root `package-lock.json` is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
+Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.3, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph. The missing root `package-lock.json` is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
 
 Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (only 55 pure-module tests); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — the Web vault's 10-minute auto-lock comes from the validation draft (`app-web/src/vault.js:110`, local unpushed draft — not part of this repository), not the repo; never claim the repo signs, constructs or broadcasts transactions; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
 

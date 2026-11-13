@@ -60,7 +60,7 @@ Inspection must precede scaffolding. Do not skip a blocked step silently or turn
 
 ## Fixed engine and chain policy
 Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**; Node range **>=22 <23**.
-Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.2**.
+Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
 Unspecified commands, interfaces or dependency versions are OPEN until inspected.
 
 Derivation is fixed: **BIP-39, 256-bit entropy, 24 words, empty passphrase, account 0, receiving branch 0 only**. Preserve the chain-specific paths below; do not invent alternate paths or index ranges.

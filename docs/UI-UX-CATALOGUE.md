@@ -37,7 +37,7 @@ Therefore:
 
 ### Selection flow
 
-![AI wallet builder selection flow](./ui-ux-assets/ai-selection-flow.png)
+![AI wallet builder selection flow](./ui-ux-assets/ai-selection-flow.svg)
 
 ## 3. The correct questions to ask the user
 
@@ -166,25 +166,25 @@ These images are **original schematic previews** created for this catalogue. The
 
 ### STYLE-01 - Minimal dark (Phantom-inspired)
 
-![Minimal dark wallet direction](./ui-ux-assets/direction-01-minimal-dark.png)
+![Minimal dark wallet direction](./ui-ux-assets/direction-01-minimal-dark.svg)
 
 Use a dark-first canvas, clean balance hierarchy, short action row, compact assets and uncluttered navigation. Best when the user prioritises a simple everyday wallet experience. Keep testnet status visible; do not let visual minimalism hide important network context.
 
 ### STYLE-02 - Portfolio-first (Exodus-inspired)
 
-![Portfolio-first wallet direction](./ui-ux-assets/direction-02-portfolio-first.png)
+![Portfolio-first wallet direction](./ui-ux-assets/direction-02-portfolio-first.svg)
 
 Use a stronger portfolio summary, asset allocation/chart area, richer asset rows and more detailed asset pages. Best when the user wants a portfolio-oriented interface. Charts must disclose missing/stale price data and must not imply unverified balances.
 
 ### STYLE-03 - Security-forward (Rabby-inspired)
 
-![Security-forward transaction review direction](./ui-ux-assets/direction-03-security-forward.png)
+![Security-forward transaction review direction](./ui-ux-assets/direction-03-security-forward.svg)
 
 Use structured transaction details, explicit chain labels, full recipient inspection, fee visibility and risk messages. Best when clarity and signing safety are the dominant UX goal. This is particularly important for Send and Review; warnings must be accurate and actionable, not decorative.
 
 ### STYLE-04 - Bawa Balanced (recommended)
 
-![Bawa Balanced wallet direction](./ui-ux-assets/direction-04-bawa-balanced.png)
+![Bawa Balanced wallet direction](./ui-ux-assets/direction-04-bawa-balanced.svg)
 
 Combine simple navigation and action layout, portfolio clarity, asset-list readability and Rabby-like transaction-review discipline. Use an original Bawa brand, palette, typography and components. This is the recommended default for Web + Android consistency.
 

@@ -1,5 +1,5 @@
 cryptography==50.0.2
-bip-utils==2.12.2
+bip-utils==2.12.3
 # Security floor pins for transitive deps (see T48 F-10/F-11):
 # pynacl 1.6.2 fixes the libsodium input-validation advisory affecting 1.5.0;
 # requests 2.34.2 fixes the MODERATE advisories affecting 2.31.0.

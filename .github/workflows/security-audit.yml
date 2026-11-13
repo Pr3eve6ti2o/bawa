@@ -4,9 +4,9 @@
 # cannot fail CI; every scan step is continue-on-error and the raw
 # logs are uploaded as an artifact for the audit lanes to read.
 # Action versions: checkout/setup-node/setup-python match the repo's
-# own ci.yml; setup-go v5 + Go 1.27.3 per the OSV-Scanner v2.7.1
-# changelog. Re-pin to SHAs at merge time if the repo's policy
-# requires it.
+# own ci.yml, pinned to full commit SHAs per repo policy; setup-go v5
+# (40f1582b2485089dde7abd97c1529aa768e1baff) + Go 1.27.3 per the
+# OSV-Scanner v2.7.1 changelog.
 name: Security audit (manual)
 
 on:
@@ -21,10 +21,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # setup-node@v4
         with:
           node-version: 22
 
@@ -39,7 +39,7 @@ jobs:
         run: npm audit
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # setup-python@v5
         with:
           python-version: "3.13"
 
@@ -64,7 +64,7 @@ jobs:
         run: semgrep scan --config p/javascript --config p/typescript --config p/python --config p/kotlin --config p/security-audit --config p/secrets
 
       - name: Setup Go (for OSV-Scanner)
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # setup-go@v5
         with:
           go-version: "1.27.3"
 

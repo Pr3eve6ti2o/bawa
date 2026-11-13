@@ -10,7 +10,12 @@ private extended key, vault key or data key. It derives no address on-device.
 - Gradle 8.7 (wrapper), AGP 8.2.2, Kotlin 1.9.22, JVM 17.
 - Compose BOM 2024.02.00, Material 3, ZXing core 3.5.3 (QR display only).
 - `compileSdk 35`, `minSdk 33`, `targetSdk 35`.
-- Package and `applicationId`: `com.bawa.wallet`; version: `0.1.0`.
+
+Google's official minimum-AGP table requires at least AGP 8.6.0 for API level 35, so this repo's AGP 8.2.2 with `compileSdk 35` is not officially supported. The build proceeds only because `apps/android/gradle.properties` sets `android.suppressUnsupportedCompileSdk=35`; the recorded `./gradlew assembleDebug` exited 0, so this suppressed-unsupported combination works in practice, rather than being a build failure. AGP 8.2.2's Gradle and JDK requirements are met: Gradle 8.2 minimum (repo: 8.7) and JDK 17 (repo: 17). The supported path is to upgrade AGP to 8.6.0 or newer, accounting for that version's Gradle/JDK requirements.
+
+The Kotlin docs' fully-supported range for KGP 1.9.20–1.9.25 (including this repo's Kotlin 1.9.22) is Gradle 6.8.3–8.1.1 and AGP 4.2.2–8.1.0. The repo's Gradle 8.7 and AGP 8.2.2 exceed those maxima; the docs say newer versions "usually work" but may print deprecation warnings or leave new features unavailable. The recorded build passed, so this is a support-range caveat, not a failure.
+
+- Package and `applicationId`: `com.bawa.wallet`; version: `0.1.0.
 
 Use JDK 17 and an Android SDK with platform 35, build-tools 35.0.0, platform-tools, the emulator and
 the `system-images;android-35;google_apis;x86_64` system image. The VM toolchain is installed outside
