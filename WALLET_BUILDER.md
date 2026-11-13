@@ -59,7 +59,7 @@ Examples inherit the testnet default and do not establish implementation.
 Inspection must precede scaffolding. Do not skip a blocked step silently or turn a requested capability into an implementation claim.
 
 ## Fixed engine and chain policy
-Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.8.4**; Node range **>=22 <23**.
+Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**; Node range **>=22 <23**.
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.2**.
 Unspecified commands, interfaces or dependency versions are OPEN until inspected.
 

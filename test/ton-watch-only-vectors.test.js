@@ -4,7 +4,7 @@
 // (from the repo root, after `npm ci` in tools/hdwallet-gen).
 // Public material only. Nothing here touches the network.
 //
-// What this pins: wallet-core 4.8.4 derives a TON address from a 32-byte
+// What this pins: wallet-core 4.9.3 derives a TON address from a 32-byte
 // Ed25519 PUBLIC KEY alone — no mnemonic, seed or private key. The fixed
 // profile is Wallet V4 R2, wallet ID 698983191, workchain 0 (the repo's
 // TON generation profile). This is a library-behaviour regression test;

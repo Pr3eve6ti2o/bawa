@@ -7,12 +7,13 @@
 // Nothing here touches the network; all derivation is offline.
 //
 // Two implementations must agree, per docs/11 and docs/mainnet:
-//   - this file: Trust Wallet Core 4.8.4 (WASM) via HDWallet;
+//   - this file: Trust Wallet Core 4.9.3 (WASM) via HDWallet;
 //   - test/differential_test.py: Python bip_utils 2.12.2 (independent).
 // TON is additionally cross-checked with @ton/ton 15.4.0 in the T30 lane
 // evidence (WalletContractV4, walletId 698983191, workchain 0).
 //
-// Known Core 4.8.4 limitation (verified first-hand, 2026-11-12):
+// Known Core limitation (verified first-hand on 4.8.4, 2026-11-12;
+// re-verified on 4.9.3, 2026-11-13):
 // CoinTypeExt.deriveAddressFromPublicKey(tron, pubkey) ABORTS the WASM
 // runtime when the public key comes from getKey().getPublicKeySecp256k1().
 // The supported TRON routes are getAddressForCoin (index 0) and

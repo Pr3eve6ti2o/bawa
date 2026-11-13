@@ -174,7 +174,7 @@ No numerical exit code is inferred from output alone. These results establish th
 
 **IMPLEMENTED_AND_VERIFIED — repository assets and bounded test evidence**
 
-The repository tool pins **`@trustwallet/wallet-core` 4.8.4**. Its `npm ci` installation and repository tool commands exercise **4.8.4**, not the newer reference engine named in the guides.
+The repository tool pins **`@trustwallet/wallet-core` 4.9.3**. Its `npm ci` installation and repository tool commands exercise **4.9.3**, not the older 4.9.2 reference engine named in the guides.
 
 The inspected tool inventory comprises:
 
@@ -355,7 +355,7 @@ The map below distinguishes existing dependency evidence from proposed architect
 
 | Consumer → source | Status and dependency boundary |
 |---|---|
-| Existing engine tooling → Trust Wallet Core | **IMPLEMENTED_AND_VERIFIED**: version **4.8.4** is pinned in `tools/hdwallet-gen/`. |
+| Existing engine tooling → Trust Wallet Core | **IMPLEMENTED_AND_VERIFIED**: version **4.9.3** is pinned in `tools/hdwallet-gen/`. |
 | Proposed wallet-engine package → inspected tooling | **PROPOSED** reuse boundary. The extraction or integration mechanism is **OPEN**. |
 | Implementation decisions → canonical guides | Guide prose supplies requirements; product behaviour remains **DOCUMENTED_NOT_TESTED** unless separately evidenced. |
 | Builder selection → registries | **PROPOSED** engine, template and chain selection catalogues. Entries, schema fields and compatibility validation are **OPEN**. |
@@ -424,7 +424,7 @@ The requested feature branch is **PROPOSED**. Branch creation and any push are *
 
 Phase 0 (reconnaissance) and Phase 1 (this plan) remain in progress. **IMPLEMENTED_AND_VERIFIED — baseline only:** inspection at HEAD `aab79dab`, H6, 2026-11-10 found a clean tree and 50 files. `npm ci` installed 14 packages; `npm run check` exited 0; `npm test` reported 80 ok; the differential test reported PASS, exit 0. Environment: Node v24.22.2, Python 3.12.3, cryptography 50.0.2 and bip-utils 2.12.2.
 
-The repository contains 27 documentation files, `tools/` with wallet-core 4.8.4, smoke/differential tests and one CI workflow using Node 22/Python 3.13. CI has no registry validation or Android job. `AGENTS.md`, `WALLET_BUILDER.md`, `ai/`, `registry/`, `templates/`, `apps/`, `packages/`, `chains/`, `research/`, general `scripts/` and a root lockfile are absent.
+The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3, smoke/differential tests and one CI workflow using Node 22/Python 3.13. CI has no registry validation or Android job. `AGENTS.md`, `WALLET_BUILDER.md`, `ai/`, `registry/`, `templates/`, `apps/`, `packages/`, `chains/`, `research/`, general `scripts/` and a root lockfile are absent.
 
 **DOCUMENTED_NOT_TESTED:** this implementation sequence. All future work below is **PROPOSED**, and future acceptance results are **UNVERIFIED**. Apart from the two specified entry filenames, paths below are **OPEN proposed allocations** for the mandated deliverables—not existing files, approved layouts or additional scope. Foundation-dependent layouts must be settled before implementation. Maintainer and external gates are **EXTERNALLY_DEPENDENT**.
 
@@ -528,13 +528,13 @@ Evidence baseline: fresh inspection at HEAD `aab79dab`, H6, **2026-11-10**. Upst
 
 ### 4.1 Engine
 
-**IMPLEMENTED_AND_VERIFIED:** `tools/hdwallet-gen` pins Trust Wallet Core **4.8.4**. `npm ci` installs 4.8.4 and `npm test` reports **80 ok**. The independent Python verification layer is **bip-utils 2.12.2 + cryptography 50.0.2**, with differential test **PASS**.
+**IMPLEMENTED_AND_VERIFIED:** `tools/hdwallet-gen` pins Trust Wallet Core **4.9.3**. `npm ci` installs 4.9.3; the tools smoke run reported **217 ok** (E02 re-verification, 2026-11-13). The independent Python verification layer is **bip-utils 2.12.2 + cryptography 50.0.2**, with differential test **PASS**.
 
 **DOCUMENTED_NOT_TESTED — adoption of the guide baseline:** `docs/11` and `docs/09` treat **4.9.2**, tag `17e3cd4` dated **2026-11-06**, as the reference engine. They record signing demo **D21** and re-confirmation **D31** on 4.9.2. These must not be presented as browser execution evidence: **in-browser send/sign/broadcast was not exercised**.
 
 `docs/11` explicitly documents the **4.8.4/4.9.2 mismatch**. Separately, Doc 4 M-21 identifies **4.9.1** as the upgrade candidate and **4.9.2** as a prerelease; neither carries an Android AAR.
 
-**OPEN version decision; PROPOSED resolution:** Phase 5 must reconcile these records, select and document the engine version, align dependency pins and guides, and repeat installation, engine and differential checks against that selection. Browser execution and Android build/packaging require explicit evidence before either is claimed. A recorded version decision supported by reproducible target evidence settles the mismatch—not the higher version number alone. Until then, 4.8.4 remains the verified tooling baseline, not proof of complete wallet readiness.
+**OPEN version decision; PROPOSED resolution:** Phase 5 must reconcile these records, select and document the engine version, align dependency pins and guides, and repeat installation, engine and differential checks against that selection. Browser execution and Android build/packaging require explicit evidence before either is claimed. A recorded version decision supported by reproducible target evidence settles the mismatch—not the higher version number alone. E02 resolved the version decision (owner-approved 2026-11-13): 4.9.3 is the verified tooling baseline, not proof of complete wallet readiness.
 
 ### 4.2 Web foundations
 
