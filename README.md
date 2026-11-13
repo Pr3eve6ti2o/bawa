@@ -1,5 +1,7 @@
 # Bawa — HD Wallets, Derivation, Recovery & Tracking: A Practical Guide
 
+> **Branch scope notice:** `hd-wallet-professional` contains only this `README.md` (audited at commit `7631d00`). The runnable implementation, dependency manifests, environment template, and tests described below live on the `main` branch of this repository. The setup and test commands in this guide cannot run from this branch as checked out because the referenced files are absent. Use a checkout of `main` for those commands.
+
 Bawa is just a name.
 
 It is not a company, service, hosted wallet, custody provider, commercial product, or promise that one library can magically solve every blockchain problem.
@@ -984,6 +986,8 @@ The table below is intentionally practical. “Recommended” does not mean “t
 
 The current Bawa reference implementation is deliberately narrower than the entire guidebook.
 
+The implementation files described below are on `main`; see the branch scope notice above.
+
 ## `tools/hdwallet-gen/generate.js`
 
 One-time wallet generation.
@@ -997,7 +1001,8 @@ It:
 5. exports BTC/ETH/TRON public roots plus the configured TON address;
 6. performs public derivation/address round trips;
 7. encrypts the mnemonic with AES-256-GCM;
-8. shows the mnemonic and separate data key only on the terminal;9. waits for operator confirmations;
+8. shows the mnemonic and separate data key only on the terminal;
+9. waits for operator confirmations;
 10. writes the encrypted recovery artifact with restrictive permissions.
 
 ## `tools/make_wallet.py`
@@ -1054,7 +1059,7 @@ The README needs to be runnable, not merely descriptive.
 For the current reference tree:
 
 - a Unix-like environment is recommended for the interactive `/dev/tty` generation flow;
-- Node.js matching the repository's `package.json` engine requirement;
+- Node.js matching the `main` branch's `package.json` engine requirement (`>=22 <23`; run this setup on `main` — see the branch scope notice above);
 - npm;
 - Python 3.11+;
 - a Python virtual environment for local tooling;
@@ -2143,6 +2148,8 @@ For security-sensitive primitives, pin the tested release in the actual applicat
 
 Trust Wallet Core itself recommends checking the current release/version rather than blindly using an old example. See the official [Wallet Core repository](https://github.com/trustwallet/wallet-core).
 
+**Version snapshot (2026-11-13):** Latest stable releases are npm `@trustwallet/wallet-core` `4.9.3`, PyPI `cryptography` `50.0.2`, and PyPI `bip-utils` `2.12.3`. The `^4.8.4` example is a historical caret-range illustration, not a latest-version recommendation. Main uses Wallet Core `4.8.4`, `cryptography==50.0.2`, and `bip-utils==2.12.2`; review and test upgrades before changing pins or lockfiles.
+
 ### Reproducibility
 
 For serious release engineering:
@@ -2554,7 +2561,6 @@ Before calling an HD-wallet implementation “done”, check all of these.
 ## Multi-chain wallet crypto
 
 - [Trust Wallet Core](https://github.com/trustwallet/wallet-core)
-- [Trust Wallet Core developer documentation](https://github.com/trustwallet/developer/tree/master/wallet-core)
 - [@scure/bip32](https://github.com/paulmillr/scure-bip32)
 - [@scure/bip39](https://github.com/paulmillr/scure-bip39)
 
@@ -2662,7 +2668,7 @@ This repository can be used as the one-time wallet foundation for Nova Shop. The
 
 ## Run it from a clean machine
 
-Use Node.js 22.x and Python 3.11+. Clone the repository and enter it:
+Run this procedure on `main` (see the branch scope notice above), using Node.js 22.x and Python 3.11+. Clone the repository and enter it:
 
 git clone https://github.com/Pr3eve6ti2o/bawa.git
 cd bawa
