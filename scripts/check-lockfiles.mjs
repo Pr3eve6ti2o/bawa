@@ -7,10 +7,10 @@
 // lockfile said.
 //
 // F-27 (kept): parse each lockfile as JSON and verify BOTH the spec and
-// the resolution are 4.9.1. A string-presence check would pass a lockfile
+// the resolution are 4.9.3. A string-presence check would pass a lockfile
 // that merely mentions the pin in a comment or another entry.
 // T44-F5 (added): version strings alone do not establish provenance —
-// a tampered lockfile could pin 4.9.1 while pointing `resolved` at a
+// a tampered lockfile could pin 4.9.3 while pointing `resolved` at a
 // hostile registry or an `integrity` hash the attacker chose. Require
 // the npm registry URL and a sha512 integrity hash.
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
@@ -49,9 +49,9 @@ export function lockfiles(root, files = FILES) {
       const spec = lock?.packages?.['']?.dependencies?.['@trustwallet/wallet-core'];
       const entry = lock?.packages?.['node_modules/@trustwallet/wallet-core'];
       const resolved = entry?.version;
-      if (spec !== '4.9.1' || resolved !== '4.9.1') {
+      if (spec !== '4.9.3' || resolved !== '4.9.3') {
         console.error(
-          `  ${file}: wallet-core pin must be 4.9.1 (spec: ${spec ?? 'missing'}, resolved: ${resolved ?? 'missing'})`,
+          `  ${file}: wallet-core pin must be 4.9.3 (spec: ${spec ?? 'missing'}, resolved: ${resolved ?? 'missing'})`,
         );
         passed = false;
         continue;

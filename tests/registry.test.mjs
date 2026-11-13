@@ -90,7 +90,8 @@ test('the real registry validates with the expected counts', async () => {
 
   assert.deepEqual(errors, []);
   assert.equal(counts.files, 4);
-  assert.equal(counts.entries, 31);
+  // 32 since E02 (2026-11-13): the trust-wallet-core-4-9-3 engine entry.
+  assert.equal(counts.entries, 32);
 });
 
 test('a profile missing its required status is rejected', async (t) => {
@@ -303,7 +304,7 @@ function promptFile(id) {
   return id === 'hd-wallet-cli' ? 'create-hd-wallet.md' : `create-${id}.md`;
 }
 
-function makeRepoFixture(t, { pin = '4.9.1' } = {}) {
+function makeRepoFixture(t, { pin = '4.9.3' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bawa-t46-repo-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const registry = path.join(root, 'registry');
@@ -407,24 +408,24 @@ test('T46: implemented must be an array of strings', async (t) => {
 test('T46: coordinated wrong engine versions are rejected by the tool pin', async (t) => {
   const fixture = makeRepoFixture(t);
   mutateRegistry(fixture.registry, 'profiles', (profiles) => {
-    for (const profile of profiles) profile.engine.version = '4.8.4';
+    for (const profile of profiles) profile.engine.version = '4.9.1';
   });
   mutateRegistry(fixture.registry, 'engines', (entries) => {
     for (const entry of entries) {
       if (typeof entry.name === 'string' && entry.name.includes('Trust Wallet Core')) {
-        entry.revision = '4.8.4';
+        entry.revision = '4.9.1';
       }
     }
   });
   const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
   assert.ok(
-    errors.some((error) => error.includes("does not match the tools/hdwallet-gen pin '4.9.1'")),
+    errors.some((error) => error.includes("does not match the tools/hdwallet-gen pin '4.9.3'")),
     `Expected a pin-mismatch error; received:\n${errors.join('\n') || '(none)'}`,
   );
 });
 
 test('T46: a non-exact tool pin is rejected', async (t) => {
-  const fixture = makeRepoFixture(t, { pin: '^4.9.1' });
+  const fixture = makeRepoFixture(t, { pin: '^4.9.3' });
   const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
   assert.ok(
     errors.some((error) => /exact X\.Y\.Z/i.test(error)),

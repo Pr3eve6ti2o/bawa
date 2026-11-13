@@ -499,7 +499,7 @@ async function main() {
   const v = HDWallet.createWithMnemonic(VEC_MNEMONIC, "");
   ok("vec_btc", v.getAddressForCoin(CoinType.bitcoin) === VEC.btc);
   ok("vec_eth", v.getAddressForCoin(CoinType.ethereum) === VEC.eth);
-  // TON triple check (M-03): wallet-core 4.9.1 defaults (V4 R2, wallet ID
+  // TON triple check (M-03): wallet-core 4.9.3 defaults (V4 R2, wallet ID
   // 698983191, subwallet 0) must reproduce the recorded fixture address.
   ok("vec_ton", v.getAddressForCoin(CoinType.ton) === VEC.ton);
 

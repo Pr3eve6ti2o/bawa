@@ -146,7 +146,7 @@ Keep the tracker watch-only and use a dedicated signer or hardware wallet for si
 
 ### Which tools does Bawa use?
 
-Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.9.1) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Trust Wallet Core 4.9.1 was the upgrade candidate and is now the version pinned by the tools (T20, 2026-11-12); 4.9.2 is the guides' reference engine, not the pin. Do not attribute authorship of the guide's procedures to any other model or tool.
+Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.9.3) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Trust Wallet Core 4.9.3 is now the version pinned by the tools (E02, 2026-11-13; 4.9.1 was the former pin, T20, 2026-11-12); 4.9.2 is the guides' reference engine, not the pin. Do not attribute authorship of the guide's procedures to any other model or tool.
 
 ### Free or paid security, what am I actually buying?
 

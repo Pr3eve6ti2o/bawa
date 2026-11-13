@@ -52,7 +52,7 @@ Recovery encryption uses AES-256-GCM with the additional authenticated data (AAD
 - Trust Wallet Core is pinned to an exact tested package version.
 - bip_utils is pinned and used only for independent verification.
 - Do not treat a version range as a tested dependency graph.
-- The tools lockfile is committed and records Core `4.9.1` exactly. No root lockfile is committed; the root `package.json` has no dependencies. Before a production release, verify and document the tools lockfile's clean-install origin and reproducibility.
+- The tools lockfile is committed and records Core `4.9.3` exactly. No root lockfile is committed; the root `package.json` has no dependencies. Before a production release, verify and document the tools lockfile's clean-install origin and reproducibility.
 - The current `ci.yml` contains no dependency- or secret-scanning steps, and scanning evidence is recorded as `blocked-unverified`. Add and verify both kinds of scanning in CI/release workflows, and record the results.
 - Prefer signed/tagged releases. No release checksums or provenance are recorded in the repository. Record checksums and provenance where practical.
 

@@ -33,7 +33,7 @@ const notes = [
 // carries implemented/missing for every profile (a04/a05).
 const fallbackImplemented = {
   cli: ['Derivation primitives via the repository tools (see security notes)'],
-  web: ['Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.1 WASM boundary', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'Receive-screen QR display of a derived address'],
+  web: ['Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.3 WASM boundary', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'Receive-screen QR display of a derived address'],
   android: ['Extended-public-key validation (no secrets, no derivation on-device)', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'QR display of an address'],
 };
 const fallbackMissing = {

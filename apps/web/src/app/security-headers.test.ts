@@ -39,9 +39,9 @@ describe('T47 security headers', () => {
 });
 
 describe('T47 wallet-core WASM integrity pin', () => {
-  it('pins the published 4.9.1 wasm hash', () => {
+  it('pins the published 4.9.3 wasm hash', () => {
     expect(EXPECTED_WASM_SHA256).toBe(
-      '0d6385c019891181f916be4c4f4a1986fff1dcb0391ca2027e1247e8bc496cd5',
+      '13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217',
     );
   });
 

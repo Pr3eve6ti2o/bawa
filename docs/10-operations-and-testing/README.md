@@ -69,7 +69,7 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.1` | `4.9.1`; reference engine: `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.3` | `4.9.3`; reference engine: `4.9.2` (published 2026-11-06; tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`; npm registry returns 200) | Pinned; the live EIP-1559 proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
 | bip-utils | Python | `==2.12.2` | `==2.12.2` | Pinned |
 | Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
@@ -894,7 +894,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at version `4.9.1` (upgraded 2026-11-12, T20); the release pin is 4.9.1 (see Version pins above).
+The tooling package declares `@trustwallet/wallet-core` at version `4.9.3` (upgraded 2026-11-13, E02); the release pin is 4.9.3 (see Version pins above).
 
 ```bash
 cd tools/hdwallet-gen

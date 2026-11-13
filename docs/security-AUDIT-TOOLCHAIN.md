@@ -18,7 +18,7 @@ Repo facts the toolchain is sized for (snapshot `981d0ba`):
 
 - JS: Node `>=22 <23` (VM: Node v22.23.4), plain JS in
   `tools/hdwallet-gen` (one dependency, `@trustwallet/wallet-core`
-  4.9.1, WASM), React 19 + Vite 8 + TypeScript 5.9 + Vitest 4.1.3 in
+  4.9.3, WASM), React 19 + Vite 8 + TypeScript 5.9 + Vitest 4.1.3 in
   `apps/web`. Lockfiles in both projects. No lint or SAST config.
 - Python: `>=3.11` (VM: 3.12.3), `requirements.txt` pins
   `cryptography==50.0.2`, `bip-utils==2.12.2`. No pyproject.
@@ -105,7 +105,7 @@ maintenance grounds, not popularity.)
 - No tool here verifies cryptographic CORRECTNESS. Only known
   test vectors + differential testing do that. SAST finds patterns,
   not logic bugs in derivation.
-- No tool sees inside `@trustwallet/wallet-core` 4.9.1 WASM. It is
+- No tool sees inside `@trustwallet/wallet-core` 4.9.3 WASM. It is
   an npm artifact; auditing wallet-core itself is out of scope for
   T38. Audit lanes may cite the upstream Trust Wallet Core audit,
   but must not claim this repo's review covers it.

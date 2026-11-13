@@ -1,5 +1,5 @@
 // Regression tests for the T10 (W1) M-20–M-24 register remediation.
-// Guards the Doc 3 register rows, the 4.9.1/4.9.2 version discipline,
+// Guards the Doc 3 register rows, the 4.9.3/4.9.2 version discipline,
 // the auto-lock wording rule, the M-23 draft-absence finding and the
 // M-24 TON generation-only resolution. Pure doc-consistency checks:
 // they read the guides, they move no funds and touch no network.
@@ -58,14 +58,13 @@ test('M-21: no guide prescribes 4.9.2 as the repository pin', () => {
     assert.ok(!doc4.includes(phrase), `MAINNET-GUIDE still says: ${phrase}`);
     assert.ok(!doc11.includes(phrase), `Doc 11 still says: ${phrase}`);
   }
-  // The corrected discipline must be stated: repo pin 4.8.4, candidate 4.9.1.
-  assert.ok(doc4.includes('**4.9.1**, the latest stable at the baseline') ||
-    doc4.includes('upgrade candidate is **4.9.1**') ||
-    doc4.includes('the upgrade candidate is `4.9.1`'),
-    'Doc 4 must name 4.9.1 as the upgrade candidate');
-  assert.ok(doc3.includes('repository pin is `4.9.1`') ||
-    doc3.includes('repository pin is 4.9.1'),
-    'Android guide must state the repository pin is 4.9.1');
+  // The corrected discipline must be stated: repo pin 4.9.3; 4.9.2 remains the guides' reference engine only.
+  assert.ok(doc4.includes('repository pin is now `4.9.3`') ||
+    doc4.includes('Pin exactly `4.9.3`'),
+    'Doc 4 must state the repository pin is 4.9.3');
+  assert.ok(doc3.includes('repository pin is `4.9.3`') ||
+    doc3.includes('repository pin is 4.9.3'),
+    'Android guide must state the repository pin is 4.9.3');
 });
 
 test('M-21: the shared 4.9.1/4.9.2 source commit is 17e3cd4, not d40d24a', () => {
@@ -78,7 +77,7 @@ test('M-21: the shared 4.9.1/4.9.2 source commit is 17e3cd4, not d40d24a', () =>
     'M-21 must cite the verified 4.9.1 npm SHA-1');
 });
 
-test('M-21: the 4.9.1 qualification run is recorded and the row is resolved', () => {
+test('M-21: the qualification run is recorded, the pin is 4.9.3, and the row is resolved', () => {
   const m21 = section(doc4, '### M-21 —', '### M-22 —');
   assert.match(m21, /RESOLVED 2026-11-12/,
     'M-21 must record the resolved qualification run');
@@ -86,8 +85,8 @@ test('M-21: the 4.9.1 qualification run is recorded and the row is resolved', ()
     'M-21 must record the derivation result');
   assert.ok(m21.includes('qualification is not promotion'),
     'M-21 must state qualification is not promotion');
-  assert.ok(m21.includes('repository pin is now `4.9.1`'),
-    'M-21 must state the repo pin is now 4.9.1');
+  assert.ok(m21.includes('repository pin is now `4.9.3`'),
+    'M-21 must state the repo pin is now 4.9.3');
 });
 
 test('M-22: every "10 minutes of inactivity" mention is a correction', () => {

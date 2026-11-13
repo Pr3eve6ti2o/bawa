@@ -60,7 +60,7 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
 
 > **Expected result**
 >
-> The dependency listing shows `@trustwallet/wallet-core@4.9.1`.
+> The dependency listing shows `@trustwallet/wallet-core@4.9.3`.
 
 **Lockfile warning**
 

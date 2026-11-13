@@ -2,24 +2,26 @@
 
 - **Repository:** `Pr3eve6ti2o/bawa`
 - **Source baseline:** `51c7e39`; Phase 3 complete.
-- **Evidence date:** 2026-11-10 (baseline); 4.9.1 qualification 2026-11-12 (T20).
+- **Evidence date:** 2026-11-10 (baseline); 4.9.1 qualification 2026-11-12 (T20); 4.9.3 qualification 2026-11-12 (R08), applied 2026-11-13 (E02).
 - **Recorded H7 results:** suite **92/92**, differential test **PASS**, fixtures **exact**.
 - **Recorded T20 results (2026-11-12):** differential run of 4.9.1 against 4.8.4 — tools smoke 130 ok / 0 fail on both; 9 derive + 9 compare addresses identical; TON fixture PASS; EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12; web vitest 28/28, tsc + build exit 0 on both; mainnet endpoints eth_chainId 0x1 on two public RPCs (read-only).
+- **Recorded E02 results (2026-11-13):** differential run of 4.9.3 against 4.9.1 (R08 qualification + E02 snapshot re-verification) — tools smoke 217 ok / 0 fail; 9 derive + 9 compare addresses identical; TON fixture PASS; EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12; web vitest 144/144, tsc + build exit 0; mainnet endpoints per R08 (`eth_chainId` `0x1` on two public RPCs, read-only; not re-probed by E02). No regressions found.
 
 Version checks and environment observations below were recorded first-hand on 2026-11-10. Historical guide and Android-draft evidence is identified separately; citing it does not imply a re-test. **PROPOSED** and **OPEN** items are not validated toolchain choices.
 
 ## 1. Engine decision
 
-**DECISION (proposed, T20 2026-11-12) — UPGRADE the tool pin to Trust Wallet Core 4.9.1, subject to owner approval.**
+**DECISION (E02 2026-11-13) — UPGRADE the tool pin to Trust Wallet Core 4.9.3, owner-approved 2026-11-13 (overriding the R08 HOLD).**
 
-This replaces the Phase 4 resolution against **Doc 4, M-21** (stay on 4.8.4) on the strength of the T20 qualification run recorded below. T20 qualification completed on 2026-11-12; 4.9.1 is now the selected tool pin.
+This replaces the Phase 4 resolution against **Doc 4, M-21** (stay on 4.8.4) on the strength of the T20 qualification run recorded below. T20 qualification completed on 2026-11-12; R08 qualification of 4.9.3 completed on 2026-11-12 and E02 applied the upgrade on 2026-11-13 on owner approval; 4.9.3 is now the selected tool pin.
 
 - **4.8.4 — previously selected and verified; superseded as the active pin.** It was pinned in `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json`. The supporting H7 evidence is the 92/92 suite result, a passing differential test and exact fixtures.
-- **4.9.1 — selected (proposed upgrade, T20 2026-11-12).** Installed and tested in scratch copies against 4.8.4: tools smoke 130 ok / 0 fail on both versions, exact fixtures, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery, web vitest 28/28 with tsc + build exit 0 on both. No regressions found; the only measured differences are WASM +33,286 bytes and bundle +14.87 kB. The 4.9.1 / 4.9.2 npm packages are byte-identical except the version field, so D21/D30/D31 evidence on 4.9.2 applies at the artifact level.
+- **4.9.1 — previously selected; superseded as the active pin by 4.9.3 (E02 2026-11-13).** Installed and tested in scratch copies against 4.8.4: tools smoke 130 ok / 0 fail on both versions, exact fixtures, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery, web vitest 28/28 with tsc + build exit 0 on both. No regressions found; the only measured differences are WASM +33,286 bytes and bundle +14.87 kB. The 4.9.1 / 4.9.2 npm packages are byte-identical except the version field, so D21/D30/D31 evidence on 4.9.2 applies at the artifact level.
+- **4.9.3 — selected (R08 qualification 2026-11-12; applied by E02 2026-11-13 on owner approval).** Installed and tested in scratch copies against 4.9.1: tools smoke 213 ok / 0 fail on both versions, exact fixtures, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery, web vitest 120/120 with tsc + build exit 0 on both. No regressions found; the only measured differences are WASM +2,503 bytes and bundle +5.79 kB. The 4.9.3 delta is Solana-only (a `TransferCoreAsset` proto addition); the JS/TS API surface and the coin registry are identical, and the EIP-1559 signed bytes are byte-identical.
 - **4.9.2 — guides’ reference engine only.** It is a prerelease per **Doc 4, M-21**, referenced at tag `17e3cd4`, dated 2026-11-06. Signing demos D21/D31 were recorded on it. In-browser send, sign and broadcast were never exercised. It is not this tool’s pin.
 - **4.8.5, 4.8.6, 4.8.7 and 4.9.0** also exist on npm, verified on 2026-11-10. None was evaluated or selected.
 
-Neither 4.9.1 nor 4.9.2 carries an Android AAR (**Doc 4, M-21**). Changing the npm engine version would not, by itself, settle Android integration.
+Neither 4.9.1, 4.9.2 nor 4.9.3 carries an Android AAR (**Doc 4, M-21**). Changing the npm engine version would not, by itself, settle Android integration.
 
 ### Upgrade gate
 
@@ -30,7 +32,7 @@ An upgrade requires a **separate decision**, followed by an intentional update o
 3. The Python differential test.
 4. Exact comparison against the existing fixtures.
 
-Do not regenerate fixtures merely to make a changed engine pass. Any intended derivation or fixture-contract change requires its own decision. Upgrade evidence was recorded by T20 on 2026-11-12 (see §1); acceptance is the owner's decision, expressed by merging this change.
+Do not regenerate fixtures merely to make a changed engine pass. Any intended derivation or fixture-contract change requires its own decision. Upgrade evidence was recorded by T20 on 2026-11-12 and by R08 on 2026-11-12 (see §1); acceptance is the owner's decision, expressed by merging this change.
 
 ## 2. Pinned toolchain
 
@@ -38,7 +40,7 @@ The table distinguishes declared constraints, checked-in pins and observed runti
 
 | Component | Pin or recorded value | Where the pin lives / evidence | Status |
 |---|---|---|---|
-| Trust Wallet Core, generator | **4.9.1** (selected; was 4.8.4) | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified (T20 qualification completed 2026-11-12) |
+| Trust Wallet Core, generator | **4.9.3** (selected; was 4.9.1) | `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` | verified (R08 qualification 2026-11-12; E02 application 2026-11-13) |
 | Node.js requirement | `>=22 <23`; CI uses Node 22 | Recorded runtime policy; CI Node selection | verified |
 | Node.js on this VM | `v24.22.2` | VM observation; not the declared project range | observed — deviation |
 | Python requirement | `>=3.11`; CI uses 3.13 | Recorded runtime policy; CI Python selection | verified |
@@ -89,7 +91,7 @@ The recorded H7 outcomes are **92/92**, **PASS** and **exact fixtures**. For set
 | Step | Expected result |
 |---|---|
 | Fresh clone and checkout | Checkout succeeds and `HEAD` resolves to the baseline identified by `51c7e39`. |
-| `npm ci` in `tools/hdwallet-gen` | Installation succeeds using the committed lockfile, retaining Trust Wallet Core 4.9.1 rather than resolving an upgrade. |
+| `npm ci` in `tools/hdwallet-gen` | Installation succeeds using the committed lockfile, retaining Trust Wallet Core 4.9.3 rather than resolving an upgrade. |
 | `npm run check` | The checked-in check script completes successfully. |
 | `npm test` | **92/92 passing**, matching H7. |
 | Create and activate the Python venv | An isolated environment is active under a Python version satisfying `>=3.11`. |
@@ -141,7 +143,7 @@ Record this as an unresolved reproducibility gap. **Do not claim CI reproducibil
 
 ### Binding remains OPEN
 
-As of the evidence date, **no wallet-core version ships a downloadable Android AAR**. In particular, neither 4.9.1 nor 4.9.2 carries one (**Doc 4, M-21**). The verified npm tool pin does not establish an Android binding or native dependency delivery route.
+As of the evidence date, **no wallet-core version ships a downloadable Android AAR**. In particular, neither 4.9.1, 4.9.2 nor 4.9.3 carries one (**Doc 4, M-21**). The verified npm tool pin does not establish an Android binding or native dependency delivery route.
 
 **Phase 5 must:**
 

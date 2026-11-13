@@ -17,10 +17,10 @@ import { lockfiles } from '../scripts/check-lockfiles.mjs';
 const FILE = 'tools/hdwallet-gen/package-lock.json';
 const ENTRY = 'node_modules/@trustwallet/wallet-core';
 const GOOD_URL =
-  'https://registry.npmjs.org/@trustwallet/wallet-core/-/wallet-core-4.9.1.tgz';
+  'https://registry.npmjs.org/@trustwallet/wallet-core/-/wallet-core-4.9.3.tgz';
 const GOOD_INTEGRITY = 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 
-function lockfile({ spec = '4.9.1', version = '4.9.1', resolved = GOOD_URL, integrity = GOOD_INTEGRITY, omitIntegrity = false } = {}) {
+function lockfile({ spec = '4.9.3', version = '4.9.3', resolved = GOOD_URL, integrity = GOOD_INTEGRITY, omitIntegrity = false } = {}) {
   const entry = { version, resolved };
   if (!omitIntegrity) entry.integrity = integrity;
   const packages = {
@@ -44,27 +44,27 @@ describe('lockfiles (F-27, T44-F5)', () => {
     writeFileSync(join(root, rel), content, 'utf8');
   }
 
-  test('the pinned 4.9.1 lockfile with registry URL and integrity passes', () => {
+  test('the pinned 4.9.3 lockfile with registry URL and integrity passes', () => {
     write(lockfile());
     assert.equal(lockfiles(root, [FILE]), true);
   });
 
   test('a wrong resolved version fails', () => {
-    write(lockfile({ version: '4.8.4' }));
+    write(lockfile({ version: '4.9.1' }));
     assert.equal(lockfiles(root, [FILE]), false);
   });
 
   test('a wrong spec fails', () => {
-    write(lockfile({ spec: '^4.9.1' }));
+    write(lockfile({ spec: '^4.9.3' }));
     assert.equal(lockfiles(root, [FILE]), false);
   });
 
-  test('T44-F5: a non-registry resolved URL fails even at 4.9.1', () => {
-    write(lockfile({ resolved: 'https://evil.example/wallet-core-4.9.1.tgz' }));
+  test('T44-F5: a non-registry resolved URL fails even at 4.9.3', () => {
+    write(lockfile({ resolved: 'https://evil.example/wallet-core-4.9.3.tgz' }));
     assert.equal(lockfiles(root, [FILE]), false);
   });
 
-  test('T44-F5: a missing integrity hash fails even at 4.9.1', () => {
+  test('T44-F5: a missing integrity hash fails even at 4.9.3', () => {
     write(lockfile({ omitIntegrity: true }));
     assert.equal(lockfiles(root, [FILE]), false);
   });

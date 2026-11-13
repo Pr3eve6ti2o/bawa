@@ -14,7 +14,7 @@
 //   (out/m2-preflight-spec-MUSE-AUTHORED.md) authored first-hand by Muse
 //   (T35 worker) after Astra calls stalled. Implementation below is
 //   hand-applied first-hand by the T35 worker from those specs, the T33
-//   unsigned-transaction module, and wallet-core 4.9.1 proto facts
+//   unsigned-transaction module, and wallet-core 4.9.3 proto facts
 //   verified first-hand in Node 22.
 // - Corrections applied against the specs (see docs/mainnet/MAINNET-SIGNING.md):
 //   (a) TON namespace is TW.TheOpenNetwork.Proto, NOT TW.TON.Proto.
@@ -65,7 +65,7 @@ import {
   MainnetGuardError,
 } from '../mainnet-guards/mainnet-guards.mjs';
 
-export const WALLET_CORE_VERSION = '4.9.1';
+export const WALLET_CORE_VERSION = '4.9.3';
 export const STOP_MESSAGE = 'STOP BEFORE BROADCASTING: M-35 execution NOT authorised.';
 
 export class SigningError extends Error {
@@ -572,7 +572,7 @@ export function ed25519Verify(messageBytes, signatureBytes, publicKeyBytes) {
 }
 
 // ---------------------------------------------------------------------------
-// Wallet-core loading (4.9.1, from tools/hdwallet-gen/node_modules; no new
+// Wallet-core loading (4.9.3, from tools/hdwallet-gen/node_modules; no new
 // dependency). TW.* is a package-level export, not on the wasm instance.
 // ---------------------------------------------------------------------------
 
@@ -586,7 +586,7 @@ export async function loadWalletCore() {
   try {
     pkg = createRequire(import.meta.url)(packagePath);
   } catch (error) {
-    throw new SigningError(`Wallet-core 4.9.1 not installed at ${packagePath}: ${error.code ?? 'load failed'}`);
+    throw new SigningError(`Wallet-core 4.9.3 not installed at ${packagePath}: ${error.code ?? 'load failed'}`);
   }
   if (!pkg || typeof pkg.initWasm !== 'function' || !pkg.TW) {
     throw new SigningError('Wallet-core package does not expose initWasm/TW as expected');

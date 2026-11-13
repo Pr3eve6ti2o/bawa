@@ -10,7 +10,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -25,7 +25,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "Generation for BTC, ETH, TRX and TON and watch-only derivation for BTC, ETH, TRX and TON are IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers these primitives only, not a complete wallet or verification of every security boundary.",
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed; i is the receiving address index.",
         "TON uses m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (single address, no index).",
@@ -77,7 +77,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -92,7 +92,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "BTC watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status records derivation evidence, not verification of a complete Bitcoin wallet or every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. BTC uses m/84'/0'/0'/0/i, with account 0 and receiving branch 0 fixed.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
@@ -139,7 +139,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -154,7 +154,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "ETH watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers this derivation evidence only; it does not establish generic EVM-wallet operation or verification of every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. ETH uses m/44'/60'/0'/0/i, with account 0 and receiving branch 0 fixed. This profile covers ETH only.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
@@ -207,7 +207,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -222,7 +222,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "Generation for BTC, ETH, TRX and TON and watch-only derivation for BTC, ETH, TRX and TON are IMPLEMENTED_AND_VERIFIED through the repository tools. This engine status does not establish an integrated multichain wallet or verification of every security boundary.",
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed.",
         "TON is single-address at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (no index).",
@@ -276,7 +276,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -291,7 +291,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.1 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration \u2014 the boundary tests do.",
+        "The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration \u2014 the boundary tests do.",
         "WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented; app tests render title, empty dashboard, import and send-not-implemented states.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
         "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.",
@@ -308,7 +308,7 @@
         "starter builds from a clean checkout",
         "14-screen contract coverage checked against docs/14 section 5.1",
         "the token-ui foundation completes Phase 5 inspection before adoption and retains UI-only responsibilities (met: Phase 5 inspection done 2026-11-10; foundation adopted in Phase 6)",
-        "Trust Wallet Core 4.9.1 integration is verified for the web profile without exposing secrets or signing authority to the UI",
+        "Trust Wallet Core 4.9.3 integration is verified for the web profile without exposing secrets or signing authority to the UI",
         "the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only",
         "any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet"
       ],
@@ -353,7 +353,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "OPEN"
     },
     "ui": {
@@ -368,7 +368,7 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. CLI generation and derivation evidence does not establish Android engine operation.",
         "AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); 17 unit tests pass; emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
@@ -386,7 +386,7 @@
         "starter builds from a clean checkout",
         "14-screen contract coverage checked against docs/14 section 5.1",
         "the Tether WDK Starter foundation completes Phase 5 inspection before adoption and remains limited to the UI layer",
-        "an Android binding to Trust Wallet Core 4.9.1 is established and verified before Android generation or derivation is described as verified; Android AAR availability is not presumed",
+        "an Android binding to Trust Wallet Core 4.9.3 is established and verified before Android generation or derivation is described as verified; Android AAR availability is not presumed",
         "the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only",
         "any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet"
       ],
@@ -431,7 +431,7 @@
     ],
     "engine": {
       "name": "trust-wallet-core",
-      "version": "4.9.1",
+      "version": "4.9.3",
       "status": "IMPLEMENTED_AND_VERIFIED"
     },
     "ui": {
@@ -448,7 +448,7 @@
       "notes": [
         "This profile holds no secrets and derives addresses from extended public keys only. It neither accepts nor creates mnemonics, seeds, private keys, private extended keys, vault keys or secret-bearing wallet handles.",
         "Any upstream mnemonic-based generation occurs outside this profile, inside the trusted key/vault boundary, and follows BIP-39 with 24 words and an empty passphrase.",
-        "Trust Wallet Core 4.9.1 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
+        "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "BTC, ETH and TRX watch-only derivation through the repository tools is IMPLEMENTED_AND_VERIFIED. The engine status covers those derivation primitives only. The watch-only wallet product has not been built and remains DOCUMENTED_NOT_TESTED.",
         "Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Address derivation uses the corresponding extended public keys, not private key material.",
         "TON is excluded because it has no xpub; its generation-only route is not part of this watch-only profile.",

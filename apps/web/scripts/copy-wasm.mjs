@@ -3,7 +3,7 @@
 // can fetch it. The file is a build artifact, never committed.
 //
 // T47: the copy is integrity-checked. The binary must hash to the published
-// @trustwallet/wallet-core@4.9.1 value in scripts/wasm-integrity.mjs; a
+// @trustwallet/wallet-core@4.9.3 value in scripts/wasm-integrity.mjs; a
 // mismatch fails the build instead of silently shipping a tampered engine.
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
@@ -27,8 +27,8 @@ const bytes = readFileSync(source);
 if (!verifyWasmHash(bytes)) {
   console.error(
     `wallet-core.wasm integrity check FAILED: sha256 ${sha256Hex(bytes)} ` +
-    `does not match the pinned 4.9.1 value ${EXPECTED_WASM_SHA256}. ` +
-    `Refusing to copy; reinstall @trustwallet/wallet-core@4.9.1 from the registry.`,
+    `does not match the pinned 4.9.3 value ${EXPECTED_WASM_SHA256}. ` +
+    `Refusing to copy; reinstall @trustwallet/wallet-core@4.9.3 from the registry.`,
   );
   process.exit(1);
 }

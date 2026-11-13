@@ -9,7 +9,7 @@
 ## How to run the checks
 
 ```sh
-# Node side — Trust Wallet Core 4.9.1 (requires tools/hdwallet-gen deps)
+# Node side — Trust Wallet Core 4.9.3 (requires tools/hdwallet-gen deps)
 node --test tests/mainnet-derivation-vectors.test.mjs
 # Python side — bip_utils 2.12.2 (independent implementation)
 python3 test/differential_test.py
@@ -108,7 +108,7 @@ Account extended public keys (account 0):
 
 | Implementation | Version | What it reproduced |
 |---|---|---|
-| Trust Wallet Core (WASM) | 4.9.1 (repo pin) | Ripple BTC/ETH/TRX/TON index 0, BTC/ETH index 1, BTC change 0, all three account xpubs, TON pubkey + address, abandon zpub + 3 addresses, Hardhat ETH 0 |
+| Trust Wallet Core (WASM) | 4.9.3 (repo pin) | Ripple BTC/ETH/TRX/TON index 0, BTC/ETH index 1, BTC change 0, all three account xpubs, TON pubkey + address, abandon zpub + 3 addresses, Hardhat ETH 0 |
 | Python bip_utils | 2.12.2 | Same ripple set, plus TRX index 1, TON address + SLIP-0010 pubkey, abandon set, Hardhat, BIP-32 TV1 xpubs at all 6 paths |
 | @ton/ton (evidence only, not a repo dependency) | 15.4.0 (@ton/crypto 3.3.0) | TON V4 R2 address from the published pubkey: raw `0:bb819bc6…`, non-bounceable `UQC7…`, bounceable `EQC7…` |
 

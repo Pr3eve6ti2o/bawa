@@ -395,7 +395,7 @@ For the procedures, see **Doc 1 §6 (Node)** and **Doc 1 §7 (Python)**. Install
 
 Match these repo pins:
 - **Node 22.23.4**, within the repo range `>=22 <23` (M05).
-- **Trust Wallet Core 4.9.1** (M05 F11).
+- **Trust Wallet Core 4.9.3** (M05 F11).
 - Python packages **`cryptography==50.0.2`** and **`bip-utils==2.12.2`** (M05).
 
 **Standing environment note:** verification ran on **Node v24.22.2**, outside the repo range. Node v24 is not a supported configuration (M05/M06; verify2 T1 environment failure). Anything installed outside the pins is untested against the repo.
@@ -3059,7 +3059,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Core pin agreement — unresolved revision input
 
-**Status: resolved in the T10 working patch (2026-11-12), pending coordinator merge verification.** Resolution: the repository pin is now `4.9.1` (upgraded 2026-11-12, T20 qualification); the guides no longer state `4.9.2` as the repository pin or as the upgrade candidate. `4.9.2` remains only as the Android guide's testnet source-build pin for the demonstrated D21 scope, labelled as a GitHub prerelease, and `4.9.1` was the upgrade candidate, whose qualification run is complete (M-21, T20). Evidence: npm registry and GitHub release-page re-check 2026-11-12 (see M-21).
+**Status: resolved in the T10 working patch (2026-11-12), pending coordinator merge verification.** Resolution: the repository pin is now `4.9.3` (upgraded 2026-11-13, E02; R08 qualification); the guides no longer state `4.9.2` as the repository pin or as the upgrade candidate. `4.9.2` remains only as the Android guide's testnet source-build pin for the demonstrated D21 scope, labelled as a GitHub prerelease, and `4.9.1` was the upgrade candidate, whose qualification run is complete (M-21, T20). Evidence: npm registry and GitHub release-page re-check 2026-11-12 (see M-21).
 
 - **Observable check:** Reconcile the pinned version, the version stated in the guide and the version proposed for the reviewed route. Do not silently select one side of the mismatch.
 - **Required evidence:** A cited resolution, the corresponding reviewed revision and evidence identifying the version actually checked for that scope.
@@ -3347,7 +3347,7 @@ For BIP-32, cite the [verified raw text](https://raw.githubusercontent.com/bitco
 **Wallet-core tally: 36 links — 35 LIVE and 1 DEAD-404 by design.**  
 **Tooling/install tally: 17 links — 14 LIVE, 1 LIVE-via-registry, 1 DEAD-404 template and 1 EXISTS-VM-BLOCKED.** [M31]
 
-Use the **Trust Wallet Core repository and `registry.json` at 4.9.1**, the Bawa repo pin. The release tagged **4.9.2** is a GitHub prerelease: it is **not the pin** (**4.9.1** is the pin, upgraded 2026-11-12 — M-21, T20); do not use it as evidence for the pinned version’s behaviour. [M31; M28]
+Use the **Trust Wallet Core repository and `registry.json` at 4.9.3**, the Bawa repo pin. The release tagged **4.9.2** is a GitHub prerelease: it is **not the pin** (**4.9.3** is the pin, upgraded 2026-11-13 — M-21, E02); do not use it as evidence for the pinned version’s behaviour. [M31; M28]
 
 Carry these access and citation qualifications:
 
@@ -3869,11 +3869,11 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Evidence:**
 
 - **M05 F2/F3/F7 (corrected 2026-11-12, T10):** `4.9.2` was npm `latest` at the 2026-11-09 baseline, but its GitHub release has `prerelease: true` (labelled “Pre-release” on the release page, re-checked live 2026-11-12) and was published on 2026-11-06. `4.9.1` is the latest stable release and upgrade candidate. They share source commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3` (npm `gitHead` for both, verified live 2026-11-12; the earlier draft cited `d40d24a`, which is the **4.8.4** tag commit, not the 4.9.1/4.9.2 commit). Their npm tarballs and SHA-1 hashes differ (`4.9.1` SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`; `4.9.2` SHA-1 `67fbe7c826fbb84b091d2b1c7a31677498924be5`). Neither carries an Android `.aar`. Live re-check 2026-11-12: npm `latest` is now `4.9.3`; `4.9.1` has no GitHub release (API 404).
-- **M05 F2/F3/F7 (byte-identity, T20, 2026-11-12):** the extracted `4.9.1` and `4.9.2` npm packages are byte-identical except `package.json` version (same wasm sha256 `0d6385c019891181f916be4c4f4a1986fff1dcb0391ca2027e1247e8bc496cd5`, same tarball size 4,793,623 bytes; verified first-hand from the npm registry). The tarball SHA-1s differ only because the version string differs. No GitHub Release object exists for `4.9.1` (API 404), so no `prerelease` flag can be read for it from GitHub; the earlier `prerelease: false` claim is unverifiable and withdrawn. Since the baseline, `4.9.3` was published on 2026-11-11 and is now npm `latest`; its wasm differs and it was not evaluated.
+- **M05 F2/F3/F7 (byte-identity, T20, 2026-11-12):** the extracted `4.9.1` and `4.9.2` npm packages are byte-identical except `package.json` version (same wasm sha256 `0d6385c019891181f916be4c4f4a1986fff1dcb0391ca2027e1247e8bc496cd5`, same tarball size 4,793,623 bytes; verified first-hand from the npm registry). The tarball SHA-1s differ only because the version string differs. No GitHub Release object exists for `4.9.1` (API 404), so no `prerelease` flag can be read for it from GitHub; the earlier `prerelease: false` claim is unverifiable and withdrawn. Since the baseline, `4.9.3` was published on 2026-11-11 and is now npm `latest`; its wasm differs and it was qualified by R08 on 2026-11-12 (see the E02 note below).
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
-**Status:** RESOLVED 2026-11-12 — the `4.9.1` qualification run specified in M05 O3 completed with recorded results (see Evidence). The repository pin is now `4.9.1` — the upgrade was approved by the owner on 2026-11-12 and applied; qualification is not promotion — the pin move was the separate maintainer decision, and the repository's wrapper, build and runtime were exercised with `4.9.1`.
+**Status:** RESOLVED 2026-11-12 — the `4.9.1` qualification run specified in M05 O3 completed with recorded results (see Evidence). The repository pin is now `4.9.3` — the 4.9.1 upgrade was approved by the owner on 2026-11-12 and applied, and the 4.9.3 upgrade was approved by the owner on 2026-11-13 (R08 qualification, E02 application); qualification is not promotion — each pin move was the separate maintainer decision, and the repository's wrapper, build and runtime were exercised with `4.9.1` and then with `4.9.3`.
 
 **2026-11-12 (T10):** the guide prescriptions of `4.9.2` as the pin were corrected (ANDROID-GUIDE §B.6 and §§E/K, docs/11, Doc 4 §20).
 
@@ -3881,9 +3881,11 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Qualification run (T20, 2026-11-12):** EIP-1559 with chain ID `1` — local sign PASS with byte-identical signed bytes and independent sender recovery (12/12 checks); mainnet derivation fixtures PASS (BTC/ETH/TRX/TON); mainnet endpoints `eth_chainId` `0x1` on two public RPCs (read-only). Tools smoke 130 ok / 0 fail on both versions; web vitest 28/28 with tsc + build exit 0 on both. No regressions found. The clearance condition is met on evidence; the upgrade itself awaits the owner's decision.
 
+**Qualification run (R08, 2026-11-12; applied by E02, 2026-11-13):** wallet-core 4.9.3 qualified against 4.9.1 — Solana-only proto delta (`TransferCoreAsset` addition to Solana `SigningInput`), WASM 10,419,822 → 10,422,325 bytes (+2,503), sha256 `13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`; tools smoke 213 ok / 0 fail on both versions; 9 derive + 9 compare addresses identical; TON fixture PASS; EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12; web vitest 120/120, tsc + build exit 0 on both; mainnet endpoints `eth_chainId` `0x1` on two public RPCs (read-only). No regressions found. R08 recommended HOLD (no Bawa feature benefit); the owner approved the upgrade for currency on 2026-11-13, overriding the HOLD. E02 re-verified the upgrade in the snapshot at `e324130`: tools smoke 217 ok / 0 fail, 9 derive + 9 compare addresses identical, TON fixture PASS, EIP-1559 byte-identical signed bytes with independent sender recovery 12/12, Python differential PASS, web vitest 144/144, tsc + build exit 0, quality gates green, test:all exit 0. No regressions found.
+
 **Coordinator re-verification (2026-11-12, tip `2b66177`):** tools smoke 166 ok / 0 fail on both versions; web vitest 82/82 on both; tsc exit 0; vite build exit 0 on 4.9.1; byte-identity re-verified from the npm registry (see Evidence). No regressions found. The upgrade was approved by the owner on 2026-11-12 and merged.
 
-**Operational restriction:** Pin exactly `4.9.1` as the repository version (upgraded 2026-11-12). Never use `latest`, `^` or a bare version. Never relabel `4.9.2` results as `4.9.1` results; `4.9.2` evidence applies to `4.9.1` only where byte-identity of the shipped artifacts is proven (T20 verified it for the npm packages), never by relabelling.
+**Operational restriction:** Pin exactly `4.9.3` as the repository version (upgraded 2026-11-13). Never use `latest`, `^` or a bare version. Never relabel `4.9.2` results as `4.9.3` results; `4.9.2` evidence applies to `4.9.3` only where byte-identity of the shipped artifacts is proven (T20 verified it for the 4.9.1/4.9.2 npm packages; R08 verified the 4.9.3 delta is Solana-only with byte-identical signed bytes), never by relabelling.
 
 **Blocks writing completion:** No.
 

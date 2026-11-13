@@ -51,7 +51,7 @@ function loadCore(): Promise<WalletCore> {
     // is still the same promise) so a later call retries; in-flight and
     // successful initialisation stay cached.
     const promise = (async () => {
-      // No options: the wallet-core 4.9.1 Emscripten build rejects both
+      // No options: the wallet-core 4.9.3 Emscripten build rejects both
       // locateFile and wasmBinary (not in INCOMING_MODULE_JS_API). It
       // resolves wallet-core.wasm relative to the page URL in the
       // browser, so the file is served from public/ (see

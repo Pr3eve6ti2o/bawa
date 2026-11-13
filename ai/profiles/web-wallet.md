@@ -3,7 +3,7 @@
 - Platform: web
 - Status: STARTER_IMPLEMENTED_AND_VERIFIED — Starter implemented and verified within its documented scope; not a complete wallet.
 - Chains: btc (m/84'/0'/0'/0/i), eth (m/44'/60'/0'/0/i), trx (m/44'/195'/0'/0/i), ton (m/44'/607'/0' generation-only)
-- Engine: trust-wallet-core 4.9.1 — IMPLEMENTED_AND_VERIFIED
+- Engine: trust-wallet-core 4.9.3 — IMPLEMENTED_AND_VERIFIED
 - UI: token-ui / web-01-token-ui — IMPLEMENTED_AND_VERIFIED
 - Verification: IMPLEMENTED_AND_VERIFIED
 
@@ -35,7 +35,7 @@
 
 ## Security notes
 
-- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.1 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration — the boundary tests do.
+- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration — the boundary tests do.
 - WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented; app tests render title, empty dashboard, import and send-not-implemented states.
 - The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.
 - Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.
@@ -51,7 +51,7 @@
 - starter builds from a clean checkout
 - 14-screen contract coverage checked against docs/14 section 5.1
 - the token-ui foundation completes Phase 5 inspection before adoption and retains UI-only responsibilities (met: Phase 5 inspection done 2026-11-10; foundation adopted in Phase 6)
-- Trust Wallet Core 4.9.1 integration is verified for the web profile without exposing secrets or signing authority to the UI
+- Trust Wallet Core 4.9.3 integration is verified for the web profile without exposing secrets or signing authority to the UI
 - the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only
 - any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet
 

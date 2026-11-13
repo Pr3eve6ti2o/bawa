@@ -165,7 +165,7 @@ function readmeFor(profile) {
   const fallbackImplemented = {
     cli: ['Derivation primitives via the repository tools (see security notes)'],
     web: [
-      'Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.1 WASM boundary',
+      'Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.3 WASM boundary',
       '14-screen UI navigation with mock data and unavailable actions labelled as such',
       'Receive-screen QR display of a derived address',
     ],

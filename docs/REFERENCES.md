@@ -26,10 +26,10 @@ These are the primary specifications and upstream projects Bawa relies on. Re-ch
 - Wallet Core — https://github.com/trustwallet/wallet-core
 - Wallet Core README — https://github.com/trustwallet/wallet-core/blob/master/README.md
 - Wallet Core HDWallet API — https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/
-- Wallet Core registry fields — https://github.com/trustwallet/wallet-core/blob/4.9.1/docs/registry-fields.md
-- Wallet Core registry — https://github.com/trustwallet/wallet-core/blob/4.9.1/registry.json
+- Wallet Core registry fields — https://github.com/trustwallet/wallet-core/blob/4.9.3/docs/registry-fields.md
+- Wallet Core registry — https://github.com/trustwallet/wallet-core/blob/4.9.3/registry.json
 
-The primary registry references are pinned to Wallet Core 4.9.1, matching tools/hdwallet-gen/package-lock.json.
+The primary registry references are pinned to Wallet Core 4.9.3, matching tools/hdwallet-gen/package-lock.json.
 
 - Trust Wallet Assets — https://github.com/trustwallet/assets
 - Assets repository overview — https://github.com/trustwallet/assets/blob/master/knowledge/architecture/repo-overview.md
