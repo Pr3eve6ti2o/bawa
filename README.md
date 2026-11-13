@@ -405,7 +405,7 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core@4.9.3 --depth=0
 
 Use `npm run check` for syntax ONLY. It checks `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js` in `tools/hdwallet-gen`; it does not validate runtime behaviour.
 
-At e3b65fb832db287fdc8d54794980dd0b3456cc12, the syntax check passes on all four files (verified 2026-11-08). The repository has no root dependency lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is an acknowledged release blocker.
+At e3b65fb832db287fdc8d54794980dd0b3456cc12, the syntax check passes on all four files (verified 2026-11-08). The repository has no root dependency lockfile; at that commit, the tools lockfile existed at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is an acknowledged release blocker.
 
 ```sh
 npm run check
@@ -420,9 +420,9 @@ test "$?" -eq 0
 
 Read the following as the status of the supplied commit, not any uncommitted lockfiles created by your local installs.
 
-The repository root has no lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is a release blocker.
+The repository root has no lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.9.3 exact). The missing root lockfile is a release blocker.
 
-Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph.
 
 To close this release blocker, resolve the npm version and commit `package-lock.json` generated from a clean install. Choose `package-lock.json`, not `npm-shrinkwrap.json`: they are alternatives, not a pair to commit together.
 
@@ -837,7 +837,7 @@ On a mismatch, stop and do not fund the wallet. Check the vector first, then the
 
 Keep these published reference values alongside the check; they are not additional coverage in the captured run.
 
-Account-0 zpub ([SLIP-0132, line 166](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L166)):
+Account-0 zpub ([SLIP-0132, line 86](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L86)):
 
 `zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs`
 
@@ -854,7 +854,7 @@ The fixture mnemonic is the published Trust Wallet Core HDWallet test example (C
 
 - Passphrase: empty (`""`).
 - Entropy: `ba5821e8c356c05ba5f025d9532fe0f21f65d594`.
-- Core's own test table uses the passphrase `TREZOR`, which gives a different seed and different addresses — Bawa uses the empty passphrase. Do not mix the two.
+- Core's own test table uses the passphrase `TREZOR`, which gives a different seed and, by BIP-39's construction, different addresses — Bawa uses the empty passphrase. Do not mix the two.
 - The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
 Account-0 public nodes, derived with bip-utils 2.12.2 and Core-confirmed on both 4.8.4 and 4.9.2 (D31, 2026-11-08):
@@ -1217,7 +1217,7 @@ Assets: the mnemonic (24 words, BIP-39), the seed (64 bytes), the data key (256-
 
 Filesystem rules: secrets/ 0700; seed.enc.json 0600; seed-backup/ 0700; backup copy 0600; .env 0600. The seed bundle is verified with tools/decrypt_seed.py plus the separate offline data key — never with a vault unlock passphrase. Keep seed words, private signing keys and their extended forms out of public commits, issues, screenshots and support logs; the same applies to keys used to decrypt recovery data, .env files used in production, wallet-backup artefacts, account/service credentials.
 
-Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.2, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested. The Node lockfile is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
+Dependency rules: every dependency is pinned exactly — @trustwallet/wallet-core 4.9.3, cryptography==50.0.2, bip-utils==2.12.2, Node >=22 <23, Python >=3.11. Wallet Core 4.9.2 was demonstrated (D21, 2026-11-08) but the repository has since been re-pinned to 4.9.3 (E02, 2026-11-13). Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). Version pins are not a lockfile; no root `package-lock.json` exists, but `apps/web/package-lock.json` and `tools/hdwallet-gen/package-lock.json` are committed project lockfiles whose existence alone proves neither clean-install provenance nor reproduction of the exact tested dependency graph. The missing root `package-lock.json` is a release blocker (see §18). Review every dependency change; do not add a dependency without a stated reason and a pinned version.
 
 Limitations, stated plainly: no zeroisation guarantee; no protection from a compromised OS, debugger, core dump, swap or memory capture, or a malicious terminal; no claim that the Android vault, Keystore or signing flows are verified on device (only 55 pure-module tests); no claim that any pinned dependency graph or lockfile exists that the repo does not have; never describe a value, timeout or policy as "repository-defined" without a cited file:line — the Web vault's 10-minute auto-lock comes from the validation draft (`app-web/src/vault.js:110`, local unpushed draft — not part of this repository), not the repo; never claim the repo signs, constructs or broadcasts transactions; never claim TON compatibility with any specific wallet; never claim recovery is tested until a rehearsal has been executed on a clean install and recorded (see §18 — the rehearsal is still open).
 

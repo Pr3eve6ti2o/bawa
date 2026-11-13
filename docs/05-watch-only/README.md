@@ -267,7 +267,7 @@ Receiving and change need separate coverage. The BIP-44 path is `m/44'/<COIN_TYP
 
 The BIP-44 gap limit is **20 consecutive unused addresses**. Start at index `0`, derive successive addresses and examine their transaction history. An unused address increments the counter; a used address resets it. Stop on the twentieth consecutive unused address.
 
-“Unused” means no transaction history, not zero current balance. A used address remains used after its balance returns to zero.
+In this guide, “Unused” means no transaction history, not zero current balance. A used address remains used after its balance returns to zero.
 
 **Worked example A**
 

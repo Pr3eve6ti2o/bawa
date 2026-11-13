@@ -408,7 +408,7 @@ At main head `56396a20` (evidence baseline 2026-11-09), the shared derivation co
 
 - **BTC:** `m/84'/0'/0'/0/i`
 - **ETH:** `m/44'/60'/0'/0/i`
-- **TRX:** `m/44'/195'/0'/0/i`
+- **TRX:** `m/44'/195'/0'/0/i` (coin type `195`: SLIP-0044).
 - **TON:** `m/44'/607'/0'` — generation-only, a single deposit address and no xpub.
 
 Here, `i` is the receiving address index. Do not extend these contracts to other accounts or branches. [M02, M01]
@@ -500,6 +500,8 @@ On Bitcoin mainnet, Bawa uses the standard BIP-84 native-SegWit account `m/84'/0
 | ETH | `m/44'/60'/0'/0/i` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
 | TRX | `m/44'/195'/0'/0/i` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `m/44'/607'/0'` — generation-only | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
+
+The TRON docs glossary states that all TRON networks use the `0x41` address prefix; the fixture `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` is a well-formed 34-character `T`-address consistent with the `0x41` + 20-byte hash + checksum Base58 construction.
 
 The TON fixture is V4 R2, wallet ID `698983191`. TON generation is in `generate.js`; TON watch-only derivation is the public-key-only `derive-ton.js` (single address, no index), and TON is absent from both `derive.js` and `daemon.js`. [M29; M04]
 
@@ -1413,7 +1415,7 @@ Every form below is **UNVERIFIED-NEEDS-CHECK**: a research target, not a finding
 |---|---|---|
 | BTC | `bitcoin:<ADDRESS>` — BIP-321 | `&amount=<BTC>` |
 | ETH | `ethereum:pay-<ADDRESS>@1` — ERC-681 | `?value=<WEI>` |
-| TON | `ton://transfer/<UQC7...>` | `?amount=<NANOCOINS>` |
+| TON | `ton://transfer/<UQC7...>` (a de facto Keeper/Tonhub vendor convention, not a standard) | `?amount=<NANOCOINS>` |
 | TRX | Bare `T...` address; no `tron:` URI exists | No amount form established here |
 
 For each target, generate the QR, decode it, and compare the **full address**, plus the amount where supplied, against the intended request. Confirm the wallet’s configured network before any send. This is the local check against **wrong-address, wrong-network and wrong-amount payments**, including theft through a substituted QR destination. Stop if decoding, comparison or wallet interpretation is unresolved, if the destination changes, or if a tool asks for wallet secrets. A successful decode alone does not establish live wallet support.
@@ -1604,7 +1606,7 @@ Two draft limitations prevent the general TXID reconciliation rule from being tr
 
 | Chain | Dropped only when | Not enough |
 |---|---|---|
-| **BTC** | The transaction is absent from the mempool views of both §12 routes (Esplora and mempool.space), more than 336 hours have passed since it was first observed unconfirmed (retain that first-observed time in the record), it appears in no confirmed block, and no conflicting transaction has spent its inputs. 336 hours is the Bitcoin Core default `-mempoolexpiry` (`src/kernel/mempool_options.h`, `DEFAULT_MEMPOOL_EXPIRY_HOURS{336}`; checked 2026-11-12) — node policy, not consensus; operators may configure it — so the window is a default, not a guarantee. | Absence from one provider; absence within the 336-hour window; eviction during congestion without the time check. |
+| **BTC** | **Repo-policy heuristic (conservative observation test, not a source-defined network-wide drop rule):** The transaction is absent from the mempool views of both §12 routes (Esplora and mempool.space), more than 336 hours have passed since it was first observed unconfirmed (retain that first-observed time in the record), it appears in no confirmed block, and no conflicting transaction has spent its inputs. 336 hours is the Bitcoin Core default `-mempoolexpiry` (`src/kernel/mempool_options.h`, `DEFAULT_MEMPOOL_EXPIRY_HOURS{336}`; checked 2026-11-12) — node policy, not consensus; operators may configure it — so the window is a default, not a guarantee. | Absence from one provider; absence within the 336-hour window; eviction during congestion without the time check. |
 | **ETH** | A different transaction from the same account with the same nonce is confirmed (positive supersession evidence), or a queued (nonce-gap) transaction is absent from a default Geth node's pool after the 3-hour `txpool.lifetime` for non-executable transactions. Executable pending transactions have no fixed expiry under Geth defaults, so time alone never drops them. The §12 routes cannot query a txpool: with the guide's tools, only the supersession case is checkable; anything else stays `Unknown`. | Time passing; absence from an explorer's pending view; a higher fee on an unrelated nonce. |
 | **TRX** | The head-block time has passed the transaction's `raw_data.expiration` (default 60 seconds past the head block's timestamp, maximum 24 hours; TRON developer docs, "Transactions", checked 2026-11-12) and the transaction appears in no block. The expiration sits inside the signed payload: a new expiration needs a new signature, so the same signed bytes cannot be revived after expiry. | A "pending" display on manual refresh; the absence of a TXID lookup (the draft has no TRX TXID adapter — that stays `Pending`, not `Dropped`). |
 | **TON** | The sending wallet set an `expire_time`/`validUntil` on the external message and the current time has passed it (Tonconsole transaction-tracking guide: past `expire_time` the message "will never be accepted by the network"; checked 2026-11-12). No protocol-wide drop rule exists for TON: without a message expiry there is no sourced criterion, and the label stays `Unknown`. TON Center exposes neither pending nor dropped messages. | Time passing without a message expiry; a 404 from a trace lookup; a timeout in a polling loop. |
@@ -1764,7 +1766,7 @@ The Android header is misleading. `EthSepoliaAdapter.kt` claims:
 
 That check is not implemented. `approve()` checks only that `decodedSummary`, `sender` and `recipient` are non-blank. `signApproved()` checks only payload equality and `reviewToken == payload.hashCode()`. Neither the coordinator nor the adapter checks chain ID, network, amount or fee.
 
-EIP-155 chain binding means a conforming mainnet node rejects a Sepolia-signed payload. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
+EIP-155 chainId binding supports the inference that a conforming mainnet node rejects a Sepolia-signed payload. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
 
 The required correction is code-level enforcement binding the intended network to the exact payload signed, alongside the missing amount and fee checks. A header, network label or endpoint selection is not that enforcement. The Web mainnet change and Android checks are implementation work; their live operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. See §17 and §21.
 
@@ -2299,7 +2301,7 @@ There was an internal rate conflict in the evidence. The m12 summary assigns **0
 #### Procedure: establish the resource position before signing
 
 1. **Check activation and available resources.** Use `wallet/getaccount` and `wallet/getaccountresource`, or inspect the corresponding account information in TronScan. Do not assume that a new address is activated or that a nominal free-bandwidth limit is available.
-2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation.  
+2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` bytes (equivalent to `B` Bandwidth points) gives `B × 0.001 TRX`, at 1,000 SUN per byte (TRON docs, “Paying for resources”; live probe: `getTransactionFee` = `1000`); uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation.  
    *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 3. **Estimate contract execution.** `estimateenergy` was unavailable on TronGrid mainnet at the check, returning “this node does not support estimate energy”, and a re-test on 2026-11-12 returned the same `CONTRACT_VALIDATE_ERROR`. A `triggerconstantcontract` dry run is the working method: a first-hand dry run on 2026-11-12 simulated a 1 USDT transfer from a funded holder and returned `result: true` with `energy_used: 64285` and `energy_penalty: 49635` (base energy 14,650). A reverted dry run is not a successful-transfer estimate. The penalty is part of the total, not additional: the dynamic energy model raises consumption, not the per-unit price, so uncovered energy is priced at the live `getEnergyFee` (100 SUN per unit at the check). See M-08 for the exact recorded procedure.
 4. **Recheck close to signing.** Activation, available resources, the live burn parameters and the intended budget must still match the proposed operation.
@@ -2313,15 +2315,15 @@ Locally check the recipient or contract against the intended destination to prev
 | Item | Dated estimate or recorded input | Scope | Source at the check above |
 |---|---|---|---|
 | TRX price reference | **$0.317467 per TRX** | Conversion input for the baseline estimates only | m09 F07–F10 |
-| Bandwidth burn | **1,000 SUN per point = 0.001 TRX** | Recorded transaction-fee parameter; applies to uncovered bandwidth | m09 F07–F10; m12 §3 |
+| Bandwidth burn | **1,000 SUN per byte = 0.001 TRX** | Recorded transaction-fee parameter; applies to uncovered bandwidth; one Bandwidth point corresponds to one byte | TRON docs, “Paying for resources”; live probe: `getTransactionFee` = `1000`; m09 F07–F10; m12 §3 |
 | Energy burn | **100 SUN per unit = 0.0001 TRX** | Measured parameter used for the dated energy arithmetic; conflicts with the summary’s common-rate claim | m09 F07–F10; m12 §3 |
-| Free bandwidth limit | **600 points/day** | Network limit, not guaranteed availability; may be reduced during high traffic | m09 F07–F10; m12 §3 |
+| Free bandwidth limit | **600 Bandwidth points** | Network allowance; replenishes gradually over approximately 24 hours; not guaranteed availability; may be reduced during high traffic | TRON docs, “Network parameters”; live probe: `getFreeNetLimit` = `600`; m09 F07–F10; m12 §3 |
 | Account-creation parameters | **0.1 TRX** create-account; **1 TRX** create-new-account | Recorded parameters, not an all-in transfer quote | m09 F07–F10 |
 | Network `feeLimit` ceiling | **15,000,000,000 SUN — 15,000 TRX** | Protocol ceiling for the contract-energy budget, not a default | m09 F10; m12 §§3, 7 |
 | Web draft `feeLimit` | **1,000,000 SUN — 1 TRX**, budgeting **10,000 energy** at the measured parameter | Smart-contract energy only; not the mainnet maximum | m09 F10; m12 §§3, 7 |
 | Address generation | **$0** | Local generation estimate; no on-chain transfer | m09 F07–F10; m12 §3 |
 | Receipt at a new address | **1–1.1 TRX activation**, paid by the sender | Activation component; check the account first | m09 F07–F10; m12 §3 |
-| First ordinary plain TRX send | **265 bandwidth points**; **0 TRX** within quota, otherwise **0.265 TRX ≈ $0.084** | Bandwidth component. Resource observation: receipt `48fbb2…55b17`, block `87852906`; other applicable charges remain separate | m09 F07–F10; m12 §3 |
+| First ordinary plain TRX send | **265 bandwidth points**; **0 TRX** within quota, otherwise **0.265 TRX ≈ $0.084** | Bandwidth component. **265 bandwidth points** is a single-receipt observation, not a protocol constant: receipt `48fbb2…55b17`, block `87852906`. The guide truncates the receipt ID, so the receipt could not be re-fetched. Secondary sources put a plain TRX transfer at roughly 267 bytes; the 2-point difference is immaterial. Other applicable charges remain separate. | m09 F07–F10; m12 §3 |
 | Memo surcharge | **+1 TRX** | Additional charge | m12 §3 |
 | Multisignature surcharge | **+1 TRX per transaction** | Not per signature | m12 §3 |
 
@@ -2337,7 +2339,7 @@ There is no single verified USDT transfer cost to quote from this evidence.
 - **Base-energy claims reconciled.** Secondary sources quoted **65,000** and **14,650 energy**, both described as base energy for a USDT transfer. They measure different quantities, not conflicting ones: the 2026-11-12 dry run returned **14,650 base energy** and **49,635 dynamic-energy penalty**, totalling **64,285 energy** — the penalty is part of the total (TRON docs: "Subtract `energy_penalty` from `energy_used` if you want only the base Energy"). The proposed **13,000–65,000 energy** range spans base to penalised total and must not be presented as an empirical operating range.  
   *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm. Reconciliation: 2026-11-12 dry run, muse-vm; developers.tron.network/docs/set-feelimit.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — new-holder cost.** No defensible total was established. Extra bandwidth and activation must be accounted for; the existing-holder estimate cannot simply be carried across.  
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — new-holder cost.** A defensible total is now established: **130,285 energy ≈ 13.03 TRX (+ ~0.35 TRX bandwidth)**, from Dwellir’s 365 on-chain receipts, TronSave and two fresh dry runs. The total remains dated and pre-rehearsal; a small-amount rehearsal remains prudent before a real transfer. Extra bandwidth and activation must be accounted for; the existing-holder estimate cannot simply be carried across.  
   *Sources: m09 F07–F10; m12 §3.*
 
 The record also contains a **reverted dry run for 1 USDT**, reporting **8,624 energy** and **6,640 penalty**. These are failed-simulation readings, not a transfer receipt. They must never be quoted as a USDT transfer cost.  
@@ -2496,7 +2498,7 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 - **G2** — BTC node-specific relay/dust values — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G3** — ETH failed ERC-20/approval gas ranges — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G4** — BTC change-branch derivation — review outstanding.
-- **G5** — TRX USDT new-holder energy — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **G5** — TRX USDT new-holder energy — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. A defensible, dated, pre-rehearsal total is now established: **130,285 energy ≈ 13.03 TRX (+ ~0.35 TRX bandwidth)**, from Dwellir’s 365 on-chain receipts, TronSave and two fresh dry runs. The small-amount rehearsal gate still stands before a real transfer.
 - **G6** — TRX `getUnfreezeDelayDays` live value — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G7** — TON Jetton transfer fee and new-recipient increment — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G8** — TON complete `estimateFee` accounting and V4R2 versus Jetton totals — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
@@ -2667,7 +2669,7 @@ The three forms do not land the same way on every chain. The table states, per c
 |---|---|---|---|
 | Bitcoin | bech32 (`bc1q...`) or legacy base58 | Zero-value or dust history entries; no token approvals and no fake-token form. Lookalikes differ in middle characters hidden by truncated displays. | Check the full address against the original verified source for the actual payment; never reselect it from history. |
 | Ethereum (and BNB Smart Chain) | `0x` hex with EIP-55 mixed-case checksum | Zero-value and dust entries also occur; fake-token poisoning uses a counterfeit ERC-20 whose Transfer events mimic the real token. | Check the full address against the original verified source for the actual payment; never reselect it from history. |
-| TRON | Base58check, starting with `T` | Fake-token poisoning uses a counterfeit TRC-20; TRC-20 approvals mirror ERC-20 (`approve` / `allowance` / `transferFrom`). | Check the full address against the original verified source for the actual payment; never reselect it from history. |
+| TRON | Base58check, starting with `T`; `0x41` address prefix on all TRON networks (TRON docs glossary) | Fake-token poisoning uses a counterfeit TRC-20; TRC-20 approvals mirror ERC-20 (`approve` / `allowance` / `transferFrom`). | Check the full address against the original verified source for the actual payment; never reselect it from history. |
 | TON | Same account in three forms: bounceable `EQ...`, non-bounceable `UQ...`, raw `0:hex`. The guide requires the UQ form for receiving instructions. | A Jetton transfer can mimic a real one in history. | Non-bounceable transfers to a wrong address can leave funds inaccessible because they do not bounce. Check the full address against the original verified source for the actual payment; never reselect it from history. |
 
 #### Ice phishing, drainers and Permit/Permit2
@@ -2692,7 +2694,7 @@ A revocation check on one chain is not a review of authority granted on another.
 
 Use a verified TRON-specific procedure for approval review and revocation. Include account permissions in that review: TRON’s `AccountPermissionUpdateContract` (**ID 46**) changes account permissions, a different control layer from an EVM token allowance.
 
-The reported figure of about **$129 million** relates to one case involving this mechanism; the case date is unverified here. It is a single-case figure, not a TRON-wide loss total.
+The reported figure of about **$129 million** relates to the November 2024 address-poisoning theft (TRM Labs via Zelcore), not an account-permission-update case, and is a single-case figure rather than a TRON-wide loss total. The victim sent a 100-USDT test first, then the large transfer went to the poisoned address "THc...bu8" instead of the intended "TMS...bu8"; the attacker later returned the funds.
 
 If you find an unexpected permission change, follow the verified TRON-specific response procedure. Do not apply EVM allowance instructions to it, or treat a Revoke.cash result as a review of a TRON account.
 
@@ -3317,7 +3319,8 @@ A link is verified by **destination content**, not by HTTP status alone. A **403
 | LIVE-via-support | 1 | The support site was verified; the homepage was blocked. |
 | LIVE-via-registry | 1 | The registry record was verified; the package page was blocked. |
 | LIVE (POST-only) | 1 | Availability was verified with POST; GET is not the availability probe. |
-| DEAD-404 | 4 | A 404 outcome was recorded. Read the entry’s qualification, particularly for the authenticated Maven registry. |
+| DEAD-404 | 3 | A 404 outcome was recorded. Read the entry’s qualification, particularly for the authenticated Maven registry. |
+| REDIRECT-301 | 1 | The bare Blockstream API root returns 301 Moved Permanently but is still not a usable endpoint. |
 | UNVERIFIED | 3 | Destination content was not verified. |
 | UNVERIFIED (shop rate-limited) | 1 | A shop rate limit prevented verification; this is not a dead-link finding. |
 | EXISTS-VM-BLOCKED | 1 | Existence is supported, but the page’s content was not verified from the VM. |
@@ -3366,10 +3369,10 @@ The [TON JSON-RPC endpoint](https://toncenter.com/api/v2/jsonRPC) is **LIVE (POS
 
 #### Endpoints and explorers
 
-**M31 tally: 18 links — 14 LIVE, 2 DEAD-404 and 2 LIVE-via-API with VM-blocked homepages.**
+**M31 tally: 18 links — 14 LIVE, 1 DEAD-404, 1 REDIRECT-301 and 2 LIVE-via-API with VM-blocked homepages.**
 
 - **PublicNode:** use [https://ethereum.publicnode.com](https://ethereum.publicnode.com). POST `eth_chainId` returned 200. Compare the returned chain ID with the intended mainnet; a successful response alone does not establish that the endpoint is serving the intended chain. Do not carry forward the wrong hostname that returned 404. [M31 F01]
-- **Blockstream:** cite a working sub-path, such as [the tip-height endpoint](https://blockstream.info/api/blocks/tip/height). Address queries use the `/api/address/<address>` path. Do not cite the bare API root: it returned 404 with “endpoint does not exist”. [M31 F03]
+- **Blockstream:** cite a working sub-path, such as [the tip-height endpoint](https://blockstream.info/api/blocks/tip/height). Address queries use the `/api/address/<address>` path. Do not cite the bare API root: it returns 301 Moved Permanently but is still not a usable endpoint. [M31 F03]
 - **Tronscan:** retain **LIVE-via-API** and the homepage access caveat. The homepage was blocked from `muse-vm` by Cloudflare with 403; the service was verified through `apilist.tronscan.org`, which returned 200. This does not verify homepage access from that environment. [M31 F06]
 - **Etherscan:** retain **LIVE-via-API** and the same access distinction. The homepage returned 403 from the VM, while `api.etherscan.io` and `docs.etherscan.io` were live. Cite those checked destinations rather than treating the homepage as verified. [M31 F07]
 
@@ -3637,7 +3640,7 @@ T08 evidence, 2026-11-12 (Muse-drafted; both Astra drafting attempts 600s-killed
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M15's TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. The TRC-20 mechanics are now verified against the primary TRON documentation: the TRC-20 protocol interface (developers.tron.network, updated 2026-09-18) requires `approve(address _spender, uint _value)`, `allowance(address _owner, address _spender)` and `transferFrom(address _from, address _to, uint _value)`; `approve` authorises a spender to transfer up to the stated value, `transferFrom` requires a prior `approve`, and a successful `approve` fires the `Approval` event. The TRC-20 contract-interaction page adds the nonzero-to-nonzero rule: first submit `approve(spender, 0)`, wait until that transaction is solidified and succeeds, then submit the new allowance, else the spender may use the old allowance before the update is confirmed and then the new allowance after it takes effect. `AccountPermissionUpdateContract`, ID 46, is verified against the TRON Account Permission Management documentation (developers.tron.network, updated 2026-09-18): it updates all permission structures at once (all-or-nothing, the full set must be resubmitted); it is normally authorised by the current owner permission, or by an active permission whose `operations` bitmap enables ID 46; the fee is 100 TRX per update plus a 1 TRX multi-signature surcharge; if the owner permission cannot meet its threshold and no usable active permission enables ID 46, the account's permissions cannot be changed again. The reported figure of approximately $129M relates to one case involving this mechanism; the case date is unverified here. The supplied TRON revocation route — TronScan's account-page **Approval** tab → **Cancel Contract Approval** — is STILL unverified: the TronScan homepage loads (live blocks visible in a text fetch on 2026-11-12), but the account page is a JavaScript app, so the Approval tab and its Cancel button cannot be verified by a text fetch; that step needs a live browser session. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20's TRON items are therefore verified except for the TronScan UI route; EVM or Permit2 wording must not be copied across without that verification.
+**Evidence or uncertainty:** M15's TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. The TRC-20 mechanics are now verified against the primary TRON documentation: the TRC-20 protocol interface (developers.tron.network, updated 2026-09-18) requires `approve(address _spender, uint _value)`, `allowance(address _owner, address _spender)` and `transferFrom(address _from, address _to, uint _value)`; `approve` authorises a spender to transfer up to the stated value, `transferFrom` requires a prior `approve`, and a successful `approve` fires the `Approval` event. The TRC-20 contract-interaction page adds the nonzero-to-nonzero rule: first submit `approve(spender, 0)`, wait until that transaction is solidified and succeeds, then submit the new allowance, else the spender may use the old allowance before the update is confirmed and then the new allowance after it takes effect. `AccountPermissionUpdateContract`, ID 46, is verified against the TRON Account Permission Management documentation (developers.tron.network, updated 2026-09-18): it updates all permission structures at once (all-or-nothing, the full set must be resubmitted); it is normally authorised by the current owner permission, or by an active permission whose `operations` bitmap enables ID 46; the fee is 100 TRX per update plus a 1 TRX multi-signature surcharge; if the owner permission cannot meet its threshold and no usable active permission enables ID 46, the account's permissions cannot be changed again. The reported figure of approximately $129M relates to the November 2024 address-poisoning theft (TRM Labs via Zelcore), not an account-permission-update case. The victim sent a 100-USDT test first, then the large transfer went to the poisoned address "THc...bu8" instead of the intended "TMS...bu8"; the attacker later returned the funds. The supplied TRON revocation route — TronScan's account-page **Approval** tab → **Cancel Contract Approval** — is STILL unverified: the TronScan homepage loads (live blocks visible in a text fetch on 2026-11-12), but the account page is a JavaScript app, so the Approval tab and its Cancel button cannot be verified by a text fetch; that step needs a live browser session. Independent secondary sources (Zelcore; direct route `tronscan.org/#/tokenapproval`) describe exactly this route, but no live-browser render was performed, so the live-browser re-check remains explicitly unmet. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20's TRON items are therefore verified except for the TronScan UI route; EVM or Permit2 wording must not be copied across without that verification.
 
 **Status:** OPEN — TRC-20 mechanics and `AccountPermissionUpdateContract` verified 2026-11-12; TronScan Approval-tab route still unverified.
 
@@ -3814,7 +3817,8 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 **Evidence:** M31 records 210 checked URLs:
 
 - 195 `LIVE`, plus 1 `LIVE-VIA-RAW`, 2 `LIVE-via-API`, 1 `LIVE-via-support`, 1 `LIVE-via-registry` and 1 `LIVE POST-only`.
-- 4 `DEAD-404`: the wrong PublicNode hostname, for which the replacement [`ethereum.publicnode.com`](https://ethereum.publicnode.com) was verified; a PyPI template URL; the bare Blockstream API root; and a Maven registry URL that returns an anonymous 404 by design.
+- 3 `DEAD-404`: the wrong PublicNode hostname, for which the replacement [`ethereum.publicnode.com`](https://ethereum.publicnode.com) was verified; a PyPI template URL; and a Maven registry URL that returns an anonymous 404 by design.
+- 1 `REDIRECT-301`: the bare Blockstream API root, which returns 301 Moved Permanently but is still not a usable endpoint.
 - 3 `UNVERIFIED`: WCAG 2.2, which exists according to W3C search but whose page was VM-blocked; the CoinsPaid hot-wallet page; and the CISA backup PDF.
 - 1 `UNVERIFIED` because the shop was rate-limited: Keycard Shell.
 - 1 `EXISTS-VM-BLOCKED`: the Medium SIM-swap article. Its replacements, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article, were both `LIVE`.
@@ -4091,7 +4095,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Affected sections:** §12 and §13.
 
 **Evidence:**
-- M18 F20 marks all four mainnet payload candidates `UNVERIFIED-NEEDS-CHECK`: BTC BIP-321, ETH ERC-681 `@1`, TON `ton://transfer`, and a TRX bare address.
+- M18 F20 marks all four mainnet payload candidates `UNVERIFIED-NEEDS-CHECK`: BTC BIP-321, ETH ERC-681 `@1`, TON `ton://transfer` (a de facto Keeper/Tonhub vendor convention, not a standard), and a TRX bare address.
 - M20 F1 records no QR decode code in either draft; receive-QR and scanning are spec-only.
 - M24 H06 records QR error correction L rather than the required M, and a dead `CAMERA` permission under OI-060.
 - M25 F19 records bare-address QR output at EC-L, with no scanning. The guide requires M, so a decision is needed.
@@ -4279,7 +4283,7 @@ T13 re-check 2026-11-12 (`981d0ba`): cited functions/files and `reviewToken`/`de
 
 **Affected sections:** §16; §12; §14.
 
-**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, 12 is retained by owner decision as an unsourced extra wallet minimum; finalised inclusion remains mandatory); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` is the latest solidified block).
+**Evidence or uncertainty:** M28-OI-03; M24 J21 (retained thresholds qualified: confirmation policy ≠ finality guarantee; cited mainnet history required, none supplied). Verification 2026-11-10 (M-38 lane, first-hand reads of current chain documentation): BTC 6 CONFIRMED (qualified — a customary recommendation, not a protocol requirement; bitcoin.org FAQ and "Some things you need to know": "6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction"; 6 is the "Minimum recommendation for high-value bitcoin transfers"); ETH `finalized` CONFIRMED (ethereum.org, Proof-of-stake: finalisation via supermajority link between two checkpoints, ≥⅔ staked ETH) and "12 alone is insufficient" CONFIRMED — but the "12" as a standalone threshold is UNVERIFIABLE (no primary source states it; the only "12" on the ethereum.org PoS page is the 12-second slot; 12 is a legacy PoW-era figure, 12 is retained by owner decision as an unsourced extra wallet minimum; finalised inclusion remains mandatory); TRX 19 distinct SRs of 27 CONFIRMED (TRON developer docs, "Consensus and DPoS", updated 2026-10-20: blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above; `walletsolidity/getnowblock` returns the latest solidified block, confirmed by the S05 Q16 live probe, which returned solidified block 87970798).
 
 T13 re-check 2026-11-12: M-38 remains RESOLVED (2026-11-10), confirmed at 981d0ba against bitcoin.org, ethereum.org PoS and TRON primary sources. The §16 table matches the row, including ETH “12” qualified as an unsourced extra minimum; ethereum.org’s “12” denotes the 12-second slot.
 

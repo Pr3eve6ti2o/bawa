@@ -42,13 +42,13 @@ The purpose level selects the script type. If you restore with the wrong purpose
 
 To construct a legacy address, take the 33-byte compressed public key and compute `h = RIPEMD160(SHA256(pubkey))`. Form the payload `0x00 || h`, then take the first 4 bytes of `SHA256(SHA256(payload))` as the checksum. Base58-encode `payload || checksum` to get a `1...` address.
 
-Version `0x00` gives the leading `1`; it is separate from coin type `0'`. The [BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki) locking script is:
+Version `0x00` gives the leading `1`; it is separate from coin type `0'`. The `pkh()` descriptor from [BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki) expands to this P2PKH locking script:
 
 ```text
 OP_DUP OP_HASH160 <h> OP_EQUALVERIFY OP_CHECKSIG
 ```
 
-Use the [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) gap limit of 20 consecutive unused receiving addresses. “Unused” means no transaction history, not zero balance: an emptied address is still used.
+Use the [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) gap limit of 20 consecutive unused receiving addresses. In this guide, “Unused” means no transaction history, not zero balance: an emptied address is still used.
 
 Use this legacy descriptor template:
 
@@ -185,7 +185,7 @@ Record the index tip. Re-query after notifications or when polling, and keep con
 | Native SegWit | `bc1q…` | `tb1q…` |
 | Taproot | `bc1p…` | `tb1p…` |
 
-Signet shares the testnet encoding ([BIP-325](https://github.com/bitcoin/bips/blob/master/bip-0325.mediawiki)). Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
+Signet ([BIP-325](https://github.com/bitcoin/bips/blob/master/bip-0325.mediawiki)) is treated in this guide as sharing the testnet encoding. Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
 
 [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) lists these testnet extended-public-key versions:
 
@@ -195,7 +195,7 @@ Signet shares the testnet encoding ([BIP-325](https://github.com/bitcoin/bips/bl
 | [BIP-49](https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki) | `m/49'/1'/0'` | `upub` | `0x044a5262` |
 | [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) | `m/84'/1'/0'` | `vpub` | `0x045f1cf6` |
 
-Re-encoding `zpub` as `vpub` does not derive the coin-type-`1'` account. SLIP-0132 also lists P2SH under `tpub`, so a prefix alone cannot prove purpose. Check the path and script together.
+Re-encoding `zpub` as `vpub` does not derive the coin-type-`1'` account. SLIP-0132 associates Bitcoin `tpub` with purpose 44 and lists both P2PKH and P2SH, so the prefix alone cannot prove the script type. Check the path and script together.
 
 ### Validation checklist
 
@@ -340,7 +340,7 @@ Verify and monitor the intended account as follows:
 TON fixture, derived and independently verified on 2026-11-08 two ways — Trust Wallet Core 4.8.4 (`getAddressForCoin(ton)`) and an independent SLIP-0010 derivation (pure-stdlib Python + PyNaCl) cross-checked with @ton/ton (Core 4.8.4 — the Core 4.9.2 re-run was completed by D31 and recorded in the programme notes):
 
 - Mnemonic: `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` (published Core test vector); passphrase empty.
-- ed25519 public key (`m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`.
+- ed25519 public key (`m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9` (consistency-verified in this check: reproduces every fixture address exactly).
 - `ton_path`: `m/44'/607'/0'`; coin 607; curve ed25519.
 - Contract: Wallet V4 R2; wallet ID / subwallet `698983191` (0x29A9A317); workchain 0; seqno at derivation 0.
 - Raw address: `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`.
@@ -440,7 +440,7 @@ Complete testnet rows (SLIP-0132, labelled testnet):
 
 For the full SLIP-0132 table (mainnet and testnet rows), see docs/01.
 
-**Re-encoding a testnet address.** To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program. Change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` has witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`; re-encoded it is `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`. The standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`. Changing an extended-key prefix re-encodes the same node; it does not move it onto another derivation path. With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
+**Re-encoding a testnet address.** To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program. Change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` has witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`; re-encoded it is `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`. The standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (encoding arithmetic verified exact; fixture-seed derivation not independently re-derived here). Changing an extended-key prefix re-encodes the same node; it does not move it onto another derivation path. With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 
 **TON naming.** Core 4.9.2 `registry.json` records symbol `GRAM`; SLIP-0044 records coin 607 as TON; Bawa uses TON. The registry entry is `ton`, coin ID 607.
 

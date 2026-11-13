@@ -191,7 +191,7 @@ Offline fixtures verify derivation conformance; they do not imply mainnet connec
    | `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` | Empty | `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` | Repo canonical pair; mnemonic from Core’s published HDWallet example. |
    | `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` | Empty | `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` | Repo canonical pair; mnemonic from Core’s published HDWallet example. |
 
-   **Use the empty passphrase.** Core’s own test table uses `TREZOR`, which gives a different seed and different addresses; Bawa uses the empty passphrase.
+   **Use the empty passphrase.** Core’s own test table uses `TREZOR`, which gives a different seed and, by BIP-39's construction, different addresses; Bawa uses the empty passphrase.
 
    The fixture phrase is 15 words because it is a published test vector; real wallets you create with this guide are 24 words. The word count changes the seed. Never mix a 15-word test phrase into a 24-word wallet flow.
 
@@ -251,7 +251,7 @@ A bare run without the virtual environment fails with `ModuleNotFoundError: No m
 
 The repo’s `derive_daemon.js` chain labels (`btc`, `eth`, `trx`) do not establish testnet compatibility—the endpoint does.
 
-Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only. To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08).
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only. To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08) (encoding arithmetic verified exact; fixture-seed derivation not independently re-derived here).
 
 ### Sources
 

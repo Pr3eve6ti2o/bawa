@@ -1705,7 +1705,7 @@ Do not feed BTC testnet `vpub` or `tpub` keys to the repo `derive.js` workflow: 
 
 The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
 
-To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`.
+To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (encoding arithmetic verified exact; fixture-seed derivation not independently re-derived here).
 
 With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 

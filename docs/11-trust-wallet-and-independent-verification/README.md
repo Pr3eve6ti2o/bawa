@@ -140,7 +140,7 @@ Use this 15-word fixture mnemonic from Trust Wallet Core’s own published HDWal
 
 Use an **empty BIP-39 passphrase** and record the entropy as `ba5821e8c356c05ba5f025d9532fe0f21f65d594`.
 
-Do not copy the passphrase `TREZOR` from Core’s own test table. It gives a different seed and different addresses; Bawa uses the empty passphrase.
+Do not copy the passphrase `TREZOR` from Core’s own test table. It gives a different seed and, by BIP-39's construction, different addresses; Bawa uses the empty passphrase.
 
 Keep this word-count rule explicit: the fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
@@ -277,7 +277,7 @@ Demand reproduction of the TON fixture in every applicable check (Android D.7 ch
 - coin: CoinType.ton = 607
 - ed25519 public key (at `m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9`
 - contract: Wallet V4 R2
-- wallet ID / subwallet: `698983191` (0x29A9A317; the @ton/ton V4 default)
+- wallet ID / subwallet: `698983191` (0x29A9A317; the V4 default)
 - workchain: `0`
 - seqno at derivation: `0`
 - address (raw): `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`
@@ -290,7 +290,7 @@ Verified two independent ways (V3, 8 November 2026): Trust Wallet Core 4.8.4 (`g
 
 The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 files). Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08); the in-browser run on 4.9.2 remains open.
 
-Do not require a separate Sepolia address fixture, because ETH addresses are network-agnostic. The BTC testnet fixture is the re-encoded Bawa address `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`, from `m/84'/0'` index 0); the standards `m/84'/1'` witness program `01c252d7b62c638895aa976479d608a14eb9daf3` encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08). With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
+Do not require a separate Sepolia address fixture, because ETH addresses are network-agnostic. The BTC testnet fixture is the re-encoded Bawa address `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`, from `m/84'/0'` index 0); the standards `m/84'/1'` witness program `01c252d7b62c638895aa976479d608a14eb9daf3` encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08) (encoding arithmetic verified exact; fixture-seed derivation not independently re-derived here). With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 
 ## Verification and testing
 
