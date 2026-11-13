@@ -126,7 +126,7 @@ clean-install CI
 Where no independent implementation or published vector exists, document the limitation instead of implying equivalent assurance.
 ## Verification, differential fixtures
 
-Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). At repository commit `754721cd`, `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` still pin **4.8.4**. Running `npm ci` in `tools/hdwallet-gen` installs **4.8.4**, so the repository's tool commands exercise **4.8.4**, not **4.9.2**. Keep bip-utils in the test layer and identify the Core version for each verification run.
+Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). At repository commit `754721cd`, `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` still pin **4.8.4**. At that commit, running `npm ci` in `tools/hdwallet-gen` installs **4.8.4**, so that revision's tool commands exercise **4.8.4**, not **4.9.2**. On the current revision, running `npm ci` in `tools/hdwallet-gen` installs **4.9.3**, so the repository's tool commands exercise **4.9.3**. Keep bip-utils in the test layer and identify the Core version for each verification run.
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 

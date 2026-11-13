@@ -57,7 +57,7 @@ class DerivationPolicyTest {
 
     @Test
     fun engineBindingIsUnavailable() {
-        assertEquals("4.9.1", DerivationPolicy.ENGINE_VERSION)
+        assertEquals("4.9.3", DerivationPolicy.ENGINE_VERSION)
         assertFalse(DerivationPolicy.ENGINE_BINDING_AVAILABLE)
     }
 }

@@ -129,7 +129,7 @@ def _legitimate_stdout():
             {"name": "vec_btc", "ok": True},
         ],
         "seed_encrypted_to": "/tmp/secrets/seed.enc.json",
-        "wallet_core_version": "4.8.4",
+        "wallet_core_version": "4.9.3",
     }
 
 

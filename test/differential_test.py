@@ -17,7 +17,7 @@ Coverage (all offline, all against the published expectations):
     m/0'/1/2', m/0'/1/2'/2 and m/0'/1/2'/2/1000000000 (xpubs only;
     the matching xprv values are intentionally not reproduced here).
 The Node-side mirror is tests/mainnet-derivation-vectors.test.mjs
-(Trust Wallet Core 4.8.4); the two must agree on every shared value.
+(Trust Wallet Core 4.9.3); the two must agree on every shared value.
 """
 from __future__ import annotations
 

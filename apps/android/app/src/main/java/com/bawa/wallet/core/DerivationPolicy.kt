@@ -48,8 +48,9 @@ object DerivationPolicy {
         Chain.TRX to "Nile"
     )
 
+    // Current repo pin: 4.9.3 (E02, 2026-11-13).
     // Repo pin (T20: upgraded to 4.9.1; was 4.8.4).
-    const val ENGINE_VERSION = "4.9.1"
+    const val ENGINE_VERSION = "4.9.3"
 
     // No Trust Wallet Core AAR exists for any version, so on-device derivation is OPEN.
     const val ENGINE_BINDING_AVAILABLE = false
