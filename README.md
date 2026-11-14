@@ -21,7 +21,7 @@ Check the generator from the repo root:
 cd tools/hdwallet-gen && npm ci && npm test
 ```
 
-**Verified expected result:** in a clean clone at commit `3964534`, exit `0`, `217` checks pass, `0` fail. The output includes:
+**Verified expected result:** in a clean clone of this branch, exit `0`, `217` checks pass, `0` fail. The output includes:
 
 ```text
 All register-links checks passed
