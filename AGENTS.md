@@ -1,72 +1,82 @@
 # AGENTS.md
 
-## Purpose and baseline
-Bawa (`Pr3eve6ti2o/bawa`) is the wallet-engine and canonical-guide repository for the AI Wallet Builder programme. The builder routes work; it is not a cryptographic implementation or a demonstrated full transaction wallet.
+## 1. Purpose and baseline
 
-Verified snapshot (2026-11-10): main at `0b2aa295` (H9: H8 audit/review fixes + H9 doc refresh). The engine suite recorded 130 checks, 0 fail at H9. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
+Bawa (`Pr3eve6ti2o/bawa`, feature branch, working-copy tip `85b8d47`) is the AI Wallet Builder’s wallet-engine and canonical-guide repository: one plain request should produce a real, buildable project. It is not a demonstrated full transaction wallet.
 
-At H9 there is NO signing, broadcast or transaction-construction code. Send/sign/broadcast has never been exercised on any network.
+**Honesty state:** At H9 there was no signing, broadcast or transaction-construction code. Send/sign/broadcast have never been exercised on any network; no live testnet spend has occurred. Recovery rehearsal has never been executed, the on-device Android gate has never run, and no debug APK has ever been built. Existing helpers do not establish end-to-end transaction capability. Never describe documentation as implemented or untested features as working. Never mark mainnet/production readiness **PASS**.
 
-## Read order
-1. `AGENTS.md` — these repository-wide instructions.
-2. `WALLET_BUILDER.md` — request classification and routing.
-3. `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md` — read front matter for post-draft updates, then relevant material in sections 1–6.
-4. `README.md` and canonical Docs 01–16, including the relevant specialist guides:
-   - Doc 2: `docs/web-wallet/WEB-GUIDE.md`.
-   - Doc 3: `docs/android-wallet/ANDROID-GUIDE.md`.
-   - Doc 4: `docs/mainnet/MAINNET-GUIDE.md`.
+## 2. Read order
 
-The plan is authoritative for architecture, phases, templates, gates and decisions. Do not invent filenames for numbered guides or treat documentation as execution evidence.
+1. `AGENTS.md`.
+2. `WALLET_BUILDER.md`.
+3. `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
+4. `README.md`, then only the request-relevant documents below; use `docs/README.md` as the documentation map.
 
-## One-prompt workflow
-Follow **parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report**. Interpret the request, identify scope and gates, route through a proposed profile and authoritative sources, select engine/chain responsibilities and a candidate template, then inspect the repository and candidate foundation before scaffolding. Implement only scoped work in the correct layers, run applicable checks, audit every claim against evidence, and report working behavior, mocks, failures and unresolved gaps. A route is not proof that a capability exists.
+Follow: **parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report**.
 
-`scripts/build-wallet.mjs` runs the workflow for one plain-language request: it classifies the request, GENERATES a differentiated project for its profile with `scripts/generate-project.mjs` (output `generated/<profile-id>`, gitignored), verifies that generated project, and writes a JSON report. The workflow generates a project; it does not merely verify starters.
+**Routing precedence:** `WALLET_BUILDER.md` routing examples still say “testnet default”. Read them under the mainnet-first direction in this file until that file is updated.
 
-## Hard constraints
-- **Builder:** route work; never implement cryptography in prompt text or invent engine interfaces.
-- **Engine:** owns generation, derivation, custody, recovery and signing through narrow typed interfaces; never an indexer. Ownership does not establish implementation, especially for signing.
-- **Chain adapters:** own endpoints, fees, broadcast and confirmation. They NEVER receive mnemonics, seeds, private keys, private extended keys, vault keys or secret-bearing objects, including during tests.
-- **UI:** presentation only; never derivation, storage or signing policy.
-- **Orchestration:** coordinates intents, approval and status; does not absorb other layers' responsibilities.
-- **Networks:** default to testnet everywhere. Mainnet is out of scope by default and requires separate approval plus applicable gates. Real-funds gates remain mandatory.
-- **Fixed policy:** preserve the engine versions, derivation restrictions, confirmation rules and UI contract recorded in `WALLET_BUILDER.md` and authoritative sources. Do not silently change paths or broaden chain support.
-- **Test keys:** fresh, real, functional test seed phrases/private keys MAY be generated; placeholders are not required. They are test-only: never production or existing keys, and never funded with real mainnet funds.
-- **Secrets and controls:** never expose secrets, including in prompts, logs, reports or commits; never weaken controls to make tests pass.
-- **Honesty:** do not invent capabilities, files, paths, versions, interfaces, commands or results. Missing facts are OPEN.
+## 3. THE ROUTING TABLE
 
-## Planned assets — not an existence inventory
-Profiles are VALIDATED in Phase 3 (`registry/profiles.json`, 7 profiles, with `implemented`/`missing` fields). Locations below are the installed state; inspect existence before use; do not synthesize names.
+Resolve validated profiles and supported capability/engine/UI choices through `registry/profiles.json`, `registry/capabilities.json`, `registry/engines.json`, `registry/ui.json` and `registry/schemas/`. For profile requests, read `ai/profiles/<profile>.md` and the matching `ai/prompts/create-*.md`. Check expected outcomes against `docs/sample-requests.md`.
 
-| Asset | Planned location / status |
-| --- | --- |
-| Profile definitions | VALIDATED in Phase 3: `registry/profiles.json` (7 profiles); run `node scripts/validate-registry.mjs`. The two starters carry status `STARTER_IMPLEMENTED_AND_VERIFIED`. |
-| Profile routing prompts | INSTALLED in `ai/prompts/`, named `create-*.md`; individual files must be inspected. |
-| Profile files | INSTALLED in `ai/profiles/` (one per profile, derived from `registry/profiles.json`). |
-| Registries | INSTALLED in Phase 3: `registry/` (`profiles.json`, `capabilities.json`, `engines.json`, `ui.json`, `schemas/`); validated. |
-| Templates | token-ui VENDORED in `apps/web/src/ui/`; WDK Starter UI layer VENDORED in `apps/android`. Upstream notes in `templates/web/UPSTREAM.md` and `templates/android/UPSTREAM.md`. |
-| Starters | INSTALLED: `apps/web` (watch-only starter, 25 tests) and `apps/android` (UI starter, 17 tests). |
+**Shared builder:** `node scripts/build-wallet.mjs "<request>"` classifies, generates into `generated/<profile-id>`, verifies and writes a JSON report. Alternatively, use `node scripts/generate-project.mjs <profile-id>` for explicit-profile generation.
 
-If section 2.2 cannot be read, keep unspecified locations OPEN and stop work that requires them. Do not claim planned assets are installed or present.
+Inspect executable code, dependencies and interfaces before use; do not infer arguments from filenames. Run watch-only derivation tools from `tools/hdwallet-gen`, using public roots only.
 
-## Evidence vocabulary
-| Label | Meaning |
-| --- | --- |
-| IMPLEMENTED_AND_VERIFIED | Demonstrated behavior only, within the evidenced revision, environment and scope. |
-| STARTER_IMPLEMENTED_AND_VERIFIED | The starter for this profile is implemented and verified within its documented scope; it is not a complete wallet; missing components are listed in the profile's `implemented`/`missing` fields. |
-| DOCUMENTED_NOT_TESTED | Described in documentation without execution evidence for that behavior. |
-| PROPOSED | Intended design, profile or future work; not an implementation claim. |
-| OPEN | Missing fact, unresolved decision or required evidence/input. |
-| EXTERNALLY_DEPENDENT | Depends on an external service, party or prerequisite; identify it explicitly. |
-| UNVERIFIED | A claim or apparent implementation whose behavior has not been sufficiently checked. |
+For Web/Android UI selection, consult `docs/UI-TEMPLATE-REGISTRY.yaml` and `docs/UI-UX-CATALOGUE.md`. 
+| Request | Profile | Read first (exact doc paths) | Existing scripts/tools | Status/limits |
+| --- | --- | --- | --- | --- |
+| Create an HD wallet | `hd-wallet-cli` | `ai/prompts/create-hd-wallet.md`; `docs/01-fundamentals/README.md`; `docs/SECURITY.md` | Shared builder; `python3 tools/make_wallet.py`; `python3 tools/decrypt_seed.py` | Validated profile. Interactive generator uses Trust Wallet Core 4.8.4 WASM; this is not evidence of transaction functionality. |
+| Create a professional Android HD wallet | `android-wallet` | `ai/prompts/create-android-wallet.md`; `docs/android-wallet/ANDROID-GUIDE.md`; `templates/android/UPSTREAM.md` | Shared builder; `apps/android` | UI starter with 17 tests. Debug APK build and on-device gate **NOT-RUN**; “professional” is a target, not a readiness claim. |
+| Create a Bitcoin watch-only wallet | `watch-only-wallet` | `ai/prompts/create-watch-only-wallet.md`; `docs/01-fundamentals/README.md`; `docs/TESTING.md` | Shared builder; `tools/hdwallet-gen/derive.js`; `tools/hdwallet-gen/derive_daemon.js`; `tools/hdwallet-gen/compare.js` | Validated profile, scoped to BTC for this request. Public roots only; no secret inputs or signing. |
+| Create a Bitcoin wallet | `bitcoin-wallet` | `ai/prompts/create-bitcoin-wallet.md`; `docs/01-fundamentals/README.md`; `docs/SECURITY.md` | Shared builder | Validated profile; BTC scaffolding does not establish spending or broadcast capability. |
+| Create a Web wallet | `web-wallet` | `ai/prompts/create-web-wallet.md`; `docs/web-wallet/WEB-GUIDE.md`; `templates/web/UPSTREAM.md` | Shared builder; `apps/web` | Watch-only starter with 25 tests; not a demonstrated transaction wallet. |
+| Create a multi-chain (BTC/ETH/TRX/TON) wallet | `multichain-wallet` | `ai/prompts/create-multichain-wallet.md`; `docs/01-fundamentals/README.md`; `docs/TESTING.md` | Shared builder | Validated profile; scaffolding does not prove end-to-end operation on all four chains. |
+| Create an EVM wallet | `evm-wallet` | `ai/prompts/create-evm-wallet.md`; `docs/01-fundamentals/README.md`; `docs/SECURITY.md` | Shared builder | Validated profile; EVM scaffolding is not verified transaction functionality. |
+| Create a payment tracker | None — AI-guided implementation | `docs/06-tracking/README.md`; `docs/07-payment-tracking/README.md`; `docs/08-security-recovery/README.md`; `docs/RECOVERY.md` | No implemented tracker | **DOCUMENTED_NOT_TESTED**. Implement from the guides; do not present documentation or a wallet scaffold as a working tracker. |
+| Create a wallet recovery utility | None — AI-guided implementation | `docs/06-tracking/README.md`; `docs/07-payment-tracking/README.md`; `docs/08-security-recovery/README.md`; `docs/RECOVERY.md`; `docs/SECURITY.md` | `python3 tools/decrypt_seed.py` — decryption check only; default `secrets/seed.enc.json` | **DOCUMENTED_NOT_TESTED** for the recovery utility. No recovery tool beyond the decryption check; recovery rehearsal **NOT-RUN**. |
+| Verify derivation / run the differential test | Selected profile | `docs/TESTING.md`; `docs/mainnet/MAINNET-VECTORS.md` | `python3 test/differential_test.py`; `tools/hdwallet-gen/compare.js` | Independent differential coverage is BTC/ETH index 0 only, not other indices or TRX/TON. Report actual execution results. |
+| Mainnet fee check / unsigned transaction / local signing | Helper request; no separate validated profile | `docs/security-release-gates.md`; `docs/mainnet/MAINNET-GUIDE.md`; `docs/mainnet/MAINNET-GUARDS.md`; `docs/mainnet/MAINNET-UNSIGNED-TX.md`; `docs/mainnet/MAINNET-SIGNING.md`; `docs/mainnet/MAINNET-VECTORS.md`; `docs/mainnet/M35-REHEARSAL-PROCEDURE.md` | `tools/mainnet-fees/fees.mjs`; `tools/mainnet-guards/mainnet-guards.mjs`; `tools/mainnet-tx/unsigned-tx.mjs`; `tools/mainnet-signing/local-signing.mjs` | Helpers exist; inspect before use. Signing is local-only and never broadcasts. Verification must not sign or broadcast; real-funds gates and required approvals still apply. |
 
-A guide describing a feature never justifies IMPLEMENTED_AND_VERIFIED. A passing generator test does not verify custody, recovery, signing, broadcast, transaction construction or mainnet readiness.
+## 4. Fixed policy and hard constraints
 
-## Unsupported requests
-State precisely which requested portion is unsupported and why. Mark missing facts OPEN and proposed additions PROPOSED. Ask for the needed decision, source, access or approval; offer only an evidence-backed narrower scope. Do not silently substitute a mock, invent support or bypass a gate.
+Never silently change these settings or boundaries:
 
-## Reporting
-Return an evidence table with: claim/scope, evidence label, revision/network, actual command or artifact and observed result, check status, mocks/limitations, and next gate.
-Use **PASS / FAIL / NOT-RUN** for checks; NOT-RUN is never a pass.
-List changed files, what actually works, what is mocked, and what remains unresolved or externally dependent. Redact secrets.
-Distinguish the supplied H9 baseline (130 checks, 0 fail) from current-run results; never report an unexecuted build or check as successful.
+- **Derivation:** BTC `m/84'/0'/0'/0/i`; ETH `m/44'/60'/0'/0/i`; TRX `m/44'/195'/0'/0/i`; TON `m/44'/607'/0'`.
+- **Seed and vault:** BIP-39, 24 words, empty passphrase; AAD `nova-shop-seed-v1`. Permissions: `secrets/` **0700**, `seed.enc.json` **0600**, `.env` **0600**.
+- **Adapter boundary:** Chain adapters NEVER receive mnemonics, seeds, private keys, xprvs or vault keys, including in tests.
+- **UI boundary:** UI is presentation only — never derivation, storage or signing policy.
+- **Test keys:** fresh, real, functional test seed phrases / private keys MAY be generated for testing only (user-approved 2026-11-10). They are test-only: never production or existing keys, never funded with real mainnet funds. Placeholders are not required.
+- **Secrets:** Never use real user mnemonics or private keys as test fixtures. Redact secrets everywhere, including prompts, logs and reports.
+- **Network direction:** Mainnet is the **PRIMARY** target; testnet is secondary/testing. Do not delete testnet code or restrictions. Mainnet work remains subject to real-funds gates and separate approval wherever required.
+- **Transaction safety:** Never sign or broadcast during verification on any network. Any future transaction functionality requires a documented preflight/dry-run, with broadcast disabled by default.
+
+## 5. Evidence vocabulary
+
+- **IMPLEMENTED_AND_VERIFIED** — Implemented behaviour supported by scoped, performed verification.
+- **STARTER_IMPLEMENTED_AND_VERIFIED** — Verified starter behaviour only; not a complete transaction wallet.
+- **DOCUMENTED_NOT_TESTED** — Documented design or procedure without execution evidence.
+- **PROPOSED** — Suggested work or a plan, not implementation.
+- **OPEN** — Unresolved decision, issue or gate.
+- **EXTERNALLY_DEPENDENT** — Progress requires an external prerequisite.
+- **UNVERIFIED** — Code or a claim without sufficient verification evidence.
+
+## 6. Unsupported requests and reporting rules
+
+If no validated profile or available capability covers the request, state the gap, ask only necessary clarifications and propose AI-guided implementation through the relevant guides. Do not invent profile IDs, tools, interfaces or evidence, or silently substitute a starter for the requested feature.
+
+Every report must include:
+
+- Selected profile and actual scope.
+- Changed files and observed generated output/report locations.
+- What works, what is mocked, what failed or was not run.
+- Unresolved items, external dependencies and the next gate.
+- An evidence table:
+
+| Item / scope | Evidence label | Check | Evidence or reason not run | Mocks / limits | Next gate |
+| --- | --- | --- | --- | --- | --- |
+| … | … | PASS / FAIL / NOT-RUN | … | … | … |
+
+Use **PASS** only for a performed check with supporting evidence, **FAIL** for a performed check that failed, and **NOT-RUN** for anything not performed, including blocked checks. **NOT-RUN is never a pass.** Test counts and file presence are not proof that tests passed. Audit every capability claim against its evidence and scope before reporting.
