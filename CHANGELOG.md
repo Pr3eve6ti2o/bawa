@@ -1,5 +1,7 @@
 # Changelog
 
+This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH). Entries under [Unreleased] describe changes since the last versioned section; a versioned section is a release only once it is tagged. No release tags exist yet, so [1.1.0] below is the recorded version state, not a tagged release.
+
 ## [Unreleased]
 
 - Added the Trust Wallet Core-backed wallet implementation under tools/.
@@ -7,6 +9,7 @@
 - Added Trust Wallet registry and Trust Wallet Assets architecture guidance.
 - Added implementation, testing, reference and recovery documents.
 - Added CI execution for the independent public-vector verification.
+- Reworked README, CONTRIBUTING, SECURITY and the docs map, and added ARCHITECTURE.md, from the repo-craft research findings: human voice, verified commands and gates, and a Diátaxis docs map.
 
 ### Changed
 
