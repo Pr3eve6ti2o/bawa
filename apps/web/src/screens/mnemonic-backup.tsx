@@ -10,16 +10,16 @@ const guidanceItems = [
 
 export function MnemonicBackupScreen() {
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Mnemonic backup</h1>
-        <p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border border-white/10 bg-[#243454] p-6 text-white">
+        <h1 className="text-2xl font-bold text-white">Mnemonic backup</h1>
+        <p className="mt-2 text-sm leading-relaxed text-[#aab5d1]">
           This watch-only starter holds no mnemonic, so there is nothing to back
           up here.
         </p>
-      </header>
+      </div>
 
-      <section aria-labelledby="backup-procedure" className="space-y-3">
+      <section aria-labelledby="backup-procedure" className="space-y-3 rounded-[20px] border border-[#d6deed] bg-white p-5 text-[#1b2742]">
         <h2 id="backup-procedure" className="text-lg font-semibold">
           Back up outside this app
         </h2>
@@ -60,6 +60,6 @@ export function MnemonicBackupScreen() {
       <Link to="/" className="inline-block text-sm underline underline-offset-4">
         Back to wallet
       </Link>
-    </main>
+    </div>
   );
 }

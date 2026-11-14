@@ -1,4 +1,3 @@
-import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
@@ -20,7 +19,7 @@ export function NetworkSelectionScreen() {
         </p>
       </header>
 
-      <Card>
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
           <CardTitle>Testnet defaults</CardTitle>
         </CardHeader>
@@ -29,17 +28,19 @@ export function NetworkSelectionScreen() {
             {networks.map(({ id, testnet }) => (
               <li
                 key={id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-[#d6deed] bg-white p-3"
               >
                 <span>{testnet}</span>
-                <Badge>Testnet</Badge>
+                <span className="flex h-6 items-center rounded-[12px] bg-[#224f45] px-3 text-[10px] font-bold text-[#94e1c3]">
+                  ACTIVE
+                </span>
               </li>
             ))}
           </ul>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
           <CardTitle>Mainnet — unavailable</CardTitle>
         </CardHeader>

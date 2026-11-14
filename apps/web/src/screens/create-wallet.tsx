@@ -13,23 +13,23 @@ export function CreateWalletScreen() {
   return (
     <section
       aria-labelledby="create-wallet-title"
-      className="mx-auto w-full max-w-3xl space-y-6 p-6"
+      className="space-y-6"
     >
-      <header className="space-y-3">
+      <div className="rounded-[30px] border border-white/10 bg-[#243454] p-7 text-white sm:p-8">
         <h1
           id="create-wallet-title"
-          className="text-3xl font-semibold tracking-tight"
+          className="text-3xl font-bold tracking-tight text-white"
         >
           Create a wallet
         </h1>
-        <p className="text-muted-foreground">
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#aab5d1]">
           This starter cannot create a wallet in the browser — there is no vault
           design yet, so no mnemonic is ever generated or shown here. This app
           never stores recovery words, seeds or private keys.
         </p>
-      </header>
+      </div>
 
-      <Card>
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
           <CardTitle>Guidance: create with the repo tools</CardTitle>
           <CardDescription>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
+import { DEMO_ASSETS } from '../state/demo-fixtures';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
@@ -19,14 +20,15 @@ export function AssetDetailScreen() {
 
   if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <div>
         <h1 className="text-2xl font-semibold">Unknown chain</h1>
-      </main>
+      </div>
     );
   }
 
   const xpub = xpubs[chain]?.xpub;
   const state = uiState[chain];
+  const demo = DEMO_ASSETS.find((asset) => asset.id === chain);
 
   async function copyAddress(address: string) {
     setCopyStatus('');
@@ -39,9 +41,17 @@ export function AssetDetailScreen() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl space-y-6 p-6">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{chain.toUpperCase()}</h1>
+        <h1 className="flex items-center gap-3 text-2xl font-semibold">
+          <span
+            className="flex size-10 items-center justify-center rounded-full text-base font-bold text-[#19223a]"
+            style={{ backgroundColor: demo?.chip ?? '#9daeff' }}
+          >
+            {(demo?.name ?? chain).slice(0, 1)}
+          </span>
+          {demo?.name ?? chain.toUpperCase()}
+        </h1>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -59,7 +69,17 @@ export function AssetDetailScreen() {
         </div>
       </header>
 
-      <Card>
+      {demo && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-white/10 bg-[#243454] px-5 py-4 text-white">
+          <div>
+            <p className="text-xs text-[#aab5d1]">Demo balance · {demo.network}</p>
+            <p className="text-2xl font-bold">{demo.value}</p>
+          </div>
+          <p className="text-sm font-semibold text-[#eff2fc]">{demo.amount}</p>
+        </div>
+      )}
+
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardContent className="pt-6">
           <dl className="space-y-4">
             <div>
@@ -124,6 +144,6 @@ export function AssetDetailScreen() {
         )}
         <p role="status" className="text-sm text-muted-foreground">{copyStatus}</p>
       </section>
-    </main>
+    </div>
   );
 }

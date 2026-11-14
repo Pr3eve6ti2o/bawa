@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
+import { DEMO_ASSETS } from "../state/demo-fixtures";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
@@ -26,16 +27,25 @@ export function WalletManagementScreen() {
             const wallet = xpubs[id];
             if (!wallet) return null;
             const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
+            const chip = DEMO_ASSETS.find((asset) => asset.id === id)?.chip ?? '#9daeff';
 
             return (
               <li key={id}>
-                <Card>
+                <Card className="rounded-[20px] border-[#d6deed]">
                   <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 space-y-1">
-                      <CardTitle>{name}</CardTitle>
-                      <p className="break-words text-sm text-muted-foreground">
-                        {wallet.label || "Unlabelled wallet"}
-                      </p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full text-base font-bold text-[#19223a]"
+                        style={{ backgroundColor: chip }}
+                      >
+                        {name.slice(0, 1)}
+                      </span>
+                      <div className="min-w-0 space-y-1">
+                        <CardTitle>{name}</CardTitle>
+                        <p className="break-words text-sm text-muted-foreground">
+                          {wallet.label || "Unlabelled wallet"}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       type="button"

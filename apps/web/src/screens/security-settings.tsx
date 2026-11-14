@@ -12,22 +12,18 @@ export function SecuritySettingsScreen() {
         Security &amp; backup
       </h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>What this starter does not do</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc space-y-2 pl-5 text-sm">
-            <li>No mnemonic generation or storage.</li>
-            <li>No private keys.</li>
-            <li>No signing.</li>
-            <li>No vault.</li>
-            <li>No PIN.</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <div className="rounded-[20px] border border-white/10 bg-[#243454] p-6 text-white">
+        <h2 className="text-lg font-bold text-white">What this starter does not do</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[#aab5d1]">
+          <li>No mnemonic generation or storage.</li>
+          <li>No private keys.</li>
+          <li>No signing.</li>
+          <li>No vault.</li>
+          <li>No PIN.</li>
+        </ul>
+      </div>
 
-      <Card>
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
           <CardTitle>App lock</CardTitle>
         </CardHeader>
@@ -50,7 +46,7 @@ export function SecuritySettingsScreen() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
           <CardTitle>Backup procedure</CardTitle>
         </CardHeader>

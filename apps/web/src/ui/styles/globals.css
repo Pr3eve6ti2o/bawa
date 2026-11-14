@@ -14,55 +14,55 @@
 @source "../**/*.{ts,tsx}";
 
 :root {
-  /* Surfaces */
-  --background: rgb(255 255 255);
-  --foreground: rgb(17 29 74);
-  --card: rgb(248 249 250);
-  --card-foreground: rgb(17 29 74);
-  --popover: rgb(248 249 250);
-  --popover-foreground: rgb(17 29 74);
+  /* Surfaces — Bawa Balanced (Direction 04) */
+  --background: rgb(244 246 251);
+  --foreground: rgb(27 39 66);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(27 39 66);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(27 39 66);
 
   /* Actions */
-  --primary: rgb(0 127 255);
-  --primary-hover: rgb(0 108 217);
-  --primary-active: rgb(0 82 165);
-  --primary-disabled: rgb(162 205 247);
-  --primary-soft: rgb(207 228 250);
+  --primary: rgb(98 88 217);
+  --primary-hover: rgb(82 72 192);
+  --primary-active: rgb(79 124 255);
+  --primary-disabled: rgb(196 192 245);
+  --primary-soft: rgb(230 228 255);
   --primary-foreground: rgb(255 255 255);
-  --secondary: rgb(240 241 243);
-  --secondary-foreground: rgb(17 29 74);
-  --accent: rgb(231 241 252);
-  --accent-foreground: rgb(17 29 74);
-  --muted: rgb(248 249 250);
-  --muted-foreground: rgb(153 161 175);
+  --secondary: rgb(238 240 252);
+  --secondary-foreground: rgb(27 39 66);
+  --accent: rgb(238 240 252);
+  --accent-foreground: rgb(27 39 66);
+  --muted: rgb(238 240 252);
+  --muted-foreground: rgb(100 113 140);
   --destructive: rgb(243 99 111);
   --destructive-hover: rgb(242 36 53);
   --destructive-foreground: rgb(255 255 255);
 
   /* Borders & focus */
-  --border: rgb(236 237 241);
-  --border-strong: rgb(207 210 219);
-  --border-subtle: rgb(236 237 241);
-  --input: rgb(240 241 243);
-  --ring: rgb(0 127 255);
-  --input-background: rgb(240 241 243);
-  --switch-background: rgb(207 210 219);
+  --border: rgb(214 222 237);
+  --border-strong: rgb(185 195 219);
+  --border-subtle: rgb(214 222 237);
+  --input: rgb(238 240 252);
+  --ring: rgb(139 124 255);
+  --input-background: rgb(238 240 252);
+  --switch-background: rgb(185 195 219);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
   /* Brand aliases */
-  --brand: rgb(0 127 255);
-  --brand-secondary: rgb(12 197 255);
-  --brand-hover: rgb(0 108 217);
-  --brand-deep: rgb(17 29 74);
+  --brand: rgb(98 88 217);
+  --brand-secondary: rgb(139 124 255);
+  --brand-hover: rgb(82 72 192);
+  --brand-deep: rgb(20 29 52);
 
   /* Surface aliases */
-  --surface-page: rgb(255 255 255);
-  --surface-blue: rgb(231 241 252);
-  --surface-blue-light: rgb(207 228 250);
-  --surface-blue-dim: rgb(162 205 247);
+  --surface-page: rgb(244 246 251);
+  --surface-blue: rgb(238 240 252);
+  --surface-blue-light: rgb(230 228 255);
+  --surface-blue-dim: rgb(196 192 245);
   --surface-blue-info: rgb(208 240 250);
-  --surface-cool: rgb(248 249 250);
+  --surface-cool: rgb(238 240 252);
   --surface-light: rgba(240, 241, 243, 0.96);
   --surface-ai-tinted: rgb(245 243 254);
   --surface-glass-page: rgba(255, 255, 255, 0.96);
@@ -97,36 +97,36 @@
   --tx-dropped: rgb(153 161 175);
 
   /* Text extras */
-  --text-secondary-gray: rgb(107 114 128);
-  --text-tertiary: rgb(153 161 175);
-  --text-disabled: rgb(207 210 219);
+  --text-secondary-gray: rgb(100 113 140);
+  --text-tertiary: rgb(159 169 199);
+  --text-disabled: rgb(185 195 219);
   --text-inverse: rgb(255 255 255);
-  --text-ai: rgb(109 40 217);
+  --text-ai: rgb(98 88 217);
 
   /* AI */
-  --ai-primary: rgb(167 139 250);
-  --ai-subtle-bg: rgb(245 243 254);
-  --ai-subtle-border: rgb(237 233 254);
-  --ai-emphasis: rgb(143 92 241);
-  --ai-text: rgb(109 40 217);
-  --ai-icon: rgb(167 139 250);
+  --ai-primary: rgb(139 124 255);
+  --ai-subtle-bg: rgb(238 240 252);
+  --ai-subtle-border: rgb(230 228 255);
+  --ai-emphasis: rgb(98 88 217);
+  --ai-text: rgb(82 72 192);
+  --ai-icon: rgb(139 124 255);
 
   /* Track colors */
-  --progress-track: rgb(236 237 241);
+  --progress-track: rgb(214 222 237);
 
   /* Charts (brand-derived) */
-  --chart-1: rgb(0 127 255);
-  --chart-2: rgb(12 197 255);
-  --chart-3: rgb(0 108 217);
-  --chart-4: rgb(248 249 250);
-  --chart-5: rgb(17 29 74);
+  --chart-1: rgb(98 88 217);
+  --chart-2: rgb(139 124 255);
+  --chart-3: rgb(79 124 255);
+  --chart-4: rgb(238 240 252);
+  --chart-5: rgb(20 29 52);
 
   /* Radius */
   --radius: 12px;
 
   /* Shadows */
-  --shadow-card-color: rgba(17, 29, 74, 0.08);
-  --shadow-cta-color: rgba(0, 127, 255, 0.2);
+  --shadow-card-color: rgba(11, 16, 32, 0.08);
+  --shadow-cta-color: rgba(98, 88, 217, 0.25);
   --shadow-dialog-color: rgba(17, 29, 74, 0.16);
   --shadow-card: 0 8px 24px color-mix(in srgb, var(--shadow-card-color) 55%, transparent);
   --shadow-card-md: 0 12px 32px color-mix(in srgb, var(--shadow-card-color) 70%, transparent);
@@ -156,48 +156,60 @@
   --duration-hero: 500ms;
 
   /* Sidebar */
-  --sidebar: rgb(255 255 255);
-  --sidebar-foreground: rgb(17 29 74);
-  --sidebar-primary: rgb(0 127 255);
+  --sidebar: rgb(20 29 52);
+  --sidebar-foreground: rgb(243 245 255);
+  --sidebar-primary: rgb(98 88 217);
   --sidebar-primary-foreground: rgb(255 255 255);
-  --sidebar-accent: rgb(240 241 243);
-  --sidebar-accent-foreground: rgb(17 29 74);
-  --sidebar-border: rgb(236 237 241);
-  --sidebar-ring: rgb(0 127 255);
+  --sidebar-accent: rgb(38 52 81);
+  --sidebar-accent-foreground: rgb(243 245 255);
+  --sidebar-border: rgb(42 54 81);
+  --sidebar-ring: rgb(139 124 255);
+}
+
+/* Bawa panel: dark-first wallet shell. Muted text and primary are lifted
+   for navy surfaces; white cards inside the panel keep the darker muted. */
+.bawa-panel {
+  --muted-foreground: rgb(170 181 209);
+  --primary: rgb(139 124 255);
+  --primary-hover: rgb(98 88 217);
+}
+.bawa-panel .bg-card {
+  --muted-foreground: rgb(100 113 140);
+  --primary: rgb(98 88 217);
 }
 
 .dark {
   /* Surfaces */
-  --background: rgb(12 22 55);
-  --foreground: rgb(255 255 255);
-  --card: rgb(15 26 67);
+  --background: rgb(11 16 32);
+  --foreground: rgb(243 245 255);
+  --card: rgb(24 38 74);
   --card-foreground: rgb(255 255 255);
-  --popover: rgb(15 26 67);
+  --popover: rgb(24 38 74);
   --popover-foreground: rgb(255 255 255);
 
   /* Actions */
-  --primary: rgb(44 146 250);
-  --primary-hover: rgb(0 127 255);
-  --primary-active: rgb(0 108 217);
-  --primary-disabled: rgb(0 76 153);
-  --primary-soft: rgb(0 76 153);
+  --primary: rgb(139 124 255);
+  --primary-hover: rgb(79 124 255);
+  --primary-active: rgb(98 88 217);
+  --primary-disabled: rgb(42 54 81);
+  --primary-soft: rgb(38 52 81);
   --primary-foreground: rgb(255 255 255);
-  --secondary: rgb(15 26 67);
+  --secondary: rgb(24 38 74);
   --secondary-foreground: rgb(255 255 255);
-  --accent: rgb(0 76 153);
+  --accent: rgb(38 52 81);
   --accent-foreground: rgb(255 255 255);
-  --muted: rgb(12 22 55);
-  --muted-foreground: rgb(207 210 219);
+  --muted: rgb(11 16 32);
+  --muted-foreground: rgb(170 181 209);
   --destructive: rgb(239 98 110);
   --destructive-hover: rgb(243 99 111);
   --destructive-foreground: rgb(255 255 255);
 
   /* Borders & focus */
-  --border: rgb(77 86 119);
-  --border-strong: rgb(153 161 175);
-  --border-subtle: rgb(17 29 74);
+  --border: rgb(42 54 81);
+  --border-strong: rgb(159 169 199);
+  --border-subtle: rgb(20 29 52);
   --input: rgb(8 14 37);
-  --ring: rgb(44 146 250);
+  --ring: rgb(139 124 255);
   --input-background: rgb(8 14 37);
   --switch-background: rgb(77 86 119);
   --font-weight-medium: 500;

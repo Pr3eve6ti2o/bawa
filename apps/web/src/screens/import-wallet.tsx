@@ -55,6 +55,7 @@ export function ImportWalletScreen() {
       setError(`${validation.message || (chain === 'ton' ? 'Invalid TON address.' : 'Invalid extended public key.')} The input was cleared; never paste a mnemonic, seed or private key here.`);
       return;
     }
+
     setError(null);
     setIsAdding(true);
     try {
@@ -75,10 +76,15 @@ export function ImportWalletScreen() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Import a watch-only wallet</h1>
-        <p id="watch-only-notice" className="text-sm text-muted-foreground">
+    <div className="space-y-6">
+      <div className="rounded-[20px] border border-white/10 bg-[#243454] p-5 text-white sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-white">Import a watch-only wallet</h1>
+          <span className="flex h-6 items-center rounded-full bg-[#243454] px-3 text-[10px] font-bold text-[#94e1c3]">
+            PUBLIC KEYS ONLY
+          </span>
+        </div>
+        <p id="watch-only-notice" className="mt-2 text-sm leading-relaxed text-[#aab5d1]">
           Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
           are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
           Never paste a mnemonic, seed or private key here.
@@ -88,7 +94,7 @@ export function ImportWalletScreen() {
           when the wallet is locked; they are readable by this site&apos;s
           scripts and by extensions with access to this site.
         </p>
-      </header>
+      </div>
 
       <form
         className="space-y-4"
@@ -100,15 +106,19 @@ export function ImportWalletScreen() {
           <legend className="text-sm font-medium">Chain</legend>
           <div className="flex gap-2">
             {chains.map((option) => (
-              <Button
+              <button
                 key={option}
                 type="button"
-                variant={chain === option ? 'default' : 'outline'}
                 aria-pressed={chain === option}
                 onClick={() => setChain(option)}
+                className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff] ${
+                  chain === option
+                    ? 'bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] text-white'
+                    : 'border border-white/10 bg-[#263451] text-[#aab5d1] hover:text-white'
+                }`}
               >
                 {option.toUpperCase()}
-              </Button>
+              </button>
             ))}
           </div>
         </fieldset>
@@ -117,6 +127,7 @@ export function ImportWalletScreen() {
           <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
           <Input
             id="wallet-xpub" name="xpub" type="text"
+            className="font-mono"
             value={xpub}
             onChange={(event) => {
               setXpub(event.target.value);
@@ -164,7 +175,7 @@ export function ImportWalletScreen() {
         ) : (
           <ul className="space-y-2">
             {imported.map((wallet) => (
-              <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-lg border p-4">
+              <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-[15px] border border-[#d6deed] bg-white p-4 text-[#1b2742]">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
                   <span>{wallet.label || 'Unlabelled wallet'}</span>
@@ -181,6 +192,6 @@ export function ImportWalletScreen() {
       <Link to="/" className="inline-block text-sm underline underline-offset-4">
         Back to wallet
       </Link>
-    </main>
+    </div>
   );
 }
