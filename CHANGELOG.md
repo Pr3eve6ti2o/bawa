@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Reworked the repository front door and documentation from the repo-craft research (structure, README, voice, catchy, docs): new front-door README with a verified quickstart, `ARCHITECTURE.md`, ADRs in `docs/adr/`, Diátaxis-organised `docs/index.md`, and the previous 1,308-line README preserved verbatim at `docs/README-FULL.md`. Moved `IMPLEMENTATION.md` and `MULTIBRANCH-REPORT.md` from the root into `docs/`; added a docs link check (`tools/check-links.py`) run by a new `docs-checks` CI job.
 - Changed CI to separate `node-tests`/`python-tests` jobs and `npm ci` instead of `npm install`; pinned the runner to `ubuntu-24.04`, all actions to full commit SHAs, and Node 22.23.4/Python 3.13.18 with CI version assertions.
 - Added CI coverage for previously unrun decrypt round-trip and make-wallet tests, and a regression check that live wallet generation refuses without a controlling terminal. The differential test's BTC/ETH/TRX index 0/1 coverage comes from the merged T30 extension.
 - Added Dependabot for GitHub Actions, npm and pip; ignore `@trustwallet/wallet-core` major bumps pending a qualification run.

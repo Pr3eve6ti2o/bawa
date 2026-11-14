@@ -18,7 +18,7 @@ All reported trees are clean. “Runnable” below describes the implementation 
 | `hd-wallet-professional` | `680c721` | 1 | 2,834 | Single-document HD-wallet guide. |
 | `feature/ai-wallet-builder` | `42e765a` worktree lane; `85b8d47` live working copy | 321 worktree; 322 live | 1,308 | Full AI Wallet Builder programme. |
 
-The feature live working copy is at `85b8d47`, a merge of `9750a91` and `27ff384`. Its additional file is `MULTIBRANCH-REPORT.md`, the prior audit record; preserve it.
+The feature live working copy is at `85b8d47`, a merge of `9750a91` and `27ff384`. Its additional file is `docs/MULTIBRANCH-REPORT.md`, the prior audit record; preserve it.
 
 ## Branch-by-branch findings
 
@@ -87,7 +87,7 @@ These are content requirements only, **not a proposal to move content or change 
 - **README lane:** The restructured README is staged **for main as the delivery target**, not for publication. Preserve the current README content in a docs file. It must not be pushed to main without the owner’s word.
 - **Other deliverables:** The launcher, `AGENTS.md` work, capability map and gap assessment belong in the **feature live working copy at `85b8d47`**, distinct from the audited worktree lane at `42e765a`.
 - **Slice branches:** `docs-usecase-split`, `feat/trust-wallet-reference-implementation` and `hd-wallet-professional` are documentation sources only for this DX entry point; none supplies its builder-routing surface.
-- **Prior record:** Preserve `MULTIBRANCH-REPORT.md`. All five branches remain as ordered.
+- **Prior record:** Preserve `docs/MULTIBRANCH-REPORT.md`. All five branches remain as ordered.
 
 ## Unverified / open
 

@@ -40,13 +40,13 @@ Use this guide to build a non-custodial Web wallet for Bitcoin testnet4, Ethereu
 
 ### Pick a starting point
 
-- **New builders:** start at [Section B](#b-prerequisites-and-project-setup).
+- **New builders:** start at [Section B](#b-prerequisites-and-toolchain).
 - **Builders who already have the repo:** start at [Section C](#c-engine-integration).
 - **Builders verifying a build:** start at [Section H](#h-testing).
 
 ### Quick-start routes
 
-**Node.js route.** Pair the repo’s `tools/hdwallet-gen/` JavaScript engine (Trust Wallet Core) with this guide’s [Section B build](#b-prerequisites-and-project-setup). You build the app from that engine reference and the Web-specific instructions. The Web validation draft (`app-web/`) is **local-only, in no repository**: treat it as validation evidence, not a shipped sample. Your build route is the repository engine plus Section B, not a checkout of the draft.
+**Node.js route.** Pair the repo’s `tools/hdwallet-gen/` JavaScript engine (Trust Wallet Core) with this guide’s [Section B build](#b-prerequisites-and-toolchain). You build the app from that engine reference and the Web-specific instructions. The Web validation draft (`app-web/`) is **local-only, in no repository**: treat it as validation evidence, not a shipped sample. Your build route is the repository engine plus Section B, not a checkout of the draft.
 
 **Python route.** Use `tools/make_wallet.py`, `tools/decrypt_seed.py` and `test/differential_test.py` in the same Bawa repo, following repo guide sections **04** and **11**. Refer there for the shared workflow, and use this guide for Web-specific app work. The recorded differential-test PASS is evidence for that test only; it is not a live browser creation or restore result.
 

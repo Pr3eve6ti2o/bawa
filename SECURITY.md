@@ -4,6 +4,10 @@ Bawa handles wallet recovery material and is security-sensitive software.
 
 See docs/SECURITY.md for the threat model, trust boundaries, secret-handling rules and known limitations. No session or inactivity timeout is implemented in the repository code; see docs/SECURITY.md.
 
+## Supported versions
+
+No versioned releases exist yet (there are no tags in the repository). Security fixes are applied to the maintained branches (`main` and `feature/ai-wallet-builder`). Report against the tip of the branch you use, and say which branch and commit you tested.
+
 Never publish:
 
 - mnemonics;

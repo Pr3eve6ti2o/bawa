@@ -68,7 +68,7 @@ The exported TON address uses contract Wallet V4 R2 with wallet ID / subwallet `
 4. `test/smoke.test.js` includes `derive.js` rejection tests for a bad chain, a negative index and an empty xpub; no repository test feeds a private extended key to any tool.
 5. Integration and reconciliation testing is an external application responsibility; no such test file is present in this repository.
 
-See [Testing](docs/TESTING.md).
+See [Testing](TESTING.md).
 
 ## Dependency rule
 
