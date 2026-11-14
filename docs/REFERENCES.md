@@ -14,14 +14,14 @@ These are the primary specifications and upstream projects Bawa relies on. Re-ch
 - SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
 - SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 - SLIP-0132 — https://github.com/satoshilabs/slips/blob/master/slip-0132.md
-- TON TEP-3 — https://github.com/ton-blockchain/TEPs/blob/master/text/0003-guidelines-and-standards.md
+- TON TEP-3 — https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md
 - Cardano CIP-1852 — https://cips.cardano.org/cip/CIP-1852
 
 ## Trust Wallet ecosystem
 
 - Trust Wallet organization — https://github.com/trustwallet
 - Wallet Core — https://github.com/trustwallet/wallet-core
-- Wallet Core Usage Guide — https://developer.trustwallet.com/developer/wallet-core/integration-guide/wallet-core-usage
+- Wallet Core developer documentation — https://developer.trustwallet.com/wallet-core
 - Wallet Core HDWallet API — https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/
 - Wallet Core registry fields — https://github.com/trustwallet/wallet-core/blob/master/docs/registry-fields.md
 - Wallet Core registry — https://github.com/trustwallet/wallet-core/blob/master/registry.json

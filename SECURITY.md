@@ -1,17 +1,32 @@
-# Security Policy
+# Security
 
-Bawa handles wallet recovery material and is security-sensitive software.
+Bawa handles wallet recovery material: mnemonics, private keys, private extended keys, recovery data keys, and encrypted recovery artifacts.
 
-See docs/SECURITY.md for the threat model, trust boundaries, secret-handling rules and known limitations.
+Read [docs/SECURITY.md](docs/SECURITY.md) for the threat model, trust boundaries, secret-handling rules, and known limitations.
 
-Never publish:
+## Supported versions
 
-- mnemonics;
-- private keys;
-- xprv/zprv or other private extended keys;
-- recovery data keys;
-- production .env files;
-- wallet backup artifacts;
-- credentials or API secrets.
+Only version 1.2.0 receives security fixes.
 
-For vulnerabilities, use a private disclosure path with the repository maintainers rather than posting exploit details publicly.
+| Version | Status | Security fixes |
+| --- | --- | --- |
+| 1.2.0 | Current (`package.json`) | Yes |
+| 1.1.0 | Superseded | No |
+
+## Reporting a vulnerability
+
+Use a private disclosure path with the repository maintainers to report a vulnerability.
+
+Never post exploit details, mnemonics, private keys, or recovery material in a public issue, chat, or CI log.
+
+## Never publish
+
+Never publish any of the following:
+
+- Mnemonics
+- Private keys
+- `xprv`/`zprv` or other private extended keys
+- Recovery data keys
+- Production `.env` files
+- Wallet backup artifacts
+- Credentials or API secrets
