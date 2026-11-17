@@ -3393,17 +3393,17 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite a live re-check of TronScan’s account-page **Approval → Cancel Contract Approval** route and verified TRC-20 approval, allowance and delegated-transfer mechanics.
+**Clearance condition:** Pending: cite a live re-check of TronScan’s account-page **Approval → Cancel Contract Approval** route and evidence verifying TRC-20 approval, allowance and delegated-transfer mechanics. Per P22, the live TronScan re-check remains outstanding because Cloudflare blocks access to tronscan.org from datacenter egress.
 
 **Gate/source links:** Register addendum, 2026-11-09 — M15 TRX row; M13 F20; [TronScan — Approval-tab route awaiting live re-check](https://tronscan.org/).
 
 ### M-12 — Address-poisoning taxonomy; the test-payment habit is defeated
 
-**Question/risk:** Address poisoning has three forms: zero-value, dust and fake-token. Only zero-value poisoning is covered in the repo. A small test transfer validates only that payment: the victim can later take a different, poisoned address from history for the main payment, defeating the test-payment habit.
+**Question/risk:** Address poisoning has three forms—zero-value, dust and fake-token—all named in this guide’s §16 taxonomy. A small test transfer validates only that payment: the victim can later copy a different, poisoned address from transaction history for the main payment, so the full-address check must be repeated for the actual transfer.
 
 **Affected sections:** §15 and §12.
 
-**Evidence or uncertainty:** M15 F1 records the December 2025 $50M poisoning case and Laplas, November 2022, using clipboard substitution with a convincing lookalike. Dust and fake-token poisoning are unnamed anywhere in the repo. M13 F07 establishes that a small test transfer limits only that test’s loss: the full-address check must be repeated for the actual transfer.
+**Evidence or uncertainty:** This guide’s §16 taxonomy names zero-value, dust and fake-token poisoning (M:116 and M:2369). M15 F1 records the December 2025 $50M case, in which the victim copied a poisoned address from transaction history, and the November 2022 Laplas case, which used clipboard substitution with a convincing lookalike. M13 F07 establishes that a small test transfer limits only that test’s loss: the full-address check must be repeated for the actual transfer.
 
 **Status:** OPEN.
 
