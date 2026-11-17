@@ -3930,7 +3930,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 ### M-36 — "Larger amounts" threshold for the hardware/PSBT direction is undefined
 
-**Question/risk:** Hardware/PSBT signing is the recommended direction for larger Bitcoin amounts (M17 F3), but no threshold for "larger amounts" is defined anywhere; §13 presents it as a direction only, never as a procedure.
+**Question/risk:** §13 presents limitations and prohibitions, not a hardware/PSBT recommendation for larger Bitcoin amounts. The guide defines no threshold for “larger amounts”; interpreting §13 as a larger-amounts signing direction would misstate its scope.
 
 **Affected sections:** §13; §15; §17.
 
@@ -3942,7 +3942,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Maintainer decision stating a number or a rule (M17 O6).
+**Clearance condition:** Until a maintainer decision states a number or a rule for “larger amounts” (M17 O6), the guide defines no larger-amounts threshold and §13 carries no larger-amounts direction.
 
 **Gate/source links:** M17 F3, O6.
 
@@ -3956,7 +3956,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** Approval expiry prevents further signing under that approval; it does not revoke signed bytes, cancel a submitted transaction, or prove funds remain unspent.
+**Operational restriction:** Proposed policy, not established behaviour: each approval would be single-use, and further signing under it would be blocked after use or expiry. Approval expiry would not revoke signed bytes, cancel a submitted transaction, or prove funds remain unspent. §13.4 supports frozen exact-payload binding only; it does not establish single-use or approval-expiry enforcement.
 
 **Blocks writing completion:** No.
 
