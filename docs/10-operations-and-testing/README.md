@@ -234,21 +234,16 @@ Then match the applicable chain-specific settings:
 
 **Cause:** Look for an address-allocation problem, a chain or indexer-state problem, an RPC error, or a network or token-contract mismatch.
 
-**Fix:** Check the following in order:
+**Fix:** Configuration names and recovery commands are implementation-dependent. Use the tracker implementation’s supported configuration and recovery operations for these checks and repairs:
 
-1. Address index.
-2. Index allocation database.
-3. Gap window.
-4. Branch.
-5. Indexer lag.
-6. RPC errors.
-7. Reorgs.
-8. Token contract.
-9. Network.
+1. **Network, RPC and indexer state.** Confirm that the tracker, indexer and RPC use the intended network. Resolve RPC errors and compare the indexer’s height and block hashes with the RPC’s canonical chain. If a reorg invalidated indexed history, use the supported rollback or resynchronization procedure.
+2. **Address derivation and allocation.** Compare the recorded address, index and branch in the address allocation table with the tracker configuration and index allocation database. Re-derive the address using the configured wallet/key source and full derivation path, including branch and index, and compare it with the payment recipient. Correct configuration mismatches, recover missing allocation state using supported operations, and ensure the gap window includes the allocated index on the correct branch.
+3. **Transaction inclusion and success.** Locate the payment through the RPC and verify inclusion in a canonical block. Check that it contains the expected output or transfer to the recorded address. Where execution status is available, verify successful execution; for token payments, verify the intended token contract and matching transfer event or record. A transaction hash or successful contract call alone does not prove that the intended payment occurred.
+4. **Confirmation policy.** Check the configured confirmation count or finality requirement against the payment’s canonical inclusion block and current chain state. Wait if the payment is not yet eligible, or correct an unintended policy mismatch. Do not treat pending, failed or orphaned transactions as confirmed payments.
+5. **Scan start height and filters.** Inspect the scan start height or saved checkpoint and the address, branch, transaction/event and token-contract filters. For a known payment transaction, start the recovery scan at or before its canonical inclusion height. Otherwise, use a known-safe height preceding the first possible payment, or genesis if no safe bound is known. Include any implementation-required reorg/look-back overlap and correct filters that exclude the payment.
+6. **Rescan and reconcile.** After correcting the identified problems, run the supported rescan or reindex operation over the affected range with the corrected allocation state and filters. Let the indexer and tracker catch up to the height required by their confirmation/finality policy, then reconcile indexed history against the RPC before relying on the tracker.
 
-Use the address allocation table to check the recorded address, index and branch against the tracker configuration and index allocation database. Correct identified configuration mismatches and reconcile indexed history against the RPC before relying on the tracker.
-
-**Check:** Compare the tracker’s result with the reconciled history for the recorded address, index, branch, network and, where applicable, token contract.
+**Check:** Compare the tracker’s result with the reconciled history for the recorded address, index, branch, network and, where applicable, token contract. Confirm that the successfully included canonical payment is reported once it meets the configured confirmation/finality policy.
 
 > **Expected result:** Confirm that the tracker agrees with the checked chain history for the incoming payment.
 
