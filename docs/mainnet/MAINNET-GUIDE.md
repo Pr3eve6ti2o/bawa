@@ -2660,6 +2660,8 @@ Recheck these policies against current chain documentation and retain the source
 
 A review gate ties a decision to an observable check, required evidence and a stop condition. This section is the locally authoritative mainnet gate catalogue; §21 records its open items. Describing a check, adding a register entry or finishing a procedure does not perform the check.
 
+**§17 record baseline:** As of the 2026-11-09 baseline, no execution or review record exists for any §17 gate. Each `Status: unperformed` rests on the absence of such a record, not on a documented execution or review result.
+
 Keep three states separate:
 
 - **Writing completion:** the prose is done and checked against the done-gate below. **“Complete” means prose done and checked. It never authorises real-fund use.**
@@ -2760,7 +2762,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### OI-096 helpers — silently wrong derived address and seed/secret disclosure
 
-**Status: unperformed; defects live.** `compare.js` accepts private keys and can print silently wrong addresses while exiting `0`. `derive.js` has wrong-branch address outputs.
+**Status: unperformed; defects repaired; independent clearance evidence missing (M-01 OPEN).** At `a5bc56e`, following the `e3b65fb8` repair, `compare.js` rejects private extended keys with an explicit `FATAL` before WASM initialisation, and a `vpub` input is explicitly rejected with exit code `2` rather than an opaque abort. `derive.js` still returns valid-looking addresses for mismatched-chain keys (BTC/ETH/TRX xpubs share version `0488b21e`).
 
 - **Observable check:** Require an evidenced resolution of the relevant defects before relying on either helper. Check derived addresses against independent targets for the exact branch and scope, and review the private-key input boundary.
 - **Required evidence:** Reviewed corrective work and reproducible comparison results for the affected behaviours. Process exit status is not comparison evidence.
@@ -2834,7 +2836,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Generator timeout — missing recovery material
 
-**Status: unperformed.** The generator has a 120-second timeout after secret display.
+**Status: unperformed.** The 120-second timeout covers the entire generator subprocess (`docs/04:176`), not a fresh allowance after secret display.
 
 - **Observable check:** Check that the creation procedure accounts for the timeout and has an evidenced stop condition for an incomplete attempt. Secret display must not be mistaken for complete recovery-material capture.
 - **Required evidence:** Observed timeout behaviour, reviewed handling of the incomplete case and a recovery-material completeness check, without recording the secrets.
@@ -2847,7 +2849,7 @@ These are wording and decision rules, not optional cautions:
 - **Do not claim that the repository constructs, signs or broadcasts transactions.** Those claims are forbidden. Send/sign/broadcast have never been exercised on any network, and no Bawa signing path is available.
 - **Do not turn a testnet pass into a mainnet assurance claim.** A testnet pass does not mean “safe”. Independent security review is mandatory before real funds, including the small receive at rung 3.
 - **Do not call a decrypt round trip a rehearsal.** A “recovery tested” label is not an executed rehearsal either.
-- **Do not use exit `0` from `compare.js` as proof of anything.** OI-096 leaves silently wrong address outputs live.
+- **Do not use exit `0` from `compare.js` as proof of anything.** The OI-096 defects are repaired at `a5bc56e` following `e3b65fb8`, including explicit rejection of private extended keys, but a successful exit alone does not establish address correctness or supply the missing independent clearance evidence (M-01 OPEN).
 - **Do not describe anything unverified as “safe”, “secure” or “production-ready”.**
 - **Do not substitute one check for another.** A decrypt round trip, an address match or a result from another wallet/chain/network/policy/route cannot stand in for a missing check.
 - **Do not promote writing status into operational authority.** “Complete”, an open-item entry or a prose review is not authorisation to receive, hold or send real funds.
