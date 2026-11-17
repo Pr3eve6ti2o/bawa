@@ -3541,10 +3541,16 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 - 195 `LIVE`, plus 1 `LIVE-VIA-RAW`, 2 `LIVE-via-API`, 1 `LIVE-via-support`, 1 `LIVE-via-registry` and 1 `LIVE POST-only`.
 - 4 `DEAD-404`: the wrong PublicNode hostname, for which the replacement [`ethereum.publicnode.com`](https://ethereum.publicnode.com) was verified; a PyPI template URL; the bare Blockstream API root; and a Maven registry URL that returns an anonymous 404 by design.
 - 3 `UNVERIFIED`: WCAG 2.2, which exists according to W3C search but whose page was VM-blocked; the CoinsPaid hot-wallet page; and the CISA backup PDF.
-- 1 `UNVERIFIED` because the shop was rate-limited: Keycard Shell.
+- **Keycard Shell:** the product page remains **UNVERIFIED (shop rate-limited)**. It returned 429 with `local_rate_limited`; it was not established to be dead. The intended fallback is the checked official Keycard root recorded in M31, but its URL is not recorded in this guide and must be obtained from the M31 record before use. Re-check the product page after the limit resets. [M31 F08]
 - 1 `EXISTS-VM-BLOCKED`: the Medium SIM-swap article. Its replacements, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article, were both `LIVE`.
 
-The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 DevSecOps and 12 other.
+M31 reports excluding **103 URLs without checking them**. Excluded is not a dead-link verdict. The recorded groups are:
+- **26 testnet-only URLs**, including endpoints and faucets;
+- **18 reference-only chain URLs** for Solana, Cardano, Cosmos, XRPL and Polkadot;
+- **40 Android-toolchain URLs**, owned by the Android slice;
+- **7 DevSecOps-tooling URLs**.
+
+These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplained in the record**. [M31]
 
 **Status:** OPEN (4 links).
 
