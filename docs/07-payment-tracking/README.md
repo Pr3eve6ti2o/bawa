@@ -811,7 +811,7 @@ If any saved outcome contradicts the evidence, preserve both and flag a discrepa
 
 ### Distinguish extra money from replay
 
-Retain every distinct transfer (see the docs/06 event-identity passages at [lines 586–590](../06-tracking/README.md#L586-L590) and [line 687](../06-tracking/README.md#L687)). Route an overpayment, or a second distinct payment against `<REQUEST_ID>`, to review or an overpaid state rather than ordinary settlement (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
+Retain every distinct transfer (see the docs/06 event-identity passages at [lines 586–590](../06-tracking/README.md#L586-L590) and [line 687](../06-tracking/README.md#L687)). A timely, confirmed overpayment fulfills `<REQUEST_ID>` in the `confirmed` state; record the excess separately and flag it for review without routing the request away from settlement. Route a second distinct payment against `<REQUEST_ID>` to review rather than ordinary settlement (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
 Use idempotent invoice creation to prevent accidental reissue, and reconciliation to detect multiple payments.
 
