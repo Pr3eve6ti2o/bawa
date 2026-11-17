@@ -3,12 +3,16 @@
 Bawa's intended deployment trust boundary is:
 
 ~~~
-trusted/offline generation
+trusted/offline region (signing domain)
         │
-        ├── mnemonic / seed / private material
+        ├── generation
+        │       └── mnemonic / seed / private material
+        │
+        ├── separate offline signer
         │
         └── account-level public roots
                     │
+                    │  hand-carried media only (air gap)
                     ▼
              online watch-only
                     │
@@ -16,7 +20,7 @@ trusted/offline generation
              RPC / indexer
 ~~~
 
-Trusted/offline generation is an operating requirement. A controlling terminal and a public-only hand-off do not themselves establish host trust or network isolation.
+Trusted/offline generation and signing are operating requirements. A controlling terminal and a public-only hand-off do not themselves establish host trust or network isolation. Host trust means a machine you control, with verified software provenance, no untrusted code or remote access, and no history of compromise. Network isolation means no live data link between the signing/generation environment and any internet-connected computer (an air gap), with data moving only by hand-carried media. Private keys and seeds must never leave the signing domain.
 
 ## Assets to protect
 
