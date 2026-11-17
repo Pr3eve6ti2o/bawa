@@ -107,7 +107,7 @@ All three fields are required, with no defaults:
 | Field | Validation |
 | --- | --- |
 | `chain` | Exactly `"btc"`, `"eth"` or `"trx"`, case-sensitive. |
-| `xpub` | A string, non-empty after trimming, with an original length of at most `200` characters. Whitespace counts towards that limit but is removed before private-key detection and derivation. |
+| `xpub` | A string, non-empty after trimming, with an original length of at most `200` characters. Whitespace counts towards that limit but is removed before private-key detection and derivation. **Warning:** `compare.js` silently discards env lines over `1024` characters and values over `200` characters; affected entries are treated as missing, with no error. |
 | `index` | A JSON number that is an integer from `0` to `2147483647` inclusive. Numeric strings are rejected. |
 
 Path selection is fixed, not caller-configurable:
@@ -134,7 +134,7 @@ Do not assume every wallet or chain uses this ETH policy. Check the exporting wa
 
 Receiving addresses follow `/0/i` after the account node: `/0/0`, `/0/1`, `/0/2`….
 
-For recovery scans of external wallets, scan both receiving and change branches where they are used. Under BIP-44, `/1/i` is change where a change branch exists. See the [Trust Wallet developer documentation](https://developer.trustwallet.com/) for platform details.
+For recovery scans of external wallets, scan both receiving and change branches where they are used. Under BIP-44, `/1/i` is change where a change branch exists. See Trust Wallet's [Wallet Core repository](https://github.com/trustwallet/wallet-core) for platform details.
 
 Bawa’s tools derive receiving branch `0` only; they do not derive change addresses. A tracker restricted to `/0/i` misses change outputs sent to `/1/i` by a wallet using that branch.
 
