@@ -4423,9 +4423,9 @@ Invalidate the preview whenever the input, network or selected account changes. 
 
 ### J-09 — Keep the backup gate locked until ordered re-entry matches
 
-> **Warning** — As of 2026-11-08, the draft’s 3-word quiz does not satisfy this rule. Replace it with full ordered 24-word re-entry; until then, keep the gate locked. Check the complete match under the approved normalisation rules. **OPEN** — Blocked pending OI-071.
+> **Warning** — As of 2026-11-08, the draft’s 3-word quiz does not satisfy this rule. Replace it with full ordered re-entry at the wallet’s own word count (12, 15, 18, 21, or 24 words; 24 words for newly generated wallets); until then, keep the gate locked. Check the complete match under the approved normalisation rules: BIP-39 NFKD normalisation of the mnemonic and passphrase plus the scheme’s word-separator rules. **OPEN** — Blocked pending OI-071.
 
-Keep the backup gate locked until complete ordered re-entry matches the wallet’s mnemonic under the approved normalisation rules.
+Keep the backup gate locked until complete ordered re-entry at the wallet’s own word count matches the wallet’s mnemonic under the approved normalisation rules.
 
 Reject a checkbox, successful checksum, correct word count, partial match or successful import as sufficient evidence of backup completion.
 
@@ -4667,7 +4667,7 @@ Changing the vault unlock passphrase cannot protect funds controlled by an expos
 
 2. **Migrate to a fresh seed on a trusted device.**
 
-   Generate a new mnemonic and derive a fresh seed with an empty BIP-39 passphrase. Keep the new mnemonic away from the suspect device. Check that recovery reproduces the replacement testnet addresses.
+   Generate a new mnemonic and derive a fresh seed with an empty BIP-39 passphrase. Keep the new mnemonic away from the suspect device. Check that recovery with the new mnemonic and empty BIP-39 passphrase reproduces the replacement testnet addresses. Recovering the original mnemonic with an empty BIP-39 passphrase reproduces the original seed and addresses only if the original derivation used an empty BIP-39 passphrase.
 
    Restore the original keys only as needed to transfer remaining testnet funds to the verified replacement addresses. Check each transfer’s destination, value and fees before signing, then verify its on-chain result. Treat the original mnemonic and its addresses as compromised after migration.
 
@@ -4730,11 +4730,11 @@ Changing the vault unlock passphrase cannot protect funds controlled by an expos
 - Requirements provenance: section J requirements — check date: 2026-11-08.
 - Android: [Keystore system](https://developer.android.com/privacy-and-security/keystore) — check date: 2026-11-08.
 - Android: [AOSP Keystore/KeyMint](https://source.android.com/docs/security/features/keystore) — check date: 2026-11-08.
-- Android: Biometric authentication — check date: 2026-11-08.
-- [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) — check date: 2026-11-08. **VERIFIED** — As of 2026-11-08, the URL returned HTTP 200.
+- Android: [Biometric authentication](https://developer.android.com/identity/sign-in/biometric-auth) — check date: 2026-11-08.
+- [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) — check date: 2026-11-08.
 - Bitcoin BIPs: [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) — check date: 2026-11-08.
-- Bitcoin BIPs: BIP-44 — check date: 2026-11-08.
-- Bitcoin BIPs: BIP-84 — check date: 2026-11-08.
+- Bitcoin BIPs: [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) — check date: 2026-11-08.
+- Bitcoin BIPs: [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) — check date: 2026-11-08.
 - NIST: [SP 800-38D — GCM](https://csrc.nist.gov/pubs/sp/800/38/d/final) — check date: 2026-11-08.
 - Wallet Core: [TransactionCompiler API](https://github.com/trustwallet/wallet-core/blob/4.9.2/include/TrustWalletCore/TWTransactionCompiler.h) — check date: 2026-11-08.
 
@@ -5264,7 +5264,7 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 
 **Cause:** Device loss or possible mnemonic exposure requires containment before recovery.
 
-**Warning** — Changing the vault unlock passphrase cannot protect an exposed mnemonic; only a fresh seed and migration can address that exposure. Contain the incident through §J.8, retire the compromised material, and verify the new seed’s addresses against the fixed policy.
+**Warning** — Changing the vault unlock passphrase cannot protect an exposed mnemonic; addressing that exposure requires migration to independent, uncompromised keys, such as those derived from a fresh seed generated on a trusted device. Contain the incident through §J.8, retire the compromised material, and verify the replacement keys’ addresses against the fixed policy.
 
 1. Follow the §J.8 incident playbook: contain the incident, choose trusted-device recovery or fresh-seed migration, revoke sessions, escalate, and notify.
 
