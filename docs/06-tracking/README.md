@@ -435,7 +435,7 @@ For fuller EVM history, scan blocks and logs, use tracing where supported, or us
 
 For a small watchlist, try shared public access before paying for dedicated infrastructure. Cache results, stagger polls and honour throttling. Do not treat free access as reserved capacity.
 
-Use a common tracking flow: address and network → chain-specific read → native result plus observation context → Bawa display fields. Treat HTTP and JSON as transport choices, not evidence that two chains share an account or transaction model.
+Use a common tracking flow: address and network → chain-specific read → native result plus observation context → Bawa display fields. Treat HTTP as a protocol and JSON as an encoding, not as evidence that two chains share an account or transaction model.
 
 ### Solana
 
@@ -449,7 +449,7 @@ Use `getTokenAccountsByOwner` to read token accounts matching an owner plus a mi
 
 Use a shared service such as TON Center (https://toncenter.com/) to avoid running a node. Check its public-access terms, authentication rules and allowances; installing an SDK does not grant extra capacity. Historical coverage depends on the service and its archival support.
 
-Use the v2 API's `getAddressInformation` for the native balance in nanotons, account state and last-transaction reference. Use `getTransactions` to read transactions and their incoming and outgoing messages.
+Use the v2 API's `getAddressInformation` for the native balance in nanotons (1 TON = 1,000,000,000 nanotons; see the [TON Center v2 API reference](https://toncenter.com/api/v2/)), account state and last-transaction reference. Use `getTransactions` to read transactions and their incoming and outgoing messages.
 
 Do not label a payment complete merely because its first transaction exists. An outgoing message can cause another account's transaction later. Inspect the relevant recipient-side execution and any bounce. Avoid an Ethereum receipt adapter here: it would obscure the distinction between one transaction and the wider message flow.
 
