@@ -1005,7 +1005,7 @@ If the provider shuts down, an independent quorum can move funds to a replacemen
 Watch for lost recovery keys, missing secrets, missing wallet-policy metadata, stale configurations, incompatible recovery software, corrupt or inaccessible backups, shared cloud backups whose common dependency can fail or expose every copy at once, departing staff and provider-dependent recovery. A recovery promise is not a substitute for a rehearsal.
 ## 20. Paid security: consumer multisig with inheritance
 
-These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
+The Casa and Unchained figures in this section, checked on 8 November 2026, are a dated guide, not current quotations. The Fireblocks tokenisation row in section 19 is undated. Recheck all pricing, minimums and insurance terms before relying on them.
 
 Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa covers generation, derivation, comparison and recovery for a reference wallet; it does not provide inheritance, estate administration or managed multisig services. This section describes paid options and the questions to ask before buying them; the named providers are examples, not Bawa recommendations.
 
@@ -1018,13 +1018,13 @@ Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa co
 
 ### Casa-style service
 
-A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime.
+A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime. Possessing enough private keys alone does not guarantee that you can spend: you also need the wallet configuration and usable signing or recovery tools.
 
 A service may describe its arrangement as "self-custody". Check what the service can and cannot do for you: if you control a working quorum independently, you retain spending ability; if the provider holds a necessary key or controls the software workflow, your independence is limited.
 
 Providers also offer account monitoring, inheritance handling and succession planning, including an inheritance check that confirms the recipient can still access their key. Casa markets its service for families and businesses seeking security and inheritance, with support for Bitcoin and Ethereum, including selected ERC-20 tokens. Check the supported assets for your own holdings.
 
-Use these figures from the [Casa vault FAQ](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
+Use these figures from the [Casa pricing](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
 
 | Casa plan | Annual price |
 |---|---:|
