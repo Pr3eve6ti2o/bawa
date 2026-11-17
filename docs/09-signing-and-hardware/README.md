@@ -110,7 +110,7 @@ Distinguish Bawa's fixed policy from the testnet standards (see the [documented 
 
 Importing a Bawa mnemonic into a standard testnet wallet derives a different derivation subtree/account key (the account index remains 0, but the coin-type branch differs) (see [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) and [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)). Keep the [Bawa policy](#the-fixed-derivation-policy) unchanged and treat this as a [documented deviation](#output-descriptors-make-the-watch-target-explicit), not an alternative path to adopt. Check that Bawa derivation still uses `m/84'/0'/0'/0/i`: from the repository root, derive with `tools/hdwallet-gen/derive.js` and compare the result against the versioned table; pass only if the path, prefix and origin match the table exactly.
 
-Bawa's own tools emit `zpub` for the BTC testnet4 account because the code pins `HDVersion.zpub`. This was verified by running the repaired `derive.js` (`node tools/hdwallet-gen/derive.js`, run from the repository root) with the [published ripple-fixture zpub, line 153](../11-trust-wallet-and-independent-verification/README.md), which derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
+Bawa's own tools emit `zpub` for the BTC testnet4 account because [`tools/hdwallet-gen/generate.js:90`](https://github.com/Pr3eve6ti2o/bawa/blob/a5bc56e7a51b44e03f51d7395bd32901c16c3d4f/tools/hdwallet-gen/generate.js#L90) pins `HDVersion.zpub`. Emission is also evidenced by the Core 4.8.4 WASM check [recorded in docs/11](../11-trust-wallet-and-independent-verification/README.md). Separately, the repaired `derive.js` run (`node tools/hdwallet-gen/derive.js`, run from the repository root) consumed the [published ripple-fixture zpub, line 153](../11-trust-wallet-and-independent-verification/README.md) and derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (mainnet-format `bc1q`, not `tb1q`).
 
 The resulting export differs from a standard testnet BIP-84 export, which would be `vpub`. Do not relabel an extended key by hand. Check the prefix against this documented behaviour by deriving with `tools/hdwallet-gen/derive.js` from the repository root and comparing the result against the versioned table; pass only if the path, prefix and origin match the table exactly:
 
@@ -599,7 +599,7 @@ Expect Bawa's own tools to emit `zpub` for the Bitcoin testnet4 account because 
 
 > **Expected result:**
 >
-> Derived address: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
+> Derived address: `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (mainnet-format `bc1q`, not `tb1q`).
 
 Hand-edited prefixes no longer match the signer's export. **Do not relabel an extended public key by hand.** Check the extended public key against the signer's own export; if unsure, re-export.
 
