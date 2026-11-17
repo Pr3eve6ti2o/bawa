@@ -731,6 +731,8 @@ The return transfer carries signatures or a signed transaction, not signing secr
 
 ## Make the device screen the approval gate
 
+This checklist states this guide's policy.
+
 The transaction check that matters is on the signer’s own screen, not Bawa, the desktop preview, a QR viewer or a filename. Compare it with independently confirmed test-payment instructions, rather than merely checking that two potentially compromised host views agree.
 
 Before approving:
@@ -750,7 +752,7 @@ During watch-only setup, verify the signer’s public account export. Record `<x
 
 Do not assume derivation paths are interchangeable between coins or curves. An exported public node cannot cross a hardened derivation step; public-child derivation also depends on the curve and scheme.
 
-Require the signer to derive and recognise the proposed change address using its own keys, the internal/change branch of that verified account, and the expected wallet policy. Match the full device-derived address to the separately labelled change output on its screen. For multisignature, the complete co-signer and script policy must match, not merely one key.
+Require the signer to derive and recognise the proposed change address using its own keys, the internal/change branch of that verified account, and the expected wallet policy. Check the fingerprint/origin and match the keys, threshold and script policy against an authenticated xpub/descriptor, rather than relying on the coordinator’s “change” label (see the [descriptor rules and fingerprint/origin checks](#output-descriptors-make-the-watch-target-explicit)). Match the full device-derived address to the separately labelled change output on its screen. For multisignature, the complete co-signer key set, threshold and script policy must match the authenticated descriptor, not merely one key.
 
 If that ownership check cannot be completed, stop. Do not substitute the desktop wallet’s reassurance.
 
