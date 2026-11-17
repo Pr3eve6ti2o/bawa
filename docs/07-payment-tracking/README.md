@@ -196,16 +196,16 @@ BIP-174 specifies the partially signed Bitcoin transaction (PSBT) format; BIP-37
 4. **Finalise.** Return the signed PSBT to the coordinator. Once the required signatures are present, finalise it and extract the signed transaction.
 4. **Broadcast online.** Send only the signed transaction to the Bitcoin network. The PSBT is a hand-off format for signing, not the object broadcast.
 
-The online tracker and watcher never touch a spending key. A watcher compromise alone cannot spend funds; it can at most misreport them, which reconciliation must catch.
+The online tracker and watcher never touch a spending key. A watcher compromise alone cannot spend funds, but it can suppress or fabricate reports, stop reporting, or disclose information available to it. The record comparison in section 10 cannot independently establish that reported events occurred; a fabricated event consistent across the records can pass reconciliation.
 
 Descriptors and PSBT are Bitcoin ecosystem standards, not Bawa features; Bawa's tools do not build or sign PSBTs.
 ## 5. Payment requests are not payments
 
 Separate the payment request you give the payer from the transaction you later observe. A payment request is not on-chain settlement.
 
-For Bitcoin payment URIs, use [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki). For Ethereum, use ERC-681 payment-request URLs, which can represent chain and token information.
+For Bitcoin payment URIs, use [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki), where amounts are denominated in BTC. For Ethereum, use ERC-681 payment-request URLs, which can represent chain and token information; native-asset amounts are integer wei and token amounts are integers in the token's smallest unit.
 
-Build an explicit payment request with the asset, network, recipient, amount, expiry and memo/tag when required. Later, verify the payment independently against the blockchain. Do not treat the request itself as proof of payment.
+Build an explicit payment request with the asset, network, recipient, amount, optional application-defined expiry and memo/tag when required. BIP-321 has no expiry parameter; keep expiry in application metadata and omit it for an unbounded request. An absent expiry field means no time limit. Later, verify the payment independently against the blockchain. Do not treat the request itself as proof of payment.
 
 ## 6. Source-of-truth drift
 
