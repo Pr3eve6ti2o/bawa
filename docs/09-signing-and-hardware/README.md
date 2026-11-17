@@ -16,6 +16,7 @@ How-to guide.
 - [The fixed derivation policy](#the-fixed-derivation-policy)
 - [Hardware wallets](#hardware-wallets)
 - [Bitcoin Descriptors & PSBT](#bitcoin-descriptors--psbt)
+- [Primary references](#primary-references)
 - [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt)
 - [A test-only hardware-signing rehearsal](#a-test-only-hardware-signing-rehearsal)
 - [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer)
@@ -23,8 +24,17 @@ How-to guide.
 - [Output descriptors: make the watch target explicit](#output-descriptors-make-the-watch-target-explicit)
 - [Checksums, multipath and a verified import](#checksums-multipath-and-a-verified-import)
 - [Hardware signing: transfer routes and screen review](#hardware-signing-transfer-routes-and-screen-review)
+- [What an air-gap must protect](#what-an-air-gap-must-protect)
+- [Choose a transfer route](#choose-a-transfer-route)
+- [Make the device screen the approval gate](#make-the-device-screen-the-approval-gate)
+- [Verify that change belongs to the wallet](#verify-that-change-belongs-to-the-wallet)
+- [Sources](#sources)
+- [Practise test funding, fees and change](#practise-test-funding-fees-and-change)
+- [Finish the test-only signing rehearsal](#finish-the-test-only-signing-rehearsal)
 
 Use this when you need to authorise transactions. The signing environment should be a separate trust domain from the online tracker.
+
+**Definitions (in this guide):** separate trust domain — a signing environment separate from the online tracker; high-value — systems for which the guide recommends offline or hardware-backed signing; D21 — the 8 November 2026 demonstration run (docs/14:92); published fixture sender — `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` (docs/14:65); original derivation inputs — the values used in the original derivation; seed-guessing resistance — the difficulty of guessing the seed.
 
 ## Signing: keep it separate from tracking
 
