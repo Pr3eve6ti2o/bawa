@@ -27,13 +27,13 @@ Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was
 
 ## 2. Privacy: xpubs are sensitive public material
 
-An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history, balances and customer relationships when payments are observable.
+An account-level xpub with non-hardened branches does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history and balances when payments are observable; customer relationships are inferences requiring attribution. Combining the xpub with a leaked private key for one of its non-hardened children allows recovery of the parent private key.
 
 - Treat xpubs as sensitive public material. Treat zpubs the same way.
-- Do not paste them into public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages.
-- For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower public node suffices.
-- An xpub or zpub CANNOT recover the wallet: it reproduces only public descendants below the exported account node ([docs/RECOVERY.md](../RECOVERY.md)).
-- Bawa does not document an xpub-only import workflow — check your chosen watch-only tool's documentation.
+- Do not paste them into, for example, public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages; disclose only what is needed, and only where needed.
+- For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower extended public node (with chain code) suffices.
+- An xpub or zpub alone CANNOT recover the wallet's private keys: it reproduces only public descendants reachable by non-hardened derivation below the exported account node, but can recreate a scoped watch-only wallet ([docs/RECOVERY.md](../RECOVERY.md)).
+- Bawa documents an xpub import-and-verify procedure in [docs/05, section 7](../05-watch-only/README.md) (derive.js with a heredoc xpub and address comparison), but does not document a persistent watch-only import workflow — check your chosen watch-only tool's documentation.
 ## 3. Backup and recovery
 
 A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, wallet contract/version and wallet-ID/subwallet configuration can matter.
