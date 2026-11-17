@@ -87,11 +87,11 @@ Use public deterministic fixtures:
 - BIP-44 Ethereum addresses;
 - any additional chain where both implementations explicitly document the same rule.
 
-Never place a real production mnemonic, seed, xprv, hardware seed, or wallet backup in CI.
+Never place a real production mnemonic, seed, xprv, xpub, zpub, hardware seed, or wallet backup in CI. The commit prohibition alone does not establish safeguards for CI inputs, logs, or artifacts.
 
 ## Trust Wallet registry
 
-Wallet Core publishes [`registry.json`](https://github.com/trustwallet/wallet-core/blob/master/registry.json) and [registry-field documentation](https://github.com/trustwallet/wallet-core/blob/master/docs/registry-fields.md).
+Wallet Core publishes [`registry.json`](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/registry.json) and [registry-field documentation](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/docs/registry-fields.md).
 
 The registry is useful for implementation metadata such as:
 
