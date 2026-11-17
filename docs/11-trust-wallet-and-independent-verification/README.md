@@ -172,11 +172,11 @@ Use the paths verified first-hand in the actual `tools/hdwallet-gen/compare.js` 
 - **ETH:** `m/44'/60'/0'/0/i`.
 - **TRX:** `m/44'/195'/0'/0/i`.
 
-Remove the stale path-difference blocker: the BTC and ETH paths agree with the repository reference checks at `i = 0`.
+The path-difference blocker is retired: the BTC and ETH paths agree with the repository reference checks at `i = 0`.
 
 The xpub-to-vector mapping is supplied by the values above and is Core-confirmed (D31, 2026-11-08: recorded `getExtendedPublicKeyAccount` run). The TRX address anchor is separately Core-confirmed (see above). Continue to require both implementations’ support references and confirmed shared settings.
 
-### Captured evidence and pending Core run
+### Captured evidence and recorded Wallet Core run
 
 Preserve the captured reference run with the following record:
 
@@ -190,7 +190,7 @@ Preserve the captured reference run with the following record:
 | Reported output | `bip_utils reference checks: PASS` |
 | Exit code | **0** |
 
-Retain the captured addresses against their published expectations. The Wallet Core column is now recorded (D31, 2026-11-08).
+Retain the captured addresses against their published expectations. The Wallet Core run is recorded (D31, 2026-11-08); see the **Wallet Core 4.9.2 observed** column in the table below for the captured Core outputs.
 
 | Chain and reference path | Published expected address | Wallet Core 4.9.2 observed | bip-utils 2.12.2 observed |
 |---|---|---|---|
