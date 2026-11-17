@@ -325,13 +325,13 @@ The contracts below are defined once, in their home sections, and used everywher
 
 ### 5.1 Shared security baseline
 
-No signing in the repo. Filesystem rules: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is part of this baseline: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address, no xpub); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet will not find Bawa funds; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
+No signing in the repo. Filesystem permissions required by policy: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Only `seed.enc.json` 0600 is evidenced as enforced; the other permissions are policy requirements, not verified as enforced. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is a baseline policy requirement, not a claim of verified enforcement: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address; this implementation does not export or support BIP32-style xpub derivation for TON); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet will not find Bawa funds; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
 
 ### 5.2 Supported capabilities
 
 What Bawa owns and does not own; mainnet is absent; no production-ready claims. Home: §1.
 
-**OI-062 — Supported-capabilities contract not established.** Supported-capabilities contract not established. Record support per surface and operation with cited verification; the V3 TON fixture alone does not establish application support. Owner: W1; evidence contributors: W3, W4 and W5.
+**OI-062 — Supported-capabilities contract not established.** Supported-capabilities contract not established. Record support per surface and operation with cited verification; the V3 TON fixture (V3 denotes the `docs/11` fixture verification of 2026-11-08) alone does not establish application support. Owner: W1; evidence contributors: W3, W4 and W5.
 
 ### 5.3 Fixture boundary
 
@@ -353,7 +353,7 @@ Record full observed tool versions separately from these declared values.
 | Python | Python runtime | `>=3.11` | An exact full version satisfying `>=3.11` | Open — exact pin not recorded. |
 | cryptography | Python dependency | `cryptography==50.0.2` | `cryptography==50.0.2` | Release verification not recorded. |
 | bip-utils | Python dependency | `bip-utils==2.12.3` (declared pin) | `bip-utils==2.12.3` (pinned in `requirements.txt`) | Observed during verification: `bip-utils==2.12.2`. Release verification not recorded. |
-| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.8.4` (published 2026-09-24) | `4.8.4` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.8.4` (published 2026-09-24) | `4.8.4` | Historical-only: demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08). This is not evidence of reproducibility on `a5bc56e` or validation of Core `4.8.4`; the in-browser proof, send, sign and broadcast remain open. |
 | npm | JavaScript dependency installation | No version specified | An exact full npm version | **Release blocker** — no version specified. |
 
 
@@ -394,9 +394,9 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core@4.8.4 --depth=0
 
 **Step 3 — syntax check**
 
-Use `npm run check` for syntax ONLY. It checks `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js` in `tools/hdwallet-gen`; it does not validate runtime behaviour.
+Use `npm run check` for syntax ONLY. It checks `generate.js`, `extended-key.js`, `derive.js`, `derive_daemon.js` and `compare.js` in `tools/hdwallet-gen`; it does not validate runtime behaviour.
 
-At e3b65fb832db287fdc8d54794980dd0b3456cc12, the syntax check passes on all four files (verified 2026-11-08). The repository has no root dependency lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is an acknowledged release blocker.
+At e3b65fb832db287fdc8d54794980dd0b3456cc12, the syntax check passes on all five files (verified 2026-11-08). The repository has no root dependency lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is recorded as a release blocker, though the root has no `dependencies` field for it to lock.
 
 ```sh
 npm run check
@@ -411,11 +411,11 @@ test "$?" -eq 0
 
 Read the following as the status of the supplied commit, not any uncommitted lockfiles created by your local installs.
 
-The repository root has no lockfile; the tools lockfile exists at `tools/hdwallet-gen/package-lock.json` (Core 4.8.4 exact). The missing root lockfile is a release blocker.
+The repository root has no lockfile, but its `package.json` has no `dependencies` field, so there is nothing for a root lockfile to lock. The missing root lockfile is therefore a weaker concern than it would be for a dependency-bearing root. The tools lockfile exists at `tools/hdwallet-gen/package-lock.json` and pins Core to exactly 4.8.4.
 
-Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile; for any unlocked root dependency scope, pins alone would not guarantee that an install reproduces the exact dependency graph that was tested. The root currently has no `dependencies` field, while the tools lockfile at `tools/hdwallet-gen/package-lock.json` pins Core to exactly 4.8.4.
 
-To close this release blocker, resolve the npm version and commit `package-lock.json` generated from a clean install. Choose `package-lock.json`, not `npm-shrinkwrap.json`: they are alternatives, not a pair to commit together.
+Resolve and document an npm version compatible with the existing `tools/hdwallet-gen/package-lock.json`, then use that version for a clean, lock-respecting install in `tools/hdwallet-gen` with `npm ci`. Retain the tools lockfile and its exact Core 4.8.4 pin, and commit any necessary lockfile updates. Do not treat generating a root `package-lock.json` as the only remediation: the root currently has no `dependencies` field and nothing for a root lockfile to lock. Choose `package-lock.json`, not `npm-shrinkwrap.json`: they are alternatives, not a pair to commit together.
 
 ## 7. Python venv and requirements
 
