@@ -70,7 +70,7 @@ Do not expect any free tool to make approving a malicious transaction safe. Use 
 
 Pay for clearly specified assistance with work you would otherwise manage yourself. Confirm which set-up, checking, backup, recovery rehearsal and instructions-for-heirs tasks the service helps with, and which remain yours. Do not assume that a membership covers all of them or removes the need to check each transaction.
 
-Use these figures from the [Casa vault FAQ](https://casa.io/vault), re-checked live on **8 November 2026**, as a dated reference:
+Use these figures from the [Casa vault FAQ](https://casa.io/vault), re-checked live on **17 November 2026**, as a dated reference:
 
 | Casa plan | Annual price |
 | --- | --- |
