@@ -1253,25 +1253,31 @@ Exit checks — complete these seven checks BEFORE signing with any paid provide
 Paying does not automatically remove risk: a paid service can reduce dependence on a single device, a household backup or one employee's knowledge; it may reduce or transfer particular exposures, but payment alone does not guarantee the elimination of market risk, protocol risk, or the risk of a mistaken approval. A compromised seed still means a new wallet, moving everything, and retiring the old wallet — whatever you paid for.
 ## 24. Sources
 
-- BIP-39 — https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
-- BIP-32 — https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
-- BIP-44 — https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
-- BIP-49 — https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
-- BIP-84 — https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
-- BIP-86 — https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki
-- BIP-174 (PSBT) — https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
-- BIP-371 (Taproot PSBT) — https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
-- BIP-380 (descriptors) — https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki
-- SLIP-39 — https://github.com/satoshilabs/slips/blob/master/slip-0039.md
-- SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-- SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
+Check-date policy: for mutable pages, record the check date and the version or commit consulted. For immutable specifications, cite the fixed version or identifier; any check date records link availability only.
+
+- [EIP-155](https://eips.ethereum.org/EIPS/eip-155)
+- [TEP-74 (Jettons)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons.md)
+- [Bitcoin Developer Guide](https://developer.bitcoin.org/devguide/)
+
+- BIP-39 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0039.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+- BIP-32 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0032.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
+- BIP-44 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0044.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+- BIP-49 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0049.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki)
+- BIP-84 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0084.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
+- BIP-86 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0086.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki)
+- BIP-174 (PSBT) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0174.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
+- BIP-371 (Taproot PSBT) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0371.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)
+- BIP-380 (descriptors) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0380.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)
+- SLIP-39 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0039.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0039.md)
+- SLIP-0044 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0044.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
+- SLIP-0010 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0010.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
 - OWASP Password Storage Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (checked 8 November 2026; contains the 600,000-iteration PBKDF2-HMAC-SHA-256 basis cited in §7 for the local-only web-draft vault)
 - age encryption tool — https://github.com/FiloSottile/age
 - Gitleaks — https://github.com/gitleaks/gitleaks
 - Semgrep — https://semgrep.dev/ (checked 8 November 2026; 403 to automated check, existence confirmed — keep with this dated note)
 - Keycard Shell — https://github.com/keycard-tech/keycard-shell (checked 8 November 2026)
 - Keycard (status-keycard) — https://github.com/keycard-tech/status-keycard (checked 8 November 2026)
-- Keycard product page (rate-limited to automated checks on 8 November 2026; linked from the live homepage)
+- Keycard product page (rate-limited to automated checks on 8 November 2026; [homepage](https://keycard.tech/))
 - Trust Wallet Core repository — https://github.com/trustwallet/wallet-core
 - SIM-swapping protection — https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/ (government guidance)
 - BitBox multisig — https://support.bitbox.swiss/en_US/blog-content/how-nearly-all-personal-hardware-wallet-multisig-setups-are-insecure (checked 8 November 2026)
