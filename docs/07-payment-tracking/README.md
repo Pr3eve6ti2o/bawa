@@ -714,22 +714,22 @@ Allow multiple transfers to settle a request only when top-ups are enabled. For 
 
 Define expiry and late-payment handling as application policy. Record a deadline for `<REQUEST_ID>` and retain the record after expiry. Your deadline does not stop blockchain transfers.
 
-Distinguish these states:
+Distinguish these conditions using the section 11 machine states and amount fields (`<EXPECTED_ATOMIC>`, `<CONFIRMED_ATOMIC>`, `<THRESHOLD_ATOMIC>`, `<SHORTFALL>`, `<EXCESS>`):
 
-- No funds yet.
-- A deposit awaiting confirmation.
-- Full payment.
-- Excess payment.
-- Partial payment while the window is open.
-- Underpayment after closure.
+- No funds yet while the window is open: `requested` or `allocated`, with `<CONFIRMED_ATOMIC> = 0`.
+- A deposit awaiting confirmation: `observed`, `seen`, `matched`, `sufficient` or `included`, not yet `confirmed`.
+- Full payment accepted before expiry: `confirmed`, with `<CONFIRMED_ATOMIC> = <EXPECTED_ATOMIC>`.
+- Excess payment accepted before expiry: also `confirmed`, with `<CONFIRMED_ATOMIC> > <EXPECTED_ATOMIC>`. Record `<EXCESS> = <CONFIRMED_ATOMIC> - <EXPECTED_ATOMIC>`; there is no separate excess-payment node.
+- Partial payment while the window is open: `underpaid` once the partial amount is confirmed, with `0 < <CONFIRMED_ATOMIC> < <THRESHOLD_ATOMIC>`.
+- Underpayment after closure: `expired`, with `<CONFIRMED_ATOMIC> < <THRESHOLD_ATOMIC>`; do not continue in `underpaid` after the deadline.
 
-Give partial, late and excess payments separate statuses rather than one paid/unpaid flag.
+Represent partial and late payments with machine states and excess payments with amount fields rather than one paid/unpaid flag.
 
-Use this expiry flow:
+Use this expiry flow. Here, `pending` is shorthand for the section 11 states `requested` or `allocated`, not a separate machine state:
 
-`pending` → `deadline passes before acceptance` → `expired` → `new matching payment found` → `late payment found` → `manual review`
+`requested` / `allocated` → (deadline passes before acceptance) → `expired` → (new matching payment found; classify it as late) → `manual_review`
 
-Route newly discovered payments on expired requests to manual review, even when their value brings the total above the threshold. Do not finalise automatically.
+Route newly discovered payments on `expired` requests to `manual_review`, even when their value brings the total above the threshold. Do not finalise automatically.
 
 Before deciding, check:
 
