@@ -736,7 +736,7 @@ For `btc`, testnet `vpub` and `tpub` inputs are rejected before WASM with exit s
 | Core call fails | Redacted error; exit 1. |
 | Final validation fails | Exit 1. |
 
-`compare.js` validates all three inputs before any WASM call; bad input exits with status 1 and empty stdout.
+`compare.js` validates all three inputs before any WASM call; bad input exits with status 1 and empty stdout. Environment values longer than 200 characters are silently discarded and surface as `missing <chain> xpub`, not as a "too long" error.
 
 **Daemon protocol**
 
@@ -820,7 +820,7 @@ python3 test/differential_test.py
 > ETH m/44'/60'/0'/0/0: 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7
 > ```
 >
-> At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1–2.
+> At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2; this differential test covers BTC BIP-84 index 0 and ETH BIP-44 index 0 only.
 
 Keep that scope statement with the PASS whenever you reproduce the result.
 
@@ -830,14 +830,14 @@ On a mismatch, stop and do not fund the wallet. Check the vector first, then the
 
 Keep these published reference values alongside the check; they are not additional coverage in the captured run.
 
-Account-0 zpub ([SLIP-0132, line 166](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L166)):
+Account-0 zpub ([SLIP-0132, line 167](https://github.com/satoshilabs/slips/blob/master/slip-0132.md#L167)):
 
 `zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs`
 
 - Second receiving address, `m/84'/0'/0'/0/1`: `bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g` (verified live with `derive.js` from the account-0 zpub above, 2026-11-09)
 - First change address, `m/84'/0'/0'/1/0`: `bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el` (unverified — no repository tool derives the change branch)
 
-The change address is a published reference, not a change to Bawa’s receiving-branch-only policy.
+The change address is unverified by repository tools and does not alter Bawa's receiving-branch-only policy.
 
 **Published ripple fixture**
 
@@ -848,7 +848,7 @@ The fixture mnemonic is the published Trust Wallet Core HDWallet test example (C
 - Passphrase: empty (`""`).
 - Entropy: `ba5821e8c356c05ba5f025d9532fe0f21f65d594`.
 - Core's own test table uses the passphrase `TREZOR`, which gives a different seed and different addresses — Bawa uses the empty passphrase. Do not mix the two.
-- The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+- The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide use 24-word mnemonics as required by section 8. Changing the mnemonic changes the seed's value; never mix a 15-word test phrase into a 24-word wallet flow.
 
 Account-0 public nodes, derived with bip-utils 2.12.2 and Core-confirmed on both 4.8.4 and 4.9.2 (D31, 2026-11-08):
 
@@ -952,7 +952,7 @@ In either case, preserve the chain paths, address policy, network/chain configur
 The seed bundle’s JSON uses:
 
 - `alg`: `AES-256-GCM`
-- `nonce_b64`: decodes to exactly 12 bytes
+- `nonce_b64`: encoded string of at most 24 characters; decodes to exactly 12 bytes
 - `ciphertext_b64`: decodes to at least 16 bytes
 - AAD: `nova-shop-seed-v1`
 
