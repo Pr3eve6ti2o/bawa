@@ -743,7 +743,7 @@ Implement the following requirements:
 
 ### Record gate-specific evidence
 
-Maintain a public **TESTING** record linking the revision, public fixture sources, expected results backed by those sources, observed results and each gate’s status. Treat this as a proposed evidence record, not as confirmation that any gate has passed.
+The existing 113-line `docs/TESTING.md` records testing strategy and current coverage, not the per-revision expected and observed results and gate attestations required by the claim-5 evidence-record specification. Extend it into a public **TESTING** evidence record linking each revision, public fixture sources, expected results backed by those sources, observed results and each gate’s status and attestation. Treat this as a proposed extension to the existing document, not as confirmation that any gate has passed.
 
 For each gate, supply or link to:
 
