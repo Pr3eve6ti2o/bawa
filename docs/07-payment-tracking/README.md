@@ -672,9 +672,9 @@ When an event is removed:
 - For `confirmed`, mark it `reorged`, revoke eligibility and freeze outstanding fulfilment. Reverse provisional credits through compensating entries, preserving the confirmation history.
 - If the event is claimed or `paid`, suspend the claim’s chain backing while retaining its allocation and audit trail. Block duplicate settlement. If goods have already been delivered or a payout is irreversible, trigger `manual_review`. Changing a database flag cannot undo an external action. See [MAINNET-GUIDE, line 1402](../mainnet/MAINNET-GUIDE.md#L1402), on preserving the earlier decision, including an earlier `paid` decision, when evidence becomes `reorged`.
 
-If an event is removed from a `finalized` or solidified view, also pause automated settlement and trigger `manual_review` with independent verification.
+If an event is removed from a `finalized` or solidified view, also pause automated settlement and trigger `manual_review` with independent verification (see [MAINNET-GUIDE, line 1402](../mainnet/MAINNET-GUIDE.md#L1402)).
 
-For ordinary reorg recovery:
+For ordinary reorg recovery (see [MAINNET-GUIDE §12 state table, lines 1379–1388](../mainnet/MAINNET-GUIDE.md#L1379-L1388)):
 
 1. Find the common ancestor, rewind the scan cursor and replay canonical blocks.
 2. Reconcile pending and replacement transactions, then re-match idempotently.
