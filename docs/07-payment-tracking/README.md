@@ -933,7 +933,7 @@ Use [Trust Wallet Assets](https://github.com/trustwallet/assets) for presentatio
 
 For related testing and troubleshooting guidance, see Android guide §I.8 (“Testnet integration pass”) and Web guide §K.4 (“Why does the wallet look empty after restore?”).
 
-No local chain stage is implemented for any chain in the validation draft. There is no regtest, signet or local-node mode for Bitcoin, Ethereum, TRON or TON. See Web guide §H and open item OI-049.
+No local chain stage is implemented for any chain in the Web validation draft. There is no regtest, signet or local-node mode for Bitcoin, Ethereum, TRON or TON. See Web guide §H and open item OI-049.
 
 ## 16. Sources
 
