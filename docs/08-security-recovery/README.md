@@ -381,7 +381,7 @@ Registered policy lets a signer recognise its own change; it does not prove an e
 
 3. **Assemble the wallet** — select 2-of-3 and the intended Bitcoin network; import each signer's account public-key export; compare the full public keys and their origins against trusted signer exports; names and short fingerprints alone are insufficient.
 
-4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; test receive-address verification and change recognition before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again.
+4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; compare a receive address with the address shown on each signer's display for the registered policy and check that change is recognised on each signer's display as belonging to that policy before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again.
 
 5. **Back up the public policy** — keep a watch-only wallet export and, where supported, checksummed descriptors for both receive and change branches; record:
    - 2-of-3;
@@ -391,7 +391,7 @@ Registered policy lets a signer recognise its own change; it does not prove an e
    - key ordering or sorting;
    - Bitcoin network.
 
-   Two seeds still need the third cosigner's public information. An individual xpub/zpub is not a multisig recovery package. Test exports: Sparrow and Electrum formats are not automatically interchangeable.
+   Two seeds still need the third cosigner's public information. An individual xpub/zpub is not a multisig recovery package. Test a full-policy export by importing it into the intended recovery software (Sparrow or Electrum); a pass requires the imported threshold, all cosigner keys, paths and script type to match the registered policy and a receive address to match one verified on a signer. Sparrow and Electrum formats are not automatically interchangeable.
 
 6. **Separate the backups** — arrange signers and seed backups so one incident cannot expose two distinct keys; three software signers on one infected computer do not provide that separation; keep multiple offline policy copies in separate locations; a public policy file cannot spend by itself, but it can reveal addresses and transaction history — protect its privacy; the watch-only file is not a seed backup.
 
