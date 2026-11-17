@@ -144,7 +144,7 @@ Use an **empty BIP-39 passphrase** and record the entropy as `ba5821e8c356c05ba5
 
 Do not copy the passphrase `TREZOR` from Core’s own test table. It gives a different seed and different addresses; Bawa uses the empty passphrase.
 
-Keep this word-count rule explicit: the fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+Keep this word-count rule explicit: the fixture retains the published test vector's 15-word mnemonic; 15 words is a valid BIP-39 mnemonic length. This guide uses 24 words as its production default, not as a BIP-39 validity requirement. The seed depends on the complete normalised mnemonic and normalised passphrase; word count is not a separate parameter. Never mix a 15-word test phrase into a 24-word wallet flow.
 
 ### Provisional public nodes and TRX anchor
 
@@ -215,7 +215,7 @@ Keep the fixtures **ineligible** until both sides are captured and diffed under 
 
 Use these published fixtures only as test vectors, never for funds. Keep each mnemonic, passphrase, path, address (or extended key) and source together. Never pair one fixture's words with another fixture's address.
 
-Treat the three fixture mnemonics as deliberate anchors for different published standards (BIP-84, Hardhat and Core), not as three phrases used by the wallet. For the Core anchor, retain the complete mnemonic, passphrase, path and address recorded in the preceding ripple-fixture section, with the repo's own fixture and Trust Wallet Core's published test vector as its source.
+Treat the three fixture mnemonics as deliberate anchors drawn from the published BIP-84 standard and the published test vectors of the Hardhat and Trust Wallet Core implementations, not as three phrases used by the wallet. Ripple-based regenerated outputs must not be presented as the original BIP-84 or Hardhat test vectors. For the Core anchor, retain the complete mnemonic, passphrase, path and address recorded in the preceding ripple-fixture section, with the repo's own fixture and Trust Wallet Core's published test vector as its sources.
 
 Prefer unifying repo fixtures on the ripple mnemonic as the single canonical set of words, because it is both the repo's own fixture and Trust Wallet Core's published test vector. Treat this as a recommendation, not a requirement. Preserve the original inputs and outputs of the independently published BIP-84 and Hardhat anchors below.
 
