@@ -445,6 +445,12 @@ Use `getBalance` to read native SOL as an integer number of lamports, alongside 
 
 Use `getTokenAccountsByOwner` to read token accounts matching an owner plus a mint or token-program filter. Decode the amounts and mint identities, then use each mint's decimals for display. Include Token-2022 where relevant: querying the original Token Program does not enumerate both programmes. Do not treat an empty result under one filter as proof that there are no other holdings. Neither read reconstructs transfers or proves that the observer can spend the funds.
 
+Use `getGenesisHash` to identify the network served by an RPC endpoint. It takes no parameters and returns the base58-encoded genesis hash; compare this with the expected cluster's hash before interpreting balances or transaction statuses.
+
+Use `getSlot` with an explicit `commitment` (`processed`, `confirmed`, or `finalized`) to query the node's current slot at that confirmation level. The result is an integer slot number, not a timestamp or proof that a particular transaction is confirmed.
+
+Use `getSignatureStatuses` to check confirmation and execution status for transaction signatures. The returned `value` entries match the input order; inspect `confirmationStatus` for the confirmation level and `err` for an execution error (`null` means no execution error in a returned status). The method does not accept a commitment parameter; compare the reported level with the level you require. By default it searches the recent status cache; set `searchTransactionHistory: true` to search the node's available transaction history. A `null` entry means no status was found, not proof that the transaction never occurred.
+
 ### TON
 
 Use a shared service such as TON Center (https://toncenter.com/) to avoid running a node. Check its public-access terms, authentication rules and allowances; installing an SDK does not grant extra capacity. Historical coverage depends on the service and its archival support.
