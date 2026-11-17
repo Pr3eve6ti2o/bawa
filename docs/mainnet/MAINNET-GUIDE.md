@@ -2054,22 +2054,23 @@ Before any USDC authorisation, verify the Ethereum token contract and recipient 
 
 #### Model: bandwidth, energy and the scope of `feeLimit`
 
-Bandwidth pays for the transaction’s byte footprint. Energy pays for TVM execution. Free bandwidth is a network limit, not a guaranteed personal allowance; it may be reduced during high traffic.
+Bandwidth pays for the transaction’s byte footprint. Energy pays for TVM execution. TRON documents a renewable **600-point free-bandwidth allowance** for each activated externally owned account (`getFreeNetLimit`); no supplied evidence documents an automatic high-traffic reduction.
 
 Freezing allocates renewable resources by **stake share**. There is no fixed stake-to-resource conversion rate.
 
-`feeLimit` is the **smart-contract energy budget only**. It is not an upfront flat fee and does not cover native bandwidth or account activation. Only unused portions of the native fee and fee-limit budget are returnable; resources already consumed are not restored merely because execution failed.
+`feeLimit` is the **smart-contract energy budget only**. It is a cap, not an upfront flat fee or prepaid deposit, and does not cover native bandwidth or flat account-activation fees. Unused budget is simply not consumed; resources already consumed are not restored merely because execution failed.
 
-There is an internal rate conflict in the evidence. The m12 summary assigns **0.001 TRX per energy unit**, but the measured chain parameters distinguish the energy price from the bandwidth price. That common-rate energy claim is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. The dated arithmetic below uses the measured energy parameter, not that shorthand.  
+There is an internal rate conflict in the evidence. The measured energy price (`getEnergyFee`) is **100 SUN = 0.0001 TRX per energy unit**. The m12 summary’s **0.001 TRX per energy unit** claim is **CONTRADICTED** by the measured chain parameters: **0.001 TRX** matches the bandwidth price instead. The dated arithmetic below uses the measured energy parameter, not that shorthand.  
 *Sources: m12 §3; m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
 #### Procedure: establish the resource position before signing
 
 1. **Check activation and available resources.** Use `wallet/getaccount` and `wallet/getaccountresource`, or inspect the corresponding account information in TronScan. Do not assume that a new address is activated or that a nominal free-bandwidth limit is available.
-2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation.  
+2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation. Contract-triggered account activation is a nonstandard exception: neither flat fee applies, but it consumes approximately **25,000 additional Energy**, whose uncovered portion must be included in the resource-burn calculation.  
    *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 3. **Estimate contract execution.** `estimateenergy` was unavailable on TronGrid mainnet at the check, returning “this node does not support estimate energy”. A `triggerconstantcontract` dry run is the alternative in the supplied evidence. A reverted dry run is not a successful-transfer estimate.
 4. **Recheck close to signing.** Activation, available resources, the live burn parameters and the intended budget must still match the proposed operation.
+5. **Check the live fee cap.** Before signing, read `getMaxFeeLimit` from the live chain parameters (**15,000,000,000 SUN**) and compare it with the encoded transaction’s `fee_limit`, also in SUN; do not sign unless `fee_limit` is at or below the returned live cap.
 
 Locally check the recipient or contract against the intended destination to prevent a **wrong address**; compare the displayed value with the intended value to prevent a **wrong amount**; investigate unresolved broadcasts for a **stuck transaction**; review resource coverage and all applicable charges to limit a **lost fee**; and reject unrecognised contracts, permissions or signing requests that could enable **theft**. Stop if the dry run fails, the current energy price cannot be reconciled, earlier transaction status is unresolved or any signing detail differs from the reviewed operation.
 
@@ -2082,7 +2083,7 @@ Locally check the recipient or contract against the intended destination to prev
 | TRX price reference | **$0.317467 per TRX** | Conversion input for the baseline estimates only | m09 F07–F10 |
 | Bandwidth burn | **1,000 SUN per point = 0.001 TRX** | Recorded transaction-fee parameter; applies to uncovered bandwidth | m09 F07–F10; m12 §3 |
 | Energy burn | **100 SUN per unit = 0.0001 TRX** | Measured parameter used for the dated energy arithmetic; conflicts with the summary’s common-rate claim | m09 F07–F10; m12 §3 |
-| Free bandwidth limit | **600 points/day** | Network limit, not guaranteed availability; may be reduced during high traffic | m09 F07–F10; m12 §3 |
+| Free bandwidth limit | **600 points/day** | Renewable 600-point allowance per activated externally owned account; no supplied evidence of automatic high-traffic reduction | m09 F07–F10; m12 §3 |
 | Account-creation parameters | **0.1 TRX** create-account; **1 TRX** create-new-account | Recorded parameters, not an all-in transfer quote | m09 F07–F10 |
 | Network `feeLimit` ceiling | **15,000,000,000 SUN — 15,000 TRX** | Protocol ceiling for the contract-energy budget, not a default | m09 F10; m12 §§3, 7 |
 | Web draft `feeLimit` | **1,000,000 SUN — 1 TRX**, budgeting **10,000 energy** at the measured parameter | Smart-contract energy only; not the mainnet maximum | m09 F10; m12 §§3, 7 |
