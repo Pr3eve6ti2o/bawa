@@ -179,13 +179,13 @@ Do not trust symbols alone. Anyone can reuse symbols such as USDC, USDT and WETH
 Always store `chain_id` and `contract_address`, plus `token_id` when applicable. Treat the symbol as metadata. Give every EVM asset an unambiguous key:
 
 - Use `(chain_id, contract_address)` for ERC-20 assets and NFT collections.
-- Add `token_id` for individual ERC-721 and ERC-1155 items: `(chain_id, contract_address, token_id)`.
+- Add `token_id` for individual ERC-721 items and ERC-1155 items: `(chain_id, contract_address, token_id)`. An ERC-1155 `_id` identifies a token or a token type, so this tuple does not necessarily distinguish an individual unit.
 
 Build indexed records around the wallet, contract, asset type, chain, block, transaction, log index, token ID/amount, decimals and metadata.
 
 - **[ERC-20](https://eips.ethereum.org/EIPS/eip-20):** Retain `Transfer` movements and exact integer amounts, plus token decimals and metadata when available. Use decimals to scale display values; names, symbols and decimals are optional metadata under the standard.
-- **ERC-721 (EIP-721):** Record ownership per token ID and retain transfer history, including mint and burn transitions. Reconcile transfer-derived holdings with `ownerOf`.
-- **ERC-1155 (EIP-1155):** Record balances as quantities per holder and token ID, not a single owner. Transfers are often batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index.
+- **ERC-721 ([EIP-721](https://eips.ethereum.org/EIPS/eip-721)):** Record ownership per token ID and retain transfer history, including mint and burn transitions. Reconcile transfer-derived holdings with `ownerOf`.
+- **ERC-1155 ([EIP-1155](https://eips.ethereum.org/EIPS/eip-1155)):** Record balances as quantities per holder and token ID, not a single owner. Transfers are often batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index.
 
 Treat metadata as untrusted presentation data. Check a price provider's chain-and-contract mapping rather than matching ticker text. Mark unmatched holdings as unpriced, not worthless.
 
