@@ -950,7 +950,7 @@ Bawa does not document a revision-authentication procedure or trusted signing id
 
 **Expected result:** a checkout containing `package.json`, `requirements.txt` and `tools/hdwallet-gen/`, with its revision confirmed by the agreed verification method. A successful clone alone is not that verification.
 
-### 3. Install the root Node dependencies
+### 3. Run `npm install` at the repository root
 
 From the repository root:
 
@@ -958,7 +958,7 @@ From the repository root:
 npm install
 ```
 
-**Expected result:** the root installation completing without an error. This is not yet evidence that the wallet tooling is ready.
+**Expected result:** the root `npm install` command completing without an error. The root package declares no dependencies, so this installs nothing; only the `tools/hdwallet-gen` installation installs dependencies. This is not yet evidence that the wallet tooling is ready.
 
 ### 4. Install the wallet-core tooling dependencies
 
@@ -979,7 +979,7 @@ cd ../..
 
 **Expected result:** a successful installation in `tools/hdwallet-gen`, followed by your shell returning to the repository root. The directory change succeeding does not cancel an earlier npm failure.
 
-#### If either npm installation fails
+#### If either `npm install` command fails
 
 Stop before moving on to Python setup or repository checks.
 
