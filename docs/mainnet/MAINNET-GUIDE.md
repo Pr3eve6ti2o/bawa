@@ -3345,7 +3345,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 ### M-09 — ETH real-transfer gas is unverified; the “independent” RPCs are one upstream
 
-**Question/risk:** No real-transfer gas figure is verified. The zero-amount self-transfer figure of 37,973 gas understates a real transfer and must not be presented as its cost. publicnode, drpc, 1rpc and blast returned byte-identical values: these represent the same upstream, not independent confirmations.
+**Question/risk:** No real-transfer gas figure is verified. The zero-amount self-transfer figure of 37,973 gas may understate a real transfer's gas use, but no measured comparison was supplied; it must not be presented as the cost of a real transfer. publicnode, drpc, 1rpc and blast returned byte-identical block and `gasPrice` values, but matching values do not identify the underlying infrastructure; the independence of these endpoints is not established.
 
 **Affected sections:** §11 and §14.
 
@@ -3363,7 +3363,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 ### M-10 — Permit/Permit2 model correction
 
-**Question/risk:** The reading that “a Permit2 signature works without an on-chain approval” understates the authority granted. `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers. The token’s ERC-20 approval to Permit2 is a prerequisite; `SignatureTransfer` bypasses only the in-Permit2 allowance. Reducing an allowance or using lockdown does not invalidate outstanding permit signatures: use the applicable nonce-invalidation mechanism, `invalidateNonces` or `invalidateUnorderedNonces`.
+**Question/risk:** The reading that “a Permit2 signature works without an on-chain approval” understates the authority granted. `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers. The token's ERC-20 approval to Permit2 is required only at transfer execution, not for signing a permit or installing an in-Permit2 allowance; `SignatureTransfer` bypasses only the in-Permit2 allowance. Reducing an allowance or using lockdown does not invalidate outstanding permit signatures: use the applicable nonce-invalidation mechanism, `invalidateNonces` or `invalidateUnorderedNonces`. An accepted Permit2 permit consumes its nonce even when it sets a lower allowance, so a permit already used cannot be replayed by reducing the allowance.
 
 **Affected section:** §15.
 
