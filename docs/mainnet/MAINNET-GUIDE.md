@@ -1515,7 +1515,7 @@ Every mainnet send procedure carries this label:
 
 **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**
 
-Send/sign/broadcast was **never exercised anywhere, on any network** in the work covered by this draft. Testnet verification is not evidence of a tested send.
+The work covered by this draft included testnet verification **without any send**; send/sign/broadcast was **never exercised anywhere, on any network**. That non-send testnet verification is not evidence of a tested testnet or mainnet send.
 
 The exact wallet-specific steps, agreement on the tiny test amount, the fee, receipt evidence and funded execution are all open and require separate authorisation. No rehearsal procedure is supplied here.
 
@@ -1536,7 +1536,7 @@ This section states what sending and signing Bawa and the drafts can and cannot 
 
 ### 13.1 What Bawa is and is not — the no-signing boundary
 
-Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/09` separates signing from tracking: “Signing remains a trusted-side operation.”
+Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/13-wallet-app-architecture/README.md:84` separates signing from tracking: “Signing remains a trusted-side operation.”
 
 Mistaking tracking for transaction preparation or approval creates **wrong-network, wrong-address and wrong-amount** loss modes. The prevention is to keep tracked observations separate from an explicitly reviewed payload and trusted-side signing. An address or balance shown by the tracker is not a transaction approval.
 
@@ -1566,7 +1566,7 @@ The Android header is misleading. `EthSepoliaAdapter.kt` claims:
 
 That check is not implemented. `approve()` checks only that `decodedSummary`, `sender` and `recipient` are non-blank. `signApproved()` checks only payload equality and `reviewToken == payload.hashCode()`. Neither the coordinator nor the adapter checks chain ID, network, amount or fee.
 
-EIP-155 chain binding means a conforming mainnet node rejects a Sepolia-signed payload. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
+For type-2 transactions, EIP-1559 includes `chain_id` in the signed data, so a conforming Ethereum mainnet node rejects a payload signed with Sepolia’s chain ID. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
 
 The required correction is code-level enforcement binding the intended network to the exact payload signed, alongside the missing amount and fee checks. A header, network label or endpoint selection is not that enforcement. The Web mainnet change and Android checks are implementation work; their live operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. See §17 and §21.
 
@@ -1584,7 +1584,7 @@ The role model in `docs/09` is separate from those checks:
 - The signer holds the private key or hardware wallet.
 - The network broadcasts.
 
-The **Signer** role reviews and signs an already-prepared, approved payload. It must never discover accounts or balances, select coins, choose fees, assemble transactions or broadcast. This is a guide requirement, **not an established implementation boundary**: the Web `tx.js` includes UTXO selection and live fee use.
+The **Signer** role reviews and signs an already-prepared, approved payload. It must never discover accounts or balances, select coins, choose fees, assemble transactions or broadcast. The Web `tx.js` includes UTXO selection and live fee use; whether the signing path itself performs those duties is **not established**.
 
 Keeping those duties outside the Signer prevents preparation or fee decisions from silently changing an approved amount or fee. **Stop if signing depends on the Signer performing those duties, or if that separation cannot be demonstrated.** The draft does not establish it merely by having approval functions. See §17 and §21.
 
