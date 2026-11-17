@@ -196,10 +196,10 @@ Use Bawa’s dedicated directory for wallet secrets. Note that Bawa applies rest
 
 ### Malicious transaction approval and blind signing
 
-- **Risk and impact:** Treat token approvals as authorisation for a spender to use tokens later. Account for an unlimited allowance exposing the relevant token balance, including later deposits. Treat hurried or unclear requests as higher risk: signing a transaction you have not read on a trusted screen can authorise unwanted transfers even while your seed remains secret. Revocation cannot undo confirmed transfers.
-- **Prevention:** Limit allowances to the amount needed. Read the action, recipient or spender, asset and amount on a trusted signing-device screen, not only the website. Do not sign if those details cannot be shown clearly.
-- **Check:** Look for unknown spenders, unexpected unlimited allowances, requests for blind signing and unexplained token transfers.
-- **Recovery:** Revoke suspect approvals through an independently verified tool and move at-risk funds if necessary. If keys have also leaked, migrate to a wallet with a newly generated seed.
+- **Risk and impact:** Treat token allowances, signature-based authorisations such as Permit/Permit2, and NFT operator approvals as permission for a spender or operator to move assets later. Unlimited allowances can expose the relevant token balance, including later deposits; collection-wide NFT operator approvals can expose current and future holdings in that collection. Treat hurried or unclear requests as higher risk: signing a transaction or message you have not read on a trusted screen can authorise unwanted transfers even while your seed remains secret. Revocation cannot undo confirmed transfers and may lose a race to malicious spending.
+- **Prevention:** Limit allowances and approval scope to what is needed. Read the action, recipient, spender or operator, asset, amount or NFT scope, and any expiry on a trusted signing-device screen, not only the website. Do not sign if those details cannot be shown clearly.
+- **Check:** Look for unknown spenders or operators, unexpected unlimited allowances or collection-wide NFT approvals, unclear Permit/Permit2 requests, requests for blind signing and unexplained token or NFT transfers.
+- **Recovery:** Use an independently verified tool to revoke suspect allowances and NFT operator approvals and, where supported, invalidate unused Permit/Permit2 signatures. Do not assume allowance revocation alone cancels unused signatures; move at-risk funds if necessary. If keys have also leaked, migrate to a wallet with a newly generated seed.
 
 ## What a holder should NOT buy or do
 
@@ -216,7 +216,7 @@ Use **signing and hardware** for signer setup and **security and recovery** for 
 
 Combine device and account controls, offline recovery records, signing controls and transaction checks. Add equipment or services only after reviewing their requirements and limits; do not substitute a purchase for the other layers.
 
-Include the mnemonic, the exact BIP-39 passphrase policy, chain derivation paths and address policy, account, network and chain configuration, and TON wallet configuration where applicable in the recovery record. Record any passphrase value separately.
+Include the mnemonic, the exact BIP-39 passphrase policy (state whether the BIP-39 seed-derivation passphrase is empty or non-empty; it is distinct from a device PIN or application password), chain derivation paths and address policy, account, network and chain configuration, and TON wallet configuration (wallet contract version/revision, subwallet ID and workchain ID) where applicable in the recovery record. Record any BIP-39 passphrase value separately.
 
 ### Free fixes
 
