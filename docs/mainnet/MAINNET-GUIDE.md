@@ -2515,10 +2515,13 @@ Before generating, restoring or using a wallet:
 - [ ] Keep the device backup distinct from the wallet recovery plan.
 - [ ] Keep wallet software separate from rehearsal software.
 - [ ] Check the device for tampering before generating or restoring a wallet.
+- [ ] Install wallet apps and updates only from the project's authoritative distribution channel; confirm the expected publisher and verify any provided release or package signatures against trusted signing keys.
+- [ ] End all active remote-access and screen-sharing sessions, and disable or remove such software before generating, restoring, or using a wallet.
+- [ ] Check for malware and other software compromise, including suspicious apps, browser extensions, or security-setting changes. The absence of visible tampering does not prove the device is safe. Do not generate, restore, or use a wallet on a device known or suspected to be compromised.
 
 #### Device backup is not wallet recovery
 
-> **Never** When backing up or replacing a device, do not rely on the device backup for wallet recovery. Device backups do not restore wallets. Preserve the recovery material independently; without it, losing the device can leave you unable to recover.
+> **Never** rely on a device backup alone for wallet recovery when backing up or replacing a device. A restore may reinstall the wallet app and restore app state while leaving the seed and private keys unavailable. Preserve the recovery material independently; without it, losing the device can leave you unable to recover.
 
 A new phone does not automatically restore the wallet. The new device needs an independent recovery plan: restore the wallet from preserved recovery material on that device, then repeat the recovery rehearsal. Recovery requires that material, not possession of the old device.
 
@@ -2539,7 +2542,7 @@ Do not assume that a control available on one platform or route applies elsewher
 - **Automatic locking:** lock the device yourself. Neither the inaccurate Web inactivity claim nor Android’s conditional vault model is a reason to leave it unlocked.
 - **Clipboard clearing:** neither draft provides it. Avoid copying secrets; if you have copied one, clear the clipboard yourself where the OS allows.
 - **Capture prevention:** Android’s `FLAG_SECURE` coverage stops at the Backup/Import routes. On either draft, keep recovery material out of screenshots and screen recordings; phrase display and screen locking do not prevent capture.
-- **Web content security policy:** the policy is absent. Keep the browser patched and run no untrusted software, but recognise that these hygiene measures do not supply the missing policy.
+- **Web content security policy:** the policy is absent. Browser patching does not compensate for a missing content-security policy. Keep the browser patched and run no untrusted software, but do not treat these hygiene measures as substitutes for the missing policy.
 
 These are compensating behaviours, not fixes for the missing controls. They do not remove the vaults’ limits.
 
