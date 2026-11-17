@@ -534,7 +534,7 @@ PSBT key origins and proprietary metadata are not transaction fields: they remai
 
 Bitcoin Core’s `finalizepsbt` can perform finalisation and extraction together. That convenience does not make extraction a broadcast operation.
 
-**Expected result:** a decodable raw transaction matching the reviewed spend. Check outputs and, using the retained UTXO amounts, the fee. A calculable `<TXID>` is not evidence of network acceptance.
+**Expected result:** a decodable raw transaction matching the reviewed spend: Bitcoin Core's transaction decoder must parse it as a fully valid Bitcoin transaction under BIP-174, not merely decode it as bytes. Check outputs and, using the retained UTXO amounts, the fee. A calculable `<TXID>` is not evidence of network acceptance.
 
 ### Broadcast, relay, not authorise
 
@@ -548,12 +548,11 @@ Verify `<TXID>` through your node or an explorer for that same test chain. For r
 
 ### Sources
 
-- BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
-- BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
-- Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
-- Vendor worked example (Coldcard/Coinkite), not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
+For PSBT sources, see the [Sources](#sources) list in [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer).
 
 ## Output descriptors: make the watch target explicit
+
+See also the [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer) and [Watch-only hand-off: combine, finalise, extract, broadcast](#watch-only-hand-off-combine-finalise-extract-broadcast) sections.
 
 Keep descriptor handling within Bawa’s xpub/address-only boundary: public keys, script policy and derivation metadata, never signing secrets. Use testnet, signet or regtest only, with no real funds or real-funds wallet exports.
 
