@@ -12,7 +12,7 @@ How-to guide.
 > **Verification status:** Partially verified  
 > **Scope:** repo guide docs/11 against the pinned repo at 754721cd, with previously recorded live link checks retained as historical evidence
 > **Repository commit:** 754721cd
-> **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
+> **Tool versions:** bip-utils 2.12.2 (captured-run version; `requirements.txt` pins `bip-utils==2.12.3`), cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
 > **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
 > **Not run:** no live testnet spend.
 > **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
@@ -35,6 +35,8 @@ Mark the checks listed as not run above `blocked-unverified`.
 - [Integration testing](#integration-testing)
 - [CI discipline, reproducible checks and build verification](#ci-discipline-reproducible-checks-and-build-verification)
 - [Compare release bytes as well as test results](#compare-release-bytes-as-well-as-test-results)
+- [Give every release gate its own record](#give-every-release-gate-its-own-record)
+- [Record Bawa's differential check accurately](#record-bawas-differential-check-accurately)
 - [Reader checklist](#reader-checklist)
 
 ## Trust Wallet Core
