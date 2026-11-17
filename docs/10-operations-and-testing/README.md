@@ -1133,8 +1133,8 @@ These checks are guidance for your own setup, not Bawa monitoring features. Bawa
 
 ### Personal, $0, no server
 
-1. **Daily:** Manually check activity and confirmations for your wallet’s public addresses using an explorer or free RPC.  
-   **Expected result:** a history you can account for, including no change when idle.
+1. **Daily:** Manually check activity and confirmations for your wallet’s public addresses using an appropriate explorer/indexer or watch-only interface that covers both receiving and change addresses.  
+   **Expected result:** a history you can account for; when idle, “no new transfers” means no new transfer-history entries, while existing transfers’ confirmation counts or status may still change.
 
 2. **Weekly:** Review the addresses you follow and cross-check a sample against a second source.  
    **Expected result:** matching history, allowing for differences in update timing.
