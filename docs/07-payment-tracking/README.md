@@ -855,11 +855,11 @@ Store the height reached by the latest successful reconciliation, or its chain e
 
 ### Three-sided check
 
-Choose confirmation requirements, amount tolerances and late-payment treatment. Check the request's recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement with the saved finalisation outcome ([reconciliation](../12-chain-registry-and-assets/README.md#L320)).
+Choose confirmation requirements, amount tolerances and late-payment treatment. Check the request's recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement (the amount or credit the request is entitled to after matching and applying the confirmation policy) with the stored outcome ([reconciliation](../12-chain-registry-and-assets/README.md#L320)).
 
 Recheck individual matches as well as the accepted total. Count each event once: re-observing it must not add its value again.
 
-Commit finalisation atomically with the credit or an outbox entry (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Enforce a stable idempotency key for that entitlement, including in downstream consumers. Never generate a fresh credit key per reconciliation run.
+Commit the stored outcome atomically with the credit or an outbox entry (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Enforce a stable credit idempotency key for that entitlement, including in downstream consumers. Derive the key from the request identifier and finalisation operation, as for the outbox key in section 13. Never generate a fresh credit key per reconciliation run.
 
 ### Worked recovery
 
