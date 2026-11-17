@@ -287,7 +287,7 @@ Represent the following information in each request. These are conceptual fields
 
 Before accepting payments, define your application's request schema: field types, network/asset identifier formats, amount validation and conversion, memo/tag optionality and how to represent its absence, and expiry format and exact boundary rules. Bawa does not document these schema details. Represent the memo/tag field explicitly even when it does not apply.
 
-Decide whether the caller provides the recipient or your application assigns it, and define how selection relates to address allocation. Bawa does not document who selects the recipient. Represent the recipient unambiguously in the request before allocation.
+Decide whether the caller provides the recipient or your application assigns it, and define how selection relates to address allocation. Bawa does not document who selects the recipient. Represent the recipient—the intended payee or allocation target, not the receiving address assigned during allocation—unambiguously in the request before allocation.
 
 ### Set the allocation policy
 
@@ -299,10 +299,11 @@ Put these application policies in place before accepting payments. They are not 
 | A field missing or ambiguous | Reject rather than choosing a default. Define how callers can correct and resubmit; Bawa does not document correction behaviour. |
 | Recipient already has holdings | Do not treat holdings alone as evidence that an event satisfies this request. |
 | Recipient shared or previously allocated | Use one address per request where possible. If you share an address, distinguish requests with a memo/tag or use a unique address instead. Never use holdings alone. Define further address-reuse and exclusivity rules. |
-| Allocation retried or attempted concurrently | Make allocation idempotent with a request/allocation identifier and atomic reservation, so a retry reuses the same allocation. |
+| Allocation retried or attempted concurrently | Make allocation idempotent with a request/allocation identifier and atomic reservation (an indivisible, race-safe operation that reserves one allocation and binds it to the request identifier), so a retry reuses the same allocation. |
 | Expiry reached | Treat events after expiry as late payments for manual review, not automatic finalisation. Define an allocation cut-off; Bawa does not document one. |
 | A blockchain event observed | Match the event to the request and apply the chain's confirmation policy before idempotent finalisation. Configure that policy per chain before accepting payments. Do not use allocation as a replacement for matching or confirmation. |
 | An event duplicated or a temporary outage occurs | Count each distinct matched event once, not each watcher delivery. Ensure reconciliation does not double-count or lose a payment. Define persistence, replay and recovery mechanics; Bawa does not document these. |
+| Persistence and replay | Persist request-to-allocation bindings, matched-event payloads with stable keys (chain ID, transaction ID and event/output index), payment totals/status and per-chain checkpoints identifying the last fully scanned block by height and hash. Atomically record each event and its payment update under a unique event key; duplicates must not reapply the update. Advance a checkpoint only after every match through that block is durably processed. After a restart, replay through this same deduplicating path. These are application responsibilities, not documented Bawa guarantees. |
 | The confirmed amount differs from the request | Treat the difference as a discrepancy. Accumulate top-ups only if your application's own policy allows it. |
 | A payment is ready for finalisation | Compare the request terms, distinct accepted events and stored outcome under the chain's confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
 ## 10. Observation, confirmation, reconciliation
@@ -330,6 +331,7 @@ Use these proposed application checks as payment-tracking policy, not as Bawa fe
 | Top-ups arrive | Accumulate them only if your application's own policy allows them. |
 | Match, confirmation and amount agree | Compare with the stored outcome before any new finalisation effect. |
 | Chain data is unavailable | Treat this as uncertainty, not proof of non-payment. Account for the missing interval during recovery. |
+| Recovery of a missing interval | On restart or reconnection, backfill from the last durable checkpoint, including its block, through a recorded current chain head using a historical chain-data source. Process backfilled events through the same deduplicating path and overlap backfill with live watching so the handoff skips no blocks. If the checkpoint's block hash is no longer canonical, rewind to a common ancestor and reverse orphaned events' payment effects before replaying. Mark recovery complete only after the entire interval and affected payment totals/status are durably reconciled. If any part of the interval remains unavailable, retain uncertainty and retry rather than infer non-payment. |
 
 ### What reconciliation compares
 
