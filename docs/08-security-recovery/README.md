@@ -589,7 +589,7 @@ Treat an EVM token approval as a standing permission, not a website session. Use
 
 **What this protects against:** Remove unnecessary permissions to reduce exposure to forgotten, malicious or later-compromised spenders. Check empty addresses too — an allowance may still cover tokens you receive later.
 
-Revocation cannot undo a drain, repair a compromised key or prevent you granting another harmful permission. This is not a general audit of native-coin transfers or smart-wallet permissions. A hardware signer can protect the key while correctly signing the malicious approval you confirm — it is not a substitute for understanding the permission.
+Revocation cannot undo a drain, repair a compromised key or prevent you granting another harmful permission. This is not a general audit of native-coin transfers or smart-wallet permissions (session keys, modules and spending policies). A hardware signer can protect the key while correctly signing the malicious approval you confirm — it is not a substitute for understanding the permission.
 
 ### Free-security checklist
 
@@ -644,7 +644,7 @@ Simulation protects against unexpected transfers or permissions that it exposes.
 
 An off-chain simulation uses no network gas. Broadcasting the real transaction can still incur network fees. Some providers charge for extras — use included free checks.
 
-**Free versus paid:** for routine payments, choose these habits before buying a security subscription. A paid product cannot decide whom you meant to pay. Paid phishing alerts or broader simulation may help with frequent, complex signing, but check their documented coverage. Pay only for an identifiable extra capability you need. These tools add warnings, not permission to skip address and source checks. A recovery service's price is not evidence that it can recover anything.
+**Free versus paid:** for routine payments, choose these habits before buying a security subscription. A tool can compare a transaction against an explicitly selected trusted record, but no product can know your unstated intention. Paid phishing alerts or broader simulation may help with frequent, complex signing, but check their documented coverage. Pay only for an identifiable extra capability you need. These tools add warnings, not permission to skip address and source checks. A recovery service's price is not evidence that it can recover anything.
 
 **Free-security checklist:**
 
