@@ -744,6 +744,10 @@ Release only when the amount meets policy and late acceptance is authorised. If 
 
 Refund only an authorised amount to an independently verified destination. A refund requires a new transfer. Record the outcome.
 
+Before approving the refund, confirm the complete destination with the authorised refund recipient through an authenticated channel reached using independently verified contact details. Do not rely solely on the refund request, transaction history or original sending address. A reviewer other than the transfer preparer must compare the full address and any required memo/tag against that confirmation and check that the receiving wallet or service supports the asset on the selected network.
+
+Accept the destination only when the recipient is authenticated, all routing details match the independent confirmation, and asset/network compatibility is confirmed. Record the verification source, method, evidence, reviewer and time. Hold the refund if any check is missing, inconsistent or inconclusive; repeat verification whenever the destination or routing details change.
+
 Move `<REQUEST_ID>` to manual review when a late top-up is found, even if the total meets `<THRESHOLD_ATOMIC>`. Leave `<CONFIRMED_ATOMIC>` unchanged if that event is delivered again.
 
 ### Price quote policy and state handling
@@ -813,6 +817,10 @@ Keep the request’s agreed asset, network, amount and destination alongside tra
 Treat each refund as a fresh outgoing payment requiring independent authorisation. Leave the original payment record unchanged. Create a linked refund record with its own approval, status and eventual `<REFUND_TXID>` (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)).
 
 Require the approval to cover the asset, network, destination, amount and fees. Verify custody and recovery feasibility before promising repayment, particularly for wrong-asset or wrong-network cases.
+
+Record the original transaction reference, actual asset and token contract where applicable, network, receiving address, settlement status and available balance. Identify the key holder or custodian and verify their authority and practical ability to access and transfer the funds. For custodial holdings, obtain the custodian’s confirmation of custody and recovery support; an explorer balance alone is not evidence of recoverability. Document the supported recovery route, recoverable amount, required fees, prerequisites and restrictions.
+
+Accept recovery as feasible only when custody and access are evidenced, a documented and approved recovery route can deliver the authorised asset and amount on the approved network to the independently verified destination, and sufficient funds are available for the refund and approved fees. If access, recovery support, funding or a required third-party action remains unconfirmed, record the case as pending and escalate for review. Do not promise repayment or initiate a recovery or refund transfer until these criteria are met.
 
 Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
