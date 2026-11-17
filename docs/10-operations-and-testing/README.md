@@ -825,15 +825,17 @@ Arrange for two independent builders to check out the same source SHA and record
 
 ### Reproduce Android release outputs
 
-Record the wrapper properties, wrapper-JAR hash, `distributionSha256Sum`, dependency locks and fixed plug-in versions. Include the JDK identity and version, SDK platform and build-tools pins, and NDK and CMake pins.
+Record and enforce the agreed wrapper properties, trusted wrapper-JAR SHA-256 and `distributionSha256Sum`; verify the wrapper JAR and distribution bytes against those hashes before use, including cached copies. Require fixed plug-in versions and complete, checked-in dependency locks in strict mode for every dependency-bearing resolvable project and buildscript configuration. Enforce checksum verification of all resolved dependency and plug-in artefacts and metadata, including transitive dependencies, against reviewed, checked-in verification metadata. Fail on missing locks or verification entries and on any pin, lock or checksum mismatch; do not regenerate locks or verification metadata during the comparison. Pin, check and record the exact vendor and full build/version of each JDK used and the package IDs and exact revisions of all SDK packages used, including platforms, build-tools, NDK and CMake.
 
-Use only the checked-in `./gradlew` for Gradle invocations, and capture the output of `./gradlew --version`. Confirm the exact release-variant task names with the maintainer, and name them in the agreed build procedure and command record for each APK or AAB. Do not substitute assumed task names.
+Use only the checked-in `./gradlew` for Gradle invocations, and capture the output of `./gradlew --version`. Confirm the exact release-variant task names with the maintainer, and name them in the agreed build procedure and command record for each APK or AAB. Do not substitute assumed task names. Use an agreed, recorded configuration that disables signing for each release variant on both builders, and verify each output is unsigned; a release task can produce signed output.
 
-Compare the whole-file SHA-256 hashes of every agreed unsigned APK or AAB from the two independent builds.
+Before hashing or signing, align each unsigned APK with the pinned build-tools `zipalign`, using identical, recorded options on both builders, and verify alignment with `zipalign -c`. Do not zipalign AABs. Compare the whole-file SHA-256 hashes of every agreed unsigned APK (after alignment) or AAB from the two independent builds.
 
 > **Expected result:** Matching whole-file SHA-256 hashes from both builders for each agreed unsigned APK or AAB.
 
-After a successful comparison, sign the artefacts in a protected step. Record the signing tool and version, certificate fingerprint, and SHA-256 hashes of both the unsigned and signed artefacts. Never record private keys.
+Preserve the exact compared unsigned files from both builders unchanged, with their hashes, source revisions and any local changes, builder identities, enforced-input and verification records, build variants/configurations, and build/alignment commands and logs.
+
+After a successful comparison, sign copies of those exact inputs in a protected step: use `apksigner` for APKs and JAR signing with `jarsigner` for AABs. Do not realign APKs after signing. Record the signing tool and version, all non-secret signing configuration (key alias/identifier, signature schemes, signature/digest algorithms and applicable SDK-range or timestamping options), each signing certificate's SHA-256 fingerprint, and whole-file SHA-256 hashes of each unsigned input and corresponding signed output. Verify the signed artefacts with `apksigner verify` for APKs and `jarsigner -verify` for AABs, requiring present, valid signatures and signer certificates matching the agreed SHA-256 fingerprints; retain the verification commands and results. Never record private keys.
 
 Claim unsigned reproducibility only, unless independently produced signed outputs also match by whole-file SHA-256.
 
