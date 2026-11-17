@@ -877,7 +877,7 @@ Before signing, recalculate the fee from validated previous-output values (check
 
 ### 3. Verify change on the device
 
-Return change to a fresh index on the **same wallet’s internal `/1/*` descriptor**, using the intended account and script policy. An arbitrary pasted address does not become safe merely because the desktop labels it ‘change’.
+Return change to a fresh index on the **same wallet’s internal `/1/*` descriptor**, using the intended account and script policy. Use [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) output derivation data (`PSBT_OUT_BIP32_DERIVATION`) and, for Taproot, the applicable [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) output fields `0x05`–`0x07` (`PSBT_OUT_TAP_INTERNAL_KEY`, `PSBT_OUT_TAP_TREE`, `PSBT_OUT_TAP_BIP32_DERIVATION`); verify the output script against the trusted descriptor or on the signer. An arbitrary pasted address does not become safe merely because the desktop labels it ‘change’.
 
 Keep the relevant output key-origin and derivation metadata in the PSBT. BIP-174 defines the PSBT framework; BIP-371 adds Taproot-specific fields where applicable. A `<fingerprint>` is an identifier, not proof of ownership.
 
@@ -901,7 +901,7 @@ If your setup cannot support those checks, or any amount remains unexplained, st
 1. Match the chain across all three roles. Record `<TESTNET_ADDRESS>`, the payment amount and fee budget from an independently checked request.
 2. On the signer, review recipient, amount, change ownership and fee. Require `SIGHASH_ALL`, or Taproot `SIGHASH_DEFAULT`, without `ANYONECANPAY`: signatures must commit to all inputs and outputs. Stop if essential details cannot be reviewed.
 3. Return the signed PSBT to the tracker/coordinator. Compare it with the reviewed transaction, finalise each input, then extract the transaction. Finalisation does not establish network acceptance.
-4. Pass only that transaction to the broadcaster. Check `<TXID>` using your chosen test node; submission and mempool acceptance are not confirmation.
+4. A standard PSBT has no network identifier; verify the selected network independently before broadcasting. Pass only that transaction to the broadcaster. Check `<TXID>` using your chosen test node on the chosen test network (including signet or regtest); submission and mempool acceptance are not confirmation. Confirmation requires inclusion in a mined block at a chosen depth.
 
 ```text
 TRACKER — prepare PSBT
@@ -928,10 +928,10 @@ For each failure, identify which role must correct it before continuing. Never a
 | Device shows a different address | Wrong recipient, change mistaken for payment, or incorrect derivation/script type. | Compare with independently checked `<TESTNET_ADDRESS>`. Verify signer-derived change and descriptor paths; `<fingerprint>` alone does not prove ownership. |
 | Device shows a different amount | Unit mismatch, payment/total confusion, or unexpected fee/change. | Compare every output in the same units. Recalculate the fee from verified input amounts minus all output amounts. |
 | PSBT will not finalise | Missing signatures, unmet threshold, absent scripts or incompatible Taproot handling. | Check threshold, key derivations and required scripts. For Taproot, check BIP-371 support and required key-path or script-path fields, including leaf/control-block data where applicable. |
-| Missing UTXO data | Spent-output information absent or inconsistent. | Verify funding `<TXID>` and output index against the test node. Legacy inputs need the full previous transaction; witness inputs need spent-output amount/script, plus any previous transaction required by signer policy. |
+| Missing UTXO data | Spent-output information absent or inconsistent. | Verify funding `<TXID>`, output index and spent-output amount/script against the test node; `<TXID>`/output index alone do not supply verified UTXO amounts/scripts. Address checks must include amount and change; the checksum format is unspecified and checksums do not authenticate origin. Legacy inputs need the full previous transaction; witness inputs need spent-output amount/script, plus any previous transaction required by signer policy. |
 | Wrong network | Wallet or node uses another chain. | Check all chain settings and funding UTXOs. A PSBT is not a chain selector; testnets can share address/key prefixes. |
 | Checksum failure | Descriptor/address mistyped, truncated or edited. | Re-export from the verified source and compare the whole value. Do not replace a checksum to conceal an unexplained mismatch; checksums do not authenticate ownership. |
-| Broadcast rejected | Unknown/spent inputs, fee policy, invalid transaction or wrong chain. | Read the node’s rejection reason; distinguish policy refusal from invalidity. Check chain, UTXOs/mempool and whether `<TXID>` is already known. Any transaction change returns to review and signing. |
+| Broadcast rejected | Unknown/spent inputs, fee policy, invalid transaction or wrong chain. | Read the node’s rejection reason; distinguish relay policy refusal from consensus invalidity. Check chain, UTXOs/mempool and whether `<TXID>` is already known. Any transaction change returns to review and signing. |
 
 ### Keep the boundary intact
 
