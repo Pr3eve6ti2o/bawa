@@ -454,11 +454,7 @@ scanner opens only after the user taps Scan; it never opens automatically.
 
 **Steps.**
 
-1. **Request camera permission and a secure context.** Request `getUserMedia`
-   with `{ video: { facingMode: "environment" } }` and require a secure context
-   (HTTPS outside local development; loopback development only). If permission
-   is denied or no camera is available, show the failure message and return to
-   the Send form with the address field unchanged.
+1. **Check prerequisites, then request camera permission.** First verify that the page is in a secure context (HTTPS outside local development; loopback development only). Next verify that `navigator.mediaDevices` exists, the Permissions Policy allows camera access, and the bundled decoder worker from `qr-scanner@1.4.2` (step 2) is loadable. Only after all prerequisites pass, request `getUserMedia` with `{ video: { facingMode: "environment" } }`. If any prerequisite fails, permission is denied, or no camera is available, show the failure message and return to the Send form with the address field unchanged.
 2. **Decode with the guarded decoder.** Use `qr-scanner@1.4.2` with its bundled
    worker. Native `BarcodeDetector` is an optimisation only: use it when
    `getSupportedFormats()` includes `qr_code`, and only after the local
@@ -486,6 +482,10 @@ results, and never auto-resume. The scanner never opens an encoded link.
 - Wrong network: `Request does not match selected network.`
 - Unsupported amount: `Amount is not supported.`
 - More than one code in frame: `Show only one payment QR code.`
+- Stale request at signing: `Payment request is no longer current; scan it again.`
+- Wrong chain: `Request does not match selected chain.`
+- Scan timeout: `QR code scan timed out.`
+- Step 4 revalidation failure: `Payment request failed revalidation.`
 
 **Payload formats (D25).** Parse the decoded text with
 `E.parsePaymentRequest`, then verify it with `E.verifyPaymentRequest` against
@@ -494,8 +494,8 @@ the selected network, recipient and associated request. Approved forms only:
 | Chain | Approved payload form |
 |---|---|
 | BTC (testnet4) | BIP-321: `bitcoin:?tb=<ADDRESS>&amount=<BTC>` |
-| ETH (Sepolia) | ERC-681: `ethereum:pay-<ADDRESS>@11155111?value=<WEI>` (`@11155111` mandatory; `pay-` prefix) |
-| TON (testnet) | `ton://transfer/<ADDRESS>?amount=<NANO>&text=<MEMO>` — never `bin`, `jetton` or `exp` |
+| ETH (Sepolia) | ERC-681: `ethereum:pay-<ADDRESS>@11155111?value=<WEI>` — this guide’s D25 policy requires the `pay-` prefix and `@11155111`; these are not ERC-681 mandates |
+| TON (testnet) | `ton://transfer/<ADDRESS>?amount=<NANO>&text=<MEMO>` — this guide’s D25 whitelist policy excludes `bin`, `jetton` and `exp`; this is not a TON protocol restriction |
 | TRX (Nile) | Bare address only |
 
 **Out of scope.** Non-payment QR codes, other barcode types, scanning from a
@@ -589,7 +589,7 @@ Choose the look, framework and components yourself. This section defines a contr
 
 ### Screen obligations
 
-The canonical screen list and permitted-data contract are defined in docs/14 section 5.1. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
+The canonical screen list and permitted-data contract are defined in `docs/14-wallet-app-implementation`, section 5.1, at `e3b65fb8`. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
 
 **Validation evidence:** the screen list and expected states come from the Web validation draft’s build log. The draft is local-only, in no repository: its fourteen screens were written and its 31 unit tests pass, and the integrated browser flow was run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; Section D). Live spend was not exercised. Treat this as evidence for the screen list and expected states, not for a completed live-spend flow.
 
@@ -600,14 +600,14 @@ If you want a starting point for the presentation layer, the UI-template appendi
 
 Receive-QR and scanning are both in scope, resolved by the user on 2026-11-08. Remaining OPEN items concern specification details, implementation/API integration and verification — not whether to include either feature.
 
-Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
+Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. The network label (for example, “testnet4”) comes from the selected network context — the configured network/endpoint — not from the address or the QR payload. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
 
 QR payment-request scanning is specified in Section F. See Doc 3, Consolidated open-items register, `OI-037`.
 
 ### Sources
 
 - Web validation draft build log — local-only, in no repository; validation evidence for the Web screen list and expected states (Section D).
-- Repo guide, `docs/14`, section 5.1, at `e3b65fb832db287fdc8d54794980dd0b3456cc12` — shared screen contract.
+- Repo guide, `docs/14-wallet-app-implementation`, section 5.1, at `e3b65fb832db287fdc8d54794980dd0b3456cc12` — shared screen contract.
 
 ### Open items
 
