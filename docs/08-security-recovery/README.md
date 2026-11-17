@@ -215,7 +215,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 1. **"BIP-39 is the wallet"** — No. BIP-39 gives you a mnemonic and a seed derivation procedure; the downstream HD/key/address policy is another layer.
 
-2. **"Every chain uses m/44'."** — No. Bitcoin BIP-84 is a different purpose; Cardano uses its own CIP purpose; TON has wallet-contract semantics; Substrate uses a different URI/crypto model.
+2. **"Every chain uses m/44'."** — No. Bitcoin BIP-84 is a different purpose; Cardano uses CIP-1852 (purpose 1852'); TON has wallet-contract semantics; Substrate uses a different URI/crypto model.
 
 3. **"The same EVM address means the same network."** — No. The address may be the same while the chain ID, RPC, balances and token contracts are different.
 
@@ -229,7 +229,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 8. **"Self-hosted means free."** — Software can be free while the infrastructure is not; a full node may require substantial disk, bandwidth, CPU, RAM, backups and maintenance.
 
-9. **"A random GitHub fork is an official implementation."** — Never assume this. Start from the blockchain's official documentation, the project's canonical repository, standards and maintainers with a visible history.
+9. **"A random GitHub fork is an official implementation."** — Never assume this. Start from the blockchain's official documentation, the project's canonical repository, standards and maintainers with a visible history. Compare the fork's upstream URL and commit history with the canonical repository, review divergent commits, and corroborate claimed maintainer affiliations and releases against that repository's maintainer information, release tags and release notes.
 ## 6. Incident response: what to do when something is compromised
 
 Apply this rule in every scenario: **changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can.** A compromised seed cannot be changed.
@@ -242,7 +242,7 @@ Complete the migration: generate a new wallet on a fresh trusted device, move ev
 2. Generate a new wallet on a fresh trusted device, using an independent seed generated on a clean signer.
 3. Move every asset and token to the new wallet, and migrate signing roles across affected networks. Retire the old wallet permanently.
 4. Do not rely on a vault-password change to secure an exposed phrase. Only a fresh seed and migration can. Revocation cannot repair key theft.
-5. Use documented incident-support routes when handling gas top-ups: sweeper bots may steal them.
+5. Use incident-support routes when handling gas top-ups: sweeper bots may steal them.
 6. Revoke exposed service credentials too.
 
 ### Compromised vault
