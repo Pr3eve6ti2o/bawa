@@ -23,12 +23,16 @@ address allocation and blockchain data
     ↓
 payment matcher
     ↓
+reconciler
+    ↓
 confirmation policy
     ↓
 idempotent finalisation
     ↓
 application/database
 ```
+
+The terms "payment matcher", "reconciler" and "price-feed subsystem" are application-design labels coined by this guide, not Bawa components.
 
 Run the watcher as a 60-second background loop. Keep separate error boundaries within each cycle, including around individual deposit checks, so a failure while checking one deposit does not terminate the whole watcher.
 
@@ -47,11 +51,11 @@ Use this stateful flow rather than “address, get transactions, if transaction 
 
 Sum matching payments to a deposit instead of assuming one exact transaction. For an expected amount of 100, two matching payments can reach the total: 60 + 40 = 100.
 
-Allow the deposit to remain in an `underpaid` state until the total reaches your configured acceptance threshold. Set that threshold as application policy: it is not part of BIP-32, BIP-44, Ethereum JSON-RPC, Bitcoin Core or any other wallet standard.
+Allow the deposit to remain in an `underpaid` state until the total reaches your configured acceptance threshold. Set that threshold as application policy: it is not part of BIP-32, BIP-44, Ethereum JSON-RPC or Bitcoin Core.
 
 ### Expiry and late payments
 
-Treat a payment deadline as an application rule, not a blockchain rule. Distinguish pending, expired, late payment found and manual review in your payment state.
+Treat a payment deadline as an application rule, not a blockchain rule. Distinguish pending, expired, late payment found and manual review in your payment state. Here, "late payment found" is an alias for `late`, and "manual review" is an alias for `manual_review`.
 
 Keep expired payment records so you can still match an on-chain payment that appears afterwards. Do not delete a record and assume expiry prevents a payment from arriving.
 
