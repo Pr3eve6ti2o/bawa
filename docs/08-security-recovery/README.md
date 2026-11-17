@@ -21,7 +21,7 @@ These engineering limitations are not weaknesses of the guide — they are part 
 
 Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "[source-verified against the Trust Wallet Core 4.9.2 tag](../14-wallet-app-implementation/README.md)". This is distinct from "tested-with-pinned-tooling" (Core 4.8.4, the exact version in the committed `tools/hdwallet-gen/package-lock.json`); the 4.9.2 tag is not a matching source reference for that 4.8.4 dependency.
 
-Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
+Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was run in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
 Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and [independent Python verification](../09-signing-and-hardware/README.md) recovered the published fixture sender [`0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`](../14-wallet-app-implementation/README.md). This dedicated 4.9.2 demo re-run was distinct from the EIP-1559 proof and full verification pass, which were run against 4.8.4. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
@@ -381,7 +381,7 @@ Registered policy lets a signer recognise its own change; it does not prove an e
 
 3. **Assemble the wallet** — select 2-of-3 and the intended Bitcoin network; import each signer's account public-key export; compare the full public keys and their origins against trusted signer exports; names and short fingerprints alone are insufficient.
 
-4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; compare a receive address with the address shown on each signer's display for the registered policy and check that change is recognised on each signer's display as belonging to that policy before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again.
+4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; compare a receive address with the address shown on each signer's display for the registered policy and check that change is recognised on each signer's display as belonging to that policy before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again or verify it on demand, according to the signer's design.
 
 5. **Back up the public policy** — keep a watch-only wallet export and, where supported, checksummed descriptors for both receive and change branches; record:
    - 2-of-3;
@@ -410,7 +410,7 @@ Sparrow and Electrum have no licence or subscription fee; budget for three compa
 Choose this over paid assisted multisig if you can manage separation, policy records and regular recovery tests. Paid help may be worth its fee for setup checks, replacement support or inheritance planning. If a provider holds a key, insist on the full exportable policy and test that your own two keys can recover without that provider.
 ## 12. EVM smart-contract wallets
 
-With Safe-class tools, your account is a contract on a specific EVM network; its owner list and signature threshold live on-chain. A mnemonic restores one owner's key, not the whole account: control still requires whatever the contract currently authorises. This redundancy covers assets controlled by the contract, not balances left in a separate seed-controlled account.
+With Safe-class tools, your account is a contract on a specific EVM network; its owner list and signature threshold live on-chain. A mnemonic can restore keys for one or more registered owners, not the whole account: not every owner is mnemonic-backed, and control still requires whatever the contract currently authorises. This redundancy covers assets controlled by the contract, not balances left in a separate seed-controlled account.
 
 ### What it protects against
 
