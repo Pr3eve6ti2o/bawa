@@ -1382,6 +1382,40 @@ Agree the following routine with the maintainer. Confirm the chosen scanner, ver
 
 Local hooks are useful, but they can be bypassed. Keep the independent CI check.
 
+#### Scanning runbook
+
+1. **Scope and cadence:** scan staged content before every commit. Scan the proposed commit and complete history for all agreed branches and tags on every pull request, push and release candidate. Run a full-history baseline before enabling the gate, repeat weekly, and repeat after imports, history rewrites or scanner/rule changes. Before CI scanning, fetch and verify the candidate commit and expected refs; `--all` covers only refs present locally.
+
+2. **Execute:** install the agreed, pinned scanner version and use maintainer-approved configuration, ignore rules and baseline policy, not unreviewed pull-request changes. For a Gitleaks version documenting these flags, run this example from the repository root with `GITLEAKS_CONFIG` pointing to the approved rules file. Use the staged invocation in the hook and the history invocation in CI and scheduled scans. Verify redaction with synthetic fixtures first.
+
+   ```sh
+   set -eu
+   umask 077
+   : "${GITLEAKS_CONFIG:?Set the absolute path to the approved rules file}"
+   reports="$(mktemp -d)"
+   printf 'Private scan reports: %s\n' "$reports"
+
+   gitleaks git --pre-commit --staged --config "$GITLEAKS_CONFIG" \
+     --redact=100 --report-format=json --report-path="$reports/staged.json" \
+     . >"$reports/staged.log" 2>&1
+
+   test "$(git rev-parse --is-shallow-repository)" = false
+   gitleaks git --config "$GITLEAKS_CONFIG" \
+     --log-opts="--all --full-history -m" --redact=100 \
+     --report-format=json --report-path="$reports/history.json" \
+     . >"$reports/history.log" 2>&1
+
+   rm -rf "$reports"
+   ```
+
+3. **Pass criteria:** every required scan must complete successfully with verified scope and no unresolved findings. Any non-zero exit, missing ref, shallow history, scanner error or coverage gap blocks the commit/check/release. Document narrowly scoped, maintainer-approved false positives without secret values; never hide an unresolved leak in a baseline or broad allowlist.
+
+4. **Contain findings immediately:** stop the affected commit or release and notify the maintainer through a restricted channel. Keep failed-run reports private; do not paste credentials or matched source lines into logs, tickets or chat. Share only verified-redacted summaries, rule IDs, paths and commit IDs. For confirmed or credible credential exposure, promptly disable/revoke the old credentials, issue replacements and update authorised consumers—do not wait for exposure assessment or history cleanup. Wallet private keys and seeds cannot be revoked: move assets to a fresh, independently generated wallet and retire the compromised wallet.
+
+5. **Assess and remediate:** establish when and where exposure occurred, including affected refs, clones/forks, logs, artifacts and external destinations. Review credential permissions and access/audit records for misuse. Remove secrets from source and configuration, use an appropriate secret store, and sanitise affected logs/artifacts. Coordinate any necessary history rewrite and downstream cleanup; rewriting history does not erase other people's copies.
+
+6. **Rescan and close:** rescan amended changes and the complete agreed history after remediation. Verify revocation or wallet migration and replacement configuration before resuming releases. Close the finding only when the pass criteria hold; record scanner/rule versions, scanned refs, redacted disposition and the next scheduled scan. Delete private failure reports when authorised triage no longer needs them.
+
 ### Triage: verify, fix, re-scan, record
 
 1. **Verify the finding.** Identify the scanner rule, file, commit and responsible owner without reproducing the value. Use only a placeholder such as `<SECRET_PLACEHOLDER>` in discussion. Establish whether the match represents an exposed secret or a false positive; do not test it by signing in or submitting it to another service. Ask the maintainer what evidence is required before accepting a narrow exception.
