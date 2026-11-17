@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.3 (the current latest stable) is a separate, uncompleted step; do not present 4.9.2 or 4.9.3 as the installed pin until the manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and require Node.js `>=22 <23` for the repository tools and Web app. The upgrade to 4.9.3 (the current latest stable) exists on feature branch `E02` (commit `decad63`) but is not integrated into main; do not present 4.9.2 or 4.9.3 as the installed pin on main until its manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, and the Web draft declares the same range.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
@@ -75,7 +75,7 @@ Read the mnemonic internally, check the 24-word count and validate it with Walle
 
 Enforce Bawa's empty BIP-39 passphrase policy. Treat a changed passphrase as selecting a different wallet, not merely changing an encryption password.
 
-Accept both mnemonic and passphrase for import. Validate the mnemonic with Mnemonic.isValid and enforce the passphrase policy before using Wallet Core's HDWallet.createWithMnemonic operation. Reject non-empty passphrase input rather than silently replacing it with an empty value. Make an explicit policy change before supporting a non-empty passphrase. Do not treat mnemonic validation as proof of the passphrase or the intended wallet.
+Accept both mnemonic and passphrase for import. Validate the mnemonic with Mnemonic.isValid and enforce the passphrase policy before using Wallet Core's HDWallet.createWithMnemonic operation. Require the implementation to reject non-empty passphrase input rather than silently replacing it with an empty value; this is a requirement, not implemented behaviour, and generation currently has no passphrase input to reject. Make an explicit policy change before supporting a non-empty passphrase. Do not treat mnemonic validation as proof of the passphrase or the intended wallet.
 
 Show a mnemonic only on the one-time offline backup screen. Keep import entry masked throughout, and never retain import text in persisted forms or navigation state.
 
@@ -117,26 +117,26 @@ Keep chain and account-origin metadata alongside the xpub. Do not treat address 
 
 ### Public-only flow
 
-Mirror the Wallet Core API sequence in `derive.js`. Apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
+`derive.js` is currently a CLI using `console.error` and exit codes, not a promise-returning library. The required derivation-module interface must mirror its Wallet Core API sequence. Under this contract, apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
 
-Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
+Under the required contract, obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
 
 Call the temporary public-key object’s `delete` method from a `finally` block, including when address conversion fails.
 
-Do not print or exit from the library. In the CLI adapter, print only the successful, validated address.
+Do not print or exit from the required derivation module. Keep diagnostics and exit-code handling in the CLI adapter, and print only the successful, validated address to stdout.
 
 ### Validation and failures
 
-Reject invalid paths, wrong networks, out-of-range indices and private material at a public-only boundary with typed errors. Never use a fallback derivation. Do not silently derive a different account after rejecting an import.
+The error taxonomy in this section is a required interface contract, not existing `derive.js` behaviour: the tool reports failures through plain stderr and exit codes. Reject invalid paths, wrong networks, out-of-range indices and private material at a public-only boundary with the contract's typed errors. Never use a fallback derivation. Do not silently derive a different account after rejecting an import.
 
 - **Inputs:** Accept exactly `btc`, `eth` or `trx`. Enforce the 200-character xpub limit before trimming, including while reading standard input, and reject empty trimmed input. Require a numeric integer index from `0` to `2147483647` inclusive. Treat both endpoints as non-hardened. Use distinct error kinds such as `UnsupportedChain`, `InvalidIndex`, `EmptyXpub` and `XpubTooLong`.
-- **Private extended keys:** Base58Check-decode the input, check its double-SHA-256 checksum, then compare the four-byte version against the eight-entry private-version set in `derive.js`, including recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. Return `PrivateExtendedKey` for recognised private extended keys, and never convert private input into public form. Keep address allocation from becoming a route for handling signing material.
+- **Private extended keys:** Base58Check-decode the input, check its double-SHA-256 checksum, then compare the four-byte version against the eight-entry private-version set defined in `extended-key.js` and imported by `derive.js`, including recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. The required derivation-module contract must use `PrivateExtendedKey` as the typed error kind for recognised private extended keys, and must never convert private input into public form. Keep address allocation from becoming a route for handling signing material.
 - **Malformed keys:** Do not treat passing the private-version guard as confirmation of a valid xpub. Require Wallet Core to parse it, and reject invalid encoding, checksum or key structure with a typed failure rather than an address.
-- **Runtime failures:** Distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. Treat an empty address or a false validation result as a failure.
+- **Runtime failures:** Under this contract, distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. Treat an empty address or a false validation result as a failure.
 
-Apply the extended-key-prefix and long-Base58 redaction from `derive.js` to retained native error text. Do not attach raw input to errors or telemetry, because an xpub still exposes an account’s address family.
+As a required policy, apply extended-key-prefix and long-Base58 redaction to retained native error text. Do not attach raw input to errors or telemetry, because an xpub still exposes an account’s address family.
 
-Keep standard-input read failures in the CLI adapter. Match `derive.js`: exit with `2` for read errors, usage errors and private-key rejection, and with `1` for runtime failures.
+Keep standard-input read failures in the CLI adapter. Require exit code `2` for read errors, usage errors and private-key rejection, and exit code `1` for runtime failures. These redaction and exit-code policies are requirements, not guarantees of existing `derive.js` behaviour.
 
 ### Regression checks
 
@@ -149,10 +149,10 @@ Record source-check results as “source-verified against the Trust Wallet Core 
 > - Confirm that BTC returns `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` and passes Bitcoin validation.
 > - Confirm that ETH returns `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`, preserves its checksum casing and passes Ethereum validation.
 > - Repeat the same chain, xpub and index, and confirm that the address remains identical.
-> - Confirm that `0` and `2147483647` pass the index gate, while negative, fractional and larger indices fail with typed errors.
-> - Confirm that invalid paths, wrong networks and hardened children below an account public key fail with typed errors, without a fallback derivation or a silently substituted account.
+> - Confirm that `0` and `2147483647` pass the index gate, while negative, fractional and larger indices fail with a stderr message and a non-zero exit, with no address on stdout.
+> - Confirm that invalid paths, wrong networks and hardened children below an account public key fail with a stderr message and a non-zero exit, with no address on stdout and without a fallback derivation or a silently substituted account.
 > - Confirm that synthetic private-version fixtures are rejected before public-key derivation.
-> - Confirm that empty, overlong or malformed input and `ton` return typed errors, without key material or a successful address on standard output.
+> - Confirm that empty, overlong or malformed input and `ton` fail with a stderr message and a non-zero exit, without key material or an address on stdout.
 
 ## Storage module
 
@@ -167,7 +167,7 @@ Keep storage behind one module. Give payment code public records or signing resu
 
 Never persist a plaintext mnemonic or private key. Never place the data key in the seed bundle, app database, `.env` or ciphertext backup archive.
 
-Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more lowercase words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
+Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more consecutive lowercase alphabetic words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
 
 An existing `seed.enc.json` causes refusal unless `generate.js --force` is passed. When that flag is set and the file exists, the generator copies it to `seed.enc.json.bak.<timestamp>` and proceeds to replace it. `make_wallet.py` accepts `--force` or `--regenerate` and passes `--force` to `generate.js`.
 
