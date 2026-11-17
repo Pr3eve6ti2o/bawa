@@ -5,7 +5,7 @@
 Start with the cheapest chain-native setup:
 
 - **BTC:** Use Blockstream's public Esplora API for address state, UTXOs, confirmed and mempool history, and transaction details. Follow the [Esplora API reference](https://github.com/Blockstream/esplora/blob/master/API.md).
-- **EVM:** Call JSON-RPC directly: `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`. Follow the [Ethereum JSON-RPC specification](https://ethereum.org/developers/docs/apis/json-rpc/).
+- **EVM:** Call JSON-RPC directly: `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`. Follow the [Ethereum JSON-RPC documentation](https://ethereum.org/developers/docs/apis/json-rpc/).
 - **Solana:** Use the public cluster RPC endpoint for your network:
   - Mainnet: <https://api.mainnet.solana.com>
   - Devnet: <https://api.devnet.solana.com>
@@ -15,7 +15,7 @@ Start with the cheapest chain-native setup:
 - **TON:** Use the TON-native SDK/HTTP ecosystem, not an Ethereum RPC abstraction.
 - **Cosmos:** Use chain-specific RPC/LCD/gRPC, plus the Cosmos Chain Registry for chain metadata.
 
-Treat $0 as a target, not a promise of a free tier. Free public endpoints have provider quotas and no uptime guarantee. Check your chosen provider's current limits.
+Treat $0 as a target, not a promise of a free tier. Free public endpoints have provider quotas; no stated uptime SLA was found. Check your chosen provider's current limits.
 
 ## 2. The ladder: manual to self-hosted
 
