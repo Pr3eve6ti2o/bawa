@@ -1030,7 +1030,7 @@ For an address mismatch, compare these in order:
 7. Same branch?
 8. Same index?
 9. Same network/address encoding?
-10. Same wallet implementation and configuration? For TON, compare the contract/version plus wallet-ID/subwallet configuration; for Cardano, the exact CIP plus role model; for Solana, the exact derivation convention.
+10. Same wallet implementation and configuration? For TON, compare the contract/version plus wallet-ID/subwallet configuration; for Cardano, the exact CIP plus role model; for Solana, the exact derivation convention (SLIP-0010 for Ed25519 derivation; coin type 501 per SLIP-0044).
 
 Re-derive with the corrected item. Do not fund a mismatched address.
 
@@ -1039,8 +1039,8 @@ For balances and tracking:
 | Symptom | What to check or do |
 | --- | --- |
 | EVM address matches but balance is zero | Check the chain ID, RPC endpoint, network name, native currency and explorer. The same address can exist on multiple EVM networks. |
-| Tracker misses a payment | Check for a wrong index, index allocation DB issues, a gap-window issue, a wrong branch, indexer lag, an RPC error, a reorg, a token contract mismatch or the wrong network. This is why an address allocation table is so important. |
-| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and empty passphrase. If it matches, the funds are on the recorded path and your restore used a different path or passphrase — re-check each item in the ordered comparison above. If the recorded first address itself shows no funds on the recorded network, the funds were never sent to that address. Never re-fund a guess. |
+| Tracker misses a payment | Candidate causes to check include a wrong index, index allocation DB issues, a gap-window issue, a wrong branch, indexer lag, an RPC error, a reorg, a token contract mismatch or the wrong network. This is why an address allocation table is so important. |
+| Wallet looks empty after restore | Re-derive your recorded first address with the recorded path and empty passphrase. If it matches, you have reproduced the recorded address. Check the recorded address on the recorded network. A matching address with zero balance does not prove that your restore used a different path or passphrase, or that funds were never sent to that address. Re-check each item in the ordered comparison above. Never re-fund a guess. |
 
 For negative and security cases:
 
@@ -1054,7 +1054,7 @@ For negative and security cases:
 | Private extended keys | These are rejected and redacted. |
 | Corrupted AES-GCM, wrong data keys or truncated artefacts | Check the seed bundle’s integrity, your data key and whether any artefact is truncated. |
 | Symlinked secret/artefact paths | `decrypt_seed.py` refuses symlinked artefact paths; `make_wallet.py` refuses symlinked secret, `.env` and backup paths. |
-| Unexpected existing outputs | `make_wallet.py` refuses an existing seed bundle (`seed.enc.json`) without `--force`. |
+| Unexpected existing outputs | `make_wallet.py` refuses an existing seed bundle (`seed.enc.json`) without `--force/--regenerate`. |
 | Missing `.env` | Check that your `.env` file is present. |
 
 If a published link fails, first check whether it moved: try the owning project’s current documentation home or repository. Do not guess a replacement URL. The canonical copy of this guide is in the repository at the pinned commit (§4); a copy elsewhere may be out of date. If a link in this guide fails, report it against the repository so the next revision can correct it.
@@ -1064,9 +1064,9 @@ Known gaps:
 - Live wallet creation and restore were performed on the pushed head under a real pty on 2026-11-08 (completion message, four public values, seed.enc.json 0600, dirs 0700, backup byte-identical; decrypt round trip byte-identical, 24 words). That run used Node v24.22.2, outside the repository's declared Node `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). No live testnet spend has been made from this wallet.
 - The Core side of the differential comparison is open (§11).
 - No root dependency lockfile exists (the tools lockfile exists at `tools/hdwallet-gen/package-lock.json`).
-- No secret or dependency scanning has run.
+- Secret or dependency scanning: no scanning step in CI.
 - No reproducible-build procedure exists.
-- No external security review has run.
+- External security review: none documented in the repo.
 - No vulnerability-disclosure channel exists; this is an open item owned by the maintainers.
 
 ## 14. Short FAQ
@@ -1075,13 +1075,13 @@ Read [`docs/FAQ.md`](FAQ.md) for the FAQ.
 
 - **Scoped numerical note.** A 24-word mnemonic encodes 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. The empty passphrase contributes no additional secret. Seed-guessing resistance is separate from randomness quality, implementation security and device compromise.
 
-- **Per-asset recovery checklist.** For each asset, record: BIP-39 support; empty passphrase; exact derivation path; account 0; receiving branch 0; address format; network. Label each item **tested** or **theoretical**. TON is generation-only. The documented policy version is `bawa-derivation-policy-v1`. Record this identifier so you can detect a future policy change; it labels the policy without changing any seed or path.
+- **Per-asset recovery checklist.** For each asset, record: BIP-39 support; empty passphrase; exact derivation path; account 0; receiving branch 0 (N/A for TON, whose path ends at the hardened account node with no branch); address format; network. Label each item **tested** or **theoretical**. TON is generation-only. The documented policy version is `bawa-derivation-policy-v1`. Record this identifier so you can detect a future policy change; it labels the policy without changing any seed or path.
 
 For the other FAQ topics, see [`docs/FAQ.md`](FAQ.md): why Bawa is not a wallet to hold money; why you should generate only on a trusted offline interactive machine; first-word plus `SAVED` confirmations; why an xpub cannot recover a wallet; why a differential pass is not production readiness; and why a quiet terminal or a refused run is normal.
 
 ## 15. Updating and rebuilding
 
-There is no documented update, migration or rollback procedure.
+This section documents an update procedure in Steps 1–4. There is no documented migration or rollback procedure.
 
 Do not casually overwrite your seed bundle (the encrypted `seed.enc.json` file) or `.env`. Use `--force` only after you have verified a backup of the seed bundle with `tools/decrypt_seed.py` and the separate offline data key. It backs up the old file to `seed.enc.json.bak.<timestamp>` with permissions `0600`.
 
@@ -1151,6 +1151,8 @@ Follow §10 to re-run the `compare.js` comparison inside the pinned worktree —
 
 The tools package's test script targets test/smoke.test.js, which exists in the pinned tree at `e3b65fb832db287fdc8d54794980dd0b3456cc12` and passes 28/28 (verified 2026-11-08). Use that script as an update check.
 
+The four-file syntax-check baseline and 28/28 tools smoke-test result are historical results for the pinned tree at `e3b65fb832db287fdc8d54794980dd0b3456cc12`. Current main checks five files (see §6), and the tools suite records 130 checks, 0 fail.
+
 **Step 4 — Stop on failure (§13).**
 
 If a check fails, stop and follow §13. Do not fund the wallet. Do not regenerate to “fix” a mismatch.
@@ -1185,6 +1187,8 @@ For each release, create an annotated tag in the form `vX.Y.Z`. In the annotatio
 - [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md)
 - [TON TEP-3 — the wallets standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md)
 - [Cardano CIP-1852](https://cips.cardano.org/cip/CIP-1852)
+
+**TEP-3 note:** Bawa departs from two TEP-3 recommendations. Section 5 says wallet applications SHOULD use Wallet V5R1 by default; Bawa's TON fixture instead uses Wallet V4R2 with wallet ID `698983191` (only V4R2 with that ID matches), because V5R1 is not implemented or verified on `main`. Section 4 says wallet applications SHOULD NOT create new wallets using a 24-word multichain mnemonic; Bawa creates 24-word BIP-39 multichain mnemonics under its pinned derivation policy `bawa-derivation-policy-v1` (guide section 8), sharing one seed across BTC, ETH, TRX, and TON because the single 24-word seed is Bawa's pinned multichain design.
 
 **Trust Wallet ecosystem**
 
