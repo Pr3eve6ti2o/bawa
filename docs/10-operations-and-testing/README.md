@@ -332,8 +332,11 @@ curl -sS "https://testnet.toncenter.com/api/v2/getMasterchainInfo"
 ### Sources
 
 - Node.js CLI: https://nodejs.org/api/cli.html
-- npm lockfile reference: https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json
+- npm lockfile reference (npm CLI v10-specific): https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json
 - Ethereum JSON-RPC: https://ethereum.org/developers/docs/apis/json-rpc/
+- TRON API reference: https://developers.tron.network/reference
+- TON documentation: https://docs.ton.org/
+- TON Center API reference (v2): https://toncenter.com/api/v2/
 
 ## A sensible architecture for different sizes of project
 
