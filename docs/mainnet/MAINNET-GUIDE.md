@@ -3677,7 +3677,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 ### M-26 — Terminology and callout work
 
-**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 195 Warning callouts are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
+**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 21 Warning callouts in this guide (119 repo-wide) are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
 
 **Affected sections:** §1, §2 and the whole document; writing-phase work.
 
@@ -3685,12 +3685,12 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - The “Mainnet” glossary row at `docs/GLOSSARY.md:45` is false for the mainnet guide. The text itself breaks the “wallet” terminology rule at `docs/RECOVERY.md:423`, and two vaults share one glossary row.
 - The terms **BIP-39 passphrase** and **vault unlock passphrase** must be used in full, never reduced to the unqualified final word. Approximately 173 existing uses lack that qualification.
 - The callout taxonomy has three tiers — Never, Stop and Warning — written as `> **NAME**`, without a colon. Every callout must contain its trigger, required action and consequence.
-- All 195 existing `> **Warning**` callouts need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
+- All 21 existing `> **Warning**` callouts in this guide (119 repo-wide) need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
 - The 81 testnet-scope sentences require individual review, not bulk deletion. The “four secrets” map is missing.
 
 **Status:** OPEN (writing-phase work).
 
-**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 195 callouts using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
+**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 21 callouts in this guide (119 repo-wide) using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
 
 **Blocks writing completion:** No — this is the writing work itself, not a precondition for it.
 
@@ -4123,7 +4123,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 26. `docs/09` migration details (descriptor examples, placeholders, expected-result text, verified mainnet replacements) | m17 O7 | OPEN — file-and-line audit of `docs/09` first. |
 | 27. 24-word policy enforcement unverified (policy stated, enforcement behaviour not shown) | m02 | OPEN — verify separately. |
 | 28. In-browser fixture reproduction on mainnet endpoints unverified | m29 | OPEN — check derivation, displayed addresses and network selection without funding. |
-| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 195 Warning callouts; unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
+| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 21 Warning callouts in this guide (119 repo-wide); unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
 | 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED in part — UI-appendix placement decided; §5 proof-staleness remains OPEN, carried as M-33. |
 | 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | RESOLVED 2026-11-10 — carried as M-34 (worktree treatment applied and pushed). |
 | 32. Landing and re-check of all 36 source slices | M35 §3 item 32; O-M35-1 | CLOSED — all 36 slices landed and were re-checked. |
