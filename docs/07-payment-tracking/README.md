@@ -511,8 +511,13 @@ matched -> underpaid
 underpaid -> observed
 allocated -> expired
 underpaid -> expired
+requested -> expired
 included -> reorged
 confirmed -> reorged
+finalized -> reorged
+paid -> reorged
+claimed -> reorged
+fulfilled -> reorged
 reorged -> observed
 expired -> late
 late -> manual_review
@@ -521,6 +526,8 @@ manual_review -> reconciled
 fulfilled -> disputed
 disputed -> manual_review
 ```
+
+Each transition to `reorged` must append the reorg evidence to the request's history, preserving the original transition records and any earlier `paid` decision. Use `reorged -> observed` to start a linked reassessment for the same `<REQUEST_ID>` with fresh network evidence, process each applicable stage in order, and append the reassessment outcome rather than deleting or overwriting the earlier decision.
 
 Also allow these conditional routes:
 
