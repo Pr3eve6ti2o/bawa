@@ -1845,6 +1845,15 @@ The Keystore prescriptions are **APPROVED BUT UNEXECUTED**: supported-device har
 
 Loss or invalidation of the device wrapping key can make the vault unreadable. Use the existing mnemonic-restoration flow for recovery and keep the derivation policy unchanged. Never use a hidden copy of the wrapping key.
 
+**Additional testnet-wallet requirements**
+
+- **Recents:** The testnet wallet must exclude secret screens from recents thumbnails.
+- **Lifecycle/callback invalidation:** The testnet wallet must invalidate secrets and authentication state on lifecycle transitions and callback invalidation; stale callbacks must not restore access.
+- **Key disposal:** The testnet wallet must deterministically dispose of the wrapping key and transient secret material, without relying on garbage collection.
+- **Autofill:** The testnet wallet must disable autofill for secret fields.
+- **Saved state:** The testnet wallet must never persist secrets in saved instance state.
+- **IME learning:** The testnet wallet must disable IME learning and personalised suggestions for secret input.
+
 **Sources**
 
 - [Android Developers — Android Keystore](https://developer.android.com/privacy-and-security/keystore)
@@ -2066,11 +2075,11 @@ Run these checks in a shell with `curl` and `jq`. Treat all example heights and 
 
 **Bitcoin testnet4**
 
-**VERIFIED** — As of 2026-11-08, the draft selection at `NetworkConfig.kt:36-38`, `https://blockstream.info/testnet/api/`, served **testnet3**, with tip **5,303,415** (R04 F12). It is **not acceptable** for this guide’s Bitcoin testnet4 adapter.
+**VERIFIED** — As of 2026-11-08, the draft endpoint `https://blockstream.info/testnet/api/` served **testnet3**, with tip **5,303,415** (R04 F12). It is **not acceptable** for this guide’s Bitcoin testnet4 adapter.
 
 > **Warning** — The draft URL supplies testnet3 data to a testnet4 integration. Replace it with the testnet4 endpoint and repeat the identity checks; do not accept the configuration until the defect and check results agree.
 
-Fix `NetworkConfig.kt:36-38` to select `https://mempool.space/testnet4/api` for this worked example. Blocked pending OI-033.
+Replace the draft endpoint `https://blockstream.info/testnet/api/` (R04 F12) with `https://mempool.space/testnet4/api` for this worked example. Blocked pending OI-033.
 
 ```sh
 btc_api='https://mempool.space/testnet4/api'
@@ -2362,11 +2371,11 @@ Return `Unsupported` for token schemes that Bawa does not explicitly support. Bi
 
 ### Network identity
 
-**VERIFIED** — As of 2026-11-08, the draft endpoint at `NetworkConfig.kt:36-38`, `https://blockstream.info/testnet/api/`, serves **testnet3**, not testnet4. The live check returned tip height `5,303,415`. This endpoint is **not acceptable** for Bitcoin testnet4.
+**VERIFIED** — As of 2026-11-08, the draft endpoint `https://blockstream.info/testnet/api/` serves **testnet3**, not testnet4. The live check returned tip height `5,303,415` (R04 F12). This endpoint is **not acceptable** for Bitcoin testnet4.
 
 **Warning** — The draft endpoint returns observations from the wrong chain. Replace it with a testnet4 provider; check network identity before accepting balances, history or confirmations.
 
-Fix the endpoint defect at `NetworkConfig.kt:36-38` and configure the Bitcoin provider for **mempool.space testnet4**. Bitcoin provider integration: Blocked pending OI-033.
+Fix the endpoint defect at `https://blockstream.info/testnet/api/` (R04 F12) and configure the Bitcoin provider for **mempool.space testnet4**. Bitcoin provider integration: Blocked pending OI-033.
 
 Run the testnet4 tip-height check as network-identity proof:
 
@@ -2439,7 +2448,7 @@ Handle a reorganisation as a reversible state transition, including after the th
 ### Sources
 
 - [mempool.space testnet4 tip-height endpoint](https://mempool.space/testnet4/api/blocks/tip/height) — checked 2026-11-08.
-- [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; defect at `NetworkConfig.kt:36-38` (OI-033).
+- [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; endpoint defect confirmed by live-check record R04 F12 (OI-033).
 - BUILD-LOG Stage 2 / `NetworkConfig.kt`, `confirmationsRequired` — BTC threshold of 6 confirmations; check date: 2026-11-08.
 
 ### F.6 — Ethereum Sepolia
