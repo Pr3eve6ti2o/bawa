@@ -3494,8 +3494,8 @@ M12 also records gaps G1–G10 with check procedures.
 - M16 F45 identifies the README §13 overclaim and the unqualified assumption of an empty BIP-39 passphrase.
 - M16 F47 records that Web import skips the backup gate, while Android uses a 3-word quiz rather than the required 24-word re-entry. These are funding-gate defects, not UX differences.
 - M16 F22–F23 records that Web deletion requires the vault passphrase and Android import refuses while a bundle exists. The only escapes identified are undocumented out-of-app clears.
-- M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten.
-- M16 F42 supplies the required synthesis for §10: a 12-step ordered procedure with hard stops.
+- M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten: a mistyped BIP-39 passphrase silently derives a different valid wallet with no error, so the user may fund the wrong wallet.
+- M16 F42 supplies the required synthesis for §10: an ordered 9-step recovery procedure plus separate 3-step procedures, with hard stops.
 
 **Status:** OPEN.
 
@@ -3503,7 +3503,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** §10 prose follows M16 F42’s 12-step order, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android.
+**Clearance condition:** §10 prose follows the 9-step recovery order and keeps the 3-step procedures separate, retaining M16 F42’s hard stops, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M16 F45, F47, F22–F23, F24 and F42. [Repository at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20): README §13.
 
