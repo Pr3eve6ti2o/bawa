@@ -232,7 +232,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 9. **"A random GitHub fork is an official implementation."** — Never assume this. Start from the blockchain's official documentation, the project's canonical repository, standards and maintainers with a visible history. Compare the fork's upstream URL and commit history with the canonical repository, review divergent commits, and corroborate claimed maintainer affiliations and releases against that repository's maintainer information, release tags and release notes.
 ## 6. Incident response: what to do when something is compromised
 
-Apply this rule in every scenario: **changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can.** A compromised seed cannot be changed.
+Apply this rule in every scenario: **changing the Web-draft vault password cannot secure an exposed phrase — only a fresh seed and migration can.** A compromised seed cannot be changed.
 
 Complete the migration: generate a new wallet on a fresh trusted device, move every asset and token to it, and retire the old wallet permanently.
 
@@ -248,18 +248,18 @@ Complete the migration: generate a new wallet on a fresh trusted device, move ev
 ### Compromised vault
 
 1. Treat the phrase as exposed if the vault was opened on a compromised machine.
-2. Change the vault password **and** migrate to a fresh seed on a fresh trusted device. Generate a new wallet, move every asset and token to it, and retire the old wallet permanently.
+2. Change the Web-draft vault password **and** migrate to a fresh seed on a fresh trusted device. Generate a new wallet, move every asset and token to it, and retire the old wallet permanently.
 3. Do not treat the password change as a remedy for phrase exposure. The password change alone does not secure the phrase; only a fresh seed and migration can.
 
 ### Disclosed phrase
 
 1. Treat the phrase as burned. A compromised seed cannot be changed.
 2. Generate a new wallet with a fresh seed on a fresh trusted device. Move every asset and token to it, and retire the old wallet permanently.
-3. Do not try to repair the exposed wallet by adding a passphrase or changing a password. Changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can. Revocation cannot repair key theft.
+3. Do not try to repair the exposed wallet by adding a passphrase or changing a password. Changing the Web-draft vault password cannot secure an exposed phrase — only a fresh seed and migration can. Revocation cannot repair key theft.
 
 ## 7. Disclosure: no channel exists
 
-**OPEN ITEM — owned by the maintainers.** No vulnerability-disclosure procedure exists, and neither `SECURITY.md` supplies a contact or channel.
+**OPEN ITEM — owned by the maintainers.** No vulnerability-disclosure procedure exists, and neither `SECURITY.md` nor `docs/SECURITY.md` supplies a contact or channel.
 
 **Existing line — OPEN ITEM:**
 
