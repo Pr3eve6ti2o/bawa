@@ -772,9 +772,9 @@ Document rounding and tolerance as application policy, then preserve the applied
 
 Store amounts as integers in the relevant atomic unit: BTC satoshis, EVM token base units, TRON token/base units or TON nanotons. Use human-readable decimals for presentation only; do not let formatting determine what is owed or tolerated.
 
-Re-pricing during a payment check breaks the link between the amount requested and the amount assessed; the stored request can no longer explain the decision. Re-quote only where explicit business rules, disclosed to the payer, allow it. Record the replacement quote as a new request term, retain the previous snapshot and make the changed terms visible to the payer. Never silently overwrite the original quote.
+Re-pricing during a payment check breaks the link between the amount requested and the amount assessed; the stored request can no longer explain the decision. Re-quote only where explicit business rules, disclosed to the payer, allow it. A request term is a recorded condition of a payment request, such as the quoted rate or required atomic amount. Record the replacement quote in a new, immutable version of the same request; retain the previous version and its frozen snapshot unchanged and make the changed terms visible to the payer. Never silently overwrite the original quote.
 
-Set a freshness limit for prices used at request time. If the feed is unavailable or stale and no fresh snapshot is available, either withhold the request or use an existing snapshot under a documented stale-quote policy. If you use a stale snapshot, clearly mark the quote as stale to the payer, show its age and retain its original timestamp. Never invent a replacement price.
+Set a freshness limit for prices used at request time. If the feed is unavailable or stale and no fresh snapshot is available, either withhold the request or use an existing snapshot. If you use a stale snapshot, clearly mark the quote as stale to the payer, show its age and retain its original timestamp. Never invent a replacement price.
 
 During watching, switch to a fallback feed only for new market data. Do not alter the frozen quote, including its recorded source, rate or atomic amount. Feed failover is not a re-quote.
 ## 13. Duplicate payments, disputes and refunds
