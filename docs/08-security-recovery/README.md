@@ -1180,9 +1180,9 @@ Define the scope before commissioning: seed handling, derivation paths, signing,
 
 ### Audit contests
 
-A contest pays many independent researchers to find vulnerabilities in a fixed window; the sponsor sets the prize pool and the rules.
+A contest pays independent researchers for accepted, reward-eligible vulnerability findings made in a fixed window under published terms; the sponsor sets or agrees the prize pool and scope, while platform terms govern eligibility, judging and payment.
 
-Check what the premium buys, what events are covered, how claims are decided, and whether cover can be withdrawn or repriced.
+Check the prize pool, scope, severity scale, eligibility, judging and payment.
 
 ### Bug bounties
 
