@@ -882,13 +882,13 @@ In your own watcher, keep the states separate, isolate failures within individua
 
 ## 15. Derivation ownership and token identity
 
-Keep Bawa as the canonical home for the derivation explanation and reference implementation. Package the application’s copy from that reference and treat it as a generated deployment output. Never hand-edit the copied tooling in place.
+Keep Bawa as the canonical home for the [derivation explanation and reference implementation](../06-tracking/README.md#7-gap-limits-and-discovering-an-hd-wallet). Package the application’s copy from that reference and treat it as a generated deployment output. Never hand-edit the copied tooling in place.
 
 Keep orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment in the application. Use Bawa for the reusable derivation reference, not the payment workflow. End the wallet/key layer at the account-level public root. Start the application layer with that root; no step in it needs a spending key.
 
 Treat a token’s ticker as a label, not an asset identifier. Unrelated contracts can share a symbol, including on the same network, and a familiar symbol can appear on several chains. A ticker cannot identify the asset being paid.
 
-For each payment request, including token payments, persist at least the following canonical fields. Quote timestamp, price source and quoted price apply when a conversion quote is used:
+For each payment request, including token payments, persist at least the following canonical fields (see [section 11’s canonical request fields](#make-all-six-fields-explicit)). Quote timestamp, price source and quoted price apply when a conversion quote is used:
 
 1. network/chain ID;
 2. asset type;
