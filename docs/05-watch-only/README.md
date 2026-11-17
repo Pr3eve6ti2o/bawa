@@ -353,9 +353,13 @@ The prefixes are case-sensitive. Redaction does not verify checksums. Do not tre
 
 Keep each input line to at most 4096 characters, measured as JavaScript string length: UTF-16 code units, not bytes.
 
-The length check runs after `readline` delivers the completed line, **before** whitespace handling or JSON parsing. It is not a streaming input-buffer limit.
+The completed-line length check runs after `readline` delivers the line, **before** whitespace handling or JSON parsing. This completed-line check is not a streaming input-buffer limit.
 
-If you send an empty or whitespace-only line of at most 4096 characters, the daemon ignores it without a response. Any longer line returns the following, even if it contains only whitespace:
+A separate streaming guard, `cappedInput`, sits between `stdin` and `readline` and counts bytes in the current unterminated line. If that count exceeds 4096 bytes, the daemon returns `{"ok":false,"error":"request too large"}` and destroys `stdin`.
+
+Base58 extended-key input longer than 112 characters is rejected; the decoded extended key must be exactly 82 bytes.
+
+An empty or whitespace-only line within both input-line limits returns `{"ok":false,"error":"bad json"}`. Any line exceeding either input-line limit returns the following, even if it contains only whitespace:
 
 ```json
 {"ok":false,"error":"request too large"}
