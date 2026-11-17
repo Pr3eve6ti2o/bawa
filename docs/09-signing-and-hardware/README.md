@@ -255,7 +255,7 @@ ONLINE — WATCH-ONLY TRACKER
 
 ### Hand-off checks
 
-The PSBT flow follows BIP-174/371. These checks describe the stages, **not literal tool output**.
+This section is a conceptual checklist, not a procedure. The PSBT flow follows BIP-174/371. These checks describe the stages, **not literal tool output**.
 
 1. **Prepare on watch-only.** Build the unsigned PSBT. 
   **Expected result:** an unsigned PSBT on the tracking side; signing stays in the separate signer domain.
@@ -331,12 +331,12 @@ finalise
 broadcast
 │
 ▼
-TESTNET ONLY
+TESTNET / SIGNET / REGTEST ONLY
 ```
 
 ### Walkthrough
 
-The steps follow the **BIP-174/371 PSBT flow**.
+The steps follow the **BIP-174 PSBT flow**. BIP-371 covers Taproot PSBTs.
 
 1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise. 
   **Expected result:** xpub/addresses on the tracking side, with the private key confined to the signing domain, not loaded into the web server.
@@ -361,7 +361,7 @@ Bawa does not ship a device integration. The Trezor reference is not a Bawa-Trez
 
 ### What the runbook still needs
 
-Under **BIP-380/381/382**, a native-SegWit descriptor carries **script policy, derivation origin and address ranges**. Testnet examples are:
+Under **[BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)/[BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki)/[BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki)**, a native-SegWit descriptor carries **script policy, derivation origin and ranged derivation patterns (/0/*)**. See also [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md).
 
 - **Receiving:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
 - **Change:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
