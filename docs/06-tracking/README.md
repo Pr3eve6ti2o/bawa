@@ -213,7 +213,7 @@ At minimum, store `first_seen_at`, block/slot, transaction hash/signature, confi
 
 Keep address derivation separate from wallet discovery. If an account has addresses 0–5 and you have only ever received at 5, a discovery process with a small gap limit can stop after a few unused addresses and miss the receiving address.
 
-Read docs/05 §9 for the full gap-limit treatment. [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) uses gap limit 20: its external-chain scan stops after 20 consecutive addresses with no transaction history. Count an emptied address as used. Other wallets may use different windows. If indices 0–19 have no history, a default scan can stop before a payment at 20.
+Read docs/05 §9 for the full gap-limit treatment. [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) uses gap limit 20: its external-chain scan stops after 20 consecutive addresses with no transaction history. Count an emptied address as used. Other wallets may use different windows. If indices 0–19 have no history, a BIP-44-default scan can stop before a payment at 20.
 
 For a payment system, store the indexes you allocate; do not force the tracker to rediscover your own order database from the chain. Durably record the wallet/account, derivation scheme, branch, index, address and order reference **before issuing the address**.
 
@@ -221,7 +221,7 @@ Back up this allocation ledger and track its entries directly, including address
 
 ## 8. Privacy: xpubs are sensitive public material
 
-Treat xpubs as sensitive public material. An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node. When payments are observable, this can reveal account structure, address reuse patterns, payment history, balances and customer relationships.
+Treat xpubs as sensitive public material. An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node. When payments are observable, this can reveal account structure, address reuse patterns, payment history and balances. Observers who link that activity to known customer identities may also infer customer relationships; an xpub alone does not identify customers.
 
 A BIP-44 account node covers receiving and change branches; hardened boundaries prevent public derivation beyond them. In a multi-account application, decide whether each subsystem really needs the account-level xpub or whether a narrower public node suffices. Give each subsystem individual addresses or a narrower public branch where sufficient.
 
