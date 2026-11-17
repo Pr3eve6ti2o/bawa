@@ -449,7 +449,7 @@ git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git worktree add
 >
 > "bip_utils reference checks: PASS", exit 0.
 >
-> **Captured run:** the bip-utils side was captured on 2026-11-08 on muse-vm with bip-utils 2.12.2 and cryptography 50.0.2 from the documented venv procedure, output "bip_utils reference checks: PASS", BTC bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd, ETH 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7, exit 0.
+> **Captured run:** the bip-utils side was captured on 2026-11-08 on muse-vm with bip-utils 2.12.2 and cryptography 50.0.2 from the documented venv procedure, output "bip_utils reference checks: PASS", BTC bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd, ETH 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7, exit 0. This capture is evidence for bip-utils==2.12.2, not the bip-utils==2.12.3 pinned in `requirements.txt`, so it is not a reproduction against the current pins.
 >
 > At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1-2.
 >
