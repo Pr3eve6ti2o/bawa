@@ -2102,10 +2102,10 @@ There is no single verified USDT transfer cost to quote from this evidence.
 - **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — existing-holder estimates.** Tronsave, dated **28 October 2026**, supplied **64,285 energy**, corresponding to **≈6.43 TRX ≈$2.04** under the baseline arithmetic. Dwellir, dated **3 November 2026**, quoted **$2.07**. These are secondary-source estimates, not a verified Bawa transfer receipt or an all-in fee promise.  
   *Source record: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — base-energy claims and range.** Secondary sources conflict between **65,000** and **14,650 energy**, both described as base energy for a USDT transfer. No verified reconciliation is supplied. The proposed **13,000–65,000 energy** range is also unverified and must not be presented as an empirical operating range.  
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — base-energy claims and range.** Dwellir reconciles the figures as **14,650 base energy + 49,635 penalty energy = 64,285 total energy**; the roughly **65,000-energy** total must not also be described as base energy. The proposed **13,000–65,000 energy** range is wrong at both ends: **13,000** is **1,650** below the measured base, while **65,000** excludes the **130,285-energy** new-recipient case. It must not be presented as an empirical operating range.  
   *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — new-holder cost.** No defensible total was established. Extra bandwidth and activation must be accounted for; the existing-holder estimate cannot simply be carried across.  
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — full new-holder cost.** The new-recipient energy component is **130,285 energy**, equivalent to **13.0285 TRX** and approximately **$4.17** at the stated rates. This is the energy component only, not an all-in total; bandwidth and any applicable activation costs must be accounted for separately. The existing-holder estimate cannot simply be carried across.  
   *Sources: m09 F07–F10; m12 §3.*
 
 The record also contains a **reverted dry run for 1 USDT**, reporting **8,624 energy** and **6,640 penalty**. These are failed-simulation readings, not a transfer receipt. They must never be quoted as a USDT transfer cost.  
@@ -2137,17 +2137,19 @@ All monetary figures below are **dated estimates, not standing fees**. The revie
 
 The accounting model separates the phases, in order:
 
-**storage → credit → compute/gas → action → forwarding → bounce**
+**storage → credit → compute → action (including forwarding)**; **bounce** is a possible message outcome.
 
 These are distinct phases. The account’s current balance is consulted before and during execution; a nominal transfer amount alone is not a sufficient balance check.
 
-For the sending account, the `estimateFee` accounting is:
+For the sending account, the `estimateFee` subtotal is:
 
 ```text
-in_fwd_fee + gas_fee + storage_fee + fwd_fee
+source_fees.in_fwd_fee + source_fees.gas_fee + source_fees.storage_fee + source_fees.fwd_fee
 ```
 
-There is an action phase, but that does **not** justify adding an invented “action fee” to these returned fields.
+The response also carries a `destination_fees` array for destination-side fee estimates; any returned entries must be considered separately from the sending-account subtotal.
+
+The TON fee model includes an action fee, but `estimateFee` does not return a separate `action_fee` field.
 
 A Jetton transfer needs whole-chain estimation, covering:
 
