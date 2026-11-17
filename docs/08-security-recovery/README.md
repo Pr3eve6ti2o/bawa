@@ -1143,9 +1143,9 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-No published custody-insurance or protected-wallet price was verified at this check. Coincover publishes no prices — B2B only, "get in touch" — so obtain pricing and the applicable protection/insurance terms in writing via [Coincover](https://www.coincover.com/) for the specific assets, systems and limits. These are budgeting ranges, not quotes; obtain a written quotation for the specific assets, systems and limits.
+No published custody-insurance or protected-wallet price was verified at this check. Coincover publishes no prices — B2B only, "get in touch" — so obtain pricing and the applicable protection/insurance terms in writing via [Coincover](https://www.coincover.com/) (checked 8 November 2026; homepage only) for the specific assets, systems and limits.
 
-Cost worksheet: [LOW]–[HIGH] annual total — add custody fees, insurance premiums, onboarding, transaction and exit charges, and network fees; do not count an insurance limit as an asset; a policy limit is a maximum payout, not money held for you.
+Cost worksheet: [LOW]–[HIGH] annual total (unfilled template placeholders) — add custody fees, insurance premiums, onboarding, transaction and exit charges, and network fees; do not count an insurance limit as an asset; a policy limit is a maximum payout, not money held for you.
 
 On-chain mutual cover: some mutual or decentralised cover products let members pool funds to pay claims for specified events (for example a smart-contract failure); pricing is quoted as [LOW]–[HIGH]% of the covered amount for [TERM] — fill in the actual figures from the product's current terms before relying on them; check what events are covered, how claims are decided, how long payouts take, and whether cover can be withdrawn or repriced. Mutual cover is not a substitute for a tested recovery drill, independent signing keys, or a provable exit.
 
