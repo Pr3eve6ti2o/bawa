@@ -4828,20 +4828,20 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
 3. **Build and stage the Core AAR through section C.**
 
-   As of 2026-11-08, Trust Wallet Core offers no downloadable Android AAR for any release, including 4.9.2, and no Maven Central acquisition route exists. Build the AAR from source using section C; do not substitute a newer version.
+   As of 2026-11-08, the Trust Wallet Core 4.9.2 release assets include no AAR. Build the AAR from source using section C; do not substitute a newer version.
 
    **OPEN** — As of 2026-11-08, the source-build route has not produced an AAR for this guide. AAR staging and integration: Blocked pending OI-005. Reject stubs, empty AARs and unrelated binaries.
 
    After the source build produces an AAR, check and record its identity and contents:
 
    - Record the Core source revision and version.
-   - Compute the AAR digest, compare it with the approved acquisition record, and record its provenance and the comparison result.
+   - Compute the SHA-256 digest of the AAR file produced by the section C source build at the pinned Core revision, compare it with the digest recorded in the approved acquisition record for that same source-built artefact, and record its provenance and the comparison result.
    - Inspect and record the generated Java bindings packaged in the AAR.
    - Inspect and record the native libraries and ABIs packaged in the AAR.
 
    Compare the actual artefact. A filename does not establish its identity, and setting a checksum variable does not perform an integrity check.
 
-   Stage the checked artefact as `wallet-core-4.9.2.aar` in the Android project’s `core/libs/` only at section C’s copy step. Do not treat that staging directory as a download location or the source-build output location.
+   As a draft-only step for the unpushed Android project, stage the checked artefact as `wallet-core-4.9.2.aar` in the project’s `core/libs/` only at section C’s copy step. This staging directory is not a main-backed location; do not treat it as a download location or the source-build output location.
 
    **APPROVED BUT UNEXECUTED** — As of 2026-11-08, the Core 4.9.2 pin still needs its live EIP-1559 proof. Re-run the proof against 4.9.2 before publication; do not carry forward evidence from 4.8.4 as validation of this pin. Publication: Blocked pending OI-004.
 
@@ -5188,7 +5188,7 @@ Check that you can:
 - [Android Developers — app signing](https://developer.android.com/studio/publish/app-signing) — checked 2026-11-08.
 - [Gradle User Manual](https://docs.gradle.org/current/userguide/userguide.html) — Gradle wrapper, build environment and daemon behaviour; checked 2026-11-08.
 - [GitHub Packages — working with the Gradle registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry) — package authentication; checked 2026-11-08.
-- [Android Developers — R8](https://developer.android.com/build/shrink-code) — checked 2026-11-08.
+- [Android Developers — R8](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization) — checked 2026-11-08.
 - [Android Developers — native ABIs](https://developer.android.com/ndk/guides/abis) — checked 2026-11-08.
 
 ## L. Recovery by symptom
@@ -5284,9 +5284,9 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 
 **Cause:** The host or sandbox may block Gradle’s loopback TCP, or the wrapper JAR may be missing.
 
-**OPEN** — As of 2026-11-08, the committed `gradlew` is a launcher note without a wrapper JAR (OI-035). The project has never run a Gradle build or produced an APK, including a debug APK.
+**OPEN** — As of 2026-11-08, the committed `gradlew` is a launcher note without a wrapper JAR (OI-035). As of 2026-11-08, no Gradle build had run in the project and no APK had been produced, including a debug APK.
 
-**Warning** — Blocked loopback TCP or a missing wrapper JAR prevents the intended Gradle invocation; complete §K.1 where loopback TCP works, then check the pinned Gradle version. Do not disable security controls broadly.
+**Warning** — Blocked loopback TCP prevents the intended daemon-based Gradle invocation, while a missing wrapper JAR prevents the wrapper invocation; complete §K.1 where loopback TCP works, then check the pinned Gradle version with `./gradlew --version`, which may still run where loopback TCP works or without the daemon. Do not disable security controls broadly.
 
 1. Complete §K.1 in an environment where Gradle can use loopback TCP, obtaining and verifying the wrapper JAR before invoking `./gradlew`.
 
@@ -5331,7 +5331,7 @@ The single canonical register for all three guides (D36 F2). Per-section
 "Unverified / open items" lists are replaced by short pointers to this
 register. Per-section references use the canonical ID, in the form:
 Open item (`OI-004`) — see Doc 3, Consolidated open-items register, `OI-004`.
-Old IDs appear only in the Aliases / provenance column.
+Old IDs appear in the Aliases / provenance column and in the introductory gap explanations.
 
 Unassigned IDs (no entry): OI-002, OI-003, OI-009, OI-010, OI-012, OI-016,
 OI-018, OI-020, OI-021, OI-022, OI-023, OI-024, OI-029, OI-030, OI-034,
@@ -5368,7 +5368,7 @@ in the lane files.
 | OI-037 | QR scope: keep receive-QR and scanning — RESOLVED by the user on 2026-11-08. Remaining open items concern specification details, implementation and verification, not whether to include either feature. | Doc 1 docs/07, docs/13, docs/14; Doc 2 §F, §G, §J; Doc 3 §H | User (decided) | RESOLVED (2026-11-08) | W3 §G/§J. |
 | OI-038 | QR payment-request scanning spec — open/build items (D24 F12): esbuild worker integration; native selection/failover controls; browser and camera coverage; loopback camera verification; EIP-681 @chainId forms; ton-test://; bare BTC/ETH/TON addresses in a QR; authoritative testnet-context checks; session timeout duration; decoder third-party notices inventory. | Doc 2 §F; Doc 3 §H | Builder | OPEN | W3 §F (D24 F12). |
 | OI-039 | Web live creation and live restore performed in the V2 browser run (2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps); live spend was not exercised (no testnet funds). | Doc 2 §A, §D, §F, §H, §J, §K | Builder | OPEN (spend only) | W3 §A/§D/§F/§H/§J/§K; Android row OI-031. |
-| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
+| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 was current at repair time; the lockfile's presence does not by itself establish an exact Core pin); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
 | OI-043 | Web account-0 public nodes and TRX anchor Core confirmation — Core-confirmed in a recorded run (D31, 2026-11-08). | Doc 2 §C | Builder | CLOSED (D31, 2026-11-08) | W3 §C; Android row OI-067. |
 | OI-044 | Web TON fixture — recorded in the repo guide, docs/11, 'TON fixture (V3, 2026-11-08)'. | Doc 2 §C; Doc 1 docs/11 | Builder | CLOSED (V3, 2026-11-08) | W3 §C; Android row OI-013. |
 | OI-045 | Web WASM parity corpus — the upstream corpus exists (wasm/tests/ at tag 4.9.2); Node parity 6/6 MATCH on 4.9.2 and 4.8.4 (D30, 2026-11-08). The in-browser run on 4.9.2 remains open (OI-092). | Doc 2 §C | Builder | CLOSED (corpus); in-browser run open via OI-092 | W3 §C; Android row OI-015. |
@@ -5404,7 +5404,7 @@ in the lane files.
 | OI-076 | Reproducible builds unverified (Android). | Doc 3 §K.4 | Builder | OPEN | W5 OI-20. |
 | OI-077 | Dependency and secret scanning never run; no scanner named or validated. | Doc 3 §J.13, §K | Maintainers | OPEN | W5 OI-21; W3 §J (Web row OI-059). |
 | OI-078 | Paid-security prices (Doc 1 docs/08) dated 30 October 2026 — CLOSED by the D17 re-check (8 November 2026): Casa $250/$2,100/$7,500/$2,750 per year; Unchained and Fireblocks figures as in docs/08. | Doc 1 docs/08 | Maintainers | CLOSED (D17, 2026-11-08) | W5 OI-23. |
-| OI-079 | 14 links unverified (HTTP 429 from the research VM: deepwiki ×6, solana.com/docs ×8) — SUPERSEDED by D18: 13 replacements confirmed live (11 by page 200, 2 by API 200) and applied in the lane files. | Doc 1; Doc 2; Doc 3 | Maintainers | CLOSED (superseded by D18) | W5 OI-24. |
+| OI-079 | 14 links unverified (HTTP 429 from the research VM: deepwiki ×6, solana.com/docs ×8) — SUPERSEDED by D18: 13 of the 14 unverified links were replaced and confirmed live (11 by page 200, 2 by API 200), with replacements applied in the lane files; the disposition of the remaining 1 link is not recorded in this register. | Doc 1; Doc 2; Doc 3 | Maintainers | CLOSED (superseded by D18) | W5 OI-24. |
 | OI-080 | Incident-response/compromise playbook — CLOSED: §J.8 publishes the incident section (four scenarios, fresh-seed migration rule). Execution of the playbook is untested. | Doc 3 §J.8 | Maintainers | CLOSED | W5 OI-27. |
 | OI-081 | Local testing stage (regtest/signet) unverified; no verified procedure for any chain (Android). | Doc 3 §F, §I.8 | Builder | OPEN | W5 OI-28; W3 §E/§H (Web row OI-049). |
 | OI-082 | Supported-device matrix undefined (Keystore/KeyMint minimums, supported Android versions, API/ABI matrix). | Doc 3 §B, §I.9, §J | Builder | OPEN | W5 OI-30. |
@@ -5452,7 +5452,7 @@ As of 2026-11-08, the following assessments describe project scope, licences and
 | Rank | Project and source | Assessed reference | Licence and maintenance | Compatibility and required adaptation |
 |---|---|---|---|---|
 | 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is not Bawa’s policy; exclude its engine and derivation code. |
-| 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet work: implement section H’s wallet screens, states and behaviour yourself. |
+| 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet-specific work: implement section H’s wallet screens, states and behaviour yourself. |
 | 3 | **Now in Android** — `android/nowinandroid` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-11-08; 22,056 stars | Architecture reference only. Adapt the structure to your wallet; implement the section H UI yourself. |
 | 4 | **EUDI Wallet UI** — `eu-digital-identity-wallet/eudi-app-android-wallet-ui` | Source check dated 2026-11-08 | EUPL-1.2 copyleft; last push 2026-11-06; 234 stars | Identity wallet, not a crypto wallet. Consider components only; adapt them to section H and meet the licence’s source-sharing obligations. |
 | 5 | **Jetpack Compose Template** — `seve-andre/jetpack-compose-template` | Source check dated 2026-11-08 | MIT; last push 2026-03-18; 62 stars; quiet for about eight months | Generic starter. Implement all wallet-specific screens and behaviour, and establish compatibility in your own build. |
@@ -5470,7 +5470,7 @@ As of 2026-11-08, use the following order when consulting full-app references. T
 | 3 | **Gem** | GPL-3.0 | 412 | Full-app reference only; copyleft obligations apply to reuse. |
 | 4 | **Green** | GPL-3.0 | 275 | Full-app reference only; copyleft obligations apply to reuse. |
 | 5 | **Nunchuk** | GPL-3.0 | 87 | Full-app reference only; copyleft obligations apply to reuse. |
-| 6 | **Schildbach** | GPLv3 according to its site and files | — | The GitHub tree has no licence file; GitLab hosts the live tree. |
+| 6 | **Schildbach** | [F-Droid listing](https://f-droid.org/en/packages/de.schildbach.wallet/) states "License: GPLv3" / "GNU General Public License v3.0 only" ([licence text](https://www.gnu.org/licenses/gpl-3.0.en.html)) | — | Verified live 2026-11-17: the [official GitHub mirror](https://github.com/bitcoin-wallet/bitcoin-wallet) has no licence file in its root file list; F-Droid names [GitLab](https://gitlab.com/bitcoin-wallet/bitcoin-wallet) as the live source tree. |
 
 ### Excluded sources and design-only kits
 
@@ -5479,14 +5479,14 @@ As of 2026-11-08, exclude these sources from template selection:
 - **Mycelium** — MS-RSL reference licence, not free reuse.
 - **Ivy Wallet** — archived money manager, not a crypto wallet.
 - **Archived `gem-android`** — the monorepo supersedes it.
-- **Trust Wallet app** — closed source; only Wallet Core is open.
+- **Trust Wallet app** — closed source; Wallet Core is open.
 
 As of 2026-11-08, these paid kits provide designs, not Android code:
 
 - **Binity** — $19–24; 41 screens.
 - **IOWallet** — 116 screens; v3.0, dated 27 January 2026.
 
-As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do not treat a design kit’s screen count as coverage of section H’s contract.
+As of 2026-11-08, no free Figma Community crypto-wallet kit was found in the searches conducted for this guide. Re-search before relying on this finding. Do not treat a design kit’s screen count as coverage of section H’s contract.
 
 ### Decide what to reuse
 
@@ -5512,7 +5512,7 @@ As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do
 
    Re-check the selected source rather than relying on the dated assessment. Record its exact version or commit and inspect the code you intend to reuse.
 
-   Retain notices when you reuse MIT or Apache-2.0 code. Meet GPL-3.0 and EUPL-1.2 source-sharing obligations where they apply. Naming a project does not change its licence.
+   This licensing summary is a non-exhaustive checklist and does not replace reading each licence. Retain notices when you reuse MIT code. Under Apache-2.0 §4(d), retain all copyright, patent, trademark and attribution notices from the source, including the contents of any NOTICE file, in redistributed copies. Meet GPL-3.0 and EUPL-1.2 source-sharing obligations where they apply. Naming a project does not change its licence.
 
    Do not treat an audit of a source project as an audit of your adaptation: it covers that project’s code, not your reuse.
 
@@ -5548,7 +5548,7 @@ Until then, treat this as a testnet guide for a testnet wallet. Mainnet is absen
 
 ## Improve this guide
 
-If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
+If a step fails as written, a link is dead, or a value has changed, open an issue against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide) at https://github.com/Pr3eve6ti2o/bawa/issues. Include the section, the exact command or link, and the output you saw. Follow the contribution guide at https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/CONTRIBUTING.md (checked 2026-11-17); do not open reports against a fork.
 
 ## Need help?
 
