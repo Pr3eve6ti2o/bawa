@@ -706,7 +706,9 @@ A valid mnemonic is not proof that the intended wallet has been recovered either
 
 > **Never** If mnemonic validation would require submitting the phrase to an unverified validator, do not upload it. Use an independently assessed local method instead; uploading the phrase can expose control of the wallet.
 
-The published addresses below are regression targets only:
+The published addresses below are regression targets only.
+
+> **Never** When using these fixtures, restrict them to public regression checks and never fund them. They are not your wallet’s recovery targets; treating them as deposit destinations risks losing funds.
 
 **Public test-vector warning: funding any address in the table below is immediate loss because the mnemonic is public.**
 
@@ -716,8 +718,6 @@ The published addresses below are regression targets only:
 | ETH | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
 | TRX | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
-
-> **Never** When using these fixtures, restrict them to public regression checks and never fund them. They are not your wallet’s recovery targets; treating them as deposit destinations risks losing funds.
 
 **Before the first real deposit**, including a funded rehearsal receipt, require all of the following:
 
@@ -1019,7 +1019,7 @@ The following values were recorded in the **Android draft configuration**, check
 |---|---:|---|
 | BTC | 6 | A customary threshold, not a network requirement. Show the actual confirmation count. At `C=1`, display the payment provisionally as **“unconfirmed for settlement”**. |
 | ETH | `finalized` | Confirmation policy resolved as `finalized` in M-38; enforcement has not been demonstrated. |
-| TRX | 19 | Use the node’s solidified / last-irreversible view, never elapsed time or raw height subtraction. |
+| TRX | 19 of 27 Super Representatives (not 19 blocks) | Use the node’s solidified / last-irreversible view, never elapsed time or raw height subtraction. |
 | TON | 1 | Masterchain-anchored; track `seqno`, not wall-clock time. |
 
 An API’s current block height is not a confirmation policy. Retargeting an endpoint does not demonstrate that these rules are enforced. Confirmations reduce reversal risk; they do not make a payment irreversible.
@@ -1251,7 +1251,7 @@ curl -fsS -w '\n' --get \
 
 On **2026-11-09, `muse-vm`**, `getnowblock` returned block **87850524**. The Tronscan account API returned live TRC-20 balances for the fixture. No token amounts, response-field mappings or history-pagination procedure are established here. A token holding is not a native TRX holding, and neither is a receipt for a particular transfer.
 
-The confirmation policy is **19**, established using the node’s **solidified / last-irreversible view**—never elapsed time or raw height subtraction. The head and account requests above do not establish that condition for a transfer.
+The confirmation policy is **19 of 27 Super Representatives (not 19 blocks)**, established using the node’s **solidified / last-irreversible view**—never elapsed time or raw height subtraction. The head and account requests above do not establish that condition for a transfer.
 
 The draft has **no TRX txid lookup adapter**. A TRX transfer therefore stays pending on manual refresh. No manual investigation procedure is supplied here. That unresolved state is a stop condition for reconciliation, not evidence that another payment is needed.
 
@@ -2615,7 +2615,7 @@ The available evidence supplies no command for the following required checks. Th
 | M06 R09 | **BLOCKED** |
 | M06 R10 | **BLOCKED** |
 
-The **README §18 recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
+The **docs/README-FULL.md §18 (line 1241) recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
 
 Keep these verification claims separate:
 
