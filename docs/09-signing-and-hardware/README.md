@@ -384,11 +384,11 @@ The PSBT workflow comes from **BIP-174/371**, not a Bawa device integration. Baw
 
 **Conceptual workflow, testnet, signet or regtest only; never real funds.**
 
-Bawa does not include a device integration. Use your chosen watch-only wallet as coordinator and follow its and the signer’s documentation. Keep seeds and private keys in the signing domain, never on the tracker or web server.
+Bawa does not include a device integration. In this guide, “coordinator” is a non-BIP term for the PSBT-orchestrating watch-only wallet; role assignment differs by wallet. Use your chosen watch-only wallet as coordinator and follow its and the signer’s documentation. Keep seeds and private keys in the signing domain, never on the tracker or web server.
 
-Descriptors give the coordinator script policy, public derivation information such as `<xpub>`, and key origins such as `<fingerprint>`. The coordinator normally acts as **Creator** and **Updater**. Only the separate signer performs the **Signer** role.
+Descriptors give the coordinator script policy, public derivation information such as `<xpub>`, and key origins such as `<fingerprint>`. The coordinator normally acts as **Creator** and **Updater**. In this guide’s workflow, only the separate signer may perform the **Signer** role.
 
-A PSBT carries data, not permission to sign: anyone can assemble one. Metadata does not prove ownership or consent. Participants must preserve fields they do not understand when passing it on. If required safety checks cannot be completed, stop rather than strip fields.
+A PSBT carries data, not permission to sign: anyone can assemble one. Metadata does not prove ownership or consent. In this guide’s workflow, participants must preserve all fields, regardless of role, when passing it on. If required safety checks cannot be completed, stop rather than strip fields.
 
 ```text
 WATCH-ONLY COORDINATOR
@@ -411,9 +411,9 @@ OFFLINE / HARDWARE SIGNER
 
 Select inputs by `<TXID>` and output index. Set recipient amounts and output scripts using `<TESTNET_ADDRESS>`, include change where needed, and choose input sequences and locktime deliberately. The fee is the difference between total input and output values, not another output.
 
-No keys are needed to construct this proposal from known outpoints and output scripts. In BIP-174’s PSBT v0 format, the global unsigned transaction has empty `scriptSig` fields and no witness data. Signatures belong in separate PSBT fields; the input and output metadata can still be sparse.
+No keys are needed to construct this proposal from known outpoints and output scripts. In BIP-174’s PSBT v0 format, the global unsigned transaction has empty `scriptSig` fields and no witness data. Signatures belong in separate PSBT fields; the Creator must initially create empty input and output fields.
 
-**Expected result:** an unsigned PSBT containing the expected inputs and outputs, with no signatures and no private keys on the coordinator.
+**Expected result:** an unsigned PSBT containing the expected inputs and outputs, with no signatures and no private keys or seeds on the coordinator.
 
 ### 2. Updater, supply the spending context
 
