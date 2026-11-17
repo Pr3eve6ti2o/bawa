@@ -15,7 +15,7 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 > - **Tool versions observed:** Node v24.22.2 (outside the declared `>=22 <23` range), Trust Wallet Core 4.9.2, esbuild 0.25.5, Python 3.12.3 with bip-utils 2.12.2 and cryptography 50.0.2
 > - **Environment:** Ubuntu 24.04 on the research VM
 > - **Actually run:** differential test (PASS), endpoint probes of all four testnets, fixture derivations
-> - **Not run:** live wallet creation and live restore in a real browser, Core 4.9.2 EIP-1559 re-run (both open items, sections [D](#d-vault-and-backup) and [F](#f-send-and-signing))
+> - **Run:** live wallet creation and live restore (V2, 2026-11-08, real headless browser, 14 PASS / 0 FAIL / 3 INFO across 17 steps); Core 4.9.2 EIP-1559 demonstration for the construction/signing scope (D21, 2026-11-08). **Open:** live spend (not exercised; no testnet funds; section [D](#d-vault-and-backup)) and in-browser EIP-1559 proof, send, sign and broadcast (section [F](#f-send-and-signing)).
 > - **Evidence:** repo clone at `082f7915`, validation-draft build logs
 > - **Sources fetched on:** 2026-11-08
 
@@ -67,7 +67,7 @@ All links checked: **2026-11-08**.
 
 ### Open items
 
-- **Live browser work — Section D:** live wallet creation and live restore in a real browser were performed on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser). Live spend was not exercised (no testnet funds). See Doc 3, Consolidated open-items register, `OI-039`.
+- **Live browser work — Section D:** live wallet creation and live restore were performed on 2026-11-08 using Playwright 1.65.0 with Chromium 158 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; recorded in the Android guide’s V2 evidence). No other browser is validated for this guide. Live spend was not exercised (no testnet funds). See Doc 3, Consolidated open-items register, `OI-039`.
 - **Core 4.9.2 EIP-1559 — Section F:** the demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. See Doc 3, Consolidated open-items register, `OI-004`.
 - **Repo documentation:** docs **03** and **12** of the repo guide received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089). See Doc 3, Consolidated open-items register, `OI-017`.
 
@@ -94,7 +94,7 @@ All links checked: **2026-11-08**.
    | Python | `>=3.11` | Observed version: 3.12.3. |
    | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.2` | Exact pin: no `^` or `~`. Published 2026-11-06. |
    | esbuild — dev dependency | `0.25.5` | Exact pin: no `^` or `~`. |
-   | http-server — dev dependency | Exact installed version; record during setup | Install it, record the installed version in `package.json` without `^` or `~`, and commit the lockfile with it. No numeric version is supplied here. |
+   | http-server — dev dependency | `14.1.1` (pin dated 2026-11-17) | Install `http-server@14.1.1`, record this exact version in `package.json` without `^` or `~`, and commit the lockfile with it. Verified first-hand from the npm registry as the latest version as of 2026-11-17; this is not a 2026-11-08 validation record, since no installed version was recorded during that validation. |
 
    Use the declared Node range for your setup. Do not treat the observed out-of-range run as verification on a runtime within that range.
 
@@ -222,7 +222,7 @@ The Android guide uses the same repo canonical ripple pair (Android guide, secti
    . .venv/bin/activate
    ```
 
-2. **Install from the repo’s `requirements.txt`.** It pins `cryptography==50.0.2` and `bip-utils==2.12.3`.
+2. **Install from the repo’s `requirements.txt`.** At the front-matter-pinned checkout (`e3b65fb832db287fdc8d54794980dd0b3456cc12`), it pins `cryptography==50.0.2` and `bip-utils==2.12.2`. `main` later moved to `bip-utils==2.12.3`.
 
    ```sh
    python3 -m pip install -r requirements.txt
@@ -279,7 +279,7 @@ The Web app combines PBKDF2 with 600,000 iterations and AES-256-GCM. Its applica
 
 That AAD deliberately differs from the repo’s `"nova-shop-seed-v1"`. A vault file made by this Web app is not compatible with the repo’s `seed.enc.json`. Do not substitute the Web vault file for that file or treat the two as interchangeable backups.
 
-The 600,000-iteration count follows the OWASP 2023 password-hashing guidance cited by the repo guide. Require the app to define a vault unlock passphrase policy. No minimum length is in evidence; the value remains unset in the open items below. Do not infer a length requirement from the PBKDF2 iteration count.
+The 600,000-iteration count follows the PBKDF2 branch of the OWASP 2023 password-storage guidance cited by the repo guide (600,000 iterations for PBKDF2-HMAC-SHA256), used here because FIPS-140 compliance requires PBKDF2, while OWASP’s headline recommendation is Argon2id. Require the app to define a vault unlock passphrase policy. No minimum length is in evidence; the value remains unset in the open items below. Do not infer a length requirement from the PBKDF2 iteration count.
 
 ### Session lifetime
 
@@ -365,11 +365,11 @@ Derive addresses locally. Never upload an extended public key (xpub) to a remote
 
 1. **Enter Sepolia.** Use `https://ethereum-sepolia-rpc.publicnode.com`, the public, keyless JSON-RPC endpoint, for state, fees and broadcast. Use `https://eth-sepolia.blockscout.com/api/v2`, the Blockscout indexer, for address history ([API reference](https://docs.blockscout.com/devs/apis)). Before you construct **every signing input**, query `eth_chainId` and require the decoded value `11155111`. Block signing on an error or mismatch. Carry that ID in the input and enforce it again offline; checking only at startup is insufficient.
 
-2. **Obtain test funds.** Use the [Alchemy Sepolia faucet](https://sepoliafaucet.com/). It offers 0.1 ETH per 24 hours under current eligibility rules; limits change often. Eligibility requires at least 0.001 ETH on mainnet, enough real mainnet transactions, and a low testnet balance; a brand-new wallet is not automatically eligible. If you are not eligible, use the [QuickNode Sepolia faucet](https://faucet.quicknode.com/ethereum/sepolia) as a fallback.
+2. **Obtain test funds.** Use the [Alchemy Sepolia faucet](https://www.alchemy.com/faucets/ethereum-sepolia). It offers 0.1 ETH per 24 hours under current eligibility rules; limits change often. Eligibility requires at least 0.001 ETH on mainnet, enough real mainnet transactions, and a low testnet balance; a brand-new wallet is not automatically eligible. If you are not eligible, use the [QuickNode Sepolia faucet](https://faucet.quicknode.com/ethereum/sepolia) as a fallback.
 
 3. **Check the setup.** Confirm that `eth_chainId` returns `0xaa36a7` (verified 2026-11-08) and that your funded address shows on the Sepolia explorer. Dated probe example (2026-11-08): chain head `12090390`; Blockscout `total_blocks` `12090067` (a stale cached counter — see item 4 under "Freshness is part of the result").
 
-The Ethereum Foundation announced Sepolia’s retirement, with end of support on 30 September 2026. The timeline is still in flux; the PublicNode endpoint above was verified live on 2026-11-08.
+Sepolia has full support through 2026, including the Glamsterdam upgrade activating on 6 October 2026, followed by a long-term-support phase in 2027; the 30 September end-of-support date belonged to Holesky, which was shut down in October 2025 and replaced by Hoodi. The timeline is still in flux; the PublicNode endpoint above was verified live on 2026-11-08.
 
 Use the keyless PublicNode endpoint by default; [Alchemy](https://www.alchemy.com/docs/reference/ethereum-api-quickstart) is a keyed alternative. If you use a keyed provider, keep its key in a restricted server-side relay, never in code, committed configuration or a browser bundle. Web build-time environment variables are public, not secret storage.
 
@@ -395,9 +395,9 @@ Use the keyless PublicNode endpoint by default; [Alchemy](https://www.alchemy.co
 1. Record the outcome and last-success time for every refresh. Advance the last-success time only when that feed refreshes successfully. Track freshness separately for each balance, each token and each history feed; a successful update to one must not make the others look current.
 2. Surface every failed refresh as **Not refreshed** (`NotRefreshed` in code). Retain previous balances and history, visibly marked stale. If a feed has never loaded successfully, show unavailable data for that feed, not an invented balance. Never translate timeouts, rate limits, authentication errors, malformed responses or failed pagination into zero balances or empty history.
 3. Make address monitoring cancellable. Treat broadcast acceptance as submitted, not confirmed. Keep submission, pending observation, inclusion and execution outcome as distinct states, rather than a single success flag. Track inclusion and define the confirmation policy, including thresholds, separately for each chain and testnet network. Do not use one universal confirmation number. Allow confirmation state to move backwards after a reorganisation.
-4. Never treat Blockscout’s `total_blocks` as the chain head: it is a stale cached counter. Checked 2026-11-08, it lagged the RPC head by 267 blocks at 11:32 and 323 blocks at 11:44. History from the indexer must be reconciled against the RPC. Never present a `total_blocks` figure as the current head.
+4. Never treat Blockscout’s `total_blocks` as the chain head: it is a stale cached counter. History from the indexer must be reconciled against the RPC. Never present a `total_blocks` figure as the current head.
 
-Repository docs 06, 07 and 13 confirm all of these requirements.
+Repository docs 06 and 07 confirm all of these requirements.
 
 ### Token balances without guesswork
 
@@ -428,7 +428,7 @@ Restrict discovery to receiving-branch addresses in the validation draft. Change
 - [Ethereum JSON-RPC docs](https://ethereum.org/developers/docs/apis/json-rpc/) — canonical URL, checked 2026-11-08.
 - [TRON — getting testnet tokens](https://developers.tron.network/docs/getting-testnet-tokens-on-tron), checked 2026-11-08.
 - [TON — get coins](https://docs.ton.org/onboarding/wallet-apps/get-coins), checked 2026-11-08.
-- Repository docs 06, 07, 13 and 14 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+- Repository docs 06, 07 and 13 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
