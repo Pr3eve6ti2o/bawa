@@ -724,7 +724,7 @@ Record your choice. Treat a confirmation threshold as a risk policy, not protect
 
 Store checkpoint height and hash. Process bounded batches from `checkpoint+1` to the eligible boundary, plus a configured overlap scan. Run the overlap scan even when the boundary has not advanced.
 
-Enforce output-level uniqueness using `(chain, network, watch, txid, output_index)`. Use the watch ID for `watch`, map `txid` to the stored `transaction_id`, and obtain chain and network from the watch reference.
+Enforce output-level uniqueness using the canonical key `(watch, transaction_id, output_index)`. Use the watch ID for `watch` and the stored `transaction_id` as the transaction identifier; obtain chain and network from the watch reference rather than including them in the key.
 
 Follow this ingestion flow:
 
