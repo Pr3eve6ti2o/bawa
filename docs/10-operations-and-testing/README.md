@@ -352,9 +352,9 @@ explorer / free RPC
 manual checks
 ```
 
-No server needed.
+No user-managed backend is needed; explorer and RPC services still run on external servers. The $0 estimate assumes existing equipment and connectivity and usage within free-service limits.
 
-## Personal automated tracker, still $0
+## Personal automated tracker, still $0 under the same assumptions
 
 ```text
 public addresses
