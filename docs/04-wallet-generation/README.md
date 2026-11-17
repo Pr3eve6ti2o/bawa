@@ -123,7 +123,7 @@ This is application-specific encryption at rest, **not** a universal replacement
 ## 5. First-run checklist
 
 - [ ] Use a trusted machine.
-- [ ] Verify the source revision.
+- [ ] Verify that the source revision matches the pinned commit `3019b02`; this commit is unsigned, so `git verify-commit HEAD` is expected to fail.
 - [ ] Review the dependency graph.
 - [ ] Confirm that deterministic tests pass.
 - [ ] Record your mnemonic offline.
@@ -157,7 +157,7 @@ This is application-specific encryption at rest, **not** a universal replacement
 
 4. **Verify what is exported.**
 
-   Check the BTC, ETH and TRON public roots and the configured TON address. For TON, verify the address; do not expect a fourth public-root export.
+   Check the BTC, ETH and TRON public roots and the exported TON address. For TON, verify the address; do not expect a fourth public-root export.
 
    Match the four public environment entries to the generator’s exports:
 
