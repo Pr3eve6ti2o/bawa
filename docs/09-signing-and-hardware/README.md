@@ -421,8 +421,8 @@ The coordinator adds information that the signer needs to validate the proposal:
 
 - **UTXOs, unspent transaction outputs:** legacy inputs should include `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they should agree (guidance derived from BIP-174).
 - **Key origins:** attach public keys, `<fingerprint>` (eight hex characters; BIP-380) and derivation paths from the descriptor, if known/present. Include output derivations, if known/present, to help identify change, without treating those claims as proof.
-- **Scripts:** include required redeem scripts and witness scripts. For Taproot, use BIP-371’s internal-key and derivation fields, plus leaf scripts and control blocks where needed for script-path spending.
-- **Sighash:** record the intended signature-hash mode, or agree the signer’s default. Ordinary `SIGHASH_ALL` and Taproot’s `SIGHASH_DEFAULT` commit to all outputs. Other modes can leave transaction parts changeable. An explicitly requested mode must be honoured or signing refused.
+- **Scripts:** include required redeem scripts and witness scripts. For Taproot, use [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)’s internal-key, Merkle-root (`PSBT_IN_TAP_MERKLE_ROOT = 0x18`) and derivation fields, plus leaf scripts and control blocks where needed for script-path spending.
+- **Sighash:** record the intended signature-hash mode, or agree the signer’s default. Ordinary `SIGHASH_ALL` and Taproot’s `SIGHASH_DEFAULT` ([BIP-341](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki)) commit to all outputs. Other modes can leave transaction parts changeable. An explicitly requested mode must be honoured or signing refused.
 
 Adding these fields does not approve the transaction. They give the signer evidence to check, not instructions it must trust.
 
@@ -442,13 +442,16 @@ Before approving, check on the device’s own trusted screen:
 
 **Stop if the device cannot show the intended address and amount, an output is unexplained, or the fee cannot be verified.**
 
-Only after these checks and on-device approval may the signer add partial signatures or BIP-371 Taproot signatures. Return the PSBT with unknown fields preserved. It may still need other signatures; finalisation and broadcast are later stages.
+Only after these checks and on-device approval may the signer add partial signatures or [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) Taproot signatures (Taproot’s `SIGHASH_DEFAULT` is defined by [BIP-341](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki)). For combining and finalising, see [Combiner, merge signed copies](#combiner-merge-signed-copies) and [Finalizer, build the final input scripts](#finalizer-build-the-final-input-scripts) below. Return the PSBT with unknown fields preserved. It may still need other signatures; finalisation and broadcast are later stages.
 
 **Expected result:** the intended test address and amount on the signer’s screen, followed by a signature-bearing PSBT; private keys remain in the signing domain.
 
 ### Sources
 
+Sources for the PSBT hand-off section above.
+
 - BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
+- BIP-341: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
 - BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - BIP-380: https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
@@ -495,6 +498,8 @@ SEPARATE BROADCAST STEP
 
 ### Combiner, merge signed copies
 
+For the signing checks, see [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer) above. Combining follows [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki).
+
 Merge only PSBTs for exactly the same unsigned transaction. In multisig, different signers may return separate copies containing their partial signatures. The Combiner brings those signatures and supporting fields together without changing the transaction.
 
 Count distinct valid signatures against each input’s spending policy, not the number of returned files. Merging the same signature twice does not help meet a threshold.
@@ -504,6 +509,8 @@ Reject mismatched transactions. If fields conflict, stop and investigate rather 
 **Expected result:** one PSBT with the transaction unchanged, supporting metadata retained and returned signatures associated with the correct inputs. More signatures may still be needed.
 
 ### Finalizer, build the final input scripts
+
+Finalisation follows [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki).
 
 Finalisation works input by input. Using sufficient signatures and the required script data, the finaliser constructs the final `scriptSig`, witness, or both, as appropriate. Script-based multisig needs signatures arranged as its spending script requires.
 
