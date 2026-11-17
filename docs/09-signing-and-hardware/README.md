@@ -126,11 +126,11 @@ Using the external signer's testnet origin to derive a Bawa wallet selects a dif
 
 ## Hardware wallets
 
-Hardware wallets make the security boundary physical rather than merely architectural.
+Hardware wallets isolate key custody and signing within the device.
 
 ### Trezor
 
-Trezor's firmware repository documents per-coin derivation paths and shows an important concept: paths differ by curve and blockchain family, and public nodes are only possible where the derivation semantics support them.
+Trezor's firmware repository documents per-coin derivation paths and shows an important concept: paths differ by curve and blockchain family, and blank entries in the tables' public-node column may suggest limits on public-node support, but do not establish that public nodes are impossible.
 
 See:
 
@@ -144,7 +144,7 @@ See:
 
 https://developers.ledger.com/
 
-For EVM hardware signing, the device is not “an RPC provider”. It is a secure signing surface.
+For EVM hardware signing, the device is not “an RPC provider”. It is a secure signing surface: it signs but never serves RPC calls. Verify that it exposes no RPC endpoint and that signing requires confirmation on the device.
 
 That distinction should remain intact.
 
