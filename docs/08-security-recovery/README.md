@@ -755,12 +755,12 @@ Crypto holdings in BitGo arrangements are outside [FDIC](https://www.fdic.gov/) 
 
 Keep the initial process deliberate:
 
-1. **Check the service and contract.** Confirm the contracting entity, supported assets and networks, reporting, liability terms, asset treatment and withdrawal rights.
+1. **Check the service and contract.** Confirm the contracting entity and its regulatory status, supported assets and networks, any subcustodians, reporting and audit rights, liability terms, insurance cover, asset ownership, segregation and treatment in insolvency, fees, exit terms and withdrawal rights.
 2. **Complete identity checks securely.** Expect identity, beneficial-ownership, authorised-signatory and source-of-funds checks.
 3. **Set operating controls.** Set up strong authentication, separate approval roles, permitted destinations and a recovery process for lost operator access.
 4. **Test before the main transfer.** Agree a small deposit and withdrawal test. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
 
-Plan departure before funding. Check notice periods, withdrawal limits, approval delays, termination charges and how statements can be exported. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination.
+Plan departure before funding. Check notice periods, withdrawal limits, prerequisites and costs, approval delays, termination charges, what happens to withdrawals in a freeze, failure or insolvency, whether any assets are locked or encumbered, and how statements and other records can be exported in a usable form. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination and that the destination supports the asset.
 
 Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process.
 
