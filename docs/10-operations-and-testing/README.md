@@ -470,6 +470,8 @@ Wallet Core results were captured in V1 (2026-11-08). Generation ran under a rea
 
 The nine cases counted for each of the derivation and independent `bip_utils` comparison results are not identified here; the 9/9 figures therefore do not establish coverage.
 
+The daemon (`tools/hdwallet-gen/derive_daemon.js`) accepts JSONL requests of the form `{"chain":"btc","xpub":"...","index":5}`. `chain` must be `btc`, `eth` or `trx`; `xpub` must be a non-empty string with length at most 200 (`MAX_XPUB_LENGTH`); and `index` must be an integer from 0 through 2147483647. The line-length limit is 4096 (`MAX_LINE_LENGTH`); longer lines return `{"ok":false,"error":"request too large"}`. An empty line or invalid JSON fails with `bad json`. An unsupported `chain`, a non-string, empty or overlength `xpub`, or a non-integer or out-of-range `index` fails with `bad request`.
+
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
 ```
