@@ -145,7 +145,7 @@ Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 004
 
 ## 10. Canonical pricing note
 
-Prices appear in exactly ONE place in this guide set: the costs reference in `docs/08-security-recovery`, labelled as an indicative snapshot dated 30 October 2026, recheck-required, not current quotations, with the recheck warning kept verbatim. No price figure is copied anywhere else in the guide set. No pricing page is cited anywhere. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check. `docs/06` and `docs/16` point here, not at figures.
+The costs reference in `docs/08-security-recovery` contains an indicative, recheck-required snapshot of priced figures labelled “checked 8 November 2026, UTC”, not current quotations. Casa annual price figures also appear in `docs/16` and `ANDROID-GUIDE`. `docs/08` cites Fireblocks, Casa and Unchained pricing pages and also cites BitGo. `docs/06` also points to `docs/08` as the single costs reference; `docs/16` has no pointer to this note and carries its own Casa price table. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check.
 
 ## 11. Sources
 
