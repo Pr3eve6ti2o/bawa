@@ -222,11 +222,11 @@ Then match the applicable chain-specific settings:
 
 ### Why does the EVM address match while its balance is zero?
 
-**Cause:** Consider whether you are connected to a different EVM chain. Recognise that the same address can legitimately exist on multiple EVM networks.
+**Cause:** Consider whether you are connected to a different EVM chain. Recognise that the same address can legitimately exist on multiple EVM networks. For externally owned accounts (EOAs), the same public key yields the same address because address derivation does not include the chain ID. This public-key derivation rationale does not generally apply to contract accounts.
 
-**Fix:** Check the chain ID, RPC endpoint, network name, native currency and explorer. Select the intended EVM network and its RPC endpoint.
+**Fix:** Check the chain ID by calling `eth_chainId` on the actual RPC endpoint used for the balance query and verifying that the returned value matches the intended network's chain ID; do not rely on displayed network metadata. Also check the RPC endpoint, network name, native currency and explorer. Select the intended EVM network and its RPC endpoint.
 
-**Check:** Confirm all five network details before checking the balance again.
+**Check:** Confirm all five network details, verifying the intended chain ID against the selected RPC endpoint's `eth_chainId` response, before checking the balance again.
 
 > **Expected result:** Confirm that the balance query concerns the matched address on the intended chain, not merely the same address on another EVM network.
 
