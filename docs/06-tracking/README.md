@@ -85,18 +85,20 @@ Prices and limits below were checked on 2026-11-17. Providers change them; check
 #### TRON
 
 | Order | Provider | What it is | Key |
-| 1 | TronGrid — <https://www.trongrid.io/> | TRON (and BTTC) API; use it as the API provider for TronScan data | API key, sent as `TRON-PRO-API-KEY` |
-| 2 | TronScan API | The TRON explorer API, reached through TronGrid | Same TronGrid key |
+| 1 | TronGrid — <https://www.trongrid.io/> | TRON node API plus V1 indexed API (account history, TRC-20 transfers, event logs) | API key from the TronGrid dashboard, sent as `TRON-PRO-API-KEY` |
+| 2 | TronScan API | TRON explorer API (token metadata, transfers, account and contract statistics) | Its own API key from TronScan, sent as `TRON-PRO-API-KEY` |
 
-Endpoints: mainnet <https://api.trongrid.io>; Shasta testnet <https://api.shasta.trongrid.io>; Nile testnet <https://nile.trongrid.io>. Shasta and Nile do not need an API key at present; mainnet does. Docs: <https://www.trongrid.io/documents>.
+TronGrid and TronScan are separate services run by separate teams, with separate keys. Both use the same header name (`TRON-PRO-API-KEY`), but a TronGrid key does not work on the TronScan API and a TronScan key does not work on TronGrid. That separation is what makes them genuine fallbacks for each other: when one is down, the other is a different system, not the same upstream under another name. Do not use the TronScan API as the primary dependency for production transaction flow; it is an explorer API for ad-hoc queries and display data. On TronScan mainnet a key is required — anonymous calls are heavily limited and some endpoints return `401` without one.
 
-**TronGrid accounts: 1 to 50 API keys, basic and paid.** Configure between 1 and 50 TronGrid API keys. 1 is the minimum — a tracker with no key cannot call mainnet. 50 is the maximum this guide supports.
+Endpoints: TronGrid mainnet <https://api.trongrid.io>; Shasta testnet <https://api.shasta.trongrid.io>; Nile testnet <https://nile.trongrid.io>. Shasta and Nile do not need an API key at present; mainnet does. TronScan API mainnet base: <https://apilist.tronscanapi.com>. TronGrid docs: <https://www.trongrid.io/documents>. TronScan API keys: <https://docs.tronscan.org/en/api/api-keys>.
 
-1. Create an account at <https://www.trongrid.io/> and open the dashboard.
-2. Create an API key on the dashboard. Choose the **basic** tier to start (free) or a **paid** plan when you need higher limits; check the current prices on the site before you pay.
+**TronGrid and TronScan accounts: 1 to 50 API keys each, basic and paid.** Configure between 1 and 50 API keys per provider. 1 is the minimum — a tracker with no key cannot call mainnet. 50 is the maximum this guide supports. The steps are the same for both providers; the keys are not interchangeable, so keep one list per provider (`trongrid_keys[0]` … `trongrid_keys[49]`, `tronscan_keys[0]` … `tronscan_keys[49]`).
+
+1. Create an account — TronGrid at <https://www.trongrid.io/>, TronScan at <https://tronscan.org/> (log in, then account menu → API keys page) — and open the dashboard.
+2. Create an API key. Choose the **basic** tier to start (free) or a **paid** plan when you need higher limits; check the current prices on the site before you pay.
 3. Copy the key. Treat it as a secret: store it in your tracker config or secret store, never in the repo and never in browser code.
-4. Add the key to the tracker as `trongrid_keys[0]`.
-5. For each extra account, repeat steps 1–4 and add the key as `trongrid_keys[1]`, `trongrid_keys[2]`, and so on, up to `trongrid_keys[49]`.
+4. Add the key to the tracker as `trongrid_keys[0]` or `tronscan_keys[0]`.
+5. For each extra account, repeat steps 1–4 and add the key as `[1]`, `[2]`, and so on, up to `[49]`.
 6. The tracker tries the keys in order. When a key is rate-limited (`429`) or its quota is exhausted, the tracker moves to the next key and logs the switch. A key that keeps failing is parked until its quota resets; the others keep working.
 
 One key per account: each key carries that account's own quota, so more keys mean more headroom, not a way around one account's limits. Do not share keys between trackers.
