@@ -899,7 +899,7 @@ Record the scanning status explicitly: as of audited commit `3019b02`, no scan r
 
 Treat a lockfile as a record of the resolved and pinned dependency graph, not as evidence of testing or dependency safety. Testing requires separate run evidence.
 
-- [ ] **Enable repository security features.** Ask a repository administrator to enable GitHub’s dependency graph, Dependabot alerts and Dependabot security updates. **Owner:** record the responsible administrator’s name. **Record:** retain the date enabled for each feature.
+- [ ] **Verify and enable repository security features.** Ask a repository administrator to check GitHub settings for the dependency graph, Dependabot alerts and Dependabot security updates, then enable any that are disabled; the dependency graph may already be enabled for public repositories. **Owner:** record the responsible administrator’s name. **Record:** retain the date enabled for each feature.
 
 - [ ] **Validate and name both scanners.** Obtain maintainer validation before naming the dependency scanner and secret scanner. Confirm dependency inputs, tool setup, cadence and blocking criteria. **Owner:** record the maintainer responsible for validation. **Record:** retain the validated name and version of each scanner, together with the agreed configuration and criteria.
 
@@ -1502,9 +1502,10 @@ Bawa does not document a reproducibility procedure, external-review acceptance c
 | Integration tests | Recorded integration run | BLOCKED, no report. |
 | Recovery drill | Recorded recovery exercise | BLOCKED, no report. |
 | Artefacts/checksums | Recorded release artefacts and checksum evidence | BLOCKED, checksum files absent. |
-| Security policy | Confirmed publication | BLOCKED, publication unconfirmed. |
+| Security policy publication | Confirmed publication | MET, `SECURITY.md` is published in the repository. |
+| Security policy readiness | Actionable policy | BLOCKED, missing disclosure procedure, private contact and report-handling procedure. |
 
-On success, `test/differential_test.py` prints “bip_utils reference checks: PASS”. This is differential-testing evidence only. Neither it nor a green installation job clears other gates.
+On success, `test/differential_test.py` prints “bip_utils reference checks: PASS”. The PASS covers only BTC/ETH index-0 comparisons; prefer a scoped PASS/PARTIAL assessment backed by execution evidence, since the printed PASS alone is not proof of execution. A verified run provides differential-testing evidence only. Neither it nor a green installation job clears other gates.
 
 Checksum files, signed checksums and build provenance, such as SLSA-style attestations, are future options, not present in this tree. Confirm any future publication and verification scheme with the maintainer.
 
