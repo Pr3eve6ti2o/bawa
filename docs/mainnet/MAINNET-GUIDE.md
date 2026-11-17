@@ -3764,7 +3764,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 - M07 F17–F21 records live verification of BIP-125: RBF is opt-in before signing, with `sequence < 0xffffffff-1`. The draft implements no RBF, bump flow, broadcast, CPFP or change-branch derivation.
-- M07 F17–F21 identifies CPFP as the receive-side rescue when RBF is unavailable. Its decision tree is: **wait → RBF bump if signalled → CPFP if the reader controls an output → stop**. Never re-send blindly.
+- M07 F17–F21 identifies CPFP as a rescue option for whoever controls a spendable output of the unconfirmed transaction. Its decision tree is: **wait → RBF bump if the reader can replace the transaction → CPFP if the reader controls a spendable output → stop**. RBF is available without signalling under the full-RBF default since Bitcoin Core 28.0; the RBF branch is not restricted to signalled transactions. Never re-send blindly.
 - M17 O3 records no replace, cancel or RBF procedure for any chain, and no primary sources. M17 O5 requires criteria for retrying after a broadcast timeout and a manual TRX transaction-ID (`txid`) investigation procedure.
 - M08 records that a nonce gap or stuck transaction blocks every later nonce. A speed-up is a same-nonce replacement with policy-compliant higher fees. Cancellation is a paid competing transaction, not an undo. No receipt and a still-pending nonce mean unresolved, not “send it again”.
 
@@ -3787,7 +3787,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 **Evidence:**
 - M10 F1–F2 records the TON fixture on mainnet with state `active`, balance `0`, a past transaction at `lt 42954571000001`, code and data present, and last activity on 2023-12-01.
 - M07 F9 records 32 transactions and 311,775 sats funded for the BTC fixture.
-- M29 treats funding the fixture addresses as immediate loss because the mnemonic is public. The warning must precede any mnemonic/address table.
+- M29 instructs readers to **treat funds sent to the fixture addresses as lost** because the mnemonic is public. The warning must precede any mnemonic/address table.
 - M03 F06 states that the 15-word vector must never become a funded wallet or a recovery wallet.
 
 **Status:** OPEN (standing rule).
@@ -3808,7 +3808,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 - M18 F20 marks all four mainnet payload candidates `UNVERIFIED-NEEDS-CHECK`: BTC BIP-321, ETH ERC-681 `@1`, TON `ton://transfer`, and a TRX bare address.
-- M20 F1 records no QR decode code in either draft; receive-QR and scanning are spec-only.
+- M20 F1 records no QR decode code in either draft; scanning remains absent/spec-only. Receive-QR generation exists but is deficient at EC-L (ANDROID-GUIDE:3174).
 - M24 H06 records QR error correction L rather than the required M, and a dead `CAMERA` permission under OI-060.
 - M25 F19 records bare-address QR output at EC-L, with no scanning. The guide requires M, so a decision is needed.
 - M24 K16 adds the receive-QR and scanning round-trip gate: EC=M, an implemented scanner, and evidence covering permission grant, denial and revocation.
