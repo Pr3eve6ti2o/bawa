@@ -119,7 +119,7 @@ The generated bundle contains alg, kdf, nonce_b64, ciphertext_b64, created, aad 
 
 Generation does not write your plaintext mnemonic to disk. Keep the random data-encryption key separately from the seed bundle.
 
-This is application-specific encryption at rest, **not** a universal replacement for a proper wallet backup standard. Recovery interoperability depends on your mnemonic, BIP-39 passphrase policy, derivation paths and chain-specific wallet configuration. Pay particular attention to the wallet configuration you need for TON.
+This is application-specific encryption at rest, **not** a universal replacement for a proper wallet backup standard. Recovery interoperability within the demonstrated scope depends on your mnemonic, BIP-39 passphrase policy and derivation paths. TON-specific wallet configuration is beyond the demonstrated support and requires separate verification.
 ## 5. First-run checklist
 
 - [ ] Use a trusted machine.
@@ -226,7 +226,7 @@ If a stage fails, stop before confirming. Keep recovery material offline and do 
 | Terminal unavailable or TTY confirmation mismatch (first word or `SAVED`) | Stop before any write; either confirmation mismatch throws. |
 | Deterministic or public check fails | Hold public release and investigate with a maintainer. Every failure path exits `1`; known diagnostics include `CHECK FAILED: <name>`, the confirmation-failure messages, and the terminal `FATAL` message. |
 | Write fails, is interrupted, or permissions differ | Keep completion unverified and retain recovery material offline. File presence alone is not recovery proof. |
-| Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` places `decrypt_seed.py` and `RECOVERY.md` (copied from `docs/RECOVERY.md` to the backup directory's top level) in the backup directory; test a restore separately before funding. |
+| Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` copies `decrypt_seed.py` into the backup directory and `docs/RECOVERY.md` to its top level as `RECOVERY.md`, each only if the corresponding source file is present; test a restore separately before funding. |
 
 **After a crash**
 
@@ -344,7 +344,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
 ## 12. Recovery drill and pre-funding gate
 
-**This drill has NEVER been executed. It remains an open item.** (V1's decrypt round trip on 2026-11-08 is not this drill.) It must also be runnable on a clean install with disposable fixtures drawn only from published test vectors, with expected addresses, a testnet signing check, pass criteria and a sanitised record.
+**There is no recorded execution of this drill. It remains an open item.** (V1's decrypt round trip on 2026-11-08 is not this drill.) It must also be runnable on a clean install with disposable fixtures drawn only from published test vectors, with expected addresses, a testnet signing check, pass criteria and a sanitised record.
 
 1. **Gather your recovery pack.** You need:
    - the BIP-39 mnemonic, or the `seed.enc.json` seed bundle plus its separate 32-byte data key;

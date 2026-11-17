@@ -160,7 +160,7 @@ In a conceptual testnet example:
 - You spend the whole 40,000-sat output: 30,000 sats go to the payment, 9,000 sats return as change and 1,000 sats pay the fee.
 - Afterwards, you have 34,000 sats: 25,000 untouched + 9,000 change.
 
-UTXO totals are before fees.
+UTXO totals are before fees not yet paid; fees already paid are reflected in the balance.
 
 Use the [Esplora API reference](https://github.com/Blockstream/esplora/blob/master/API.md) for these endpoints:
 
