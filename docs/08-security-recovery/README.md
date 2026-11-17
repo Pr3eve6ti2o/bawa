@@ -530,7 +530,7 @@ Use age-encrypted recovery files as a SECONDARY recovery route, not the main bac
 
 **What it does NOT protect against:** malware watching creation or recovery, an attacker acquiring both file and passphrase, destroyed media, or forgotten credentials. A weak passphrase can be guessed offline without an account lockout slowing the attacker down.
 
-### Set it up (age workflow)
+### Set it up (age workflow; [age documentation](https://age-encryption.org/))
 
 1. **Plan storage first.** Keep Bawa's `seed.enc.json`, its data key and the offline mnemonic in separate locations. An age-encrypted recovery file does not replace Bawa's data key or change its file format. Record the physical access arrangements for every copy: its safe or locked cabinet, who controls access, and how an authorised person retrieves it. Two drives in one drawer share one disaster risk.
 
@@ -564,7 +564,7 @@ Flash storage can fail silently—keep independent copies and test them periodic
 
 Re-encrypting a leaked mnemonic does not make that wallet safe again: create an entirely new wallet on a fresh, trusted device, transfer every asset and token, and stop using the old wallet permanently.
 
-### Recovery drill
+### Recovery drill ([age documentation](https://age-encryption.org/))
 
 Before depositing a meaningful amount, run this drill offline on a fresh, trusted machine running clean, verified software.
 
@@ -585,7 +585,7 @@ Successful decryption alone proves too little—a wrong derivation passphrase ca
 Repeat independently for every copy, including the primary paper or metal route, without relying on the working wallet.
 ## 15. Free everyday defences: token approval hygiene
 
-Treat an EVM token approval as a standing permission, not a website session. For ERC-20 tokens, an approved spender can move tokens up to the remaining allowance without another signature from you. An NFT operator approval can cover an entire collection. Disconnecting a site leaves those on-chain permissions in place.
+Treat an EVM token approval as a standing permission, not a website session. Use an approval checker such as [Revoke.cash](https://revoke.cash). For ERC-20 tokens, an approved spender can move tokens up to the remaining allowance without another signature from you. An NFT operator approval can cover an entire collection. Disconnecting a site leaves those on-chain permissions in place.
 
 **What this protects against:** Remove unnecessary permissions to reduce exposure to forgotten, malicious or later-compromised spenders. Check empty addresses too — an allowance may still cover tokens you receive later.
 
