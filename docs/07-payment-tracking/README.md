@@ -374,7 +374,7 @@ Define these application payment-tracking design rules before implementation and
 - Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation.
 - Configure a confirmation policy for each chain before finalising.
 
-Bawa does not document stable event identity, confirmation thresholds, reversal handling, durable storage, atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook.
+Bawa documents stable event identity, confirmation thresholds, reversal handling, durable storage and atomic finalisation elsewhere. This recovery outline does not specify application-level atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook.
 
 No commands or implementation guarantees are implied here.
 ## 11. Payment requests describe intent
@@ -387,7 +387,7 @@ Bawa does not prescribe a payment API. Before accepting payments, define field t
 
 ### Receive QR payloads
 
-Use the approved payload forms below for receive QRs. All profiles are testnet-only.
+Use the approved payload forms below for receive QRs. The examples in this section are scoped to testnet.
 
 | Chain | Approved payload | Constraints |
 |---|---|---|
