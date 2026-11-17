@@ -96,11 +96,11 @@ Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce dif
 
 **TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `195` and the complete path against the table.
 
-**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the [generation-only model with a single deposit address and no xpub](../02-chains/README.md). Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, coin type `607` and the complete generation path against the table; confirm that only one deposit address is generated.
+**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to reproduce the generated key and deposit address. TON is [generation-only](../02-chains/README.md) because Bawa supports it for generation and deposit only, with no xpub watch-only flow. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, coin type `607` and the complete generation path against the table; confirm that only one deposit address is generated.
 
 **BIP-39 mnemonic.** Changing the word count changes the seed and addresses. Use a 24-word mnemonic to encode the required 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. Check the 256-bit entropy requirement and the 24-word count.
 
-**BIP-39 passphrase.** A non-empty BIP-39 passphrase changes the seed and addresses, creating a different wallet. Use the fixed empty BIP-39 passphrase (Bawa's policy choice), which contributes no additional secret, to keep the seed determined by the mnemonic alone. Check that the value contains zero characters.
+**BIP-39 passphrase.** A non-empty BIP-39 passphrase changes the seed and addresses, creating a different wallet. Use the fixed empty BIP-39 passphrase (Bawa's policy choice), which contributes no additional secret, to keep the seed determined by the mnemonic alone. The empty-passphrase requirement is Bawa policy, not a BIP-39 determinism requirement. Before generation or recovery, inspect the passphrase field in the wallet's derivation settings and check that it contains zero characters.
 
 NFKD-normalise the BIP-39 mnemonic and BIP-39 passphrase. Derive the 64-byte seed from the normalised mnemonic using PBKDF2-HMAC-SHA512 with 2,048 iterations and a salt of `"mnemonic"` plus the normalised BIP-39 passphrase. Assess seed-guessing resistance separately from randomness quality, implementation security and device compromise.
 
