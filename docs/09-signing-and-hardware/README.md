@@ -110,19 +110,19 @@ Distinguish Bawa's fixed policy from the testnet standards (see the [documented 
 
 Importing a Bawa mnemonic into a standard testnet wallet derives a different account (see [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) and [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)). Keep the [Bawa policy](#the-fixed-derivation-policy) unchanged and treat this as a documented deviation, not an alternative path to adopt. Check that Bawa derivation still uses `m/84'/0'/0'/0/i`.
 
-Bawa's own tools emit `zpub` for the BTC testnet4 account because the code pins `HDVersion.zpub`. This was verified by running the repaired `derive.js` with the published ripple-fixture zpub, which derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
+Bawa's own tools emit `zpub` for the BTC testnet4 account because the code pins `HDVersion.zpub`. This was verified by running the repaired `derive.js` (`node tools/hdwallet-gen/derive.js`, run from the repository root) with the [published ripple-fixture zpub, line 153](../11-trust-wallet-and-independent-verification/README.md), which derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
 
 The resulting export differs from a standard testnet BIP-84 export, which would be `vpub`. Do not relabel an extended key by hand. Check the prefix against this documented behaviour:
 
 > **Expected result:** A prefix-checking tool sees `zpub` for Bawa's BTC testnet4 account.
 
-Using the published 15-word ripple fixture mnemonic for wallet creation violates the 24-word policy. Use it only as a published test vector, not a creation example, and never mix a 15-word test mnemonic into a 24-word wallet flow. Check that real wallets created by this guide use 24 words.
+Using the [published 15-word ripple fixture mnemonic](../11-trust-wallet-and-independent-verification/README.md#ripple-fixture-and-shared-settings) for wallet creation violates the 24-word policy. Use it only as a published test vector, not a creation example, and never mix a 15-word test mnemonic into a 24-word wallet flow. Check that real wallets created by this guide use 24 words.
 
 ### The descriptor convention is different
 
 Read the descriptor examples in this file as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
 
-Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins: a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
+Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins: a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both. See [Output descriptors](#output-descriptors-make-the-watch-target-explicit) for the signer export and a descriptor example.
 
 ## Hardware wallets
 
