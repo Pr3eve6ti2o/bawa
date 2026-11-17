@@ -2156,10 +2156,12 @@ The TON fee model includes an action fee, but `estimateFee` does not return a se
 
 A Jetton transfer needs whole-chain estimation, covering:
 
-- the main TON transfer;
-- deployment of the recipient’s Jetton wallet, if it is new;
+- the main TON transfer to the sender's Jetton wallet;
+- the sender-side Jetton wallet's execution and forwarding to the recipient's Jetton wallet;
+- deployment of the recipient's Jetton wallet, if it is new;
 - the TON forwarded to the recipient;
-- the Jetton wallet’s notification forwarding fee.
+- the Jetton wallet's notification forwarding fee;
+- the `destination_fees` on every message leg.
 
 The sending account’s estimate alone is not a whole-chain Jetton quote. Attached TON is not the fee; `forward_ton_amount` is not the fee; excesses are not expenditure. Keep the funding supplied to messages separate from the amounts actually consumed.
 
@@ -2211,7 +2213,7 @@ The following amounts were unresolved at the same TON check:
 
 Any proposed correction needs its own local review for **wrong address, wrong amount, stuck transaction, lost fee and theft**. A successful simulation does not remove these loss modes.
 
-- **Wrong address.** A transfer to the wrong valid destination can lose the entire principal plus fees. At a wrong uninitialised destination, a bounceable message may bounce, losing delivery fees while possibly returning value; a non-bounceable message may strand the value without a bounce. Address checking before signing is the only protection against these wrong-destination outcomes. Stop if the destination cannot be confirmed.
+- **Wrong address.** A transfer to the wrong valid destination can lose the entire principal plus fees. At a wrong uninitialised destination, a bounceable message may bounce, losing delivery fees while possibly returning value; a non-bounceable message may strand the value without a bounce. Address checking before signing is the primary safeguard against these wrong-destination outcomes; protocol bouncing provides limited protection because a bounceable message to a wrong, uninitialised destination may bounce, returning value less delivery fees. Stop if the destination cannot be confirmed.
 
 - **Wrong amount and lost fee.** Too little value can consume fees before delivery fails. Check both the intended amount and whether value plus the complete fee obligation is covered—not merely whether the nominal transfer amount fits the balance. Stop if the amount is wrong, the balance is insufficient or the complete cost is unknown.
 
@@ -2244,7 +2246,7 @@ The comparison record supplies totals but not numerical rate inputs. Those missi
 
 **Before a send on any of these chains, review wrong address, wrong amount, stuck transaction, lost fee and theft locally.** Confirm the intended recipient and amount, keep signing material private, and ensure the proposed transaction is the one reviewed. Check the fee immediately before sending and record its **source, check time, rate or resource basis, and total**.
 
-For a native-asset send, “enough” is a balance rule: the spendable balance must cover the intended value plus the complete fee. For a token send, token quantity and fee funding are separate checks; a token-only wallet cannot send. The review must also record whether first-send deployment or other first-send conditions change the cost.
+For a native-asset send, “enough” is a balance rule: the spendable balance must cover the intended value plus the complete fee. For a token send, token quantity and fee funding are separate checks. On TRON, sufficient staked bandwidth and energy can cover a token transfer with no liquid TRX; any fees not covered by those resources still require TRX. The review must also record whether first-send deployment or other first-send conditions change the cost.
 
 Recovery must remain chain-specific. BTC, ETH and TRX need their respective stuck/failed-transaction recovery checks alongside the reviews in parts 1–3. TON needs the current-state and bounce checks above. This comparison supplies no general retry instruction.
 
@@ -2266,11 +2268,11 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 - **G1** — BTC congested rate — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G2** — BTC node-specific relay/dust values — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G3** — ETH failed ERC-20/approval gas ranges — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G4** — BTC change-branch derivation — review outstanding.
+- **G4** — BTC change-branch derivation — DUPLICATE of the P126-c2 change-branch item.
 - **G5** — TRX USDT new-holder energy — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G6** — TRX `getUnfreezeDelayDays` live value — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **G6** — TRX `getUnfreezeDelayDays` live value — CLOSED: live `getUnfreezeDelayDays` is 14 days (chain parameter 70).
 - **G7** — TON Jetton transfer fee and new-recipient increment — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G8** — TON complete `estimateFee` accounting and V4R2 versus Jetton totals — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **G8** — TON complete `estimateFee` accounting and V4R2 versus Jetton totals — PARTLY CLOSED: `destination_fees` and the action-fee field are now recorded; Jetton totals remain **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G9** — Web draft source inspection — review outstanding.
 - **G10** — Repo capability claims — evidence outstanding.
 
