@@ -4006,17 +4006,17 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Affected sections:** §18; §10.
 
-**Evidence or uncertainty:** M16 open item 5; M16-F27.
+**Evidence or uncertainty:** M16-F43; M16-F45.
 
 **Status:** OPEN.
 
-**Operational restriction:** §18 gives no steps; do not copy the Web rule across to Android.
+**Operational restriction:** No in-place change operation for the vault unlock passphrase has been established for Web or Android.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Established and documented procedure, or a stated "none exists".
+**Clearance condition:** For each platform—Web and Android—an in-place change operation for the vault unlock passphrase is established and documented, or it is explicitly stated that none exists.
 
-**Gate/source links:** M16 open item 5, F27.
+**Gate/source links:** M16-F43, M16-F45.
 
 ### M-41 — Address discovery procedure missing
 
