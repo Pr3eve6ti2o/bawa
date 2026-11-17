@@ -296,6 +296,8 @@ tree is still clean.
 cd ../bawa
 ```
 
+> **Archive note (added 2026-11-17):** this check pins the 2026-11-08 snapshot commit `b8298197dd227916ff424dd479508887753e713f`. A reader cloning today will not match main's HEAD — treat the pin as historical, not as a current-state check.
+
 **Expected result — check**
 ```sh
 test "$(git rev-parse HEAD)" = "b8298197dd227916ff424dd479508887753e713f"
