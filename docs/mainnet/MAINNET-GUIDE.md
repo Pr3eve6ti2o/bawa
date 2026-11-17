@@ -4134,7 +4134,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 | 2. Hardware/PSBT mainnet procedure: no named device, no reviewed procedure, no non-BTC hardware procedure | m17 O2, m02 | OPEN — needs a named device + reviewed procedure. |
 | 3. Stuck-transaction recovery: no replace/cancel/RBF procedure for any chain, no primary sources | m17 O3 | OPEN — carried as M-28. |
 | 4. Criteria for retrying after a broadcast timeout; TRX manual txid investigation procedure | m17 O5 | OPEN — carried as M-28. |
-| 5. “Larger amounts” threshold undefined — when hardware signing becomes required rather than recommended | m17 O6 | OPEN — maintainer decision. |
+| 5. No “larger amounts” direction exists in §13; no threshold is defined | m17 O6 | OPEN — §13 contains no larger-amounts hardware-signing or PSBT recommendation. |
 | 6. History classification criteria partial (failed / replaced / dropped, fee presentation, reorg rewind) | m17 O4 | OPEN — needs sourced chain-specific criteria + a testnet reorg demonstration. |
 | 7. Send-screen checklist implementation status unverified (full-address comparison, smallest-unit and balance validation, change ownership, freshness, decoded-transaction review) | m17 O8 | OPEN — needs a UI-by-UI audit of the Web draft Send screen. |
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
@@ -4143,7 +4143,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 | 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. |
 | 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
-| 14. Standard-wallet import of a Bawa mnemonic never performed | m02, m28-OI-08 | OPEN — R-14 (extended); cross-wallet recovery still unverified (M23 F36, M22 F44). |
+| 14. Standard-wallet import of a Bawa mnemonic not recorded | m02, m28-OI-08 | OPEN — R-14 (extended): cross-wallet recovery evidence record documenting target wallet/version, import settings and steps, observed recovery results, and supporting logs; cross-wallet recovery still unverified (M23 F36, M22 F44). |
 | 15. 4.9.1 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
 | 16. CI pin values to obtain and re-verify (Python 3.13 patch version, Ubuntu runner image digest, three action commit SHAs) | m05 O1, O2 | OPEN — do not guess. |
 | 17. bip-utils 2.12.3 differential re-run | m05 O4 | OPEN — dedicated run. |
