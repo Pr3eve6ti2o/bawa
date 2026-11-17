@@ -1205,7 +1205,7 @@ Monitoring watches on-chain activity and alerts on unusual transfers, new approv
 
 Check what is actually monitored (which chains, which events), how alerts are delivered, and what happens when the monitoring service is down.
 
-Buy in this order: hardware signing and offline backups first; then alerts and pre-signing checks; then bespoke feeds and automated response. Monitoring is never a substitute for a tested recovery drill, independent signing keys, or a provable exit — and paying for any of these services does not remove the risk of seed compromise: the remedy remains the same (a new wallet, move everything, retire the old wallet).
+By default, buy in this order: hardware signing and tested offline backups first; then alerts and pre-signing checks; then bespoke feeds (customised streams of monitoring data) and automated response (actions triggered automatically by alerts). Monitoring is never a substitute for a tested recovery drill, independent signing keys, or a provable exit — and paying for any of these services does not remove the risk of seed compromise: the remedy remains the same (a new wallet, move everything, retire the old wallet).
 ## 23. Paid security: choosing by threat, by budget, and the exit checks
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -1219,10 +1219,10 @@ Choose by threat — match the control to the risk, not to the price tag:
 | Lost seed or device | Offline backups, tested recovery drill | Managed multisig with inheritance |
 | Single stolen key | Hardware signing, separate approval roles | Multisig or MPC with independent signers |
 | Mistaken or malicious payment | Independent transaction verification, allow-lists, spending limits | Approval workflows, transaction simulation |
-| Provider failure or freeze | Independent quorum, provable exit, tested recovery | Only if the exit is genuinely independent |
+| Provider failure or freeze | Independent quorum, provable exit, tested recovery | Paid managed multisig or threshold-MPC service with an independent quorum and a genuinely independent, provable exit |
 | Insider or colluding approvers | Separate signers, audit records, quorum above one | Independent signers, external review |
 | Smart-contract or protocol failure | Keep exposure small, check contract risk separately | Insurance may cover some events — check wording |
-| Inheritance or incapacity | Letter of instruction, named recipient, tested handover | Assisted multisig with inheritance, estate wrapper |
+| Inheritance or incapacity | Letter of instruction, named recipient, tested handover | Assisted multisig with inheritance, [estate wrapper](#20-paid-security-consumer-multisig-with-inheritance) |
 | Regulatory or audit requirements | Documented procedures, audit records | Qualified custody, external review |
 
 Choose by budget and skill — indicative scale (indicative cost guidance — check dates apply only to the figures explicitly marked; recheck before purchase):
