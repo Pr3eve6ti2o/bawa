@@ -724,7 +724,7 @@ Do not assume a retail exchange account is the same service, even where the same
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-Use sections 17–22 as the single costs reference for the whole Bawa professional guide set. Treat any providers named as examples, NOT Bawa recommendations.
+Treat any providers named as examples, NOT Bawa recommendations.
 
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Any custody agreement is with an external provider, not Bawa.
 
@@ -758,7 +758,7 @@ Keep the initial process deliberate:
 1. **Check the service and contract.** Confirm the contracting entity and its regulatory status, supported assets and networks, any subcustodians, reporting and audit rights, liability terms, insurance cover, asset ownership, segregation and treatment in insolvency, fees, exit terms and withdrawal rights.
 2. **Complete identity checks securely.** Expect identity, beneficial-ownership, authorised-signatory and source-of-funds checks.
 3. **Set operating controls.** Set up strong authentication, separate approval roles, permitted destinations and a recovery process for lost operator access.
-4. **Test before the main transfer.** Agree a small deposit and withdrawal test. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
+4. **Test before the main transfer.** Agree a small deposit and withdrawal test. Include negative authorisation tests, governance/recovery bypass tests, transaction-binding tests and isolation/restoration evidence. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
 
 Plan departure before funding. Check notice periods, withdrawal limits, prerequisites and costs, approval delays, termination charges, what happens to withdrawals in a freeze, failure or insolvency, whether any assets are locked or encumbered, and how statements and other records can be exported in a usable form. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination and that the destination supports the asset.
 
