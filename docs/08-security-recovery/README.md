@@ -273,10 +273,10 @@ No private reporting route is documented, so this line does not identify an avai
 
 Carry these as open work and requirements, not claims that controls are implemented:
 
-Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate.
-- **OPEN ITEM — script injection.** Give “defend against script injection” an executable control. It currently has none: no CSP/SRI/inline-script rule.
+Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate. The paste instruction is user-facing guidance, not an app-side prohibition on accepting pasted input.
+- **OPEN ITEM — script injection.** Give “defend against script injection” a deployed control. The Web guide requires CSP (`script-src 'self'`, or `script-src 'self' 'wasm-unsafe-eval'` if needed), but no CSP is deployed; no SRI rule is defined.
 PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The [OWASP Password Storage Cheat Sheet 2023](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) is cited as the basis for that draft value, not as evidence of a repository security control.
-- **OPEN ITEMS — vault passphrase and unlock time.** Define the vault-passphrase strength policy and unlock-time target. Keep both marked as open items, not stated policy.
+- **OPEN ITEM — vault passphrase.** Define the vault-passphrase strength policy. Keep it marked as an open item, not stated policy. The Web guide defines a 10-minute auto-lock.
 - **Required — network-identity verification.** Verify network identity for BTC, TRON and TON adapters too, not only ETH (`chainId 11155111`).
 - **Builder duty — genuine-app verification.** Make the genuine app verifiable through its official origin, publisher identity, release signing and key continuity.
 
