@@ -440,14 +440,14 @@ Reject ambiguous values too. Do not turn incomplete instructions into apparently
 
 BIP-321 describes Bitcoin payment instructions using `bitcoin:<RECIPIENT>`, with parameters including `amount`, `label` and `message`. The wallet presents the amount as a suggestion to the payer; the URI cannot enforce settlement.
 
-ERC-681 describes Ethereum transaction requests using `ethereum:<TARGET>[@<CHAIN_ID>][/transfer]`. Native-currency requests express `value` in wei. ERC-20 requests use `/transfer`, with `address` for the recipient and `uint256` for the atomic amount. The format has no invoice-reference field, so an ERC-20 `Transfer` log cannot by itself identify the invoice being paid.
+ERC-681 describes Ethereum transaction requests, including the ERC-20 `/transfer` specialisation `ethereum:<TARGET>[@<CHAIN_ID>]/transfer`. Native-currency requests express `value` in wei. For this specialisation, `<TARGET>` is the token contract, `address` is the recipient and `uint256` is the atomic amount. Request parameters are suggestions and should be presented to the user as such; the user may change them before authorising a transaction. The format has no invoice-reference field, so an ERC-20 `Transfer` log cannot by itself identify the invoice being paid.
 
 Use these formats to communicate what to send. Neither establishes that the requested transfer happened.
 
 ### Keep three objects separate
 
 - **The request:** store the intended terms. Your application may identify it with `<REQUEST_ID>`, but that identifier is not automatically carried on-chain.
-- **The on-chain event:** assess the evidence and associate it with a particular request. Check its network, asset, recipient, atomic amount and applicable memo/tag, then apply your expiry rules. A wallet's holdings cannot show that a particular event meets those terms.
+- **The on-chain event:** assess the evidence and associate it with a particular request. Before comparing atomic amounts, derive the expected atomic amount by normalising the requested amount using the expected asset's decimal precision. Check its network, asset, recipient, atomic amount and applicable memo/tag, then apply your expiry rules. A wallet's holdings cannot show that a particular event meets those terms.
 - **The fulfilled order:** record the business outcome after your application has accepted payment evidence and completed fulfilment. A matching transfer does not itself deliver goods, provide a service or update the order.
 
 Keep explicit links between these objects. Do not treat the existence of one as proof that the others exist. Creating a valid `<REQUEST_ID>` leaves it awaiting payment; creation alone records neither receipt of funds nor order fulfilment.
