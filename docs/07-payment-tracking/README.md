@@ -865,7 +865,7 @@ Commit finalisation atomically with the credit or an outbox entry (see the [paym
 
 `<REQUEST_ID>` expects `<AMOUNT>` of `<ASSET>` on `<NETWORK>` at `<DESTINATION>`. The watcher was offline when `<TXID>` paid `<AMOUNT>` at `<HEIGHT>`. The database still records no payment.
 
-1. Replay `<SAFE_HEIGHT>` through `<END_HEIGHT>`, containing `<HEIGHT>`.
+1. Replay the inclusive range `<SAFE_HEIGHT>` through `<END_HEIGHT>`, containing `<HEIGHT>`. `<SAFE_HEIGHT>` is the first height given by the restart/rewind rule below; for this targeted repair, move it earlier if needed to include `<HEIGHT>`, but not before the configured first tracked height. `<END_HEIGHT>` is the canonical chain-tip height captured at replay start; keep both bounds fixed for the second replay.
 2. Find the missing event during replay and restore its record.
 3. Check the restored event. It matches the request and meets `<CONFIRMATION_POLICY>`, so the stored outcome needs correction (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)).
 4. Record the corrected finalisation and `<CREDIT_ID>` under `<IDEMPOTENCY_KEY>`.
@@ -875,7 +875,7 @@ Commit finalisation atomically with the credit or an outbox entry (see the [paym
 
 Maintain an append-only journal with UTC timestamps, source, actor/job identity and schema/software versions. Preserve original decisions when correcting them ([persist first; reconcile later](../06-tracking/README.md#10-persist-first-reconcile-later)).
 
-Before scanning, log the run ID, trigger, input checkpoint and range bounds. After durable processing, append the run's comparisons, repairs, errors, completion status and safe checkpoint ([checkpointing](../06-tracking/README.md#L746)).
+Before scanning, log the run ID, trigger, input checkpoint, configured reorg-safety rewind depth `R` as an explicit block count, and inclusive range bounds. After durable processing, append the run's comparisons, repairs, errors, completion status and safe checkpoint: the end height of the last batch in the contiguous, fully processed prefix of the scan, with all event records and resulting outcome and credit updates durable. Never advance a checkpoint across an incomplete batch. After downtime, let `C` be the last persisted safe checkpoint height and `S` the configured first tracked height; restart at `max(S, C - R)` (inclusive), rewinding `R` block heights before `C` and reprocessing unfinished work. If no checkpoint exists, start at `S` ([checkpointing](../06-tracking/README.md#L746)).
 
 Retain the linked payment records in causal order ([persist raw observations first](../06-tracking/README.md#L582)):
 
