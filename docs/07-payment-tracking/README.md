@@ -88,7 +88,7 @@ For free/manual tracking, use Mempool.space and Blockstream Esplora. Treat a hos
 
 For an ERC-20 payment, track the network/chain ID, token contract, `Transfer` event, sender, recipient, amount, transaction hash, log index and block number.
 
-Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and query `eth_getBlockByNumber("latest", false)`, `eth_getBlockByNumber("safe", false)` and `eth_getBlockByNumber("finalized", false)` to obtain the latest, safe and finalized heads. A payment is safe or finalized when its block is on the canonical chain and its block number is at or below the corresponding safe or finalized head.
+Use the ERC-20 `Transfer` event as the normal low-level primitive ([EIP-20](https://eips.ethereum.org/EIPS/eip-20)). Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and query `eth_getBlockByNumber("latest", false)`, `eth_getBlockByNumber("safe", false)` and `eth_getBlockByNumber("finalized", false)` to obtain the latest, safe and finalized heads. A payment is safe or finalized when its block is on the canonical chain and its block number is at or below the corresponding safe or finalized head.
 
 #### TRON
 
@@ -100,7 +100,7 @@ Retain the general matching model: network, contract, transaction-event (the spe
 
 Use a unique address, or a shared address plus a unique comment/memo. With a shared address, include the memo/comment in the payment-matching key.
 
-Retain the exact wallet configuration. A TON wallet address depends on its wallet contract type and wallet ID; do not treat it as the result of a generic Bitcoin-like path alone.
+Retain the exact wallet configuration. A TON wallet address depends on its wallet contract type and wallet ID ([TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md)); do not treat it as the result of a generic Bitcoin-like path alone.
 
 ### Confirmation is not one universal number
 
@@ -109,8 +109,8 @@ Choose chain-specific confirmation settings as application policy. Do not blindl
 Model the evidence each chain exposes:
 
 - **Ethereum:** distinguish its different chain-head/finality views.
-- **Solana:** use the explicit commitment levels `processed`, `confirmed`, `finalized`.
-- **TRON:** account for the solidification/reorganisation information exposed by its event APIs.
+- **Solana:** use the explicit commitment levels `processed`, `confirmed`, `finalized` ([Solana RPC commitment documentation](https://solana.com/docs/rpc)).
+- **TRON:** account for the solidification/reorganisation information exposed by its event APIs ([TRON event API documentation](https://developers.tron.network/)).
 
 Support richer states in your payment database: `seen` (detected by your application, with block inclusion not yet verified), `included` (present in a block on the current canonical chain), `confirmed`, `finalized`, `reorged` (previous block inclusion invalidated by a chain reorganization), `expired`, `late`, `manual_review`, `paid`. Do not force every blockchain into one integer called `confirmations`.
 
@@ -156,8 +156,8 @@ Retain a chain-native cursor:
 - **Bitcoin** — last relevant block/transaction cursor.
 - **EVM** — last processed block.
 - **Solana** — last processed slot/signature cursor.
-- **XRPL** — ledger index/transaction cursor.
-- **Cosmos** — block height/pagination cursor.
+- **XRPL** — ledger index/transaction cursor ([XRPL documentation](https://xrpl.org/docs/)).
+- **Cosmos** — block height/pagination cursor ([Cosmos documentation](https://docs.cosmos.network/)).
 
 The exact cursor depends on the chain. Do not rely only on wall-clock timestamps. Record successful reconciliation checkpoints so that, after an outage, your application can report "Last successfully reconciled height = H" and resume from a safe boundary (a verified chain position at or before that checkpoint, with enough overlap to re-scan potentially missed or reorg-affected blocks).
 
