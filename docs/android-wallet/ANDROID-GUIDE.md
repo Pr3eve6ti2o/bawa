@@ -2088,13 +2088,13 @@ curl -fsS "$btc_api/blocks/tip/height"
 
 > **Expected result**
 >
-> **VERIFIED** — As of 2026-11-08, the live check recorded this example output (R07 F8):
+> **VERIFIED** — As of 2026-11-08, the live check recorded this example height (R07 F8):
 >
 > ```text
 > 159813
 > ```
 >
-> Use the dated contrast with the draft’s testnet3 tip as the worked example’s network-identity check. Recheck the live tip and pinned network identity for each build; do not require a future response to equal this example height.
+> `159813` is a dated example only, not a network-identity check. For each build, recheck the live tip and establish the pinned network identity by comparing the endpoint’s genesis or checkpoint block hash against the corresponding known testnet4 genesis or checkpoint hash; do not require a future response to equal this example height.
 
 **Ethereum Sepolia execution RPC**
 
@@ -2110,13 +2110,15 @@ curl -fsS \
 
 > **Expected result**
 >
-> **VERIFIED** — As of 2026-11-08, the live check recorded this example output, equivalent to decimal **11155111** (R07 F8):
+> **VERIFIED** — As of 2026-11-08, the live check recorded this example raw JSON-RPC response (R07 F8):
 >
-> ```text
-> 0xaa36a7
+> ```json
+> {"jsonrpc":"2.0","id":1,"result":"0xaa36a7"}
 > ```
 >
-> Reject the endpoint if the command fails. Treat a passing result as the provider’s declared chain identity, not authentication of its other answers.
+> The `jq` filter extracts bare `0xaa36a7` from `.result`, equivalent to decimal **11155111**.
+>
+> Reject the endpoint if the command fails. A passing `eth_chainId` response verifies only the declared chain (Sepolia, 11155111); it does not by itself identify which provider served it or authenticate that provider's other answers.
 
 **Ethereum Sepolia history indexer**
 
@@ -2153,13 +2155,13 @@ Reconcile an indexed block with the execution RPC before accepting the indexer. 
 
 > **Expected result**
 >
-> **APPROVED BUT UNEXECUTED** — As of 2026-11-08, the required successful output for this reconciliation check is:
+> **EXECUTED / PASS** — On 2026-11-15, the Blockscout reconciliation check passed at block 12141208, with the indexed hash equal to the execution RPC hash:
 >
 > ```text
 > Sepolia indexer block hash matches the execution RPC.
 > ```
 >
-> Capture an actual run before accepting the indexer. A failed request, missing block or hash mismatch must prevent acceptance; matching hashes still leave reliance on both providers’ honesty.
+> A failed request, missing block or hash mismatch must prevent acceptance; one matching block does not establish history completeness, and matching hashes still leave reliance on both providers’ honesty.
 
 **TRON Nile**
 
@@ -2213,7 +2215,7 @@ curl -fsS "$ton_api/getMasterchainInfo" |
 | Bitcoin testnet4 | 6 | Count confirmations in the accepted chain. Use the threshold as the wallet’s completion policy, while retaining reorganisation handling; do not treat it as irreversible protocol finality. |
 | Ethereum Sepolia | 12 | Use the threshold for the wallet’s confirmed state. Report protocol finalisation only when the inclusion block belongs to the RPC’s `finalized` view. Preserve receipt success or failure separately. |
 | TRON Nile | 19 | Require the threshold and inclusion in the solidified chain before treating inclusion as final. Preserve execution success or failure separately; full-node depth alone does not establish solidification. |
-| TON testnet | 1 masterchain seqno | Require masterchain anchoring of the transaction’s shard inclusion and apply the seqno-based threshold. Keep anchored inclusion separate from message-trace and execution outcomes. |
+| TON testnet | 1 masterchain seqno beyond the recorded anchor | Require masterchain anchoring of the transaction’s shard inclusion. Record the anchoring masterchain seqno when the shard inclusion is observed; the threshold is met only when the masterchain has advanced at least one seqno beyond that anchor. The anchor seqno itself does not count. Keep anchored inclusion separate from message-trace and execution outcomes. |
 
 **Testnet walkthrough**
 
@@ -2377,15 +2379,18 @@ Return `Unsupported` for token schemes that Bawa does not explicitly support. Bi
 
 Fix the endpoint defect at `https://blockstream.info/testnet/api/` (R04 F12) and configure the Bitcoin provider for **mempool.space testnet4**. Bitcoin provider integration: Blocked pending OI-033.
 
-Run the testnet4 tip-height check as network-identity proof:
+Verify the provider's chain against the pinned testnet4 genesis hash before running the tip-height check:
 
 ```sh
-curl https://mempool.space/testnet4/api/blocks/tip/height
+expected_genesis='00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043'
+provider_genesis=$(curl --fail --silent --show-error https://mempool.space/testnet4/api/block-height/0) || exit 1
+[ "$provider_genesis" = "$expected_genesis" ] || { echo "testnet4 genesis hash mismatch; reject this provider" >&2; exit 1; }
+curl --fail https://mempool.space/testnet4/api/blocks/tip/height
 ```
 
 > **Expected result**
 >
-> The response body contains an integer representing the testnet4 tip height. **VERIFIED** — As of 2026-11-08, the live check of this endpoint returned `159813`. Expect a larger number now. Record the returned height and check date; never hardcode `159813` as the current tip.
+> The provider's height-0 block hash must exactly match the independently pinned testnet4 genesis hash above before accepting its network identity. Reject the provider if the hash lookup fails or mismatches. The tip-height response then contains an integer representing the testnet4 tip height; an integer height alone is not network-identity proof. **VERIFIED (height only)** — As of 2026-11-08, the live tip-height check returned `159813`. Expect a larger number now. Record the matched genesis hash, returned height, and check date; never hardcode `159813` as the current tip.
 
 ### Queries and watching
 
@@ -2393,11 +2398,11 @@ curl https://mempool.space/testnet4/api/blocks/tip/height
 
 Keep derivation and address discovery local. Do not upload an xpub, register an HD wallet with a provider or ask a provider to derive addresses. Preserve the existing local discovery policy and its limits.
 
-Use Esplora’s per-address balance, UTXO and transaction-history queries, transaction retrieval and chain-tip information. For Electrum, calculate the protocol’s script hash locally from each watched address’s script, then use the corresponding balance, history, unspent-output and subscription methods.
+Use Esplora's per-address statistics to derive balances, and use its UTXO and transaction-history queries, transaction retrieval and chain-tip information. For Electrum, calculate the protocol's scripthash locally from each watched address's scriptPubKey as hex(reverse(SHA256(scriptPubKey))), then use the corresponding balance, history, unspent-output and subscription methods. Subscriptions report history-status changes, not transaction payloads.
 
 Fetch confirmed and mempool history where the provider supports them. Deduplicate transactions that appear under several wallet addresses. Do not substitute a UTXO list for transaction history.
 
-Account for the remaining disclosure from per-address queries. A provider can still correlate requests by connection, timing and address activity.
+Account for the remaining disclosure from per-address queries. Per-address querying reduces disclosure but does not guarantee unlinkability or anonymity. A provider can still correlate requests by connection, timing and address activity.
 
 ### Building and fees
 
@@ -2429,7 +2434,7 @@ Report unusable fee estimates explicitly when sparse testnet activity prevents a
 
 ### Confirmation
 
-**VERIFIED** — Apply a BTC threshold of **6 confirmations** (BUILD-LOG Stage 2 / `NetworkConfig.kt`, `confirmationsRequired`).
+Apply a BTC policy threshold of **6 confirmations**; this is not a Bitcoin guarantee of irreversibility.
 
 Track the transaction ID, inclusion block hash and inclusion height against the current canonical tip:
 
@@ -2449,7 +2454,7 @@ Handle a reorganisation as a reversible state transition, including after the th
 
 - [mempool.space testnet4 tip-height endpoint](https://mempool.space/testnet4/api/blocks/tip/height) — checked 2026-11-08.
 - [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; endpoint defect confirmed by live-check record R04 F12 (OI-033).
-- BUILD-LOG Stage 2 / `NetworkConfig.kt`, `confirmationsRequired` — BTC threshold of 6 confirmations; check date: 2026-11-08.
+- BUILD-LOG Stage 2 / this guide's Confirmation and finality policy table — BTC policy threshold of 6 confirmations; check date: 2026-11-08.
 
 ### F.6 — Ethereum Sepolia
 
