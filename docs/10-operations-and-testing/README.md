@@ -443,6 +443,7 @@ Create a fresh clone, then add a separate detached worktree at the repair pin `e
 
 ```
 git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git worktree add --detach ../bawa-f4 e3b65fb832db287fdc8d54794980dd0b3456cc12 && cd ../bawa-f4 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
+# Note: This semicolon-separated pre-merge command chain is not fail-fast; each command's exit status must be checked before proceeding.
 ```
 
 > **Expected result:**
@@ -1056,7 +1057,7 @@ python3 -m py_compile tools/make_wallet.py tools/decrypt_seed.py
 python3 test/differential_test.py
 ```
 
-The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
+The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js`, `compare.js` and `extended-key.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
 
 **Expected result:** all four commands completing successfully. At the pinned commit e3b65fb832db287fdc8d54794980dd0b3456cc12 they do: `npm run check` exits 0 and `npm test` passes 28/28 (verified 2026-11-08; all nine CI steps replayed exit 0, D23). At the former pin 082f7915, `npm run check` failed on three files and `npm test` could not run. Bawa does not document a fixed success transcript; if the outcome is unclear, confirm the expected behaviour for your revision with the maintainer. Passing these checks does not certify the machine as safe for real wallet generation.
 
