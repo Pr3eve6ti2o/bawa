@@ -1252,8 +1252,8 @@ Use the allocation table as your reference; scope every step to the payment's ne
 6. **RPC error:** inspect failures, timeouts and retry history.  
    **Expected result:** successful reads or a recorded fault.
 
-7. **Reorg:** check canonical inclusion and finality.  
-   **Expected result:** current status rather than stale inclusion.
+7. **Reorg:** check canonical inclusion and apply the [per-chain confirmation rules](../mainnet/MAINNET-GUIDE.md#12-wallet-tracking-and-payment-monitoring) to reassess finality; consult the [checkpoint rewind/replay concept](../06-tracking/README.md#L722) for recovery planning.  
+   **Expected result:** current inclusion and finality status under the applicable confirmation rules rather than stale inclusion.
 
 8. **Token contract mismatch:** compare EVM contract addresses, not symbols.  
    **Expected result:** the expected contract.
@@ -1261,10 +1261,12 @@ Use the allocation table as your reference; scope every step to the payment's ne
 9. **Network:** compare allocation, transaction and provider networks.  
    **Expected result:** matching chain/network identifiers.
 
-Bawa does not document replay or gap-expansion procedures. Any recovery action needs confirmation from the maintainer before tracking is changed.
+Bawa documents checkpoint rewind and replay conceptually in [tracking](../06-tracking/README.md#L722), but executable database-specific rewind/replay commands and gap-expansion procedures are not documented. Any recovery action needs confirmation from the maintainer before tracking is changed.
 
 ### Sources
 
+- [Tracking documentation, checkpoint rewind and replay concepts](../06-tracking/README.md#L722)
+- [Mainnet guide, per-chain confirmation rules](../mainnet/MAINNET-GUIDE.md#12-wallet-tracking-and-payment-monitoring)
 - BIP 32, public derivation: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 - BIP 44, branches and gap discovery: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 
