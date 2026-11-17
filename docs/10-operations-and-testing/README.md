@@ -727,9 +727,9 @@ Implement the following requirements:
 
 - Define the `tests`, `dependency-scan`, `secret-scan`, `build`, `reproduce` and `release-gate` jobs. Place Node testing in `tests`, move Python differential testing into a separate test job, and record that job’s identifier.
 - Add dependency-scan and secret-scan steps in their corresponding jobs. Obtain and record the names of both scanners, who runs each scanner and where each redacted report is retained. Do not treat a job name as identification of its scanner.
-- Pin the runner to a fixed Ubuntu label and record the runner image identity with the run evidence.
+- Pin the runner to a fixed Ubuntu release label; this label still receives image updates. Record the actual runner image identity, including its release/version, with the run evidence.
 - Pin Node to a complete, validated Node 22 version, and pin npm and Python to exact versions. Record the selected versions.
-- Pin every action to a full-length commit SHA verified in that action’s own repository. Do not rely on action tags, which can be moved or deleted. Configure Dependabot for GitHub Actions updates in `.github/dependabot.yml`.
+- Pin every repository-based action to a full-length commit SHA verified in that action’s own repository, and pin every `docker://` action to an image digest. Do not rely on action tags, which can be moved or deleted. Configure Dependabot for GitHub Actions updates in `.github/dependabot.yml`.
 - Generate, validate and commit `package-lock.json` first. Only then switch CI installation to `npm ci --ignore-scripts --no-audit --no-fund`.
 - Make both test jobs check out the same revision. Require each job to fail on empty or skipped tests. Retain a successful differential run for that exact SHA before making any claim of repaired-tree CI coverage.
 - Set `permissions.contents` to `read` and all other permissions to `none`. Document and justify any exception.
