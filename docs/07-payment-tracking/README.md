@@ -858,10 +858,10 @@ Before scanning, log the run ID, trigger, input checkpoint and range bounds. Aft
 Retain the linked payment records in causal order ([persist raw observations first](../06-tracking/README.md#L582)):
 
 1. **Request:** `<REQUEST_ID>`, creation/revision history, chain/network, asset identifier, base-unit amount, recipient, required memo/tag, validity limits and policy snapshot.
-2. **Observation:** `<TXID>`, chain/network and native event/output/log identity, cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
-3. **Match decision:** request–event link, deduplication key, evaluated confirmations, accepted/rejected/pending status and reason, tied to the policy version.
+2. **Observation:** `<TXID>`, chain/network and native event/output/log identity ([docs/06, lines 586–590](../06-tracking/README.md#L586-L590)), cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
+3. **Match decision:** request–event link, deduplication key ([docs/06, line 687](../06-tracking/README.md#L687)), evaluated confirmations, accepted/rejected/pending status and reason, tied to the policy version.
 4. **Reconciliation/finalisation:** accepted event set, total, database before/after values, discrepancy and repair, resulting status and decision reason.
-5. **Credit and settlement:** credit ID, idempotency key, journal amount/asset, reversals or adjustments, and allocation to the retained `<SETTLEMENT_LINE_ID>` record, including fees and net value.
+5. **Credit and settlement:** credit ID, idempotency key, journal amount/asset, reversals or adjustments, and allocation to the retained `<SETTLEMENT_LINE_ID>` record, including fees and net value ([docs/12, line 320](../12-chain-registry-and-assets/README.md#L320)).
 
 Keep enough detail for a reviewer to verify inclusion and policy acceptance at the recorded checkpoint, reconstruct the distinct accepted total, check finalisation and follow the credit into settlement—all from these records alone. Use run history to establish scanned coverage, and credit keys and journal entries to show that replay did not pay twice.
 
