@@ -2325,11 +2325,11 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 
 > **Warning** If you use a small test transfer, it limits that test’s loss only. Repeat the character-by-character check of the entire pasted address against an independently verified destination for the actual transfer; skipping it risks sending the full actual amount to a substituted destination.
 
-**Decoding is not approval to sign.** Meaningfully decoded data can still authorise loss. Refusing blind signing does not remove the need to examine the authority requested. Review and revoke token approvals regularly. Outstanding permit signatures need separate consideration; they must not be treated as cancelled merely because an allowance has changed.
+**Decoding is not approval to sign.** Meaningfully decoded data can still authorise loss. Refusing blind signing does not remove the need to examine the authority requested. Review and revoke token approvals regularly. Outstanding permit signatures need separate consideration; they must not be treated as cancelled merely because an allowance has changed. An accepted Permit2 permit consumes its nonce, even when it sets a lower allowance, so a permit signature using that consumed nonce in the same nonce scope cannot be replayed.
 
 **Verification and recovery continuity need their own controls.** Keep `bip_utils` pinned and verification-only. Verify that recovery works without exposing the material or relaxing the recovery-entry and offline-backup rules. Document an explicit inheritance plan. Keep any BIP-39 passphrase separate from the recovery words, and keep the words separate from the signing device. Offline backups need separate, secure, fire/water-protected failure domains.
 
-**Coercion remains a personal-safety threat.** Neither a BIP-39 passphrase nor a vault unlock passphrase guarantees protection under coercion; the same is true of hidden backups, decoy wallets, a device PIN and multisig. Personal safety comes before protecting the wallet.
+**Coercion remains a personal-safety threat.** A decoy wallet can plausibly satisfy a coercer who is unaware of the real wallet. Multisig prevents one coerced holder alone from moving treasury funds when a quorum of independent holders is required. A BIP-39 passphrase can itself be compelled. A vault unlock passphrase or device PIN can also be demanded. Hidden backups do not eliminate coercion risk. These mechanisms can provide benefits, but none guarantees protection under coercion. Personal safety comes before protecting the wallet.
 
 ### Permit2: two independent paths
 
@@ -2340,7 +2340,7 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 
 The token approval, any standing Permit2 allowance and outstanding permit signatures therefore need separate attention. Before signing a permit, verify the chain, token, spender, amount, expiry and authority. A wallet displaying decoded fields does not make the requested authority acceptable.
 
-Reducing an allowance or using `lockdown` does **not** invalidate outstanding permit signatures. Where supported, use the appropriate `invalidateNonces` or `invalidateUnorderedNonces` operation to invalidate them. Do not mistake an allowance change for signature cancellation.
+Reducing an allowance by itself or using `lockdown` does **not** invalidate outstanding permit signatures. Where supported, use `invalidateNonces` to invalidate the relevant ordered (sequential) nonces used by `AllowanceTransfer`, or `invalidateUnorderedNonces` to invalidate the relevant unordered nonces used by `SignatureTransfer`. Do not mistake an allowance change for signature cancellation.
 
 Never assume that disconnecting or clearing state cancels outstanding signatures. A signature that remains usable is still part of the exposure, subject to its authorisation and the transfer prerequisites above.
 
