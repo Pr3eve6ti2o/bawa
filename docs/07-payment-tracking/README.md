@@ -525,7 +525,7 @@ Also allow these conditional routes:
 - When the acceptance deadline passes, allow `observed`, `seen`, `matched`, `sufficient`, `included`, `confirmed` and `reorged` to enter `expired`.
 - For ambiguous or contradictory evidence, allow `observed`, `seen`, `matched`, `underpaid`, `sufficient`, `included`, `confirmed`, `reorged`, `finalized`, `paid` or `claimed` to enter `manual_review`.
 
-Treat these routes as exhaustive. Keep the request in its current state when a duplicate report arrives.
+Treat these routes as exhaustive. A duplicate report is an identical replay of an already-recorded report; keep the request in its current state when such a replay arrives. A second distinct report of the same event is not a duplicate and must be evaluated under these routes. The monitoring cutoff remains unspecified: application policy must define it relative to the acceptance deadline, including whether and for how long monitoring continues after that deadline.
 
 ### Checks and exception handling
 
