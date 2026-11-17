@@ -1065,7 +1065,13 @@ Keep recovery material out of the checkout and installation reports. `CONTRIBUTI
 
 ### Sources
 
-- Bawa installation guidance and repository files: `package.json`, `tools/hdwallet-gen/package.json`, `requirements.txt` and `CONTRIBUTING.md`, https://github.com/Pr3eve6ti2o/bawa.git
+All sources below are pinned to revision `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+
+- Installation guide: [`docs/10-operations-and-testing/README.md`, “Installing Bawa from a clean machine”](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/10-operations-and-testing/README.md#installing-bawa-from-a-clean-machine).
+- Dependency and contributor guidance: [`package.json`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/package.json#L1), [`tools/hdwallet-gen/package.json`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/tools/hdwallet-gen/package.json#L1), [`requirements.txt`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/requirements.txt#L1) and [`CONTRIBUTING.md`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/CONTRIBUTING.md#L1).
+- Smoke and differential-test sources: [`test/smoke.test.js`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/test/smoke.test.js#L1) and [`test/differential_test.py`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/test/differential_test.py#L1).
+- CI workflow: [`.github/workflows/ci.yml`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/.github/workflows/ci.yml#L1).
+- D23 execution evidence: this guide’s [“Dependency lockfile discipline” section](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/10-operations-and-testing/README.md#dependency-lockfile-discipline) records that CI runs `npm install`, not `npm ci`.
 
 ## Dependency lockfile discipline
 
