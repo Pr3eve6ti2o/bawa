@@ -676,7 +676,7 @@ If fetching or reconciliation remains uncertain, keep the previously committed b
 
 - **Watches:** assign an ID and enforce uniqueness on `(chain, network, address)`.
 - **Observations:** assign an ID and retain the watch reference, source, read timestamp, request outcome and any available raw response. Preserve the raw response unchanged so you can rebuild derived facts.
-- **Facts:** key output-based activity uniquely by `(watch, transaction_id, output_index)`. For other event types, use `(watch, transaction_id, event_type, transaction_event_index)` and document how each chain adapter derives a deterministic index within the transaction’s complete event list. Do not use a block-wide log index, which can shift across a reorg. Update the same fact on repeated reads; never make confirmation changes or reorgs change its identity. Retain the supporting observation link, available block reference and confirmation/reorg/finality state.
+- **Facts:** key output-based activity uniquely by `(watch, transaction_id, output_index)`. For other event types, use `(watch, transaction_id, event_type, transaction_event_index)` and document how each chain adapter derives a deterministic index within the transaction’s complete event list (all events produced by that transaction in deterministic transaction-local order, before watch or event-type filtering). Do not use a block-wide log index, which can shift across a reorg. Update the same fact on repeated reads; never make confirmation changes or reorgs change its identity. Retain the supporting observation link, available block reference and confirmation/reorg/finality state.
 - **Sync:** keep one record per `(watch, source)`, containing the last attempt, last success, checkpoint, available source anchor and freshness. Record failed attempts without advancing the success timestamp.
 
 Supply chain and network for every fact through its watch reference. Never infer either from an address alone.
@@ -713,11 +713,11 @@ Treat request success, freshness and finality as separate states. A successful r
 
 Implement database and replay operations for your storage engine before scheduling polls: Bawa does not document database or replay commands. Keep freshness and finality `UNKNOWN` until you have implemented and checked block/checkpoint mappings, progress comparisons and a per-chain finality rule.
 
-Verify network identity for **every chain**, not only ETH. Check each source’s chain-id or network identifier **plus known block anchors** against the watch configuration. Reject mismatches before ingestion.
+Verify network identity for **every chain**, not only ETH. Check each source’s chain-id or network identifier **plus known block anchors** (trusted block hashes at specified heights for the expected network) against the watch configuration. Reject mismatches before ingestion.
 
 Configure an eligible processing boundary:
 
-- **Bitcoin:** choose `C >= 1` confirmations. A canonical block at height `h`, with verified tip `H`, has `H-h+1` confirmations. Eligibility ends at `H-C+1`.
+- **Bitcoin:** choose `C >= 1` confirmations. A canonical block (one on the verified chain with the greatest cumulative proof of work) at height `h`, with verified tip `H`, has `H-h+1` confirmations. Eligibility ends at `H-C+1`.
 - **Ethereum:** use a checked `finalized` block as the boundary where supported. Verify provider support before relying on it.
 
 Record your choice. Treat a confirmation threshold as a risk policy, not protection against every reorg.
