@@ -292,7 +292,7 @@ Define the scope and execute the review:
 Keep the gate marked **FAIL** until the scope is defined and the review executed.
 ## 8. Air-gapped signing with PSBTs
 
-A [PSBT](../07-payment-tracking/README.md) lets an online wallet prepare a payment without holding the keys needed to authorise it. In Bawa, give the watch-only coordinator the account's public derivation root so it can discover coins through RPC or an indexer. Treat xpubs as **sensitive public material**. Keep the mnemonic, seed and private keys on the trusted offline signer.
+A [PSBT](../07-payment-tracking/README.md) lets an online wallet prepare a payment without holding the keys needed to authorise it. Give an external watch-only coordinator the account's public derivation root so it can discover coins through RPC or an indexer. Treat xpubs as **sensitive public material**. Keep the mnemonic, seed and private keys on the trusted offline signer.
 
 **Flow:** online watch-only coordinator prepares payment → unsigned PSBT by QR code or removable media → offline signer verifies details, then signs → signed PSBT by QR code or removable media → online coordinator finalises and broadcasts.
 
@@ -326,7 +326,7 @@ Open firmware makes the signer's firmware source available for independent audit
 
 Do not treat availability as evidence of an audit. Look for a report naming the reviewed version, scope and unresolved findings; even an audit can miss faults.
 
-The software is free; the physical device costs money. Check the maker's own site for current costs, including delivery and taxes.
+The open-firmware signer's software is free; the physical device costs money. Check the maker's own site for current costs, including delivery and taxes.
 
 ### Verify every release before installation
 
@@ -350,7 +350,7 @@ An exposed recovery backup may let someone spend without the device.
 
 What it helps against: during signing, the networked wallet need not hold the seed or private keys, reducing direct key theft by malware on that computer; removing radios removes those wireless entry points; not saving keys reduces what a thief can extract from a powered-off device's storage. What it does not cover: malicious firmware, tampered components, memory extraction, QR-parser vulnerabilities, stolen backups, or approving a substituted transaction — check destination, amount and fee on the signer itself; power interruptions, failed storage media, unreadable QR codes can stop a session; losing the only recovery backup can mean losing access altogether. Nor does this repair an earlier leak: Bawa's controlling-terminal route keeps the mnemonic and data key out of ordinary subprocess stdout/stderr capture; it does not isolate them from the host; a hostile OS or terminal, debuggers, crash dumps, swap and memory snapshots can still expose them; loading an exposed seed into another device does not make it secret again.
 
-The software is free to use, inspect and modify; parts and replacements cost money; assembly, firmware verification and recovery testing take time. Choose this route over a paid option if you are comfortable taking on that maintenance. A maintained, supported paid signer may suit you better if you want less assembly and troubleshooting; payment alone is no security guarantee.
+The do-it-yourself stateless signer's software is free to use, inspect and modify; parts and replacements cost money; assembly, firmware verification and recovery testing take time. Choose this route over a paid option if you are comfortable taking on that maintenance. A maintained, supported paid signer may suit you better if you want less assembly and troubleshooting; payment alone is no security guarantee.
 ## 11. Free Bitcoin multisig: keep the keys and the policy
 
 Sparrow ([Apache-2.0](https://github.com/sparrowwallet/sparrow)) and Electrum ([MIT](https://github.com/spesmilo/electrum)) are free open-source coordinators. A 2-of-3 wallet requires signatures from any two of three independent keys; the coordinator can remain watch-only (prepares transactions without holding seeds).
