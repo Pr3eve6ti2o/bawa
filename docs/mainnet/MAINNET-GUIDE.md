@@ -3609,7 +3609,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 
-- **M05 F2/F3/F7:** `4.9.2` is npm `latest`, but its GitHub release has `prerelease: true` and was published on 2026-11-06. `4.9.1` has `prerelease: false` and is the latest stable release and upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`.
+- **M05 F2/F3/F7:** `4.9.2` was npm `latest` at writing on 2026-11-09, but its GitHub release has `prerelease: true` and was published on 2026-11-06. As of `a5bc56e`, `4.9.3`, published on 2026-11-11T08:08:04Z, is the latest stable release. `4.9.1` has `prerelease: false` but is no longer the latest stable release or upgrade candidate. `4.9.1` and `4.9.2` share source commit `17e3cd4d`, but their npm tarballs and SHA-1 hashes differ. Neither `4.9.1` nor `4.9.2` carries an Android `.aar`.
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
