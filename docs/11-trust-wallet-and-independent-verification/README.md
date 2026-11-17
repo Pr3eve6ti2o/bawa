@@ -378,7 +378,7 @@ These gates remain open:
 
 2. **Chain-specific fixtures.** Every supported chain needs published expectations for its claimed configurations, with documented overlap between the generator and an independent verifier. Generic BIP support does not establish chain coverage.
 
-3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account. The TON fixture in "Fixture and parity gaps" records all of these fields.
+3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account. The TON fixture in "Fixture and parity gaps" records the listed fields except the mnemonic scheme, which it does not explicitly specify.
 
 #### Adding one eligible chain fixture
 
