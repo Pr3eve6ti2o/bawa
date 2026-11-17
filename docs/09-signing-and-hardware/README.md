@@ -419,8 +419,8 @@ No keys are needed to construct this proposal from known outpoints and output sc
 
 The coordinator adds information that the signer needs to validate the proposal:
 
-- **UTXOs, unspent transaction outputs:** legacy inputs need `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they must agree.
-- **Key origins:** attach public keys, `<fingerprint>` and derivation paths from the descriptor. Include output derivations to help identify change, without treating those claims as proof.
+- **UTXOs, unspent transaction outputs:** legacy inputs should include `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they should agree (guidance derived from BIP-174).
+- **Key origins:** attach public keys, `<fingerprint>` (eight hex characters; BIP-380) and derivation paths from the descriptor, if known/present. Include output derivations, if known/present, to help identify change, without treating those claims as proof.
 - **Scripts:** include required redeem scripts and witness scripts. For Taproot, use BIP-371’s internal-key and derivation fields, plus leaf scripts and control blocks where needed for script-path spending.
 - **Sighash:** record the intended signature-hash mode, or agree the signer’s default. Ordinary `SIGHASH_ALL` and Taproot’s `SIGHASH_DEFAULT` commit to all outputs. Other modes can leave transaction parts changeable. An explicitly requested mode must be honoured or signing refused.
 
@@ -450,6 +450,7 @@ Only after these checks and on-device approval may the signer add partial signat
 
 - BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 - BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
+- BIP-380: https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
 - Community worked example, not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
 
