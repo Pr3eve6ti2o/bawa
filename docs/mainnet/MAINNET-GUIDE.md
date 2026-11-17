@@ -3625,7 +3625,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 ### M-22 — Auto-lock claims corrected
 
-**Question/risk:** A reader may leave a wallet unattended believing that it auto-locks. The Web timer re-arms only on unlock or mnemonic access through `requireMnemonic()`, and Android has no auto-lock at all.
+**Question/risk:** A reader may leave a wallet unattended believing that it auto-locks. The Web timer re-arms only on unlock, not as a general inactivity timer, and the Android draft specifies no inactivity timeout.
 
 **Affected sections:** §10, §15.
 
@@ -3636,7 +3636,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** Describe the Web default as a 10-minute timer re-armed by unlocking or by an operation that calls `requireMnemonic()`, not as a general inactivity timer. Tell readers to lock explicitly before leaving the wallet. State plainly that Android has no inactivity auto-lock and requires manual locking.
+**Operational restriction:** Describe the Web default as a 10-minute timer re-armed only by unlocking, not as a general inactivity timer. Tell readers to lock explicitly before leaving the wallet. State plainly that the Android draft specifies no inactivity timeout, and tell readers to lock manually before leaving the wallet unattended.
 
 **Blocks writing completion:** No.
 
