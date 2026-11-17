@@ -3916,7 +3916,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Affected sections:** §13 (whole section); §§11, 12, 14; §16; §17.
 
-**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision.
+**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision. On 2026-11-13, the owner declined M-35 funding; all four rehearsal addresses were retired and must never be funded.
 
 **Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
 
