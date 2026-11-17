@@ -1,12 +1,12 @@
 ---
 title: Signing, Descriptors, PSBT and Hardware
 description: Keep signing in a separate trust domain from tracking; use output descriptors and PSBT to hand unsigned transactions to a hardware signer, and verify the signed result before broadcast.
-last-updated: 2026-11-08
+last-updated: 2026-11-09
 ---
 
 # Signing, Descriptors, PSBT & Hardware
 
-Verified against commit `754721cd` (documentation-only rewrite; code identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`).
+Verified against commit `754721cd` (documentation-only rewrite; code identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`). Verification work was done on 8 November 2026.
 
 How-to guide.
 
@@ -48,19 +48,19 @@ NETWORK
 broadcast signed transaction
 ```
 
-The tracking service should not need the private key.
+The tracking service should not need the private key (see [watch-only derivation](../../tools/hdwallet-gen/derive.js)).
 
-The web server should not become the place where the seed is loaded just because signing is inconvenient.
+The web server should not become the place where the seed is loaded just because signing is inconvenient (see [wallet generation](../../tools/hdwallet-gen/generate.js)).
 
-For high-value systems, move signing into an offline or hardware-backed trust domain.
+For high-value systems, move signing into an offline or hardware-backed trust domain (see [watch-only derivation](../../tools/hdwallet-gen/derive.js) and [wallet generation](../../tools/hdwallet-gen/generate.js)).
 
 ---
 
-The dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08), with `txMode: 1` producing a `0x02` envelope and Python independently recovering the published fixture sender. Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
+The dedicated EIP-1559 construction/signing demonstration was verified on [Core 4.9.2](../../CHANGELOG.md) ([D21, 2026-11-08](../14-wallet-app-implementation/README.md)), with `txMode: 1` producing a `0x02` envelope and Python independently recovering the published fixture sender. Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
 
 ## The fixed derivation policy
 
-Identify this policy as `bawa-derivation-policy-v1` so a future change is detectable. Read the paths below in [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) notation.
+Identify this policy as `bawa-derivation-policy-v1` so a future change is detectable (see [fixed generation paths](../../tools/hdwallet-gen/generate.js)). Read the paths below in [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) notation.
 
 | Asset or setting | Fixed policy |
 |---|---|
@@ -83,7 +83,7 @@ Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce dif
 
 **TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Check the complete path, including coin type `195`.
 
-**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the generation-only model with a single deposit address and no xpub. Check the generation path and the single deposit address requirement.
+**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the [generation-only model with a single deposit address and no xpub](../02-chains/README.md). Check the generation path and the single deposit address requirement.
 
 **BIP-39 mnemonic.** Changing the word count changes the seed and addresses. Use a 24-word mnemonic to encode the required 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. Check the 256-bit entropy requirement and the 24-word count.
 
