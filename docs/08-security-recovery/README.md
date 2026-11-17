@@ -1232,13 +1232,13 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 | Approach | Indicative annual cost | Who it suits |
 |---|---|---|
 | Free controls only (hardware wallet, offline backups, tested drill) | £0 plus hardware | Most individuals |
-| Collaborative custody (Casa-style, Unchained-style) | $250–$7,500 per year | Families, higher-value individuals |
-| Institutional MPC entry | Approximately $999 per month to $36,000+ per year enterprise | Business treasuries, funds |
+| Collaborative custody (Casa-style, Unchained-style) | $250–$7,500 per year (source: [Casa and Unchained entries, section 20](#20-paid-security-consumer-multisig-with-inheritance); checked 8 November 2026) | Families, higher-value individuals |
+| Institutional MPC entry | Approximately $999 per month to $36,000+ per year enterprise (source: [Fireblocks entry, section 19](#19-paid-security-institutional-mpc-platforms); checked 8 November 2026) | Business treasuries, funds |
 | Qualified custody | Negotiated percentage of assets | Funds, fiduciaries, regulated businesses |
-| External security audits | $8,000–$300,000+ per engagement | Any production deployment |
-| Bug bounty ceilings | Thousands to $10 million+ | Projects with public exposure |
-| Cloud KMS | From approximately $1 per key per month | Teams needing managed signing |
-| Dedicated HSMs | From cluster or pool-hour billing | Institutions with strict key-control needs |
+| External security audits | $8,000–$300,000+ per engagement (unsourced estimate; no check date recorded in the guide) | Any production deployment |
+| Bug bounty ceilings | Thousands to $10 million+ (unsourced estimate; no check date recorded in the guide) | Projects with public exposure |
+| Cloud KMS | From approximately $1 per key per month (unsourced estimate; no check date recorded in the guide) | Teams needing managed signing |
+| Dedicated HSMs | From cluster or pool-hour billing (unsourced estimate; no check date recorded in the guide) | Institutions with strict key-control needs |
 
 Exit checks — complete these seven checks BEFORE signing with any paid provider:
 
