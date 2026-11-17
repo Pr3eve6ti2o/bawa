@@ -128,9 +128,9 @@ Read the configured steps in this order:
 
 Distinguish this configured sequence from successful execution at the pinned head.
 
-Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags, no Dependabot, and a single job. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags. The workflow has a single job, which is not inherently a defect. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
 
-Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install.
+Record the genuine omissions from the CI workflow as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install. Verify repository-level services, including Dependabot and secret scanning, before asserting their absence.
 
 ## Release metadata
 
@@ -144,7 +144,7 @@ Do not claim Semantic Versioning adherence until you declare the public API (the
 
 ### Tagging
 
-As of 8 November 2026, the Bawa repository has zero tags: `git tag` is empty. A tag is the immutable record of a release.
+At the 8 November 2026 check, the Bawa repository had zero tags: `git tag` was empty. Tag refs are mutable (movable or deletable); annotation alone does not enforce immutability, and a commit hash does not pin the state of mutable tag refs.
 
 Before tagging, document which release artefacts are built from the tag and where their checksums are recorded. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
 
