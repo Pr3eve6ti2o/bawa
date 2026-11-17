@@ -419,7 +419,7 @@ Resolve and document an npm version compatible with the existing `tools/hdwallet
 
 ## 7. Python venv and requirements
 
-Start at the repository root. Use a Unix-like shell that supports `source`, such as Bash or Zsh. Generation is Unix-like only.
+Start at the repository root. Use a Unix-like shell that supports `source`, such as Bash or Zsh, with a controlling terminal; the generator refuses to run without one. Generation is Unix-like only.
 
 Keep `.venv` active for the remaining Python commands. Stop if a Python command or its check fails.
 
@@ -467,6 +467,8 @@ python -m pip install -r requirements.txt
 python -m pip check
 ```
 
+`python -m pip check` verifies dependency consistency, not exact pins; confirm the exact pins in Step 4 using `python -m pip show cryptography bip-utils`.
+
 **Step 4 — confirm the pins**
 
 ```sh
@@ -495,7 +497,7 @@ Work from the repository root in a Unix-like shell on an interactive terminal, w
 
 ### Step 2 — Run the generation command.
 
-From the repository root, run this command with no flags for a first wallet:
+From the repository root, run this command with no flags to generate a wallet when none already exists; if a wallet already exists, `make_wallet.py` refuses this no-flag invocation and reports "existing wallet found; rerun with --force/--regenerate only after making a verified backup":
 
 ```sh
 python3 tools/make_wallet.py
@@ -517,7 +519,7 @@ A successful run prints:
 Wallet generation and public configuration update completed.
 ```
 
-The four public values follow: BTC zpub, ETH xpub, TRX xpub and TON address. These are followed by:
+The `Public roots:` header line is followed by the four public values: BTC zpub, ETH xpub, TRX xpub and TON address. These are followed by:
 
 ```text
 Encrypted recovery artifact: <path> (0600)
@@ -595,9 +597,9 @@ PY
 > With the default paths:
 >
 > ```text
-> secrets/ 0700
+> secrets 0700
 > secrets/seed.enc.json 0600
-> seed-backup/ 0700
+> seed-backup 0700
 > seed-backup/seed.enc.json 0600
 > .env 0600
 > ```
@@ -642,7 +644,7 @@ The old seed bundle is backed up as `seed.enc.json.bak.<timestamp>` at `0600`. T
 | Seed-bundle validation stops: missing, outside the secrets directory, or not exactly `0600` | Correct the cause. Do not bypass validation. |
 | Symlink refused | Use non-symlinked paths. |
 
-The mnemonic and data key now exist in exactly three places — your offline record, the encrypted artefact, and the backup.
+The current mnemonic and data key exist in three places — your offline record, the encrypted artefact, and the backup — but after `--force` regeneration, the retained `seed.enc.json.bak.<timestamp>` bundle (0600) is a fourth place holding the old mnemonic and data key.
 
 ## 9. Watch-only derivation
 
@@ -698,13 +700,13 @@ Account 0 and receiving branch 0 only are Bawa’s pinned policy, not a BIP-44 r
 
 > **Derivation deviation**
 >
-> Bawa pins Core’s mainnet SegWit derivation `m/84'/0'/0'/0/i` with `HDVersion.zpub` and applies it to testnet4. This is Core’s default, selected explicitly in `generate.js`, not the BIP-44/SLIP-44 testnet convention.
+> Bawa pins the mainnet BIP-84 SegWit derivation `m/84'/0'/0'/0/i` with `HDVersion.zpub` and applies it to testnet4. This is an explicit selection in `generate.js` (`Purpose.bip84`, `Derivation.bitcoinSegwit`), not the BIP-44/SLIP-44 testnet convention.
 >
-> The standards-conformant testnet pair is `m/84'/1'/0'/0/i` with `vpub` version `0x045f1cf6` ([SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md), [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)). Core ships that derivation too.
+> The standards-conformant testnet pair is `m/84'/1'/0'/0/i` with `vpub` version `0x045f1cf6` ([SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md), [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)).
 >
 > If you import a Bawa mnemonic into a standard testnet wallet, you derive a different account and do not see Bawa funds. Preserve Bawa’s recorded derivation policy for recovery; do not silently substitute the standard testnet path.
 >
-> Core’s derivation layer produces a `bc1q` address in mainnet form. The wallet-facing layer re-encodes it with HRP `tb`, producing `tb1q`. The witness program is identical: witness version 0, a 20-byte program. Only the Bech32 HRP changes.
+> Guide 02 documents re-encoding the mainnet-form `bc1q` address as `tb1q` by changing the Bech32 HRP from `bc` to `tb` and recomputing the checksum, while leaving witness version 0 and the 20-byte witness program unchanged; this procedure is not implemented in a tool on `main`.
 
 For derivation, Core runs `getPublicKeyFromExtended` and then `deriveAddressFromPublicKey`.
 
