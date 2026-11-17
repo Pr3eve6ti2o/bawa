@@ -16,6 +16,8 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [11 — Trust Wallet Core & Independent Verification](11-trust-wallet-and-independent-verification/README.md) — **How-to guide:** carry out independent verification when you use Trust Wallet Core.
 - [16 — Security Decision Guide](16-security-decision-guide/README.md) — **How-to guide:** make security decisions for your wallet. Read [Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) for the concepts behind those decisions.
 - [Recovery](RECOVERY.md) — **How-to guide:** use the supporting recovery guidance when you need to recover a wallet.
+- [09 — Signing, Descriptors, PSBT & Hardware](09-signing-and-hardware/README.md) — **How-to guide:** work with signing, descriptors, PSBT and hardware.
+- [13 — Wallet App Architecture](13-wallet-app-architecture/README.md) — **How-to guide:** structure a wallet app. Continue with [Wallet App Implementation](14-wallet-app-implementation/README.md) when you want to implement it.
 - [14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — **How-to guide:** implement a wallet app. Use [Wallet App Architecture](13-wallet-app-architecture/README.md) for design context.
 
 ### Platform guides
@@ -27,7 +29,6 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 
 - [02 — Chain Guides](02-chains/README.md) — **Reference:** find guidance for the chain you are working with.
 - [03 — Tool & Repository Map](03-tools-and-repositories/README.md) — **Reference:** find tools and repositories for your task.
-- [09 — Signing, Descriptors, PSBT & Hardware](09-signing-and-hardware/README.md) — **Reference:** look up details on signing, descriptors, PSBT and hardware.
 - [12 — Chain Registry & Asset Metadata](12-chain-registry-and-assets/README.md) — **Reference:** look up chain registry and asset metadata.
 - [Mainnet guide](mainnet/MAINNET-GUIDE.md) — **Reference:** consult the mainnet-related guidance. Its existence is **not evidence of mainnet support or readiness**.
 - [Glossary](GLOSSARY.md) — **Reference:** check the meaning of an unfamiliar term.
@@ -40,7 +41,6 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 ## Explanation — understand concepts and reasons
 
 - [01 — Fundamentals](01-fundamentals/README.md) — **Explanation:** understand the fundamentals before you choose software or run it.
-- [13 — Wallet App Architecture](13-wallet-app-architecture/README.md) — **Explanation:** understand how to structure a wallet app. Continue with [Wallet App Implementation](14-wallet-app-implementation/README.md) when you want to implement it.
 - [15 — Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) — **Explanation:** understand threats and the reasons for theft-prevention measures before you make security decisions.
 
 ## Recommended reading order
