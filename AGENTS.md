@@ -2,7 +2,7 @@
 
 ## Purpose and baseline
 
-Bawa (`Pr3eve6ti2o/bawa`, `main` branch) is a practical open-source reference for HD-wallet generation, watch-only derivation, recovery, tracking and reconciliation — not a hosted wallet, custody service or exchange. It is built primarily for **mainnet**; testnet is a testing concern, not the default target.
+Bawa (`Pr3eve6ti2o/bawa`, `main` branch) is a practical open-source reference for HD-wallet generation, watch-only derivation, recovery, tracking and reconciliation — not a hosted wallet, custody service or exchange. The owner's direction is **mainnet-first**, but that direction is not yet delivered: the current documented workflow is **testnet-only**. Mainnet work is gated behind a separate reviewed change, and real-funds gates remain mandatory; no mainnet execution without separate explicit approval.
 
 Verified snapshot (2026-11-14): main at `16c074e`. The engine is Trust Wallet Core **4.8.4** WASM. The tools suite (`npm --prefix tools/hdwallet-gen test`) records 130 checks, 0 fail. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
 
@@ -15,6 +15,8 @@ There is NO signing, broadcast or transaction-construction code on this branch, 
 3. `docs/01-fundamentals/README.md` through `docs/16-security-decision-guide/README.md` — the canonical guides.
 4. Specialist guides: Doc 2 `docs/web-wallet/WEB-GUIDE.md`, Doc 3 `docs/android-wallet/ANDROID-GUIDE.md`, Doc 4 `docs/mainnet/MAINNET-GUIDE.md`.
 5. `docs/SECURITY.md`, `docs/RECOVERY.md`, `docs/TESTING.md`, `docs/GLOSSARY.md`, `docs/FAQ.md`.
+
+Note: "Docs 1–3" means the testnet guide set in `docs/mainnet/MAINNET-GUIDE.md`, but the three specialist guides (Web, Android, mainnet) in the Android register.
 
 Do not invent filenames for numbered guides or treat documentation as execution evidence. Inspect executable code, dependencies and interfaces before use; do not infer arguments from filenames.
 
@@ -29,7 +31,7 @@ Do not invent filenames for numbered guides or treat documentation as execution 
 | Decrypt / recover a seed bundle | `python3 tools/bawa_cli.py` (menu 5), or `python3 tools/decrypt_seed.py` |
 | Security, verification and safety tests | `python3 tools/bawa_cli.py` (menu 5), or `npm --prefix tools/hdwallet-gen test` and `python3 test/differential_test.py` |
 | TON watch-only derivation | **Not available on this branch** — no TON derivation mode is provided; see `docs/05-watch-only/README.md` |
-| Mainnet fee quote / signing / broadcast | **Not available on this branch** — library and procedure only; see `docs/mainnet/MAINNET-GUIDE.md` |
+| Mainnet fee quote / signing / broadcast | **Not available on this branch** — procedure only; see `docs/mainnet/MAINNET-GUIDE.md` |
 
 `python3 tools/bawa_cli.py` is the one-command entry point. It never executes a shell string and never echoes secret material. Some of its options point to tools and docs that exist only on the feature branch; on this branch those options report "unavailable in this checkout" instead of running. That is the correct behaviour — do not work around it.
 
@@ -38,7 +40,7 @@ Do not invent filenames for numbered guides or treat documentation as execution 
 - **Engine:** Trust Wallet Core 4.8.4 WASM. Do not silently re-pin or change the engine version.
 - **Derivation:** BTC `m/84'/0'/0'/0/i` (BIP-84, zpub), ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` generation-only, single deposit address, no xpub. Account 0, receiving branch 0 only. BIP-39 256-bit, 24 words, **empty passphrase**. Do not change paths, the passphrase policy, or the AAD `nova-shop-seed-v1`.
 - **Permissions:** `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600.
-- **Networks:** mainnet is the primary target. Testnet is for testing only. Real-funds gates remain mandatory; no mainnet execution without separate explicit approval.
+- **Networks:** testnet-only workflow; the owner's mainnet-first direction is not yet delivered. Mainnet work is gated behind a separate reviewed change; real-funds gates remain mandatory; no mainnet execution without separate explicit approval.
 - **Test keys:** fresh, real, functional test seed phrases / private keys MAY be generated for testing only (user-approved 2026-11-10). They are test-only: never production or existing keys, never funded with real mainnet funds. Placeholders are not required.
 - **Secrets:** never use real user mnemonics or private keys as test fixtures. Never log, print or store a wallet secret. Redact secrets everywhere, including prompts, logs and reports.
 - **Chain adapters and UI:** chain adapters own endpoints, fees, broadcast and confirmation; they NEVER receive mnemonics, seeds, private keys, private extended keys, vault keys or secret-bearing objects, including during tests. UI is presentation only — never derivation, storage or signing policy.
