@@ -3858,7 +3858,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN (standing discipline).
 
-**Operational restriction:** Every claim must carry its verification scope: fixture/offline, controllable testnet or authorised rehearsal. No chain inherits another’s pass (M24 I17). A pass applies only to the wallet, chain, network, derivation policy and signing route actually rehearsed (M27 hard rule).
+**Operational restriction:** Every claim must carry its verification scope: fixture/offline, controllable testnet or authorised rehearsal. No chain inherits another’s pass (M24 I17). A pass applies only to the wallet, chain, network, derivation policy and signing route actually rehearsed.
 
 **Blocks writing completion:** No.
 
@@ -3875,7 +3875,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 **Evidence:**
 - M36 item 3 requires the user’s word before changing the repair-commit pin for the mainnet guide.
 - M36 item 5 identifies §5 proof staleness: use the `MAIN_HEAD` capture form or update the SHA at push.
-- M24 K01 records the §4 text fix as uncommitted and the §15/L3732/L4756 decisions as OPEN.
+- M24 K01’s §4 text fix was committed at b3814e0b in the 2026-11-10 push (b3814e0b is an ancestor of a5bc56e); the §15/L3732/L4756 decisions remain OPEN.
 - M01 F35 item 11 prohibits silently treating `56396a20` as an authorised mainnet baseline.
 
 **Status:** RESOLVED 2026-11-10 — the user decided: pin Doc 4 to the immutable repair-commit SHA `e3b65fb832db287fdc8d54794980dd0b3456cc12`; the §5 step-4 proof uses the literal baseline HEAD SHA; the `MAIN_HEAD` capture in step 1 is supporting context only.
