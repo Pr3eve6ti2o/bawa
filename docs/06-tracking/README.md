@@ -735,7 +735,7 @@ retain raw response
   → commit facts, totals and checkpoint atomically
 ```
 
-Keep raw observations when a derived-state commit fails. Never advance a checkpoint across an incomplete batch or a failed commit.
+Keep raw observations when a derived-state commit fails. Never advance a checkpoint across an incomplete batch (one whose requested range, including all required pages, has not been fully fetched and validated, or whose observations have not all been processed) or a failed commit.
 
 ### Run local acceptance checks
 
@@ -755,7 +755,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
    Reset the fixture and fail a write. Keep derived state unchanged and the checkpoint at `99`; do not leave partially updated facts or totals.
 
-   Without the required verification, a complete response still cannot establish finality.
+   Without the required verification (confirmation against independent node data that the relevant blocks are canonical and satisfy the configured finality rule), a complete response still cannot establish finality.
 
 2. **Repeat poll**
 
@@ -773,9 +773,9 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
 4. **Possible reorg**
 
-   Report `BLOCK_B` at height `100`, omitting `FACT_A`. Treat missing history alone as inconclusive: check canonical ancestry against a current node view.
+   Report `BLOCK_B` at height `100`, omitting `FACT_A`. Treat missing history alone as inconclusive: check canonical ancestry against a current node view (the canonical head and block-hash ancestry returned by a fresh query to an authoritative node).
 
-   For a verified replacement branch without that fact, mark old-branch facts inactive and roll back to the last verified common checkpoint — `99` here — then replay. Apply the changes to facts, totals and checkpoint atomically, and retain the raw observations.
+   For a verified replacement branch (one confirmed as canonical by checking its block hashes and parent links against the current node view) without that fact, mark old-branch facts inactive and roll back to the last verified common checkpoint (the latest stored checkpoint at a common ancestor whose block hash is confirmed in both branches’ ancestry) — `99` here — then replay. Apply the changes to facts, totals and checkpoint atomically, and retain the raw observations.
 
    Remove `FACT_A` from totals. Keep unresolved differences flagged; do not give them settled status.
 
