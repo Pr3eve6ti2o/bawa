@@ -319,7 +319,7 @@ Keep your requests within these limits:
 
 ### Private-key rejection
 
-The daemon trims your `xpub`, Base58-decodes it and separates the final four decoded bytes as the checksum. It hashes the preceding payload twice with SHA-256. The checksum bytes must equal the first four bytes of the second hash before a listed private version triggers rejection.
+The daemon trims your `xpub`, Base58-decodes it and separates the final four decoded bytes as the checksum. It hashes the preceding payload twice with SHA-256. The checksum bytes must equal the first four bytes of the second hash before either a listed private version or `decoded[45] === 0x00` (the private-payload marker) triggers rejection. The marker triggers private-key rejection independently of membership in the eight-version list.
 
 The eight recognised private version prefixes—the first four decoded bytes, in hex—are:
 
@@ -332,13 +332,13 @@ The eight recognised private version prefixes—the first four decoded bytes, in
 - `044a4e28`
 - `045f18bc`
 
-With a matching checksum, a listed version gives you:
+With a matching checksum, a listed private version or the private-payload marker gives you:
 
 ```json
-{"ok":false,"error":"extended public key required"}
+{"ok":false,"error":"extended public key required (private extended keys are rejected)"}
 ```
 
-This is neither a prefix-only check nor a complete public-key format check. Do not assume that passing it means you have a usable extended public key. A checksum mismatch returns `false` from this test; it does not approve the value as a public key.
+This is neither a prefix-only check nor a complete public-key format check. Do not assume that passing it means you have a usable extended public key. A checksum mismatch causes the daemon to return `{"ok":false,"error":"extended key checksum verification failed"}`; it does not approve the value as a public key.
 
 ### Error redaction
 
