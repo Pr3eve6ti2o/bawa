@@ -3513,7 +3513,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Affected sections:** §11, §4.
 
-**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/get` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
+**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/getJoinPage` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
 
 **Status:** OPEN.
 
@@ -3544,7 +3544,7 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 **Clearance condition:** A live-tested Etherscan V2 route with its API-key requirements stated, or a replacement explorer with dated verification.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M18 F10; M11; M08. [Repository docs at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20/docs): docs/06:287 and docs/06:731.
-### M-19 — Link library: 4 dead links, 4 links unverified from the VM
+### M-19 — Link library: 4 dead links, 5 links unverified from the VM
 
 **Question/risk:** Doc 4 §20 may cite a dead or unverified URL, sending a reader to the wrong or an unreachable source.
 
@@ -3568,7 +3568,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN (4 links).
 
-**Operational restriction:** Use the verified replacements, including M31’s operator-verified replacement URLs for the NCSC guide, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article. Do not cite the 4 unverified links until a non-VM network re-check is recorded.
+**Operational restriction:** Use the verified replacements, including M31’s operator-verified replacement URLs for the NCSC guide, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article. Do not cite the 5 unverified links until a non-VM network re-check is recorded.
 
 **Blocks writing completion:** No — §20 remains link-only until the re-check lands.
 
