@@ -165,7 +165,7 @@ UTXO totals are before fees.
 Use the [Esplora API reference](https://github.com/Blockstream/esplora/blob/master/API.md) for these endpoints:
 
 - `/address/:address/txs` — address transaction history.
-- `/address/:address/txs/chain/:last_seen_txid` — pagination through confirmed history.
+- `/address/:address/txs/chain[/:last_seen_txid]` — pagination through confirmed history.
 - `/address/:address/utxo` — unspent outputs.
 - `/tx/:txid` — transaction details.
 - `/tx/:txid/outspends` — output spending status.
@@ -185,7 +185,7 @@ Record the index tip. Re-query after notifications or when polling, and keep con
 | Native SegWit | `bc1q…` | `tb1q…` |
 | Taproot | `bc1p…` | `tb1p…` |
 
-Signet shares the testnet encoding ([BIP-325](https://github.com/bitcoin/bips/blob/master/bip-0325.mediawiki)). Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
+Signet uses testnet-style address encoding, including Bech32 HRP `tb` ([Bitcoin Core chainparams](https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp)). Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
 
 [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) lists these testnet extended-public-key versions:
 
