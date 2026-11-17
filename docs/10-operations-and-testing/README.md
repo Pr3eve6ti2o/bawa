@@ -857,18 +857,30 @@ Record signing as `none` where applicable.
 
 ### Retain build and test evidence
 
-Retain `ci-evidence.json`, logs and reports for both independent builds, and record their storage location. Keep the evidence attributable to each builder and include:
+Retain `ci-evidence.json`, logs and reports for both independent builds, and record their storage location. Keep the evidence attributable to each builder.
 
-- Source SHA and workflow SHA.
-- Run id and attempt, build id and runner image.
-- Tool versions and input hashes.
-- Artefact SHA-256 hashes and comparison results.
-- Commands, exit codes and test results.
-- Applicable signing records.
+Use a versioned JSON Schema committed as `ci-evidence.schema.json` alongside the workflow. Version 1 defines a JSON object with these required fields:
 
-For each Android artefact, also record the variant, `applicationId`, `versionCode` and `versionName`.
+- `schemaVersion`: integer `1`; `sourceSha` and `workflowSha`: full commit-SHA strings; `runId`: string; `runAttempt`: positive integer; `status`: `success`, `failed` or `cancelled`.
+- `completedAt` and `retentionUntil`: UTC ISO 8601 timestamp strings; `evidenceUri`: the credential-free storage URI of the manifest.
+- `builds`: an array of records with a unique `buildId`, a `builderId`, `status`, `runnerImageId`, `toolVersions` (tool-name/version string map), `inputHashes` (input-name/SHA-256 string map), `commands` (records containing a sanitized `command` string and integer `exitCode`), `testResults` (records containing a `name`, a `result` of `passed`, `failed` or `skipped`, and an optional `reportUri`), and `logUris` and `reportUris` (arrays of credential-free storage URIs).
+- `artefacts`: an array of records with a unique `artefactId`, a `buildId` referencing its producing build, a `storageUri`, a `sha256`, and `signingRecords` (records containing a public signing-record URI and verification result, or an empty array when signing is not applicable).
+- `comparisons`: an array of records containing `leftArtefactId`, `rightArtefactId`, and a `result` of `match`, `mismatch` or `not-run`; `not-run` also requires a `reason`.
+- `missingEvidence`: a field-path/reason string map, empty for complete evidence. Failed or cancelled runs may use `null` for unavailable measurements or empty arrays for unproduced outputs only when the missing evidence is explained here.
 
-Keep private keys out of `ci-evidence.json`, logs and reports.
+IDs, URIs and signing verification results are strings. All SHA-256 values must be 64 lowercase hexadecimal characters. Every artefact and comparison must resolve to the exact producing build and builder through its references.
+
+Identify each runner image using a container image digest or an immutable provider VM-image ID/version. A mutable label such as `ubuntu-latest` is not sufficient; retain it only as supplementary metadata. If immutable identification cannot be obtained, record the limitation as missing evidence rather than claiming complete evidence.
+
+For each Android artefact, also record the variant, `applicationId`, `versionCode` and `versionName`. Require `variant`, `applicationId` and `versionName` as strings and `versionCode` as a positive integer in that artefact’s record.
+
+Validate against the committed schema and check uniqueness, reference resolution and completeness before accepting the evidence. Reject unknown schema versions, malformed hashes and missing or ill-typed required fields. Successful runs must contain complete evidence for both independent builders and their comparison results.
+
+Capture evidence incrementally and generate, validate and upload it in an unconditional finalisation step (`always()` or equivalent), including after build, test or comparison failure. Preserve the original failure status. Upload sanitized partial evidence and validation errors as diagnostics even when validation fails; do not mark them complete. Missing uploads or invalid evidence must fail the evidence check.
+
+Retain the manifest, logs, reports and referenced signing records for at least 90 days after run completion. For released artefacts, retain them for the release’s supported lifetime if longer. Record `retentionUntil`, configure storage to enforce it, and extend it when support is extended rather than relying on default CI expiry.
+
+Keep private keys, credentials, tokens and signing passwords out of `ci-evidence.json`, logs and reports. Prevent or redact secret values before writing evidence, including command arguments and storage URLs. Signing records must contain only public signing and verification material.
 
 ### Complete the scanning checklist
 
