@@ -787,9 +787,15 @@ Expect repeat observations from polling, retries, restarts, duplicated webhooks,
 
 1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or log index. Identify the actual transfer; do not rely on a callback identifier alone. See [event identity](../06-tracking/README.md#L586-L590).
 2. Persist the event and claim fulfilment atomically in a database transaction. Enforce a unique event constraint on the transfer identity and use a conditional claim on `<REQUEST_ID>`. See [fact keying](../06-tracking/README.md#L687).
-3. Let only the successful claimant fulfil and then record the final state. Make other workers consult the existing state instead of starting another fulfilment. See [the payment lifecycle state machine](#payment-lifecycle-state-machine).
+3. Let only the successful claimant, or a recovery worker that atomically takes ownership of the same pending claim, fulfil and then record the final state. Use an expiring ownership lease or equivalent recovery mechanism so a crash cannot strand a committed claim. Make other workers consult the existing state instead of starting another fulfilment. See [the payment lifecycle state machine](#payment-lifecycle-state-machine).
 
-Commit local credit atomically with its outcome. For external fulfilment, use a durable outbox and an idempotent receiver. Do not dispatch goods again when a `paid` notification is replayed.
+Commit local credit atomically with its outcome. Include the event, claim and final state in that transaction: a crash before commit rolls everything back; after commit, workers read the recorded outcome instead of issuing another credit.
+
+For external fulfilment, use a durable outbox and an idempotent receiver. An outbox is a database table of pending fulfilment commands, durably committed in the same transaction as the event and claim. Give each request's fulfilment command a stable idempotency key based on `<REQUEST_ID>`; recovery and retries must reuse that key and payload. Send commands only after the transaction commits. The receiver must atomically commit the side effect with its durable idempotency record and result, or provide equivalent replay-safe recovery; duplicate commands must return the recorded result without repeating the effect.
+
+After a crash following a committed claim but before dispatch, recover ownership and send the existing outbox command. After a crash following fulfilment but before finalisation, query the receiver or retry the same command with the same key to recover its result without repeating fulfilment. On confirmed success, atomically mark the outbox command complete and record the request's final state. Keep unconfirmed work pending for recovery; sending a command or receiving a timeout is not proof of fulfilment.
+
+Apply `paid` only as a conditional forward transition permitted by the lifecycle state machine. Replayed `paid` for a request already `paid` or in a later/final state leaves that state unchanged and must not create another claim or outbox command. It may wake recovery of existing pending work, but must not reopen completed fulfilment. Do not dispatch goods again when a `paid` notification is replayed.
 
 ### Resolve stored outcomes after a lost response
 
