@@ -30,11 +30,11 @@ Keep the empty BIP-39 passphrase and the 24-word mnemonic: both are fixed policy
 
 ## 2. Install pointer
 
-Follow the root README §§5–7 as the single canonical installation procedure.
+Follow the root README §2 ("Getting started") as the single canonical installation procedure.
 
 You need:
 
-- A Unix-like environment with a usable /dev/tty is required for wallet generation. There is no PowerShell activation.
+- A Unix-like environment with a usable /dev/tty is required for wallet generation. This guide provides no PowerShell route to a usable /dev/tty for generation; the PowerShell venv activation documented in docs/10 does not remove the generator's /dev/tty requirement.
 - Node matching the `engines` requirement in `package.json`, and npm.
 - Python 3.11+ and a venv.
 - Disk space.
@@ -50,7 +50,7 @@ git verify-commit HEAD
 
 > **Expected result**
 >
-> Expected result for a signed commit: The commit signature verifies using a maintainer key you already trust. At the pinned head 754721cd, HEAD is unsigned, so `git verify-commit HEAD` fails because there is no commit signature to verify. Printing a key ID alone is not verification.
+> Expected result for a signed commit: The commit signature verifies using a maintainer key you already trust. At the pinned head 3019b02, HEAD is unsigned, so `git verify-commit HEAD` fails because there is no commit signature to verify. Printing a key ID alone is not verification.
 
 Check the installed Wallet Core version:
 
