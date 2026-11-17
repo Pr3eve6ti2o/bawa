@@ -74,6 +74,83 @@ Your endpoint has no provider-imposed quota, but CPU, disk and sync lag still li
 
 As you climb, control, privacy and reliability rise—and so do complexity and cost.
 
+### Provider fallback: if one fails, try the next
+
+Never depend on one provider for a chain. List two or more providers per chain in a fixed order, try them in that order, and move to the next one when the first fails. A provider fails when it times out, returns an HTTP error, returns `429` (rate-limited), or returns stale data. Retry the same provider once, then move on. Record which provider answered each request, so a dead provider is visible instead of silent.
+
+Two providers are not independent fallbacks when they share one upstream. Two URLs can share one underlying outage, and an "independent" RPC can be one upstream behind several names. Prefer providers that run their own infrastructure, and keep at least one fallback that is a different kind of source (for example, a hosted RPC plus an indexed explorer API).
+
+Prices and limits below were checked on 2026-11-17. Providers change them; check the linked pricing page before you commit to a tier.
+
+#### TRON
+
+| Order | Provider | What it is | Key |
+| 1 | TronGrid — <https://www.trongrid.io/> | TRON (and BTTC) API; use it as the API provider for TronScan data | API key, sent as `TRON-PRO-API-KEY` |
+| 2 | TronScan API | The TRON explorer API, reached through TronGrid | Same TronGrid key |
+
+Endpoints: mainnet <https://api.trongrid.io>; Shasta testnet <https://api.shasta.trongrid.io>; Nile testnet <https://nile.trongrid.io>. Shasta and Nile do not need an API key at present; mainnet does. Docs: <https://www.trongrid.io/documents>.
+
+**TronGrid accounts: 1 to 50 API keys, basic and paid.** Configure between 1 and 50 TronGrid API keys. 1 is the minimum — a tracker with no key cannot call mainnet. 50 is the maximum this guide supports.
+
+1. Create an account at <https://www.trongrid.io/> and open the dashboard.
+2. Create an API key on the dashboard. Choose the **basic** tier to start (free) or a **paid** plan when you need higher limits; check the current prices on the site before you pay.
+3. Copy the key. Treat it as a secret: store it in your tracker config or secret store, never in the repo and never in browser code.
+4. Add the key to the tracker as `trongrid_keys[0]`.
+5. For each extra account, repeat steps 1–4 and add the key as `trongrid_keys[1]`, `trongrid_keys[2]`, and so on, up to `trongrid_keys[49]`.
+6. The tracker tries the keys in order. When a key is rate-limited (`429`) or its quota is exhausted, the tracker moves to the next key and logs the switch. A key that keeps failing is parked until its quota resets; the others keep working.
+
+One key per account: each key carries that account's own quota, so more keys mean more headroom, not a way around one account's limits. Do not share keys between trackers.
+
+#### EVM: Ethereum, Base, Arbitrum, BNB Smart Chain
+
+The Etherscan family shares one API (Etherscan API V2): a single key covers 50+ chains, including Ethereum, Arbitrum, Base and BNB Smart Chain. Plans checked 2026-11-17: Free $0 (3 calls/second, 100,000 calls/day, selected chains, community endpoints only); Lite $49/month; Standard $199/month (10 calls/second, 200,000 calls/day, API Pro endpoints); Advanced $299/month; Professional $399/month. Pricing: <https://etherscan.io/api/pricing>. Docs: <https://docs.etherscan.io/introduction>.
+
+| Order | Provider | What it is | Key |
+| 1 | Etherscan API V2 | Indexed API for 50+ EVM chains, one key | Free or paid API key |
+| 2 | RouteScan | Data API, Etherscan-compatible API, Archive RPC | Free (no key) or Standard (paid) |
+| 3 | Blockscout | Open-source explorer; run your own instance or use a public one | No key for public instances |
+
+Per-chain entry points (all covered by the same Etherscan V2 key): Ethereum (<https://etherscan.io/>); Arbitrum <https://arbiscan.io/> — API <https://arbiscan.io/api>, sign in <https://arbiscan.io/login>, register <https://arbiscan.io/register>; Base <https://basescan.org/> — API <https://basescan.org/api>; BNB Smart Chain <https://bscscan.com/>.
+
+**RouteScan: free and Standard.** Free with no key: $0, 2 calls/second, 10,000 calls/day, Data API and Etherscan-compatible API, no account needed. Free with an API key: $0, 5 calls/second, 100,000 calls/day, plus $100 Streams credit on sign-up. Standard: $200/month, 10 calls/second, 200,000 calls/day, Blockscout-compatible API included, Archive RPC 100M RU per 30 days. One key works on every supported chain. The Blockscout-compatible API is included in every paid plan and in no free plan. Free plans need a backlink or a "Powered by Routescan.io APIs" mention, except for private use. Pricing: <https://routescan.io/pricing>. Docs: <https://docs.routescan.io/>. Main site: <https://routescan.io/>. Sign in: <https://routescan.io/auth/login>.
+
+**Blockscout.** The open-source explorer: docs <https://docs.blockscout.com/>, code <https://github.com/blockscout/blockscout>, main site <https://www.blockscout.com/>. Running your own instance removes the provider quota entirely and is the strongest fallback — it is also the most work, so treat it as Level 6 (self-hosted) in the ladder above.
+
+#### Solana
+
+| Order | Provider | What it is | Key |
+| 1 | Helius | Solana RPC plus indexed APIs (DAS, parsed events, webhooks) | API key from the dashboard |
+| 2 | Solscan API | Solana explorer API | Free or Pro API key |
+| 3 | Public cluster RPC | <https://api.mainnet.solana.com> | None (shared, rate-limited) |
+
+**Helius.** Plans checked 2026-11-17: Free $0 (1M credits/month, 10 RPC requests/second); Developer $49/month (10M credits, 50 RPS); Business $499/month (100M credits, 200 RPS); Professional $999/month (200M credits, 500 RPS); Enterprise custom. Most RPC calls cost 1 credit. Pricing: <https://www.helius.dev/pricing>. Billing and plans: <https://www.helius.dev/docs/billing/plans>. Docs: <https://www.helius.dev/docs>. Dashboard sign-in: <https://dashboard.helius.dev/login>. Main site: <https://www.helius.dev/>.
+
+**Solscan.** Explorer API with free and Pro plans; check current limits on the pricing page. Main site: <https://solscan.io/>. APIs: <https://solscan.io/apis>. Pricing: <https://solscan.io/apis/pricing>.
+
+#### Bitcoin and multi-chain
+
+- **Blockchain.com Explorer** — explorer and API for Bitcoin (and other chains). Main: <https://www.blockchain.com/explorer>. Pricing: <https://www.blockchain.com/explorer/pricing>.
+- **OKLink** — multi-chain explorer and API (including BSC). Docs: <https://www.oklink.com/docs/en/#developer-tools>. Main site: <https://www.oklink.com/>. BSC: <https://www.oklink.com/bsc>.
+
+Use OKLink as a second source when the chain-native provider fails: it is a different company and different infrastructure, so it is a genuine fallback rather than the same upstream under another name.
+
+#### How to add a provider
+
+1. Pick the chain and the gap: which call fails today (balance, history, token transfers)?
+2. Start on the free tier. Create the account, create the API key, and note the rate limit and daily cap.
+3. Add the key to the tracker config. Never commit a key; keep it in a secret store or environment variable.
+4. Put the new provider in the fallback order for that chain, after the provider you already use.
+5. Add a second provider for the same chain before you need it — a fallback you add during an outage is already late.
+6. Test the fallback: disable the first provider and confirm the tracker still answers from the second.
+7. Set a spending alert before you add a payment method, and check what happens when the allowance runs out (rejected calls, paused service, or chargeable usage).
+
+#### When a provider fails
+
+1. Retry the same provider once, with a short back-off.
+2. Move to the next provider in the order and log the switch.
+3. If every provider for the chain fails, log the outage, keep the last good state, and alert — do not serve stale data as fresh.
+4. After the outage, check why it failed (quota, downtime, or a bad key) before you put the provider back first in the order.
+
 ## 3. RPC is not an indexer
 
 Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode`, `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
