@@ -812,9 +812,11 @@ Use primary sources only:
 - [Etherscan rate limits](https://docs.etherscan.io/rate-limits).
 - [RFC 6585](https://www.rfc-editor.org/info/rfc6585/), especially section 4, “429 Too Many Requests”.
 - [CometBFT documentation home](https://docs.cosmos.network/cometbft/latest/docs/README).
+- [TEP-74: Jettons standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md).
 - [TON Jettons standard overview](https://docs.ton.org/contracts/standard/tokens/jettons/overview).
 - Solana documentation from version-controlled source files in `solana-foundation/solana-com`, not rendered pages:
   - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getgenesishash.mdx).
   - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getslot.mdx).
+- [Wallet Core repository](https://github.com/trustwallet/wallet-core).
   - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getsignaturestatuses.mdx).
 - Trust Wallet: [documentation home](https://developer.trustwallet.com/) and [Wallet Core repository](https://github.com/trustwallet/wallet-core).
