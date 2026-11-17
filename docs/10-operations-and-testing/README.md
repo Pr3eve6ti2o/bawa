@@ -516,7 +516,7 @@ Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-This layer has no runnable procedure in this guide yet.
+The Web layer has no runnable procedure in this guide yet. At commit `3019b02`, `apps/` contains zero files.
 
 ### Android
 
