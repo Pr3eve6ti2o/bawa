@@ -5396,7 +5396,7 @@ As of 2026-11-08, the following assessments describe project scope, licences and
 
 | Rank | Project and source | Assessed reference | Licence and maintenance | Compatibility and required adaptation |
 |---|---|---|---|---|
-| 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is not Bawa’s policy; exclude its engine and derivation code. |
+| 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is also Bawa’s BTC policy (`m/84'/0'/0'/0/i`); matching BIP-84 does not establish drop-in suitability. Exclude its engine and derivation code. |
 | 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet work: implement section H’s wallet screens, states and behaviour yourself. |
 | 3 | **Now in Android** — `android/nowinandroid` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-11-08; 22,056 stars | Architecture reference only. Adapt the structure to your wallet; implement the section H UI yourself. |
 | 4 | **EUDI Wallet UI** — `eu-digital-identity-wallet/eudi-app-android-wallet-ui` | Source check dated 2026-11-08 | EUPL-1.2 copyleft; last push 2026-11-06; 234 stars | Identity wallet, not a crypto wallet. Consider components only; adapt them to section H and meet the licence’s source-sharing obligations. |
@@ -5435,7 +5435,7 @@ As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do
 
 ### Decide what to reuse
 
-> **Warning** — As of 2026-11-08, adopting the BDK sibling `simple-wallet` engine would adopt BIP-84, outside Bawa’s derivation policy. Restrict reuse to non-secret `ui-only` screens; check that you copy no engine or derivation code.
+> **Warning** — As of 2026-11-08, the BDK sibling `simple-wallet` uses BIP-84, which is also Bawa’s BTC policy (`m/84'/0'/0'/0/i`); matching BIP-84 does not establish drop-in suitability. Its engine and derivation code remain excluded because its engine is entangled with its own UI rather than UI-only, it is BTC-only, and it uses early-2025 Compose/Material versions. Restrict reuse to non-secret `ui-only` screens; check that you copy no engine or derivation code.
 
 1. **Check the frozen BDK `ui-only` sample for useful non-secret screens.**
 
