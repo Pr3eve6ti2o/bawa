@@ -45,12 +45,15 @@ TRACKER / WEB SERVER
 
 xpub / address only
       │
-      └── derives and watches addresses
+      ├── derives and watches addresses
+      ├── constructs unsigned transaction from xpub and payment details
+      └── verifies signed result before broadcast
 
 SIGNER
 
 private key / hardware wallet
       │
+      ├── signer (or its operator) checks transaction before signing
       └── signs transaction
 
 NETWORK
@@ -62,7 +65,7 @@ The tracking service should not need the private key (see [watch-only derivation
 
 The web server should not become the place where the seed is loaded just because signing is inconvenient (see [wallet generation](../../tools/hdwallet-gen/generate.js)).
 
-For high-value systems, move signing into an offline or hardware-backed trust domain (see [watch-only derivation](../../tools/hdwallet-gen/derive.js) and [wallet generation](../../tools/hdwallet-gen/generate.js)).
+For systems handling any amount whose loss would be material to the holder, move signing into an offline or hardware-backed trust domain (see [watch-only derivation](../../tools/hdwallet-gen/derive.js) and [wallet generation](../../tools/hdwallet-gen/generate.js)).
 
 ---
 
