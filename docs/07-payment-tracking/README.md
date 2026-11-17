@@ -259,7 +259,9 @@ For all payments, do not use a symbol alone as the asset identity. Persist at le
 - Memo/tag where required.
 - Frozen quote snapshot for the payment request: the fields above, quote timestamp and expiry, and any pricing amount/currency and conversion rate/source. Keep this snapshot immutable and use it for matching and amount-sufficiency checks instead of current rates or mutable asset metadata.
 
-Treat Trust Wallet Assets as an optional metadata source for presentation, token lists and logos, not as the source of truth for observed payment settlement. Make your payment matcher verify the actual chain event against your application's requested network and asset identity.
+Treat [Trust Wallet Assets](https://github.com/trustwallet/assets) as an optional metadata source for presentation, token lists and logos, not as the source of truth for observed payment settlement. Make your payment matcher verify the actual chain event against your application's requested network and asset identity.
+
+The shared identity policy is to identify an asset by the requested network and token contract or equivalent asset address (or explicitly as that network's native asset), never by symbol, name or logo. For tokens, verify decimal precision from the token contract or chain-defined asset data for that exact network and asset; use the same verified identity and precision for payment requests and settlement matching.
 
 See `docs/12` (Chain Registry and Asset Metadata) for the registry treatment.
 
@@ -882,7 +884,7 @@ For each token payment, persist at least these seven fields:
 6. amount expressed in atomic units;
 7. any required memo or tag.
 
-Use Trust Wallet Assets for presentation metadata, token lists and logos, not as evidence that a payment has settled. Base settlement on a verified chain event checked against the requested network and token contract or equivalent asset address. Never accept a matching symbol or metadata entry as settlement evidence.
+Use [Trust Wallet Assets](https://github.com/trustwallet/assets) for presentation metadata, token lists and logos, not as evidence that a payment has settled. Base settlement on a verified chain event checked against the requested network and token contract or equivalent asset address. Never accept a matching symbol or metadata entry as settlement evidence.
 
 For related testing and troubleshooting guidance, see Android guide §I.8 (“Testnet integration pass”) and Web guide §K.4 (“Why does the wallet look empty after restore?”).
 
@@ -897,4 +899,5 @@ Use primary sources for technical claims. Check each source live at the time of 
 - [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki)
 - [Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md)
 - [ERC-681](https://eips.ethereum.org/EIPS/eip-681)
+- [Trust Wallet Assets](https://github.com/trustwallet/assets)
 
