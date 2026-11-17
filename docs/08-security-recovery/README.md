@@ -46,7 +46,7 @@ Encryption at rest protects a stored artefact; it does not make plaintext secret
 
 ### Recovery drill (before funding)
 
-Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Check that, on a fresh machine using clean software, you can recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address and compare it with a previously recorded address.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Check that, in an executed and recorded rehearsal using a clean install on a trusted machine, you restore from the actual backup, recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address, compare it with a previously recorded address and complete a successful testnet signing check.
 
 Do this before trusting the wallet with meaningful funds.
 
@@ -64,7 +64,7 @@ Use the offline recovery set for wallet recreation and a sensitive xpub for watc
 
 Plan for each backup boundary:
 
-- **Fire/flood:** keep 2–3 offline copies in separate places that do not share one fire or flood risk. Bawa does not prescribe backup media or protective storage; choose these for the risks at each location.
+- **Fire/flood:** keep 2–3 offline copies in separate places that do not share one fire or flood risk. Bawa does not prescribe which backup media or protective storage to use; choose these for the risks at each location. For **every copy**, record its medium, custodian, authorised access and physical theft controls.
 - **Theft:** choose and record physical access controls for each copy, including how its storage protects against theft.
 - **Loss:** use separated copies to provide alternatives. Test independent recovery before relying on them.
 
@@ -98,7 +98,7 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
 1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
 
-2. **Proposed first-address check:** compare the restored first receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account and network.
+2. **Proposed first-address check:** compare the restored receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account, network, receiving branch and address index (or equivalent).
 
    Bawa's drill stops at `fresh`: seed decryption is documented, but Bawa does not document a complete restore tool/UI workflow or a first-address selection procedure for this drill. Follow your recovery tool's documentation to reproduce the recorded settings. Use a reference address recorded from your original testnet wallet before the restore.
 
