@@ -875,10 +875,10 @@ Visit these four branches in this order on every cycle:
 
 1. **Pending or underpaid direct deposits:** fetch transaction data using the chain-specific lookup, match the expected payment and total the matching payments. Apply that chain's confirmation policy. Claim a ready deposit atomically before fulfilling its order; otherwise, leave it pending or underpaid.
 2. **Expired deposits:** run a short scan for late payments, then move the deposit into the manual-review state. Leave the order for review rather than treating expiry handling as successful payment completion.
-3. **External invoice recovery:** query paid invoices and recover orders whose finalisation is still outstanding. Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
+3. **External invoice recovery:** query paid invoices and recover orders whose finalisation is still outstanding (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)). Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
 4. **Slow-path pending payments:** run the slow-path lookup for payments still pending. Leave unresolved payments pending and send recovered evidence to the same finalisation path.
 
-In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil. Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
+In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
 
 ## 15. Derivation ownership and token identity
 
