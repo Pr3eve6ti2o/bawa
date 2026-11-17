@@ -186,7 +186,7 @@ broadcast node / RPC (watch-only side)
 
 **Conceptual only, testnet/signet/regtest; never real funds.**
 
-Tracking and authorisation belong in separate trust domains. Private keys and seeds never leave the signing domain. Signing inconvenience is not a reason to load a seed onto the web server.
+Tracking and authorisation belong in separate trust domains. The signing domain includes private keys, seeds, the signer device and its screen, and the offline seed backup; recovery happens inside it. The tracker, the web server and the network are outside it. Private keys and seeds never leave the signing domain. Under this guide's threat model, the signing domain is offline/hardware-isolated. A browser vault does not meet that definition and is in tension with this rule; browser signing is not an intended signing domain and must not be treated as meeting the rule. Signing inconvenience is not a reason to load a seed onto the web server.
 
 Bawa does not ship a device integration. This flow follows the descriptor and PSBT standards; use your chosen watch-only wallet and signer’s documentation to set it up.
 
