@@ -3081,6 +3081,8 @@ All counts above, and the category tallies below, belong to the **2026-11-09** s
 
 **M31 tally: 55 links — 54 LIVE and 1 LIVE-VIA-RAW.**
 
+Standards and links are different counting units: the reference set lists 32 named standards (21 BIPs, 5 SLIPs, 6 EIPs), but without the M31 per-URL table, readers cannot reproduce how those 32 standards correspond to the 55 counted links.
+
 The standards reference set includes:
 
 - **Bitcoin:** BIP-32, BIP-39, BIP-43, BIP-44, BIP-49, BIP-84, BIP-86, BIP-141, BIP-173, BIP-174, BIP-321, BIP-340, BIP-341, BIP-342, BIP-350, BIP-371, BIP-380, BIP-381, BIP-382, BIP-383 and BIP-386.
@@ -3117,7 +3119,7 @@ The [TON JSON-RPC endpoint](https://toncenter.com/api/v2/jsonRPC) is **LIVE (POS
 
 **M31 tally: 18 links — 14 LIVE, 2 DEAD-404 and 2 LIVE-via-API with VM-blocked homepages.**
 
-- **PublicNode:** use [https://ethereum.publicnode.com](https://ethereum.publicnode.com). POST `eth_chainId` returned 200. Compare the returned chain ID with the intended mainnet; a successful response alone does not establish that the endpoint is serving the intended chain. Do not carry forward the wrong hostname that returned 404. [M31 F01]
+- **PublicNode:** use [https://ethereum.publicnode.com](https://ethereum.publicnode.com). POST `eth_chainId` returned 200. Compare the returned chain ID with the intended mainnet; a successful response alone does not establish that the endpoint is serving the intended chain. The wrong hostname that returned 404 is unrecorded in this guide; no hostname may be inferred or carried forward for that failure on this evidence. [M31 F01]
 - **Blockstream:** cite a working sub-path, such as [the tip-height endpoint](https://blockstream.info/api/blocks/tip/height). Address queries use the `/api/address/<address>` path. Do not cite the bare API root: it returned 404 with “endpoint does not exist”. [M31 F03]
 - **Tronscan:** retain **LIVE-via-API** and the homepage access caveat. The homepage was blocked from `muse-vm` by Cloudflare with 403; the service was verified through `apilist.tronscan.org`, which returned 200. This does not verify homepage access from that environment. [M31 F06]
 - **Etherscan:** retain **LIVE-via-API** and the same access distinction. The homepage returned 403 from the VM, while `api.etherscan.io` and `docs.etherscan.io` were live. Cite those checked destinations rather than treating the homepage as verified. [M31 F07]
@@ -3158,7 +3160,7 @@ M31 excluded **103 URLs without checking them**. Excluded is not a dead-link ver
 The code baseline for Doc 4 is **`Pr3eve6ti2o/bawa`, `main` at `56396a20`**. Its evidence base comprises:
 
 - **36 mainnet research slices, M01–M36**, containing approximately **1,050 findings**, verified first-hand on **2026-11-09**.
-- **Live verification round 2**, with results recorded as **T1 15 PASS**, **T2 19/0/3** and **T3 9/9**. Preserve that notation and consult the underlying records for the individual results.
+- **Live verification round 2**, with results recorded as **T1 15 PASS**, **T2 19/0/3** (19 PASS, 0 FAIL, 3 INFO) and **T3 9/9**. Preserve that notation and consult the underlying records for the individual results.
 - The **200-finding documentation fix** pushed at **`56396a20`**.
 - The **F4 worktree fix**, committed at `b3814e0b` (2026-11-10 push). Its local evidence is `~/workspace/bawa-wallet/F4-FIX-RERUN-EVIDENCE.md`. [M36; M28]
 
