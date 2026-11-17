@@ -1736,7 +1736,7 @@ The numerical examples in this part are dated estimates from the **2026-11-09 ~1
 
 1. **Check immediately before sending.** Obtain the fee from a live source and record the UTC check time. Never quote a figure from this guide as the current fee.
 
-2. **Show both the rate and the total before signing.** The review must show Bitcoin in **sat/vB and sats**, Ethereum in **gwei and ETH**, TRON in **points / energy and TRX**, and TON in **nanoTON and TON**. It must also explain the proposed transaction’s change or refund behaviour.
+2. **Show both the rate and the total before signing.** The review must show Bitcoin’s **fee rate in sat/vB and total fee in sats**; Ethereum’s **estimated gas usage and gas limit (gas units)**, **estimated effective fee rate and applicable fee caps (gwei per gas)**, and **estimated total fee versus maximum fee budget (ETH)** (for EIP-1559, the maximum execution-fee budget is gas limit × maxFeePerGas); TRON’s **required bandwidth (points) and energy (units)** as resource quantities, not rates, plus any **TRX** needed for resource shortfalls or other fees; and TON’s **estimated fees in nanoTON and TON**, which are denominations, not fee rates. It must also explain the proposed transaction’s change or refund behaviour.
 
 3. **Treat “enough” as a balance rule, not a deposit amount.** A native-coin payment needs spendable funds covering the intended payment plus its freshly reviewed fee budget. A token payment needs the intended token balance and the native coin or resources required for its fee. There is no fixed funding amount in this guide.
 
@@ -1744,7 +1744,7 @@ The numerical examples in this part are dated estimates from the **2026-11-09 ~1
 
 5. **Have a chain-specific stuck/failed-transaction route before authorising a payment.** That route belongs to an external toolchain, not Bawa. If the transaction’s status or the toolchain’s recovery controls cannot be established, stop rather than improvise another transaction.
 
-6. **Do not confuse a token balance with the ability to send.** USDT without ETH cannot fund an Ethereum send; USDT without TRX or usable energy cannot fund a TRON send; Jettons without TON cannot fund a TON send. A token-only wallet without the required native coin or resources cannot send anything. Receiving and reading balances need no gas; sending always needs the applicable fee or resource budget.
+6. **Do not confuse a token balance with the ability to send.** Self-funded Ethereum USDT sends need ETH; TRON USDT sends need both bandwidth and energy, supplied by usable resources or TRX burned to cover shortfalls, plus any other applicable fees; self-funded TON Jetton sends need TON. A token-only wallet may nevertheless send through sponsorship, a paymaster, a relayer or a gasless flow where supported by the network, wallet and transaction. “Gasless” does not eliminate network fees or resource consumption; it changes how they are funded and may charge the user in tokens instead. Before allowing a send, verify that the sender or a supported funding mechanism can cover the applicable fee and resource budget. Reading balances does not itself incur an on-chain fee. Receiving is not universally fee-free: TON incoming-message processing and storage can incur fees, paid from attached value or account funds as applicable.
 
 7. **Check the address before signing.** A confirmed payment to a wrong address is not reversible on Bitcoin, Ethereum, TRON or TON. Address-checking before signing is the only protection against that loss.
 
