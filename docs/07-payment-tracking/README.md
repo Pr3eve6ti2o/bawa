@@ -742,7 +742,7 @@ Before deciding, check:
 
 Release only when the amount meets policy and late acceptance is authorised. If fulfilment cannot proceed, refuse it and record the reason and your decision about the received funds.
 
-Refund only an authorised amount to an independently verified destination under the documented fee policy. A refund requires a new transfer. Record the outcome.
+Refund only an authorised amount to an independently verified destination. A refund requires a new transfer. Record the outcome.
 
 Move `<REQUEST_ID>` to manual review when a late top-up is found, even if the total meets `<THRESHOLD_ATOMIC>`. Leave `<CONFIRMED_ATOMIC>` unchanged if that event is delivered again.
 
