@@ -1246,11 +1246,11 @@ Exit checks — complete these seven checks BEFORE signing with any paid provide
 2. Prove independent recovery: using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof.
 3. Write down exit terms: notice periods, withdrawal limits, approval delays, termination charges, data export. Get them in writing before funding.
 4. Test a withdrawal: move a small amount out while the service is operating normally, to a fresh wallet you control. Record the time it took and the fees charged.
-5. Record what cancellation changes: does cancelling stop signing, monitoring, recovery support, or all three? What happens to backups and records?
-6. Rehearse provider shutdown: with the provider's signing and authentication services unavailable, produce a valid transaction using the documented fallback and broadcast through independent chain access.
+5. Record what cancellation changes: does cancelling stop signing, monitoring, recovery support or authentication/API access? Can you export keys or shares, recover the wallet and spend independently afterwards? What happens to pending transactions, fees, backups and records, including retention and deletion?
+6. Open item — rehearse provider shutdown once a fallback procedure is documented: with the provider's signing and authentication services unavailable, test whether you can produce a valid transaction using that procedure and broadcast through independent chain access.
 7. Rehearse seed compromise: a new wallet, move everything, retire the old wallet. If the service cannot explain how that remedy works under its arrangement, do not fund it.
 
-Paying does not remove risk: a paid service can reduce dependence on a single device, a household backup or one employee's knowledge; it cannot remove market risk, protocol risk, or the risk of a mistaken approval. A compromised seed still means a new wallet, moving everything, and retiring the old wallet — whatever you paid for.
+Paying does not automatically remove risk: a paid service can reduce dependence on a single device, a household backup or one employee's knowledge; it may reduce or transfer particular exposures, but payment alone does not guarantee the elimination of market risk, protocol risk, or the risk of a mistaken approval. A compromised seed still means a new wallet, moving everything, and retiring the old wallet — whatever you paid for.
 ## 24. Sources
 
 - BIP-39 — https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
