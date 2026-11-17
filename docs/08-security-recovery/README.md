@@ -701,12 +701,16 @@ In a conventional custody arrangement, the provider operates the signing system.
 
 Custody does not make the asset itself safer. Price falls, token-issuer problems, blockchain faults and smart-contract failures remain possible; a transfer to the wrong destination may still be irreversible.
 
-Plan for custody-specific failure modes:
+Plan for custody-specific failure modes (non-exhaustive):
 
 - **Compromised access/approvals:** a stolen operator account, colluding approvers or an incorrectly configured policy can produce a withdrawal that appears authorised.
 - **Loss of availability:** maintenance, staff-access problems, withdrawal queues, compliance reviews and legal orders can delay or prevent transfers.
 - **Provider compromise:** signing infrastructure and staff can still be attacked. Professional operation reduces some risks; it does not remove them.
 - **Financial failure:** the provider may become insolvent or enter a lengthy resolution process. Regulation does not guarantee immediate return of assets.
+- **Operational or key-recovery failure:** non-adversarial errors or failures in operations or key recovery can delay or prevent access to assets.
+- **Intentional custodial misuse:** the provider may deliberately misuse client holdings.
+
+Where applicable, require client holdings to be segregated from the provider's own holdings.
 
 This is counterparty risk: your ability to recover or move assets depends partly on another organisation remaining solvent, capable and willing to honour its obligations. Review whether holdings are legally separated from the provider's own property, whether they may be lent or pledged, and what happens if the business fails.
 
@@ -714,7 +718,7 @@ This is counterparty risk: your ability to recover or move assets depends partly
 
 Qualified custody is most relevant to funds, fiduciaries and businesses with regulatory, audit or governance requirements. If you manage a treasury, weigh the value of continuity when staff leave and a formal separation between requesting and approving payments.
 
-If you are an individual with substantial holdings, you may prefer outsourced key recovery. Check eligibility thresholds and administrative overhead: these can make institutional custody unsuitable for an ordinary personal wallet.
+If you are an individual with substantial holdings, you may prefer outsourced key recovery (a paid service that keeps a recovery share or key to help you recover access if you lose yours, without taking custody; see section 20). Check eligibility thresholds and administrative overhead: these can make institutional custody unsuitable for an ordinary personal wallet.
 
 Do not assume a retail exchange account is the same service, even where the same corporate group offers qualified custody.
 
@@ -725,6 +729,8 @@ Use sections 17–22 as the single costs reference for the whole Bawa profession
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Any custody agreement is with an external provider, not Bawa.
 
 ### Figures
+
+The only dated figure in this table is BitGo Bank & Trust's reported insurance programme total of up to US$250 million (checked 8 November 2026, UTC). The fee and threshold rows contain no published figures.
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
