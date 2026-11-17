@@ -147,7 +147,7 @@ Keep the tracker watch-only and use a dedicated signer or hardware wallet for si
 
 ### Which tools does Bawa use?
 
-Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.8.4) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Trust Wallet Core 4.9.2 is the recommended upgrade pin in README section 5, not the version currently pinned by the tools. Do not attribute authorship of the guide's procedures to any other model or tool.
+Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.8.4) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Do not attribute authorship of this FAQ entry's procedures to any other model or tool.
 
 ### Free or paid security, what am I actually buying?
 
@@ -179,7 +179,7 @@ When checking a backup restore, use testnet coins, not real funds.
 
 ### Why do two wallets show different addresses for the same seed?
 
-Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana and Cardano are reference-only and are not supported by Bawa; their notes below describe comparisons with other wallets, not Bawa capabilities.
+Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana and Cardano are reference-only and are not supported by Bawa.
 
 Start by comparing settings rather than assuming a faulty wallet. Check the mnemonic words, then check the BIP-39 passphrase, including whether one was used.
 
