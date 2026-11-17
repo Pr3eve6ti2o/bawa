@@ -412,10 +412,10 @@ Per-chain verification:
 
 | Chain | Required verification |
 |---|---|
-| BTC testnet4 | Require the empty-body `bitcoin:?tb=...` form. Reject `bitcoin:tb1q...` and bare `tb1q...`. Reject the whole URI for an unknown `req-` key. Reject duplicate `amount`, `label`, `message` or `pop` before normalisation can overwrite them. Interpret `amount` as decimal BTC. Compare the full decoded recipient against the selected testnet4 address; do not infer testnet4 from the URI alone. |
+| BTC testnet4 | Require the empty-body `bitcoin:?tb=...` form. Reject `bitcoin:tb1q...` and bare `tb1q...`. Reject the whole URI for an unknown `req-` key. Reject duplicate `amount`, `label`, `message` or `pop` before normalisation can overwrite them ([BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki)). Interpret `amount` as decimal BTC. Compare the full decoded recipient against the selected testnet4 address; do not infer testnet4 from the URI alone. |
 | ETH Sepolia | Require `ethereum:pay-<ADDRESS>@11155111`, with the mandatory chain ID. Reject a missing or different chain ID, function paths, ENS, gas parameters and ERC-20 forms. Interpret `value` as scientific-notation wei. Display the complete suggested value, retaining its order of magnitude. |
-| TON testnet | Require `ton://transfer/` and the testnet address form (full `kQC7...` / `0QC7...` forms); never accept the `UQC7...` mainnet presentation for this profile. Apply the supplied nanocoin amount or text variant. Reject `bin`, `jetton` and `exp`. Compare the recipient with the selected testnet recipient. |
-| TRX Nile | Require the entire payload to be a bare 34-character Base58 address beginning with `T`; no scheme or amount query. Compare the recipient with the expected address. Establish Nile from wallet configuration, never from the address. Keep the amount outside the QR. |
+| TON testnet | Require `ton://transfer/` and the testnet address form (full `kQC7...` / `0QC7...` forms); never accept the `UQC7...` mainnet presentation for this profile. Apply the supplied nanocoin amount or text variant ([TON Deep links](https://docs.ton.org/v3/guidelines/dapps/asset-processing/deep-links)). Reject `bin`, `jetton` and `exp`. Compare the recipient with the selected testnet recipient. |
+| TRX Nile | Require the entire payload to be a bare 34-character Base58 address beginning with `T` ([TRON address encoding](https://developers.tron.network/docs/account)); no scheme or amount query. Compare the recipient with the expected address. Establish Nile from wallet configuration, never from the address. Keep the amount outside the QR. |
 
 Add round-trip tests for every emitted variant and rejection tests for every listed invalid form.
 
