@@ -393,8 +393,8 @@ Use the approved payload forms below for receive QRs. The examples in this secti
 |---|---|---|
 | BTC testnet4 | `bitcoin:?tb=<ADDRESS>`, optionally followed by `&amount=<BTC>` (decimal BTC) | [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki) supersedes BIP-21. Leave the URI body empty; put the testnet address in `tb`. A BTC URI alone does not establish testnet4: retain the selected network and compare it with the associated request. |
 | ETH Sepolia | `ethereum:pay-<ADDRESS>@11155111`, optionally followed by `?value=<WEI>` (scientific-notation wei) | [ERC-681](https://eips.ethereum.org/EIPS/eip-681). The network is explicit in `@11155111`. The amount is a suggestion. No gas parameters, ENS, ERC-20 or function path. |
-| TON testnet | `ton://transfer/<TESTNET_ADDRESS>`, with optional `?amount=<NANOCOINS>` (nanocoins) and `?text=<TEXT>` (URL-encoded UTF-8) | A de facto Keeper/Tonhub vendor convention, not a standard. Use `&` between query parameters when both are present. Require the full testnet address presentation; never use `bin`, `jetton` or `exp`. |
-| TRX Nile | Bare 34-character Base58 address beginning with `T` | No `tron:` payment URI exists to prescribe. The amount stays outside the QR. Nile identity comes from wallet configuration, never from the address. |
+| TON testnet | `ton://transfer/<TESTNET_ADDRESS>`, with optional `?amount=<NANOCOINS>` (nanocoins) and `?text=<TEXT>` (URL-encoded UTF-8) | [TON Deep links](https://docs.ton.org/v3/guidelines/dapps/transactions/links). A de facto Keeper/Tonhub vendor convention, not a standard. Use `&` between query parameters when both are present. Require the full testnet address presentation; never use `bin`, `jetton` or `exp`. |
+| TRX Nile | Bare 34-character Base58 address beginning with `T` ([TRON address encoding](https://developers.tron.network/docs/account)) | No `tron:` payment URI exists to prescribe. The amount stays outside the QR. Nile identity comes from wallet configuration, never from the address. |
 
 For TON, use a full testnet address presentation, such as `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo` or `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`, never the `UQC7…` mainnet presentation.
 
@@ -421,7 +421,7 @@ Add round-trip tests for every emitted variant and rejection tests for every lis
 
 **Nile testnet — native TRX only.** This QR contains only an address, not a network selection. Before sending, confirm that the sending wallet is configured for Nile. Do not assume that scanning will switch a mainnet wallet to Nile.
 
-Set QR error correction explicitly to M. Do not rely on an encoder default. Decode and verify the actual output before presenting it as verified.
+Set QR error correction explicitly to M (ISO/IEC 18004). Do not rely on an encoder default. Decode and verify the actual output before presenting it as verified.
 
 
 | Field | Meaning | When missing |
