@@ -4038,7 +4038,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 ### M-42 — Exact file:line citations for RECOVERY.md / README §§12/13/18 not supplied
 
-**Question/risk:** §18 cites sections and steps, not file:line references; exact citations cannot be published without line-numbered text at 56396a20.
+**Question/risk:** §18 principally cites finding IDs, not file:line references; steps 1–10 form its own troubleshooting tree, and it includes only one README section reference. Exact file:line citations cannot be published without line-numbered text at 56396a20.
 
 **Affected sections:** §18.
 
@@ -4046,7 +4046,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** §18 cites sections and steps, not file:line.
+**Operational restriction:** §18 principally cites finding IDs and includes one README section reference; steps 1–10 are its own troubleshooting tree. It provides no file:line citations.
 
 **Blocks writing completion:** No.
 
@@ -4086,7 +4086,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Source re-check against m09/m12 to settle which value is correct.
+**Clearance condition:** Verify the energy-unit fee against an independent source—the TRON chain parameters (`getEnergyFee`) or authoritative TRON developer documentation—and cite that source to resolve the conflict between m12 §3’s “0.001 TRX per energy unit” and the measured 100 SUN/unit (0.0001 TRX).
 
 **Gate/source links:** m12 §3; m09/m12.
 
