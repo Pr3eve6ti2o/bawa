@@ -4169,13 +4169,13 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 ## Appendix — UI templates (pointer)
 
-Doc 4 carries no UI appendix of its own. For UI guidance, see the appendices of Doc 2 (WEB-GUIDE.md, Appendix — Optional pre-existing UI templates, L1032) and Doc 3 (ANDROID-GUIDE.md, Appendix — Optional pre-existing UI templates, L5384). Those appendices are vetted for testnet; mainnet vetting open. No template coverage is claimed here, and no UI is created in this guide: UI comes from a pre-existing template only, and if none is available, no UI is created.
+Doc 4 carries no UI appendix of its own. For UI guidance, see the appendices of Doc 2 (WEB-GUIDE.md, Appendix — Optional pre-existing UI templates, L1032) and Doc 3 (ANDROID-GUIDE.md, Appendix — Optional pre-existing UI templates: no drop-in fit, L5384). Those appendices are vetted for testnet; mainnet vetting open. No template coverage is claimed here, and no UI is created in this guide: UI comes from a pre-existing template only, and if none is available, no UI is created.
 
 ## 22. Prose credit
 
-The prose of this mainnet wallet guide was drafted with the assistance of GPT-6-Astra, an external language model accessed through AgentRouter. The drafting drew on the findings of the mainnet research programme (36 research agents, M01–M36) and the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`).
+The prose of this mainnet wallet guide was drafted with the assistance of GPT-6-Astra, an external language model accessed through AgentRouter. The drafting drew on the findings of the mainnet research programme (36 research slices, M01–M36) and the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`, the programme’s historical evidence baseline); the guide’s current evidentiary pin is repair commit `e3b65fb8` (M:5).
 
-The drafting model did not verify the guide, did not run the repository tools, did not perform any mainnet transaction and did not authorise any real-fund use. Every claim in this guide traces to a cited research finding or a recorded live check; the model supplied wording, not evidence.
+The drafting model did not verify the guide, did not run the repository tools, did not perform any mainnet transaction and did not authorise any real-fund use. The guide draws on cited research findings and recorded live checks, but not every statement or prescription is individually cited; the model supplied wording, not evidence.
 
 Review, verification, assembly and the done-gate (see §17) are the maintainer’s responsibility. Corrections, the open-items register (§21) and the review record are maintained with the guide, not with the drafting model.
 
