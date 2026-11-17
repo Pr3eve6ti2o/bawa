@@ -106,9 +106,9 @@ NFKD-normalise the BIP-39 mnemonic and BIP-39 passphrase. Following [BIP-39 ‘F
 
 ### Derivation policy versus the standards
 
-Distinguish Bawa's fixed policy from the testnet standards. Bawa gives Bitcoin testnet4 the mainnet derivation `m/84'/0'/0'/0/i`. [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) reserves coin type `1` for testnet, and [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) gives testnet native SegWit the `vpub` prefix `0x045f1cf6` with path `m/84'/1'`.
+Distinguish Bawa's fixed policy from the testnet standards (see the [documented deviation](#output-descriptors-make-the-watch-target-explicit)). Bawa gives Bitcoin testnet4 the mainnet derivation `m/84'/0'/0'/0/i`. [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) registers coin type `1` for testnet, and [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) gives testnet native SegWit the `vpub` prefix `0x045f1cf6` with derivation prefix `m/84'/1'`.
 
-Importing a Bawa mnemonic into a standard testnet wallet derives a different account. Keep the Bawa policy unchanged and treat this as a documented deviation, not an alternative path to adopt. Check that Bawa derivation still uses `m/84'/0'/0'/0/i`.
+Importing a Bawa mnemonic into a standard testnet wallet derives a different account (see [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md) and [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)). Keep the [Bawa policy](#the-fixed-derivation-policy) unchanged and treat this as a documented deviation, not an alternative path to adopt. Check that Bawa derivation still uses `m/84'/0'/0'/0/i`.
 
 Bawa's own tools emit `zpub` for the BTC testnet4 account because the code pins `HDVersion.zpub`. This was verified by running the repaired `derive.js` with the published ripple-fixture zpub, which derived `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd`.
 
