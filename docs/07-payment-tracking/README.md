@@ -588,12 +588,12 @@ Deduplicate observations using a chain-specific event key (see [docs/06, lines 5
 
 Read transaction outputs from a node or a node-backed address indexer.
 
-- Use `(<CHAIN>, <TXID>, <OUTPUT_INDEX>)` as the event key.
+- Use `(<CHAIN>, <TXID>, <OUTPUT_INDEX>)` as the event key. When comparing with a watch-scoped Bitcoin key, map `watch` to its configured chain/network (`<CHAIN>`) and retain the transaction ID and output index. A watch identifier is not a chain identifier; this is a scope mapping, not an exact schema match.
 - Allocate a separate address to each request.
-- Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and the per-chain confirmation criterion.
+- Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and the per-chain confirmation criterion ([Bitcoin confirmation guidance](https://bitcoin.org/en/you-need-to-know#instant-transactions-are-less-secure)).
 - Use the assigned address to identify the request and the output key to identify the payment observation.
 
-Treat a mempool output as an attempted payment, not confirmation. Block inclusion can still be reversed by a reorganisation. Identify the particular paying output; do not substitute an address balance for that identification.
+Treat a mempool output as an attempted payment, not confirmation. Block inclusion can still be reversed by a reorganisation ([Bitcoin confirmation guidance](https://bitcoin.org/en/you-need-to-know#instant-transactions-are-less-secure)). Identify the particular paying output; do not substitute an address balance for that identification.
 
 ### EVM tokens
 
