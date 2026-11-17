@@ -738,7 +738,7 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 |---|---|
 | Institutional fees | Institutional fees are normally negotiated per client, commonly as an annual percentage of assets under custody. |
 | Asset-entry thresholds | No verified generic entry threshold is published. Check each provider's own eligibility and minimum-balance terms; do not rely on a third-party-reported range. |
-| Headline insurance programme totals | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). See [BitGo](https://www.bitgo.com/) for its primary insurance disclosure. Headline programme cover is shared across customers and is not guaranteed cover for each account; check the policy wording for the insured entity, covered events, exclusions and deductibles. |
+| Headline insurance programme totals | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). See [BitGo](https://www.bitgo.com/resources/insurance) for its primary insurance disclosure. Headline programme cover is shared across customers and is not guaranteed cover for each account; check the policy wording for the insured entity, covered events, exclusions and deductibles. |
 
 Obtain a written quote showing the annual rate, any minimum charge and possible onboarding, transaction, network and exit charges. Ask how asset values are measured for billing. Do not infer an annual bill from the entry threshold.
 
@@ -886,9 +886,9 @@ The main benefit is resistance to a single compromised device or dishonest opera
 
 The share-generation ceremony and recovery process deserve as much scrutiny as everyday signing; some recovery designs rebuild a complete private key — that creates a single-key exposure which the normal MPC workflow avoids.
 
-**Platforms, custody and actual control:** Fireblocks advertises MPC signing alongside approval workflows, spending controls, approved-destination lists and transaction simulation — check which controls are available and enforced for your chosen networks and contract. Fireblocks is principally an infrastructure offering; buying that infrastructure does not, by itself, mean appointing a qualified custodian; regulated custody may be supplied through a related entity or an integrated provider — establish exactly which legal entity is responsible.
+**Platforms, custody and actual control:** [Fireblocks](https://www.fireblocks.com/) advertises MPC signing (see [NIST threshold cryptography](https://csrc.nist.gov/projects/threshold-cryptography)) alongside approval workflows, spending controls, approved-destination lists and transaction simulation — check which controls are available and enforced for your chosen networks and contract. Fireblocks is principally an infrastructure offering; buying that infrastructure does not, by itself, mean appointing a qualified custodian; regulated custody may be supplied through a related entity or an integrated provider — establish exactly which legal entity is responsible.
 
-Copper markets MPC custody together with off-exchange settlement; keeping trading collateral away from an exchange may reduce one exposure, but it introduces dependence on the custody and settlement arrangements; it does not eliminate counterparty risk.
+[Copper](https://copper.co/) markets MPC custody together with off-exchange settlement; keeping trading collateral away from an exchange may reduce one exposure, but it introduces dependence on the custody and settlement arrangements; it does not eliminate counterparty risk.
 
 For any platform, obtain a written share-and-control map: who holds each share, including backups and subcontractor-held shares? How many usable shares are required, and who can restore or replace them? Can the provider reach that threshold without your participation? Can you reach it without the provider's servers, login system or support team?
 
@@ -906,7 +906,7 @@ Expect business identity checks, contractual due diligence and a technical revie
 4. Configure payment policies and test both permitted and rejected requests.
 5. Exercise recovery with a small balance before increasing exposure.
 
-A platform's share backup is not necessarily a BIP-39 mnemonic or something Bawa can import — establish compatibility rather than assuming that all wallet backups are interchangeable.
+A platform's share backup is not necessarily a [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic or something Bawa can import (see also [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)) — establish compatibility rather than assuming that all wallet backups are interchangeable.
 
 ### Figures
 
