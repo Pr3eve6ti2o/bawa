@@ -98,7 +98,7 @@ All links checked: **2026-11-08**.
 
    Use the declared Node range for your setup. Do not treat the observed out-of-range run as verification on a runtime within that range.
 
-   Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and `4.9.1`/`4.9.2` added Zcash v5 transactions.
+   Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and the `4.9.x` releases added Zcash v5 transactions.
 
    The Web/WASM integration itself is unchanged: `dist/index.js` and `dist/index.d.ts` are byte-identical between `4.8.4` and `4.9.2`, `Ethereum.proto` is unmodified, and `initWasm()` is still called with no arguments.
 
@@ -209,7 +209,7 @@ Offline fixtures verify derivation conformance; they do not imply mainnet connec
    |---|---|---|---|---|
    | `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` | Empty | `m/44'/195'/0'/0/0` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` | bip-utils-derived, Core-confirmed (D31, 2026-11-08) |
 
-The TON fixture is recorded in the repo guide, docs/11, "TON fixture (V3, 2026-11-08)": Wallet V4 R2, wallet ID 698983191, workchain 0, `m/44'/607'/0'`. Testnet forms of the same account: bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`, non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`. The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 files); Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08), and the in-browser run on 4.9.2 remains open.
+The TON fixture is recorded in the repo guide, docs/11, "TON fixture (V3, 2026-11-08)": Wallet V4 R2, wallet ID 698983191, workchain 0, `m/44'/607'/0'`. Testnet forms of the same account: bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`, non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`. The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 top-level `.test.ts` files plus 11 files under `Blockchain/`, for 33 files recursively); Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08), and the in-browser run on 4.9.2 remains open.
 
 The Android guide uses the same repo canonical ripple pair (Android guide, section D.7 fixture gate). Do not pair one fixture’s words with another fixture’s address.
 
@@ -277,7 +277,7 @@ Use this section for testnet only.
 
 The Web app combines PBKDF2 with 600,000 iterations and AES-256-GCM. Its application-specific associated data (AAD) value is `"bawa-web-vault-v1"`.
 
-That AAD deliberately differs from the repo’s `"nova-shop-seed-v1"`. A vault file made by this Web app is not compatible with the repo’s `seed.enc.json`. Do not substitute the Web vault file for that file or treat the two as interchangeable backups.
+That AAD deliberately differs from the repo’s `"nova-shop-seed-v1"`. The distinct constant alone does not establish that `"bawa-web-vault-v1"` is reserved exclusively for seed files, and enforcement of the separate AAD by the Web app has not been demonstrated. A vault file made by this Web app is not compatible with the repo’s `seed.enc.json`. Do not substitute the Web vault file for that file or treat the two as interchangeable backups.
 
 The 600,000-iteration count follows the PBKDF2 branch of the OWASP 2023 password-storage guidance cited by the repo guide (600,000 iterations for PBKDF2-HMAC-SHA256), used here because FIPS-140 compliance requires PBKDF2, while OWASP’s headline recommendation is Argon2id. Require the app to define a vault unlock passphrase policy. No minimum length is in evidence; the value remains unset in the open items below. Do not infer a length requirement from the PBKDF2 iteration count.
 
@@ -516,7 +516,7 @@ third-party notices inventory. See Doc 3, Consolidated open-items register,
 3. **Bind approval to the exact transaction input.** Do not carry approval over to a different input. Keep the approved input as the reference for the later comparison with the signed result.
 4. **Sign through Core’s single signing entry point** in the built app.
 5. **Check the signing output for errors before accepting any returned bytes.** Stop on an error; the presence of bytes is not a substitute for checking the result.
-6. **Decode the actual signed bytes with a chain-specific decoder.** Compare the decoded transaction against the approved intent, including recipients, amounts, change, fees and contract calls, plus chain/network, nonce, gas and data where applicable. Checking the unsigned input alone does not establish what will be broadcast. Block submission on a mismatch or decoding failure.
+6. **Decode the actual signed bytes with a chain-specific decoder.** Compare the decoded transaction against the approved intent, including recipients, amounts, change, fees and contract calls, plus chain/network, nonce, gas and data where applicable. Checking the unsigned input alone does not establish what will be broadcast. Decoded bytes alone have limits: BTC fee calculation requires previous-output data, identifying change requires ownership context, a raw BTC transaction does not establish mainnet versus testnet, EIP-1559 fee caps are not the eventual fee, and interpreting calldata requires ABI context. Block submission on a mismatch or decoding failure.
 7. **Display the decoded transaction before an explicit broadcast action.** Base that display on the bytes you decoded, rather than displaying the unsigned request again. Broadcast only signed transaction bytes, never a signing input or an unsigned transaction. Do not turn a successful signature into an automatic send.
 
 The signing coordinator holds no private keys; only the key module adds signing secrets. Keep secret-bearing messages inside that key-module boundary.
@@ -548,7 +548,7 @@ Apply these constraints alongside the common ceremony. A single signing entry po
 | Bitcoin | Check UTXO inputs, the fee and change outputs; use the witness-stripped txid described above. |
 | Ethereum | Enforce chain ID `11155111` before every signing input (Section E), and check nonce, gas and data. |
 | TRON | Use the Nile network only; look up transaction identifiers through the TronGrid Nile API. |
-| TON | The repo is generation-only. In the app, use a sequence number, `expireAt` set to now plus 60 seconds, wallet version `2` (V4R2) and mode `3` for a TON transfer. Take the destination address from the address object’s data. Compatibility with any specific wallet is unverified. |
+| TON | The repo is generation-only. In the app, the sequence number must match the wallet’s current on-chain state. Encode `expireAt` as an unsigned 32-bit Unix timestamp in seconds (not milliseconds); the wallet checks it against TON block time, so “now plus 60 seconds” must account for clock skew and inclusion delay. Wallet version `2` is Core’s enum mapping for V4R2, not a universal TON version number; it must match the wallet contract. An undeployed wallet needs its matching StateInit in the external message and the contract’s initial sequence number. Mode `3` combines `+1` (pay transfer fees separately from the sent amount) and `+2` (ignore certain action-phase send errors), and does not guarantee transfer success. Take the destination address from the address object’s data. A TON external-message hash is not generally the eventual on-chain transaction hash; retrieve the transaction hash from the chain after inclusion. Compatibility with any specific wallet is unverified. |
 
 ### Confirmation tracking
 
@@ -818,7 +818,7 @@ Do not stop at Ethereum. A hosted provider can return stale or misleading result
 
 ### Make the genuine app verifiable
 
-Publish the exact commit the build came from, the build commands and the expected output hashes (Section J), so a reader can distinguish the genuine app from a copy. Publish those details for the build you serve, not merely for a similarly named app.
+Publish the exact commit the build came from, the build commands and the expected output hashes (Section J), to support verification of the served build. These details do not by themselves establish that the app is genuine: the reader also needs trusted provenance or a trusted hash reference, not merely information asserted by the app being checked. Publish those details for the build you serve, not merely for a similarly named app.
 
 Require the external security review release gate to cover the vault, the signing ceremony, the network layer and the UI’s secret handling. It remains unscoped until a reviewer, date and retained evidence exist. Naming these required areas does not mean a review has been scoped or run. Name the scope, reviewer, date and retained evidence before using review labels.
 
