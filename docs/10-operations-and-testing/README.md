@@ -1232,9 +1232,9 @@ Verify reconciliation or escalate
 
 ### When a payment is missing
 
-Use the allocation table as your reference; keep this order.
+Use the allocation table as your reference; scope every step to the payment's network and derivation context (branch or full derivation path), and keep this order.
 
-1. **Address index:** compare the recipient with the address for its allocated index.  
+1. **Address index:** compare the recipient with the address for its allocated index within that same network and derivation context.  
    **Expected result:** the same public address.
 
 2. **Allocation database:** inspect the saved allocation.  
