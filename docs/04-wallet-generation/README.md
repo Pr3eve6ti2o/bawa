@@ -312,7 +312,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
    Symlinked paths are refused. The seed bundle uses AES-256-GCM, and the generator never writes the plaintext mnemonic to disk. Store the data key separately. Treat this as application-specific encryption at rest, not a universal backup standard.
 
-4. **Check the public environment file.** The `.env` write is atomic, with mode `0600`. Check that XPUB_BTC, XPUB_ETH, XPUB_TRX and TON_DEPOSIT_ADDRESS contain the generated public values. Comments, blank lines and other preserved content may also be present.
+4. **Check the public environment file.** The `.env` write is atomic, with mode `0600`. Check that XPUB_BTC, XPUB_ETH, XPUB_TRX and TON_DEPOSIT_ADDRESS contain the generated public values. Comments, blank lines and other pre-existing content may also be preserved. The writer does not sanitise preserved content, so any pre-existing secret in that content survives the write. The requirement that `.env` contain no secrets is an operator requirement, not an automatic guarantee; inspect the entire file, including preserved content, to enforce it.
 
    ```dotenv
    XPUB_BTC=<btc-xpub>
@@ -334,7 +334,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
 1. **Record and compare before confirming.** Your recovery records must agree with the terminal display. If the terminal is unavailable or anything differs, stop before confirming. Never redirect secrets into logs. If the 120-second limit expires, the generator is killed and generation fails.
 
-2. **Respect the generation checks.** The deterministic checks and public round trips establish that the documented checks completed, not that recovery works. If a check fails, hold public release and investigate with a maintainer. Exact diagnostics and exit codes for failed checks are not documented.
+2. **Respect the generation checks.** The deterministic checks and public round trips establish that the documented checks completed, not that recovery works. If a check fails, hold public release and investigate with a maintainer. Every failure path exits with status `1`. The diagnostic messages are defined in the code but are not listed in this guide.
 
 3. **Check the write, and pause after a crash.** A seed bundle at `0600` meets the disk-write condition; it is not a restore test. After a write failure, interruption or permission mismatch, treat completion as unverified and keep recovery material offline. Check crash, retry and overwrite safety before trying again.
 
@@ -370,7 +370,7 @@ No `seed.enc.json`, `.env` or backup directory was created. Only an empty secret
 
 3. **Restore the original settings.** Verify the mnemonic and BIP-39 passphrase policy against your recovery records. The BIP-39 passphrase is empty: do not add one during the drill or substitute a vault unlock passphrase.
 
-   Apply the recorded derivation paths, address policy, and network and chain configuration. For TON, preserve the original wallet contract and version, derivation convention, workchain, network presentation, wallet ID and subwallet ID.
+   Apply the recorded derivation paths, address policy, and network and chain configuration. For TON, preserve the original wallet contract and version, derivation convention, workchain, network presentation, and wallet ID (identified as `698983191` in the available evidence). That evidence does not establish a subwallet ID, its value, or its recording location.
 
 4. **Compare public outputs.** Derive known public addresses from the restored wallet for each chain. Compare them with your recorded originals using the original address and network presentation. Investigate any mismatch. Do not fund the wallet until the public outputs match.
 
