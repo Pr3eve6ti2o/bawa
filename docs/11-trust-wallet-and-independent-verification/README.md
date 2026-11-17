@@ -251,11 +251,11 @@ Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 tes
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. `compare.js` also rejects private extended keys: it validates all inputs with `validateExtendedKey` before WASM initialization and exits 1 with `FATAL: btc: extended public key required (private extended keys are rejected)` (reproduced 2026-11-16).
 
 - **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. The shared private-key guard covers this BIP-32 test-vector-1 root `xprv`; `compare.js` validates all inputs with `validateExtendedKey` before WASM initialization, so the code-supported expectation is rejection with exit 1 and `FATAL: btc: extended public key required (private extended keys are rejected)`.
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
