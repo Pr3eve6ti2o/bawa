@@ -466,18 +466,29 @@ The nine cases counted for each of the derivation and independent `bip_utils` co
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
 ```
-node generate.js
+node tools/hdwallet-gen/generate.js
 ```
 
 > **Expected result:**
 >
 > Require successful self-checks on the TTY and capture their actual output. Treat this as an acceptance requirement, not an observed result; the Wallet Core self-check result was captured in V1 (2026-11-08): live generation exited 0 and all README §8 checks passed.
 
-Build the root `.env` from the published xpubs in `docs/11`, using `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. Then run `node compare.js` from `tools/hdwallet-gen/` (the helper reads the `.env` from the repository root regardless of where it runs):
+Build the root `.env` from the published xpub fixtures in `docs/11`, using `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. Replace the placeholders below with the corresponding fixture values:
 
 ```
+XPUB_BTC=<published BTC xpub>
+XPUB_ETH=<published ETH xpub>
+XPUB_TRX=<published TRX xpub>
+```
+
+Then, starting at the repository root, change to `tools/hdwallet-gen/` and run `node compare.js`:
+
+```
+cd tools/hdwallet-gen/
 node compare.js
 ```
+
+This recipe expects the helper to load the repository-root `.env`; the complete environment-loading procedure has not been verified here.
 
 > **Expected result:**
 >
