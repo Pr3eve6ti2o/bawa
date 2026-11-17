@@ -192,7 +192,7 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm install --ignore-scripts --no-audit --no-fund` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
 
-   `npm ci` requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
+   [`npm ci`](https://docs.npmjs.com/cli/commands/npm-ci) requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
 
    **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09. This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
 
@@ -213,13 +213,13 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ## 5. Common mistakes
 
-1. **"BIP-39 is the wallet"** — No. BIP-39 gives you a mnemonic and a seed derivation procedure; the downstream HD/key/address policy is another layer.
+1. **"BIP-39 is the wallet"** — No. [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) gives you a mnemonic and a seed derivation procedure; the downstream HD/key/address policy is another layer.
 
-2. **"Every chain uses m/44'."** — No. Bitcoin BIP-84 is a different purpose; Cardano uses CIP-1852 (purpose 1852'); TON has wallet-contract semantics; Substrate uses a different URI/crypto model.
+2. **"Every chain uses m/44'."** — No. Bitcoin [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) is a different purpose; Cardano uses [CIP-1852](https://cips.cardano.org/cip/CIP-1852) (purpose 1852'); TON has [wallet-contract semantics](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md); Substrate uses a different [URI/crypto model](../02-chains/README.md).
 
 3. **"The same EVM address means the same network."** — No. The address may be the same while the chain ID, RPC, balances and token contracts are different.
 
-4. **"RPC gives transaction history."** — Sometimes you can build history with RPC calls, but a raw RPC node is not a pre-built wallet index.
+4. **"RPC gives transaction history."** — Sometimes you can build history with [RPC calls](https://ethereum.org/developers/docs/apis/json-rpc/), but a raw RPC node is not a pre-built wallet index.
 
 5. **"The xpub is public so it belongs in .env.example with everything else."** — It can be public in cryptographic terms while still being privacy-sensitive operational data. Treat xpubs as **sensitive public material**.
 
@@ -273,7 +273,7 @@ Carry these as open work and requirements, not claims that controls are implemen
 
 Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate.
 - **OPEN ITEM — script injection.** Give “defend against script injection” an executable control. It currently has none: no CSP/SRI/inline-script rule.
-PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The OWASP Password Storage Cheat Sheet 2023 is cited as the basis for that draft value, not as evidence of a repository security control.
+PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The [OWASP Password Storage Cheat Sheet 2023](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) is cited as the basis for that draft value, not as evidence of a repository security control.
 - **OPEN ITEMS — vault passphrase and unlock time.** Define the vault-passphrase strength policy and unlock-time target. Keep both marked as open items, not stated policy.
 - **Required — network-identity verification.** Verify network identity for BTC, TRON and TON adapters too, not only ETH (`chainId 11155111`).
 - **Builder duty — genuine-app verification.** Make the genuine app verifiable through its official origin, publisher identity, release signing and key continuity.
