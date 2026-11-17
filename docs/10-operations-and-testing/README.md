@@ -1328,7 +1328,7 @@ A compromised seed requires a new wallet, not a restored backup. See **Incident 
 ### Sources
 
 - CISA, *Data Backup Options*: https://www.cisa.gov/sites/default/files/publications/data_backup_options.pdf (checked 8 November 2026; the site returns HTTP 403 to automated checks)
-- NCSC, *Backing up your data*: https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
+- NCSC, *Small organisations guide to cyber security* (collection): https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
 
 ## Restore drills and what changes the recovery picture
 
