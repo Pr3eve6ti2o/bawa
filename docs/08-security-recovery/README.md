@@ -930,12 +930,12 @@ A provider can fail financially, suspend an account or lose a critical service w
 
 Before committing substantial funds, require an exit plan that works under an abrupt shutdown:
 
-- **Have the recovery materials already:** necessary shares or independent recovery participants, decryption access, software, documentation, licences. A promise to supply them after a shutdown is weak protection.
+- **Have the recovery materials already:** necessary shares or independent recovery participants (who can take part in recovery without the provider), decryption access, software, documentation, licences. A promise to supply them after a shutdown is weak protection.
 - **Test without the provider:** use a small test balance and a documented fallback. Produce a valid transaction while the provider's signing and authentication services are unavailable; broadcast through independent chain access; record the result without recording secrets.
-- **Know the migration route:** does supported export preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
+- **Know the migration route:** does supported export (export that the recovery tooling can carry out) preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
 - **Repeat the drill after material changes:** share replacement, software upgrades, staff departures can invalidate an earlier test.
 
-Do not count "we have backup files" as proof that you can still sign; without a demonstrated independent quorum and usable recovery tooling, a shutdown may leave you dependent on a recovery agent, an insolvency process — or unable to spend at all.
+Do not count "we have backup files" as proof that you can still sign; without a demonstrated independent quorum (enough signers shown to be able to sign without the provider) and usable recovery tooling, a shutdown may leave you dependent on a recovery agent, an insolvency process — or unable to spend at all.
 ### Multisig-as-a-service
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
@@ -954,7 +954,7 @@ MPC [key shares across participants]
 
 ### Check the protection and its limits
 
-With a threshold above one and genuinely separate signers, one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
+With a threshold above one and genuinely separate signers (so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
 
 A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
 
@@ -999,7 +999,7 @@ Retain the wallet descriptor or equivalent configuration, including the threshol
 
 For a provider-independent arrangement, rehearse recovery before depositing substantial funds: using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer changes.
 
-If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change. Budget for the relevant network fees. If you use a custodial service, test withdrawals while the service is operating — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
+If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change (a permitted change to the rules for authorising spending). Budget for the relevant network fees. If you use a custodial service, test withdrawals while the service is operating — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
 
 Watch for lost recovery keys, stale configurations, incompatible recovery software, shared cloud backups and departing staff. A recovery promise is not a substitute for a rehearsal.
 ## 20. Paid security: consumer multisig with inheritance
@@ -1038,7 +1038,7 @@ These are entry bands only. Ask what features, limits and support are included a
 
 A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable.
 
-The process may include a six-month inactivity check, a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable.
+The process may include a six-month inactivity check (checking whether the holder has been inactive), a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable.
 
 A recipient who has lost their key or cannot be found is a recognised failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
 
