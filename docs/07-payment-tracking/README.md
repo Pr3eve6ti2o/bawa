@@ -158,11 +158,11 @@ A watcher tells you what it currently sees; a reconciler checks whether your dat
 
 Retain a chain-native cursor:
 
-- **Bitcoin** — last relevant block/transaction cursor.
-- **EVM** — last processed block.
-- **Solana** — last processed slot/signature cursor.
-- **XRPL** — ledger index/transaction cursor ([XRPL documentation](https://xrpl.org/docs/)).
-- **Cosmos** — block height/pagination cursor ([Cosmos documentation](https://docs.cosmos.network/)).
+- **Bitcoin** — last fully processed block; retain any endpoint-specific transaction/pagination continuation state separately.
+- **EVM** — last fully processed block; retain any endpoint-specific transaction/pagination continuation state separately.
+- **Solana** — last fully processed slot; retain any endpoint-specific signature/pagination continuation state separately.
+- **XRPL** — index of the last fully processed ledger; retain any endpoint-specific transaction/pagination continuation state separately ([XRPL documentation](https://xrpl.org/docs/)).
+- **Cosmos** — height of the last fully processed block; retain any endpoint-specific pagination continuation state separately ([Cosmos documentation](https://docs.cosmos.network/)).
 
 The exact cursor depends on the chain. Do not rely only on wall-clock timestamps. Record successful reconciliation checkpoints so that, after an outage, your application can report "Last successfully reconciled height = H" and resume from a safe boundary (a verified chain position at or before that checkpoint, with enough overlap to re-scan potentially missed or reorg-affected blocks).
 
@@ -176,7 +176,7 @@ For offline or hardware signing, study [BIP-174 (PSBT format)](https://github.co
 WATCH-ONLY → known UTXOs → unsigned transaction/PSBT → OFFLINE OR HARDWARE SIGNER → signed transaction → broadcast
 ```
 
-The online tracker never needs the spending key merely to build or monitor the transaction.
+The online tracker must never hold spending keys, including when building or monitoring the transaction.
 
 [Bitcoin Core output descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) can record:
 
