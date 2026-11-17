@@ -741,6 +741,8 @@ Keep raw observations when a derived-state commit fails. Never advance a checkpo
 
 Use this local fixture:
 
+The fixture’s block numbers and one-block lag limit are test policy only, not general rules. Use a retry budget of three retries per cycle for this fixture.
+
 - `C=3` — test policy only.
 - Verified tip: `102`.
 - Checkpoint: `99`.
@@ -765,7 +767,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
 3. **Lag, then outage**
 
-   With a one-block lag limit, move the independently checked tip to `104` while the source remains at `102`. Then fail requests.
+   With this fixture’s one-block lag limit, move the independently checked tip to `104` while the source remains at `102`. Then fail requests.
 
    Keep the last good value labelled stale, not zero. Retry with bounded back-off and retain separate attempt and success timestamps. Do not advance the success timestamp on failed requests.
 
@@ -784,7 +786,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 | Symptom | Check and recover |
 |---|---|
 | **RPC down** | Check endpoint reachability, DNS/TLS errors and provider status. Preserve stored state and retry only within your budget. |
-| **Rate-limited (`429`)** | A rate or usage limit was reached. Honour `Retry-After` when present, reduce request pressure and cap retries. |
+| **Rate-limited (`429`)** | A rate or usage limit was reached. Honour `Retry-After` when present, reduce request pressure and cap retries at three per cycle. |
 | **Wrong chain or network** | Compare RPC network identifiers and known block anchors with the watch configuration. Apply these checks to every chain and reject mismatches before ingestion. |
 | **Stale data** | Allow for cached responses. Compare source block progress and time since the last verified update. HTTP success proves neither freshness nor finality. |
 | **Indexer lag** | Compare the advancing chain with the stalled indexed height. Monitor catch-up or use another checked source. |
