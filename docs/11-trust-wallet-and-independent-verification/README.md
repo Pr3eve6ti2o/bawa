@@ -556,7 +556,7 @@ Where a project publishes a signed checksum file:
 2. Verify the checksum file’s signature with that key.
 3. Only then trust its sums when checking the downloaded artefact.
 
-An unsigned checksum can detect an accidental transfer error, but it cannot authenticate a release. Someone who replaces the binary can replace the unsigned checksum file as well.
+An unsigned checksum fetched over an unauthenticated channel can detect an accidental transfer error but cannot authenticate a release; one obtained through an independently authenticated channel can authenticate the release bytes. Someone who replaces the binary can replace the unsigned checksum file as well.
 
 When comparing projects, explicitly record **“no documented reproducible-build procedure”** where that is the case. A source repository, installation guide or lockfile is not a substitute for a documented rebuild-and-compare process.
 
