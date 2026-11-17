@@ -1,12 +1,12 @@
 ---
 title: Glossary
-description: Plain definitions for the terms used across the Bawa guide set, with the authority for each term; one term per concept, en-GB throughout.
-last-updated: 2026-11-08
+description: Plain definitions for the terms used across the Bawa guide set, including synonymous labels, with the authority for each term; en-GB throughout.
+last-updated: 2026-11-17
 ---
 
 # Glossary
 
-Reference. Terms are listed alphabetically in a single table.
+Reference. Terms are listed in a single table in character-by-character label order, with spaces and hyphens sorting before letters.
 
 | Term | Plain definition | Authority |
 |---|---|---|
