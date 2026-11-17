@@ -362,7 +362,7 @@ Keep the residual limits in view rather than treating the combined setup as comp
 3. <https://lune.fi/blog/crypto-wallet-security-checklist-2026>
 4. <https://coinscapture.medium.com/sim-swap-attacks-on-crypto-accounts-how-they-work-and-how-to-prevent-one-245b4c2d3f00>, checked 8 November 2026: automated checks returned HTTP 403, but a web search confirmed that the article exists.
 5. <https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/>, New Zealand government guidance, verified live 8 November 2026.
-6. <https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20>
+6. <https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20>, verified live 17 November 2026; covers SIM-swap mechanics and defences.
 7. <https://coinspaid.com/knowledge-base/hot-wallet-hacks-and-risks/>, checked 8 November 2026: automated checks returned HTTP 403, but a web search confirmed that the article exists.
 8. <https://www.bitgo.com/research/fool-me-twice-ledger-tokenized-repo-and-finks-worldview/>
 9. <https://dev.to/etairos/ledger-finds-lte-seed-stealing-implant-in-wallets-sold-by-cryptobilis-86m-drained-2jd2>
