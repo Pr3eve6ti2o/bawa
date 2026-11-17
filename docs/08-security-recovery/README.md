@@ -154,19 +154,19 @@ Complete recovery on a clean trusted machine before funding, as required by [doc
 
 A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook) requires:
 
-1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet's documented generation procedure.
+1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks (**UNVERIFIABLE**) — use a verified device-setup process and the wallet-generation procedure documented in [docs/04, sections 3 and 8](../04-wallet-generation/README.md) (`python3 tools/make_wallet.py`).
 2. **Move EVERY asset/token to the replacement wallet.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify every holding, transfer it and verify receipt before retiring the old wallet.
-3. **Retire the old wallet PERMANENTLY.**
+3. **Retire the old wallet PERMANENTLY.** Stop ordinary signing and funding under the compromised seed, replace saved addresses, and retain watch-only monitoring where appropriate.
 
 ### Recovery rehearsal procedure
 
 Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-record). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
 
-**The rehearsal has never been executed.** Show every unexecuted gate as **FAIL**.
+**No executed recovery rehearsal is recorded at this commit.** Show every unexecuted gate as **FAIL**.
 
 | Check | Pass criteria | Status |
 |---|---|---|
-| Clean-install restore | Complete a clean-install restore on a clean trusted machine with disposable test fixtures, using the linked recovery procedure and verified wallet/chain instructions. | **FAIL — unexecuted** |
+| Clean-install restore | Complete a clean-install restore on a clean trusted machine with disposable test fixtures (local gate requirement), using the linked recovery procedure and verified wallet/chain instructions (local gate requirement). | **FAIL — unexecuted** |
 | Expected addresses | Match the derived public addresses against the fixtures' recorded expected addresses, using the recorded network/account/derivation context, address policy and applicable TON settings. | **FAIL — unexecuted** |
 | Testnet signing check | Verify spending recovery with a successful testnet signing check. Use verified instructions for the relevant testnet and a tiny testnet amount only; use no real funds. | **FAIL — unexecuted** |
 | Sanitised record | Keep a sanitised record of the fixture context, address comparisons, signing result and check results. Exclude mnemonics, passphrases, data keys and other credentials. | **FAIL — unexecuted** |
