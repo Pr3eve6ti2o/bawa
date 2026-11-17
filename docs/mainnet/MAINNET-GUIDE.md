@@ -1,6 +1,6 @@
 # Bawa — Mainnet non-custodial wallet guide (Doc 4)
 
-Doc 4 is one new standalone document: the mainnet guide for creating a non-custodial wallet with the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`), covering Bitcoin, Ethereum, TRON and TON mainnet with real funds. Guide prose only — no app or UI code. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet.
+Doc 4 is one new standalone document: the mainnet guide for creating a non-custodial wallet with the Bawa repository (`Pr3eve6ti2o/bawa`, with repair commit `e3b65fb8` as the procedural and code baseline and `56396a20` only as the historical documentation snapshot), covering Bitcoin, Ethereum, TRON and TON mainnet with real funds. Guide prose only — no app or UI code. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet.
 
 Evidence baseline: 2026-11-09 (research slices M01–M36; live checks dated 2026-11-09). The code pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (short `e3b65fb8`), decided 2026-11-10 — see §5 and M-33.
 
@@ -24,7 +24,7 @@ The three warnings below appear in full here and in §2, and are presented befor
 
 ### No inherited assurance
 
-> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (README §18 L1160). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
+> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (docs/README-FULL.md §19 L1264). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
 
 > **Stop** If you are treating any gate, review or completion as permission to use real funds, stop the mainnet procedure. Do not proceed on that basis; ignoring this stop risks irreversible real-fund loss.
 
@@ -58,7 +58,7 @@ Appendix. UI templates (pointer)
 
 ### What this guide is and who it is for
 
-This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa` at `56396a20`). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
+This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa`, with repair commit `e3b65fb8` as the procedural and code baseline and `56396a20` only as the historical documentation snapshot). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
 
 Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (README §§18–19).
 
@@ -69,7 +69,7 @@ The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethere
 - **Not a hosted wallet, custody service or exchange.** This guide is for non-custodial use.
 - **No security, audit or production-readiness claim.** Do not treat the repository or this guide as audited or production-ready.
 - **No hardware-wallet support or multisig.** Neither is provided by the repository.
-- **No verified sending procedure.** The repository contains no transaction construction or signing code (README L1197). Signing exists only in the separate Web/Android validation drafts. No send/sign/broadcast flow has been exercised on-chain on any network. Every send procedure in this guide is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **No verified sending procedure.** The repository contains no transaction construction or signing code (docs/README-FULL.md §17 L1201). Signing exists only in the separate Web/Android validation drafts. No send/sign/broadcast flow has been exercised on-chain on any network. Every send procedure in this guide is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Testnet gates are not mainnet authorisation.** README §18 places any mainnet work outside the testnet guide set as a separate, reviewed change. Passing the testnet gates does not authorise it.
 
 ### Mainnet warnings
@@ -127,7 +127,7 @@ Clipboard swappers can replace a correctly copied address with a lookalike match
 
 ### No inherited assurance
 
-> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (README §18 L1160). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
+> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (docs/README-FULL.md §19 L1264). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
 
 > **Stop** If you are treating any gate, review or completion as permission to use real funds, stop the mainnet procedure. Do not proceed on that basis; ignoring this stop risks irreversible real-fund loss.
 
