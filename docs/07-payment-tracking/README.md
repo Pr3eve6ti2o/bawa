@@ -241,7 +241,7 @@ Model at least these payment states. The arrows are guarded transitions, not unc
 requested → address/memo assigned → observed
   ├─ matched → underpaid/sufficient
   └─ confirmation/finality
-matched + sufficient + required confirmation/finality → claimed
+matched + sufficient + required confirmation/finality + exclusive, durable fulfilment reservation → claimed
   → fulfilled → reconciled
 ```
 
@@ -583,7 +583,7 @@ Read transaction outputs from a node or a node-backed address indexer.
 
 - Use `(<CHAIN>, <TXID>, <OUTPUT_INDEX>)` as the event key.
 - Allocate a separate address to each request.
-- Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and confirmation depth.
+- Verify the network, transaction ID, output index, destination script/address and atomic amount, then check block inclusion and the per-chain confirmation criterion.
 - Use the assigned address to identify the request and the output key to identify the payment observation.
 
 Treat a mempool output as an attempted payment, not confirmation. Block inclusion can still be reversed by a reorganisation. Identify the particular paying output; do not substitute an address balance for that identification.
