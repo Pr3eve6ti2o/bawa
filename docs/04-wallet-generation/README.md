@@ -64,11 +64,11 @@ npm --prefix tools/hdwallet-gen ls @trustwallet/wallet-core
 
 **Lockfile warning**
 
-> Before calling the repository production-ready, commit the lockfile generated from a clean install.
+> Before calling the repository production-ready, commit the repository-root lockfile generated from a clean install.
 >
 > Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
 
-**Environment note:** A differential-test scratch result passed with Node v24.22.1 and Python 3.12.3. Python met the requirement; Node did not. That pass does **not** validate a supported installation. Repeat the differential check with Node 22.
+**Environment note:** A differential-test scratch result passed with Node v24.22.1 and Python 3.12.3. Python met the requirement; Node did not. That pass does **not** validate a supported installation. For the completed Node 22 repeat, see section 8: Node v22.23.4, differential **PASS** (2026-11-15).
 
 ## 3. Generating the wallet safely
 
@@ -95,8 +95,9 @@ Terminal check → Wallet Core self-checks → 256-bit wallet creation → mnemo
 1. Your mnemonic.
 2. The BIP-39 passphrase policy: **empty**. Do not confuse the BIP-39 passphrase with a vault unlock passphrase.
 3. The exact derivation paths and policies for each chain.
-4. Any chain-specific wallet configuration needed for recovery.
+4. The chain-specific wallet configuration needed for recovery: per-chain derivation paths and policies, address policy, and network and chain configuration; for TON, also the contract/version, derivation convention, workchain, network presentation, wallet ID, and subwallet ID.
 5. The seed bundle and its key, stored separately from each other.
+6. The separate data key displayed in the terminal. Record and retain it before acknowledging with `SAVED`; retaining the mnemonic is not a substitute for retaining this key.
 
 An xpub is **not** a wallet backup. It is a watch-only capability.
 
