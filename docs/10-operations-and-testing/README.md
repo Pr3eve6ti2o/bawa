@@ -356,6 +356,8 @@ No user-managed backend is needed; explorer and RPC services still run on extern
 
 ## Personal automated tracker, still $0 under the same assumptions
 
+This is a viable local-automation sketch; cron execution and SQLite persistence are not implemented here.
+
 ```text
 public addresses
       ↓
@@ -368,9 +370,11 @@ SQLite
 local dashboard
 ```
 
-Great for learning.
+Great for learning. An implementation should include durable scan checkpoints, retries and backfill for failed or missed ranges, explicit confirmation thresholds and rollback/rescan handling for reorgs, and backups with tested restores.
 
 ## Small application
+
+This is a small-application architecture sketch; no PostgreSQL implementation is provided here.
 
 ```text
 wallet generation machine
@@ -393,6 +397,8 @@ wallet generation machine
 ```
 
 Use a free hosted RPC tier initially and upgrade when the metrics justify it.
+
+An implementation should define confirmation thresholds and reorg rollback rules, make reconciliation idempotent, include address-to-account correctness tests, and validate database restores from backups.
 
 ## Serious application
 
