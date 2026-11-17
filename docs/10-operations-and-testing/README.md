@@ -251,9 +251,9 @@ Then match the applicable chain-specific settings:
 
 Start with a local stage where the chain supports it, then proceed to public testnet.
 
-Use Bitcoin Core regtest for the Bitcoin local stage. Work on a private chain, create blocks on demand and generate 101 blocks in under a second. Refer to https://developer.bitcoin.org/examples/testing.html (verified live 2026-11-08) for this regtest stage.
+Use Bitcoin Core regtest for the Bitcoin local stage. Work on a private chain, create blocks on demand and generate 101 blocks. Refer to https://developer.bitcoin.org/examples/testing.html (verified live 2026-11-08) for this regtest stage. The `generate` RPC shown in the linked example is legacy.
 
-**Warning:** Deleting the wrong directory can remove mainnet wallet data. Always back up mainnet wallets before dangerous operations such as deleting. Check that the backup is in place and that the deletion target is only the `regtest` subdirectory, then delete that subdirectory to restart regtest.
+**Warning:** Deleting the wrong directory can remove mainnet wallet data. Always back up mainnet wallets before dangerous operations such as deleting. Before deletion, stop Bitcoin Core and resolve the actual configured `regtest` directory. Check that the backup is in place and that the deletion target is only the `regtest` subdirectory, then delete that subdirectory to restart regtest.
 
 Treat local Ethereum, TRON and TON testing as excluded from this documented sequence. Do not treat the Bitcoin regtest stage as establishing local testing for those chains.
 
