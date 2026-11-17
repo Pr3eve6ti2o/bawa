@@ -394,7 +394,7 @@ BIP32-Ed25519 derivation (CIP-0003 wallet key generation); extended-UTXO (eUTXO)
 
 CIP-1854 covers multisig HD wallets with a separate layout; do not treat CIP-1852 as covering every Cardano wallet design. Changing an Ethereum BIP-32 implementation's coin type to `1815` cannot supply Cardano's rules. Use Cardano-native tooling.
 
-Sources: [CIP-1852](https://cips.cardano.org/cip/CIP-1852), CIP-0003, CIP-1854 (cips.cardano.org), [Cardano eUTXO explainer](https://docs.cardano.org/learn/eutxo-explainer/).
+Sources: [CIP-1852](https://cips.cardano.org/cip/CIP-1852), CIP-0003, CIP-1854 (cips.cardano.org), [Cardano eUTXO explainer](https://docs.cardano.org/about-cardano/learn/eutxo-explainer/).
 
 ## 10. Polkadot/Substrate
 
@@ -424,7 +424,7 @@ Use the actual network's documentation and test vectors before assuming a Bitcoi
 | SOL | Reference-only | 501 | Ed25519 | Account | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. | Base58-encoded public key (no fixed textual prefix) | No derivation, generation, or signing |
 | ADA | Reference-only | 1815 | Ed25519 with Cardano's extended-key scheme | Extended-UTXO | Payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` (CIP-1852) | Shelley Bech32 `addr1…` mainnet / `addr_test1…` testnet; reward `stake1…` / `stake_test1…` (CIP-19) | No derivation, generation, or signing |
 
-The BTC/ETH/TRX entries are the derive tools' COMPLETE chain and path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `x'` is a hardened account index.
+The `derive.js` allowlist establishes the derive tools' BTC/ETH/TRX chain set; it does not establish an exhaustive path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `a'` is a hardened account index.
 
 ### Derivation and network policy
 
@@ -446,7 +446,7 @@ For the full SLIP-0132 table (mainnet and testnet rows), see docs/01.
 
 **TON naming.** Core 4.9.2 `registry.json` records symbol `GRAM`; SLIP-0044 records coin 607 as TON; Bawa uses TON. The registry entry is `ton`, coin ID 607.
 
-**Chain IDs.** Sepolia's chain ID is `11155111`; the registry's Ethereum `chainId` value `1` is a mainnet reference value and must not be substituted for it. TRON has no chain/network-id field in the registry — that absence is not an ID of zero.
+**Chain IDs.** Sepolia's chain ID is `11155111`; the registry's Ethereum `chainId` value `1` is a mainnet reference value and must not be substituted for it. TRON's `chainId` field is present in the registry with value `null` — `null` is neither field absence nor an ID of zero.
 
 **Registry interpretation.** The registry's explorer URLs are mainnet defaults; use the guides' verified testnet endpoints (Web guide, Section E) for testnet work. The field reference warns that the chain ID "might not be always latest in registry. In transaction building current value has to be supplied each time." For registry-field interpretation and the addition procedure, see docs/12.
 
