@@ -3566,7 +3566,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** Re-checked register (2026-11-09), M-20; M24 K21–K26, covering proposed Doc 3 rows OI-097–OI-102.
 
-### M-21 — 4.9.1 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
+### M-21 — 4.9.3 is the upgrade candidate pending qualification; 4.9.2 was a prerelease; 4.8.4 remains pinned
 
 **Question/risk:** The guide may prescribe `4.9.2` as the default because npm calls it `latest`, treat `4.9.1` and `4.9.2` as interchangeable, or promise an Android AAR that does not exist.
 
@@ -3574,7 +3574,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 
-- **M05 F2/F3/F7:** `4.9.2` is npm `latest`, but its GitHub release has `prerelease: true` and was published on 2026-11-06. `4.9.1` has `prerelease: false` and is the latest stable release and upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`.
+- **M05 F2/F3/F7:** `4.9.2` was a GitHub prerelease (`prerelease: true`), published on 2026-11-06, and was never the installed reference engine. `4.9.3` is the latest stable full release and replaces `4.9.1` as the upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`. Keep `tools/hdwallet-gen` pinned to `4.8.4`; the `4.8.4` → `4.9.3` re-pin remains a separate deferred item, and adoption requires a passing qualification run. Never use `latest`; use explicit version pins.
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
