@@ -176,7 +176,7 @@ Require every check to pass before marking the rehearsal complete.
 
 Wallet code is sensitive to dependency drift. Required practice (not a claim of current implementation): document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
 
-Do not write `"dependency": "^4.8.4"` and assume that means "the code I tested" — a caret range means future compatible versions may be selected. For security-sensitive primitives, pin the tested release in the actual application lockfile and review upgrades deliberately. Trust Wallet Core itself recommends checking the current release/version rather than blindly using an old example ([official Wallet Core repository](https://github.com/trustwallet/wallet-core)).
+Do not write `"dependency": "^4.8.4"` and assume that means "the code I tested" — a caret range means future compatible versions may be selected. For security-sensitive primitives, pin the tested release in the actual application lockfile and review upgrades deliberately. This guide recommends checking the current release/version rather than blindly using an old example ([official Wallet Core repository](https://github.com/trustwallet/wallet-core)).
 
 Establish and verify the reproducibility chain: source tag → lockfile → clean build → tests → artefact hash → release. That is far more useful than writing "secure" in the README.
 
@@ -190,11 +190,11 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Release blocker
 
-1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
+1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm install --ignore-scripts --no-audit --no-fund` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
 
    `npm ci` requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
 
-   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
+   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09. This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
 
 ### TARGET — CI design, not existing CI
 
