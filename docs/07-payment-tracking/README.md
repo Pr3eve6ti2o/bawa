@@ -781,9 +781,9 @@ Treat everything in this section as application policy, not Bawa behaviour.
 
 Expect repeat observations from polling, retries, restarts, duplicated webhooks, rescans, multiple workers and indexer replays.
 
-1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or log index. Identify the actual transfer; do not rely on a callback identifier alone.
-2. Persist the event and claim fulfilment atomically in a database transaction. Enforce a unique event constraint on the transfer identity and use a conditional claim on `<REQUEST_ID>`.
-3. Let only the successful claimant fulfil and then record the final state. Make other workers consult the existing state instead of starting another fulfilment.
+1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or log index. Identify the actual transfer; do not rely on a callback identifier alone. See [event identity](../06-tracking/README.md#L586-L590).
+2. Persist the event and claim fulfilment atomically in a database transaction. Enforce a unique event constraint on the transfer identity and use a conditional claim on `<REQUEST_ID>`. See [fact keying](../06-tracking/README.md#L687).
+3. Let only the successful claimant fulfil and then record the final state. Make other workers consult the existing state instead of starting another fulfilment. See [the payment lifecycle state machine](#payment-lifecycle-state-machine).
 
 Commit local credit atomically with its outcome. For external fulfilment, use a durable outbox and an idempotent receiver. Do not dispatch goods again when a `paid` notification is replayed.
 
