@@ -27,8 +27,8 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 
 ## Reference — look up information
 
-- [02 — Chain Guides](02-chains/README.md) — **Reference:** find guidance for the chain you are working with.
-- [03 — Tool & Repository Map](03-tools-and-repositories/README.md) — **Reference:** find tools and repositories for your task.
+- [02 — Chain Guides](02-chains/README.md) — **Reference (classified by cross-chain comparison-table content):** find guidance for the chain you are working with. Worked examples use mainnet format unless labelled testnet.
+- [03 — Tool & Repository Map](03-tools-and-repositories/README.md) — **Reference (classified by tool and repository lookup-table content):** find tools and repositories for your task.
 - [12 — Chain Registry & Asset Metadata](12-chain-registry-and-assets/README.md) — **Reference:** look up chain registry and asset metadata.
 - [Mainnet guide](mainnet/MAINNET-GUIDE.md) — **Reference:** consult the mainnet-related guidance. Its existence is **not evidence of mainnet support or readiness**.
 - [Glossary](GLOSSARY.md) — **Reference:** check the meaning of an unfamiliar term.
