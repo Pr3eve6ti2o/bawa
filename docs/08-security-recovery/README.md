@@ -371,6 +371,8 @@ What it buys: one compromised key cannot spend alone; losing access to one key n
 
 Registered policy lets a signer recognise its own change; it does not prove an external recipient's identity. Check destination and amount on trusted signer displays against independently obtained payment details.
 
+**Definitions:** **full policy registration** — registering the same full policy on every signer; **change validation** — comparing change addresses; **coordinator** — the tool used to import each signer's account public-key export; **Safe-class tools** — tools where your account is a contract on a specific EVM network; **clean compatible installation** — a clean installation able to rebuild the watch-only wallet from the policy backup; **newly verified policy** — a policy checked anew with the replacement key; **official deployment records** — official records used to check the contract implementation; **signer's recovery-check feature** — the signer's feature for checking each seed backup.
+
 ### Set up and prove it (7 steps)
 
 1. **Check compatibility first** — obtain verified releases from the projects' official distribution channels; choose a coordinator and signers supporting your exact policy, full policy registration and change validation; Bitcoin native SegWit multisig, P2WSH, is a common choice; check firmware support; do not assume every device qualifies.
