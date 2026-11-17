@@ -1747,11 +1747,11 @@ The numerical examples in this part are dated estimates from the **2026-11-09 ~1
 
 6. **Do not confuse a token balance with the ability to send.** Self-funded Ethereum USDT sends need ETH; TRON USDT sends need both bandwidth and energy, supplied by usable resources or TRX burned to cover shortfalls, plus any other applicable fees; self-funded TON Jetton sends need TON. A token-only wallet may nevertheless send through sponsorship, a paymaster, a relayer or a gasless flow where supported by the network, wallet and transaction. “Gasless” does not eliminate network fees or resource consumption; it changes how they are funded and may charge the user in tokens instead. Before allowing a send, verify that the sender or a supported funding mechanism can cover the applicable fee and resource budget. Reading balances does not itself incur an on-chain fee. Receiving is not universally fee-free: TON incoming-message processing and storage can incur fees, paid from attached value or account funds as applicable.
 
-7. **Check the address before signing.** A confirmed payment to a wrong address is not reversible on Bitcoin, Ethereum, TRON or TON. Address-checking before signing is the only protection against that loss.
+7. **Check the address before signing.** A confirmed payment is not necessarily final; finality depends on the chain’s consensus rules. On Bitcoin, Ethereum, TRON or TON, the sender generally cannot unilaterally reverse a finalized payment to a wrong address. Address-checking before signing is an important safeguard, not the only protection against this loss. A recipient’s return of funds is a new transaction, not a reversal of the original payment.
 
 8. **Keep provenance attached to every fee figure.** Record its source and check time, including a writing-time re-check. Mark every unverified figure **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. A historical estimate does not become a current fee merely because it appears in a reviewed document.
 
-**Loss-and-stop gate for these requirements:** prevent a **wrong address** by independently checking the full destination against the external signer’s final review; prevent a **wrong amount** by checking the amount and denomination against the payment intent. Reduce the risk of a **stuck transaction** with fresh, cross-checked fees and a reviewed recovery route. Check the total fee and change/refund behaviour against the plan to avoid a **lost fee**. Reduce exposure to **theft** by using a reviewed signer and keeping signing secrets out of fee services and unreviewed recovery helpers. Stop before signing if any of these checks is missing or cannot be reconciled.
+**Loss-and-stop gate for these requirements:** prevent a **wrong address** by independently checking the full destination against the external signer’s final review; prevent a **wrong amount** by checking the amount and denomination against the payment intent. Reduce the risk of a **stuck transaction** with fresh, cross-checked fees and a reviewed recovery route. Check the total fee and change/refund behaviour against the plan to avoid **excessive or unintended fees**. Reduce exposure to **theft** by using a reviewed signer and keeping signing secrets out of fee services and unreviewed recovery helpers. Stop before signing if any of these checks is missing or cannot be reconciled.
 
 ### Bawa boundary and external toolchains
 
@@ -1768,6 +1768,8 @@ A named external signer/toolchain is therefore a prerequisite for each chain. **
 | TRON | Not established by the evidence — blocked | Points / energy and total TRX; the native-coin/resource budget for token sends; recipient and amount review; documented first-send, change/refund and stuck/failed-transaction behaviour. |
 | TON | Not established by the evidence — blocked | NanoTON and total TON; native-TON budget for Jettons; recipient and amount review; documented first-send, change/refund and stuck/failed-transaction behaviour. |
 
+No external signer toolchain has been named or tested for any chain, so this guide records no tested external-signing route. Each table row remains “Not established by the evidence — blocked” until a toolchain for that chain is named, reviewed and tested.
+
 For every row, the external review must address **wrong address** and **wrong amount** through final destination and amount checks; **stuck transaction** and **lost fee** through fresh fee, status, change/refund and recovery checks; and **theft** through review of the signer and handling of signing material. Stop if the toolchain is unnamed or any required control is unreviewed. This part does not establish an authorised send or recovery path.
 
 ### Bitcoin procedure: obtain a live rate and calculate the total
@@ -1780,7 +1782,7 @@ Immediately before a proposed signing, open:
 
 `https://mempool.space/api/v1/fees/recommended`
 
-Save the response and its UTC retrieval time. The response has **no embedded observation timestamp**, so retaining the values alone does not preserve their freshness. Refresh after any material delay.
+Save the response and the UTC time when this guide retrieved it. This is the retrieval time, not the time when the estimator observed the network. The response has **no embedded observation timestamp**, so the saved values and retrieval time do not establish the freshness of the estimator’s underlying observations. Refresh after any material delay.
 
 The five fields are **rates in sat/vB**, not total fees:
 
