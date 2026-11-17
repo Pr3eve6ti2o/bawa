@@ -367,14 +367,14 @@ Keep these two uncertainties separate: missing chain evidence during an outage, 
 
 Define these application payment-tracking design rules before implementation and before accepting payments:
 
-- Require every request to carry network, asset, recipient, amount in atomic units, memo/tag where the chain supports one, and expiry. Represent all six fields before allocation.
-- Reject requests with missing or ambiguous fields rather than using defaults.
-- Use one address per request where possible. When requests share a recipient, distinguish them with a memo/tag where supported or assign a unique address.
-- Never rely on holdings alone.
+- Require every request to carry network, asset, recipient, amount in atomic units, memo/tag where the chain supports one, and expiry. Represent all six fields before allocation. ([WEB-GUIDE](../web-wallet/WEB-GUIDE.md); [docs/14](../14-wallet-app-implementation/README.md); [docs/12, line 320](../12-chain-registry-and-assets/README.md))
+- Reject requests with missing or ambiguous fields rather than using defaults. ([WEB-GUIDE](../web-wallet/WEB-GUIDE.md); [docs/14](../14-wallet-app-implementation/README.md))
+- Use one address per request where possible. When requests share a recipient, distinguish them with a memo/tag where supported or assign a unique address. ([WEB-GUIDE](../web-wallet/WEB-GUIDE.md); [docs/14](../14-wallet-app-implementation/README.md))
+- Never rely on holdings alone. ([MAINNET-GUIDE, section 12 and its state table](../mainnet/MAINNET-GUIDE.md))
 - Make allocation idempotent with a request/allocation identifier and an atomic reservation, so a retry reuses the same allocation.
-- Configure a confirmation policy for each chain before finalising.
+- Configure a confirmation policy for each chain before finalising. ([MAINNET-GUIDE, section 12 and its state table](../mainnet/MAINNET-GUIDE.md); [docs/12, line 320](../12-chain-registry-and-assets/README.md))
 
-Bawa documents stable event identity, confirmation thresholds, reversal handling, durable storage and atomic finalisation elsewhere. This recovery outline does not specify application-level atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook.
+Bawa documents stable event identity, confirmation thresholds, reversal handling, durable storage and atomic finalisation elsewhere ([docs/06, lines 586–590 and 687](../06-tracking/README.md); [MAINNET-GUIDE, line 1402](../mainnet/MAINNET-GUIDE.md)). This recovery outline does not specify application-level atomic finalisation or replay interfaces. Define and document these choices in your application, including how to recover missed observations, before turning these checks into an executable recovery runbook.
 
 No commands or implementation guarantees are implied here.
 ## 11. Payment requests describe intent
