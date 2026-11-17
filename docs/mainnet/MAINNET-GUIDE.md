@@ -1018,7 +1018,7 @@ The following values were recorded in the **Android draft configuration**, check
 | Network | Configured threshold at that check | Policy interpretation |
 |---|---:|---|
 | BTC | 6 | A customary threshold, not a network requirement. Show the actual confirmation count. At `C=1`, display the payment provisionally as **“unconfirmed for settlement”**. |
-| ETH | 12 | Configured threshold only; enforcement has not been demonstrated. |
+| ETH | `finalized` | Confirmation policy resolved as `finalized` in M-38; enforcement has not been demonstrated. |
 | TRX | 19 | Use the node’s solidified / last-irreversible view, never elapsed time or raw height subtraction. |
 | TON | 1 | Masterchain-anchored; track `seqno`, not wall-clock time. |
 
@@ -1034,7 +1034,7 @@ Creating a wallet needs no paid service. A paid RPC tier is an optional upgrade,
 
 ### First funding
 
-There are no mainnet faucets. First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
+First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
 
 Funding carries **wrong network, wrong address, wrong amount, stuck transaction and theft** risks. Before authorising a transfer or withdrawal, pin the expected mainnet, refresh the required inputs and verify your receiving address, the appropriate native asset, integer amount, fee bounds and total debit. Keep seed phrases and private keys local; providers must never receive them. Stop if the rehearsal requirement is unmet, a check fails or cannot be completed, or a provider requests a secret. A timed-out broadcast is **UNKNOWN**: stop and apply the txid-reconciliation rule above, including the TRX limitation, rather than making another transfer. Never fund a published fixture address. The addresses below belong to the public 15-word ripple test vector and must never receive real funds; stop if any appears as the destination.
 
@@ -1080,7 +1080,7 @@ The 2026-11-09 run used the repo tools at `56396a20` in a scratch copy, with `np
 
 Those successful fixture checks do not remove **OI-096**, which remains unfixed:
 
-- `derive.js` ignores the purpose, coin type and account components of a supplied path. A mismatched path can therefore produce a valid-looking address on the wrong branch and still exit 0.
+- `derive.js` accepts an xpub on stdin plus a chain and index, and uses fixed per-chain paths. It does not authenticate the xpub's intended chain or full derivation origin from serialization alone. BTC/ETH/TRX xpubs share version `0488b21e`, so an accepted xpub supplied for the wrong chain can still produce a syntactically valid address and exit 0.
 - `compare.js` accepts a private extended key and silently prints wrong addresses, also with exit 0. **Never feed any private key to `compare.js`.**
 
 Exit 0 and a plausible-looking address prove nothing about whether the intended branch or destination was used.
@@ -1284,7 +1284,7 @@ The presence of `last_transaction_id` was **not verified history**. It establish
 
 The confirmation policy is **1 masterchain seqno**: a TON payment is treated as confirmed once a masterchain block references the shardchain block containing the transaction, and the transaction's outgoing message is verified as successful (delivered, not bounced, not failed). Count masterchain seqno progression from inclusion, not the wallet's account seqno — which advances on every outgoing message the wallet sends — and not wall-clock time. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
 
-**TON reconciliation can never be automatic in this draft:** `tx.js:320` leaves `txid` as `null`. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
+In this draft, `tx.js:320` leaves the TON `txid` as `null`, so TON reconciliation cannot be automatic here. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
 
 ### Shared explorer rules
 
@@ -1507,7 +1507,7 @@ These are the required meanings of the history labels, **not verified guarantees
 Two draft limitations prevent the general TXID reconciliation rule from being treated as a universal capability:
 
 - **TRX:** there is no TXID lookup adapter. A TRX transfer stays **Pending** on manual refresh; that retained label is not fresh verification of its outcome. No manual investigation procedure is supplied.
-- **TON:** reconciliation **can never be automatic in this draft**. `txid` is `null` at `tx.js:320`.
+- **TON:** reconciliation cannot be automatic in this draft. `txid` is `null` at `tx.js:320`.
 
 ### Rehearsal
 
