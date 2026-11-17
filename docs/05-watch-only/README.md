@@ -192,7 +192,7 @@ An account export normally exposes both receiving and change branches. Calling a
 
 A parent extended public key plus any one matching non-hardened child private key can expose the parent extended private key. This is the BIP-32 leak warning: recovery can propagate upwards along an entirely non-hardened path. A hardened edge stops upward recovery, but it does not protect ordinary receiving and change children beneath the compromised account.
 
-Never put a child private key in the same storage as an xpub. Never send one to a watch-only system, even for testing, recovery or a temporary signing task.
+Never put a non-hardened descendant private key in the same storage as the corresponding parent xpub: together they allow recovery of the parent extended private key and derivation of every descendant key. Never send a non-hardened descendant private key to a watch-only system holding that xpub, even for testing, recovery or a temporary signing task.
 
 ### Exposure has no revocation switch
 
@@ -205,7 +205,7 @@ If an xpub is exposed:
 - Retire the exposed branch for receipts and change.
 - Keep monitoring it for late payments, but stop issuing its addresses.
 
-Historical activity remains visible, and migration transactions may link old funds to the new account. If a child private key leaked too, treat it as a spending-key compromise, not merely a privacy incident.
+Historical activity remains visible, and migration transactions may link old funds to the new account. If a non-hardened descendant private key leaked too, treat it as a spending-key compromise, not merely a privacy incident: together with the parent xpub, it allows recovery of the parent extended private key and derivation of every descendant key.
 ## 7. The watch-only model
 
 Your receiving server should not need spending authority to tell someone where to pay. An xpub contains a public key plus chain code. You can use it to derive non-hardened child public keys for receiving addresses, but not to derive private keys, recover your spending wallet, recreate its seed or sign a spend. Rebuilding an address list is not restoring spending access.
