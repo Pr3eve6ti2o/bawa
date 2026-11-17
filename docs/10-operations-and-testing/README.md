@@ -1083,7 +1083,14 @@ CI in `.github/workflows/ci.yml` currently runs `npm install --ignore-scripts --
 
 ### Generate, review and test
 
-Bawa does not document a lockfile-specific validation procedure. Confirm the Node.js/npm versions and required checks with the maintainer before proceeding.
+Confirm the Node.js/npm versions and required checks with the maintainer before proceeding.
+
+Use the following lockfile validation procedure:
+
+1. From `tools/hdwallet-gen`, record `node --version` and `npm --version`. Review `package.json` and the committed `package-lock.json`, including dependency versions, resolved URLs and integrity entries. Review `git diff HEAD -- package.json package-lock.json` and note any intentional changes before installing.
+2. Run `npm ci --ignore-scripts`, retaining any other existing CI flags. This checks manifest/lockfile dependency consistency and installs the locked dependency graph without regenerating the lockfile. If installation fails, stop and investigate; do not regenerate the lockfile merely to make validation pass.
+3. Run `npm ls --all` to check for missing or invalid dependencies. Compare `git diff HEAD -- package.json package-lock.json` with the pre-install diff and confirm that installation introduced no manifest or lockfile changes.
+4. Run the package checks named below and record the commands and results before committing.
 
 1. **Generate from a clean install.** Use a fresh checkout of the revision to be tested, with no existing `node_modules` in `tools/hdwallet-gen`. From the repository root, use CI’s current install options:
 
@@ -1092,7 +1099,7 @@ Bawa does not document a lockfile-specific validation procedure. Confirm the Nod
    npm install --ignore-scripts --no-audit --no-fund
    ```
 
-   **Expected result:** a new `tools/hdwallet-gen/package-lock.json`. If it does not appear, stop and confirm the npm configuration with the maintainer.
+   **Expected result:** the existing, committed `tools/hdwallet-gen/package-lock.json` passes review and validation with `npm ci --ignore-scripts` without being rewritten. Do not regenerate it or expect a new file. If validation fails, stop and resolve the error with the maintainer.
 
 2. **Review the changes.** Stay in that directory. A new, untracked file will not appear in an ordinary Git diff, so stage it for review:
 
@@ -1112,7 +1119,7 @@ Bawa does not document a lockfile-specific validation procedure. Confirm the Nod
 
    `npm ci` uses the lockfile without rewriting it and fails if it disagrees with `package.json`. By contrast, `npm install` may update the lockfile.
 
-Run the maintainer-confirmed checks after that install. Once they pass, commit the lockfile with the tested code, any intentional manifest changes and the CI change to `npm ci`, retaining the existing flags and working directory. This ties the reviewed dependency graph to the revision that was actually tested.
+In `tools/hdwallet-gen`, validate manifest/lockfile dependency consistency with `npm ci --ignore-scripts`, retaining any other existing CI flags. `--ignore-scripts` suppresses installation lifecycle hooks, so review and explicitly perform any required hook-based setup before subsequent checks. Run `npm ls --all` to check the dependency tree. List available scripts with `npm run`, then run the declared test, lint and build checks using `npm test`, `npm run lint` and `npm run build`, respectively, only where those scripts exist; do not count an absent script as a passing check. Review `git diff HEAD -- package.json package-lock.json` against the pre-install diff to confirm there are no installation-induced changes. Once all required checks pass, commit the tested code, any intentional manifest and lockfile changes and the CI change to `npm ci`, retaining the existing flags and working directory. An unchanged committed lockfile needs no new lockfile commit. This ties the reviewed dependency graph to the revision that was actually tested.
 
 ### Sources
 
