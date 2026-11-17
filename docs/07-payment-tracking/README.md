@@ -88,13 +88,13 @@ For free/manual tracking, use Mempool.space and Blockstream Esplora. Treat a hos
 
 For an ERC-20 payment, track the network/chain ID, token contract, `Transfer` event, sender, recipient, amount, transaction hash, log index and block number.
 
-Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and use modern block queries to distinguish `latest`, `safe` and `finalized` views.
+Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and query `eth_getBlockByNumber("latest", false)`, `eth_getBlockByNumber("safe", false)` and `eth_getBlockByNumber("finalized", false)` to obtain the latest, safe and finalized heads. A payment is safe or finalized when its block is on the canonical chain and its block number is at or below the corresponding safe or finalized head.
 
 #### TRON
 
 Use the hosted TRON ecosystem's indexed transaction and event data. For a small application, this often avoids the need to run a full TRON indexer yourself.
 
-Retain the general matching model: network, contract, transaction-event (the specific payment transfer or event within a transaction, rather than the transaction as a whole), recipient, amount and block-finality state.
+Retain the general matching model: network, contract, transaction-event (the specific payment transfer or event within a transaction, identified by transaction hash and log index rather than transaction hash alone), sender, recipient, amount, block reference (block number and hash) and confirmation/finality status.
 
 #### TON
 
