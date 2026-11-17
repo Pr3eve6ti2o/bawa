@@ -538,7 +538,7 @@ python3 test/differential_test.py
 
 > **Expected result:** On success, the check prints "bip_utils reference checks: PASS".
 
-Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence**. Do not substitute it for the Wallet Core side of the comparison (now captured, D31, 2026-11-08).
+Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence** (`test/differential_test.py`, bip-utils 2.12.2), not as Wallet Core evidence. Do not substitute it for the Wallet Core side of the comparison; the D31 artefacts were never supplied.
 
 Limit the claim supported by that line to the comparisons the script actually performed. Do not treat it, by itself, as establishing complete BIP-32/BIP-39 vector coverage, chain coverage, offline operation, reproducibility or security review. Do not change any of those records merely because the reference check passed.
 

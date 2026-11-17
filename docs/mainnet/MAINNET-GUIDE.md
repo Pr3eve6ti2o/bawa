@@ -3498,7 +3498,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 ### M-18 — Etherscan V1 is dead unauthenticated; Etherscan pages are bot-protected
 
-**Question/risk:** The guide’s Etherscan citations at docs/06:287 and docs/06:731 point at a dead endpoint. A reader following them receives an application-level error despite HTTP 200.
+**Question/risk:** The guide’s Etherscan citations at docs/06:366 and docs/06:810 (3019b02) both link to the live Etherscan rate-limits documentation page (`docs.etherscan.io`, HTTP 200), not the deprecated V1 API. Separately, `api.etherscan.io/api?module=proxy&action=eth_blockNumber` returns HTTP 200 with “You are using a deprecated V1 endpoint” (M18 F10, 2026-11-09).
 
 **Affected sections:** §11, §12.
 

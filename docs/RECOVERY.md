@@ -28,7 +28,7 @@ Follow this guide in four parts:
 
 Use recovery to restore access from the mnemonic and its exact BIP-39 passphrase. Recovery cannot recover a lost mnemonic, a lost passphrase or funds already moved.
 
-Live wallet creation and recovery were verified end to end against a live run on 8 November 2026 (V1, pushed head 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
+Live wallet creation and recovery were verified end to end on 8 November 2026 (V1, repair commit e3b65fb8): generation under a real pty, a byte-identical decrypt round trip, and a differential test PASS. Verification was not against pushed head 082f7915, whose JavaScript tools failed `node --check` and on which all three checks failed (derive 9/9, compare 9/9, smoke 28/28). The run exercised decryption at e3b65fb8, which included the symlink-guard hardening. The record establishes no verification run at 754721cd or the audit-time head a5bc56e, and no targeted symlink-guard test. That verifies the procedure, not your backup: do not claim your recovery is tested until you have executed a rehearsal on a clean install and recorded it.
 
 ### Required recovery material
 
