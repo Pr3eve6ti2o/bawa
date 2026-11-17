@@ -405,7 +405,7 @@ After suspected key theft, replace that key in a newly verified policy and move 
 
 ### Cost and when to choose it
 
-The software has no licence or subscription fee; budget for three compatible hardware signers if you use hardware, backup materials and any paid storage; software signers still need genuinely isolated systems; miner fees apply, including rehearsals; multisig spends generally cost more than comparable single-key spends; maintenance and testing also cost time.
+Sparrow and Electrum have no licence or subscription fee; budget for three compatible hardware signers if you use hardware, backup materials and any paid storage; software signers still need genuinely isolated systems; miner fees apply, including rehearsals; multisig spends generally cost more than comparable single-key spends; maintenance and testing also cost time.
 
 Choose this over paid assisted multisig if you can manage separation, policy records and regular recovery tests. Paid help may be worth its fee for setup checks, replacement support or inheritance planning. If a provider holds a key, insist on the full exportable policy and test that your own two keys can recover without that provider.
 ## 12. EVM smart-contract wallets
@@ -432,9 +432,9 @@ Deleting a queued item does not revoke signatures. For normal cancellation, exec
 
 1. **Prepare independent owners.** For example, initialise three separate hardware-wallet signers. Keep each owner's mnemonic backup offline and apart. Record BIP-39 passphrase requirements, the exact derivation path and account/branch. Preserve any required passphrase securely too. Restore each owner separately on trusted spare hardware and compare its address. Erase temporary restored copies afterwards. Never enter these secrets into a multisig website.
 
-2. **Deploy deliberately.** Use the project's verified release or official interface on [network/chain ID]. Select the three checked owner addresses and threshold two. After confirmation, check the contract implementation against [official deployment records](https://github.com/safe-global/safe-deployments) and inspect its owners and threshold through a separate explorer or RPC. Leave optional modules and guards off initially.
+2. **Deploy deliberately.** Select the network and numeric chain ID and verify both through a separate explorer or RPC. Use the project's verified release or official interface on that network. Select the three checked owner addresses and threshold two. After confirmation, check that the contract's implementation address matches an address listed for its version and the selected numeric chain ID in the [Safe safe-deployments repository](https://github.com/safe-global/safe-deployments) and inspect its owners and threshold through a separate explorer or RPC. Leave optional modules and guards off initially.
 
-3. **Write the recovery inventory.** Preserve [chain ID], [Safe address], deployment transaction, owner addresses, threshold, implementation/version, enabled modules, guards, fallback handler and any recovery or upgrade arrangements. Keep dated offline copies and verify them against current on-chain state before recovery. This record is not a signing secret, but it is privacy-sensitive.
+3. **Write the recovery inventory.** Preserve the selected network and numeric chain ID, [Safe address], deployment transaction, owner addresses, threshold, implementation/version, enabled modules, guards, fallback handler and any recovery or upgrade arrangements. Keep dated offline copies and verify them against current on-chain state before recovery. This record is not a signing secret, but it is privacy-sensitive.
 
 4. **Test with little money.** Send a small test amount to the deployed Safe, then propose a transfer out. Collect approvals separately. Have each signer check the chain, Safe address, nonce, destination, asset, amount and decoded calldata, including every batched call and token approval. Execute and check the receipt and balances. Test that your intended apps support contract accounts.
 
