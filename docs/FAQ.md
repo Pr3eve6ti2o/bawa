@@ -129,15 +129,17 @@ Keep the tracker watch-only, holding only an xpub or addresses. Treat these as s
 
 Keep those roles separate in the conceptual PSBT flow:
 
-1. Build a PSBT watch-only.
-2. Verify the recipient and amount on the signing device, then sign separately.
-3. Finalise and broadcast.
+1. The watch-only coordinator normally performs the Creator role by assembling the transaction and the Updater role by attaching the data needed to spend its inputs.
+2. Only the separate signer performs the Signer role: verify the recipient and amount on the signing device, then sign the PSBT.
+3. The coordinator performs the Combiner role to combine returned signed PSBTs as needed, then the Finalizer role to finalise the PSBT and the Extractor role to extract the final transaction.
+4. Before broadcast, verify the finalised transaction's recipient, amount, change and fee against the independent record of the intended payment.
+5. The coordinator requests broadcast of the verified transaction from a node.
 
 See [Signing & hardware](09-signing-and-hardware/README.md).
 
 ### Can I build a wallet app from Bawa?
 
-Use Bawa as a development reference, not a ready-to-use wallet app. Use its examples to generate a wallet on a trusted computer, derive public addresses without the seed and check results against an independent implementation.
+Use Bawa as a development reference, not a ready-to-use wallet app. Use Bawa's wallet-generation examples for BTC, ETH, TRX and TON to generate wallets on a trusted computer. Use the watch-only address-derivation examples for BTC, ETH and TRX to derive public addresses without the seed; TON is generation-only. Check the derived BTC and ETH addresses against an independent implementation.
 
 Rely on Wallet Core for derivation and signing, not for connections to blockchain networks. Provide access to your own node or an external provider, code for balances and past transactions, transaction construction, an interface, backup procedures and a security review.
 
