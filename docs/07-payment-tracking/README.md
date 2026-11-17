@@ -426,11 +426,11 @@ Set QR error correction explicitly to M (ISO/IEC 18004). Do not rely on an encod
 
 | Field | Meaning | When missing |
 | --- | --- | --- |
-| Network | Chain on which payment is expected. | Reject — do not infer the network from an address or wallet setting. |
+| Network | Chain on which payment is expected. | Accept omission only when authoritative invoice or merchant configuration explicitly fixes the expected network (Nile in the example above); otherwise reject. Do not infer it from an address or incidental wallet defaults. Confirming that the sending wallet is configured for Nile verifies that it matches the required network; it does not establish that requirement. |
 | Asset | Native currency or specific token expected. | Reject — do not assume the chain's native currency. |
 | Recipient | Destination that must receive the funds. | Reject — do not substitute a default wallet address. |
 | Amount in atomic units | Quantity in the asset's smallest units. | Reject — do not derive it from a balance or accept an arbitrary amount. |
-| Memo/tag where supported | Chain-specific routing/reference information. | Reject omission. For unsupported chains, represent “not applicable” explicitly in your model. Where supported, define whether an explicit empty value is allowed. |
+| Memo/tag where supported | Chain-specific routing/reference information. | Omission from the QR does not establish that the chain lacks memo/tag support. Represent “not applicable” explicitly in your model only when the chain is known not to support it. Where supported, require an explicit value in the payment model: accept an empty string (`""`) only when authoritative recipient/invoice configuration confirms that no memo/tag is required for this payment; otherwise require a non-empty value. Reject omission from the model. |
 | Expiry | Time limit for satisfying the request. | Reject — do not interpret absence as unlimited validity. |
 | expected decimal precision | For token payments, record the expected decimal precision, verified under the shared identity policy. | Reject — do not accept a token payment without the expected decimal precision, verified under the shared identity policy. |
 
