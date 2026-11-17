@@ -660,11 +660,11 @@ Bawa documents endpoint/network mapping, but does not document tracking-specific
 
 Keep tracking read-only. Aim for $0 running costs, but check the provider’s current quotas and prices. Do not assume guaranteed uptime or lasting free access.
 
-For a polling-only setup, try one cycle per network every 60 seconds. Treat this as a starting point, not a quota guarantee. Avoid overlapping cycles, count every request they make and lengthen the interval to fit your allowance. Use the same approach for Esplora services without subscriptions.
+For a polling-only setup, try one cycle per network every 60 seconds. This interval is this guide's starting-point policy, not a sourced requirement or a quota guarantee. Avoid overlapping cycles, count every request they make and lengthen the interval to fit your allowance. Applying the same approach to Esplora services without subscriptions is also this guide's starting-point policy, not a sourced requirement.
 
 On HTTP 429, pause that provider’s queue. Use capped exponential backoff with jitter, but never wait less than `Retry-After` specifies. Try a limit of three retries per cycle; once exhausted, defer further work. Make scheduled polls respect the same cooldown rather than resetting it.
 
-On EVM networks, prefer WebSocket `eth_subscribe` streams for `newHeads` and relevant `logs` where supported. Reserve `eth_blockNumber` checks for times when subscriptions cannot be used. Treat events as best-effort notifications, not durable history. After every reconnect, verify the stored chain view, fetch missed ranges and reconcile before marking the dashboard current.
+For geth-backed connections, prefer WebSocket `eth_subscribe` streams for `newHeads` and relevant `logs` where supported. Reserve `eth_blockNumber` checks for times when subscriptions cannot be used. Treat events as best-effort notifications, not durable history. After every reconnect, verify the stored chain view, fetch missed ranges and reconcile before marking the dashboard current.
 
 For `eth_getLogs`, use short block windows and the relevant contract-address filter. If a window is rejected for size, split it instead of repeating a broad scan.
 
