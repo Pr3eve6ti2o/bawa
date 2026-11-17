@@ -359,7 +359,7 @@ Show the mnemonic once, offline. For creation, use the single reveal described i
 
 Require the user to re-enter the entire mnemonic from their saved copy using protected entry: all words, in their original order, at the mnemonic's permitted length (12, 15, 18, 21, or 24 words). Ask the user to consult that copy rather than rely on memory. Compare every entered word with the corresponding position in the generated or imported mnemonic. Accept backup confirmation only when the entered mnemonic has the same length as the generated or imported mnemonic and all words match in order. Do not accept selected words, a partial match or a tick-box acknowledgement.
 
-On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all 24 words match in order.
+On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all words of the mnemonic match in order at its permitted length (12, 15, 18, 21 or 24 words).
 
 After the user explicitly confirms, persist the confirmed backup status, clear temporary buffers and lift the backup-pending gate.
 
@@ -373,7 +373,7 @@ Do not let dismissing the warning change backup status. Retain a clear **Resume 
 > - One offline phrase reveal per creation attempt, with no repeat reveal on retry.
 > - Masked, editable input for invalid imports, with confirmation disabled and no imported wallet committed.
 > - Backup-pending status preserved after mismatches, skips, navigation and restarts.
-> - Removal of the backup-pending gate only after full, ordered 24-word re-entry and explicit confirmation, followed by temporary-buffer clearing.
+> - Removal of the backup-pending gate only after full, ordered re-entry of the entire mnemonic at its permitted length (12, 15, 18, 21 or 24 words) and explicit confirmation, followed by temporary-buffer clearing.
 
 ### Receive
 
@@ -383,11 +383,11 @@ Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The
 
 ### Send and Review
 
-Collect the recipient, asset and amount in Send. Estimate fees and prepare a reviewable action, not a signature. Present the collected values and estimated fees in the required Review state within Send. Do not treat action preparation or entry into Review as signing.
+Collect the recipient, asset and amount in Send. Estimate fees and prepare a reviewable action, not a signature. Present the sender, recipient, asset, amount, chain, network and estimated fees in the required Review state within Send. Do not treat action preparation or entry into Review as signing.
 
 ### History, empty and locked states
 
-Distinguish pending, included, confirmed, failed and replaced transactions in Transaction history and Transaction details. Keep included and confirmed visibly distinct.
+Distinguish observed, pending, included, confirmed, failed, replaced and reorged transactions in Transaction history and Transaction details. Keep included and confirmed visibly distinct. Transition from included to confirmed only when the chain-specific confirmation threshold set by application policy is met. Record included -> reorged and confirmed -> reorged when a transaction drops out of the canonical chain, and reorged -> observed when it is observed again. Even a transaction that looked confirmed can drop out.
 
 Provide explicit empty states when there are no assets or transactions to display.
 
