@@ -1617,7 +1617,7 @@ These are code-level capabilities, not evidence of a completed send. The Android
 |---|---|---|
 | BTC | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a BTC transaction. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
 | ETH | `EthSendComposer.kt` supports native ETH transfers only, with sending conditional on the `chainId` port. No ERC-20 transfers, contract calls or data payloads. | Transfer-only code with a fixed gas limit of `21000`. This is not a general contract-call or token-send path. |
-| TRX | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a TRX transaction. | The TRX path supports native TRX only. In `tx.js`, `signTrx` builds a transfer contract with `feeLimit` hardcoded to **1,000,000 SUN (1 TRX)**. There is no TRC-20 send path and no pre-send resource check. |
+| TRX | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a TRX transaction. | The TRX path supports native TRX only. In `tx.js`, `signTrx` builds a transfer contract with `feeLimit` hardcoded to **1,000,000 SUN (1 TRX)**. `feeLimit` is an energy-fee budget for smart-contract execution, not the cost of a native TRX transfer or a cap on total transaction fees. Native TRX transfers consume bandwidth rather than energy; applicable bandwidth and account-activation fees are not capped by this setting. There is no TRC-20 send path and no pre-send resource check. |
 | TON | Signing is refused: “TON signing is unimplemented in this build”. The Send screen reports “not implemented”. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
 
 The Web broadcast paths are testnet submission implementations. HTTP 200 probes on **2026-11-09** confirmed mainnet endpoint reachability only: no transaction was submitted and no funds moved. The TRX `feeLimit` is a hardcoded limit, not an observed fee or a resource estimate.
@@ -1660,7 +1660,7 @@ The confirmation thresholds below are Android draft configuration in `NetworkCon
 | Chain | Android configured confirmations | Web `reconcileTx` behaviour |
 |---|---:|---|
 | BTC | 6 | Checks `getTx(txid)` and its confirmed flag. |
-| ETH | 12 | Checks `eth_getTransactionReceipt` for status `0x1`. |
+| ETH | 12 + canonical finalised inclusion | Requires `eth_getTransactionReceipt` status `0x1`, at least 12 confirmations, and canonical finalised inclusion: the receipt’s `blockHash` must match the canonical block at its height, and that height must be at or below the `finalized` head. |
 | TRX | 19 | No txid lookup adapter: “stays pending, manual refresh”. |
 | TON | 1 | Checks history for the txid. |
 
