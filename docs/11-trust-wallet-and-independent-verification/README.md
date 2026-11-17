@@ -408,7 +408,7 @@ If no compatible independent implementation is documented, describe any publishe
 
 ### Negative and security testing
 
-Work in a disposable directory, away from live wallets. Use published [BIP-32 vectors](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#test-vectors), [BIP-39 reference tests](https://github.com/trezor/python-mnemonic/tree/master/tests) and [NIST AES-GCM vectors](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes#GCMVS), plus published recovery fixtures in the supported format. Use published invalid vectors where available; otherwise corrupt disposable copies without generating new secrets. Obtain replacement credentials only from published vectors. Never print secret fields.
+Work in a disposable directory, away from live wallets. Use published [BIP-32 test vectors](https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0032.mediawiki#test-vectors), [BIP-39 reference tests](https://github.com/trezor/python-mnemonic/tree/master/tests) and [NIST AES-GCM vectors](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes#GCMVS) as recovery fixtures, in the formats those publications use. Use published invalid vectors where available; otherwise corrupt disposable copies without generating new secrets. Obtain replacement credentials only from published vectors. Never print secret fields.
 
 Cipher vectors alone do not verify recovery-file handling. Mark cases without compatible published fixtures **not run**.
 
