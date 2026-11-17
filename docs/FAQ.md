@@ -1,7 +1,7 @@
 ---
 title: Frequently asked questions
 description: Short answers to the questions readers ask most often about Bawa, derivation, tracking, signing, security and recovery; testnet only.
-last-updated: 2026-11-08
+last-updated: 2026-11-17
 ---
 
 # Frequently asked questions
@@ -30,9 +30,9 @@ Reference. Each answer is short; the linked section carries the detail.
 
 Start with [Fundamentals](01-fundamentals/README.md), then read [Chain Guides](02-chains/README.md) and the [Tool & Repository Map](03-tools-and-repositories/README.md) before moving on to [Wallet Generation](04-wallet-generation/README.md). Choose only the READMEs you need, each is organised around a job.
 
-**Work with testnet wallets only. Mainnet is absent from this guide set.**
+**For guides 01–16, work with testnet wallets only. Mainnet is documented separately in `docs/mainnet/MAINNET-GUIDE.md`.**
 
-Use Bawa as an HD-wallet reference to generate wallet material on a trusted machine, derive public addresses without the seed (the 64-byte BIP-39 derived value), verify with an independent implementation and recover encrypted seed material from a seed bundle (the encrypted seed.enc.json file).
+Use Bawa as an HD-wallet reference to generate wallet material on a trusted machine, derive public addresses without the seed (the 64-byte BIP-39 derived value), verify with an independent implementation and use `decrypt_seed.py` to recover the mnemonic from the encrypted seed bundle (`seed.enc.json`), not the 64-byte seed directly.
 
 ### Can an xpub recover my wallet?
 
