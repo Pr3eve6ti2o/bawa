@@ -270,7 +270,7 @@ There is a post-rename crash window: after the seed bundle is renamed into place
 | TRON | trx_xpub | XPUB_TRX | Public root |
 | TON | ton_address | TON_DEPOSIT_ADDRESS | Configured TON address |
 
-**Launch guards.** `make_wallet.py` captures only the generator’s public JSON stdout. Seed material in that stream causes a refusal, as does any failed self-check. Before writing public material, it checks that the seed bundle exists with mode exactly `0600`. A failed guard must stop the write. Do not treat a startup message as evidence that these checks passed.
+**Launch guards.** `make_wallet.py` captures both the generator’s stdout and stderr via `capture_output=True`; only stdout is parsed as JSON (`json.loads(proc.stdout)`). Stderr is captured but suppressed on failure. Seed material in stdout causes a refusal, as does any failed self-check. Before writing public material, it checks that the seed bundle exists with mode exactly `0600`. A failed guard must stop the write. Do not treat a startup message as evidence that these checks passed.
 
 **Missing-terminal refusal.** The disposable check directed `NOVA_SECRETS_DIR`, `BAWA_ENV_FILE` and `BAWA_BACKUP_DIR` into a disposable directory, with stdin from `/dev/null`. It printed these startup lines, quoted verbatim including the legacy wording:
 
@@ -287,7 +287,7 @@ wallet-core generation failed; stderr suppressed
 
 The cause was confirmed: stdin was not a terminal and `/dev/tty` could not be opened. `generate.js` refused at its first step, exactly as intended. Those startup lines did not mean a wallet had been created.
 
-No `seed.enc.json`, `.env` or backup directory was created. Only an empty secrets directory at `0700` remained. The disposable directory was then deleted. **No live wallet was created [in this scratch run].** Live wallet creation has since been performed end to end on the pushed head (2026-11-08, under a real pty; see README §18).
+No `seed.enc.json`, `.env` or backup directory was created. Only an empty secrets directory at `0700` remained. The disposable directory was then deleted. **No live wallet was created [in this scratch run].** Live wallet creation has since been performed end to end on the pushed head (2026-11-08, under a real pty; see `docs/README-FULL.md` §18).
 
 **Existing-wallet refusal.** This protects an existing wallet against replacement; it is not a housekeeping error. Stop and check which wallet location you selected. Do not delete or rename wallet files to make generation run. Keep the existing wallet and its backups intact, and use a separate disposable location for a fresh test.
 
