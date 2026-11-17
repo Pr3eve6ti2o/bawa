@@ -60,7 +60,7 @@ Appendix. UI templates (pointer)
 
 This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa`, with repair commit `e3b65fb8` as the procedural and code baseline and `56396a20` only as the historical documentation snapshot). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
 
-Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (README §§18–19).
+Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (docs/README-FULL.md §19, line 1264).
 
 The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethereum `m/44'/60'`, TRON `m/44'/195'` and TON `m/44'/607'`. The testnet4 derivation deviation disappears on mainnet; do not “fix” the Bitcoin mainnet path to `m/84'/1'`.
 
@@ -109,7 +109,7 @@ The risks apply throughout the wallet workflow:
 
 Never use transaction history as an address book. Use this full-address verification procedure for every destination:
 
-1. Establish the **full intended recipient address** from a verified source outside transaction history. Retain that original source as the comparison reference.
+1. Establish the **full intended recipient address** from a verified source outside transaction history. Retain that original source as the comparison reference. Before trusting any source, including an address-book entry, authenticate it by confirming the full destination’s binding to the intended recipient directly with that recipient through a second, independent channel; a successful test payment does not establish that binding.
 2. After pasting, compare the **entire pasted address** against the original verified reference. Require a full-string match, not an endpoint match.
 3. On the signing display, before confirmation, compare the **entire destination** against that same original verified reference — not merely against the pasted copy.
 
@@ -218,7 +218,7 @@ For **US federal income tax**, the IRS states: “The Internal Revenue Code and 
 
 This guide gives no fixed retention period. Check your local retention rules and keep records.
 
-> **Warning** If a transaction is missing from your log, add its details and retain the records. For US federal tax, leaving gaps risks tax under-reporting. Without the necessary records, you cannot prove basis, cannot prove holding period, and cannot answer a tax enquiry. This loss mode follows from the US IRS record-keeping standard above — direct; checked 9 November 2026.
+> **Warning** If a transaction is missing from your log, add its details and retain the records. For US federal tax, leaving gaps risks tax under-reporting. Record gaps can contribute to reporting errors and make it difficult or impossible to substantiate basis, holding period, or other return positions if sufficient evidence cannot be obtained. This loss mode follows from the US IRS record-keeping standard above — direct; checked 9 November 2026.
 
 ### Sanctions and AML — US only
 
@@ -228,7 +228,7 @@ This guide gives no fixed retention period. Check your local retention rules and
 
 The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations carry **strict liability**: penalties are possible even without knowledge or intent.
 
-> **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or seized funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
+> **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or blocked funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
 
 Neither an SDN List check nor following this guide’s checks is presented here as sufficient for US OFAC compliance.
 
@@ -2403,7 +2403,7 @@ Neither substitutes for the other. Comparing every character against a poisoned 
 
 Use this procedure for each payment:
 
-1. **Establish the recipient outside history.** Obtain the intended recipient’s full destination from a verified source outside transaction history. Keep that original source available throughout the payment. Do not use a recent-transaction entry to choose or reselect the recipient.
+1. **Establish the recipient outside history.** Obtain the intended recipient’s full destination from a verified source outside transaction history. Keep that original source available throughout the payment. Do not use a recent-transaction entry to choose or reselect the recipient. Before trusting any source, including an address-book entry, authenticate it by confirming the full destination’s binding to the intended recipient directly with that recipient through a second, independent channel; a successful test payment does not establish that binding.
 2. **Check after pasting.** Compare the entire pasted destination with the original verified source, character by character—not just the first and last characters.
 3. **Check on the signing display.** Before authorising the payment, compare the full destination shown for signing with the original verified source. Comparing it only with the pasted text is not enough.
 4. **Repeat for the main payment after any test.** Check its full destination again after pasting and on the signing display. Continue using the original verified source; do not return to history to select the recipient.
