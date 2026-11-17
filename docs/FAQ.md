@@ -60,7 +60,7 @@ Before relying on your backups:
 
 1. Write them offline.
 2. Keep **2 to 3 separated copies**. Never digitise them or share them with support.
-3. Test a restore with a tiny testnet amount.
+3. Test the restore on testnet with a fresh test wallet (never fund the published fixtures).
 
 See [Chain Guides](02-chains/README.md) and [Operations & Testing](10-operations-and-testing/README.md).
 
@@ -174,7 +174,7 @@ Treat mainnet as out of scope: it is absent from this guide set, and passing the
 
 Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the network of the destination address, RPC endpoint and explorer. For EVM networks, also verify the chain ID, network name and native currency, since the same address can appear on several networks.
 
-When checking a backup restore, use a tiny testnet amount, not real funds.
+When checking a backup restore, use testnet coins, not real funds.
 
 ### Why do two wallets show different addresses for the same seed?
 
