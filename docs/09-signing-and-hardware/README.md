@@ -175,10 +175,13 @@ broadcast node / RPC (watch-only side)
 ## Primary references
 
 - [BIP-174 / PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
-- [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)
+- [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) (Taproot-only; not used in this SegWit v0 flow)
+- [BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)
+- [BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki)
+- [BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki)
 - [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md)
 - [Bitcoin Core PSBT](https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md)
-- [Trezor](https://github.com/trezor/trezor-firmware)
+- [Trezor](https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md)
 ## Watch-only hand-off: descriptors and PSBT
 
 **Conceptual only, testnet/signet/regtest; never real funds.**
@@ -198,7 +201,7 @@ Bawa does not ship a device integration. This flow follows the descriptor and PS
 
 Descriptor handling must preserve the tracker’s xpub/address-only boundary.
 
-BIP-380/381/382 define the descriptor rules. For native SegWit on testnet, the receiving and change patterns are:
+[BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)/[BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki)/[BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki) define the descriptor rules for this SegWit v0 flow. [BIP-386](https://github.com/bitcoin/bips/blob/master/bip-0386.mediawiki) covers Taproot descriptors and is out of scope for this flow. For native SegWit on testnet, the receiving and change patterns are:
 
 - Receiving: `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
 - Change: `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
