@@ -815,13 +815,13 @@ All service responses, heights and fee figures below are dated observations: **c
 
 Apply the complete mapping, not just the first URL that makes a request work.
 
-| Testnet URL fragment | Mainnet replacement | Occurrences in the replacement inventory |
-|---|---|---:|
-| `ethereum-sepolia-rpc.publicnode.com` | `ethereum-rpc.publicnode.com` | 8 |
-| `nile.trongrid.io` | `api.trongrid.io` | 6 |
-| `mempool.space/testnet4/api` | `mempool.space/api` | 5 |
-| `eth-sepolia.blockscout.com/api/v2` | `eth.blockscout.com/api/v2` | 5 |
-| `testnet.toncenter.com/api/v2` | `toncenter.com/api/v2` | 4 |
+| Testnet URL fragment | Mainnet replacement | Exact full-URL occurrences | Substring-line occurrences |
+|---|---|---:|---:|
+| `ethereum-sepolia-rpc.publicnode.com` | `ethereum-rpc.publicnode.com` | 11 | 11 |
+| `nile.trongrid.io` | `api.trongrid.io` | 10 | 10 |
+| `mempool.space/testnet4/api` | `mempool.space/api` | 10 | 10 |
+| `eth-sepolia.blockscout.com/api/v2` | `eth.blockscout.com/api/v2` | 6 | 6 |
+| `testnet.toncenter.com/api/v2` | `toncenter.com/api/v2` | 9 | 14 |
 
 **Delete, without replacement:**
 
@@ -935,9 +935,9 @@ Treat this as a per-input payment gate, not just an RPC test:
 
 **Stop before creating or approving a signing input** if the chain query fails or differs from `1`, an input check is unresolved, usable fee data is missing, the required independent cross-check cannot be demonstrated, or private signing material is requested. Reject any signed result whose chain ID does not match.
 
-#### Draft edits to review at this revision
+#### Local-only draft edit checklist (not repository state)
 
-Endpoint responses do not prove that these code changes have been made.
+The table below is a local-only draft checklist, not a description of repository state: the referenced `connectivity.js`, `tx.js`, and `app-web` paths do not exist at `56396a20`, as verified by `git ls-tree`.
 
 | Location | Required mainnet edit or behaviour |
 |---|---|
@@ -957,9 +957,9 @@ The mainnet HTTP endpoint is `https://api.trongrid.io`. In the **2026-11-09 chec
 
 The officially listed alternatives were JSON-RPC at `https://api.trongrid.io/jsonrpc` and gRPC at `grpc.trongrid.io:50051` and `grpc.trongrid.io:50052`. **Their liveness was not tested.** TronScan API DNS resolution failed twice from the VM during that check. Those failures were inconclusive: its status is **unverified-from-VM; re-check required**, not a confirmed general outage.
 
-TRON has no chain ID: the signing input carries no network-identifier field. Network binding comes from the **chosen endpoint and the recent block referenced by the transaction**. Both need checking; an address alone cannot establish the network. The derivation path, `m/44'/195'/0'/0/i`, is identical on mainnet and Nile, and a TRX address carries no network tag. A Nile address shown to a mainnet sender is indistinguishable by inspection. Network identity therefore comes from wallet configuration. The QR payload is only the bare T-address; there is no `tron:` URI.
+The **TRON native-transaction schema** carries no network-identifier field in its signing input; this is distinct from the TVM `CHAINID` opcode. The transaction’s recent-block reference is part of the signed data. **Endpoint selection determines which network the client contacts; it is not signed network binding.** Both need checking; an address alone cannot establish the network. The derivation path, `m/44'/195'/0'/0/i`, is identical on mainnet and Nile, and a TRX address carries no network tag. A Nile address shown to a mainnet sender is indistinguishable by inspection. Network identity therefore comes from wallet configuration. The QR payload is only the bare T-address; there is no `tron:` URI.
 
-The activation figures verified in the **2026-11-09 check** were **1 TRX for system-contract creation plus 0.1 TRX for creation-bandwidth**. These are dated figures, not a suggested funding amount. **Who pays, and whether first funding auto-activates an account, were unverified.**
+The **2026-11-09 check** verified **1 TRX for system-contract creation**. Whether an additional **0.1 TRX creation-bandwidth burn** applies depends on **who pays and whether first funding auto-activates an account**, both **unverified** in that check. These are dated figures, not a suggested funding amount.
 
 Before any prospective send, check all five loss modes: **wrong network, wrong address, wrong amount, stuck transaction and theft**. Confirm the wallet’s mainnet endpoint and the recent-block reference. Independently confirm the complete intended recipient T-address, then require a **read-only `wallet/getaccount` check of that recipient on the same mainnet endpoint**. Verify the intended amount and current applicable charges separately; do not turn the dated creation figures into a transfer amount. Require successful fresh reads and an understood recipient account state, and do not repeat a transfer whose outcome is unknown. Keep mnemonics and signing keys out of endpoint requests, explorers and QR tools. **Stop without signing** if the network, recipient, amount, charges, activation requirements or transaction status remain unresolved, or if a service asks for wallet secrets. Do not send funds as a connectivity or activation test.
 
