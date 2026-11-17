@@ -869,7 +869,7 @@ Replay the worked range twice and check that it leaves one accepted event, one c
 
 ### Watcher loop (generic)
 
-Run the background watcher on a 60-second cycle. Give each deposit check its own error boundary. Do not let one bad deposit, failed chain lookup or broken price feed stop the loop or block other deposits. Do not rely on catching errors only around the whole cycle: that can leave the watcher running while it skips the remaining checks after a failure.
+Run the background watcher on a 60-second cycle (see the [bounded back-off polling policy in docs/06](../06-tracking/README.md#L326)). Give each deposit check its own error boundary. Do not let one bad deposit, failed chain lookup or broken price feed stop the loop or block other deposits. Do not rely on catching errors only around the whole cycle: that can leave the watcher running while it skips the remaining checks after a failure.
 
 Visit these four branches in this order on every cycle:
 
