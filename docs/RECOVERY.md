@@ -112,11 +112,15 @@ If no independent original public output is available, recover that evidence bef
 
 Use a clean operating system from trusted installation media, together with a Bawa checkout and dependencies you have checked. Do not treat restoration of an old wallet directory or an entire old home directory as a clean recovery test.
 
+“Dependencies you have checked” means completing the **locked-dependency integrity check**: verify the checkout revision and its lockfile against an independently trusted release reference; install the lockfile's exact direct and transitive dependencies in a new isolated environment with artifact-hash verification enabled; compare the installed package list and versions with the lockfile; and run the checkout's documented tests. Keep a secret-free local record of the revision, lockfile digest, installed versions, hash-check results and test exit status. If a complete, trusted pin-and-hash set is unavailable, or any check fails, stop before introducing secret material.
+
 Complete software installation before introducing secret material. Where the tooling permits, perform secret recovery and public-address derivation offline.
 
 Use a private local terminal without session recording or shell tracing. Keep recovery work out of synchronised folders, screenshots, shared logs and support tickets. Avoid clipboard history and other facilities that retain secret input. Never paste a real mnemonic or data key anywhere.
 
 Start with fresh wallet state. Ensure that no previously loaded mnemonic, seed or extended public key can supply the addresses used in the test.
+
+For this test, start Bawa under a disposable OS account or VM with its own newly created, empty wallet-data directory, configuration, cache and credential store. Do not restore old state or attach an existing wallet store. Before recovery, confirm that no wallet or keys are loaded and that address derivation fails specifically for lack of key material; an automatically generated seed also fails this check. Recover only the intended material into that store. To establish address provenance, derive a verification address directly from the recovered mnemonic or seed in a second empty instance, without importing an extended public key or cached addresses. Use the recorded network, derivation path and index, and require a match with both the recovered wallet's address and a trusted, independently retained pre-loss address for those same derivation settings. Record only the public address, derivation settings and pass/fail result. A failed isolation or comparison check invalidates the test.
 
 > **Expected result:** A known software environment with fresh wallet state and no recording or synchronisation configured to capture secret input or terminal output.
 
