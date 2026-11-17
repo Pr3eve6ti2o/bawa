@@ -3206,13 +3206,13 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5273); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/test/smoke.test.js).
 
-### M-02 — Bad-checksum inputs bypass the private-key guard; a typo can trigger a multi-gigabyte allocation
+### M-02 — Bad-checksum inputs and the private-key guard
 
-**Question/risk:** `isPrivateExtendedKey` returns `false` on checksum failure. A bad-checksum `zprv` therefore reaches Core and aborts opaquely. A bad-checksum ETH `xpub` makes WASM attempt an allocation of approximately 2.6 GB before aborting. A `false` result from this guard is not proof that the input is public.
+**Question/risk:** `isPrivateExtendedKey` returns `false` on checksum failure. At `a5bc56e`, validation in `extended-key.js:111`, `extended-key.js:200` and `extended-key.js:249` rejects a bad-checksum `zprv` before WASM, so it does not reach Core or abort opaquely. No approximately 2.6 GB WASM allocation for a bad-checksum ETH `xpub` is established at `a5bc56e`. A `false` result from this guard is not proof that the input is public.
 
 **Affected sections:** §8 and §9.
 
-**Evidence or uncertainty:** M04 F8 records the behaviour reproduced twice. M04 F9 identifies `derive.js:39–56`: the checksum check at lines 50–53 returns `false` before the version-byte check. See also M04 F10. The ‘explicit rejection’ framing for the bad-checksum vector at `docs/11:248` is wrong and must not be carried into this guide.
+**Evidence or uncertainty:** M04 F8 records the behaviour reproduced twice. M04 F9 describes the checksum check returning `false` before the version-byte check; that logic moved from `derive.js` to `extended-key.js` in `e3b65fb8` and resides there at `a5bc56e`, while `derive.js:39–56` now covers stdin and index validation. See also M04 F10. The error in the bad-checksum vector’s framing at `docs/11:248` is its private-key attribution, not its description of the rejection as explicit; that attribution must not be carried into this guide.
 
 **Status:** OPEN.
 
