@@ -59,8 +59,8 @@ Treat “free” as a description of the tooling and the absence of a service me
 
 Keep responsibility for the remaining work:
 
-- **Set-up and checking.** Configure the arrangement and verify it independently. Do not treat a successful installation as proof that generation, derivation and signing work as intended.
-- **Backups and recovery tests.** Make backups, rehearse recovery and work through the loss of one backup. Include instructions your heirs can use without relying on your memory.
+- **Set-up and checking.** Configure the arrangement and verify it independently. Seeds must not be exposed to an online coordinator. The independent checks must cover wallet metadata, any seed passphrase and key-loss scenarios for each signing threshold. Do not treat a successful installation as proof that generation, derivation and signing work as intended.
+- **Backups and recovery tests.** Make backups, rehearse recovery and work through the loss of one backup. Rehearse the loss of one key at each signing threshold, checking whether signing and recovery remain possible. Include instructions your heirs can use without relying on your memory.
 - **Theft and shared failures.** Check what an attacker could do with one stolen seed or device. Consider a compromised computer separately from a firmware flaw affecting one vendor’s devices. Do not count several devices as independent protection merely because they are separate devices.
 - **Phishing.** Keep checking the transaction you are being asked to approve, even when the request looks familiar or urgent.
 
