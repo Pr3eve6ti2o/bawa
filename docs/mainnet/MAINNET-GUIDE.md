@@ -4135,7 +4135,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 | 3. Stuck-transaction recovery: no replace/cancel/RBF procedure for any chain, no primary sources | m17 O3 | OPEN — carried as M-28. |
 | 4. Criteria for retrying after a broadcast timeout; TRX manual txid investigation procedure | m17 O5 | OPEN — carried as M-28. |
 | 5. No “larger amounts” direction exists in §13; no threshold is defined | m17 O6 | OPEN — §13 contains no larger-amounts hardware-signing or PSBT recommendation. |
-| 6. History classification criteria partial (failed / replaced / dropped, fee presentation, reorg rewind) | m17 O4 | OPEN — needs sourced chain-specific criteria + a testnet reorg demonstration. |
+| 6. History classification criteria partial (failed / replaced / dropped, fee presentation, reorg rewind) | m17 O4 | OPEN — needs sourced chain-specific criteria, including reorg rewind; the specific requirement for a testnet reorg demonstration is unverified. |
 | 7. Send-screen checklist implementation status unverified (full-address comparison, smallest-unit and balance validation, change ownership, freshness, decoded-transaction review) | m17 O8 | OPEN — needs a UI-by-UI audit of the Web draft Send screen. |
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
 | 9. Mainnet endpoints need live re-verification at guide-writing time (`mempool.space/api`, PublicNode mainnet RPC, Blockscout mainnet, `api.trongrid.io`, `toncenter.com/api/v2`) | m28-OI-02 | OPEN — carried as M-17/M-18/M-19; probe live, do not copy testnet values. |
