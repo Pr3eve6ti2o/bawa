@@ -2458,7 +2458,7 @@ A password change does not rotate the wallet’s keys. If keys have been disclos
 
 ##### Fake wallet apps and extensions
 
-A store listing is not authentication. A counterfeit client can capture wallet material you import **or create within it**, or redirect deposits. Reinstalling the genuine app cannot recover funds already transferred.
+A store listing is not authentication. A counterfeit client can capture wallet material you import **or create within it**, or redirect deposits. Reinstalling the genuine app cannot reverse transfers to an address you do not control; funds that remain at an address you still control may be recoverable by restoring access through a genuine client.
 
 First establish the exact URL of the maker’s canonical site or repository through an independently authenticated channel; use that authenticated source as the trust anchor. Follow its official download or store links, then check the publisher, package identity and requested permissions. Before installing, authenticate the exact artifact using verification material obtained from that trust anchor: verify its signature against the maker’s authenticated signing key where a signature-verification process exists, or compare its digest with an authenticated release digest. A valid signature from an unknown signer is insufficient. If the artifact cannot be authenticated, do not install it. Do not treat availability in an app or extension store as a replacement for these checks.
 
@@ -2468,11 +2468,11 @@ Never import a mainnet mnemonic merely to test an unfamiliar app or extension. T
 
 Payment-first giveaways, “double your coins” promises and pay-to-claim messages are scams. If a supposed claim, unlock or support process requires you to send funds first, do not pay: following that instruction transfers funds to the scammer.
 
-A legitimate wallet or support route never requires a payment to claim or unlock funds.
+Apart from genuine gas or protocol fees and repayment of secured debt, a claim, unlock or support process demanding payment first is a scam.
 
-#### Seed words: four legitimate moments
+#### Seed words: examples of legitimate handling
 
-Seed words belong in four moments, and nowhere else:
+The following are examples of legitimate contexts for handling seed words; the list is not exhaustive, and some contexts overlap:
 
 1. **Generation** — when the verified wallet generates them.
 2. **Offline backup recording** — recording those words in your offline backup.
