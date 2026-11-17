@@ -955,7 +955,7 @@ MPC [key shares across participants]
 
 ### Check the protection and its limits
 
-With a threshold above one and genuinely separate signers (so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
+With a threshold above one and genuinely separate signers (each with independent control and authorisation, so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if the remaining keys satisfy the complete spending policy, including required roles. Provider checks may offer another chance to catch a bad payment.
 
 A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
 
@@ -975,9 +975,9 @@ Two employee approvals in a portal do not necessarily represent two independentl
 Before funding:
 
 - Confirm the exact chain, asset, threshold and key holders.
-- Expect identity checks and, where required, business and authorised-signatory checks.
+- Identity checks and, where required, business and authorised-signatory checks may apply, depending on the provider, service, customer and jurisdiction.
 - Agree signing delays, transaction limits, recovery responsibilities and exit terms.
-- Generate user-controlled keys independently, keep recovery secrets offline and out of this repository, and start with a small test balance.
+- Generate user-controlled keys independently where supported by the architecture and provider, keep recovery secrets offline and out of this repository, and start with a small test balance.
 
 Have each signer verify the payment independently rather than merely approve a notification.
 
