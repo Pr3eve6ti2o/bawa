@@ -260,6 +260,14 @@ Treat extended public keys as **sensitive public material**. Export the least yo
 
 Your invoice service may need only a receiving-branch key where the wallet supports it. That export cannot monitor change, so do not label its total as the whole account balance.
 
+### BitBoxApp: display and export an account key
+
+1. In the BitBoxApp, select the account, open **Account info**, and choose **View account details**.
+2. Check the account name and **Script type**. Native SegWit and Taproot have separate keypaths and exports; use **View Taproot** / **View Native Segwit** to display the one you intend to import.
+3. Where an **Extended public key** field and a **Verify on device** button are shown, choose **Verify on device**. Compare the entire key on the BitBox with the app’s field. Confirm on the device only if the full key matches.
+4. Prefer the complete **Descriptor** when the receiving software supports it. Taproot offers a descriptor only, with no separate **Extended public key** field.
+5. Copy the chosen value with its copy icon (or scan its QR code), then paste the whole value into the receiving software’s import field.
+
 ## 9. Gap limits, branches and address-mismatch diagnosis
 
 Keep three jobs separate: calculating an address, assigning it to a payment and finding its history during a scan.
