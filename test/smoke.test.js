@@ -5,7 +5,9 @@
 // - The three account xpubs below are the extended PUBLIC keys derived from
 //   the repo's own published test-vector mnemonic (the same vector shipped in
 //   tools/hdwallet-gen/generate.js and test/differential_test.py). No
-//   mnemonic, seed, or private key appears in this file.
+//   mnemonic or seed appears in this file. The private extended keys below
+//   (TV1_XPRV, ZPRV, TV5_BAD) are published BIP-32 test vectors used only
+//   as negative inputs that must be rejected, never for funds.
 // - Every expected address was verified against TWO independent
 //   implementations: Trust Wallet Core (WASM) and Python bip_utils 2.12.2.
 //   BTC/ETH index 0 match the repo's published fixtures; index 1 and both

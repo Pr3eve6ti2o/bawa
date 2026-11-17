@@ -25,9 +25,11 @@ Expected output:
 Route: Create an HD Cryptocurrency Wallet
 Kind: [EXISTING TOOL]
 Details: python3 tools/make_wallet.py
-Command: python3 tools/make_wallet.py
 Runs with inherited stdio; exact YES confirmation is required.
+Command (shown, not executed): python3 tools/make_wallet.py
 ```
+
+`--route` selects and prints a route without executing its command. If no route matches, the launcher prints `No route matched for: <request>`, then the main menu, and exits with status 2.
 
 ### Why this exists — and when not to use it
 

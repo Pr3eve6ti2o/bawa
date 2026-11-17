@@ -122,6 +122,24 @@ def main() -> int:
     if args.output:
         output_dir = os.path.dirname(os.path.realpath(args.output))
         os.makedirs(output_dir, exist_ok=True)
+        # A run killed mid-write can leave a 0600 plaintext seed-*.tmp
+        # behind (the finally cleanup below is bypassed by a kill).
+        # Remove stale temporaries from earlier runs, warning about each.
+        try:
+            for stale in sorted(os.listdir(output_dir)):
+                if stale.startswith("seed-") and stale.endswith(".tmp"):
+                    stale_path = os.path.join(output_dir, stale)
+                    try:
+                        os.unlink(stale_path)
+                        print(
+                            "warning: removed stale plaintext temporary "
+                            f"{stale_path} left by an interrupted run",
+                            file=sys.stderr,
+                        )
+                    except OSError:
+                        pass
+        except OSError:
+            pass
         mode = os.stat(output_dir).st_mode
         if (mode & 0o022) and not (mode & 0o1000):
             raise SystemExit(
@@ -151,6 +169,11 @@ def main() -> int:
         return 0
 
     if args.stdout:
+        print(
+            "warning: recovered mnemonic on stdout — do not copy into chat, "
+            "source control, issues, or logs",
+            file=sys.stderr,
+        )
         print(mnemonic)
         return 0
 

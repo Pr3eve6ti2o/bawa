@@ -14,6 +14,117 @@ Main options:
     5. Security, Recovery and Development
     0. Exit
 
+Command-line flags:
+    --route "<request>"
+        Pass a request on the command line.
+
+    --list-routes
+        Print every route in the following format, with "---" separators
+        between routes, and exit with status 0:
+            Route: <title>
+            Kind: <label>
+            Details: ...
+            Command (shown, not executed): ...
+
+        Kind labels:
+            "tool"      -> "[EXISTING TOOL]"
+            "ai-guided" -> "[AI-GUIDED IMPLEMENTATION]"
+            Any other kind -> "[UNAVAILABLE OR UNVERIFIED]"
+
+    --help
+        Display argparse help listing --route, --list-routes and -h.
+
+--route
+-------
+Selects and prints a matching route without executing its command. The
+command is shown as "Command (shown, not executed): ...", and the launcher
+exits with status 0.
+
+If no route matches, the launcher prints "No route matched for: <request>",
+then prints the main menu and exits with status 2.
+
+Node and timeouts:
+    BAWA_NODE is the environment override for the first Node executable
+    candidate. Candidates are ordered as follows:
+        os.environ.get("BAWA_NODE")
+        /home/boxd/workspace/android-tooling/node22/bin/node
+        shutil.which("node")
+
+    resolve_node selects the first existing executable candidate and
+    version-checks only that candidate. Its version must start with "v22".
+    Later candidates are not checked for a matching version.
+
+    Timeouts:
+        10 seconds: Node version check.
+        120 seconds: run_captured default.
+        300 seconds: wallet-tool tests.
+        600 seconds: one-prompt build and registry starter.
+
+    A subprocess.TimeoutExpired from run_captured is not caught and
+    propagates as an uncaught traceback. Node errors are printed to stderr.
+
+Interactive menu
+----------------
+At the main prompt, enter "0", "q", "quit", or "exit" to quit. The aliases
+"q", "quit", and "exit" are case-insensitive. EOF or KeyboardInterrupt at
+the main prompt prints "Goodbye." and exits with status 0. EOF or
+KeyboardInterrupt at a submenu prompt returns to the main menu.
+
+Submenu choices are letters a-e. Digits 1-5 are also accepted as aliases
+for a-e, respectively.
+
+Unknown choices produce these messages:
+- At the main prompt: "Unknown choice. Please select 0-5."
+- At a submenu prompt: "Unknown choice."
+
+After each submenu action, the launcher pauses with
+"Press Enter to return to the main menu."
+
+Watch-only behaviours
+---------------------
+- On successful derivation, the launcher prints the address unless it contains
+  the xpub or any 20-character window of it. In that case, it prints
+  "(details withheld)" instead.
+- On failure, the launcher prints "Derivation failed (exit code <code>)."
+  followed by the tool's stderr. If stderr contains the xpub or any
+  20-character window of it, it prints "(details withheld)" in place of stderr.
+- The TON handler prints no stderr on failure: it prints only
+  "Derivation failed (exit code <code>).".
+- The launcher offers only btc, eth and trx, always on receiving branch 0;
+  btc-change is not offered. derive.js takes no branch argument and always
+  derives branch 0.
+
+Confirmation and input
+----------------------
+- ask_yes accepts only the exact, case-sensitive input "YES", without case
+  or whitespace changes.
+- Wallet generation asks "Type YES to generate a new wallet", then
+  unconditionally asks
+  "Type YES to force-regenerate and overwrite an existing wallet (--force)".
+  Refusing the first prompt prints "Cancelled.".
+- After the wallet generator runs, the launcher prints
+  "Wallet generator exited with code <code>.".
+  Other handlers print "Exit code: <code>.".
+- In ask_int, a blank answer cancels and returns None. The reprompt text is
+  "Enter an integer from <lo> to <hi>, or leave blank to cancel.".
+
+Build and security behaviours
+-----------------------------
+- The registry starter reads "registry/profiles.json", prints a numbered
+  profile list, and asks for a profile number and an output directory. It
+  passes "--out <dir>" only when a directory is given. If the registry cannot
+  be read or has no profiles, it prints "Registry unavailable in this checkout."
+- The 5b safety-test loop prints one line per tested file:
+  "<filename>: PASS" or "<filename>: FAIL (exit code <code>)".
+  It calls resolve_node() inside the loop; if resolve_node() returns None,
+  the handler returns immediately, aborting the loop rather than continuing
+  with the remaining files. A missing test file prints
+  "<filename>: UNAVAILABLE (missing test infrastructure)" instead.
+- The 4d fee-quote handler prints
+  "[UNAVAILABLE OR UNVERIFIED] Mainnet fee quote", followed by a warning
+  line, before checking for the fee test; when the test file is absent it
+  reports the missing test infrastructure instead of running.
+
 Secret rule: never capture, print, log, or store mnemonics, private keys,
 data keys, xprvs, or recovery credentials. Never include them in requests.
 Wallet creation and seed decryption use inherited stdio; those tools
@@ -45,7 +156,7 @@ NODE_CANDIDATES = [
     if isinstance(candidate, str) and candidate
 ]
 
-CHAINS = {"btc", "eth", "trx", "btc-change"}
+CHAINS = {"btc", "eth", "trx"}
 
 DERIVATION_PATHS = {
     "btc": "m/84'/0'/0'/0/i",
@@ -59,8 +170,6 @@ DOCS = {
     "chains": "docs/02-chains/README.md",
     "verify": "docs/11-trust-wallet-and-independent-verification/README.md",
     "watch_only": "docs/05-watch-only/README.md",
-    "watch_gui": "docs/05-watch-only/GUI-WATCH-ONLY-WORKFLOW.md",
-    "watch_ton": "docs/05-watch-only/TON-WATCH-ONLY-TESTING.md",
     "tracking": "docs/06-tracking/README.md",
     "payments": "docs/07-payment-tracking/README.md",
     "security": "docs/08-security-recovery/README.md",
@@ -74,11 +183,6 @@ DOCS = {
     "web_guide": "docs/web-wallet/WEB-GUIDE.md",
     "android_guide": "docs/android-wallet/ANDROID-GUIDE.md",
     "mainnet_guide": "docs/mainnet/MAINNET-GUIDE.md",
-    "mainnet_guards": "docs/mainnet/MAINNET-GUARDS.md",
-    "index": "docs/index.md",
-    "samples": "docs/sample-requests.md",
-    "builder": "WALLET_BUILDER.md",
-    "pay_schema": "docs/mainnet/payment-record.schema.json",
 }
 
 # Application and TON routes precede broader wallet/watch-only phrases.
@@ -95,7 +199,7 @@ ROUTES = [
             "one prompt",
         ],
         "title": "Build a Cryptocurrency Wallet Application",
-        "kind": "tool",
+        "kind": "unavailable",
         "detail": (
             'node scripts/build-wallet.mjs "<request>"\n'
             "Warning: this runs npm ci and writes under generated/."
@@ -115,7 +219,7 @@ ROUTES = [
     {
         "keywords": ["ton address", "ton watch-only", "ton watch only"],
         "title": "Derive the TON watch-only address",
-        "kind": "tool",
+        "kind": "unavailable",
         "detail": (
             'echo "<64 hex chars>" | node tools/hdwallet-gen/derive-ton.js\n'
             "Supply a 64-hex-character public key only. The launcher passes "
@@ -129,10 +233,11 @@ ROUTES = [
         "kind": "tool",
         "detail": (
             'echo "<xpub>" | node tools/hdwallet-gen/derive.js '
-            "<chain> <index> [branch]\n"
-            "Chains: btc|eth|trx|btc-change; index: 0..2147483647.\n"
+            "<chain> <index>\n"
+            "Chains: btc|eth|trx; index: 0..2147483647. Branch 0 "
+            "(receiving) only; derive.js takes no branch argument.\n"
             "The launcher passes the public xpub via stdin using an argv "
-            "list, without a shell; branch is optional."
+            "list, without a shell."
         ),
         "command": [
             "node",
@@ -144,7 +249,7 @@ ROUTES = [
     {
         "keywords": ["generate starter", "registry profile"],
         "title": "Generate a starter for a registry profile",
-        "kind": "tool",
+        "kind": "unavailable",
         "detail": (
             "node scripts/generate-project.mjs <profile-id>\n"
             "Choose a profile id from registry/profiles.json."
@@ -158,7 +263,6 @@ ROUTES = [
         "detail": (
             f"{DOCS['tracking']}\n"
             f"{DOCS['payments']}\n"
-            f"{DOCS['samples']}\n"
             "No standalone payment-tracker executable exists in this checkout."
         ),
         "command": None,
@@ -179,10 +283,9 @@ ROUTES = [
         "title": "Mainnet fee quote",
         "kind": "unavailable",
         "detail": (
-            "Library-only: tools/mainnet-fees/fees.mjs\n"
-            "Run: node tests/mainnet-fees.test.mjs\n"
-            f"Read: {DOCS['mainnet_guide']}\n"
-            "No standalone mainnet fee-quote executable is available."
+            "No mainnet fee-quote executable, library, or test exists in "
+            "this checkout.\n"
+            f"Read: {DOCS['mainnet_guide']}"
         ),
         "command": None,
     },
@@ -199,15 +302,12 @@ ROUTES = [
         "kind": "tool",
         "detail": (
             "npm --prefix tools/hdwallet-gen test\n"
-            "node tests/mainnet-guards.test.mjs\n"
-            "node tests/mainnet-fees.test.mjs\n"
-            "node tests/mainnet-signing.test.mjs\n"
-            "node tests/mainnet-unsigned-tx.test.mjs\n"
-            "Run each mainnet test separately for per-file pass/fail.\n"
+            "The four mainnet test files (mainnet-guards, mainnet-fees, "
+            "mainnet-signing, mainnet-unsigned-tx) do not exist in this "
+            "checkout.\n"
             "[AI-GUIDED IMPLEMENTATION] No signing/broadcast path exists "
             "in this checkout. M-35 execution is NOT authorised.\n"
-            f"{DOCS['security']}\n"
-            f"{DOCS['mainnet_guards']}"
+            f"{DOCS['security']}"
         ),
         "command": ["npm", "--prefix", "tools/hdwallet-gen", "test"],
     },
@@ -216,9 +316,8 @@ ROUTES = [
         "title": "Custom development request",
         "kind": "ai-guided",
         "detail": (
-            f"{DOCS['index']}\n"
-            f"{DOCS['samples']}\n"
-            f"{DOCS['builder']}"
+            "No index document, sample requests, or builder guide exists "
+            "in this checkout."
         ),
         "command": None,
     },
@@ -287,10 +386,11 @@ def render_submenu(name: str) -> str:
             [
                 "1. [EXISTING TOOL] Derive an address from an xpub",
                 '   echo "<xpub>" | node tools/hdwallet-gen/derive.js '
-                "<chain> <index> [branch]",
-                "   Chains: btc|eth|trx|btc-change; index: 0..2147483647.",
+                "<chain> <index>",
+                "   Chains: btc|eth|trx; index: 0..2147483647.",
+                "   Branch 0 (receiving) only; derive.js takes no branch argument.",
                 "   Public xpub via stdin; argv-based execution, no shell.",
-                "2. [EXISTING TOOL] Derive the TON watch-only address",
+                "2. [UNAVAILABLE OR UNVERIFIED] Derive the TON watch-only address",
                 '   echo "<64 hex chars>" | node tools/hdwallet-gen/derive-ton.js',
                 "   Public key: 64 hex chars, supplied via stdin without a shell.",
                 "3. [EXISTING TOOL] Compare addresses from .env xpubs",
@@ -298,17 +398,15 @@ def render_submenu(name: str) -> str:
                 "4. [AI-GUIDED IMPLEMENTATION] Watch-only setup guide",
                 "   Read:",
                 f"   {DOCS['watch_only']}",
-                f"   {DOCS['watch_gui']}",
-                f"   {DOCS['watch_ton']}",
                 "0. Back",
             ]
         ),
         "3": "\n".join(
             [
-                "1. [EXISTING TOOL] One-prompt project build",
+                "1. [UNAVAILABLE OR UNVERIFIED] One-prompt project build",
                 '   node scripts/build-wallet.mjs "<request>"',
                 "   Warning: runs npm ci and writes under generated/.",
-                "2. [EXISTING TOOL] Generate a starter for a registry profile",
+                "2. [UNAVAILABLE OR UNVERIFIED] Generate a starter for a registry profile",
                 "   node scripts/generate-project.mjs <profile-id>",
                 "   Choose ids from registry/profiles.json.",
                 "3. [AI-GUIDED IMPLEMENTATION] Web wallet starter",
@@ -331,7 +429,7 @@ def render_submenu(name: str) -> str:
             [
                 "1. [EXISTING TOOL] Run the wallet-tool tests",
                 "   npm --prefix tools/hdwallet-gen test",
-                "2. [EXISTING TOOL] Validate the registry",
+                "2. [UNAVAILABLE OR UNVERIFIED] Validate the registry",
                 "   node scripts/validate-registry.mjs",
                 "3. [AI-GUIDED IMPLEMENTATION] Payment / tracking tools",
                 "   No standalone payment-tracker executable exists "
@@ -340,8 +438,7 @@ def render_submenu(name: str) -> str:
                 f"   {DOCS['tracking']}",
                 f"   {DOCS['payments']}",
                 "4. [UNAVAILABLE OR UNVERIFIED] Mainnet fee quote",
-                "   Library only: tools/mainnet-fees/fees.mjs",
-                "   Run: node tests/mainnet-fees.test.mjs",
+                "   No fee-quote library or test exists in this checkout.",
                 "   Read:",
                 f"   {DOCS['mainnet_guide']}",
                 "0. Back",
@@ -352,12 +449,9 @@ def render_submenu(name: str) -> str:
                 "1. [EXISTING TOOL] Decrypt / recover a seed bundle",
                 "   python3 tools/decrypt_seed.py",
                 "   Inherited stdio; the tool prompts for the data key itself.",
-                "2. [EXISTING TOOL] Run mainnet safety tests",
-                "   node tests/mainnet-guards.test.mjs",
-                "   node tests/mainnet-fees.test.mjs",
-                "   node tests/mainnet-signing.test.mjs",
-                "   node tests/mainnet-unsigned-tx.test.mjs",
-                "   Run each file independently and report per-file pass/fail.",
+                "2. [UNAVAILABLE OR UNVERIFIED] Run mainnet safety tests",
+                "   The four mainnet test files do not exist in this checkout.",
+                "   Missing test files are reported as unavailable.",
                 "3. [AI-GUIDED IMPLEMENTATION] Security & recovery docs",
                 "   Read:",
                 f"   {DOCS['security']}",
@@ -375,10 +469,8 @@ def render_submenu(name: str) -> str:
                 "   test/fixture-oracle-vectors.json",
                 "   Published vectors only; never supply actual wallet secrets.",
                 "5. [AI-GUIDED IMPLEMENTATION] Custom development request",
-                "   Read:",
-                f"   {DOCS['index']}",
-                f"   {DOCS['samples']}",
-                f"   {DOCS['builder']}",
+                "   Describe the project in one sentence. No index,",
+                "   sample-request, or builder document exists in this checkout.",
                 "0. Back",
             ]
         ),
@@ -443,7 +535,8 @@ def require_tool(rel: str, doc: str) -> Path | None:
 def run_captured(
     argv, input_text=None, timeout=120
 ) -> subprocess.CompletedProcess:
-    """Capture only non-secret tool output, using an argv list."""
+    """Capture tool output using an argv list. Callers must invoke only tools
+    that emit non-secret output; this function performs no redaction."""
     if not isinstance(argv, list):
         raise TypeError("argv must be a list")
     return subprocess.run(
@@ -583,22 +676,15 @@ def handle_hd_wallet(choice: str) -> None:
 
 def handle_watch_only(choice: str) -> None:
     if choice == "a":
-        chain = ask("Chain (btc/eth/trx/btc-change)").strip().lower()
+        chain = ask("Chain (btc/eth/trx)").strip().lower()
         if chain not in CHAINS:
-            print("Invalid chain. Choose btc, eth, trx, or btc-change.")
+            print("Invalid chain. Choose btc, eth, or trx.")
             return
         index = ask_int("Index (0..2147483647)", 0, 2147483647)
         if index is None:
             return
-        branch = "0"
-        if chain != "btc-change":
-            branch = (
-                ask("Branch (0 receiving, 1 change, default 0)", default="0").strip()
-                or "0"
-            )
-            if branch not in ("0", "1"):
-                print("Invalid branch: expected 0 or 1.")
-                return
+        # derive.js always derives receiving branch 0; it takes no branch
+        # argument, and the launcher offers no change-branch path.
         xpub = secret_input("Account xpub (input hidden): ")
         if not xpub:
             return
@@ -608,9 +694,7 @@ def handle_watch_only(choice: str) -> None:
         derive = require_tool("tools/hdwallet-gen/derive.js", DOCS["watch_only"])
         if derive is None:
             return
-        argv = [node, str(derive), chain, str(index)] + (
-            [branch] if chain != "btc-change" else []
-        )
+        argv = [node, str(derive), chain, str(index)]
         result = run_captured(argv, input_text=xpub + "\n")
         code, stdout, stderr = (
             (result.returncode, result.stdout, result.stderr)
@@ -644,7 +728,7 @@ def handle_watch_only(choice: str) -> None:
         if node is None:
             return
         derive = require_tool(
-            "tools/hdwallet-gen/derive-ton.js", DOCS["watch_ton"]
+            "tools/hdwallet-gen/derive-ton.js", DOCS["watch_only"]
         )
         if derive is None:
             return
@@ -679,7 +763,7 @@ def handle_watch_only(choice: str) -> None:
     elif choice == "d":
         show_ai_guided(
             "Watch-only setup guide",
-            [DOCS["watch_only"], DOCS["watch_gui"], DOCS["watch_ton"]],
+            [DOCS["watch_only"]],
             [
                 "Watch-only uses public material only: xpubs and public keys, "
                 "never mnemonics or private keys.",
@@ -830,7 +914,7 @@ def handle_build_tools(choice: str) -> None:
         node = resolve_node()
         if node is None:
             return
-        path = require_tool("scripts/validate-registry.mjs", DOCS["index"])
+        path = require_tool("scripts/validate-registry.mjs", DOCS["impl"])
         if path is None:
             return
         result = run_captured([node, str(path)])
@@ -847,24 +931,27 @@ def handle_build_tools(choice: str) -> None:
     elif choice == "c":
         show_ai_guided(
             "Payment / tracking tools",
-            [DOCS["tracking"], DOCS["payments"], DOCS["samples"]],
+            [DOCS["tracking"], DOCS["payments"]],
             [
                 "No standalone payment-tracker executable exists in this "
                 "checkout; this needs AI implementation.",
-                "Payment-record schema: docs/mainnet/payment-record.schema.json.",
             ],
         )
     elif choice == "d":
         print("[UNAVAILABLE OR UNVERIFIED] Mainnet fee quote")
         print(
-            "The fee module (tools/mainnet-fees/fees.mjs) is a library with no CLI."
+            "No mainnet fee-quote executable, library, or test exists in "
+            "this checkout."
         )
+        test_path = require_tool(
+            "tests/mainnet-fees.test.mjs", DOCS["mainnet_guide"]
+        )
+        if test_path is None:
+            return
         node = resolve_node()
         if node is None:
             return
-        result = run_captured(
-            [node, str(tool_path("tests", "mainnet-fees.test.mjs"))]
-        )
+        result = run_captured([node, str(test_path)])
         code, stdout, stderr = (
             (result.returncode, result.stdout, result.stderr)
             if hasattr(result, "returncode")
@@ -899,10 +986,14 @@ def handle_security(choice: str) -> None:
             "tests/mainnet-signing.test.mjs",
             "tests/mainnet-unsigned-tx.test.mjs",
         ]:
+            path = tool_path(filename)
+            if not path.is_file():
+                print(f"{filename}: UNAVAILABLE (missing test infrastructure)")
+                continue
             node = resolve_node()
             if node is None:
                 return
-            result = run_captured([node, str(tool_path(filename))])
+            result = run_captured([node, str(path)])
             code, stdout, stderr = (
                 (result.returncode, result.stdout, result.stderr)
                 if hasattr(result, "returncode")
@@ -944,13 +1035,10 @@ def handle_security(choice: str) -> None:
             ],
         )
     elif choice == "e":
-        show_ai_guided(
-            "Custom development request",
-            [DOCS["index"], DOCS["samples"], DOCS["builder"]],
-            [
-                "Describe the project in one sentence, then follow the routing "
-                "in docs/index.md."
-            ],
+        print("[AI-GUIDED IMPLEMENTATION] Custom development request")
+        print(
+            "Describe the project in one sentence. No index, sample-request, "
+            "or builder document exists in this checkout."
         )
     else:
         print("Unknown choice.")
@@ -986,7 +1074,7 @@ def print_route(route: dict) -> None:
     print(f"Details: {route['detail']}")
     command = route.get("command")
     if command is not None:
-        print("Command: " + " ".join(command))
+        print("Command (shown, not executed): " + " ".join(command))
 
 
 def main(argv=None) -> int:
@@ -1033,6 +1121,11 @@ def main(argv=None) -> int:
                 if sub == "0":
                     break
                 sub = sub.lower()
+                # Submenus display numbered items but accept letters; digits
+                # 1-5 are aliases for a-e so the display and the input agree.
+                sub = {"1": "a", "2": "b", "3": "c", "4": "d", "5": "e"}.get(
+                    sub, sub
+                )
                 if len(sub) == 1 and sub in SUBMENU_CHOICES[choice]:
                     SUBMENU_HANDLERS[choice](sub)
                     pause()
