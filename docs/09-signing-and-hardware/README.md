@@ -90,13 +90,13 @@ Changing these values can produce different addresses. Do not add alternative pa
 
 Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce different addresses. The wallet can look empty: the funds are not lost, but are unreachable from this policy. Keep the policy fixed and check the original derivation inputs when investigating a mismatch.
 
-**BTC.** A different BTC path changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep native SegWit receiving addresses on the fixed BIP-84 account and branch. Check account `0`, receiving branch `0` and the complete path.
+**BTC.** A different BTC path changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep native SegWit receiving addresses on the fixed BIP-84 account and branch. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `0` and the complete path against the table.
 
-**ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Check account `0`, receiving branch `0` and the complete path, including coin type `60`.
+**ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `60` and the complete path against the table.
 
-**TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Check account `0`, receiving branch `0` and the complete path, including coin type `195`.
+**TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `195` and the complete path against the table.
 
-**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the [generation-only model with a single deposit address and no xpub](../02-chains/README.md). Check the generation path and the single deposit address requirement.
+**TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the [generation-only model with a single deposit address and no xpub](../02-chains/README.md). Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, coin type `607` and the complete generation path against the table; confirm that only one deposit address is generated.
 
 **BIP-39 mnemonic.** Changing the word count changes the seed and addresses. Use a 24-word mnemonic to encode the required 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. Check the 256-bit entropy requirement and the 24-word count.
 
