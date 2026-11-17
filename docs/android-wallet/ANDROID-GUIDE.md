@@ -544,6 +544,41 @@ Invoke that absolute path for the version check:
 
 Require that exact version output.
 
+**PowerShell equivalents.** Run the same B.5 checks from the Core checkout root in PowerShell:
+
+```powershell
+(Get-Command sdkmanager -CommandType Application -ErrorAction Stop).Source
+# Expected: sdkmanager is found under the selected SDK root.
+
+sdkmanager --install 'ndk;28.0.12674087' 'cmake;3.18.1'
+# Expected: those exact NDK and CMake packages are installed.
+
+$NDK_PROPERTIES = Read-Host 'Absolute path to the NDK package source.properties'
+Select-String -LiteralPath $NDK_PROPERTIES -Pattern '^Pkg\.Revision' -CaseSensitive |
+    ForEach-Object { $_.Line }
+# Expected: Pkg.Revision = 28.0.12674087
+
+$CMAKE_BIN = Read-Host 'Absolute path to the installed CMake executable'
+& $CMAKE_BIN --version
+# Expected: cmake version 3.18.1
+
+$NDK_CLANG = Read-Host 'Absolute path to the installed NDK Clang executable'
+& $NDK_CLANG --version
+# Expected: Clang runs and reports its version.
+
+# tools/install-dependencies: no direct PowerShell equivalent; it is a Bash
+# script and must run in its supported Bash environment.
+# The protoc checks require its output to exist and be runnable on this host.
+
+# pwd -P has no direct portable PowerShell equivalent. For these two checks,
+# use the physical checkout root (no symlink/junction components).
+Join-Path -Path (Get-Location).ProviderPath -ChildPath 'build/local/bin/protoc'
+# Expected: the absolute path to build/local/bin/protoc.
+
+& (Join-Path -Path (Get-Location).ProviderPath -ChildPath 'build/local/bin/protoc') --version
+# Expected: libprotoc 3.20.3
+```
+
 Include the Core release reference, module pin locations, SDK root and installed package IDs, NDK package revision, CMake version output, and a successful NDK Clang invocation in the toolchain record. Also record the protoc source—Core's protobuf `3.20.3` dependency declaration and `tools/install-dependencies`—along with its absolute path and version output.
 
 **Sources**
@@ -644,7 +679,7 @@ For a full installation, download Gradle 8.9, compare its checksum against the t
 
 If no wrapper is available to check, create a validation project yourself and generate its standard wrapper from that checksum-verified Gradle 8.9 installation. Record Gradle 8.9 as the wrapper's originating version. Do not treat the local draft as an existing Android project or complete wrapper.
 
-Use a POSIX shell with `mktemp` available for the commands below. Select the Java 17 JDK for command-line Gradle through `JAVA_HOME`, and put that JDK's tools on `PATH`.
+Use a POSIX shell with `mktemp` available for the commands below. Before any Gradle invocation, verify that the Gradle wrapper launcher is genuine and that its wrapper JAR has been authenticated. Java 17 is a valid runtime choice for command-line Gradle; Java 21 also runs Gradle 8.9 and 8.10.2. Select the chosen JDK through `JAVA_HOME`, and put that JDK's tools on `PATH`.
 
 **Validate the wrapper before running it**
 
@@ -714,10 +749,10 @@ Permit working localhost TCP between the Gradle client and daemon, typically thr
 
    **Expected result:** The installed packages include Android SDK platform 34 and build-tools 34.0.0. An entry under available packages does not count as installed.
 
-3. **Check the CMake binary.** Put the CMake binary selected for the module on `PATH`.
+3. **Check the CMake binary.** Invoke the CMake binary selected for the module by its explicit path, as in B.5. Replace `<module-selected-version>` with the applicable module pin.
 
    ```sh
-   cmake --version
+   "$ANDROID_SDK_ROOT/cmake/<module-selected-version>/bin/cmake" --version
    ```
 
    **Expected result:** The selected binary runs and reports its version. Compare that version against the applicable module pin before continuing.
@@ -777,7 +812,7 @@ There is no testnet-only build variant. Testnet-only operation comes from endpoi
 
 **Open item (OI-025):** no testnet-only variant exists; deciding whether one is needed is open.
 
-The empty-project build has never been run from this guide. No Gradle build has run for this Android project, no APK has been produced, and no device or emulator run has happened. The sandbox loopback block stopped Gradle before any build logic ran; this establishes nothing about the application code, only about that sandbox. The fixture in B.7 and the smoke build here are **APPROVED BUT UNEXECUTED** until you record a passing run for each.
+No empty-project build run has been recorded in this audit. The audit evidence records no completed Gradle build for this Android project, no APK output, and no device or emulator run. In the recorded attempt, the sandbox loopback block stopped Gradle before any build logic ran; this establishes nothing about the application code, only about that sandbox. The fixture in B.7 and the smoke build here are **APPROVED BUT UNEXECUTED** in this audit until you record a passing run for each. Approval alone does not constitute a passing run.
 
 Run the following checks in order. Make the selected B.1 tools available on your shell's `PATH`, record the results and stop on any mismatch. The Expected results below are acceptance criteria, not recorded outcomes.
 
@@ -823,13 +858,19 @@ Run the following checks in order. Make the selected B.1 tools available on your
 
    **Expected result:** The Gradle daemon builds the empty project successfully and produces `app-debug.apk`.
 
-   Check that the APK is non-empty:
+   Check that this build produces a fresh, non-empty APK. Before running the build, remove any pre-existing `app-debug.apk` files under `app`:
+
+   ```sh
+   find app -type f -name app-debug.apk -delete
+   ```
+
+   After cleanup succeeds, run or rerun the build command above, then check the APK:
 
    ```sh
    test -n "$(find app -type f -name app-debug.apk -exec test -s {} \; -print)"
    ```
 
-   **Expected result:** Exits successfully with no output. The check fails if no non-empty `app-debug.apk` is found under `app`.
+   **Expected result:** The final check exits successfully with no output. It fails if the build run after cleanup produces no non-empty `app-debug.apk` under `app`. An APK from a previous build cannot satisfy the check because it was removed before this run.
 
 5. **Check out and verify Core.** Follow the B.6 fresh-directory procedure to obtain the upstream Core repository outside the Android project. Do not reuse a working tree. Run inside that checkout and select the tag ref explicitly:
 
@@ -868,7 +909,7 @@ This is a toolchain sign-off, not permission to enable the wallet.
 
 Use this section for the Bawa testnet wallet only. Treat it as your first build verification gate: do not proceed with an unidentified AAR, an incomplete binding or a Wallet Core version other than `4.9.2`.
 
-No downloadable Android AAR exists for any Wallet Core release, including `4.9.2`. The release assets carry kdoc, `Package.swift`, a Swift tarball and xcframeworks — no AAR.
+No downloadable Android AAR is included among the Wallet Core `4.9.2` release assets. The release is marked Pre-release (`prerelease: true`); its assets carry kdoc, `Package.swift`, a Swift tarball and xcframeworks — no AAR.
 
 **Open item (OI-005):** The source build in this section has never been completed; no locally built AAR exists.
 
@@ -876,7 +917,7 @@ Wallet Core's GitHub Packages Maven registry, `https://maven.pkg.github.com/trus
 
 Configure your GitHub username as `GITHUB_USER` and a GitHub personal access token with `read:packages` scope as `GITHUB_TOKEN` in `~/.gradle/gradle.properties`, as specified in the GitHub Docs Gradle registry guidance. Never commit credential values.
 
-**Open item (OI-006):** Whether `4.9.2` artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route; the `flatDir`-first local build is the verified path.
+**Open item (OI-006):** Whether `4.9.2` artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route.
 
 JitPack is not usable: the `4.8.4` log records a build failure with `LicenceNotAcceptedException` for `ndk;28.0.12674087`, and `4.9.2` also fails to build.
 
@@ -942,7 +983,6 @@ Do not edit anything in this checkout to make the build pass.
 
 - [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2)
 - [Wallet Core 4.9.2 Android build configuration](https://github.com/trustwallet/wallet-core/tree/4.9.2/android)
-- [Trust Wallet docs home](https://developer.trustwallet.com/)
 - [Wallet Core repository](https://github.com/trustwallet/wallet-core)
 
 ### C.2 Install the Android toolchain
@@ -983,7 +1023,7 @@ Record the selected JDK, SDK, NDK and CMake versions, including the installed SD
 
 ### C.3 Run the code-generation pre-step
 
-A fresh Core checkout does not contain the generated binding sources. `jni/proto` holds only `.gitkeep`, and `jni/java` holds two hand-written files. Upstream CI runs Android code generation before any Gradle command.
+A fresh Core checkout does not contain the generated binding sources. `jni/proto` holds only `.gitkeep`, and `jni/java` holds `wallet/` containing `core/`. Upstream CI runs Android code generation before any Gradle command.
 
 Without this pre-step, the Gradle build fails on missing generated sources. The old C.4 checklist's "generated at build time" claim was wrong; this pre-step replaces it.
 
@@ -1032,7 +1072,7 @@ If either directory is still empty or contains only the original checkout files,
 
 ### C.4 Build Core, then the protobuf artefact
 
-**APPROVED BUT UNEXECUTED:** This entire build has never been run; the steps below are a specified procedure for the testnet-only wallet, not a record of a passing run.
+**APPROVED BUT UNEXECUTED:** No build was executed in this audit; the steps below are a specified procedure for the testnet-only wallet, not a record of a passing run.
 
 Run both builds from the source repository's `android/` directory using its upstream Gradle 8.10.2 wrapper under JDK 17, with NDK 28.0.12674087 and CMake 3.18.1.
 
@@ -1104,9 +1144,9 @@ Do not judge the Android API by browsing `jni/java` alone. The `wallet.core.jni`
 
 A missing generated `HDWallet.java` in a fresh checkout is not evidence that Core lacks `HDWallet`. If it is missing from the generated output after C.3, generation did not run: **STOP** and fix generation before continuing.
 
-Use the D.2 verified inventory as the authority for the required API. Do not reduce it to whichever methods happen to be convenient.
+Use the D.2 inventory as the authority for the required Java surface shown below. This inventory is derived from the C headers and is not a verified Java binding surface; the C entry points do not establish the Java methods. Do not reduce it to whichever methods happen to be convenient.
 
-| Area | Verified surface |
+| Area | Required Java surface |
 | --- | --- |
 | binding package | `wallet.core.jni` |
 | wallet construction | `HDWallet(mnemonic, passphrase)`, `HDWallet.create(strength, passphrase)` |
@@ -1118,7 +1158,7 @@ Use the D.2 verified inventory as the authority for the required API. Do not red
 | signing and planning | `AnySigner.sign`, `AnySigner.signJSON`, `AnySigner.plan` |
 | external-signature workflow | `TransactionCompiler.preImageHashes`, `TransactionCompiler.compileWithSignatures` |
 
-The `passphrase` argument in both construction entry points is the BIP-39 passphrase: pass an empty value by policy. Do not substitute the vault unlock passphrase, which is the PBKDF2 input.
+The `passphrase` argument in both construction entry points is the BIP-39 passphrase, which is empty by policy: pass an empty value. Do not substitute the vault-unlock passphrase: it is a separate input to the vault PBKDF2, not the BIP-39 passphrase.
 
 Keep the 24-word BIP-39 mnemonic distinct from the 64-byte BIP-39-derived seed. `mnemonic()`, `seed()` and `entropy()` expose different secret material; they are not interchangeable and are not diagnostic APIs. Never put their results in logs, analytics, crash reports or ordinary UI state.
 
