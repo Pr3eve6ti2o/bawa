@@ -3674,12 +3674,12 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 
-- **M28-OI-04:** no fee section exists in the testnet guide to convert.
+- **M28-OI-04:** no fee section exists in Docs 1–3 (the testnet guide set) to convert.
 - **M28-OI-06:** TON is generation-only, but a mainnet reader will expect to send TON.
 - **M10:** TON is generation-only in the repository. The Web and Android drafts carry a send path, but it has never been exercised.
 - **M18 F06:** the generation-only TON path provides a single deposit address, with no `xpub`.
 
-**Status:** RESOLVED 2026-11-10 — the user approved the recommended scope: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
+**Status:** RESOLVED 2026-11-10 — based on reported user approval of the recommended scope, with no independent repo record of that approval: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
 
 **Operational restriction:** None remaining for §13’s TON-send subsection. §14’s TON procedure is new mainnet prose, not a conversion (M28-OI-04); identifying external signing software remains open (M-39).
 
@@ -3695,14 +3695,14 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 **Affected section:** §3.
 
 **Evidence:**
-- M33 covers US/UK/EU/India only. The guide may say “check your local law” and “keep records”, and give jurisdiction-named, dated, sourced facts, subject to M33’s 8-item never-claim list.
+- M33 covers US/UK/EU/India only. The guide may say “check your local law” and “keep records”, and give jurisdiction-named, dated, sourced facts, subject to the 7-item never-claim list in this guide’s §17, “Never-claim rules the gates enforce”.
 - India’s 30%/1% TDS figures rest on convergence of secondary sources only; the official sites were unreachable.
 - M33 records no tax coverage in the current guides. The repository’s only law sentence is at `docs/RECOVERY.md:680`.
 - M36 F6 places law, tax and records in front-matter §3, not in a footnote.
 
 **Status:** OPEN.
 
-**Operational restriction:** Limit §3’s jurisdiction-specific coverage to US/UK/EU/India. Label the India figures, including TDS, as secondary-source convergence. State no rule for any other jurisdiction, and apply M33’s 8-item never-claim list in full.
+**Operational restriction:** Limit §3’s jurisdiction-specific coverage to US/UK/EU/India. Label the India figures, including TDS, as secondary-source convergence. State no rule for any other jurisdiction, and apply the 7-item never-claim list in this guide’s §17, “Never-claim rules the gates enforce”, in full.
 
 **Blocks writing completion:** No.
 
