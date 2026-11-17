@@ -467,7 +467,7 @@ Sources for the PSBT hand-off section above.
 
 The watch-only coordinator performs the Combiner role only when separate copies exist; it performs the Finalizer and Extractor roles, then requests broadcast from a node. Only the signer creates spending signatures, after reviewing the destination, amount, change and fee. Private keys and seeds stay in the signing domain. These are roles, not fixed device types: a signer may also finalise.
 
-A PSBT is a data container, not authorisation by itself. Receiving or combining it grants no spending authority; valid signatures authorise what they commit to. However, a sufficiently signed PSBT may let its holder finish and broadcast without another device approval. Handle signed PSBTs accordingly.
+A PSBT is a data container, not authorisation by itself. Receiving or combining it grants no spending authority; valid signatures authorise what they commit to. However, a sufficiently signed PSBT (one in which every input carries the signatures its spending policy requires, as counted by the Combiner) may let its holder finish and broadcast without another device approval. Treat a spend-ready signed PSBT like a signed transaction: store it as securely as a signed transaction, never share it casually, and assume its holder can finish and broadcast it.
 
 Every participant must preserve fields it does not understand when passing on a PSBT, including proprietary fields. Do not strip unfamiliar records to make a hand-off work.
 
