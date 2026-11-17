@@ -641,7 +641,7 @@ If you cannot reach a chain feed, leave the outcome unknown. Missing observation
 
 ### Confirmation thresholds
 
-**ILLUSTRATIVE application policy — not Bawa behaviour.** Choose your own value bands, risk limits and waiting times; never transplant these thresholds blindly. Treat “confirmed” as meaning that your policy passed, not that reversal is impossible.
+**ILLUSTRATIVE application policy — not Bawa behaviour.** Choose your own value bands, risk limits and waiting times; never transplant these thresholds blindly. Treat “confirmed” as meaning that your policy passed, not that reversal is impossible. Settlement states are defined in the [MAINNET-GUIDE §12 state table](../mainnet/MAINNET-GUIDE.md); event identity is defined in [docs/06, lines 586–590 and 687](../06-tracking/README.md).
 
 For BTC, count blocks, including the inclusion block. Elsewhere, **1** means one successful event inclusion satisfying the stated chain condition.
 
