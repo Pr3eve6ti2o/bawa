@@ -3851,8 +3851,8 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 - M36 F9 identifies borrowed testnet assurance as the most likely structural failure mode.
-- M28 records the mainnet rewrite findings: all 60+ “Mainnet is absent” lines across 7 files invert; the derivation deviation disappears on mainnet; the `docs/09` hardware-signing rehearsal inverts to “small amount first”; and the `docs/08` plus `RECOVERY` rehearsal becomes 3 stages. These are rewrite findings, not mainnet spending evidence.
-- M30 records 81 testnet-scope sentences swept individually, not bulk-deleted.
+- Repo-wide verification found 15 “Mainnet is absent” hits in 4 files at baseline `56396a20` and 17 hits in 6 files at `a5bc56e`; M-28 does not record these counts. The derivation deviation disappears on mainnet; the `docs/09` hardware-signing rehearsal prohibits real funds and stops before signing; and the `docs/08` plus `RECOVERY` rehearsal becomes 3 stages. These are scope and rewrite findings, not mainnet spending evidence.
+- M-26 states that 81 testnet-scope sentences require individual review rather than bulk deletion. M-26 remains OPEN; it does not record a completed sweep.
 - M20 records that V2/D21 stop at construction/signing. Send/sign/broadcast/confirmation remains UNVERIFIED.
 - M19 records the verification-block contradiction between L13–L19 and L70–L72.
 
