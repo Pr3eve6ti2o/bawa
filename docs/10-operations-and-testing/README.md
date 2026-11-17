@@ -1334,7 +1334,7 @@ A compromised seed requires a new wallet, not a restored backup. See **Incident 
 
 Keep funding on hold until the encrypted backup has passed a restore check. Repeat after every backup change and regularly between changes.
 
-1. **Confirm the supported route.** The command syntax and output behaviour of `tools/decrypt_seed.py` are documented in docs/08 §3, including the invocation `python3 tools/decrypt_seed.py /path/to/seed.enc.json`. The full restore sequence and drill frequency remain undocumented. Confirm these with the maintainer, together with suitable public fixtures and controlled-environment requirements. If those details cannot be confirmed, stop rather than improvise.  
+1. **Confirm the supported route.** The command syntax and output behaviour of `tools/decrypt_seed.py` are documented in docs/08 §3, including the invocation `python3 tools/decrypt_seed.py /path/to/seed.enc.json`. The set-up and six-step recovery drill are also documented in docs/08 §3; follow those instructions. Seek maintainer clarification only where details such as drill frequency, suitable public fixtures or controlled-environment requirements remain unspecified. If those details cannot be confirmed, stop rather than improvise.  
    **Expected result:** agreed instructions and known public reference checks.
 
 2. **Practise without funds.** Only run `tools/decrypt_seed.py` under the agreed isolated, offline conditions. Practise with `<PUBLIC_FIXTURE>` and its public test inputs in a fresh `<SCRATCH_DIRECTORY>`, away from live wallet files and synchronised storage. Use no real funds. Keep decrypted material out of logs, screenshots and support messages.  
