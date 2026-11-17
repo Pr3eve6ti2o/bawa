@@ -247,7 +247,7 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Neither tool's output distinguishes bad-checksum from wrong-version rejection.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` also rejects the first two vectors with a `FATAL` rejection before WASM initialization. The validator reports bad-checksum and wrong-version defects distinctly; only the alleged WASM-abort output would not distinguish them.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
@@ -259,11 +259,11 @@ Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 tes
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; the tool output does not distinguish it from a wrong-version failure.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4 after the `e3b65fb8` repair: no address, exit 2, and an explicit rejection before WASM. `compare.js` exits 1 with a `FATAL` rejection, also before WASM. For the published BIP-32 test-vector-5 bad-checksum xprv, the validator explicitly reports `extended key checksum verification failed`. No WASM abort occurs on this path. The alleged opaque-abort behaviour was not reproduced; the claim that output does not distinguish checksum and version defects applies only to that alleged abort, not to daemon validation.
 
 - **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect; the tool output does not distinguish it from a bad-checksum failure.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4 after the `e3b65fb8` repair: no address, exit 2, and an explicit rejection before WASM. `compare.js` exits 1 with a `FATAL` rejection, also before WASM. For the published BIP-32 test-vector-5 version-mismatch xpub, the validator reports a version rejection, distinguishing it from a bad-checksum failure. No WASM abort occurs on this path. The alleged opaque-abort behaviour was not reproduced; the claim that output does not distinguish version and checksum defects applies only to that alleged abort, not to daemon validation.
 
 ### Fixture and parity gaps
 
