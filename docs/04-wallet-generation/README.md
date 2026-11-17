@@ -204,9 +204,9 @@ TON is an address export, not a fourth public root. Round trips check generation
 
 **Backup checks**
 
-Check the layout defined by `make_wallet.py`: the backup directory has mode `0700` and contains a `0600` copy of the seed bundle, `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
+After a successful run, check the layout defined by `make_wallet.py`: the backup directory has mode `0700` and contains a `0600` copy of the seed bundle, `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
 
-The orchestrator checks that the original seed bundle has mode `0600` and that its bytes match the backup copy.
+The orchestrator checks that the original seed bundle has mode `0600`.
 
 **What verified can mean here**
 
@@ -230,7 +230,7 @@ If a stage fails, stop before confirming. Keep recovery material offline and do 
 
 **After a crash**
 
-Make no assumptions about what remains, clean-up behaviour or the safety of retries or overwrites. Check the implementation or ask a maintainer before retrying or overwriting. Atomic writing does not specify a recovery or rollback procedure.
+There is a post-rename crash window: after the seed bundle is renamed into place but before the backup copy and `.env` write are complete, the bundle exists on disk while the run can report failure. A re-run then refuses with `existing wallet found...` unless `--force` is used. `--force` copies the old bundle aside with a `.bak.<timestamp>` suffix and generates a **new wallet**, abandoning the wallet from the failed run rather than resuming it. Atomic writing does not provide a recovery or rollback procedure.
 ## 8. Launch wallet generation
 
 1. **Use an interactive terminal.** From the repository root, run:
