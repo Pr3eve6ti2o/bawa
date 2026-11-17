@@ -202,8 +202,8 @@ Distinguish seen, included, confirmed, finalised and economically final. Their e
 Apply the chain's own rules:
 
 - **Bitcoin:** Count inclusion as 1 confirmation; each following block adds another. Nodes follow the valid chain with the greatest accumulated work, so depth reduces reversal risk without creating a protocol-finalised state. Treat six confirmations as a customary acceptance threshold, not a network requirement.
-- **Ethereum:** Casper FFG justifies checkpoints using votes representing at least two-thirds of staked ETH. A supermajority link from a justified checkpoint to its immediate successor finalises the earlier checkpoint and its ancestors. Finalisation normally takes around two epochs; follow the node's finalised view rather than trusting a timer. Under the protocol's assumptions, conflicting finality makes at least one-third of stake slashable.
-- **Solana:** Choose the commitment explicitly. `processed` reflects a node's processed block, potentially on a fork that will be discarded. `confirmed` has supermajority voting support. `finalized` has reached maximum vote lockout.
+- **Ethereum:** Casper FFG justifies checkpoints using votes representing at least two-thirds of staked ETH. A supermajority link from a justified checkpoint to its immediate successor finalises the earlier checkpoint and its ancestors. Follow the node's finalised view rather than trusting a timer. Under the protocol's assumptions, conflicting finality makes at least one-third of stake slashable.
+- **Solana:** Choose the commitment explicitly rather than relying on defaults. If a method or subscription accepts commitment and it is omitted, the default is typically `finalized`. `processed` reflects a node's processed block, potentially on a fork that will be discarded. `confirmed` has supermajority voting support. `finalized` has reached maximum vote lockout.
 
 Treat an API provider's required confirmation count as its acceptance policy, not a new consensus rule. Do not mark an order "paid forever" on one RPC result.
 
