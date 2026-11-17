@@ -736,9 +736,9 @@ Implement the following requirements:
 - Pin the runner to a fixed Ubuntu release label; this label still receives image updates. Record the actual runner image identity, including its release/version, with the run evidence.
 - Pin Node to a complete, validated Node 22 version, and pin npm and Python to exact versions. Record the selected versions.
 - Pin every repository-based action to a full-length commit SHA verified in that action’s own repository, and pin every `docker://` action to an image digest. Do not rely on action tags, which can be moved or deleted. Configure Dependabot for GitHub Actions updates in `.github/dependabot.yml`.
-- Generate, validate and commit `package-lock.json` first. Only then switch CI installation to `npm ci --ignore-scripts --no-audit --no-fund`.
+- The lockfile prerequisite is already met: `package-lock.json` is committed. Switch CI installation to `npm ci --ignore-scripts --no-audit --no-fund`.
 - Make both test jobs check out the same revision. Require each job to fail on empty or skipped tests. Retain a successful differential run for that exact SHA before making any claim of repaired-tree CI coverage.
-- Set `permissions.contents` to `read` and all other permissions to `none`. Document and justify any exception.
+- The permissions requirement is already met: `permissions.contents` is `read`, and unspecified permissions are `none`. Document and justify any exception.
 - Make `release-gate` require success and retained evidence from every preceding job, including both test jobs, `dependency-scan`, `secret-scan`, `build` and `reproduce`. Keep it blocked whenever a required job or gate lacks evidence.
 
 ### Record gate-specific evidence
