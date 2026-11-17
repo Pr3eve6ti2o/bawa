@@ -749,7 +749,7 @@ Check the insurance terms as well as the headline total:
 - Market losses and protocol failures are generally outside that cover.
 - Check exclusions, deductibles, the insured legal entity and who receives a payout: each matters.
 
-Crypto holdings in these arrangements are generally outside FDIC and SIPC protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
+Crypto holdings in these arrangements are generally outside [FDIC](https://www.fdic.gov/) and [SIPC](https://www.sipc.org/) protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
 
 ### Onboarding and exit
 
@@ -791,7 +791,7 @@ A hardware security module is a tamper-resistant device that can create, retain 
 
 This reduces opportunities to extract keys from application memory, server disks or stolen equipment. It protects key storage and cryptographic operations inside the device — it is not a claim of invulnerability.
 
-FIPS 140-3 Level 3 is a commonly requested validation level. Check the exact module, firmware and operating configuration covered by a validation. A validated component does not certify the complete wallet, approval service or custody arrangement.
+[FIPS 140-3 Level 3](https://csrc.nist.gov/projects/cryptographic-module-validation-program) is a commonly requested validation level. Check the exact module, firmware and operating configuration covered by a validation. A validated component does not certify the complete wallet, approval service or custody arrangement.
 
 ### Keep the limits in view
 
@@ -807,9 +807,9 @@ Distinguish these two control models:
 - **Full HSM custody:** a provider operates the key infrastructure and releases transactions under its custody agreement. You depend on its authorisation, recovery and withdrawal processes. Holding an account with that provider is not the same as directly controlling a wallet key.
 - **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted. Check who can change policy, recover backups, cause a signature or block access — the product label alone does not settle custody.
 
-Anchorage describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
+[Anchorage](https://www.anchorage.com/) describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
 
-Coinbase Custody-style offerings are described around HSM-backed cold storage, geographically separated vaults, biometric controls and recurring SOC 1 and SOC 2 audits. Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
+[Coinbase Custody](https://www.coinbase.com/custody)-style offerings are described around HSM-backed cold storage, geographically separated vaults, biometric controls and recurring SOC 1 and SOC 2 audits. Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
 
 Treat the named providers as examples, not Bawa recommendations. Bawa endorses neither provider, and naming them does not imply Bawa compatibility.
 
