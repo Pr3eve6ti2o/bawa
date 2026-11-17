@@ -836,7 +836,7 @@ Accept recovery as feasible only when custody and access are evidenced, a docume
 
 Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
-**Expected:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
+**Expected:** Replays and a lost-response retry leave one credit and one fulfilment, enforced by section 13's replay-safe protocol (unique event constraint, conditional claim, stable idempotency key and durable outbox); distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
 ## 14. Watcher and reconciler
 
 Treat everything in this section as application policy, not Bawa behaviour.
@@ -887,7 +887,7 @@ Retain the linked payment records in causal order ([persist raw observations fir
 
 Keep enough detail for a reviewer to verify inclusion and policy acceptance at the recorded checkpoint, reconstruct the distinct accepted total, check finalisation and follow the credit into settlement—all from these records alone. Use run history to establish scanned coverage, and credit keys and journal entries to show that replay did not pay twice.
 
-Replay the worked range twice and check that it leaves one accepted event, one credit and a traceable request-to-settlement record chain.
+Replay the worked range twice and check that it leaves one accepted event, one credit and a traceable request-to-settlement record chain. The single accepted event and single credit are enforced by section 13's replay-safe protocol (unique event constraint, conditional claim, stable idempotency key and durable outbox).
 
 ### Watcher loop (generic)
 
