@@ -29,13 +29,17 @@ Highest sensitivity:
 1. BIP-39 mnemonic and passphrase;
 2. private keys / private extended keys;
 3. recovery data key;
-4. encrypted recovery artifacts before controlled backup.
+4. encrypted recovery artifacts before controlled backup. A controlled backup
+   is a copy made and stored under recorded physical access controls in a
+   location without a shared fire or flood risk with the other copies (per
+   docs/08 and docs/15). The "before controlled backup" condition ends once
+   such a copy exists and has been checked for completeness and legibility.
 
 Privacy-sensitive:
 
 - account xpub/zpub;
-- derived address inventories;
-- payment/order associations.
+- derived address inventories (lists of addresses derived from an account-level public root);
+- payment/order associations (linkages between a derived address or payment and the specific order or payment request it satisfies).
 
 ## Threat model
 
