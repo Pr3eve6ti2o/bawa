@@ -497,7 +497,9 @@ Make every allocation retry for `<REQUEST_ID>` return the same `<RECIPIENT>` and
 
 Own this lifecycle in your application; Bawa does not enforce these transitions. Append each change with its time, reason and evidence reference. Do not treat a transaction report alone as permission to fulfil.
 
-Start at `requested`. Enter `allocated` once the request has its receiving address or memo. Capture a report at `observed`, record basic validation at `seen`, then bind validated network, asset, destination and memo evidence to `<REQUEST_ID>` at `matched`.
+Start at `requested`. Enter `allocated` once the request has its receiving address or memo. Capture a report at `observed`, record basic validation (the report parses, required fields are present, and transaction references and payment fields have valid formats; this does not establish on-chain inclusion or finality) at `seen`, then bind validated network, asset, destination and memo evidence to `<REQUEST_ID>` at `matched`.
+
+Mapping note: These are application-level states to be mapped onto the settlement states in [`MAINNET-GUIDE` section 12 ("Wallet tracking and payment monitoring")](../mainnet/MAINNET-GUIDE.md), the mainnet settlement reference. In particular, docs/07 `seen` is not MAINNET `seen`.
 
 Apply one progression rule: **do not skip any state to reach finalisation** — process every applicable stage in order, even when evidence for several stages arrives together.
 
@@ -532,12 +534,12 @@ Treat these routes as exhaustive. A duplicate report is an identical replay of a
 #### Follow normal progression
 
 - At `matched`, compare the validated total with the requested amount and choose `underpaid` or `sufficient`. Route top-ups back through `observed` for validation and matching.
-- Require canonical block inclusion before entering `included`.
-- Require the configured confirmation depth before entering `confirmed`.
-- Require the chosen chain-finality test to pass before entering `finalized`.
+- Require canonical block inclusion (verified membership of the payment transaction in a block on the network's currently accepted canonical chain) before entering `included`.
+- Require the configured per-chain confirmation criterion (a required canonical-confirmation count or equivalent chain-native confirmation evidence) to be satisfied before entering `confirmed`.
+- Require the chosen chain-finality test (verify that the payment block is covered by a finalized checkpoint or equivalent consensus-finality evidence, or satisfies an explicitly configured reorganization-risk policy for a probabilistic-finality chain) to pass before entering `finalized`.
 - At `paid`, record application acceptance.
-- At `claimed`, record an exclusive, durable fulfilment reservation.
-- At `fulfilled`, record completed delivery.
+- At `claimed`, record an exclusive, durable fulfilment reservation: an atomic, persistent claim keyed by `<REQUEST_ID>`, enforced by a uniqueness constraint or compare-and-set, with a single authorized delivery owner and the same claim reused on retries.
+- At `fulfilled`, record completed delivery: the promised goods, service or credit has been delivered in full, with the completion result durably recorded against `<REQUEST_ID>` and its reservation.
 
 #### Handle `confirmed -> reorged`
 
