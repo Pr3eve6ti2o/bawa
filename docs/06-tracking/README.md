@@ -453,7 +453,7 @@ Use the v2 API's `getAddressInformation` for the native balance in nanotons, acc
 
 Do not label a payment complete merely because its first transaction exists. An outgoing message can cause another account's transaction later. Inspect the relevant recipient-side execution and any bounce. Avoid an Ethereum receipt adapter here: it would obscure the distinction between one transaction and the wider message flow.
 
-For Jettons, make separate contract reads (https://docs.ton.org/contracts/standard/tokens/jettons/overview). Use a trusted master's `get_wallet_address` to derive the owner's token-wallet address. Call that wallet's `get_wallet_data` for its token balance, owner and master. Verify those identities rather than trusting a symbol. Keep these holdings separate from the native TON balance, which excludes them.
+For Jettons, make separate contract reads (https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md). Use a trusted master's [`get_wallet_address`](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md) to derive the owner's token-wallet address. Call that wallet's [`get_wallet_data`](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md) for its token balance, owner and master. Verify those identities rather than trusting a symbol. Keep these holdings separate from the native TON balance, which excludes them.
 
 ### Cosmos
 
