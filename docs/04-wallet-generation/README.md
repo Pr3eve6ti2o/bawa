@@ -174,13 +174,13 @@ This is application-specific encryption at rest, **not** a universal replacement
 
    Your BIP-39 passphrase is **EMPTY**. The data key is a separate recovery key, not that passphrase.
 
-   Check your records before answering the confirmation prompts. Type the first word of your mnemonic, then type `SAVED`. If either confirmation fails, `seed.enc.json` is not written. The 120-second limit applies to the entire generator subprocess, including time spent recording, checking and answering confirmations. If it expires, the generator is killed and generation fails, even if the mnemonic and data key have already been displayed.
+   The 120-second limit applies to the entire generator subprocess, including time spent recording, checking and answering confirmations. If it expires, the generator is killed and generation fails, even if the mnemonic and data key have already been displayed. Check your records before answering the confirmation prompts. Type the first word of your mnemonic, then type `SAVED`. If either confirmation fails, `seed.enc.json` is not written.
 
 6. **Confirm, then inspect the write.**
 
    After confirming, check these locations and conditions:
 
-   - **Secrets directory:** the directory set by `NOVA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`. Symlinked paths are refused.
+   - **Secrets directory:** the directory set by `NOVA_SECRETS_DIR`, or `secrets/` at the repository root, has mode `0700`. It contains the seed bundle, `seed.enc.json`, at `0600`.
    - **Backup directory:** the directory set by `BAWA_BACKUP_DIR`, or `seed-backup/` at the repository root, has mode `0700`. It contains a `0600` copy of `seed.enc.json`, plus `decrypt_seed.py` and `RECOVERY.md`; the latter is copied from `docs/RECOVERY.md` to the backup directory's top level.
    - **Public environment file:** the file set by `BAWA_ENV_FILE`, or the repository-root `.env`, is written atomically with mode 0600. The four public wallet values from step 4 are updated; all other lines from the existing file, or from `.env.example` when the target file does not exist, are preserved.
 
