@@ -1135,11 +1135,11 @@ In `tools/hdwallet-gen`, validate manifest/lockfile dependency consistency with 
 
 - npm lockfile behaviour: https://backpack.ns.nl/guides/tooling/working-with-npm.html
 
-## Daily and weekly rhythm by size
+## Daily and weekly rhythm by size (future-state runbook)
 
 Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
-These checks are guidance for your own setup, not Bawa monitoring features. Bawa does not document freshness thresholds, payment-confirmation rules or recovery procedures. Confirm those with the maintainer.
+These routine checks are a future-state runbook for your own setup, not executable procedures or current Bawa monitoring features. The repository has no monitoring, threshold, indexer or tracking code and no allocation table or allocation database. Requirements to index allocations by network and branch apply only to a future operator-managed allocation store, not an existing Bawa schema. Bawa does not document freshness thresholds, payment-confirmation rules or recovery procedures. Confirm those with the maintainer.
 
 ### Personal, $0, no server
 
@@ -1188,9 +1188,9 @@ These checks are guidance for your own setup, not Bawa monitoring features. Bawa
 - SLIP-132, zpub serialization: https://github.com/satoshilabs/slips/blob/master/slip-0132.md
 - Esplora API: https://github.com/Blockstream/esplora/blob/master/API.md
 
-## Monitoring signals, alerts and investigating a missed payment
+## Monitoring signals, alerts and investigating a missed payment (future-state runbook)
 
-These checks belong to your monitoring setup, not Bawa monitoring features. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
+These checks are a future-state runbook for your own monitoring setup, not executable procedures or current Bawa monitoring features. The repository has no monitoring, threshold, indexer or tracking code and no allocation table or allocation database. Allocation-first triage below applies only after your setup implements allocation recording and lookup; indexing allocations by network and branch is a requirement for that future store, not an existing Bawa capability. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
 
 Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
 
