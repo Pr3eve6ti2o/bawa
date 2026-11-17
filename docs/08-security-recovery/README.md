@@ -1078,9 +1078,9 @@ Before choosing, work out which questions you need answered in writing:
 
 A legal estate wrapper uses a trust, company or will structure to hold or direct wallet assets. It may use one or more of a letter of instruction, a will, a trust deed or a company record, and typically involves a named trustee, executor or attorney.
 
-No generic estate-wrapper figures are published in this guide. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; and asset-based charges. Confirm the jurisdiction, the scope of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
+No generic estate-wrapper figures are published in this guide. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; asset-based charges; and amendment, probate, distribution, transfer and winding-up costs. Confirm the jurisdiction, the scope, charging frequency, currency, taxes, minimums, caps, escalation, fee percentage and valuation basis of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
 
-Asset-based charges are quoted individually and subject to negotiation. These bands do not include government filing fees, legal advice for specific jurisdictions, or the cost of resolving disputes.
+Asset-based charges are quoted individually and subject to negotiation.
 
 ### Before you sign
 
@@ -1090,7 +1090,7 @@ Asset-based charges are quoted individually and subject to negotiation. These ba
 - Make sure the designated recipient can reach their key.
 - Test the inheritance handover while the holder is alive.
 - Write down what happens if the provider ceases trading.
-- Remember that paying for a service does not remove the risk of seed compromise — the remedy remains the same: a new wallet, move everything, retire the old wallet.
+- Remember that paying for a service does not remove the risk of seed compromise — for single-signature wallets, the remedy remains the same: a new wallet, move everything, retire the old wallet. For multisig, count compromised signing positions, not seeds; for a partial compromise, replace only the compromised signer and migrate the funds to a new wallet because the existing script cannot change the compromised key's role.
 ### The seven private test questions
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
