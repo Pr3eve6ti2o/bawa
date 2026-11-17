@@ -102,11 +102,11 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
    Bawa's drill stops at `fresh`: seed decryption is documented, but Bawa does not document a complete restore tool/UI workflow or a first-address selection procedure for this drill. Follow your recovery tool's documentation to reproduce the recorded settings. Use a reference address recorded from your original testnet wallet before the restore.
 
-   The first-address comparison is a check, not a standalone restore procedure or a fixed address output; it does not make xpub-only recovery possible.
+   The first-address comparison is a check, not a standalone restore procedure or a fixed address output; it does not demonstrate private-key possession. An xpub alone can reconstruct a watch-only wallet, but cannot recover its private keys or spending capability.
 
 ### Compromise rehearsal (testnet only)
 
-A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
+A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook), generate a new wallet with verified recovery on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
 
 ### Passphrase and backup checklist
 
@@ -119,7 +119,7 @@ Record the recovery set offline, including the exact BIP-39 passphrase policy.
 | Wallet selection | Record the wallet, chain, network, account, derivation paths and address policy. |
 | TON if applicable | Record the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms needed to reproduce the same addresses. |
 
-Use the recorded passphrase policy exactly during recovery. Verify the mnemonic/passphrase before funding. Bawa does not document non-empty passphrase setup or lost-passphrase handling. If you cannot verify the mnemonic and exact passphrase policy, mark recovery incomplete and **do not fund**.
+Use the recorded passphrase policy exactly during recovery. Verify the mnemonic/passphrase before funding. Do not fund the restored wallet until the public outputs match. Bawa does not document non-empty passphrase setup or lost-passphrase handling. If you cannot verify the mnemonic and exact passphrase policy, mark recovery incomplete and **do not fund**.
 
 Keep **2–3 separated offline copies** in places that do not share one fire or flood risk. Choose and record physical access controls. Never digitise the mnemonic or share it with "support".
 
@@ -130,11 +130,11 @@ Before using an existing encrypted backup, complete its decryption-handling chec
 - Document credential custody.
 - Document plaintext/memory handling.
 
-If any of these remain undocumented, recovery is blocked.
+If any of these remain undocumented, recovery is blocked under this guide's additional safety policy.
 
 Bawa's [docs/RECOVERY.md](../RECOVERY.md#part-2-the-encrypted-seed-decryption-workflow-part-1-the-artefact-the-key-and-the-output-modes) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
 
-Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked.
+Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked under this guide's additional safety policy until a verified procedure is obtained for every applicable handling requirement.
 
 Treat xpubs and zpubs as **sensitive public material**. An encrypted xpub still cannot replace the wallet recovery set.
 
