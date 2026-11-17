@@ -1558,7 +1558,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 4. **Move assets.** For migration, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets and continuing with other holdings as they can safely be moved. Retire the old wallet permanently.
 
-5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface.
+5. **Revoke approvals.** From the clean environment, use a trusted interface to inventory token allowances, NFT/operator approvals, and supported permit-based permissions for every affected account on each network it used. For suspicious permissions, verify the network, account, and spender/operator before signing the appropriate zero-allowance, approval-removal, or supported permit-revocation transaction. Confirm transaction finality and independently recheck on-chain state to verify zero allowances and cleared NFT/operator or permit permissions, as applicable; record transaction references and any failed, unsupported, or unverified revocations. Do not delay required fresh-seed migration to attempt or verify revocation: an attacker retaining the signing key can reapprove.
 
 6. **Rotate related access.** Confirm session-revocation support with the relevant account or service issuers, revoke affected sessions where supported, and record any unsupported or unverified revocation. Replace exposed account credentials and service keys through their issuers.
 
