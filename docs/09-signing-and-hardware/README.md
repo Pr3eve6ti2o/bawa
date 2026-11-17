@@ -338,11 +338,11 @@ TESTNET / SIGNET / REGTEST ONLY
 
 The steps follow the **BIP-174 PSBT flow**. BIP-371 covers Taproot PSBTs.
 
-1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise. 
+1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise: a written walkthrough record of the intended addresses, amounts, transfer routes and checks to perform, with no funds moved. The test-fund funding procedure remains an open item; the guide does not provide one. 
   **Expected result:** xpub/addresses on the tracking side, with the private key confined to the signing domain, not loaded into the web server.
 
 2. **Build on the watch-only side.** Prepare an unsigned PSBT for the intended test payment. Bawa does not document construction commands or wallet-specific controls; use your watch-only wallet’s documentation. 
-  **Expected result:** an **unsigned PSBT**, ready for the separate signer.
+  **Expected result:** an **unsigned PSBT** (see the full [Hand-off checks](#hand-off-checks) checklist), ready for the Updater to complete, then for the separate signer.
 
 3. **Transfer and review.** Pass the PSBT to the signer using a supported QR, file or SD-card route. Bawa does not document device-specific transfer support; check your wallet and signer documentation before choosing a route. Compare the address and amount on the **signing device’s screen** with the intended test payment. Stop if either differs or cannot be reviewed. 
   **Expected result:** the intended address and amount on the signing device itself. The online display alone is not this check.
