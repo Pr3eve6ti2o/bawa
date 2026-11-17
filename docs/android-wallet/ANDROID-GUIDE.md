@@ -1373,7 +1373,7 @@ dependencyResolutionManagement {
 }
 ```
 
-**Expected result:** Dependency repositories are configured in settings, with `flatDir` first and GitHub Packages last; the GitHub Packages repository accepts only the `com.trustwallet` group.
+**Expected result:** Dependency repositories are configured in settings, with `flatDir` first and GitHub Packages last; the GitHub Packages repository's `includeGroup("com.trustwallet")` filter restricts routing to the `com.trustwallet` group for that repository only.
 
 Supply `GITHUB_USER` and `GITHUB_TOKEN` through the environment used to run Gradle. Never commit their values or put them in build files or settings.
 
@@ -1381,7 +1381,7 @@ In `core/build.gradle.kts`, replace the previous Core declarations with explicit
 
 A `flatDir` artefact has no Maven POM carrying transitive dependencies. Retain the protobuf runtime and other dependencies at their reviewed, pinned versions.
 
-Never publish the locally built AAR under `com.trustwallet` coordinates. Repository order alone is not proof of local resolution; inspect the resolved dependencies in C.7.
+Never publish the locally built AAR under `com.trustwallet` coordinates: this is a Bawa project safeguard to avoid confusion with the official artefacts, not a Gradle restriction. Repository order alone is not proof of local resolution; inspect the resolved dependencies in C.7.
 
 ### C.7 Compile Bawa and pass the fixture gate
 
@@ -1753,7 +1753,7 @@ With the same BIP-39 passphrase, a testnet wallet restricted to discovery under 
 
 Limit signing and planning to testnet. Keep all native signing inputs and outputs inside the adapter.
 
-For `AnySigner.sign` and `signJSON`, use the selected coin's schema and error handling source-verified against the Trust Wallet Core 4.9.2 tag. As with the 4.8.4 tag source check, this covers the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
+For `AnySigner.sign` and `signJSON`, verify the selected coin's schema and error handling against the Trust Wallet Core 4.9.2 tag sources before relying on them. This verification remains outstanding and must cover the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
 
 Core's ETH signer needs `txMode: 1` (Enveloped) for EIP-1559 — the protobuf enum value is `1`, while `0x02` is the wire type byte; do not confuse the two.
 
