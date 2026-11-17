@@ -122,7 +122,7 @@ Using the [published 15-word ripple fixture mnemonic](../11-trust-wallet-and-ind
 
 Read the descriptor examples in [Output descriptors](#output-descriptors-make-the-watch-target-explicit) and [Testnet receiving and change](#testnet-receiving-and-change) as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
 
-Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins: a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both; from the repository root, derive with `tools/hdwallet-gen/derive.js` and compare the result against the versioned table; pass only if the path, prefix and origin match the table exactly and the descriptor's fingerprint and origin match those in the signer's export exactly. See [Output descriptors](#output-descriptors-make-the-watch-target-explicit) for the signer export and a descriptor example.
+Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins (see the [origin definition](#output-descriptors-make-the-watch-target-explicit)): a Bawa-generated wallet uses the purpose/coin-type prefix `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both; from the repository root, derive with `tools/hdwallet-gen/derive.js` and compare the result against the versioned table; pass only if the path, prefix and origin match the table exactly and the descriptor's fingerprint and origin match those in the signer's export exactly. See [Output descriptors](#output-descriptors-make-the-watch-target-explicit) for the signer export and a descriptor example.
 
 ## Hardware wallets
 
@@ -152,7 +152,7 @@ That distinction should remain intact.
 
 ## Bitcoin Descriptors & PSBT
 
-An xpub can be ambiguous for serious Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
+An xpub can be ambiguous for Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
 
 [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) for offline and hardware-backed transaction workflows.
 
