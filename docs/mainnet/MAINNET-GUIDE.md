@@ -3712,7 +3712,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 ### M-26 — Terminology and callout work
 
-**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 195 Warning callouts are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
+**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 195 Warning callouts are ungraded. Deleting the 7 actual “Never use real funds” warnings across `docs/09`, `RECOVERY` and `FAQ`, rather than replacing them with mainnet-appropriate warnings, would leave those passages without warnings when adapted for mainnet.
 
 **Affected sections:** §1, §2 and the whole document; writing-phase work.
 
@@ -3720,12 +3720,12 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 - The “Mainnet” glossary row at `docs/GLOSSARY.md:45` is false for the mainnet guide. The text itself breaks the “wallet” terminology rule at `docs/RECOVERY.md:423`, and two vaults share one glossary row.
 - The terms **BIP-39 passphrase** and **vault unlock passphrase** must be used in full, never reduced to the unqualified final word. Approximately 173 existing uses lack that qualification.
 - The callout taxonomy has three tiers — Never, Stop and Warning — written as `> **NAME**`, without a colon. Every callout must contain its trigger, required action and consequence.
-- All 195 existing `> **Warning**` callouts need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
+- All 195 existing `> **Warning**` callouts need re-grading. The 7 actual “Never use real funds” warnings across `docs/09`, `RECOVERY` and `FAQ`—none in `MAINNET-GUIDE`—must be replaced for mainnet, not deleted.
 - The 81 testnet-scope sentences require individual review, not bulk deletion. The “four secrets” map is missing.
 
 **Status:** OPEN (writing-phase work).
 
-**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 195 callouts using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
+**Operational restriction:** Apply the three-tier taxonomy and the full secret-name rule to every section. Re-grade every `> **Warning**` callout under that taxonomy, ensuring each callout states its trigger, required action and consequence. Replace the obsolete “Never use real funds” warnings with mainnet-appropriate warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
 
 **Blocks writing completion:** No — this is the writing work itself, not a precondition for it.
 
