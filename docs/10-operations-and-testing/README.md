@@ -791,6 +791,7 @@ Use public fixtures only. Use published test vectors or clearly marked placehold
 Before running each test, define and record its expected outcome. Confirm undocumented expected behaviour with the maintainer before running the test, then compare the actual result with the recorded expectation.
 
 Include negative tests covering malformed input, rejection of private-key material at the public-only boundary, refusal of symlinked paths and invalid checksums.
+Add an explicit `compare.js` regression test with `xprv` input that asserts rejection, no address output and a non-zero exit status. This guards against the reported probe that accepted `xprv` input, printed three identical addresses and exited 0.
 
 Run `test/differential_test.py` as Bawa’s independent check of public vectors using `bip_utils`.
 
