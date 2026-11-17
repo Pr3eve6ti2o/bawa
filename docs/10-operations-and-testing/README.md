@@ -841,13 +841,19 @@ Claim unsigned reproducibility only, unless independently produced signed output
 
 ### Reproduce web outputs
 
-For each independent web build, produce a manifest covering every output file. Record each file’s relative path and SHA-256 hash, and sort the manifest by relative path.
+For each independent web build, use the build configuration’s final web distribution directory as the output root, and record its location separately from the manifest. Establish the same complete, nonempty expected artifact inventory for both builders from the build’s declared deliverables, covering all web files under that root and every output archive, including archives stored elsewhere. Require at least one web output file and one corresponding archive pair. Missing or empty roots, empty inventories or archive sets, missing expected artifacts, and unlisted outputs are failures, even if both builders have the same omissions.
 
-Compare the sorted manifests and the whole-archive SHA-256 hashes of corresponding output archives. Do not use matching file manifests as a substitute for comparing the archives.
+Produce a manifest covering every regular file recursively under the output root, including hidden files, without exclusions. Reject a symlink output root, any symlink beneath it (including directory and dangling symlinks), and any entry that is neither a directory nor a regular file; do not follow or silently omit such entries. Verify the collected files and output archives against the expected inventory.
+
+Record each file’s relative path and SHA-256 hash of its exact bytes. Paths must be valid UTF-8, use `/` between components, have no leading separator or `.`/`..` components, and preserve case and Unicode code points without normalization. Reject duplicate relative paths. Write one canonical JSON (RFC 8785) record containing only `path` and lowercase-hex `sha256` per LF-terminated line, encoded as UTF-8 without a BOM. Sort records lexicographically by the unsigned UTF-8 bytes of the unescaped relative path, with shorter prefixes first, not by locale.
+
+Keep the evidence manifests and expected inventory outside both output roots and every output archive; they must not be included in the hashed outputs.
+
+Compare the sorted manifests and the whole-archive SHA-256 hashes of corresponding output archives. Do not use matching file manifests as a substitute for comparing the archives. Compare every inventoried file and archive pair; an empty or incomplete comparison must not pass.
 
 Record signing as `none` where applicable.
 
-> **Expected result:** Identical sorted relative-path/SHA-256 manifests and matching whole-archive SHA-256 hashes from both builders.
+> **Expected result:** Identical, complete, nonempty sorted relative-path/SHA-256 manifests and matching whole-archive SHA-256 hashes for every expected archive from both builders, with no missing outputs.
 
 ### Retain build and test evidence
 
