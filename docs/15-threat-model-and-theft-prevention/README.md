@@ -329,8 +329,9 @@ Begin containment before attempting wallet recovery or migration.
 
 1. Stop using any device you suspect is compromised for signing, wallet recovery and service accounts. Carry out account containment from a trusted device.
 2. Revoke active sessions on affected email, exchange and other service accounts. Review their authentication and recovery options, remove SMS fallbacks where possible, and keep recovery codes offline.
-3. Review withdrawal allow-lists and alerts where offered, and respond to unexpected activity.
-4. Review token permissions separately from service-account sessions. Revoke unnecessary permissions using verified tools, check network fees before signing, and review the remaining permissions.
+3. Rotate compromised passwords and API keys from a trusted device: set new, unique passwords, revoke compromised API keys, and issue replacement keys only where needed. Update dependent services to use the replacement keys.
+4. Review withdrawal allow-lists and alerts where offered, and respond to unexpected activity.
+5. Review token permissions separately from service-account sessions. Revoke unnecessary permissions using verified tools, check network fees before signing, and review the remaining permissions.
 
 ### Choose trusted-device recovery or fresh-seed migration
 
@@ -342,7 +343,7 @@ Begin containment before attempting wallet recovery or migration.
 
 ### Escalate to the maintainers
 
-No vulnerability-disclosure channel is published in the repository (OI-065). Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Once such a channel is available and containment is under way, report suspected compromise through it.
+No vulnerability-disclosure channel is published in the repository. The label OI-065 is a singleton reference occurring nowhere else in the repository. Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Do not publish exploit details, including in public issues, discussions or social media. Once such a channel is available and containment is under way, report suspected compromise through it, including affected components or accounts, a timeline, observed impact, containment actions taken and redacted supporting evidence; do not include passwords, API keys, recovery codes or wallet recovery phrases. Maintainers must handle reports and supporting evidence privately: acknowledge receipt, triage severity and scope, coordinate investigation and remediation, record the outcome, and communicate status updates and the final disposition to the reporter through the same private channel.
 
 > **Warning:** Sharing wallet or account secrets can expose funds or accounts. Keep mnemonics, passphrase values and recovery codes out of the report. Check the report for those secrets before sending it.
 
