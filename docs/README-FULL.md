@@ -15,6 +15,8 @@
 | Evidence | Recorded in §11, §18 and docs/08 |
 | Sources fetched on | 2026-11-08 |
 
+`requirements.txt` pins `bip-utils==2.12.3`, while verification actually ran with `bip-utils==2.12.2`. The tool-version summary and verification record report the observed version, not the declared pin. The pin tables distinguish the declared pin from the version observed during verification.
+
 ## 1. Scope and non-goals
 
 Use Bawa as a practical open-source reference for HD-wallet workflows:
@@ -31,7 +33,7 @@ Do not treat Bawa as:
 
 - a hosted wallet or custody service;
 - an exchange or commercial product;
-- a node client, balance retriever or transaction broadcaster — these are outside Trust Wallet Core’s scope;
+- a node client, balance retriever or transaction broadcaster — these are not provided by this repository;
 - a security audit.
 
 Read each **Warning** in this guide set in this order: **consequence → safe action → check or recovery**.
@@ -55,23 +57,23 @@ Version pins live in §5.4 (Compatibility, provenance, and version pins).
 
 Standards lead to chain-specific policy, which the Trust Wallet Core reference implementation follows. Watch-only public derivation turns public roots into addresses; RPC, node or indexer reads chain state; wallet and payment tracking observe payments; the application database reconciles them against orders:
 
-Standards → Chain-specific policy → Trust Wallet Core reference implementation → Watch-only public derivation → RPC / node / indexer → Wallet + payment tracking → Application database / reconciliation
+Generator / public-root input → Standards → Chain-specific policy → Trust Wallet Core reference implementation → Watch-only public derivation → RPC / node / indexer (external to this checkout) → Wallet + payment tracking (external to this checkout) → Application database / reconciliation (external to this checkout)
 
 | Component | Owns | Does NOT own |
 |---|---|---|
 | Standards | The base rules on which chain-specific policy rests. | Chain-state access or order reconciliation. |
 | Chain-specific policy | The chain-specific rules used by the reference implementation. | Reading chain state or deciding whether a payment satisfies an order. |
-| Trust Wallet Core | The reference wallet implementation: derivation and signing. | Reading chain state, making history searchable or deciding whether an order is paid. |
+| Trust Wallet Core | The reference wallet implementation: derivation. | Reading chain state, making history searchable or deciding whether an order is paid. |
 | Trusted generator | Creating wallet material and account-level public roots on the trusted machine, with no online chain connection needed. | Online payment tracking or reconciliation. |
 | Watch-only public derivation | Address derivation from an xpub or zpub (sensitive public material), or use of a public address. | Signing or handling seed and private material — the tools do not accept a private extended key. |
-| RPC / node | Reading chain state. | Wallet derivation, signing or order-payment decisions. |
-| Indexer | Making chain history searchable. | Wallet derivation, signing or order-payment decisions. |
-| Wallet + payment tracking | Tracking wallets and observed payments. | Wallet generation or signing. |
-| Application database / reconciliation | Recording tracked payments and deciding whether an observed payment satisfies an order. | Wallet derivation, signing or providing chain state. |
+| RPC / node | External/reference architecture (not implemented in this repo): reading chain state. | Wallet derivation, signing or order-payment decisions. |
+| Indexer | External/reference architecture (not implemented in this repo): making chain history searchable. | Wallet derivation, signing or order-payment decisions. |
+| Wallet + payment tracking | External/reference architecture (not implemented in this repo): tracking wallets and observed payments. | Wallet generation or signing. |
+| Application database / reconciliation | External/reference architecture (not implemented in this repo): recording tracked payments and deciding whether an observed payment satisfies an order. | Wallet derivation, signing or providing chain state. |
 
 The online application may be monitored, logged, restarted or compromised, so never allow the mnemonic, seed or private material to reach the watch-only runtime. Trusted generation keeps private material out of the online application, while chain observation supplies the evidence the application uses to reconcile payments.
 
-Use this section as the shared authority for the whole guide set. The Web guide and Android guide link here for scope, derivation policy and gates. Follow the “Learn from scratch” path in §19.
+Use this section as the shared authority for the whole guide set. The Web guide and Android guide reference the main README's scope, derivation-policy and gates sections by section number rather than linking here. Follow the “Learn from scratch” path in §19.
 
 ## 2. Choose your task
 
@@ -103,7 +105,7 @@ Learn from scratch — reading order:
 
 Deep-dive guides: docs/09-signing-and-hardware, docs/10-operations-and-testing, docs/11-trust-wallet-and-independent-verification, docs/12-chain-registry-and-assets, docs/13-wallet-app-architecture, docs/14-wallet-app-implementation, docs/15-threat-model-and-theft-prevention, docs/16-security-decision-guide, docs/RECOVERY.md, docs/GLOSSARY.md, docs/FAQ.md, docs/FURTHER-READING.md. Troubleshooting and the FAQ pointer live in §13 and §14 of this README.
 
-Supporting documentation: the [docs map](docs/README.md) lists every guide in reading order, with [References](docs/REFERENCES.md), [Security](docs/SECURITY.md) and [Testing](docs/TESTING.md) alongside. Platform guides: [Web wallet guide](docs/web-wallet/WEB-GUIDE.md) and [Android wallet guide](docs/android-wallet/ANDROID-GUIDE.md).
+Supporting documentation: the [docs map](README.md) lists every guide in reading order, with [References](REFERENCES.md), [Security](SECURITY.md) and [Testing](TESTING.md) alongside. Platform guides: [Web wallet guide](web-wallet/WEB-GUIDE.md) and [Android wallet guide](android-wallet/ANDROID-GUIDE.md).
 
 
 ## 3. Prerequisites
@@ -118,7 +120,7 @@ Use §§3–4 and 6–7 as the single canonical installation procedure for the w
 | Python virtual environment | Required; create `.venv` in §7. |
 | Git | Required |
 | `cryptography` | `cryptography==50.0.2` |
-| `bip-utils` | `bip-utils==2.12.3` |
+| `bip-utils` | Pinned in `requirements.txt`: `bip-utils==2.12.3`; observed during verification: `bip-utils==2.12.2`. |
 
 Live verification in this guide used Node v24.22.2, outside the declared `>=22 <23` range — the suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) (see §18).
 | `@trustwallet/wallet-core` | `4.8.4`, published 2026-09-24 |
@@ -350,7 +352,7 @@ Record full observed tool versions separately from these declared values.
 | Node | JavaScript runtime | `>=22 <23` | An exact full version within `>=22 <23` | Open — exact pin not recorded; live verification used Node v24.22.2, outside the declared range; the repository suite was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22). |
 | Python | Python runtime | `>=3.11` | An exact full version satisfying `>=3.11` | Open — exact pin not recorded. |
 | cryptography | Python dependency | `cryptography==50.0.2` | `cryptography==50.0.2` | Release verification not recorded. |
-| bip-utils | Python dependency | `bip-utils==2.12.3` | `bip-utils==2.12.3` | Release verification not recorded. |
+| bip-utils | Python dependency | `bip-utils==2.12.3` (declared pin) | `bip-utils==2.12.3` (pinned in `requirements.txt`) | Observed during verification: `bip-utils==2.12.2`. Release verification not recorded. |
 | Trust Wallet Core | Reference implementation through `@trustwallet/wallet-core` | `4.8.4` (published 2026-09-24) | `4.8.4` | Demonstrated on `4.9.2` for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. |
 | npm | JavaScript dependency installation | No version specified | An exact full npm version | **Release blocker** — no version specified. |
 
@@ -621,7 +623,7 @@ stdout JSON contains public material only: `btc_zpub`, `eth_xpub`, `trx_xpub`, `
 
 **Step 7 — Regenerate only after a verified backup**
 
-Before regenerating, verify your backup on a trusted machine with `tools/decrypt_seed.py` and the separate offline data key. Follow [docs/RECOVERY.md](docs/RECOVERY.md) and §12. Leave no decrypted copy behind.
+Before regenerating, verify your backup on a trusted machine with `tools/decrypt_seed.py` and the separate offline data key. Follow [docs/RECOVERY.md](RECOVERY.md) and §12. Leave no decrypted copy behind.
 
 Without `--force` or `--regenerate`, an existing seed bundle stops the run. Only after verifying the backup should you repeat the generation command from Steps 1–4 with `--force`.
 
@@ -1067,13 +1069,13 @@ Known gaps:
 
 ## 14. Short FAQ
 
-Read [`docs/FAQ.md`](docs/FAQ.md) for the FAQ.
+Read [`docs/FAQ.md`](FAQ.md) for the FAQ.
 
 - **Scoped numerical note.** A 24-word mnemonic encodes 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. The empty passphrase contributes no additional secret. Seed-guessing resistance is separate from randomness quality, implementation security and device compromise.
 
 - **Per-asset recovery checklist.** For each asset, record: BIP-39 support; empty passphrase; exact derivation path; account 0; receiving branch 0; address format; network. Label each item **tested** or **theoretical**. TON is generation-only. The documented policy version is `bawa-derivation-policy-v1`. Record this identifier so you can detect a future policy change; it labels the policy without changing any seed or path.
 
-For the other FAQ topics, see [`docs/FAQ.md`](docs/FAQ.md): why Bawa is not a wallet to hold money; why you should generate only on a trusted offline interactive machine; first-word plus `SAVED` confirmations; why an xpub cannot recover a wallet; why a differential pass is not production readiness; and why a quiet terminal or a refused run is normal.
+For the other FAQ topics, see [`docs/FAQ.md`](FAQ.md): why Bawa is not a wallet to hold money; why you should generate only on a trusted offline interactive machine; first-word plus `SAVED` confirmations; why an xpub cannot recover a wallet; why a differential pass is not production readiness; and why a quiet terminal or a refused run is normal.
 
 ## 15. Updating and rebuilding
 
