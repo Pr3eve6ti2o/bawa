@@ -164,9 +164,9 @@ Keep these distinct:
 
 Your mnemonic reproduces the intended seed only with the same BIP-39 passphrase. A bare private key lacks the chain code needed for HD derivation. An account extended private key, or xprv, recovers only its subtree; the seed or master xprv is root-level material.
 
-**What an xpub exposes.** An extended public key, or xpub, includes the chain code needed for non-hardened public-child derivation. Anyone holding an account xpub can derive every receiving and change address below that account, including unissued ones, and link their on-chain activity.
+**What an xpub exposes.** An extended public key, or xpub, includes the chain code needed for non-hardened public-child derivation. Anyone holding an account xpub can derive every receiving and change address on entirely non-hardened paths below that account, including unissued ones, and link their on-chain activity.
 
-On its own, an xpub cannot recover hardened private ancestors or authorise a spend. Treat it as sensitive public material. Keep it out of public logs and unrestricted exports.
+On its own, an xpub cannot recover private keys or authorise a spend. Paired with a descendant private key whose path from the xpub is entirely non-hardened, however, it reveals the corresponding extended private key and hence every descendant key. A hardened edge on that path blocks this recovery. Treat an xpub as sensitive public material. Keep it out of public logs and unrestricted exports.
 
 ## 6. Hardened derivation and watch-only design
 
@@ -174,7 +174,7 @@ Keep your address server on the public side. For `m/44'/60'/0'/0/i`, the purpose
 
 Export the account xpub at `m/44'/60'/0'`. Your server derives `/0/0`, `/0/1`, `/0/2`… for deposit addresses without signing authority.
 
-This design is unsafe if any private key on the non-hardened branch reaches someone holding the account xpub: one leaked address private key recovers the account private key. BIP-44 hardens account levels to contain the damage. An account compromise cannot be reversed through the hardened account edge to the coin-type parent or sibling accounts.
+This design is unsafe if someone holding the account xpub obtains any descendant private key whose entire path from the account is non-hardened: one leaked address private key on such a path recovers the account extended private key and hence every descendant key. A hardened edge on that path blocks this recovery. BIP-44 hardens account levels to contain the damage. An account compromise cannot be reversed through the hardened account edge to the coin-type parent or sibling accounts.
 
 **SLIP-0010 curves.** [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) uses these master HMAC keys:
 
@@ -246,7 +246,7 @@ For 24 words, 256 entropy bits plus 8 checksum bits make 264 bits. The last word
 | Output | 64 bytes: the seed |
 | Bawa’s empty passphrase | `""`, so the salt is the literal string `"mnemonic"` |
 
-**Leak rule (§3):** if you expose a parent extended public key and one descendant private key on an all-non-hardened path, you reveal the parent private key.
+**Leak rule (§3):** if you expose a parent extended public key and one descendant private key reached from that parent through an entirely non-hardened path, you reveal the parent extended private key and hence every descendant key. A hardened edge on that path blocks this recovery.
 
 **Address server (§6):** the account xpub at `m/44'/60'/0'` lets you derive deposit addresses without signing authority.
 
