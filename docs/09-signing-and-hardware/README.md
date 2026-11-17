@@ -761,12 +761,12 @@ If that ownership check cannot be completed, stop. Do not substitute the desktop
 Authoritative documentation:
 
 - Trezor: derivation paths and curve constraints: https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md
-- Ledger: device applications and signing integration: https://developers.ledger.com/
+- Ledger: device applications and signing integration: [Bitcoin Signer Kit](https://developers.ledger.com/docs/device-interaction/dmk-ts/references/signers/btc) and [transaction signing guidelines](https://developers.ledger.com/docs/device-app/integration/design-guidelines/transactions)
 
 Community experience and product context, not protocol specifications:
 
-- Keycard Shell: https://keycard.tech/products/keycard-shell (checked 8 November 2026; the site returns HTTP 429 to automated checks)
-- Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q
+- Keycard Shell: https://keycard.tech/products/keycard-shell (checked 8 November 2026; the site returned HTTP 429 to automated checks)
+- Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q (a community review of the Coldcard Q air-gap hardware wallet, not a protocol specification)
 
 ### Firmware discipline, PINs and passphrases
 
@@ -814,12 +814,12 @@ After broadcast, verify `<TXID>` and its status through a node or explorer on th
 **Official references and standards**
 
 - Trezor derivation-path reference: https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md
-- Ledger developer documentation: https://developers.ledger.com/
+- Ledger developer documentation: [Bitcoin Signer Kit](https://developers.ledger.com/docs/device-interaction/dmk-ts/references/signers/btc) and [transaction signing guidelines](https://developers.ledger.com/docs/device-app/integration/design-guidelines/transactions)
 - Descriptor and PSBT standards: https://github.com/bitcoin/bips
 
 **Community experience, not specifications**
 
-- Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q
+- Coldcard Q: https://thebitcoinhole.com/hardware-wallets/coldcard-q (a community review of the Coldcard Q air-gap hardware wallet, not a protocol specification)
 - SeedSigner: https://thebitcoinhole.com/hardware-wallets/seedsigner
 
 ## Practise test funding, fees and change
