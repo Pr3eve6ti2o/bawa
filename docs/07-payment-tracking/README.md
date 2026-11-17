@@ -71,7 +71,7 @@ observe → identify event/payment uniquely → store/claim atomically → fulfi
 
 Make the claim atomic and choose a chain-specific uniqueness key:
 
-- UTXO payments: `chain + txid + output`
+- UTXO payments: `chain + network + watch_scope + txid + output_index`
 - EVM token events: `chain_id + tx_hash + log_index`
 
 Use the same idempotent finalisation gate for every payment path. Do not let a repeated observation fulfil an order again.
@@ -80,7 +80,7 @@ Use the same idempotent finalisation gate for every payment path. Do not let a r
 
 #### Bitcoin
 
-Match a payment to a UTXO/output paying the assigned address. Follow Bitcoin's developer guide recommendation to use a unique address per payment request: associate the address with the request, then scan for transactions involving it.
+Match a payment to a UTXO/output paying the assigned address. Follow [Bitcoin's developer guide recommendation](https://developer.bitcoin.org/devguide/requesting_payments.html) to use a unique address per payment request: associate the address with the request, then scan for transactions involving it.
 
 For free/manual tracking, use Mempool.space and Blockstream Esplora. Treat a hosted explorer as a convenience, not as your application's canonical database.
 
