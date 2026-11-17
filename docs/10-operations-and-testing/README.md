@@ -522,11 +522,11 @@ The Web layer has no runnable procedure in this guide yet. At commit `3019b02`, 
 
 > 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
 >
-> **Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
+> **Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, a subset of the 55, not additional coverage); the on-device gate has never run.
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-Preserve the historical command record for `jvmtests/PureModuleTests.kt`, in the order shown below. Note that the placeholders are the author's recorded form, not resolved paths, and that the harness needs kotlinc 2.1.0 and JDK 21.
+Preserve the historical command record for `jvmtests/PureModuleTests.kt`, in the order shown below. Note that the placeholders are the author's recorded form, not resolved paths, and that kotlinc 2.1.0 and JDK 21 are the recorded versions, not established requirements.
 
 ```
 kotlinc <core sources except CoreWalletEngine/EthSendComposer> app/.../storage/VaultEnvelope.kt jvmtests/PureModuleTests.kt
