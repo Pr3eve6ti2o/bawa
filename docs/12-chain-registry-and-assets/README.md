@@ -36,7 +36,7 @@ Reference.
 
 **Status:** Metadata reference; contribution and validation procedures are incomplete.
 
-Bawa ships no chain registry; this section interprets the [Trust Wallet Core registry](../GLOSSARY.md#trust-wallet-core-registry) (`registry.json`) and Trust Wallet Assets, both upstream, and explains what each can and cannot answer for Bawa.
+Bawa ships no chain registry; this section interprets the [Trust Wallet Core registry](../GLOSSARY.md) (`registry.json`) and Trust Wallet Assets, both upstream, and explains what each can and cannot answer for Bawa.
 
 The Trust Wallet Core registry is mainnet metadata: it holds 168 entries and zero testnet entries. It describes coin, derivation and address parameters for Trust Wallet Core; it does not define Bawa's supported networks. Trust Wallet Assets supplies asset metadata for identification and display; an entry there does not establish Bawa's engine compatibility or payment support.
 
@@ -53,7 +53,7 @@ This is a selected subset of fields in `registry.json`, not a complete inventory
 - Derivation paths and alternate derivations.
 - Bitcoin-style extended-key formats inside `derivation`; among Bawa's four chains, these are present only for Bitcoin.
 - Elliptic curve and public-key type.
-- Address prefixes and [HRP](../GLOSSARY.md#hrp) values (human-readable part: the readable prefix in an address encoding).
+- Address prefixes and [HRP](../GLOSSARY.md) values (human-readable part: the readable prefix in an address encoding).
 - Network identifiers, including the optional `chainId` field. In the Wallet Core 4.9.2 registry, this field is present on 100 of 168 entries, with all values stored as strings. It carries both EVM chain IDs and non-EVM network identifiers such as `cosmoshub-4`.
 - Explorer and documentation links.
 
