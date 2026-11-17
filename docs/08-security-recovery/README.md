@@ -983,7 +983,7 @@ Have each signer verify the payment independently rather than merely approve a n
 
 Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a signing quorum.
 
-### Check the figures for the particular service
+### Check the figures for BitGo
 
 **BitGo is a commercial example, not a Bawa recommendation.** It markets multisig and MPC wallets, qualified-custody services, and products for settlement and staking. Check the agreement for the particular service — these are not interchangeable arrangements.
 
@@ -991,8 +991,8 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Item | Indicative figure and checks |
 |---|---|
-| BitGo custody pricing | BitGo currently offers qualified custody with no custody fees to eligible individual investors. No published institutional annual custody rate was verified at this check (checked 8 November 2026, UTC). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, recovery and exit charges, and allow separately for chain fees. |
-| BitGo insurance headline | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). Check who is insured, which losses qualify, exclusions and whether limits are shared. |
+| BitGo custody pricing | BitGo currently offers qualified custody with no custody fees to eligible individual investors. No published institutional annual custody rate was verified at this check (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, recovery and exit charges, and allow separately for chain fees. |
+| BitGo insurance headline | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Check who is insured, which losses qualify, exclusions and whether limits are shared. This row duplicates the BitGo insurance row in section 17 (L733), the single maintained source; keep both rows' check dates synchronised with that source. |
 
 ### Make the exit real
 
