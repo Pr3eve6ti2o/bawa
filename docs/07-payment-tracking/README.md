@@ -801,7 +801,7 @@ Use idempotent invoice creation to prevent accidental reissue, and reconciliatio
 
 ### Keep evidence for disputes and refunds
 
-Keep the request’s agreed asset, network, amount and destination alongside transaction evidence, confirmation status and the claim, credit and fulfilment history. Append review decisions and their reasons without erasing earlier evidence.
+Keep the request’s agreed asset, network, amount and destination alongside transaction evidence ([persist raw observations first](../06-tracking/README.md#L582)), confirmation status ([confirmation/finality policy](../12-chain-registry-and-assets/README.md#L320)) and the claim, credit and fulfilment history. Append review decisions and their reasons without erasing earlier evidence.
 
 - **Wrong asset:** Hold the payment for review. Compare the requested and received asset identifiers, including token contract identifiers where relevant, against transfer logs or outputs. Record the amount and asset precision. Do not rely on matching names or tickers.
 - **Wrong network:** Do not automatically settle the intended-network request. Give the reviewer the expected and observed chain identifiers, transaction evidence, destination and confirmation status, plus evidence that the operator controls the funds on the observed chain.
