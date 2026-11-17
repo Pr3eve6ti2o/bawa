@@ -964,7 +964,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at `4.8.4`, which `npm ci` installs; `4.9.2` was the required release-verification pin in the Version pins table above (D21 construction/signing demonstration only, not the installed pin). With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
+The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm install` and does not demonstrate a clean, lockfile-based `npm ci` installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
 ```bash
 cd tools/hdwallet-gen
