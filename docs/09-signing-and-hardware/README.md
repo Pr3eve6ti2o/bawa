@@ -592,7 +592,7 @@ Use this metadata to populate BIP-174 PSBT derivation records, helping an offlin
 
 ### Choose the script wrapper
 
-Use BIP-380's shared syntax. Refer to BIP-381 for legacy constructions such as `pkh` and `sh`, and to BIP-382 for SegWit constructions such as `wpkh`. Consult [Bitcoin Core's descriptor documentation](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) for Taproot's separate `tr` extension.
+Use BIP-380's shared syntax. Refer to BIP-381 for legacy constructions such as `pkh` and `sh`, and to BIP-382 for SegWit constructions such as `wpkh`. Consult [Bitcoin Core's descriptor documentation](https://github.com/bitcoin/bitcoin/blob/e211dd0186e9646167d063a16f0da88e5f72e05f/doc/descriptors.md) (pinned as at 17 November 2026) for Taproot's separate `tr` extension ([BIP-386](https://github.com/bitcoin/bips/blob/master/bip-0386.mediawiki)).
 
 | Form | Output policy |
 | --- | --- |
@@ -607,11 +607,11 @@ Changing the wrapper changes the output script and address, even with the same k
 
 For an external hardware signer exporting the BIP-84 testnet account-zero origin shown above, use the canonical receive/change descriptor pair in [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt).
 
-Read these as the BIP-44-style account hierarchy: `/0/*` conventionally tracks external receiving addresses, and `/1/*` tracks internal change addresses.
+Read these as the BIP-44-style account hierarchy: `/0/*` conventionally tracks external receiving addresses, and `/1/*` tracks internal change addresses (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) and [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)). The fingerprint placeholder must be replaced with exactly 8 hex digits, and the key must be account-level.
 
 Change can disappear from the tracker's view after a spend if you omit the change branch. **Watch both branches, receiving `/0/*` and change `/1/*`.** Check that the tracker includes both.
 
-Treat `<xpub>` as a generic placeholder, not a required prefix. A generic test-network export may carry `tpub`, but a BIP-84 testnet account export uses `vpub` (`0x045f1cf6`), assigned by [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) to testnet native SegWit under `m/84'/1'`.
+Treat `<xpub>` as a generic placeholder, not a required prefix. A generic test-network export may carry `tpub`, but a [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) testnet account export uses `vpub` (`0x045f1cf6`), assigned by [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) to testnet native SegWit under `m/84'/1'`. Bitcoin Core expects network-appropriate `xpub`/`tpub` in descriptors, not verbatim `zpub`/`vpub`.
 
 Expect Bawa's own tools to emit `zpub` for the Bitcoin testnet4 account because the code pins `HDVersion.zpub`. Note the verified result from running the repaired `derive.js` with the published ripple-fixture `zpub`:
 
@@ -653,7 +653,7 @@ These templates show the structure only; they are not import-ready strings and h
 | Receiving and change | See the canonical receive/change descriptor pair in [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt). |
 | Both branches | `wpkh([<fingerprint>/84'/1'/0']<xpub>/<0;1>/*)` |
 
-Here, `<0;1>` is literal multipath syntax, not a placeholder. It selects branches `0` and `1`; the trailing `*` varies the address index within each branch. In this convention, those remain separate receiving and change sequences, simply written compactly.
+Here, `<0;1>` is literal multipath syntax ([BIP-389](https://github.com/bitcoin/bips/blob/master/bip-0389.mediawiki)), not a placeholder. It selects branches `0` and `1`; the trailing `*` varies the address index within each branch. Multipath requires software that supports it. In this convention, those remain separate receiving and change sequences, simply written compactly.
 
 **Never guess the fingerprint or origin.** Take both from the signer’s own export, including every hardened derivation marker. The illustrated `84'/1'/0'` path is not a replacement for that export. Coin type `1` is the testnet convention; it does not by itself select or confirm the network.
 
