@@ -38,9 +38,11 @@ An account-level xpub with non-hardened branches does not normally let an attack
 
 A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms can matter.
 
-Recovery record = mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration. For TON, include the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
+Recoverable material = mnemonic (with scheme/passphrase requirements) OR (encrypted seed bundle + matching 32-byte data key). Recovery record = recoverable material + exact derivation/account metadata + network + chain/wallet/address-presentation configuration.
 
-Encryption at rest protects a stored artefact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics.
+Definitions: chain derivation policy = the chain's derivation rules; exact chain/path policy = the precise derivation rules and paths used; account selection = the chosen account; account/branch = the chosen account and derivation branch; chain-specific configuration = additional settings required by the chain; offline recovery set = the complete recovery record kept offline; fresh = without existing wallet state; meaningful funds = funds whose loss would matter to you; verified procedure = a procedure successfully used to recreate the same wallet independently. For TON, include the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
+
+Encryption at rest protects a stored artefact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics, including during generation and recovery. The Bawa artefact boundary: `seed.enc.json` holds the encrypted seed bundle, and its separate 32-byte data key is stored in another location; during generation and recovery the mnemonic and seed are plaintext in process memory (and on the terminal when displayed for recovery). The guide documents no wrapping of the data key.
 
 ### Recovery drill (before funding)
 
