@@ -789,7 +789,7 @@ Do this before trusting exports, loading test recovery material or funding a tes
 #### Separate device access from wallet identity
 
 - **PIN:** where supported, this restricts device access; it does not protect a copied recovery backup. Retry limits, delays and erasure behaviour vary. Read the model’s policy rather than guessing.
-- **Optional wallet passphrase:** this changes the wallet derived from recovery material. A typing error can produce a different, empty wallet without an error message. Keep an exact offline record separate from the recovery backup; case and spacing matter. The recovery backup alone cannot recreate that wallet without the passphrase.
+- **Optional wallet passphrase:** this changes the wallet derived from recovery material. A typing error can produce a different, empty wallet without an error message. Keep an exact offline record separate from the recovery backup; case and spacing matter. The recovery backup alone cannot recreate that wallet without the passphrase. Weak passphrases are vulnerable to offline guessing. Rehearse recovery: restore the wallet from the recovery backup plus passphrase on a test device and compare the derived addresses against the recorded reference addresses.
 - Prefer entry on the signer where supported. If you type a passphrase into a computer, assume it can be captured there. Shield secret entry from observers. Never put recovery words or passphrases in Bawa, watch-only imports, logs or PSBT metadata.
 
 #### Differences to check, not a buying recommendation
@@ -803,7 +803,7 @@ Do this before trusting exports, loading test recovery material or funding a tes
 
 #### Finish with independent checks
 
-Use the signer’s own public export, `<xpub>`, `<fingerprint>` and key-origin information, with applicable BIP-380/381/382 descriptor rules. A fingerprint alone is not proof of wallet identity. Compare `<TESTNET_ADDRESS>` with the signer’s display before funding.
+Use the signer’s own public export, `<xpub>`, `<fingerprint>` and key-origin information, with applicable BIP-380/381/382 descriptor rules and [BIP-386](https://github.com/bitcoin/bips/blob/master/bip-0386.mediawiki) for Taproot descriptors. A fingerprint alone is not proof of wallet identity. Compare `<TESTNET_ADDRESS>` with the signer’s display before funding.
 
 Follow your tools’ BIP-174 PSBT flow, with BIP-371 support when using Taproot. Bawa does not document construction, signing or finalisation commands. Confirm the chosen network in your tools; an address alone cannot distinguish testnet from signet. On the signer, check destinations, change, amounts and fee before signing.
 
