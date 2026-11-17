@@ -616,14 +616,14 @@ Give each request its own deposit address. A standard token-transfer event conta
 
 ### TRON
 
-Read indexed transaction records and contract events, including execution results and block/finality state.
+Read indexed transaction records and contract events, including execution results and block/finality state ([TRON transaction-information response](https://developers.tron.network/reference/gettransactioninfobyid)).
 
 - For token events, use `(<NETWORK>, <TXID>, <EVENT_INDEX>)` as the event key. Use a stable transaction-local event position for `<EVENT_INDEX>`, never a pagination offset.
 - For native transfers, use `(<NETWORK>, <TXID>, <CONTRACT_INDEX>)` in a separate namespace. The contract index identifies the transfer operation within the transaction.
 - Check the network, transfer contract/type, recipient, atomic amount, successful execution, block number/hash and confirmed or solidified state.
 - For tokens, also verify the expected token contract and decoded transfer event.
 
-If several requests fit, do not guess. Treat an indexed transaction as evidence of visibility, not successful execution or finality. Do not treat a latest-block result as solidified merely because the indexer returned it.
+If several requests fit, do not guess. Treat an indexed transaction as evidence of visibility, not successful execution or finality ([TRON broadcast documentation](https://developers.tron.network/reference/broadcasttransaction), [transaction-information response](https://developers.tron.network/reference/gettransactioninfobyid)). Do not treat a latest-block result as solidified merely because the indexer returned it ([TRON consensus](https://developers.tron.network/docs/concensus)).
 
 ### TON
 
