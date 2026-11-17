@@ -2253,7 +2253,7 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 - **TRX `feeLimit`:** the draft confuses a smart-contract budget with the mainnet maximum. At the dated review, **1,000,000 SUN** was a smart-contract budget only; the mainnet ceiling, obtained by querying the live `getMaxFeeLimit` chain parameter, was **15,000,000,000 SUN**. Neither is a quote for actual expenditure or a recommended setting. The smaller value must not be presented as the maximum accepted on mainnet.  
   *Source and check: m12 §7, baseline 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **TON estimation timing:** the draft’s broadcast-only wording is misleading. `estimateFee` simulation exists **before signing**, using the exact unsigned body and deployment inputs where applicable. The procedure above is not dependent on first broadcasting a transaction.  
+- **TON estimation timing:** The draft's procedure was not supplied, so the guide cannot characterize its wording, and correct implementation in the draft has not been verified. `estimateFee` simulation exists **before signing**, using the exact unsigned body and deployment inputs where applicable. This simulation does not require first broadcasting a transaction.  
   *Sources: m12 §7; m12 §4; m10 F9/F10.*
 
 - **BTC fee sources:** the draft’s examples derive from mempool.space **testnet** fee data. Re-point the examples to **mainnet** data and retain the source and check time with each replacement figure. No draft fee example is established as a mainnet fact merely by appearing in the Web text.  
@@ -2280,7 +2280,7 @@ The likelihoods below are conditional planning judgements for ordinary-use expos
 
 ### What changes on mainnet
 
-The testnet-only threats drop out: testnet-faucet exhaustion, quotas and unavailability; theft of valueless test coins; and disruption confined to rehearsal.
+The threats tied to testnet-specific service dependencies cease to apply on mainnet: testnet-faucet exhaustion, quotas and unavailability. Theft of valueless test coins is not a financial-loss mode, though it can affect rehearsal availability and integrity; the theft mechanism itself does not disappear on mainnet. Disruption also remains a threat and can affect live operations rather than being confined to rehearsal.
 
 None of the wallet-compromise mechanisms disappears. A testnet mnemonic reused on mainnet, or malware retained on a shared device, can cause real loss. Keep untrusted rehearsal software out of a clean, separate mainnet signing environment.
 
