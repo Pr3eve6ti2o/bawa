@@ -156,16 +156,18 @@ After resolving those details and clearing the release blockers, create an annot
 
 **Cause:** Treat the cause as unconfirmed until you have checked the installed Node.js and npm versions and the exact package/version selected by the lockfile.
 
-**Fix:** Run:
+**Diagnose:** Preserve the exact error output and copies of the original manifest (`package.json`) and lockfile before making changes or retrying `npm install`. Then run:
 
 ```bash
 node --version
 npm --version
 ```
 
-Inspect the exact package/version selected by the lockfile and address the specific failure identified.
+Inspect the exact package/version selected by the original lockfile.
 
-**Warning:** Replacing the dependency set before identifying the failure can change what you are diagnosing. Do not immediately delete every dependency or install arbitrary ‘latest’ versions. Check the selected package/version against the lockfile before retrying installation.
+**Fix:** Address the specific failure identified by the error and diagnostic checks.
+
+**Warning:** Replacing the dependency set before identifying the failure can change what you are diagnosing. Do not immediately delete every dependency or install arbitrary ‘latest’ versions. Check the selected package/version against the lockfile before retrying installation. `npm install` can update the lockfile.
 
 **Check:** Run `npm install` again after correcting the identified problem.
 
