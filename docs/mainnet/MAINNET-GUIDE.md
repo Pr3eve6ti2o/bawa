@@ -2866,10 +2866,10 @@ Unperformed operational checks may remain open when the writing is complete, but
 2. **Before-creation coverage.** Every setup, creation and import entry point—including recovery and FAQ routes—is preceded by the required warnings.
 3. **Action-level coverage.** Every money-movement instruction locally names its loss modes, teaches prevention and states when to stop.
 4. **Consistency and navigation.** Warning copies agree with §2, links reach their sections, and no shortcut bypasses a prerequisite or stop condition.
-5. **Evidence and wording.** Every value, count and date is checked against cited evidence. Repository facts are attributed to `56396a20` without presenting that head as an approved mainnet revision. There are no “safe”, “secure” or “production-ready” claims, and no legal or tax advice.
+5. **Evidence and wording.** Every value, count and date must be checked against cited evidence. This check is not satisfied until the P129 28-of-28 figure is reconciled with the live 130-ok run and the P121 counts (8, 6, 5, 5, 4) are reconciled with the recounts (exact: 11, 10, 10, 6, 9; substring: 11, 10, 10, 6, 14). Repository facts are attributed to `56396a20` without presenting that head as an approved mainnet revision. There are no “safe”, “secure” or “production-ready” claims, and no legal or tax advice.
 6. **Register coverage.** Every uncertainty, deferral and TODO maps to an M- entry with all required fields. Shared issues retain separate scope-specific rows.
 7. **Gate independence.** Each mainnet criterion has an observable check, required evidence and an explicit consequence if unmet. Testnet results are not treated as mainnet passes.
-8. **Outstanding-item treatment.** No writing blocker remains unresolved. Unperformed operational checks stay visibly unperformed, with dependent action stopped. Registering a gap does not clear it.
+8. **Outstanding-item treatment.** No writing blocker may remain unresolved. This check is not satisfied while the P128 payment-procedure gaps remain open. Unperformed operational checks stay visibly unperformed, with dependent action stopped. Registering a gap does not clear it.
 9. **Separate review.** An inspectable review record identifies the reviewed prose revision, scope and remaining restrictions. A testnet review is not a substitute; neither scope’s review replaces the other’s. This prose review also does not satisfy the independent security review gate.
 
 #### Six writing blockers and their clearance conditions
@@ -2891,7 +2891,7 @@ A status change must cite inspectable evidence meeting the entry’s clearance c
 
 A shared issue requires **two scope-specific rows**: an **OI row in Doc 3** and an **M- row in Doc 4**. Cross-link them, but do not merge their authority. Closing either row does not close the other; each needs its own scope-appropriate clearance evidence.
 
-**README §18 is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
+**`docs/README-FULL.md` §18 is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
 
 ## 18. Troubleshooting and FAQ
 
