@@ -861,19 +861,19 @@ On regtest, locally generated coins are another option, but generated coinbase o
 
 Build a small payment to another test address you control, leaving room for both fee and change. Inspect the selected inputs and proposed outputs as well as the wallet’s balance.
 
-`fee = total input value − total output value`
+`fee = total input value − total output value` (see [Bitcoin Developer Guide: transaction fees](https://developer.bitcoin.org/devguide/transactions.html))
 
 Input values come from the previous outputs being spent. Include **every output** in the second total, including change.
 
 There is no separate fee output. When the transaction is mined, the positive remainder becomes the miner’s fee. Removing a change output without changing anything else therefore gives its entire value to the miner. Nothing automatically sends that remainder back to your wallet.
 
-Choose a suitable test-network fee rate in sat/vB. Estimate the eventual signed transaction’s virtual size using its input and output types, including change:
+Choose a suitable test-network fee rate in sat/vB (see Bitcoin Core’s [`estimatesmartfee` documentation](https://developer.bitcoin.org/reference/rpc/estimatesmartfee.html)). Account for signature-size variability and integer-satoshi rounding, and check the final fee/vsize after signing. Estimate the eventual signed transaction’s virtual size using its input and output types, including change:
 
 `estimated fee ≈ fee rate × estimated signed virtual size`
 
 The PSBT file’s size is not the transaction’s virtual size. Sparse test-network history can also make automatic fee estimates unreliable; do not interpret an unavailable estimate as a recommendation to pay nothing.
 
-Before signing, recalculate the fee from validated previous-output values and all proposed outputs. Check both the absolute fee and estimated sat/vB rate against your plan and tiny test budget. If the builder omits uneconomic change and adds that remainder to the fee, check the resulting total explicitly. Unverified input-value data is a reason to stop.
+Before signing, recalculate the fee from validated previous-output values (checked against the test node’s UTXO set and independently verified by the signer) and all proposed outputs. Estimate the final signed vsize, including witnesses, and check both the absolute fee and estimated sat/vB rate against your plan and tiny test budget. If the builder omits uneconomic change and adds that remainder to the fee, check the resulting total explicitly. Unverified input-value data is a reason to stop.
 
 ### 3. Verify change on the device
 
