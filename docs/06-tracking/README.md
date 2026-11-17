@@ -244,7 +244,7 @@ For each collection cycle, fetch, preserve raw chain facts with their chain/netw
 | Poller | Schedule reads; handle indexer lag, RPC outages, retries, duplicates and reorgs. |
 | Dashboard | Present the stored view locally, including chain/network, freshness and reorg/finality state. |
 
-Bawa does not document a database engine or schema, reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
+Bawa names SQLite as a common choice for personal local storage and proposes a logical schema in section 10, but does not document reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
 
 SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity such as `(watch, transaction id, output index)`.
 
@@ -265,7 +265,7 @@ Use these Esplora reads against the Blockstream endpoint. The paths include `/ap
 
 Use the [Esplora API documentation](https://github.com/Blockstream/esplora/blob/master/API.md) for response schemas, history pagination and the chain/mempool variants.
 
-For EVM reads, use `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`.
+For EVM reads, use `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt`, `eth_getLogs` and `eth_call`.
 
 ### Run the read probe
 
@@ -277,7 +277,7 @@ Run the sourced read probe after making that replacement:
 curl https://blockstream.info/api/address/bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd
 ```
 
-Expect address-state data from Esplora. Bawa does not document the exact JSON fields; use the Esplora reference.
+Expect address-state data from Esplora. Bawa documents the `chain_stats` JSON fields in MAINNET-GUIDE:1145-1160; use that passage.
 
 ### Complete the setup
 
