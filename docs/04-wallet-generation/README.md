@@ -223,8 +223,8 @@ If a stage fails, stop before confirming. Keep recovery material offline and do 
 
 | Failure | What you should do |
 | --- | --- |
-| Terminal unavailable or your records do not match | Stop before confirming. |
-| Deterministic or public check fails | Hold public release and investigate with a maintainer. Treat exact diagnostics and exit codes as unspecified. |
+| Terminal unavailable or TTY confirmation mismatch (first word or `SAVED`) | Stop before any write; either confirmation mismatch throws. |
+| Deterministic or public check fails | Hold public release and investigate with a maintainer. Every failure path exits `1`; known diagnostics include `CHECK FAILED: <name>`, the confirmation-failure messages, and the terminal `FATAL` message. |
 | Write fails, is interrupted, or permissions differ | Keep completion unverified and retain recovery material offline. File presence alone is not recovery proof. |
 | Recovery fails or the procedure is unavailable | Keep recovery marked unverified. `make_wallet.py` places `decrypt_seed.py` and `RECOVERY.md` (copied from `docs/RECOVERY.md` to the backup directory's top level) in the backup directory; test a restore separately before funding. |
 
