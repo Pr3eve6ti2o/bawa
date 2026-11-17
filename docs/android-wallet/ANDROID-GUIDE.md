@@ -151,9 +151,9 @@ Expected result: a commit hash starting with `e3b65fb832db287fdc8d54794980dd0b34
 
 Keep the README run guide, `docs/RECOVERY.md`, `tools/hdwallet-gen` and docs 01, 02, 04, 05, 08, 09, 13, 14, 15 and 16 beside this guide. Include docs 03, 06, 07, 10, 11 and 12, which the repository guide also carries.
 
-The pinned checkout at `e3b65fb832db287fdc8d54794980dd0b3456cc12` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly the four JavaScript tools and `decrypt_seed.py`, and all four tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
+The pinned checkout at `e3b65fb832db287fdc8d54794980dd0b3456cc12` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly six files: `tools/hdwallet-gen/compare.js`, `tools/hdwallet-gen/derive.js`, `tools/hdwallet-gen/derive_daemon.js`, `tools/decrypt_seed.py`, `test/smoke.test.js`, and `tools/hdwallet-gen/package-lock.json`; `generate.js` was untouched, and all four JavaScript tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
 
-Docs 03 and 12 are the shallowest in the repository and have never received a deep pass. Treat anything taken from them as unreviewed until the repository guide deepens them. **Open item (OI-017):** docs 03 and 12 received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089).
+Docs 03 and 12 are the shallowest in the repository, but received a deep pass (D01–D16, 2026-11-08). **Open items (OI-017/OI-089):** the docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089).
 
 Never change a derivation policy. If the documentation, recovery instructions and reference implementation disagree, record the discrepancy and stop the affected work. Use only published test vectors or explicit placeholders in examples.
 
@@ -4205,7 +4205,7 @@ Each URL below carries its own 2026-11-08 check date; the off-repo R20 Appendix 
 
 Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
-Read the shared security baseline in the repository guide (`docs/08`) and the single threat model (`docs/15`). Use this section for the Android-specific checks and procedures.
+Read the shared security baseline in the repository guide (`docs/08-security-recovery`, §3 "Backup and recovery" and §6 "Incident response: what to do when something is compromised") and the single threat model (`docs/15-threat-model-and-theft-prevention`, "Establish the threat model and trust boundary" and "Incident-response playbook"). Use this section for the Android-specific checks and procedures.
 
 These are requirements, not claims about the current build. Each rule needs an enforcing check. Enforce each rule in code, run repeatable tests and record results for the supported Android versions and devices.
 
@@ -4344,11 +4344,11 @@ Keep these procedures on testnet; passing these checks does not authorise mainne
 
    Do not silently downgrade wrapping protection. Do not substitute plaintext storage, obfuscation or application-managed wrapping. Retain watch-only functions only where they require no wallet secrets.
 
-> **Warning** — Replacing the vault after key invalidation can discard existing encrypted material. Preserve it and report the unlock or recovery requirement; check invalidation and failed-unwrap paths.
+> **Warning** — Replacing the vault after key invalidation can discard existing encrypted material. Preserve it and report whether the cause is authentication gating (unlocking may resolve it) or a permanently invalidated wrapping key (unlocking cannot restore it; recovery through the mnemonic is required); check invalidation and failed-unwrap paths.
 
 3. Preserve the existing vault and seed bundle when the wrapping key becomes invalid or unavailable.
 
-   Report that unlocking or recovery is required. Do not treat a failed unwrap as an empty vault or initialise replacement wallet material.
+   Report whether the cause is authentication gating or a permanently invalidated wrapping key. Unlocking may resolve authentication gating, but it cannot restore a permanently invalidated wrapping key; recovery through the mnemonic is required in that case. Do not treat a failed unwrap as an empty vault or initialise replacement wallet material.
 
    **Check:** Exercise supported security levels, unavailable hardware, missing required device authentication, key invalidation and failed unwrap operations. Confirm the chosen refusal or report-and-continue behaviour, and confirm that no fallback writes secret material or replaces the vault.
 
