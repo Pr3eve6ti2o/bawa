@@ -1190,18 +1190,18 @@ A bounty programme pays researchers who report vulnerabilities responsibly throu
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-| Bounty item | Dated figure |
+| Bounty item | Figure |
 |---|---|
-| Top critical awards | Were roughly 5–10% of realistically exposed funds |
-| Bounty pot | Was typically 2–3 times that award |
-| Ceilings | Ranged from thousands to more than US$10 million |
-| Platform fee | Was roughly another tenth of the rewards paid |
+| Top critical awards | Were roughly 5–10% of realistically exposed funds (unsourced estimate) |
+| Bounty pot | Unsourced estimate |
+| Ceilings | Ranged from thousands to more than US$10 million (unsourced estimate) |
+| Platform fee | Was roughly another tenth of the rewards paid (unsourced estimate) |
 
 Set the scope, the severity scale, the payout rules and the response times before launch; a bounty without a working disclosure route is not a programme (see §7 — no reporting route is documented; that is an open item owned by the maintainers).
 
 ### Transaction monitoring and simulation
 
-Monitoring watches on-chain activity and alerts on unusual transfers, new approvals or unexpected destinations; simulation previews a transaction's effects before signing. Neither can make an approved malicious transaction safe — they give you a chance to catch it before you approve.
+Monitoring watches on-chain activity and alerts on unusual transfers, new approvals or unexpected destinations, usually after the activity; simulation previews a transaction's effects before signing and can feed an enforcing policy that refuses signing. Neither guarantees prevention.
 
 Check what is actually monitored (which chains, which events), how alerts are delivered, and what happens when the monitoring service is down.
 
