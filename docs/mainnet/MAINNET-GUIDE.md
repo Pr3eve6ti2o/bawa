@@ -4122,7 +4122,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Implementation check against the draft, plus policy values defined (see M-13, M-38).
+**Clearance condition:** Sourced, chain-specific drop criteria remain undefined for every chain. Clearance requires supplying and citing those criteria for each chain before **Dropped** may be applied. The label requires evidenced removal or expiry under the relevant chain’s criteria; absence from a response is not enough, and the label is not permission to resend.
 
 **Gate/source links:** m17 F11/F15.
 
@@ -4130,7 +4130,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 | Item | Source | Status after the re-check |
 |---|---|---|
-| 1. Live mainnet send/sign/broadcast never exercised on any chain | m17 O1, m28-OI-01, m28-OI-09, m29 | OPEN — H-02–H-05; confirmed by M20/M24 (send/sign/broadcast/confirmation UNVERIFIED on every chain). |
+| 1. Live mainnet send/sign/broadcast never exercised on any chain | m17 O1, m28-OI-01, m28-OI-09, m29 | OPEN — H-02–H-05; send/sign/broadcast/confirmation remain UNVERIFIED on every chain. |
 | 2. Hardware/PSBT mainnet procedure: no named device, no reviewed procedure, no non-BTC hardware procedure | m17 O2, m02 | OPEN — needs a named device + reviewed procedure. |
 | 3. Stuck-transaction recovery: no replace/cancel/RBF procedure for any chain, no primary sources | m17 O3 | OPEN — carried as M-28. |
 | 4. Criteria for retrying after a broadcast timeout; TRX manual txid investigation procedure | m17 O5 | OPEN — carried as M-28. |
