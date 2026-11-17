@@ -468,14 +468,14 @@ For standard ERC-20 transfers, the recipient and amount arrive without an invoic
 
 #### Make allocation idempotent
 
-Use `<REQUEST_ID>` as the stable allocation key. Return its stored allocation if one already exists. Otherwise, reserve an available target and save the request mapping in one atomic transaction.
+Use `<REQUEST_ID>` as the stable allocation key within the canonical allocation namespace and an explicit chain/network scope. Resolve namespace and chain aliases to canonical identifiers before lookup or insertion: callers sharing an allocation pool on the same chain must use the same scope, while distinct chains/networks must have distinct scopes. Return the stored allocation for that scoped request key if one already exists. Otherwise, reserve an available target and save the request mapping in one atomic transaction.
 
-Enforce uniqueness on both:
+Enforce two independent uniqueness constraints, not a single constraint combining the request and target:
 
-- The request key.
-- The allocation target: the address for dedicated allocations, or the recipient/tag pair for shared allocations.
+- The request key: `(canonical namespace, chain/network scope, <REQUEST_ID>)`.
+- The allocation target: `(canonical namespace, chain/network scope, address)` for dedicated allocations, or `(canonical namespace, chain/network scope, recipient, tag)` for shared allocations. Use chain-defined canonical representations for addresses, recipients, and tags; this constraint must not include `<REQUEST_ID>`.
 
-If concurrent calls for the same request race, return the committed allocation rather than creating another one.
+If concurrent calls for the same scoped request race, return the committed allocation for that request rather than creating another one. If different requests race for the same target, the loser must retry target selection (or fail if no target is available); it must not return the winner's allocation.
 
 ```text
 First attempt: <REQUEST_ID>
