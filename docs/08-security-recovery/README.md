@@ -36,9 +36,9 @@ An account-level xpub with non-hardened branches does not normally let an attack
 - Bawa documents an xpub import-and-verify procedure in [docs/05, section 7](../05-watch-only/README.md) (derive.js with a heredoc xpub and address comparison), but does not document a persistent watch-only import workflow — check your chosen watch-only tool's documentation.
 ## 3. Backup and recovery
 
-A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, wallet contract/version and wallet-ID/subwallet configuration can matter.
+A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms can matter.
 
-Recovery record = mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration.
+Recovery record = mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration. For TON, include the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
 
 Encryption at rest protects a stored artefact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics.
 
@@ -73,7 +73,7 @@ Plan for each backup boundary:
 - Preserve the BIP-39 mnemonic, or an existing `seed.enc.json` plus its separate 32-byte data key.
 - Preserve the exact BIP-39 passphrase policy: currently an empty passphrase.
 - Preserve the chain derivation paths and address policy, account and network/chain configuration.
-- For TON, preserve the wallet contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID.
+- For TON, preserve the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
 - Keep the recorded configuration whichever recovery route you use.
 - Keep xpubs out of the excluded destinations: public issues and untrusted services. Check whether each subsystem can use a narrower public node.
 
@@ -115,7 +115,7 @@ Record the recovery set offline, including the exact BIP-39 passphrase policy.
 | Mnemonic | Record the complete mnemonic in its exact word order. |
 | Passphrase | Record the exact BIP-39 passphrase policy. Under the current policy, leave the BIP-39 passphrase empty and record that it is empty. |
 | Wallet selection | Record the wallet, chain, network, account, derivation paths and address policy. |
-| TON if applicable | Record any applicable TON wallet and chain settings needed to reproduce the same addresses. |
+| TON if applicable | Record the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms needed to reproduce the same addresses. |
 
 Use the recorded passphrase policy exactly during recovery. Verify the mnemonic/passphrase before funding. Bawa does not document non-empty passphrase setup or lost-passphrase handling. If you cannot verify the mnemonic and exact passphrase policy, mark recovery incomplete and **do not fund**.
 
