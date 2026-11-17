@@ -1181,6 +1181,7 @@ These checks are guidance for your own setup, not Bawa monitoring features. Bawa
 
 - Trust Wallet Core: https://github.com/trustwallet/wallet-core
 - BIP 32, public derivation: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+- SLIP-132, zpub serialization: https://github.com/satoshilabs/slips/blob/master/slip-0132.md
 - Esplora API: https://github.com/Blockstream/esplora/blob/master/API.md
 
 ## Monitoring signals, alerts and investigating a missed payment
