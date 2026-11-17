@@ -819,9 +819,9 @@ Apply atomic claiming and idempotent execution to refunds too, so a retry cannot
 **Expected:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
 ## 14. Watcher and reconciler
 
-Use the watcher to report current observations. Use the reconciler to replay a bounded chain range, check persisted state, and restore omitted entries or correct obsolete ones. Keep the watcher catching new activity beyond the replay's endpoint; use the reconciler to catch missed payments and reorganisation-related changes within its range. Do not treat fresh observations as proof that earlier database history is correct. Watch frequently and reconcile periodically.
+Use the watcher to report current observations ([polling guidance](../06-tracking/README.md#L382-L390)). Use the reconciler to replay a bounded chain range, check persisted state, and restore omitted entries or correct obsolete ones. Keep the watcher catching new activity beyond the replay's endpoint; use the reconciler to catch missed payments and reorganisation-related changes within its range (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Do not treat fresh observations as proof that earlier database history is correct. Watch frequently and reconcile periodically.
 
-Retain each chain's native cursor:
+Retain each chain's native cursor ([cursor guidance](../06-tracking/README.md#L382-L390)):
 
 - **Bitcoin:** the most recent relevant block/transaction position.
 - **EVM:** the processed block height.
