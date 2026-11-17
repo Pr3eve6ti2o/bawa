@@ -77,12 +77,12 @@ Identify this policy as `bawa-derivation-policy-v1` (see [fixed generation paths
 
 | Asset or setting | Fixed policy |
 |---|---|
-| BTC | [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki), `m/84'/0'/0'/0/i`, account `0`, receiving branch `0` |
+| BTC | native SegWit (bech32), [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki), `m/84'/0'/0'/0/i` (mainnet; [testnet4 deviation](#derivation-policy-versus-the-standards)), account `0`, receiving branch `0` |
 | ETH | [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), `m/44'/60'/0'/0/i` |
-| TRX | BIP-44, `m/44'/195'/0'/0/i` |
+| TRX | [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), `m/44'/195'/0'/0/i`, coin type `195` ([SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)) |
 | TON | Generation-only from `m/44'/607'/0'`, single deposit address, no xpub |
 | BIP-39 mnemonic | [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki), 256-bit entropy, 24 words |
-| BIP-39 passphrase | Empty, zero characters |
+| [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) passphrase ("From mnemonic to seed" section) | Empty, zero characters |
 
 Changing these values can produce different addresses. Do not add alternative paths, and never change this policy in a wallet built from this guide. Check every derivation setting against this versioned table.
 
@@ -92,9 +92,9 @@ Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce dif
 
 **BTC.** A different BTC path changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep native SegWit receiving addresses on the fixed BIP-84 account and branch. Check account `0`, receiving branch `0` and the complete path.
 
-**ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Check the complete path, including coin type `60`.
+**ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Check account `0`, receiving branch `0` and the complete path, including coin type `60`.
 
-**TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Check the complete path, including coin type `195`.
+**TRX.** A different TRX path changes the addresses. Use `m/44'/195'/0'/0/i` so generation and recovery select the same BIP-44 TRX account. Check account `0`, receiving branch `0` and the complete path, including coin type `195`.
 
 **TON.** A different TON path changes the deposit address. Use `m/44'/607'/0'` to preserve the [generation-only model with a single deposit address and no xpub](../02-chains/README.md). Check the generation path and the single deposit address requirement.
 
