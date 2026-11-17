@@ -3973,7 +3973,7 @@ Require the signer to return either the required signatures/components or the ch
 - Validate the final transaction.
 - Reject any mismatch, decoding failure, invalid signature or transaction-validation failure.
 
-**Warning** — Signing a changed payload produces a signature outside your approval. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks.
+**Warning** — Exact-payload approval is approval bound to the frozen scope contents. Any candidate whose contents differ from the approved frozen scope is outside that approval. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks.
 
 Exercise these approval transitions:
 
@@ -4069,9 +4069,9 @@ Apply the following fixture-driven checks to the actual logging, saved-state, sn
 3. Assert that no fixture mnemonic, private key, seed, data key or secret-bearing serialisation appears in the captured outputs. Do not let the redaction assertion print the secret it detects.
 4. Check normalised, encoded and structured-field representations as well as exact mnemonic strings.
 
-**Warning** — Snapshot or dump uploads can disclose secret material. Test upload rejection using local capture; confirm that raw secret-bearing dumps cannot reach an external reporting service.
+**Warning** — Snapshot or dump uploads can disclose secret material. Test that raw secret-bearing dumps are rejected at the upload boundary before any external transmission, using local capture that covers the outbound request, not only the local file; confirm that they cannot reach an external reporting service.
 
-5. Verify that secret-display screens follow the snapshot policy, including screenshot and recent-task behaviour, and that raw secret-bearing dumps cannot be uploaded.
+5. Verify that secret-display screens follow the snapshot policy, including screenshot and recent-task behaviour, and that raw secret-bearing dumps are rejected at the upload boundary before any external transmission. As a positive control, confirm that a benign (non-secret) upload still succeeds, proving that rejection is secret-specific.
 
 **What this proves:** A passing run demonstrates that the exercised watch-only paths do not activate signing, the tested public interfaces do not cross into secret handling, and the tested reporting paths do not disclose secret material for the exercised fixtures.
 
@@ -4185,7 +4185,7 @@ Mark every unvisited surface, missing device pass or untested lifecycle path **O
 
 ### Sources
 
-**VERIFIED** — As of 2026-11-08, R20 Appendix A records HTTP 200 responses for every URL below.
+Each URL below carries its own 2026-11-08 check date; the off-repo R20 Appendix A record was not supplied here.
 
 - [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) — checked 2026-11-08.
 - [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) — checked 2026-11-08.
@@ -4196,6 +4196,10 @@ Mark every unvisited surface, missing device pass or untested lifecycle path **O
 - [EIP-155](https://eips.ethereum.org/EIPS/eip-155) — checked 2026-11-08.
 - [TRON network documentation](https://developers.tron.network/docs/networks) — checked 2026-11-08.
 - [Android instrumented testing](https://developer.android.com/training/testing/instrumented-tests) — checked 2026-11-08.
+
+**Wycheproof exclusion** — The guide’s testing uses published BIP-32/39 vectors and fixtures. The Wycheproof adversarial corpus (positive and rejection cases for cryptographic primitives) is out of scope because Bawa implements no cryptographic primitives itself; primitives come from Trust Wallet Core. No Wycheproof coverage is specified.
+
+**EIP-155 exclusion** — The wallet’s Ethereum signing is EIP-1559 Enveloped only. Legacy transactions and their EIP-155 replay protection (chain-ID-bound signing preimage and adjusted `v`) are out of scope and not specified.
 
 ## J — Security documentation
 
