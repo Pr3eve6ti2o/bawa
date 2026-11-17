@@ -534,7 +534,7 @@ Also allow these conditional routes:
 - When the acceptance deadline passes, allow `observed`, `seen`, `matched`, `sufficient`, `included`, `confirmed` and `reorged` to enter `expired`.
 - For ambiguous or contradictory evidence, allow `observed`, `seen`, `matched`, `underpaid`, `sufficient`, `included`, `confirmed`, `reorged`, `finalized`, `paid` or `claimed` to enter `manual_review`.
 
-Treat these routes as a whitelist of permitted transitions, not a completeness claim about all possible state/report combinations; no unlisted transition is permitted. A duplicate report is an identical replay of an already-recorded report; keep the request in its current state when such a replay arrives. A second distinct report of the same event is not a duplicate and must be evaluated under these routes. The monitoring cutoff remains unspecified: application policy must define it relative to the acceptance deadline, including whether and for how long monitoring continues after that deadline.
+Treat these routes as a whitelist of permitted transitions, not a completeness claim about all possible state/report combinations; no unlisted transition is permitted. Read-only replay of a matching stored finalisation outcome after a lost response is outside this section 11 machine, not an additional transition: it must not change state, issue another credit, or repeat a finalisation effect (see [Resolve stored outcomes after a lost response](#resolve-stored-outcomes-after-a-lost-response)). A duplicate report is an identical replay of an already-recorded report; keep the request in its current state when such a replay arrives. A second distinct report of the same event is not a duplicate and must be evaluated under these routes. The monitoring cutoff remains unspecified: application policy must define it relative to the acceptance deadline, including whether and for how long monitoring continues after that deadline.
 
 ### Checks and exception handling
 
@@ -799,7 +799,11 @@ Apply `paid` only as a conditional forward transition permitted by the lifecycle
 
 ### Resolve stored outcomes after a lost response
 
-If finalisation completes but its response is lost, resolve the stored outcome first on retry. Return a matching result without another credit or repeated finalisation effect (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
+If finalisation completes but its response is lost, resolve the stored outcome first on retry. The authoritative replay source is the durable finalisation record committed for the original request together with any credit or other finalisation effects. That record must bind the request identifier and finalisation idempotency key to the outcome-affecting inputs, payment-evidence references, and returned result. Associate the retry with the original attempt using the same request identifier and key; similar payment details or the current lifecycle state are not sufficient.
+
+A result matches only if the record identifies the same request and finalisation operation, the retry's outcome-affecting inputs and evidence references match those recorded, and the saved result agrees with the authoritative payment evidence and committed effects. Return that stored result without another credit, state change, or repeated finalisation effect. This read-only replay is outside the section 11 [payment lifecycle state machine](#payment-lifecycle-state-machine), not an additional permitted transition.
+
+If no authoritative record can be resolved, the association is ambiguous, or the inputs do not match, do not guess a result or infer that finalisation failed. Resolve the original attempt before any further finalisation; any subsequent state-changing processing must follow the permitted lifecycle routes and is not authorised by this replay procedure.
 
 If any saved outcome contradicts the evidence, preserve both and flag a discrepancy for review. Do not quietly replace the result.
 
