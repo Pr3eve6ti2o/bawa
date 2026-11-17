@@ -1060,9 +1060,9 @@ Unchained's [IRA offering](https://unchained.com/pricing) is available in the US
 
 ### Assisted multisig with inheritance
 
-In this arrangement, a named provider operates a signing service, helps set up a multisig wallet, offers supported hardware options and manages an inheritance process. It may include an inheritance key or a time-locked mechanism, with defined steps for the successor.
+In this arrangement, a named provider operates a signing service, helps set up a multisig wallet, offers supported hardware options and manages an inheritance process. It may include an inheritance key, such as Casa's [recipient key / Casa Recovery Key](https://support.casa.io/knowledge/inheritance-faqs-vault-owner), with defined steps for the successor.
 
-No generic assisted-multisig band is published. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals. Unchained IRA costs $250 per IRA account per year (checked 8 November 2026).
+No generic assisted-multisig band is published in this guide. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals. Unchained IRA costs $250 per IRA account per year (checked 8 November 2026).
 
 Higher-touch packages may include trustee arrangements and estate-planning support.
 
@@ -1078,7 +1078,7 @@ Before choosing, work out which questions you need answered in writing:
 
 A legal estate wrapper uses a trust, company or will structure to hold or direct wallet assets. It may use one or more of a letter of instruction, a will, a trust deed or a company record, and typically involves a named trustee, executor or attorney.
 
-No generic estate-wrapper figures are published. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; and asset-based charges. Confirm the jurisdiction, the scope of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
+No generic estate-wrapper figures are published in this guide. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; and asset-based charges. Confirm the jurisdiction, the scope of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
 
 Asset-based charges are quoted individually and subject to negotiation. These bands do not include government filing fees, legal advice for specific jurisdictions, or the cost of resolving disputes.
 
