@@ -1028,12 +1028,12 @@ Use these figures from the [Casa pricing](https://casa.io/pricing), re-checked l
 
 | Casa plan | Annual price |
 |---|---:|
-| Standard 3-key vault, 2-of-3 | $250 per year |
-| Premium 5-key vault, 3-of-5 | $2,100 per year |
-| Private Client 6-key vault | $7,500 per year |
+| Standard 3-key vault | $250 per year |
+| Premium 5-key vault | $2,100 per year |
+| Private Client 5-key or 6-key vault | $7,500 per year |
 | Business plans | $2,750 per year |
 
-These are entry bands only. Ask what features, limits and support are included at each level and whether additional keys, users or assisted recovery cost extra.
+These are listed annual plan prices. Ask what features, limits and support are included at each level and whether additional keys, users or assisted recovery cost extra.
 
 #### Inheritance
 
