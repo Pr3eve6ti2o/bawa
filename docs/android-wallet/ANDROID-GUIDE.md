@@ -775,7 +775,7 @@ Permit working localhost TCP between the Gradle client and daemon, typically thr
 
    **Expected result:** The fixture prints `Hello, world.`, executes Android Java compilation rather than reporting `NO-SOURCE`, and produces a non-empty debug AAR.
 
-A complete fixture pass establishes daemon, loopback and SDK wiring only; it does not validate wallet compilation. Reject a partial pass. Never weaken a version pin or skip a later gate.
+A complete fixture pass that actually exercised daemon communication establishes daemon, loopback and SDK wiring only; it does not validate wallet compilation. Reject a partial pass. Never weaken a version pin or skip a later gate.
 
 **Sources**
 
@@ -913,9 +913,9 @@ No downloadable Android AAR is included among the Wallet Core `4.9.2` release as
 
 **Open item (OI-005):** The source build in this section has never been completed; no locally built AAR exists.
 
-Wallet Core's GitHub Packages Maven registry, `https://maven.pkg.github.com/trustwallet/wallet-core`, is the official Android distribution route for `com.trustwallet:wallet-core` and `com.trustwallet:wallet-core-proto`. It requires authentication; see the [GitHub Docs Gradle registry guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry). The bare registry URL returns HTTP 404 anonymously because authentication is required; that 404 is not evidence that the registry is dead.
+Wallet Core's GitHub Packages Maven registry, `https://maven.pkg.github.com/trustwallet/wallet-core`, is the official Android distribution route for `com.trustwallet:wallet-core` and `com.trustwallet:wallet-core-proto`. It requires authentication; see the [GitHub Docs Gradle registry guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry). The bare registry URL returns HTTP 404 anonymously. An HTTP 404 from the bare registry URL does not, by itself, establish its cause or whether the registry is live or dead; authentication is required before drawing any conclusion about the registry’s state.
 
-Configure your GitHub username as `GITHUB_USER` and a GitHub personal access token with `read:packages` scope as `GITHUB_TOKEN` in `~/.gradle/gradle.properties`, as specified in the GitHub Docs Gradle registry guidance. Never commit credential values.
+Configure your GitHub username as `GITHUB_USER` and a GitHub personal access token with `read:packages` scope as `GITHUB_TOKEN` in `~/.gradle/gradle.properties`, as specified in the GitHub Docs Gradle registry guidance; these properties work only if Gradle reads `~/.gradle/gradle.properties` for this registry, and no credentialed resolution has been demonstrated. Never commit credential values.
 
 **Open item (OI-006):** Whether `4.9.2` artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route.
 
@@ -1061,7 +1061,7 @@ ls jni/proto jni/java/wallet/core/jni
 
 **Expected result:** Generated files are present under both directories, including `HDWallet.java` under `jni/java/wallet/core/jni`.
 
-If either directory is still empty or contains only the original checkout files, stop: generation did not run. Treat a missing generated `HDWallet.java` in a fresh checkout as evidence that generation has not run yet, not as evidence that Wallet Core lacks `HDWallet`.
+If either directory is still empty or lacks the expected generated files, stop: generation has not produced the expected output; a missing generated `HDWallet.java` in a fresh checkout is consistent with generation not having run, not proof of it or evidence that Wallet Core lacks `HDWallet`, and `ls` alone does not establish whether present files are generated or checked in.
 
 **Sources**
 
@@ -1142,7 +1142,7 @@ Keep the wallet on testnet throughout these checks.
 
 Do not judge the Android API by browsing `jni/java` alone. The `wallet.core.jni` binding classes are generated at build time from `include/TrustWalletCore/*.h` through codegen. The complete generated binding is not checked in: `jni/java` contains hand-written helpers, not the complete generated JNI API. The AAR module's `sourceSets` includes both the generated bindings and those helpers. The separate `wallet-core-proto` JAR supplies the protobuf message classes.
 
-A missing generated `HDWallet.java` in a fresh checkout is not evidence that Core lacks `HDWallet`. If it is missing from the generated output after C.3, generation did not run: **STOP** and fix generation before continuing.
+A missing generated `HDWallet.java` in a fresh checkout is consistent with generation not having run, not proof of it or evidence that Core lacks `HDWallet`; if it is missing from the generated output after C.3, generation has not produced the expected output: **STOP** and fix generation before continuing.
 
 Use the D.2 inventory as the authority for the required Java surface shown below. This inventory is derived from the C headers and is not a verified Java binding surface; the C entry points do not establish the Java methods. Do not reduce it to whichever methods happen to be convenient.
 
@@ -1250,7 +1250,7 @@ Check the corresponding native implementations as well. Public declarations and 
 - Do not drop a required function.
 - Do not re-implement derivation in Kotlin.
 
-Keep the four-ABI baseline: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. A debug build filters to `x86` and `arm64-v8a` only; the release build carries all four ABIs. Do not treat a successful debug build as confirmation of release ABI coverage.
+Keep the four-ABI baseline: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. A debug build filters to `x86` and `arm64-v8a` only; under Gradle defaults, the release build is expected to carry all four ABIs, but release ABI coverage has not been verified. Do not treat a successful debug build as confirmation of release ABI coverage.
 
 Require `jni/<abi>/libTrustWalletCore.so` for each baseline ABI in the release AAR. If you ship a narrower ABI set, make that decision deliberately and document the exact filter and its device/emulator consequences.
 
@@ -2219,7 +2219,7 @@ curl -fsS "$ton_api/getMasterchainInfo" |
 
 **Testnet walkthrough**
 
-> **Warning** — As of 2026-11-08, importing a Bawa mnemonic into a standard Bitcoin testnet wallet derives a different BTC account. Preserve the pinned derivation policy and use the existing offline engine; compare its first public address with the receiving address before obtaining test funds.
+> **Warning** — As of 2026-11-08, importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different BTC account. Preserve the pinned derivation policy and use the existing offline engine; compare its first public address with the receiving address before obtaining test funds.
 
 Preserve the documented BTC testnet4 deviation, OI-032: use `m/84'/0'/0'/0/i` with a zpub. SLIP-0044 reserves coin **1** for testnet, and SLIP-0132 assigns Bitcoin Testnet `vpub 0x045f1cf6` with `m/84'/1'`. Document this compatibility consequence without changing the pinned implementation. Keep the zpub outside the adapter.
 
@@ -5207,7 +5207,7 @@ Passing these checks does not authorise mainnet work; any mainnet work requires 
 
 **Cause:** A wrong derivation path or a non-empty BIP-39 passphrase derives a different wallet. This mismatch does not lose the funds; it leaves them unreachable from this policy.
 
-**Warning** — As of 2026-11-08, Bawa’s testnet4 deviation means that importing a Bawa mnemonic into a standard testnet wallet derives a different account (OI-032). Use the fixed derivation policy and an empty BIP-39 passphrase; check the path, not the balance, first.
+**Warning** — As of 2026-11-08, Bawa’s testnet4 deviation means that importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different account (OI-032). Use the fixed derivation policy and an empty BIP-39 passphrase; check the path, not the balance, first.
 
 1. Close and reopen the wallet, enter the mnemonic exactly, and leave the BIP-39 passphrase empty.
 
@@ -5361,7 +5361,7 @@ in the lane files.
 | OI-027 | Confirm and record the retained GitHub Packages URL before accepting the repository configuration. | Doc 3 §C | Builder | OPEN | W4 OI-A27. |
 | OI-028 | docs/09 teaches Bawa's coin-0 policy and documents its testnet deviation; its coin-1 example concerns an external hardware signer. | Doc 1 docs/02, docs/09; Doc 3 §D | Maintainers | OPEN (documented) | W4 OI-A28. |
 | OI-031 | Android live wallet creation, live restore and live testnet spend have never been performed in the Android app; the procedures are specified, not demonstrated. | Doc 3 §D, §E, §G, §I, §K | Builder | OPEN | W5 OI-04; W3 live-work rows (Web row OI-039). |
-| OI-032 | Testnet4 uses the mainnet derivation m/84'/0'/0' and zpub; SLIP-0044 reserves coin 1 for testnet and SLIP-0132 assigns testnet vpub. Importing a Bawa mnemonic into a standard testnet wallet derives a different account. Documented, not changed. | Doc 1 docs/02; Doc 2 §C; Doc 3 §D, §F, §I | Maintainers | OPEN (documented, not changed) | W5 OI-07; W3 §C. |
+| OI-032 | Testnet4 uses the mainnet derivation m/84'/0'/0' and zpub; SLIP-0044 reserves coin 1 for testnet and SLIP-0132 assigns testnet vpub. Importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different account. Documented, not changed. | Doc 1 docs/02; Doc 2 §C; Doc 3 §D, §F, §I | Maintainers | OPEN (documented, not changed) | W5 OI-07; W3 §C. |
 | OI-033 | Draft defect: the draft BTC endpoint serves testnet3, not testnet4. | Doc 3 §F.5 | Builder | OPEN (draft defect; correct endpoint in §F.2) | W5 OI-12. |
 | OI-035 | No Gradle build, no APK, no device or emulator run ever; gradlew is a launcher note without a wrapper JAR. | Doc 3 §B, §K | Builder | OPEN | W5 OI-25. |
 | OI-036 | No verified faucet procedure for funding test accounts (Android). The Web faucet procedures were verified per D26; the Android faucet procedure is still owed. | Doc 3 §F, §I.8 | Builder | OPEN | W5 OI-29; W3 §E (Web row OI-048). |
