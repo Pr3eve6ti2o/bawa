@@ -3601,7 +3601,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Gate/source links:** Re-checked register (2026-11-09), M-20; M24 K21–K26, covering proposed Doc 3 rows OI-097–OI-102.
 
-### M-21 — 4.9.1 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
+### M-21 — 4.9.3 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
 
 **Question/risk:** The guide may prescribe `4.9.2` as the default because npm calls it `latest`, treat `4.9.1` and `4.9.2` as interchangeable, or promise an Android AAR that does not exist.
 
@@ -3615,11 +3615,11 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.1` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.2` results as `4.9.1` results.
+**Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.3` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.1` or `4.9.2` results as `4.9.3` results.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** The `4.9.1` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
+**Clearance condition:** The `4.9.3` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
 
 **Gate/source links:** Re-checked register (2026-11-09), M-21; M05 F2/F3/F7 and O3; M23; M24 K18 / OI-090. Repository context: [Bawa at `56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20).
 
