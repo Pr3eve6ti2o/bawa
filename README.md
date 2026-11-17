@@ -5,6 +5,10 @@ Bawa (`Pr3eve6ti2o/bawa`) is a practical open-source reference for HD-wallet wor
 
 > **Security first:** Never share mnemonics, private keys or data keys. xpubs/zpubs are privacy-sensitive. Generate secrets in a trusted offline environment; keep online work watch-only. Keep `secrets/` at `0700`, and `seed.enc.json` and `.env` at `0600`.
 
+> **Archive notice:** [docs/README-FULL.md](docs/README-FULL.md) is the preserved 2026-11-08 record (e3b65fb8 snapshot), not the current README. For current verification, see section 8 of this README ("Current verification: 2026-11-15").
+
+Never claim "secure", "safe", "secure because encrypted", "production-ready", "ready" or "ready for real money" about anything unverified. Never claim "audited" or "reviewed" without scope, reviewer, date and evidence.
+
 ## 1. What Bawa is
 
 ### Try the launcher
@@ -22,6 +26,7 @@ Route: Create an HD Cryptocurrency Wallet
 Kind: [EXISTING TOOL]
 Details: python3 tools/make_wallet.py
 Command: python3 tools/make_wallet.py
+Runs with inherited stdio; exact YES confirmation is required.
 ```
 
 ### Why this exists — and when not to use it
@@ -46,17 +51,24 @@ All paths use **account 0**; indexed receiving paths use **branch 0 only**.
 | Chain | Pinned path |
 |---|---|
 | BTC — zpub | `m/84'/0'/0'/0/i` |
-| ETH | `m/44'/60'/0'/0/i` |
-| TRX | `m/44'/195'/0'/0/i` |
-| TON — address only | `m/44'/607'/0'` |
+| ETH | `m/44'/60'/0'/0/i` — path structure: [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki); SLIP-0044 registers only the hardened coin-type number, 60. |
+| TRX | `m/44'/195'/0'/0/i` — path structure: [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki); SLIP-0044 registers only the hardened coin-type number, 195. |
+| TON — address only | `m/44'/607'/0'` — Trust Wallet Core-provided path, reported as `ton_path` by `generate.js` (coin type 607). |
 
-TON has **no xpub**, and the derivation tools have **no TON mode**.
+`generate.js` reports `ton_path` from Trust Wallet Core's `CoinTypeExt.derivationPath(CoinType.ton)` and checks `CoinType.ton.value === 607`. This implementation does not export or support BIP32-style xpub derivation for TON; the derivation tools have **no TON mode**.
 
 ### What still needs development
 
 Web/Android applications, payment tracking, monitoring, reconciliation and broader recovery utilities require new implementation and testing. **Web and Android starters exist only on the feature branch, not on main.**
 
 Main contains **no transaction construction, signing or broadcast code**, and **no balance retriever**. Documentation must not be mistaken for implemented or tested functionality.
+
+**Qualifications (OI-062–OI-065)**
+
+- **Supported-capabilities contract: not established.** Record support per surface and operation with cited verification; the V3 TON fixture alone does not establish application support. No supported-capabilities claim is made meanwhile.
+- **Lifecycle contract: not established from the supplied evidence.** Guarantees and limits must be specified and verified before being claimed; none are claimed meanwhile.
+- **Accessibility criteria and conformance: not established by the supplied evidence.** Define acceptance criteria and obtain Web and Android verification; no conformance claim is made meanwhile.
+- **Operational/security ownership and vulnerability-disclosure procedure: not established by the supplied evidence.** Obtain maintainer-approved responsibilities, a reporting channel, and handling/escalation instructions, and publish them in `docs/10`. No ownership, disclosure procedure, reporting channel, or response commitment is claimed meanwhile.
 
 ## 2. Getting started
 
@@ -77,7 +89,7 @@ cd bawa
 npm --prefix tools/hdwallet-gen install
 ```
 
-Verified output from `npm --prefix tools/hdwallet-gen install`:
+Verified install re-run output (a fresh install reports `added 14 packages` instead of `up to date`):
 
 ```text
 up to date, audited 15 packages
@@ -126,13 +138,15 @@ Expected output:
 SMOKE TESTS PASSED
 ```
 
-The verified run completed **130 checks with 0 failures**. The launcher unit tests completed **25 tests**, with result `OK`.
+The smoke-test layer (`npm --prefix tools/hdwallet-gen test`) completed **130 checks with 0 failures**. The launcher unit-test layer (`python3 -m unittest discover -s test -p test_bawa_cli.py`) completed **25 tests**, with result `OK`.
 
 The limited independent BTC/ETH differential test reported:
 
 ```text
 bip_utils reference checks: PASS
 ```
+
+The differential test that reported PASS ran with bip-utils 2.12.2, while the repository's `requirements.txt` pins `bip-utils==2.12.3`.
 
 Recorded address results:
 
@@ -236,6 +250,8 @@ Run from the repository root with your virtual environment active, except where 
 
 **Current verification: 2026-11-15.** Checks ran in the main worktree identified above, using Node `v22.23.4` and Python `3.12.3`.
 
+A gate that has not passed is **FAIL** by default — not "pending", not "in progress". Passing a gate does not prove the guide is safe, production-ready, or authorised for mainnet.
+
 - `npm --prefix tools/hdwallet-gen install` — `up to date, audited 15 packages`; `found 0 vulnerabilities`.
 - `npm --prefix tools/hdwallet-gen test` — `SMOKE TESTS PASSED`: **130 checks, 0 failures**.
 - `python3 test/differential_test.py` — `bip_utils reference checks: PASS`, for **BTC and ETH at index 0 only**:
@@ -246,13 +262,13 @@ Run from the repository root with your virtual environment active, except where 
 
 | Area | Recorded status |
 |---|---|
-| **Derivation and comparison** | Derive **9/9**; compare **9/9** — previously recorded under the **2026-11-08** verification (pin `e3b65fb8`), not the current test totals. |
+| **Derivation and comparison** | Derive **9/9**; compare **9/9** — recorded under the **2026-11-08** verification (pin `e3b65fb8`) and reproduced hands-on on **2026-11-15** at `a5bc56e` using the published BTC/ETH/TRX fixture xpubs at indices **0–2**. These are fixture derivation/comparison counts, not test-suite totals. |
 | **Independent verification** | BTC/ETH **index 0 only** versus `bip-utils`; not full published-vector coverage. |
 | **Root checks** | `npm test` and `npm run check` delegate to `tools/hdwallet-gen`; these checks are not a security audit. |
-| **Recovery rehearsal** | **FAIL gate — never executed.** The decryption tool’s existence does not satisfy this gate. |
-| **Live testnet spend** | No live testnet spend has ever been made. |
-| **Android validation** | No debug APK has ever been built; the on-device Android gate has never been run. |
-| **Release gates** | **5 of 6 unmet:** root lockfile, full published-vector coverage, secret/dependency scanning, reproducible releases and external security review. |
+| **Recovery rehearsal** | **Gate remains FAIL.** No recovery rehearsal is documented in the verification rounds. The decryption tool's existence does not satisfy this gate. |
+| **Live testnet spend** | No testnet spend is documented in the repo. |
+| **Android validation** | No Android APK build or on-device Android gate run is documented in the repo. |
+| **Release gates** | **5 of 6 unmet:** root lockfile, full published-vector coverage, secret/dependency scanning, reproducible releases and external security review. **Met:** Chain-specific fixtures, including TON — **PASS** at `e3b65fb8` (README-FULL section 17). |
 | **Readiness** | Mainnet and production readiness are **not established**. |
 
-The full current README is preserved at [docs/README-FULL.md](docs/README-FULL.md).
+The historical 2026-11-08 README snapshot (e3b65fb8) is preserved at [docs/README-FULL.md](docs/README-FULL.md).
