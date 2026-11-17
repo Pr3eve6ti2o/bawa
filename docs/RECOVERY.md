@@ -1,7 +1,7 @@
 ---
 title: Recovery Procedure
 description: Recover a Bawa wallet from the mnemonic or the encrypted seed bundle, test the recovery before funding, and handle compromised seeds, device loss, backup separation, disaster and inheritance; testnet only, with disposable test fixtures.
-last-updated: 2026-11-08
+last-updated: 2026-11-09
 ---
 
 # Recovery procedure
@@ -41,9 +41,9 @@ In either case, preserve:
 - the network/chain configuration;
 - the TON wallet configuration, where applicable.
 
-For TON, preserve the wallet contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID used by the original system.
+For TON, preserve the wallet contract/version, mnemonic scheme, exact derivation path, workchain, network presentation, wallet/subwallet ID and both bounceable and non-bounceable address forms used by the original system.
 
-Do not rely on an xpub or zpub to recover the wallet. It can reproduce only public descendants below the exported account node.
+Do not rely on an xpub or zpub to recover the wallet. It can reproduce only public descendants below the exported account node ([BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#public-parent-key--public-child-key)).
 
 ### Derivation policy and seed construction
 
