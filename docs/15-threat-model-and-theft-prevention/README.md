@@ -285,14 +285,14 @@ Prices change; check the vendor's current pricing before choosing.
 
 The levels are cumulative. The small-holder baseline is mandatory, regardless of balance.
 
-A compromised seed has no reset mechanism. Create a replacement wallet on a fresh, trusted device, test its recovery before funding it, transfer every asset and token, and stop using the original wallet permanently.
+A compromised seed has no reset mechanism. Create a replacement wallet on a fresh, trusted device, test its recovery before funding it, transfer every asset and token except locked or non-transferable assets and unsolicited scam tokens, and stop using the original wallet permanently.
 
 ### Small holder, mandatory minimum
 
 - [ ] Make a legible offline mnemonic backup and protect it from unauthorised access. Record the passphrase policy and derivation policy needed for recovery.
 - [ ] Keep no digital seed copy: no photographs, screenshots, cloud files, messages or password-manager entries.
 - [ ] Before funding, recover the mnemonic from your backup on a clean, trusted machine. Follow the passphrase policy and derivation policy exactly, then compare the derived address with the address recorded earlier. Funding must wait until the public outputs agree.
-- [ ] Do not count an `xpub` or `zpub` import as a recovery test. Neither can restore the wallet: each can reproduce only the public descendants beneath its exported account node.
+- [ ] Do not count an `xpub` or `zpub` import as a signing-key recovery test. Either can restore watch-only capability, but neither can restore signing keys; each can derive public descendants only along non-hardened paths below the exported node, which need not be account-level.
 - [ ] Use a security key or authenticator for crypto and email accounts. Remove SMS two-factor authentication, including SMS fallback methods.
 - [ ] Confirm payment addresses through a separate, trusted channel. Compare the entire destination address before authorising a transfer, not only its opening and closing characters.
 
