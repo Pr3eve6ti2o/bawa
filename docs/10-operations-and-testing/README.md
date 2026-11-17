@@ -179,7 +179,7 @@ Inspect the exact package/version selected by the original lockfile.
 
 **Fix:** Run generation from an actual interactive terminal on the trusted generation machine.
 
-**Warning:** Piping fake input defeats the TTY check rather than providing the required interactive terminal. Use the actual interactive terminal without fake piped input. Check the result when starting generation there.
+**Warning:** Piping fake input ordinarily fails a genuine TTY check rather than bypassing it, and piped stdin does not supply input to `/dev/tty`. Use the actual interactive terminal without fake piped input. Check the result when starting generation there.
 
 > **Expected result:** Confirm that generation no longer refuses to run because there is no TTY.
 
