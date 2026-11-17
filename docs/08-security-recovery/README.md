@@ -1041,7 +1041,7 @@ A nominated recipient can request access once the holder has died, usually throu
 
 The default process includes a six-month waiting period starting when the recipient requests access; it does not verify death or require proof of death, and the owner can reject the request at any time within those six months. Optional Enhanced Verification (Private Client, US residents only) requires a US-issued death certificate validated by Casa and eliminates the six-month wait (see the [Casa inheritance FAQ](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)). The recipient is expected to have enough identity and location information to be reachable.
 
-A recipient who has lost their key or cannot be found is a recognised failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
+A recipient who has lost their key or cannot be found is a failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
 
 ### Unchained-style service
 
@@ -1101,9 +1101,9 @@ Before you buy or trust a paid service, answer these seven questions privately �
 
 1. Who holds each key, and can you prove it? List every signing key, its holder, its storage location and its backup. A service that cannot name the holders and locations of all keys in the quorum has not given you enough to verify.
 
-2. Can you spend without the provider? Using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign. Repeat the check after any signer change.
+2. Can you spend without the provider? Using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature, then verify its acceptance or confirmation. Seeing a balance or exporting a file is not by itself proof that you can sign. Repeat the check after any signer change (any key, signer device or signing-role change).
 
-3. Can the recipient actually recover the funds? Rehearse the inheritance route with a small balance on a separate wallet while the holder is alive: the recipient must be able to reach their key, complete the provider's procedure, and move funds to a fresh wallet. A recipient who has lost their key or cannot be found is a recognised failure mode.
+3. Can the recipient actually recover the funds? Rehearse the inheritance route with a small balance on a separate wallet while the holder is alive: where applicable and possible to rehearse, check whether the recipient can reach their key, complete the provider's procedure, and move funds to a fresh wallet. A death-triggered procedure cannot genuinely be rehearsed while the holder is alive. A recipient who has lost their key or cannot be found is a failure mode.
 
 4. What happens if the provider ceases trading? Get the exit terms in writing: notice periods, withdrawal limits, approval delays, termination charges, data export. Know whether funds must move on-chain to a fresh wallet, and test that route while the service is operating normally.
 
