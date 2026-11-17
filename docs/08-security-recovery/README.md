@@ -685,9 +685,9 @@ Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. 
 
 ### Confirm what “qualified” means
 
-"Qualified" usually covers institutions such as banks, trust companies and registered broker-dealers that undergo examination by state or federal regulators (US). Some registered funds, ETF issuers and fiduciaries may have a legal obligation to appoint a qualified custodian. Have legal advisers confirm the arrangement rather than relying on the label: applicable rules, assets and the contracting entity all matter.
+The US SEC [Custody Rule 206(4)-2(d)(6)](https://www.ecfr.gov/current/title-17/chapter-II/part-275/section-275.206(4)-2) defines "qualified custodian" to include banks, registered broker-dealers, registered futures commission merchants, qualifying foreign financial institutions that customarily hold financial assets and FDIC-insured savings associations. Some registered funds, ETF issuers and fiduciaries may have a legal obligation to appoint a qualified custodian. Have legal advisers confirm the arrangement rather than relying on the label: applicable rules, assets and the contracting entity all matter.
 
-Examples include Anchorage Digital Bank (OCC national trust bank charter, January 2021), and the BitGo and Coinbase Custody state-chartered trust custody businesses (also described as qualified custodians). These are examples, not recommendations. Check the precise legal entity and its regulatory permissions before signing; a familiar group name is not enough.
+Examples include Anchorage Digital Bank (OCC national trust bank charter, January 2021), and the BitGo Trust Company, Inc. (South Dakota state trust company) and Coinbase Custody state-chartered trust custody businesses (also described as qualified custodians). The OCC conditionally approved the conversion of BitGo Trust Company, Inc. to BitGo Bank & Trust, National Association, an uninsured national trust bank (not FDIC-insured), on 12 December 2025 ([OCC News Release 2025-125](https://www.comptrollerofthecurrency.gov/news-issuances/news-releases/2025/nr-occ-2025-125c.pdf)); this is conditional approval, not a granted charter. These are examples, not recommendations. Check the precise legal entity and its regulatory permissions before signing; a familiar group name is not enough.
 
 ### What it protects against
 
