@@ -286,12 +286,12 @@ Do not stop at prefix plus length.
 
 For a dedicated TRON app, prefer a maintained TRON SDK or Wallet Core’s TRON functionality. Keep transaction construction and RPC TRON-specific.
 
-**Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, you produce an address that belongs to nobody.
+**Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, the resulting address string is malformed and fails validation.
 ## 6. TON
 
 TON is generation-only in Bawa: you get one deposit address per wallet, with no xpub exported and no TON xpub watch-only flow. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive_daemon.js` support `btc`, `eth` and `trx` only.
 
-[TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. Use the full compatibility model:
+[TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. The ordered compatibility model below is this guide’s synthesis, not an algorithm quoted from TEP-3:
 
 ```text
 mnemonic (the wallet's scheme)
@@ -302,6 +302,8 @@ mnemonic (the wallet's scheme)
   → workchain/network presentation
   → TON address
 ```
+
+The final presented TON address depends on the workchain and network presentation, so the same wallet can present different address strings.
 
 BIP-32’s secp256k1 extended-key machinery is not a drop-in interface for TON’s Ed25519 keys. Do not relabel a TON public key as a “TON xpub”.
 
