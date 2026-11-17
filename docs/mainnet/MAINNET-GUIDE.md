@@ -3472,8 +3472,9 @@ M12 also records gaps G1–G10 with check procedures.
 - M21 J-8 adds a pre-funding authorisation gate after gate 6: complete gates 1–6 unfunded first, record owner-approved loss limits, and permit only a bounded mainnet canary with fresh keys.
 - M27 states the hard rule that a small amount does not bypass the independent-security-review gate, citing docs/14 L411/L439. That gate sits before rung 3, not merely before sending.
 - M24 K14 adds a gate for mainnet small-amount rehearsal evidence. M24 K17 specifies ten conjunctive gates. M24 K08 marks the mandatory security-review gate BLOCKED.
+- Evidence for the M-31/M-15 closure recorded by the owner on 2026-11-13: R02/E01 — 11 findings, all ADDRESSED. This closure covers the review gate only and does not authorise funding, rehearsal, or any real-funds use.
 
-**Status:** OPEN.
+**Status:** CLOSED (review gate only). Closure recorded by the owner on 2026-11-13 based on R02/E01 evidence: 11 findings, all ADDRESSED. This closure does not authorise funding, rehearsal, or any real-funds use.
 
 **Operational restriction:** No funding until gates 1–6 are complete unfunded, loss limits are recorded and owner-approved, and the independent security review has taken place. Rehearsals require separate authorisation, must be bounded, and must use fresh disposable accounts.
 
@@ -3832,10 +3833,9 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 - A small amount does not bypass the independent-security-review gate (`docs/14`, L411/L439). That gate sits before rung 3.
 - M13’s verified-correct list records the `docs/16` external review gate as OPEN.
 - M06 R10 gives BLOCKED as the expected result for release-gate enforcement on the current evidence.
+- Evidence for the M-31/M-15 closure recorded by the owner on 2026-11-13: R02/E01 — 11 findings, all ADDRESSED. This closure covers the review gate only and does not authorise funding, rehearsal, or any real-funds use.
 
-**Status:** OPEN.
-
-**Operational restriction:** No real-funds use before the independent-security-review gate is cleared. Doc 4 must state that gate-passing is not a substitute for the review. “Complete” under M36 F8 means the prose is done and checked, never authorisation for real-fund use.
+**Status:** CLOSED (review gate only). Closure recorded by the owner on 2026-11-13 based on R02/E01 evidence: 11 findings, all ADDRESSED. This closure does not authorise funding, rehearsal, or any real-funds use. Doc 4 must state that gate-passing is not a substitute for the review. “Complete” under M36 F8 means the prose is done and checked, never authorisation for real-fund use.
 
 **Blocks writing completion:** No — the gate blocks release, not writing.
 
