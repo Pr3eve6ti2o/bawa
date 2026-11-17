@@ -570,7 +570,7 @@ watch list (chain, network, public address)
 ### Local contracts
 
 - **Address list:** Assign a watch identity to each `(chain, network, address)`. Never infer the network from the address text alone.
-- **Reader:** Restrict calls to an allowlist of read routes and methods. Return the provider payload with retrieval time and source identity. Leave presentation calculations for later.
+- **Reader:** Restrict calls to an allowlist of read routes and methods (explicitly approved provider route/method pairs that do not mutate provider state; deny all unlisted pairs). Return the provider payload with retrieval time and source identity. Leave presentation calculations for later.
 - **Database:** Save raw observations before deriving balances and activity. Retain chain/network, available block hashes and heights, and confirmation state so you can correct records later.
 - **Poller:** Keep scheduling, timeouts and bounded retries with backoff in the poller. Expect indexer lag, outages, repeated records and reorgs. Do not let retries multiply records.
 - **Dashboard:** Read the database, not a wallet. Show chain/network, last successful collection and freshness/finality labels. Never turn a failed fetch into a zero balance.
@@ -623,12 +623,12 @@ Follow this persistence order:
 
 1. Poll and commit each raw observation before decoding or deriving anything.
 2. Normalise and reconcile the batch.
-3. Only for a complete, validated batch, commit the reconciled facts, success time and checkpoint together in a separate transaction.
+3. Only for a complete, validated batch (all expected pages retrieved, all payloads parsed and schema-checked, and block hashes verified as consistent with the captured source tip), commit the reconciled facts, success time and checkpoint together in a separate transaction.
 4. Refresh the dashboard from the committed facts.
 
-If parsing fails, a page is missing or the fact transaction aborts, keep the observations but roll back derived changes. Leave both the checkpoint and last-success time unchanged. Record the failure in attempt and error metadata without advancing either.
+If parsing fails, a page is missing or the fact transaction aborts, keep the observations but roll back derived changes. Leave both the checkpoint and last-success time unchanged. Record the failure in attempt and error metadata (the schema's request outcome, recording request success or failure and any failure details) without advancing either.
 
-Capture the source tip with each batch and compare block hashes, not just heights. Do not assume separate HTTP reads form a consistent snapshot. On a reorg, replay from a verified common ancestor and revise the affected facts and checkpoint together. Leave earlier observations untouched.
+Capture the source tip with each batch and compare block hashes, not just heights. Do not assume separate HTTP reads form a consistent snapshot. On a reorg, replay from a verified common ancestor (a block whose hash has been confirmed in both the stored pre-reorg chain and the current chain ending at the captured source tip) and revise the affected facts and checkpoint together. Leave earlier observations untouched.
 
 If you cannot establish a consistent anchor, retain the previous view and report uncertainty. Use bounded retries with backoff and prevent overlapping polls.
 
