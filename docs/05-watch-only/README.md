@@ -434,9 +434,9 @@ It reads the repository-root `.env`, or the file named by `NOVA_ENV`. Ensure the
 
 The script takes `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` and prints the first three receiving addresses per chain, at indexes `0`, `1` and `2`. Output is public-only: a chain label plus three addresses, not xpubs or private material.
 
-A missing chain xpub throws, and the top-level handler exits with status `1`. Check the exit status even when the output looks plausible: earlier chains may already have printed before a later chain fails. Use this for a spot-check, not as an allocation mechanism.
+A missing chain xpub throws, and the top-level handler exits with status `1`. All validation precedes derivation, and all results are collected before any addresses are printed, so a failure prints zero addresses. Check the exit status. Use this for a spot-check, not as an allocation mechanism.
 
-`compare.js` does not perform the private-extended-key rejection used by `derive.js` and `derive_daemon.js`. Supply public extended keys only in the chain xpub settings. An `xprv` can be accepted and produce addresses successfully, so successful output does not prove that the input is public.
+`compare.js` performs the same private-extended-key rejection as `derive.js` and `derive_daemon.js`, using `validateExtendedKey` before WASM initialization. Supply public extended keys only in the chain xpub settings. An `xprv` is rejected with exit status `1`, and zero addresses are printed.
 
 **Reader pattern — not a Bawa file**
 
