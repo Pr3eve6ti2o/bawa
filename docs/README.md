@@ -1,11 +1,10 @@
 # Bawa Documentation
 
-Choose the guide for your job. You do not need to read everything. For a full path through guides 01–16, follow the [recommended reading order](#recommended-reading-order).
+Choose the guide for your job. You do not need to read everything. For a full path through guides 01–16, follow the [recommended reading order](#recommended-reading-order). You can also read the [preserved full README](README-FULL.md).
 
 ## Tutorials — learn through doing
 
 - [04 — Wallet Generation](04-wallet-generation/README.md) — **Tutorial:** learn by generating a wallet. Read [Fundamentals](01-fundamentals/README.md) for the concepts.
-- [14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — **Tutorial:** learn by implementing a wallet app. Use [Wallet App Architecture](13-wallet-app-architecture/README.md) for design context.
 
 ## How-to guides — accomplish a goal
 
@@ -17,6 +16,7 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [11 — Trust Wallet Core & Independent Verification](11-trust-wallet-and-independent-verification/README.md) — **How-to guide:** carry out independent verification when you use Trust Wallet Core.
 - [16 — Security Decision Guide](16-security-decision-guide/README.md) — **How-to guide:** make security decisions for your wallet. Read [Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) for the concepts behind those decisions.
 - [Recovery](RECOVERY.md) — **How-to guide:** use the supporting recovery guidance when you need to recover a wallet.
+- [14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — **How-to guide:** implement a wallet app. Use [Wallet App Architecture](13-wallet-app-architecture/README.md) for design context.
 
 ### Platform guides
 
