@@ -455,11 +455,13 @@ git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git worktree add
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile; without a committed lockfile, reproducing the exact dependency graph that was tested is not guaranteed, although a matching resolution is possible. A newly generated lockfile, even from a clean install, need not match the tested graph.
 
 ### Capture the Wallet Core side
 
 Wallet Core results were captured in V1 (2026-11-08). Generation ran under a real pty via `script -qec`, exited 0 and passed all README §8 checks. The decrypt round trip was byte-identical; derivation passed 9/9; comparison against an independent `bip_utils` re-derivation passed 9/9; the daemon BTC index-5 value matched exactly; and `npm test` passed 28/28. Generation requires a controlling terminal. No root `.env` is included in the repository; V1 built it from the published xpubs in docs/11, supplying `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` for `compare.js`.
+
+The nine cases counted for each of the derivation and independent `bip_utils` comparison results are not identified here; the 9/9 figures therefore do not establish coverage.
 
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
