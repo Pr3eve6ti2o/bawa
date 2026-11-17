@@ -805,7 +805,7 @@ Ask the maintainer for the undocumented CI configuration, public fixture locatio
 
 ### Establish trust first
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+As of the audit of commit `3019b02`, no published maintainer signing key, tags or signed commits were identified in the repository material reviewed for that revision. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 Do not treat a tag as verified without both trusted-key confirmation and a successful check of that tag’s signature.
 
@@ -1367,7 +1367,7 @@ Coordinate a history purge where possible, using a method confirmed with the mai
 
 ### Verify the tag or commit signature
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+As of the audit of commit `3019b02`, no published maintainer signing key, tags or signed commits were identified in the repository material reviewed for that revision. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 For the intended tag:
 
