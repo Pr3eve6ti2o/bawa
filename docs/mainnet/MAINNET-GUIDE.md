@@ -3367,9 +3367,9 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary Uniswap document was **not opened**, and its re-check remains outstanding. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
+**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary-document re-check required by M-10 was completed first-hand on 2026-11-17 against the Uniswap Permit2 documentation at developers.uniswap.org (overview page updated 2026-08-27; allowance-transfer page updated 2026-08-25), confirming expiry via allowance expiration timestamps and signature deadlines, with `expiration = 0` expiring permissions at `block.timestamp`; AllowanceTransfer incrementing nonces per owner, token, and spender; SignatureTransfer unordered single-use nonce bitmaps; revocation by setting amount or expiration to `0`; and re-approval via `approve` or `permit`, but the contract entry points `invalidateNonces` and `invalidateUnorderedNonces` are not detailed on those pages and were not verified by this documentation re-check. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
 
-**Status:** OPEN — primary-doc re-check outstanding.
+**Status:** OPEN — primary-doc re-check completed 2026-11-17; `invalidateNonces`/`invalidateUnorderedNonces` entry points not covered by that re-check.
 
 **Operational restriction:** Teach both the token’s allowance to Permit2 and the permissions within Permit2. Inspect the chain, token, spender, amount, expiry and authority before signing. Never assume that disconnecting or using a clearing action cancels outstanding signatures.
 
@@ -3377,7 +3377,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Clearance condition:** Cite a re-check against the primary Uniswap Permit2 documentation covering expiry, invalidation, revocation and re-approval behaviour.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; [primary Uniswap Permit2 documentation — re-check target, not yet checked](https://docs.uniswap.org/contracts/permit2/overview).
+**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; [primary Uniswap Permit2 documentation — re-checked first-hand 2026-11-17](https://developers.uniswap.org/docs/protocols/permit2/overview).
 
 ### M-11 — TRON approval mechanics differ from EVM revocation tooling
 
