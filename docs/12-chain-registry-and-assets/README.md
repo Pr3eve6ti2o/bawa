@@ -331,7 +331,7 @@ Keep the six-field application request separate from the QR payload. Serialise o
 
 | Profile | Approved payload | Constraints |
 | --- | --- | --- |
-| BTC testnet4 | `bitcoin:?tb=<ADDRESS>`, optionally followed by `&amount=<BTC>` (decimal BTC) | [BIP-321](https://github.com/bitcoin/bips/blob/master/bip-0321.mediawiki) supersedes BIP-21. Leave the URI body empty; put the testnet address in `tb`. A BTC URI alone does not establish testnet4: retain the selected network and compare it with the associated request. |
+| BTC testnet4 | `bitcoin:?tb=<ADDRESS>`, optionally followed by `&amount=<BTC>` (decimal BTC) | [BIP-321](https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0321.mediawiki) supersedes BIP-21. Leave the URI body empty; put the testnet address in `tb`. A BTC URI alone does not establish testnet4: retain the selected network and compare it with the associated request. |
 | ETH Sepolia | `ethereum:pay-<ADDRESS>@11155111`, optionally followed by `?value=<WEI>` (scientific-notation wei) | [ERC-681](https://eips.ethereum.org/EIPS/eip-681). The network is explicit in `@11155111`. The amount is a suggestion. No gas parameters, ENS, ERC-20 or function path. |
 | TON testnet | `ton://transfer/<TESTNET_ADDRESS>`, with optional `?amount=<NANOCOINS>` (nanocoins) and `?text=<TEXT>` (URL-encoded UTF-8) | A de facto Keeper/Tonhub vendor convention, not a standard. Use `&` between query parameters when both are present. Require the full testnet address presentation; never use `bin`, `jetton` or `exp`. |
 | TRX Nile | Bare 34-character Base58 address beginning with `T` | No `tron:` payment URI exists to prescribe. The amount stays outside the QR. Nile identity comes from wallet configuration, never from the address. |
@@ -368,7 +368,7 @@ Use this checklist to prepare and review an addition. Do not rely on it as a ver
 
    For Trust Wallet Assets additions, start with the Assets README's How to add token section (`https://github.com/trustwallet/assets/blob/master/README.md#how-to-add-token`) and use the Assets web app (`https://assets.trustwallet.com`) as directed there. Follow the README's documented `make add-token` and `make check` instructions.
 
-   The developer contribution guide linked by that README was unavailable at its published URL when checked on 2026-11-08: it redirected to the Trust Wallet marketing homepage rather than the guide. Use the working entry points above while that link remains unavailable.
+   When checked on 2026-11-16, the Assets README's contribution-guidelines link redirected to the Trust Wallet marketing homepage rather than the developer contribution guide. The guide was unavailable through that link at the time of the check; use the working entry points above instead.
 
    The Assets web app is the preferred route; use it with a GitHub account. Brand new tokens are not accepted: projects must have non-minimal circulation.
 
