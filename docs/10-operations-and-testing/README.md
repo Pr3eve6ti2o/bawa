@@ -1003,7 +1003,7 @@ This section provides initial npm failure-recovery guidance. Maintainer confirma
 
 ### 5. Create and activate the Python environment
 
-Back at the repository root, create a local environment and activate it:
+Back at the repository root, `python3` must resolve to Python 3.11 or newer, and its `venv` module must be available. Create a local environment and activate it:
 
 ```bash
 python3 -m venv .venv
@@ -1018,7 +1018,14 @@ For Windows PowerShell, the documented activation command replaces the `source` 
 
 That activation command does not establish a complete Windows setup for the `/dev/tty` generation flow. Bawa does not document that workflow on Windows; confirm platform support and any additional setup with the maintainer.
 
-**Expected result:** a `.venv` directory, successful activation, and `python` referring to the environment’s interpreter. Do not install the Python dependencies into the system interpreter by mistake.
+After activation, verify the Python version and interpreter path:
+
+```bash
+python --version
+python -c "import sys; print(sys.executable)"
+```
+
+**Expected result:** a `.venv` directory, successful activation, `python --version` reporting Python 3.11 or newer, and `sys.executable` pointing to the interpreter inside `.venv`. Do not install the Python dependencies into the system interpreter by mistake.
 
 ### 6. Install the Python requirements
 
