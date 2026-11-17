@@ -662,7 +662,7 @@ Apply TRON's confirmation rules: solidification requires block production by at 
 
 ### Reorg handling
 
-Keep observation status (`seen`, `included`, `confirmed`, `finalized`, `reorged`) separate from business status (`expired`, `late`, `manual_review`, `paid`). Persist event identity, block hash and height, claim linkage and policy version.
+Keep observation status (`seen`, `included`, `confirmed`, `finalized`, `reorged`) separate from business status (`expired`, `late`, `manual_review`, `paid`). Persist event identity, block hash and height, claim linkage and policy version. See [MAINNET-GUIDE §12 state table (lines 1379–1388)](../mainnet/MAINNET-GUIDE.md#L1379-L1388).
 
 Compare stored block hashes with the canonical chain. Do not rely solely on removal notifications.
 
@@ -670,7 +670,7 @@ When an event is removed:
 
 - For `seen` or `included`, retain the removed block observation as `reorged` and withhold acceptance. Return to `seen` only after you actually observe the transaction pending again.
 - For `confirmed`, mark it `reorged`, revoke eligibility and freeze outstanding fulfilment. Reverse provisional credits through compensating entries, preserving the confirmation history.
-- If the event is claimed or `paid`, suspend the claim’s chain backing while retaining its allocation and audit trail. Block duplicate settlement. If goods have already been delivered or a payout is irreversible, trigger `manual_review`. Changing a database flag cannot undo an external action.
+- If the event is claimed or `paid`, suspend the claim’s chain backing while retaining its allocation and audit trail. Block duplicate settlement. If goods have already been delivered or a payout is irreversible, trigger `manual_review`. Changing a database flag cannot undo an external action. See [MAINNET-GUIDE, line 1402](../mainnet/MAINNET-GUIDE.md#L1402), on preserving the earlier decision, including an earlier `paid` decision, when evidence becomes `reorged`.
 
 If an event is removed from a `finalized` or solidified view, also pause automated settlement and trigger `manual_review` with independent verification.
 
