@@ -2378,13 +2378,13 @@ Address poisoning corrupts the place you choose a recipient from. An attacker se
 
 There are three forms: **zero-value transfers**, **tiny or dust transfers**, and **fake-token transfers**. Looking only for zero-value entries misses the other two. An entry’s presence in transaction history is not evidence that its address belongs to your intended recipient.
 
-Tsuchiya and Christin of Carnegie Mellon, reporting at **USENIX Security 2025**, measured about **270 million attempts** against about **17 million victim addresses** on Ethereum and BNB Smart Chain between **July 2022 and June 2024**. They identified **6,633 successful incidents** and at least **$83.8 million in confirmed stablecoin losses**. That loss figure is a stablecoin-only lower bound, not an all-asset total.
+Tsuchiya, Dong, Soska and Christin of Carnegie Mellon, reporting at **USENIX Security 2025**, measured about **270 million attempts** against about **17 million victim addresses** on Ethereum and BNB Smart Chain between **July 2022 and June 2024**. They identified **6,633 successful transfers** and estimated at least **$83.8 million in stablecoin losses**. That loss figure is a stablecoin-only lower bound, not an all-asset total.
 
 Reported cases show both the scale of individual losses and the trap in relying on a test payment:
 
 - **May 2024:** a victim sent **1,155 WBTC**, worth about **$68 million**, to a lookalike address. The attacker later returned about **22,960 ETH**, over **96% of the value**. That return was exceptional, not a recovery expectation.
 - **May 2025:** **$2.6 million in USDT** was lost across two zero-value-transfer scams.
-- **December 2025:** about **$50 million in USDT** was lost after a correct **$50 test payment**. Minutes after the test, the victim copied a poisoned address from history for the main payment.
+- **December 2025:** about **$50 million in USDT** was lost after a **$50 test payment**. The victim copied a poisoned address from history for the main payment.
 
 These case figures retain their own dates and scopes; do not add them to the study’s stablecoin-only loss figure.
 
@@ -2397,8 +2397,8 @@ A clipboard swapper, or clipper, replaces clipboard contents between copying and
 Lookalike clippers deliberately preserve the first and last characters people commonly check. A matching beginning and ending therefore does not establish that the pasted address is unchanged.
 
 - **2017 — CryptoShuffler:** Kaspersky reported **23 BTC stolen**, worth about **$140,000** at the time.
-- **November 2022 — Laplas Clipper:** it substituted first-and-last-character lookalikes. Researchers reproduced a convincing lookalike in about **five seconds**.
-- **2025 — MassJacker:** CyberArk identified **778,531 unique attacker addresses**, with about **$95,300 held** and about **$336,700 passed through** at analysis time. These are address-count, balance and flow observations, not a verified total of victim losses.
+- **2022 — Laplas Clipper:** it substituted first-and-last-character lookalikes. In a reported test, researchers reproduced a convincing lookalike in about **five seconds**.
+- **2025 — MassJacker:** CyberArk identified **over 778,531 unique attacker addresses**, with only **423** holding approximately **$95,300 in total** at analysis time. These are address-count and balance observations, not a verified total of victim losses.
 
 No credible total loss figure exists for clippers. The MassJacker balances and flows do not provide one.
 
