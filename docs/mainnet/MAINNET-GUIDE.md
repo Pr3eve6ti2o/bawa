@@ -1796,13 +1796,13 @@ Cross-check with another estimator. Use the mempool.space recommended set as the
 
 Choose urgency from the fresh fields. None guarantees confirmation within its named interval. Bitcoin’s roughly ten-minute block interval is an average, not a promise.
 
-Calculate the planned total from the external wallet’s estimate of the eventual signed virtual size:
+Calculate the planned total fee from the external wallet’s estimate of the eventual signed virtual size:
 
 ```text
 planned fee (sats) = ceil(estimated signed vsize × chosen rate in sat/vB)
 ```
 
-The amount being sent does not determine that fee. The input/output layout and signed virtual size do.
+At the chosen rate, the amount being sent affects the fee only through the input/output layout it requires. The vsize used for the planned fee is an estimate; the eventual signed vsize may differ.
 
 As a node alternative, `estimatesmartfee 2` and `estimatesmartfee 6` return rates in **BTC/kvB**. Multiply the returned rate by **100,000** to convert it to sat/vB. This is a unit conversion, not a fee quote. A missing estimate is not a zero-fee recommendation.
 
@@ -1891,7 +1891,7 @@ These notes apply to the Web draft at `Pr3eve6ti2o/bawa @ 56396a20`. All figures
 **Overpayment and change deserve separate checks.** Once a transaction confirms, the miner keeps its actual fee. In the dated worked example, each unnecessary **+1 sat/vB** on a **140 vB** transaction adds approximately **140 sats ≈ $0.10**. The recorded P2WPKH dust threshold was **294 sats**, using Core’s default dust relay fee of **3,000 sat/kvB**. Omitting change turns the remainder into fee; it does not leave that remainder in the wallet. **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** applies to the worked cost for a proposed transaction and to the dust setting used by a particular node.  
 *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP if you control an output → stop; never re-send blindly**.  
+The stuck-transaction decision tree is **wait → RBF bump if accepting-node policy permits (including full-RBF without opt-in) → CPFP if you control an output → stop; never re-send blindly**; signalling is neither a universal prerequisite nor a guarantee of replacement acceptance.  
 *Source: m07 F20; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 1. **Wait and inspect the original transaction.**  
@@ -1909,7 +1909,7 @@ The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP
    At the dated check, Bitcoin Core's default incremental relay reference was **100 sat/kvB = 0.1 sat/vB** for versions 29.1 and later (from September 2025); earlier versions defaulted to **1000 sat/kvB = 1 sat/vB**. The worked replacement example used **140 vB**, moving from **1 to 3 sat/vB**: approximately **140 → 420 sats**, an increase of **280 sats ≈ $0.21**. That dollar figure is the increase, not the replacement’s total fee. Whether this satisfies any particular node’s policy is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.  
    *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-   Before any replacement approval, recheck the intended recipient, amount and change for **wrong address** and **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to avoid another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
+   Before any replacement approval, recheck the intended recipient, amount and change to reduce the risk of a **wrong address** or **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to reduce the risk of another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
 
 3. **Consider CPFP only where an output is controlled.**  
    A sender can spend unconfirmed change, or a recipient can spend the stuck payment output, in a high-fee child. Both transactions confirm, and **both fees are paid**.
