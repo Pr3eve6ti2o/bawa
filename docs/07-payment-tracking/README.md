@@ -813,7 +813,7 @@ If any saved outcome contradicts the evidence, preserve both and flag a discrepa
 
 Retain every distinct transfer (see the docs/06 event-identity passages at [lines 586–590](../06-tracking/README.md#L586-L590) and [line 687](../06-tracking/README.md#L687)). A timely, confirmed overpayment fulfills `<REQUEST_ID>` in the `confirmed` state; record the excess separately and flag it for review without routing the request away from settlement. Route a second distinct payment against `<REQUEST_ID>` to review rather than ordinary settlement (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
-Use idempotent invoice creation to prevent accidental reissue, and reconciliation to detect multiple payments.
+Use idempotent invoice creation (a create-or-return-existing operation keyed by a stable, persisted idempotency key for each logical invoice request; retries and concurrent calls with the same key must return the same provider invoice ID rather than create another invoice) to prevent accidental reissue, and reconciliation to detect multiple payments.
 
 ### Keep evidence for disputes and refunds
 
@@ -898,7 +898,7 @@ Visit these four branches in this order on every cycle:
 
 1. **Pending or underpaid direct deposits:** fetch transaction data using the chain-specific lookup, match the expected payment and total the matching payments. Apply that chain's confirmation policy. Claim a ready deposit atomically before fulfilling its order; otherwise, leave it pending or underpaid.
 2. **Expired deposits:** run a short scan for late payments, record any newly discovered payment evidence as `late`, then move the deposit into the manual-review state (`manual_review`). Leave the order for review rather than treating expiry handling as successful payment completion.
-3. **External invoice recovery:** query paid invoices and recover orders whose finalisation is still outstanding (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)). Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
+3. **External invoice recovery:** query the issuing external invoice provider’s authoritative invoice store, via that provider’s invoice API, for paid invoices and recover orders whose finalisation is still outstanding (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)). Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
 4. **Slow-path pending payments:** run the slow-path lookup for payments still pending. Leave unresolved payments pending and send recovered evidence to the same finalisation path.
 
 In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
@@ -907,7 +907,7 @@ In your own watcher, keep the states separate, isolate failures within individua
 
 Bawa owns the derivation explanation and reference implementation; the application owns orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment.
 
-Keep Bawa as the canonical home for the [derivation explanation and reference implementation](../06-tracking/README.md#7-gap-limits-and-discovering-an-hd-wallet). Package the application’s copy from that reference and treat it as a generated deployment output. Never hand-edit the copied tooling in place.
+Keep Bawa as the canonical home for the [derivation explanation and reference implementation](../06-tracking/README.md#7-gap-limits-and-discovering-an-hd-wallet). For applications that need a local copy, the recommended design is to copy and package that reference during the build and treat the result as generated deployment output. Never hand-edit the copied tooling in place.
 
 Keep orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment in the application. Use Bawa for the reusable derivation reference, not the payment workflow. End the wallet/key layer at the account-level public root. Start the application layer with that root; no step in it needs a spending key.
 
