@@ -524,7 +524,7 @@ Choose it over a paid backup service when your main concern is theft of a mnemon
 Paid durability or recovery assistance may still be worthwhile — those solve different problems. Check what the fee buys and who can access the secrets. Payment does not make a missing BIP-39 passphrase resettable.
 ## 14. Free tools: encrypted offline backups
 
-Use encrypted files as a SECONDARY recovery route, not the main backup. Keep the mnemonic offline on paper or metal. Paper costs little but is vulnerable to fire and water; suitable metal withstands more physical damage, but neither conceals the words from someone who finds it. Maintain two or three offline copies across locations that would not be lost in the same fire or flood.
+Use age-encrypted recovery files as a SECONDARY recovery route, not the main backup; this framing does not apply to Bawa's `seed.enc.json` plus data-key bundle (see [RECOVERY.md](../RECOVERY.md)). Keep the mnemonic offline on paper or metal. Paper costs little but is vulnerable to fire and water; suitable metal withstands more physical damage, but neither conceals the words from someone who finds it. Maintain two or three offline copies across locations that would not be lost in the same fire or flood.
 
 **What encryption protects against:** someone finding or stealing a backup drive without obtaining its strong decryption passphrase.
 
@@ -536,7 +536,7 @@ Use encrypted files as a SECONDARY recovery route, not the main backup. Keep the
 
 2. **Prepare a clean offline session.** Obtain and verify the encryption software before disconnecting. Use trusted equipment, keep networking disconnected and work away from cameras. Prepare a RAM-backed workspace with swap, hibernation and editor autosave disabled. Ordinary deletion, particularly on an SSD or USB drive, is not dependable removal of plaintext.
 
-3. **Create the recovery record.** In that workspace, make `recovery.txt` containing the mnemonic and the information needed to interpret it: mnemonic scheme, network and complete derivation settings. Do not include the wallet derivation passphrase or Bawa data key. Keep non-secret recovery instructions with the primary copies too. Independently record a known wallet address for the later comparison.
+3. **Create the recovery record.** In that workspace, make `recovery.txt` containing the mnemonic and the information needed to interpret it: mnemonic scheme, network and complete derivation settings. Record a yes/no flag indicating whether a wallet derivation passphrase is required and, if yes, a location reference for retrieving it from its separately protected backup. Do not include the wallet derivation passphrase or Bawa data key. Keep non-secret recovery instructions with the primary copies too. Independently record a known wallet address for the later comparison.
 
 4. **Generate a separate file-encryption passphrase.** Use substantial randomness, not a memorable quotation—for example, seven words independently selected with dice from a [7,776-entry word list](https://www.eff.org/dice). Record the result accurately on paper and store it offline, apart from every ciphertext copy. Do not reuse a wallet derivation passphrase or Bawa data key. Record any wallet derivation passphrase separately from the mnemonic backups.
 
