@@ -2992,7 +2992,7 @@ No. No current balance does not mean “never received funds”; earlier receipt
 
 **What should I do when the seed is lost?**
 
-Complete seed loss—no mnemonic, no bundle, no device and no surviving signing access—is **TOTAL and IRREVERSIBLE loss of spending access**. No support desk, recovery service, reset or reconstruction from an xpub/zpub can restore it. Any offer to recover a lost mnemonic or passphrase for a fee is a scam. (M16-F22–M16-F29)
+Complete seed loss—no mnemonic, no bundle, no device and no surviving signing access—is **TOTAL and IRREVERSIBLE loss of spending access**. No support desk, recovery service, reset or reconstruction from an xpub/zpub can restore it. Any offer promising to restore spending access for a fee despite such complete loss is a scam. (M16-F22–M16-F29)
 
 **What should I do when the seed is exposed?**
 
@@ -3000,7 +3000,7 @@ An exposed seed requires migration to independent keys. Changing a PIN or app pa
 
 **Which Node version should I use?**
 
-For this baseline, use the repo-pinned **Node 22.23.4**. The declared range is `>=22 <23`; Node `v24.22.2` is outside it. (M05, M06)
+The tested and verified baseline is **Node v22.23.4**, not an exact repo pin. The declared range is `>=22 <23` (greater than or equal to 22 and less than 23); Node `v24.22.2` is outside it. (M05, M06)
 
 ## 19. Updating and rebuilding
 
@@ -3008,7 +3008,7 @@ For this baseline, use the repo-pinned **Node 22.23.4**. The declared range is `
 
 Doc 4’s current pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`. **Re-pinning to a newer head is OPEN**, pending the user’s decision. For any agreed update, re-run the **§5 worktree procedure** against the new head; §5 contains the full procedure. **Never update by checking a new commit out in place inside the working directory:** an in-place detach silently replaces the guide being read. (M28; F4 fix)
 
-The cross-reference to the F4 treatment in **Doc 1 §15 was updated to the worktree procedure** in the 2026-11-10 push. (M28; F4 fix; M-34 decided 2026-11-10)
+The cross-reference to the F4 worktree treatment was updated in the 2026-11-10 push to point to **`docs/README-FULL.md` §15 (Updating and rebuilding)**. (M28; F4 fix; M-34 decided 2026-11-10)
 
 Do not carry over the testnet guides’ old in-place pinning procedure, treat the testnet4 deviation as a mainnet defect, or reuse testnet endpoints, addresses or network metadata as mainnet configuration. Testnet gate outcomes are not mainnet evidence. (M28 §0; M36 F4)
 
@@ -3018,13 +3018,13 @@ Version records at the **2026-11-09 baseline**: (M05)
 
 | Component | Recorded pin | Candidate or constraint |
 |---|---|---|
-| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
+| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** — tag `4.9.1` points to commit `17e3cd4d`; npm tarball SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
 | Node | **22.23.4**; repo range `>=22 <23` | Node **v24** is outside that range. |
 | bip-utils | **2.12.3** (adopted 2026-11-13: differential test PASS, identical BTC/ETH addresses, 14/14 unit tests) | none — 2.12.3 is the current latest stable and the adopted pin |
 
 **A candidate is not a pin. No version is qualified for mainnet until it passes the promotion checks.** (M05 F7)
 
-Installation belongs in §6. Install the Node tools with `npm ci --ignore-scripts` in `tools/hdwallet-gen`. (M05 F11) **Gap:** CI pins are missing. (M05 F12)
+Installation belongs in §6. Install the Node tools with `npm ci --ignore-scripts` in `tools/hdwallet-gen`. (M05 F11) **Gap:** `ci.yml:21` pins `node-version` to `22`; only the exact `22.23.4` patch pin is missing. (M05 F12)
 
 ### Post-update re-verification
 
