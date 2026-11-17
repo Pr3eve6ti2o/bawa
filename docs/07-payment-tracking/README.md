@@ -228,8 +228,8 @@ entropy → mnemonic → deterministic key tree → account-level public root
 **APPLICATION LAYER**
 
 ```text
-public root → address allocation → payment request → blockchain observation
-  → payment matching → confirmation/finality → idempotent claim
+public root → payment request → address allocation → blockchain observation
+  → payment matching → confirmation/finality → idempotent finalisation
   → fulfilment → reconciliation
 ```
 
