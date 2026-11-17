@@ -5552,7 +5552,7 @@ If a step fails as written, a link is dead, or a value has changed, open an issu
 
 ## Need help?
 
-No help destination is published for this guide yet. Work from the symptom-led recovery in section L and the repository guide’s troubleshooting (README §13–14) first. If the failure is a defect in the guide itself, report it as above.
+As of 2026-11-17, no help destination is published in the Bawa repository at the pinned commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (no `SUPPORT.md` or equivalent help file at that commit; checked 2026-11-17). Work from the symptom-led recovery in section L and the repository guide’s troubleshooting ([README §13 — architecture troubleshooting](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/13-wallet-app-architecture/README.md) and [README §14 — implementation troubleshooting](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/14-wallet-app-implementation/README.md)) first. If the failure is a defect in the guide itself, report it as above.
 
 ## Prose credit
 
