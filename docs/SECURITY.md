@@ -57,7 +57,7 @@ Recovery encryption uses AES-256-GCM with the additional authenticated data (AAD
 
 ## Dependency and supply chain
 
-- Trust Wallet Core is pinned to an exact tested package version.
+- Trust Wallet Core is pinned to an exact package version.
 - bip_utils is pinned and used only for independent verification.
 - Do not treat a version range as a tested dependency graph.
 - The tools lockfile is committed and records Core `4.8.4` exactly. No root lockfile is committed; the root `package.json` has no dependencies. Before a production release, verify and document the tools lockfile's clean-install origin and reproducibility.
@@ -68,7 +68,7 @@ Recovery encryption uses AES-256-GCM with the additional authenticated data (AAD
 
 JavaScript/WebAssembly memory cannot provide a cryptographic guarantee of perfect zeroization. Encryption at rest protects stored ciphertext but does not eliminate plaintext exposure while a mnemonic is being generated or recovered.
 
-An external security review is required before treating this as production custody infrastructure.
+An external security review is required before any real funds are involved, whether in production or non-production use.
 
 No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Establishing and publishing a private disclosure channel remains an open maintainer action. Do not post exploit details publicly.
 
