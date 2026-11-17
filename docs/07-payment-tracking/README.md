@@ -843,13 +843,13 @@ Treat everything in this section as application policy, not Bawa behaviour.
 
 Use the watcher to report current observations ([polling guidance](../06-tracking/README.md#L382-L390)). Use the reconciler to replay a bounded chain range, check persisted state, and restore omitted entries or correct obsolete ones. Keep the watcher catching new activity beyond the replay's endpoint; use the reconciler to catch missed payments and reorganisation-related changes within its range (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Do not treat fresh observations as proof that earlier database history is correct. Watch frequently and reconcile periodically.
 
-Retain each chain's native cursor ([cursor guidance](../06-tracking/README.md#L382-L390)):
+Retain chain-specific checkpoints separately from endpoint-specific pagination state, with explicit resume boundaries:
 
-- **Bitcoin:** the most recent relevant block/transaction position.
-- **EVM:** the processed block height.
-- **Solana:** the slot plus signature.
-- **XRPL:** the ledger index plus transaction.
-- **Cosmos:** the height plus pagination state.
+- **Bitcoin:** retain both the block height (scan position) and block hash (block identity and checkpoint for hash-based RPCs such as `listsinceblock`). For partial-block progress, also retain the transaction index and transaction ID. After fully processing height `h`, scan heights `h + 1` through target height `H`, inclusive: the checkpoint is excluded and the target is included. Within a block, resume after the saved transaction; if an endpoint includes the saved block or transaction, replay that boundary with deduplication.
+- **EVM:** retain the last fully processed block number and block hash, plus transaction/log indices for partial-block progress. Before resuming, compare the saved hash with the canonical block hash at that number; on a mismatch, rewind to a verified canonical checkpoint and replay. Block height alone is not reorg-aware.
+- **Solana:** retain the slot and signature as a checkpoint, but follow the queried method's pagination contract. A `(slot, signature)` pair is not a universal paginator: `getSignaturesForAddress`, for example, uses signature-based `before`/`until` bounds rather than a slot cursor.
+- **XRPL:** retain the validated ledger index; for within-ledger progress, identify the transaction by its hash and its position by metadata `TransactionIndex`. For `account_tx`, use the returned opaque `marker` with the same account, ledger bounds and query direction; a transaction hash is not that endpoint's continuation token.
+- **Cosmos:** retain the height checkpoint and the selected endpoint's pagination state. SDK key-pagination endpoints return `pagination.next_key` for use as the next request's `pagination.key`; CometBFT `tx_search` uses `page`/`per_page`. Keep the endpoint, filters, ordering and any fixed height/range with that state; pagination state is not interchangeable across endpoints.
 
 Store the height reached by the latest successful reconciliation, or its chain equivalent, separately from watcher progress. Advance it only when the whole range succeeds and writes are durable. After downtime, restart from a conservative earlier boundary. Do not substitute timestamps for chain cursors.
 
