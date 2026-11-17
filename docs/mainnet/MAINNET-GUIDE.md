@@ -653,11 +653,11 @@ The Android vault is Keystore-bound.
 
 > **Warning** Before uninstalling the Android app, moving to another device or adding a fingerprint, check that independent offline recovery material survives. The Keystore key does not survive uninstall or a device move, and adding a fingerprint may invalidate the Keystore wrapping key. Without its Keystore key, the vault cannot be opened; a copied vault or database is not a portable backup.
 
-The Android draft specifies **no inactivity timeout**; any biometric gating is a **UI-layer design** rather than an enforced session control. `FLAG_SECURE` covers only the Backup and Import routes, not the whole app.
+The Android draft specifies **no inactivity timeout**; any biometric gating is a **UI-layer design** rather than an enforced session control. In the Android starter code, `MainActivity.onCreate` sets `FLAG_SECURE` unconditionally on the activity window, so it covers the entire activity, not only the Backup and Import routes.
 
 Passing the Android **3-word backup quiz does not meet the full ordered 24-word re-entry requirement**. Do not treat that quiz as full backup verification.
 
-Neither the Web nor Android draft implements clipboard clearing.
+Neither the Web nor Android draft implements clipboard clearing: Android specifies clearing an owned clip only under an approved policy and after checking that no newer user clip has replaced it, but guarded clipboard access and ownership-aware clearing remain **OPEN** with **NO DRAFT API** (ANDROID-GUIDE:3087–3089); the Web draft only requires that the app never write the mnemonic to the clipboard, not that it clear clipboard contents (WEB-GUIDE:299–301).
 
 ### Forgotten vault unlock passphrase
 
@@ -775,7 +775,7 @@ Account for all transient copies and remove transient secrets when the checks ar
 
 #### Rehearsal status
 
-The recorded recovery rehearsal status is **FAIL** (README §18): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
+The recorded recovery rehearsal status is **FAIL** (`docs/README-FULL.md` §18, line 1241): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
 
 The required staged protocol is:
 
