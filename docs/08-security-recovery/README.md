@@ -1122,9 +1122,9 @@ Providers named are examples, NOT Bawa recommendations.
 
 Insurance does not make a wallet safe; it may pay for some losses after the fact, under defined terms. Read the policy before funding, not after a loss. Bawa is a wallet reference project; it holds no users' keys and sells no insurance.
 
-What insurance can cover: crime and specie cover (theft of physical assets, including precious metals and, in some policies, digital assets held in specified custody); a policy may cover losses from external compromise of a specified cold-storage system, employee dishonesty, and physical theft during transit or storage. Coincover-style offerings are described as protecting against specified theft and loss events for wallets and exchanges, with recovery services attached — check the policy wording for the particular product, not the marketing summary.
+What insurance can cover: crime cover (including, in some policies, theft of expressly insured digital assets held in specified custody) and specie cover (theft of physical valuables, including precious metals); a policy may cover losses from external compromise of a specified cold-storage system, employee dishonesty, and physical theft during transit or storage. Coincover-style offerings are described as protecting against specified theft and loss events for wallets and exchanges, with recovery services attached — check the policy wording for the particular product, not the marketing summary.
 
-What it does not cover: market losses; protocol failures and smart-contract faults; losses from your own mistake (wrong address, approved malicious transaction, lost seed with no recovery route); losses outside the insured entity, insured location or insured system; losses above the policy limit; losses after the policy has lapsed. A headline amount does not establish cover for your balance: limits are usually shared across clients; other claims may reduce the available cover; exclusions, deductibles, the insured legal entity and who receives a payout matter.
+What standard custody crime/specie insurance typically does not cover: market losses; protocol failures and smart-contract faults; losses from your own mistake (wrong address, approved malicious transaction, lost seed with no recovery route); losses outside the insured entity, insured location or insured system; losses above the policy limit; losses after the policy has lapsed. A headline amount does not establish cover for your balance: limits are often shared across clients; other claims may reduce the available cover; exclusions, deductibles, the insured legal entity and who receives a payout matter.
 
 Covered-or-not table (illustrative — check the actual policy wording):
 
@@ -1132,9 +1132,9 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Event | Typically covered? | Check |
 |---|---|---|
-| Theft of cold-storage keys by an external attacker | Possibly, if the policy names that event and system | Insured entity, system, limit, deductible |
+| Theft of insured digital assets from cold storage through private-key compromise | Possibly, if the policy names that event and system | Insured assets, event, legal entity, system, location, limit and available cover, deductible, exclusions, whether the policy has lapsed, who receives a payout |
 | Employee dishonesty | Possibly, under a crime policy | Who counts as an employee; sub-limits |
-| Physical theft in transit or storage | Possibly, under specie cover | Transit routes, storage locations, limits |
+| Physical theft of insured valuables in transit or storage | Possibly, under specie cover | Insured assets and legal entity, transit routes, storage locations, limits and available cover, deductible, exclusions, whether the policy has lapsed, who receives a payout |
 | Market price fall | No | — |
 | Smart-contract or protocol failure | Generally no | Some policies offer separate cover — check |
 | Wrong address or approved malicious transaction | No | — |
