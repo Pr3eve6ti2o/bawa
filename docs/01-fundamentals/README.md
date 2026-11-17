@@ -12,7 +12,7 @@ The exact construction is:
 
 > Seed = PBKDF2-HMAC-SHA512(mnemonic in UTF-8 NFKD, salt "mnemonic" + passphrase in UTF-8 NFKD, 2048 iterations, 64-byte output). With Bawa's empty passphrase the salt is the literal string "mnemonic".
 
-**Empty passphrase.** BIP-39 defines the empty string as the default when you do not supply a passphrase. Bawa’s policy is empty-only: if you supply any non-empty passphrase input, Bawa rejects it, never silently replacing or trimming it. That rejection is Bawa’s rule, not a BIP-39 requirement.
+**Empty passphrase.** BIP-39 defines the empty string as the default when you do not supply a passphrase. Bawa’s policy is empty-only, not a BIP-39 requirement. The repository tools expose no passphrase input; `generate.js` always uses the empty string.
 
 **Word counts.** BIP-39 supports entropy lengths from 128 to 256 bits in 32-bit steps, giving 12, 15, 18, 21 or 24 words. ENT is the entropy length, CS is the checksum length and MS is the mnemonic word count.
 
@@ -151,7 +151,7 @@ Branch `0` is external/receiving; branch `1` is internal/change. Ethereum toolin
 
 Store the index in your application; never reconstruct it by guessing from a few addresses. Persist the last-used and next index per account and branch. Record allocations before payment arrives: an unpaid address can look unused.
 
-**Why the path and passphrase are fixed.** The fixed path and empty BIP-39 passphrase are what make the same mnemonic reproduce the same addresses. A different path or a non-empty passphrase gives you different addresses and an apparently empty wallet. The funds are not lost, but they are unreachable from this policy. Do not add any alternative-path or passphrase option.
+**Why the path and passphrase are fixed.** The fixed derivation path and empty BIP-39 passphrase are Bawa policy, not BIP requirements. Keeping both fixed makes the same mnemonic reproduce the same addresses. The tools expose no passphrase input and always use the empty passphrase. A different path or a non-empty passphrase used elsewhere gives you different addresses and can make the wallet appear empty. Funds at addresses derived outside Bawa’s policy are not lost, but they are unreachable with these tools. Do not add any alternative-path or passphrase option.
 
 ## 5. Mnemonic, seed, private key, extended public key: what each is
 
