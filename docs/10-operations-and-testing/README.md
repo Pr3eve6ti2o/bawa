@@ -1343,7 +1343,7 @@ Keep funding on hold until the encrypted backup has passed a restore check. Repe
 3. **Test the backup itself.** A fixture pass does not validate your wallet backup. Under the same controlled conditions, use the confirmed recovery method to restore a copy of `<ENCRYPTED_BACKUP>` from its intended storage into a fresh scratch location. Preserve the original. Verify the restored wallet using the public identity check agreed with the maintainer; do not use a funds transfer as the test.  
    **Expected result:** the expected public identity matches; successful decryption alone is insufficient.
 
-4. **If anything fails, stop.** A missing file, decryption error or verification mismatch means the drill has not passed. Pause new funding, preserve existing copies and keep any working wallet intact. Ask the maintainer to investigate using non-secret diagnostics only. Test another independent copy if available, then repeat the complete drill after any correction. Bawa does not document repair steps; confirm them rather than guessing.  
+4. **If anything fails, stop.** A missing file, decryption error or verification mismatch means the drill has not passed. Pause new funding, preserve existing copies and keep any working wallet intact. Ask the maintainer to investigate using non-secret diagnostics only. Test another independent copy if available, then repeat the complete drill after any correction. Bawa does not document repair steps in the checked `docs/08` material; confirm them rather than guessing.  
    **Expected result:** recovery recorded as unverified until a complete repeat passes.
 
 5. **Close and schedule.** Record the backup revision, date and outcome without secrets. Follow the confirmed cleanup method for scratch data. Set the next drill date; repeat sooner whenever the backup, its encryption or its storage changes.  
@@ -1353,7 +1353,7 @@ Keep funding on hold until the encrypted backup has passed a restore check. Repe
 
 - **Backup failure:** that copy offers no demonstrated recovery. An independent copy may still work, but must pass its own drill. Bawa does not document replacement from a working wallet; confirm whether and how that route is supported.
 - **Media loss:** recovery now depends on an accessible, tested independent copy or another supported route. Two copies on the missing device do not help. Confirm any alternative route with the maintainer.
-- **Lost passphrase:** if decryption requires the missing passphrase, extra copies do not solve the problem. Bawa does not document a bypass; confirm whether an independent recovery route exists with the maintainer. Without one, recovery may be impossible.
+- **Lost passphrase:** if decryption requires the missing passphrase, extra copies requiring the same missing passphrase do not solve the problem. Bawa does not document a bypass; confirm whether an independent recovery route exists with the maintainer. Without one, recovery may be impossible.
 
 For suspected or confirmed seed compromise, see **Incident response**. A backup is not a substitute for a new wallet.
 
