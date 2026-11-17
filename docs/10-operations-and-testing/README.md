@@ -813,13 +813,15 @@ Do not treat a tag as verified without both trusted-key confirmation and a succe
 
 Confirm the project-specific build requirements and exact commands with the maintainer. Agree which unsigned Android artefacts and web outputs to compare, then record the following before either builder starts:
 
-- Source SHA and all applicable submodule SHAs.
-- Dependency locks, dependency checksums and hashes of other build inputs.
-- Toolchain and image identities, tool versions and architecture.
+- Agreed exact build commands.
+- Source SHA and all applicable submodule SHAs; record `none` for submodules only after confirming that the source tree at that SHA contains no gitlinks.
+- Dependency locks, immutable dependency identities (commit SHAs or content hashes), dependency checksums and hashes of other build inputs.
+- Immutable toolchain, build-tool and image identities (content hashes or digests rather than mutable names or tags), tool versions and architecture.
 - Build flags and public configuration.
 - Locale, timezone and timestamp policy.
+- Other output-affecting environment variables and settings, initial cache state and permitted cache use, and network-access and dependency-fetch policies.
 
-Arrange for two independent builders to check out the same source SHA and recorded submodule SHAs in separate clean environments. Require each builder to verify the input hashes against the agreed record and build with the recorded inputs and settings, without sharing outputs.
+Arrange for two independent builders to check out the same source SHA and recorded submodule SHAs in separate clean environments. Require each builder to verify the input hashes against the agreed record and build with the recorded inputs and settings, without sharing outputs or using shared build-output caches.
 
 ### Reproduce Android release outputs
 
