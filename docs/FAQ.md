@@ -36,7 +36,7 @@ Use Bawa as an HD-wallet reference to generate wallet material on a trusted mach
 
 ### Can an xpub recover my wallet?
 
-**No. An xpub is sensitive public material and cannot spend, sign or recover your wallet.** Use it only to derive and watch addresses below its account. Treat zpubs as sensitive public material too.
+**No. An xpub is sensitive public material: it cannot spend or sign, and it cannot recover your private keys or restore spending capability.** It can reconstruct a watch-only view; use it only to derive and watch addresses below its account. Treat zpubs as sensitive public material too.
 
 Restore your wallet only with the mnemonic and its BIP-39 passphrase. Keep the BIP-39 passphrase empty, as required by this guide's policy. Do not confuse it with the vault unlock passphrase, which unlocks the vault (the encrypted store).
 
@@ -173,7 +173,7 @@ For Bitcoin on testnet4, recognise Bawa's use of `m/84'/0'/0'/0/i`, the mainnet 
 
 Treat mainnet as out of scope: it is absent from this guide set, and passing the gates does not authorise mainnet use.
 
-Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the network of the destination address, RPC endpoint and explorer. For EVM networks, also verify the chain ID, network name and native currency, since the same address can appear on several networks.
+Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the intended destination network and that the RPC endpoint and explorer match it. For EVM networks, also verify that the chain ID, network name and native currency match the intended network; an EVM address alone does not identify a unique network.
 
 When checking a backup restore, use testnet coins, not real funds.
 
