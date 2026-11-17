@@ -632,6 +632,16 @@ Before calling an HD-wallet implementation “done”, check all of these.
 [ ] security policy published
 ```
 
+### Threat model, custody, recovery, and provenance
+
+```text
+[ ] threat model documented and reviewed
+[ ] signer/seed custody controls documented and verified
+[ ] xpub exposure and privacy implications reviewed
+[ ] recovery discovery and gap limits documented and tested
+[ ] signed build provenance published and verified
+```
+
 ---
 
 ## How to adapt this repository to another chain
