@@ -19,7 +19,7 @@ How-to guide.
 
 ## Wallet app architecture: overview and layers
 
-A wallet app combines three roles: **key manager, viewer and signer**. It manages access to keys, presents chain activity and authorises transactions. It is neither a custodian nor a node: the key holder retains signing authority, while nodes provide chain state. Assets are recorded on-chain, not held inside the app’s interface or database.
+A wallet app combines three roles: **key manager, viewer and signer**. It manages access to keys, presents chain activity and authorises transactions. In Bawa's noncustodial deployment, it is neither a custodian nor a node: the key holder retains signing authority, while nodes provide chain state. Assets are recorded on-chain, not held inside the app’s interface or database.
 
 For Bawa’s watch-only deployment, these roles belong in separate environments. Key generation and signing stay on the trusted side; the online application handles public addresses, chain observations and payment records.
 
@@ -50,7 +50,7 @@ Application records and order reconciliation
 | Public-only address handling | Derive receiving addresses from a suitable public root, or use an explicitly provisioned public address. | Sign transactions or accept a mnemonic, seed, private key or private extended key. |
 | Node / RPC access | Expose blocks, transactions and other chain-state information. | Derive wallet keys, sign on the application’s behalf or decide that an order is paid. |
 | History indexer | Organise chain activity so that relevant transactions and address histories can be found efficiently. | Generate wallets, sign transactions or make order-payment decisions. |
-| Wallet and payment tracking | Maintain the public wallet view and track observed transfers and their status. | Create wallets, handle signing secrets or perform signing. |
+| Wallet and payment tracking | Maintain the public wallet view and track observed transfers and their status. | Generate private wallet material, handle signing secrets or perform signing. |
 | Database and reconciliation | Persist observations, associate payments with orders and apply the application’s settlement policy. | Derive keys, sign transactions or substitute local records for chain evidence. |
 
 [Trust Wallet Core](https://github.com/trustwallet/wallet-core) is the low-level, multi-chain library within this architecture, not the whole wallet application. The open-source project reports coverage of over 130 blockchains. Its cross-platform C++ implementation has bindings for iOS, Android and WebAssembly.
@@ -122,13 +122,13 @@ Read BIP-44 path components in order as the private root, purpose, coin type, ac
 
 Recognise branch 0 as external receiving and branch 1 as internal change. For account-based networks without UTXO change, document the supported branch policy rather than inventing change behaviour.
 
-Keep hardened purpose, coin-type and account derivation inside key management. Never attempt to cross a hardened step with public-only derivation. Use an exported account public key to derive only non-hardened children below it. Restrict non-hardened child indices to 0 through 2³¹ minus 1.
+Keep hardened purpose, coin-type and account derivation inside key management. Never attempt to cross a hardened step with public-only derivation. Use an exported account extended public key to derive only non-hardened children below it. Restrict non-hardened child indices to 0 through 2³¹ minus 1.
 
-Apply the fixed `bawa-derivation-policy-v1` policy. This policy covers Bawa-generated wallets; external hardware-signer exports follow the signer's own origin.
+Apply the fixed `bawa-derivation-policy-v1` policy (defined in docs/02 at line 429). This policy covers Bawa-generated wallets; external hardware-signer exports follow the signer's own origin.
 
 Use account 0 and receiving branch 0 only for BTC, ETH and TRX, with `i` denoting the address index:
 
-Apply the fixed `bawa-derivation-policy-v1` policy. For BTC, use account origin `m/84'/0'/0'` and address path `m/84'/0'/0'/0/i`; require testnet4 for the BTC adapter. Bawa retains coin type `0'` on testnet4. This differs from SLIP-0044's testnet coin type `1` and SLIP-0132's association of `vpub` with `m/84'/1'`. The testnet derivation taught in docs/09 is therefore not the Bawa derivation used here. A standard testnet wallet using `m/84'/1'` will derive a different account from the same mnemonic and must not be assumed to reproduce Bawa's account or addresses.
+For BTC, use account origin `m/84'/0'/0'` and address path `m/84'/0'/0'/0/i`; require testnet4 for the BTC adapter. Bawa retains coin type `0'` on testnet4. This differs from SLIP-0044's testnet coin type `1` and SLIP-0132's association of `vpub` with `m/84'/1'`. The testnet derivation taught in docs/09 is therefore not the Bawa derivation used here. A standard testnet wallet using `m/84'/1'` will derive a different account from the same mnemonic and must not be assumed to reproduce Bawa's account or addresses.
 - For ETH, use `m/44'/60'/0'/0/i`.
 - For TRX, use `m/44'/195'/0'/0/i`.
 
@@ -165,13 +165,14 @@ It can, however, link addresses throughout its non-hardened subtree and reveal a
 
 There is also a key-compromise hazard: an account xpub combined with a leaked descendant private key on an entirely non-hardened path can expose the account private node. Hardened ancestors limit upward propagation; they do not protect the exported account’s non-hardened subtree from this combination.
 
-The root `.env` written by `make_wallet.py` contains only `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`. It does not include the full account path, network or address-format policy alongside those values; record the path, network and address-format policy for each export in the wallet creation record instead. The xpub’s embedded metadata is not a complete wallet description.
+The root `.env` written by `make_wallet.py` includes the target keys `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`. It does not include the full account path, network or address-format policy alongside those values; record the path, network and address-format policy for each export in the wallet creation record instead. The xpub’s embedded metadata is not a complete wallet description.
 
 Expected result:
 
 - [ ] Recovery tests covering normalisation and empty/non-empty passphrases.
 - [ ] Matching public derivations on the signer and watch-only sides.
 - [ ] Hardened derivation rejected by public-only interfaces.
+- [ ] Private extended keys rejected by the watch-only tools.
 - [ ] Account-scoped public exports with explicit network and path policy.
 - [ ] No recovery or signing secrets in diagnostics or examples.
 
@@ -217,10 +218,10 @@ Normal output contains public wallet metadata, checks, the encrypted-file locati
 
 Maintain two clearly distinguished recovery routes:
 
-- **Offline phrase:** a complete, ordered copy of the 24 words on a durable medium with controlled physical access. This can recover the wallet without the encrypted JSON or its data key. Background on mnemonic-based recovery is available in [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
-- **Encrypted backup:** an intact copy of `seed.enc.json`, with the data key held in a separate security domain. Do not reunite them in a shared archive, synchronised folder or exported vault backup.
+- **Offline phrase:** a complete, ordered copy of the wallet's full BIP-39 mnemonic at its permitted length (12, 15, 18, 21 or 24 words) on a durable medium with controlled physical access. This can recover the wallet without the encrypted JSON or its data key. Background on mnemonic-based recovery is available in [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki).
+- **Encrypted backup:** an intact copy of `seed.enc.json`, with the data key held separately from the ciphertext. Do not reunite them in a shared archive, synchronised folder or exported vault backup.
 
-Inventory every copy, its custodian and its retention policy. Include removable media, replicas, snapshots and older backup versions. A backup that cannot be located cannot be reliably retired.
+Inventory every copy, its custodian and its retention policy. Include removable media, replicas, snapshots and older backup versions. A ciphertext-only backup may be cryptographically retired without locating it if every copy of its decryption key is irrecoverably destroyed. Destroying the data key for `seed.enc.json` does not retire plaintext phrase copies.
 
 Also retain protected records of coin and derivation settings, expected public identities and the Wallet Core version. Back up application state separately: restoring the phrase does not recreate address-allocation history or other off-chain records.
 
@@ -228,7 +229,7 @@ Also retain protected records of coin and derivation settings, expected public i
 
 Recover in a new trusted, non-recorded session. Either import the offline phrase into a compatible wallet or recover it from the encrypted envelope using the separately held data key. Do not generate another phrase and expect it to recover the original addresses.
 
-`tools/decrypt_seed.py` is the designated decryption helper. Before using it, verify that its input and output handling preserves the same boundary as generation: no key in command-line arguments or shell history, and no recovered phrase in ordinary output, logs or temporary files. Plaintext should remain in-process or be displayed only on a private controlling TTY. Do not assume the generator’s output restrictions automatically apply to another tool.
+`tools/decrypt_seed.py` is the designated decryption helper. Before using it, verify that its input and output handling preserves the same boundary as generation: no key in command-line arguments or shell history, and, by default, no recovered phrase in ordinary output, logs or temporary files. The explicit `--stdout` option is an exception to the ordinary-output restriction: it writes the mnemonic to stdout, which must be handled as sensitive plaintext and kept out of logs and temporary files. Plaintext should remain in-process or be displayed only on a private controlling TTY. Do not assume the generator’s output restrictions automatically apply to another tool.
 
 Reject authentication failure without importing or displaying partial plaintext. A wrong key, changed nonce, altered AAD or damaged ciphertext is a failed recovery, not permission to bypass verification.
 
@@ -348,15 +349,15 @@ For an unsupported count, unrecognised word or checksum mismatch, identify the f
 
 After all checks pass, present a read-only public-address preview. Ask the user to check that the phrase belongs to the intended wallet, that its word order is correct, and that the selected network and previewed address match their expectations where known. Do not treat a valid checksum as proof of wallet identity. On an unexpected address, stop and review the recovery settings.
 
-Required behaviour: After explicit confirmation, import the wallet through Wallet Core and open Mnemonic backup without lifting the backup-pending gate. Lift the gate only after successful full, ordered re-entry of all 24 words from the user's saved copy. Successful import alone must not count as backup confirmation.
+Required behaviour: After explicit confirmation, import the wallet through Wallet Core and open Mnemonic backup without lifting the backup-pending gate. Lift the gate only after successful full, ordered re-entry of the entire mnemonic from the user's saved copy, whether it contains 12, 15, 18, 21, or 24 words. Successful import alone must not count as backup confirmation.
 
-Draft status at commit 754721cd: The Web import handler in main.js instead calls setBackupConfirmed(w.id) immediately after import, with the comment "import demonstrates possession of the phrase", and navigates to the portfolio without a backup-confirmation step. This is a draft deviation from the required import and backup-gate behaviour, not an allowed exception.
+Draft status: The required import and backup-gate behaviour is stated above. Any draft deviation is unverified against commit 754721cd.
 
 ### Mnemonic backup and confirmation
 
 Show the mnemonic once, offline. For creation, use the single reveal described in the Create wallet flow, not an additional display. Do not redisplay the mnemonic on a confirmation retry.
 
-Require the user to re-enter the entire mnemonic from their saved copy using protected entry: all 24 words, in their original order. Ask the user to consult that copy rather than rely on memory. Compare every entered word with the corresponding position in the generated or imported mnemonic. Accept backup confirmation only when all 24 words match in order. Do not accept selected words, a partial match or a tick-box acknowledgement.
+Require the user to re-enter the entire mnemonic from their saved copy using protected entry: all words, in their original order, at the mnemonic's permitted length (12, 15, 18, 21, or 24 words). Ask the user to consult that copy rather than rely on memory. Compare every entered word with the corresponding position in the generated or imported mnemonic. Accept backup confirmation only when the entered mnemonic has the same length as the generated or imported mnemonic and all words match in order. Do not accept selected words, a partial match or a tick-box acknowledgement.
 
 On a mismatch, show a generic error, keep **Confirm backup** disabled and retain the backup-pending gate. Allow editing and retry through protected entry. Enable **Confirm backup** only after all 24 words match in order.
 
