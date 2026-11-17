@@ -676,6 +676,8 @@ If an event is reported as removed from a `finalized` or solidified view, also p
 
 For ordinary reorg recovery (see [MAINNET-GUIDE §12 state table, lines 1379–1388](../mainnet/MAINNET-GUIDE.md#L1379-L1388)):
 
+Before replay, invalidate orphaned inclusion and confirmation state and suspend acceptance for affected records. After replay and before restoring eligibility, recheck affected records and rebuild derived totals rather than retaining an invalid settled label.
+
 1. Find the common ancestor, rewind the scan cursor and replay canonical blocks.
 2. Reconcile pending and replacement transactions, then re-match idempotently.
 3. If `<TXID>` returns, verify its new block hash and execution. Rebuild depth from its new inclusion and reapply the threshold.
