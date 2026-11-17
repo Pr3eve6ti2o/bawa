@@ -93,15 +93,17 @@ Never place a real production mnemonic, seed, xprv, xpub, zpub, hardware seed, o
 
 Wallet Core publishes [`registry.json`](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/registry.json) and [registry-field documentation](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/docs/registry-fields.md).
 
-The registry is useful for implementation metadata such as:
+At Wallet Core tag `4.9.2`, the registry provides per-entry implementation metadata, with optional fields and coverage that varies by entry. Depending on the entry, it may include:
 
-- coin IDs and optional SLIP-44 values;
+- Wallet Core coin identifiers (`coinId`) and optional SLIP-44 coin-type values (`slip44`, present in 12 of 168 entries);
 - derivation paths and alternate derivations;
 - xpub/xprv serialisation variants;
 - curves and public-key types;
 - address prefixes and HRPs;
-- chain IDs;
+- network chain IDs (`chainId`), distinct from `coinId` and `slip44`;
 - explorer/documentation metadata.
+
+Registry inclusion and populated metadata do not constitute a security assurance.
 
 Use the registry to understand implementation compatibility. Do not treat it as a replacement for the protocol specification.
 
@@ -432,7 +434,7 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Invalid Base58:** Put a forbidden character, such as `0`, into a copied public-key encoding. Expect decoding failure, not character stripping or fallback interpretation.
 
-- **Invalid mnemonic checksum:** Use a published checksum-invalid fixture with an otherwise valid word count and vocabulary. Expect rejection before seed derivation. Do not substitute a spelling-error test.
+- **Invalid mnemonic checksum:** Use the checksum-invalid fixture `abandon` repeated 12 times with the BIP-39 English wordlist (`bitcoin/bips`, `bip-0039/english.txt`). This fixture is derived from the published 128-bit zero-entropy English vector in `trezor/python-mnemonic`’s `vectors.json` by replacing its final `about` with `abandon`; word count and vocabulary remain valid. Under this guide’s strict checksum-validation policy, expect rejection before the seed KDF. BIP-39 calls for checksum checking and a warning on invalid checksums, but does not universally mandate rejection before its seed KDF. Do not substitute a spelling-error test.
 
 - **Wrong passphrase:** BIP-39 does not identify an unintended passphrase: it derives another valid wallet. Record that expectation and compare public output with the intended wallet’s reference output; they should differ. For passphrase-protected authenticated recovery, expect authentication failure and no plaintext.
 
@@ -440,7 +442,7 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Missing files:** Remove each required input independently. Expect a file-not-found error, without creating a replacement input, empty wallet or recovery output.
 
-- **Symlinked paths:** Test input files, output destinations and parent directories linked to disposable protected targets. Expect refusal before following links; links and targets must remain unchanged. Static checks do not prove protection against path-swap races.
+- **Symlinked paths:** Under this guide’s no-symlink hardening policy—not a universal correctness requirement—test links at each input-file or output-destination leaf and at every ancestor directory below a declared trusted root (including the immediate parent, but excluding the root and ancestors above it). The trusted root is the recorded, prevalidated non-symlink directory anchoring the fixture paths; its integrity and that of its ancestors are setup assumptions. Use separate cases with links to disposable protected targets. Expect refusal before following the tested link; links and targets must remain unchanged. Static checks do not prove protection against path-swap races.
 
 - **Malformed JSON:** Test incomplete objects, invalid quoting and trailing non-whitespace data. Expect a parse error, with no partial record processing or interpretation as another format.
 
