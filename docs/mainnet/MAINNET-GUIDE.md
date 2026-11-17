@@ -2938,7 +2938,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### An address tool aborts, or returns plausible but wrong output
 
-**Cause:** BTC testnet `vpub`/`tpub` inputs to `derive.js` can cause an opaque WASM abort, exit status `1` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` accepts private extended keys and silently prints wrong addresses with exit status `0`; `derive.js` returns valid-looking addresses for mismatched-chain keys. (M04; OI-096)
+**Cause:** BTC testnet `vpub` inputs to `derive.js` produce an explicit rejection with exit status `2` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` rejects private extended keys with a `FATAL` diagnostic and exit status `1`; `derive.js` can still produce valid-looking addresses for the wrong chain from shared-version `xpub` inputs. (M04; OI-096)
 
 **Action:** do not feed BTC testnet `vpub`/`tpub` keys to `derive.js`. Do not use `compare.js` with private extended keys, or accept mismatched-chain output from `derive.js` as validation. Plausible output plus exit status `0` is not validation. If an address mismatch remains, use the ordered mismatch tree above. (M04; OI-096; M16-F43)
 
@@ -2954,7 +2954,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### The UI says “backup confirmed”, but full re-entry has not happened
 
-**Cause:** Web import marks the backup confirmed without re-entry through `setBackupConfirmed` at `main.js:529`. Android’s draft uses a 3-word quiz where its guide requires full ordered 24-word re-entry. Neither satisfies the backup gate. (M16-F28, M16-F47)
+**Cause:** In the local-only, off-branch Web draft, import marks the backup confirmed through `setBackupConfirmed` without re-entry. Android's draft uses a 3-word quiz where its guide requires full ordered 24-word re-entry. Neither satisfies the backup gate. (M16-F28, M16-F47)
 
 **Action:** require **full ordered 24-word re-entry** for the backup gate. Any flow that cannot perform the gate is **unsupported**, regardless of its confirmation flag or quiz result. A decrypt round trip is not the recovery rehearsal. Re-entry is not a request to send the words in a troubleshooting message. (M16-F28, M16-F47; M03, M16)
 
