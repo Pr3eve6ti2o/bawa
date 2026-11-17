@@ -582,6 +582,8 @@ Treat `reconciled` as terminal audit closure, not another word for successful pa
 **Expected:** an ordered history for `<REQUEST_ID>`, with every required check recorded, late payments routed to review, and no fulfilment authorised by observation alone.
 ## 12. Observation and chain-specific matching
 
+Treat the matching rules in this section as application policy built on Bawa's tracking definitions (docs/06): the application decides how to apply the chain-specific event keys and confirmation policies.
+
 Deduplicate observations using a chain-specific event key (see [docs/06, lines 586–590 and 687](../06-tracking/README.md)), then require an unambiguous link to a payment request. Look up stored requests in the relevant chain/network using an explicit request ID, a persisted event-to-request mapping, or the destination together with any request-specific memo, tag or reference. Apply the available identifiers together and require exactly one consistent candidate. If no request matches, leave the observation unmatched; if multiple requests match or identifiers conflict, keep it unresolved until additional request-specific evidence resolves the ambiguity. Do not break ties by amount or timing alone. Compare the destination, asset and atomic amount with the request, validate the fields below, and apply your confirmation/finality policy before accepting a match (see [docs/12, line 320](../12-chain-registry-and-assets/README.md)).
 
 ### Bitcoin
@@ -837,6 +839,8 @@ Apply atomic claiming and idempotent execution to refunds too, so a retry cannot
 **Expected:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
 ## 14. Watcher and reconciler
 
+Treat everything in this section as application policy, not Bawa behaviour.
+
 Use the watcher to report current observations ([polling guidance](../06-tracking/README.md#L382-L390)). Use the reconciler to replay a bounded chain range, check persisted state, and restore omitted entries or correct obsolete ones. Keep the watcher catching new activity beyond the replay's endpoint; use the reconciler to catch missed payments and reorganisation-related changes within its range (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Do not treat fresh observations as proof that earlier database history is correct. Watch frequently and reconcile periodically.
 
 Retain each chain's native cursor ([cursor guidance](../06-tracking/README.md#L382-L390)):
@@ -899,6 +903,8 @@ Visit these four branches in this order on every cycle:
 In your own watcher, keep the states separate, isolate failures within individual checks, and use the same finalisation gate whenever any branch is ready to fulfil (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Distinguish finding evidence, waiting for readiness, holding for review and completing an order.
 
 ## 15. Derivation ownership and token identity
+
+Bawa owns the derivation explanation and reference implementation; the application owns orders, payment records, quoting, address allocation, matching, confirmations, reconciliation and fulfilment.
 
 Keep Bawa as the canonical home for the [derivation explanation and reference implementation](../06-tracking/README.md#7-gap-limits-and-discovering-an-hd-wallet). Package the application’s copy from that reference and treat it as a generated deployment output. Never hand-edit the copied tooling in place.
 
