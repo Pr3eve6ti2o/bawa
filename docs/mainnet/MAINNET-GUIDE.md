@@ -3282,7 +3282,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Question/risk:** The Android draft has unresolved send and signing gaps:
 
-- The adapter header claims a chain-ID check that does not exist in `SigningCoordinator`.
+- The adapter header’s chain-ID claim concerns chain-context consistency under `ANDROID-GUIDE:3194(a)`, not a live `eth_chainId` call; a missing check in `SigningCoordinator` is not established.
 - The send path is ETH-only, and zero-amount sends are allowed.
 - A broadcast timeout is `UNKNOWN`. Rebroadcasting identical signed bytes cannot double-pay, but a fresh composition can.
 - TON can show a silent zero on the wrong network: Toncenter returns a successful `0`, with `fresh=true`.
@@ -3327,7 +3327,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 ### M-08 — TRON energy estimation: prescribed method is unavailable on the primary endpoint
 
-**Question/risk:** `wallet/estimateenergy` is unsupported on TronGrid mainnet, leaving the Android guide’s energy-estimation instruction without a working method on the primary endpoint. The only dry-run figure, 8624 energy, came from a `REVERTED` call and must never be quoted as a transfer cost. `fee_limit` is not a universal cap.
+**Question/risk:** `wallet/estimateenergy` is unsupported on TronGrid mainnet. The Android guide’s energy-estimation instruction is a generic method requirement, with no named or demonstrated mainnet recipe for the primary endpoint. The only dry-run figure, 8624 energy, came from a `REVERTED` call and must never be quoted as a transfer cost. `fee_limit` is not a universal cap.
 
 **Affected section:** §14.
 
