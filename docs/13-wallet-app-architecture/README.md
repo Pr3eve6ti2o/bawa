@@ -55,7 +55,7 @@ Application records and order reconciliation
 
 [Trust Wallet Core](https://github.com/trustwallet/wallet-core) is the low-level, multi-chain library within this architecture, not the whole wallet application. The open-source project reports coverage of over 130 blockchains. Its cross-platform C++ implementation has bindings for iOS, Android and WebAssembly.
 
-Internally, it separates the public API, core wallet types (`HDWallet`, `Mnemonic`, `StoredKey`, `Account`), multi-chain interfaces (`AnyAddress`, `AnySigner`, `CoinType`), cryptographic algorithms and individual chain modules. These implementation layers are described in [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) and [Core Wallet Architecture repository](https://github.com/vultisig/walletcore-spm). They provide key, address and transaction machinery; they do not replace chain observation or application reconciliation.
+In its repository and architecture documentation, the project describes its internal organisation as separating the public API, core wallet types (`HDWallet`, `Mnemonic`, `StoredKey`, `Account`), multi-chain interfaces (`AnyAddress`, `AnySigner`, `CoinType`), cryptographic algorithms and individual chain modules. These implementation layers are described in [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) and [Core Wallet Architecture repository](https://github.com/vultisig/walletcore-spm). They provide key, address and transaction machinery; they do not replace chain observation or application reconciliation.
 
 ### Keep private material outside the watch-only runtime
 
@@ -267,7 +267,7 @@ Restrict the watch-only runtime to public material only (xpubs, zpubs and addres
 
 Treat xpubs and zpubs as **sensitive public material**: an xpub cannot sign, but exposing it discloses an ongoing address catalogue, balances, payment history and relationships. Never upload an extended public key to a remote service. Treat fallback providers and multi-provider comparisons as additional disclosures.
 
-Reject private material at every public-only boundary, including the derivation worker’s JSONL channel. Contain diagnostics so that no secret reaches logs.
+Reject private material at every public-only boundary; for the derivation worker’s JSONL channel, this is a requirement, not demonstrated behaviour. The demonstrated daemon rejections are limited to over-long lines (“request too large”) and malformed JSON (“bad json”) at `derive_daemon.js:71,87-91`. Contain diagnostics so that no secret reaches logs.
 
 Keep `tools/hdwallet-gen/derive_daemon.js` on the watch-only side: it uses Trust Wallet Core to derive and validate addresses, but does not establish ownership, find funds or authorise spending. Handle its startup readiness record separately from derivation replies. Allow only one outstanding request per worker because replies have no request identifier, and keep the request context alongside each returned address.
 

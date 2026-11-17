@@ -324,7 +324,7 @@ Do not treat broadcast acknowledgement as confirmation. Track inclusion, confirm
 
 ### 5.3 Accessibility, clipboard and capture
 
-Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) for accessibility across screens and required states (verified live 8 November 2026; w3.org blocks automated checks).
+Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) for accessibility across screens and required states (link checked live on 2026-11-17).
 
 Apply the shared clipboard rule from section 3:
 

@@ -66,7 +66,7 @@ Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:52–5
 
 ## TON-specific coverage
 
-TON needs explicit fixtures for:
+The following TON fixture needs have been identified; this list is not asserted to be complete. In the recorded fixture, workchain is inferred from the address’s `0:` prefix rather than stated as an explicit fixture field. TON needs explicit fixtures for:
 
 - mnemonic scheme;
 - derivation path;
