@@ -156,9 +156,9 @@ Use these ripple-fixture account-0 public nodes, derived with **bip-utils 2.12.2
 | ETH xpub | `m/44'/60'/0'` | `xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc` | Core-confirmed (D31, 2026-11-08) |
 | TRX xpub | `m/44'/195'/0'` | `xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF` | Core-confirmed (D31, 2026-11-08) |
 
-Treat this derivation as confirmation of reproducibility, not independence: bip-utils is the same library used by `test/differential_test.py`. Every public node was confirmed against Core’s `getExtendedPublicKeyAccount` in a recorded **4.9.2** run using the ripple mnemonic and empty passphrase (D31, 2026-11-08); treat them as canonical.
+Treat this derivation as confirmation of reproducibility, not independence: bip-utils is the same library used by `test/differential_test.py`. The recorded Core **4.9.2** run using the ripple mnemonic and empty passphrase (D31, 2026-11-08) shows address agreement, but address agreement alone does not establish derivation provenance. These public nodes remain provisional.
 
-Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/195'/0'/0/0` as the TRX anchor. It was derived with bip-utils **2.12.2** and confirmed by Trust Wallet Core 4.8.4 (V3 live verification, 8 November 2026: `getAddressForCoin(tron)` returns this address) and re-confirmed on Core 4.9.2 (D31, 2026-11-08).
+Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/195'/0'/0/0` as the TRX anchor. It was derived with bip-utils **2.12.2** and confirmed by Trust Wallet Core 4.8.4 (V3 live verification, 8 November 2026: `getAddressForCoin(tron)` returns this address) and re-confirmed on Core 4.9.2 (D31, 2026-11-08). The ripple TRX index-1 address at `m/44'/195'/0'/0/1` is **`TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B`**.
 
 Do not count this separate derivation as repository-test coverage.
 
