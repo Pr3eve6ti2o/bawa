@@ -2,7 +2,7 @@
 
 ## 1. What this document decides
 
-Choose one owner per job. “Recommended” means a sensible place to start for this specific job, not the only valid choice.
+Choose one owner per job. “Recommended” means a sensible place to start for this specific job, not the only valid choice. The paired entries are alternatives, not joint owners: choose either viem or ethers for the EVM application layer, and either Trezor or Ledger for the hardware signer.
 
 Use this document to select repositories and tools, with their responsibilities and limits. Use `docs/12` for the registry, `docs/11` for Wallet Core and `docs/02` for chain guidance.
 
