@@ -810,11 +810,11 @@ Keep the request’s agreed asset, network, amount and destination alongside tra
 
 ### Refund through a separate payment
 
-Treat each refund as a fresh outgoing payment requiring independent authorisation. Leave the original payment record unchanged. Create a linked refund record with its own approval, status and eventual `<REFUND_TXID>`.
+Treat each refund as a fresh outgoing payment requiring independent authorisation. Leave the original payment record unchanged. Create a linked refund record with its own approval, status and eventual `<REFUND_TXID>` (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)).
 
 Require the approval to cover the asset, network, destination, amount and fees. Verify custody and recovery feasibility before promising repayment, particularly for wrong-asset or wrong-network cases.
 
-Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment.
+Apply atomic claiming and idempotent execution to refunds too, so a retry cannot send another payment (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
 **Expected:** Replays and a lost-response retry leave one credit and one fulfilment; distinct extra funds remain flagged, and any refund has separate approval and a linked outgoing-payment record.
 ## 14. Watcher and reconciler
