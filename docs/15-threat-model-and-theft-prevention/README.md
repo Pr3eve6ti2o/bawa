@@ -33,7 +33,7 @@ Treat mnemonic phishing, fake wallet apps and browser extensions, social enginee
 
 ### Maintain the trust boundary
 
-> **Warning:** Whoever holds your mnemonic or private key controls the wallet. Never hand either over to a service, support agent or wallet maker; no legitimate service asks you to do so. If either has been disclosed, treat it as permanently compromised and follow the exposure response below.
+> **Warning:** Whoever holds your mnemonic and any required BIP-39 passphrase can derive the corresponding private keys. A single child private key need not control the whole wallet, and multisig spending requires the configured threshold of valid signatures. Never hand your mnemonic, passphrase or private keys over to a service, support agent or wallet maker; no legitimate service asks you to do so. If any has been disclosed, treat it as permanently compromised and follow the exposure response below.
 
 The trusted side consists of recovery storage you control and a verified wallet on a trusted device. External people, services, software sources, phone-number accounts and transaction data are outside that boundary. An identity claim or software installation alone does not establish trust; a suspected compromised device is not a trusted recovery or signing environment.
 
@@ -147,7 +147,7 @@ Account for tampered dependencies, malicious updates and fake releases as threat
 
 > **Warning:** A hidden implant can capture the mnemonic displayed during setup, as described in public reports of physically tampered hardware wallets bought through a reseller rather than directly from the maker. [2](https://www.bitgo.com/research/fool-me-twice-ledger-tokenized-repo-and-finks-worldview/) Buy hardware directly from the maker and verify the device using the maker’s guidance. Check seals and casing for alterations, but do not assume hidden tampering will leave an obvious sign. Do not treat a successful genuine-check alone as proof that a device was never opened.
 
-Do not treat a version range as evidence of a tested dependency graph. Keep Trust Wallet Core pinned to Bawa’s exact, tested package version. Keep bip_utils pinned and use it only for independent verification. Before a production release, commit the lockfile produced by a clean install. Run dependency and secret scanning in CI and release workflows. Prefer signed or tagged upstream releases, and record release checksums and provenance where practical.
+Do not treat version ranges, exact pins or a clean-install lockfile as evidence, on their own, that a dependency graph has been tested. Keep Trust Wallet Core pinned to Bawa’s exact, tested package version. Keep bip_utils pinned and use it only for independent verification. Before a production release, generate a lockfile from a clean install, test the exact resolved dependency graph it records, and commit that lockfile. Run dependency and secret scanning in CI and release workflows. Prefer signed upstream releases and verify their signatures against trusted upstream signing keys; a tag alone does not authenticate a release. Record release checksums and provenance where practical.
 
 Check for unexplained dependency changes and signature or checksum failures. Stop affected releases, quarantine suspect devices or packages, and notify affected holders. Rebuild from independently verified inputs. Treat mnemonics handled by compromised software or hardware as exposed, and use a separate, trusted environment to generate fresh wallets and move remaining funds.
 
