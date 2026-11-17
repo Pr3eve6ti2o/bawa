@@ -897,7 +897,7 @@ Run the background watcher on a 60-second cycle (see the [bounded back-off polli
 Visit these four branches in this order on every cycle:
 
 1. **Pending or underpaid direct deposits:** fetch transaction data using the chain-specific lookup, match the expected payment and total the matching payments. Apply that chain's confirmation policy. Claim a ready deposit atomically before fulfilling its order; otherwise, leave it pending or underpaid.
-2. **Expired deposits:** run a short scan for late payments, then move the deposit into the manual-review state (`manual_review`). Leave the order for review rather than treating expiry handling as successful payment completion.
+2. **Expired deposits:** run a short scan for late payments, record any newly discovered payment evidence as `late`, then move the deposit into the manual-review state (`manual_review`). Leave the order for review rather than treating expiry handling as successful payment completion.
 3. **External invoice recovery:** query paid invoices and recover orders whose finalisation is still outstanding (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)). Send these orders through idempotent finalisation, not a separate invoice-only route to fulfilment.
 4. **Slow-path pending payments:** run the slow-path lookup for payments still pending. Leave unresolved payments pending and send recovered evidence to the same finalisation path.
 
