@@ -1282,7 +1282,7 @@ On **2026-11-09, `muse-vm`**, Toncenter `getMasterchainInfo` returned `ok:true` 
 
 The presence of `last_transaction_id` was **not verified history**. It establishes neither a complete transaction list nor receipt of a particular payment. Likewise, `ok:true` reports a successful API response, not payment acceptance. TonAPI’s masterchain-head route is a **head check only**, not account, history or payment verification.
 
-The confirmation policy is **1 masterchain seqno**: a TON payment is treated as confirmed once a masterchain block references the shardchain block containing the transaction, and the transaction's outgoing message is verified as successful (delivered, not bounced, not failed). Count masterchain seqno progression from inclusion, not the wallet's account seqno — which advances on every outgoing message the wallet sends — and not wall-clock time. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
+The confirmation policy is **1 masterchain seqno**: a TON payment is treated as confirmed once the payment’s internal message has been traced from the sender’s wallet transaction to the intended recipient’s receiving transaction, that receiving transaction is verified to have successfully credited the payment (not bounced or failed), and a masterchain block references the shardchain block containing that receiving transaction. Count masterchain seqno progression from inclusion, not the wallet's account seqno — which advances on every outgoing message the wallet sends — and not wall-clock time. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
 
 In this draft, `tx.js:320` leaves the TON `txid` as `null`, so TON reconciliation cannot be automatic here. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
 
@@ -1332,10 +1332,10 @@ Every form below is **UNVERIFIED-NEEDS-CHECK**: a research target, not a finding
 
 | Network | Research target | Optional amount fragment to check |
 |---|---|---|
-| BTC | `bitcoin:<ADDRESS>` — BIP-321 | `&amount=<BTC>` |
+| BTC | `bitcoin:<ADDRESS>` — BIP-321 | `?amount=<BTC>` |
 | ETH | `ethereum:pay-<ADDRESS>@1` — ERC-681 | `?value=<WEI>` |
 | TON | `ton://transfer/<UQC7...>` | `?amount=<NANOCOINS>` |
-| TRX | Bare `T...` address; no `tron:` URI exists | No amount form established here |
+| TRX | Testnet examples use bare `T...` addresses; `tron:` URI support is not established by those examples | Amount encoding is not established by those testnet examples |
 
 For each target, generate the QR, decode it, and compare the **full address**, plus the amount where supplied, against the intended request. Confirm the wallet’s configured network before any send. This is the local check against **wrong-address, wrong-network and wrong-amount payments**, including theft through a substituted QR destination. Stop if decoding, comparison or wallet interpretation is unresolved, if the destination changes, or if a tool asks for wallet secrets. A successful decode alone does not establish live wallet support.
 
@@ -1384,10 +1384,11 @@ Observation and request-status labels are not the application’s `paid` decisio
 | `expired` | The request’s expiry has been reached; this does not prove that no payment exists or can arrive later. |
 | `late` | An attributed payment falls after expiry under the timing basis that the policy must define. |
 | `manual_review` | Attribution, evidence, timing or an amount discrepancy remains unresolved and must not produce automatic `paid`. |
+| `paid` | Business acceptance decision: the application has accepted the payment as satisfying the invoice under the configured acceptance policy, including amount and chain-specific confirmation/finality requirements; not a chain-observation label. |
 
 A mainnet policy must explain how correctly attributed, deduplicated payments reach `paid`. For a matching total, that requires checked units, current canonical evidence meeting the policy’s confirmation or finality requirements, and resolved expiry and late-payment conditions. The decision must retain its policy version and reason. A wrong address or network cannot be cured by more confirmations, and a wrong amount cannot be cured by a favourable balance screen.
 
-`docs/07`’s BTC **1/3/6** bands are **ILLUSTRATIVE application policy, not Bawa’s policy**. Do not transplant them into mainnet operation. The actual mainnet thresholds and transitions remain open. Until they are defined, stop at recording observations and review rather than enabling automatic `paid`.
+`docs/07` advises choosing chain-specific settings rather than blindly copying them. Define and validate Bawa’s mainnet confirmation/finality policy for each chain instead of transplanting example or testnet settings unchanged. The actual mainnet thresholds and transitions remain open. Until they are defined, stop at recording observations and review rather than enabling automatic `paid`.
 
 A discrepancy or an unresolved transaction does not authorise another payment. Retrying a pending or stuck transfer risks duplication; switching destinations or supplying secrets during review risks theft. Stop those actions rather than treating them as settlement checks.
 
