@@ -272,7 +272,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 | **Build a watch-only view** | §5 → §6 → §§7–9: derivation with `tools/hdwallet-gen/derive.js`. Under `bawa-derivation-policy-v1`, TON is generation-only: one deposit address, no xpub. |
 | **Compare derivations against an independent reference** | §5 → §6 → §§7–9: derivation, then comparison with `tools/hdwallet-gen/compare.js` against that reference. |
 | **Recover from a backup** | §5 → §6 → §§7–9: backup dependencies, decryption with `tools/decrypt_seed.py`, then recovery rehearsal. Decryption is not import; Bawa supplies no import tool. [M16-F09] |
-| **Track balances** | §5 → §6 → §§7–9: watch-only setup and tracking prerequisites, using `tools/hdwallet-gen/daemon.js` as the tracking entry point. |
+| **Track balances** | §5 → §6 → §§7–9: watch-only setup and tracking prerequisites, using `tools/hdwallet-gen/derive_daemon.js` as the tracking entry point. |
 | **Send** | §5 → §6 → §§7–9 for prerequisites only, then an external sending route or the app drafts. The drafts’ send/sign/broadcast was never exercised on-chain in either verification round: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. [M16-F09; M27] |
 
 ### Prerequisites and stop conditions
@@ -283,7 +283,7 @@ Gate status below is the **2026-11-09 baseline**, not a statement that the gates
 - [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `b8298197`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
-- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
+- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [`docs/README-FULL.md` §18, L1241]
 - [ ] **Rehearsal gates respected.** Follow the ladder: testnet first (**FAIL until executed**) → unfunded mainnet watch-only check → small mainnet receive → small mainnet send → normal use (**not cleared**). The small receive and small send are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. Do not advance beyond an unpassed rung. A pass covers only the wallet, chain, network, derivation policy and signing route actually rehearsed. [M27]
 
 ## 5. Clone and pin with a worktree
@@ -383,7 +383,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
 
 **Decided 2026-11-10 — proof form.** Step 4 uses the literal baseline HEAD SHA in the proof; the literal SHA is the check. The `MAIN_HEAD` capture in step 1 is supporting context only — record it for provenance, do not substitute it for the literal SHA. If main advances and Doc 4 is re-issued, update the literal SHA in step 4 to the new baseline.
 
-**Decided 2026-11-10 — cross-references.** The F4 treatment in Doc 1 §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
+**Decided 2026-11-10 — cross-references.** The F4 treatment in `docs/README-FULL.md` §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
 
 ## 6. Node and Python installation
 
@@ -477,7 +477,9 @@ For the offline regression check, use only the published **15-word “ripple sci
 
 The TON fixture uses **V4 R2**, wallet ID **`698983191`**, and the non-bounceable address format. The drafts’ wallet ID `0` is wrong for this fixture: it produces a different address. [M29, M16-F07]
 
-| Chain | Derivation path | Expected public-fixture address |
+**Public test-vector warning: funding any address in the table below is immediate loss because the mnemonic is public.**
+
+| Chain | Derivation path | First receiving-address fixture — never fund |
 |---|---|---|
 | BTC | `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
@@ -497,7 +499,7 @@ On Bitcoin mainnet, Bawa uses the standard BIP-84 native-SegWit account `m/84'/0
 | TRX | `m/44'/195'/0'/0/i` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `m/44'/607'/0'` — generation-only | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
 
-The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is absent from both `derive.js` and `daemon.js`. [M29; M04]
+The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is absent from both `derive.js` and `derive_daemon.js`. [M29; M04]
 
 **Derive, serve and compare**
 
@@ -505,7 +507,7 @@ The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is a
 
 2. **Complete the input checks in the blocker box below before supplying a key.** Use `derive.js` to derive from the checked public extended key at the recorded receiving index. The repo’s watch-only tools already derive the mainnet paths for BTC, ETH and TRX. [M02; M04]
 
-3. **Use `daemon.js` when serving watch-only derivation over its protocol.** The same public-only boundary and input checks apply. Respect its protocol limits: `MAX_XPUB_LENGTH = 200`, `MAX_LINE_LENGTH = 4096`, and `MAX_INDEX = 2147483647`. [M04; M27 §3.1]
+3. **Use `derive_daemon.js` when serving watch-only derivation over its protocol.** The same public-only boundary and input checks apply. Respect its protocol limits: `MAX_XPUB_LENGTH = 200`, `MAX_LINE_LENGTH = 4096`, and `MAX_INDEX = 2147483647`. [M04; M27 §3.1]
 
 4. **Use `compare.js` as a comparison aid against independent references, not as an input validator.** The independent-reference comparison procedure is in §9. Its output and exit status do not remove the blockers below. [M04; M27; M35]
 
@@ -573,7 +575,7 @@ Use only the published 15-word “ripple scissors…” test vector, with an emp
 
 **Funding any address in the table below is immediate loss because the mnemonic is public.**
 
-| Chain | Recorded path or wallet parameters | Expected fixture address |
+| Chain | Recorded path or wallet parameters | First receiving-address fixture — never fund |
 |---|---|---|
 | BTC | `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
@@ -708,7 +710,9 @@ A valid mnemonic is not proof that the intended wallet has been recovered either
 
 The published addresses below are regression targets only:
 
-| Asset | Public fixture address |
+**Public test-vector warning: funding any address in the table below is immediate loss because the mnemonic is public.**
+
+| Asset | First receiving-address fixture — never fund |
 | --- | --- |
 | BTC | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
