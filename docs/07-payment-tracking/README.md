@@ -110,11 +110,13 @@ Model the evidence each chain exposes:
 
 - **Ethereum:** distinguish its different chain-head/finality views.
 - **Solana:** use the explicit commitment levels `processed`, `confirmed`, `finalized` ([Solana RPC commitment documentation](https://solana.com/docs/rpc)).
-- **TRON:** account for the solidification/reorganisation information exposed by its event APIs ([TRON event API documentation](https://developers.tron.network/)).
+- **TRON:** verify confirmation against the node's solidified/last-irreversible view; do not treat the 19-confirmation policy as a universal rule for event API fields ([TRON event API documentation](https://developers.tron.network/)).
 
 Support richer states in your payment database: `seen` (detected by your application, with block inclusion not yet verified), `included` (present in a block on the current canonical chain), `confirmed`, `finalized`, `reorged` (previous block inclusion invalidated by a chain reorganization), `expired`, `late`, `manual_review`, `paid`. Do not force every blockchain into one integer called `confirmations`.
 
-### Price quotes as payment state
+### Price quote policy overview
+
+For canonical price quote policy rules, see section 12, [Price quote policy and state handling](#price-quote-policy-and-state-handling).
 
 Cache recent prices in a separate price-feed subsystem. Keep the flow explicit:
 
@@ -140,8 +142,11 @@ Use integers for stored monetary state:
 
 - **BTC:** satoshis
 - **EVM:** token base units
-- **TRON:** token/base units
+- **TRON:** sun for native TRX (1 TRX = 1,000,000 sun); token base units
 - **TON:** nanotons
+- **Solana:** lamports
+- **XRPL:** drops
+- **Cosmos:** base denominations
 
 Convert to human-readable decimal strings only at the presentation boundary.
 ## 3. Reconciliation
@@ -721,7 +726,9 @@ Refund only an authorised amount to an independently verified destination under 
 
 Move `<REQUEST_ID>` to manual review when a late top-up is found, even if the total meets `<THRESHOLD_ATOMIC>`. Leave `<CONFIRMED_ATOMIC>` unchanged if that event is delivered again.
 
-### Price quotes as payment state
+### Price quote policy and state handling
+
+This section is canonical for price quote policy rules. For the overview, see section 3, [Price quote policy overview](#price-quote-policy-overview).
 
 Define quote policy in your application; it is not a Bawa feature. Bawa does not define a price API.
 
