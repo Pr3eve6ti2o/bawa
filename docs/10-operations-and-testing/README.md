@@ -472,6 +472,8 @@ The nine cases counted for each of the derivation and independent `bip_utils` co
 
 The daemon (`tools/hdwallet-gen/derive_daemon.js`) accepts JSONL requests of the form `{"chain":"btc","xpub":"...","index":5}`. `chain` must be `btc`, `eth` or `trx`; `xpub` must be a non-empty string with length at most 200 (`MAX_XPUB_LENGTH`); and `index` must be an integer from 0 through 2147483647. The line-length limit is 4096 (`MAX_LINE_LENGTH`); longer lines return `{"ok":false,"error":"request too large"}`. An empty line or invalid JSON fails with `bad json`. An unsupported `chain`, a non-string, empty or overlength `xpub`, or a non-integer or out-of-range `index` fails with `bad request`.
 
+After the request checks, the daemon validates `xpub` as an extended public key. It must be a non-empty Base58 string decoding to exactly 82 bytes, and its Base58Check checksum must verify. Private extended keys are rejected; public key data must begin with `0x02` or `0x03` and represent a valid secp256k1 point. Depth-0 keys must have zero fingerprint and child number, and the extended-key version must be allowed for the requested chain. Validation failures return `{"ok":false,"error":"<message>"}` with the validator's message, such as `extended key must decode to exactly 82 bytes` or `extended key checksum verification failed`.
+
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
 ```
