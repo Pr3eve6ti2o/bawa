@@ -190,9 +190,10 @@ Enumerate addresses within the tracker's configured ranges and match their outpu
 
 BIP-174 specifies the partially signed Bitcoin transaction (PSBT) format; BIP-371 adds Taproot-specific PSBT fields. As this guide's recommendation, not a BIP-174 requirement, use a separate PSBT-capable Bitcoin wallet or coordinator to move a transaction through this flow:
 
-1. **Build online.** Select known wallet UTXOs and construct an unsigned transaction with the intended destinations, amounts and fee. Package it as an unsigned PSBT with the previous-output and derivation information the signer needs.
-2. **Sign offline or on hardware.** Transfer the PSBT to the signer, where the spending keys remain. Treat the online proposal as untrusted. Verify the destinations, amounts and fee through the trusted signing interface against the intended payment before approving.
-3. **Finalise.** Return the signed PSBT to the coordinator. Once the required signatures are present, finalise it and extract the signed transaction.
+1. **Build online.** Select known wallet UTXOs and construct an unsigned transaction with the intended destinations, amounts and fee. Package it as an unsigned PSBT with the previous-output information the signer needs and, if required by that signer, derivation information.
+2. **Sign offline or on hardware.** Transfer the PSBT to the signer, where the spending keys remain. Treat the online proposal as untrusted; this is guide policy, not a BIP-174 requirement. Verify the destinations, amounts and fee through the trusted signing interface against the intended payment before approving.
+3. **Combine if needed.** If parallel or multisignature signing produces separate PSBTs for the same unsigned transaction, use a Combiner to merge them into a single PSBT before finalisation.
+4. **Finalise.** Return the signed PSBT to the coordinator. Once the required signatures are present, finalise it and extract the signed transaction.
 4. **Broadcast online.** Send only the signed transaction to the Bitcoin network. The PSBT is a hand-off format for signing, not the object broadcast.
 
 The online tracker and watcher never touch a spending key. A watcher compromise alone cannot spend funds; it can at most misreport them, which reconciliation must catch.
