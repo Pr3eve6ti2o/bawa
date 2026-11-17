@@ -155,7 +155,7 @@ Use OKLink as a second source when the chain-native provider fails: it is a diff
 
 ## 3. RPC is not an indexer
 
-Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode`, `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
+Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode` (which reads contract bytecode, not storage), `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
 
 Use an indexer for wallet history, all token transfers, NFT ownership, token metadata, historical prices, wallet net worth, contract interactions and swaps. An indexer builds those answers through this pipeline:
 
@@ -166,10 +166,10 @@ Apply this rule: **a standard RPC has no universal wallet-history method**. For 
 ## 4. UTXO tracking vs account tracking
 
 - **BTC:** Track which outputs belong to the wallet, which are unspent or spent, and which transaction created or spent each output. Keep the state UTXO-oriented. Treat xpubs as **sensitive public material**: they can reveal derived addresses and link their activity.
-- **EVM:** Track native balance, nonce, contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership. An address's native balance is easy to query; “everything that happened to this wallet” is not.
+- **EVM:** Track native balance, nonce, contract bytecode (`eth_getCode`), contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership. An address's native balance is easy to query; “everything that happened to this wallet” is not.
 - **Solana:** Account for accounts and program-owned/token accounts: SOL balance, SPL token accounts, token mint metadata, program interactions, transactions/instructions and NFT state.
-- **TON:** Reason in messages, contract state and token contracts, not EVM-style transaction receipts.
-- **Cosmos:** Model modules and IBC packet/channel relationships.
+- **TON:** Reason in messages, contract state and token contracts, not EVM-style transaction receipts. Smart contracts store code and persistent data and communicate via messages; jetton tokens use master and owner-specific wallet contracts. General reference: [TON documentation](https://docs.ton.org/).
+- **Cosmos:** Model modules and IBC packet/channel relationships. Cosmos SDK applications compose modules that manage state and process messages; IBC packets identify source and destination ports and channels, linking packet activity to channels. General reference: [Cosmos SDK documentation](https://docs.cosmos.network/).
 
 **Store the raw chain-native facts first; normalise into your own common schema second.**
 ## 5. EVM token and NFT tracking
