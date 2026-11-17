@@ -1618,15 +1618,15 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 4. **Move assets.** For the migration route, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets before continuing with other holdings that can safely be moved. Retire the old wallet permanently.
 
-5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface. For an incident established as approval-only, make this the principal containment action once the scope is known.
+5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted external interface such as [Revoke.cash](https://revoke.cash/) on supported chains; this repository provides no revocation procedure. For each affected chain and owner account, identify the relevant token contracts and suspicious spender/operator addresses, submit the corresponding allowance or NFT-approval revocations, and wait for confirmed successful transactions. Independently verify the resulting on-chain state for each scoped chain, account, token contract and spender/operator using a trusted explorer or RPC (allowance `0`, token-specific approval cleared or operator approval `false`, as applicable). Disconnecting the dApp does not revoke on-chain approvals. For an incident established as approval-only, make this the principal containment action once the scope is known.
 
 6. **Rotate related access.** Confirm session-revocation support with the relevant account or service issuers, revoke affected sessions where supported, and record any unsupported or unverified revocation. Replace exposed account credentials and service keys through their issuers.
 
 7. **Preserve evidence.** Save transaction hashes, recipient addresses, phishing communications and relevant logs. Escalate affected account or service access through its issuer. Record any maintainer-dependent transaction-reconciliation or dependency questions under the requirements below.
 
-8. **Review before resuming.** Establish whether the incident involved suspicious permission, signing-secret exposure or a tracker fault, and close the original access path. Apply the missed-payment or malicious-dependency acceptance requirements below where relevant.
+8. **Review before resuming.** Establish all applicable incident types—suspicious permissions, signing-secret exposure, malicious direct transfer and tracker fault—and close all relevant access paths. A malicious direct transfer need not involve either approval or signing-secret exposure; causes can coexist. Apply the missed-payment or malicious-dependency acceptance requirements below where relevant.
 
-> **Expected result:** Confirm removal of suspicious permissions for an approval-only incident, or complete fresh-seed migration and permanent retirement for signing-secret exposure. For a tracker fault, confirm transaction status independently and keep recovery open until the required reconciliation expectations are agreed and met.
+> **Expected result:** Confirm on-chain removal of all scoped suspicious permissions wherever present, and complete fresh-seed migration and permanent retirement whenever signing-secret exposure is established. For a malicious direct transfer, independently confirm its transaction status and close the initiating access path; do not infer approval or signing-secret exposure from the transfer alone. Apply all relevant requirements when causes coexist. For a tracker fault, confirm transaction status independently and keep recovery open until the required reconciliation expectations are agreed and met.
 
 ### Escalation and acceptance requirements
 
