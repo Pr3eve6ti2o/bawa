@@ -884,9 +884,9 @@ Keep private keys, credentials, tokens and signing passwords out of `ci-evidence
 
 ### Complete the scanning checklist
 
-Record the current scanning status explicitly: no scan has ever been recorded, and no tool is named yet. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
+Record the scanning status explicitly: as of audited commit `3019b02`, no scan record was found in the audited documentation, and no tool was named there. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
 
-Treat a lockfile as a record of the tested dependency graph, not as evidence of dependency safety.
+Treat a lockfile as a record of the resolved and pinned dependency graph, not as evidence of testing or dependency safety. Testing requires separate run evidence.
 
 - [ ] **Enable repository security features.** Ask a repository administrator to enable GitHub’s dependency graph, Dependabot alerts and Dependabot security updates. **Owner:** record the responsible administrator’s name. **Record:** retain the date enabled for each feature.
 
