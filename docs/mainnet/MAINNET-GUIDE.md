@@ -2754,7 +2754,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### TON wallet ID — wrong-account loss mode
 
-**Status: unperformed.** The open input gives the TON wallet ID as `698983191`; drafts record `0`. That discrepancy remains open.
+**Status: unperformed.** The open input gives the TON wallet ID as `698983191`; drafts record `0`. That discrepancy remains open. Under TEP-0003 §7, the same mnemonic and key pair may correspond to multiple wallet contracts and accounts.
 
 - **Observable check:** Check that the TON route covered by this evidence uses wallet ID `698983191`, not the draft value `0`, and that restoration and address comparisons correspond to that ID.
 - **Required evidence:** A corrected, reviewed scope record and independent public-address comparisons identifying the wallet ID used.
@@ -3218,7 +3218,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** A code fix must provide decoded private-material rejection and correct checksum handling, verified through the M-01 fixture-oracle procedure.
 
-**Gate/source links:** Re-checked register: M04 F8–F10; [M-01 fixture-oracle gate](#m-01--oi-096-must-not-certify-its-own-repair).
+**Gate/source links:** Re-checked register: M04 F8–F10; no Doc 3 OI counterpart is recorded for M-02, and M-02’s shared-issue classification remains unestablished.
 
 ### M-03 — TON wallet-ID false metadata in the Android draft (headline defect)
 
