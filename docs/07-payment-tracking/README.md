@@ -235,26 +235,29 @@ public root → payment request → address allocation → blockchain observatio
 
 Keep wallet and key derivation separate from application payment tracking.
 
-Model at least these payment states:
+Model at least these payment states. The arrows are guarded transitions, not unconditional progression. Matching requires the observed transfer's chain, asset, recipient, and required memo/tag to agree with the request; amount sufficiency is checked against the frozen quote's expected atomic amount. Confirmation/finality progresses independently of matching and amount sufficiency. Claim only when the payment is matched, sufficient, and meets the configured confirmation/finality policy. Fulfillment requires a successful claim; reconciliation requires agreement between settlement, fulfillment, and ledger records.
 
 ```text
-requested → address/memo assigned → observed → matched
-  → underpaid/sufficient → confirmation/finality → claimed
+requested → address/memo assigned → observed
+  ├─ matched → underpaid/sufficient
+  └─ confirmation/finality
+matched + sufficient + required confirmation/finality → claimed
   → fulfilled → reconciled
 ```
 
 Treat an on-chain observation as evidence to validate. Do not treat it as automatic authorisation to fulfil an application order.
 ## 8. Asset identity and Trust Wallet metadata
 
-For token payments, do not use a symbol alone as the asset identity. Persist at least:
+For all payments, do not use a symbol alone as the asset identity. Persist at least:
 
 - Network/chain ID.
 - Asset type.
-- Token contract / chain-specific address.
+- Chain-specific asset identity, e.g. native BTC on the specified Bitcoin network, a token contract address, an exact Cosmos denomination (including `ibc/<hash>` and its denomination trace for IBC assets), or XRPL currency + issuer for issued assets.
 - Expected decimals.
 - Recipient.
 - Amount in atomic units.
 - Memo/tag where required.
+- Frozen quote snapshot for the payment request: the fields above, quote timestamp and expiry, and any pricing amount/currency and conversion rate/source. Keep this snapshot immutable and use it for matching and amount-sufficiency checks instead of current rates or mutable asset metadata.
 
 Treat Trust Wallet Assets as an optional metadata source for presentation, token lists and logos, not as the source of truth for observed payment settlement. Make your payment matcher verify the actual chain event against your application's requested network and asset identity.
 
