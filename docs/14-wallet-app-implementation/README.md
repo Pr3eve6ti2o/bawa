@@ -187,7 +187,7 @@ Use versioned migrations for storage changes, preserving authenticated encryptio
 
 ### 3.3 Platform protection and memory
 
-Set the shared application inactivity timeout to 10 minutes. This explicitly adopts the Web validation draft's ten-minute auto-lock interval as shared policy. At 754721cd, that interval is evidenced for the Web draft, and no inactivity timeout was found in the Android draft. Both platforms must meet the shared timeout; this policy statement does not establish that both drafts already comply. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
+Set the shared application inactivity timeout to 10 minutes as a selected policy choice adopted from the Web validation draft (WEB-GUIDE:286/887), not as a repository default. At 754721cd, that interval is evidenced only for the Web draft; Android compliance remains undecided (OI-011). Both platforms must meet the selected timeout; this is a requirement, not a description of current cross-platform compliance. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
 
 Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
@@ -215,7 +215,7 @@ Provide one-tap copy for the receive address, with automatic clipboard clearing 
 
 ### 3.6 Vault passphrase policy and Web draft evidence
 
-Set the shared minimum vault unlock passphrase length to 8 characters. This explicitly adopts the minimum enforced by the Web validation draft in `main.js` as shared policy. Enforcement outside the Web draft is not established by the supplied evidence. Reject weak passphrases under the recorded policy.
+Propose 8 characters as the shared minimum vault unlock passphrase length for prospective adoption, not as established shared policy. The Web validation draft leaves the minimum unset (WEB-GUIDE:282/336; OI-046), and `main.js` is absent from both cited trees. The supplied evidence does not establish enforcement of an 8-character minimum. If adopted, require both platforms to enforce that minimum. Reject weak passphrases under the recorded policy.
 
 Keep the Web validation draft’s vault distinct from the repository envelope. Treat its PBKDF2-600k with AES-256-GCM and its own AAD `bawa-web-vault-v1` as draft implementation choices. Preserve the distinction that this AAD is deliberately not the repository’s AAD. Do not claim `seed.enc.json` compatibility.
 
@@ -223,7 +223,7 @@ Treat 600,000 PBKDF2-HMAC-SHA-256 iterations as a defensible floor for the FIPS-
 
 ## Network and signing modules
 
-This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)). The app owns those responsibilities.
+This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core); live public repository page verified 2026-11-17). The app owns those responsibilities.
 
 ### 4.1 Network module
 
@@ -248,11 +248,11 @@ The daemon has fixed derivation paths and no network selector. Its chain labels 
 
 ### 4.2 Signing module
 
-Build the public transaction fields of a chain-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning the chain’s `SigningOutput`. Bitcoin input carries UTXOs, outputs, fee and change; Ethereum input carries chain ID, nonce, gas and data ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)).
+Build the public transaction fields of a coin-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning serialised `SigningOutput` protobuf bytes ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)). Coin-specific field examples include UTXOs, outputs, fee and change for Bitcoin, and chain ID, nonce, gas and data for Ethereum; exact schema details vary by coin and Core version (this repository pins Core 4.8.4).
 
 The signing coordinator holds no private keys. Only the key module adds signing secrets and invokes `AnySigner`; secret-bearing messages never leave that boundary. The key module must bind approval to the exact input. Check `SigningOutput` errors before accepting bytes.
 
-For offline/hardware signing, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction. Keys remain on the device; bind signatures to the reviewed input ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)).
+For offline/hardware signing, where supported for the selected coin and Core version, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction; some coins use a custom `PreSigningOutput` protobuf ([Trust Wallet Core TransactionCompiler interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWTransactionCompiler.h)). Require keys to remain on the device; bind signatures to the reviewed input.
 
 Obtain approval for recipients, amounts, change, fees and contract calls before signing. Decode the actual signed bytes with a chain-specific decoder, compare them against that approved intent, including chain/network, nonce, gas and data where applicable, and display the decoded transaction before an explicit broadcast action. A mismatch or decoding failure blocks submission.
 
@@ -306,7 +306,7 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 443), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
 
 ### 5.2 Confirmation and send flow
 
@@ -368,7 +368,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
   >
   > `test/differential_test.py` independently checks the BTC and ETH fixtures above and prints `PASS`.
 
-  Exception at 754721cd: unlike `derive.js` and `derive_daemon.js`, `compare.js` does not reject private extended keys; given a private extended key it prints silently wrong addresses with exit 0 (D06 F1). Do not feed `compare.js` anything but a verified account public root.
+  Historical exception at 754721cd only: unlike `derive.js` and `derive_daemon.js`, `compare.js` did not reject private extended keys; given a private extended key it printed silently wrong addresses with exit 0 (D06 F1). As of a5bc56e, `compare.js` routes input through `validateExtendedKey` from `extended-key.js`, which rejects private extended keys before derivation. Do not feed `compare.js` anything but a verified account public root.
 
   Assert exact equality in CI. Track the extension of independent coverage to TRX and indices `1` and `2` as an open item. Treat these checks as public-derivation coverage, not custody or signing coverage. Treat the addresses as fixtures, not payment destinations, and label the BTC vector as mainnet-formatted.
 
@@ -396,7 +396,7 @@ Do not combine these counts or use them as evidence of a build, device run or li
 
 ### 6.2 Release and update security
 
-Apply OWASP MASVS L1 as the floor, with L2/R coverage for apps storing sensitive data. Maintain a threat model and commission an external penetration test. Automate dependency and secret scanning. Require signed, reproducible builds and use a staged rollout.
+Apply the legacy OWASP MASVS verification levels: L1 as the floor, with L2/R coverage for apps storing sensitive data. This guide does not pin a MASVS version. MASVS alone does not cover web/Core or wallet-specific transaction security, so provide separate coverage for those. Maintain a threat model and commission an external penetration test. Automate dependency and secret scanning. Require signed, reproducible builds and use a staged rollout.
 
 Block release for any of the following:
 
