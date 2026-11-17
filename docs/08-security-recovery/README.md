@@ -19,7 +19,7 @@ Twelve honest limitations. This guide does not promise:
 
 These engineering limitations are not weaknesses of the guide — they are part of being honest about the engineering problem, not an excuse for preventable documentation omissions.
 
-Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
+Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag". This is distinct from "tested-with-pinned-tooling" (Core 4.8.4, the exact version in the committed `tools/hdwallet-gen/package-lock.json`); the 4.9.2 tag is not a matching source reference for that 4.8.4 dependency.
 
 Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
@@ -172,11 +172,11 @@ Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Use the che
 Require every check to pass before marking the rehearsal complete.
 ## 4. Dependency and supply-chain discipline
 
-Wallet code is sensitive to dependency drift. Document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
+Wallet code is sensitive to dependency drift. Required practice (not a claim of current implementation): document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
 
 Do not write `"dependency": "^4.8.4"` and assume that means "the code I tested" — a caret range means future compatible versions may be selected. For security-sensitive primitives, pin the tested release in the actual application lockfile and review upgrades deliberately. Trust Wallet Core itself recommends checking the current release/version rather than blindly using an old example ([official Wallet Core repository](https://github.com/trustwallet/wallet-core)).
 
-Keep the reproducibility chain intact: source tag → lockfile → clean build → tests → artefact hash → release. That is far more useful than writing "secure" in the README.
+Establish and verify the reproducibility chain: source tag → lockfile → clean build → tests → artefact hash → release. That is far more useful than writing "secure" in the README.
 
 ### Independent verification and supply-chain discipline
 
