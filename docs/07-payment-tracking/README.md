@@ -652,13 +652,13 @@ For BTC, count blocks, including the inclusion block. Elsewhere, **1** means one
 | TRX | **1 successful inclusion** — faster, but explicitly provisional. | **1 solidified inclusion** — waits for the protocol's quorum. | **1 solidified inclusion plus independent verification** — same finality, better protection against faulty node data. |
 | TON | **1 verified masterchain anchor** — uses protocol finality rather than arbitrary depth. | **1 verified anchor** — ordinary value does not change the finality rule. | **1 verified anchor plus independent verification** — checks observation errors rather than inventing extra finality. |
 
-For BTC, retail guidance gives **0–1**, deposits at exchanges **3–6**, and major settlements **6+**. More depth reduces reversal probability; a displaced transaction can later return in another block.
+For BTC, retail guidance gives **0–1**, deposits at exchanges **3–6**, and major settlements **6+** ([Bitcoin confirmation guidance](https://en.bitcoin.it/wiki/Confirmation)). More depth reduces reversal probability; a displaced transaction can later return in another block.
 
-Treat Ethereum's views as gates, not fixed depths: verify that the payment block belongs to the chosen view. Use separate settlement rules for other EVM networks, including upstream finality where relevant.
+Treat Ethereum's views as gates, not fixed depths: verify that the payment block belongs to the chosen view ([Ethereum consensus specification](https://ethereum.github.io/consensus-specs/specs/phase0/fork-choice/)). Use separate settlement rules for other EVM networks, including upstream finality where relevant.
 
-For TON, require a verified finalised masterchain reference covering the payment's shard block; this is the anchor.
+For TON, require a verified finalised masterchain reference covering the payment's shard block; this is the anchor ([TON finality and proof-verification documentation](https://docs.ton.org/v3/documentation/dapps/basic-proofing-concepts)).
 
-Apply TRON's confirmation rules: solidification requires block production by at least **19 different Super Representatives**, each at the target height or higher. This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check that `contractRet` is `SUCCESS` separately.
+Apply TRON's confirmation rules: solidification requires block production by at least **19 different Super Representatives**, each at the target height or higher ([TRON consensus documentation](https://developers.tron.network/docs/concensus)). This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check that `contractRet` is `SUCCESS` separately.
 
 ### Reorg handling
 
