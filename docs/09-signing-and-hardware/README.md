@@ -82,9 +82,9 @@ Identify this policy as `bawa-derivation-policy-v1` (see [fixed generation paths
 | TRX | [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki), `m/44'/195'/0'/0/i`, coin type `195` ([SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md)) |
 | TON | Generation-only from `m/44'/607'/0'`, single deposit address, no xpub |
 | BIP-39 mnemonic | [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki), 256-bit entropy, 24 words |
-| [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) passphrase ("From mnemonic to seed" section) | Empty, zero characters |
+| [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) passphrase ("From mnemonic to seed" section) | Empty, zero characters (Bawa's policy choice; changing it creates a different wallet) |
 
-Changing these values can produce different addresses. Do not add alternative paths, and never change this policy in a wallet built from this guide. Check every derivation setting against this versioned table.
+Changing these values can produce different addresses. Do not add alternative paths, and never change this policy in a wallet built from this guide. Check every derivation setting and compare the wallet's derived addresses and descriptor fields against this versioned table, including for an already-generated wallet (derive the addresses with `tools/hdwallet-gen/derive.js` and compare).
 
 ### Why each choice, and what breaks if you change it
 
@@ -100,7 +100,7 @@ Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce dif
 
 **BIP-39 mnemonic.** Changing the word count changes the seed and addresses. Use a 24-word mnemonic to encode the required 256 random bits plus 8 checksum bits. The checksum adds no independent randomness. Check the 256-bit entropy requirement and the 24-word count.
 
-**BIP-39 passphrase.** A non-empty BIP-39 passphrase changes the seed and addresses. Use the fixed empty BIP-39 passphrase, which contributes no additional secret, to keep the seed determined by the mnemonic alone. Check that the value contains zero characters.
+**BIP-39 passphrase.** A non-empty BIP-39 passphrase changes the seed and addresses, creating a different wallet. Use the fixed empty BIP-39 passphrase (Bawa's policy choice), which contributes no additional secret, to keep the seed determined by the mnemonic alone. Check that the value contains zero characters.
 
 NFKD-normalise the BIP-39 mnemonic and BIP-39 passphrase. Derive the 64-byte seed from the normalised mnemonic using PBKDF2-HMAC-SHA512 with 2,048 iterations and a salt of `"mnemonic"` plus the normalised BIP-39 passphrase. Assess seed-guessing resistance separately from randomness quality, implementation security and device compromise.
 
