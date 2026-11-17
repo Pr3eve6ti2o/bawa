@@ -152,7 +152,7 @@ That distinction should remain intact.
 
 ## Bitcoin Descriptors & PSBT
 
-An xpub can be ambiguous for Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
+The same xpub is ambiguous because it can be used for P2PKH, P2WPKH or nested-SegWit in Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and ranged derivation patterns (/0/*).
 
 [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) for offline and hardware-backed transaction workflows.
 
@@ -163,9 +163,13 @@ unsigned transaction / PSBT
     ↓
 offline or hardware signer
     ↓
+signed PSBT
+    ↓
+watch-only coordinator — finalises and extracts
+    ↓
 signed transaction
     ↓
-broadcast node / RPC
+broadcast node / RPC (watch-only side)
 ```
 
 ## Primary references
@@ -188,8 +192,8 @@ Bawa does not ship a device integration. This flow follows the descriptor and PS
 | Item | Role in this flow |
 |---|---|
 | xpub / address | Tracker input for deriving and watching addresses. |
-| Descriptor | Keeps script policy, derivation origin and address ranges together. |
-| PSBT (BIP-174/371) | Built unsigned by the watch-only side, signed offline or on hardware, then returned for finalisation and broadcast. |
+| Descriptor | Keeps script policy, derivation origin and ranged derivation patterns (/0/*) together. |
+| PSBT (BIP-174/371) | Built unsigned by the watch-only side, signed offline or on hardware, then returned to the watch-only coordinator for finalisation and extraction; the watch-only side broadcasts the final transaction. |
 | Private key / hardware wallet | Belongs to the signer, not the tracker. |
 
 Descriptor handling must preserve the tracker’s xpub/address-only boundary.
