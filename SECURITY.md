@@ -8,22 +8,31 @@ The `main` branch is the supported line (current HEAD `16c074e` plus staged chan
 
 ## Reporting a vulnerability
 
-No vulnerability-disclosure procedure or private reporting contact is currently provided in this repository. Do not post exploit details publicly.
+No private disclosure channel or reporting contact is established yet. Establishing and publishing a private channel remains an open maintainer action (OI-065).
+
+Use GitHub Issues for non-sensitive reports only. Never post exploit details publicly. For private vulnerability reporting, use the repository's GitHub Security tab where that feature is available. If it is unavailable, do not publish sensitive reports in GitHub Issues.
 
 ## Handling reports
 
-No report-handling procedure is currently published. Establishing and publishing a private disclosure channel remains an open maintainer action.
+The documented report-handling procedure is:
+
+1. Acknowledge receipt of the report.
+2. Triage the report.
+3. Prepare a fix for confirmed vulnerabilities.
+4. Coordinate disclosure with the reporter.
+
+These steps describe handling expectations, not a guaranteed response or timetable.
 
 ## Never publish
 
-- mnemonics;
+- mnemonics, except the deliberate 15-word test mnemonic fixture published in `docs/11`;
 - private keys;
 - `xprv`/`zprv` or other private extended keys;
 - recovery data keys;
-- production `.env` files;
+- `.env` and `.env.*` files, except `.env.example`;
 - wallet backup artefacts;
 - credentials or API secrets.
 
 ## Threat model
 
-See [docs/SECURITY.md](docs/SECURITY.md) for the threat model, trust boundaries, secret-handling rules and known limitations. No session or inactivity timeout is implemented in the repository code.
+See [docs/SECURITY.md](docs/SECURITY.md) for the threat model, trust boundaries, secret-handling rules and known limitations. See also [docs/15-threat-model-and-theft-prevention](docs/15-threat-model-and-theft-prevention/README.md). No session or inactivity timeout is implemented in the repository code.
