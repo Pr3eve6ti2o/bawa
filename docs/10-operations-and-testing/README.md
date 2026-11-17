@@ -1636,7 +1636,7 @@ Keep maintainer-dependent disclosure work pending while no vulnerability-disclos
 
 Apply these additional operational acceptance requirements where relevant:
 
-- **Leaked data key:** Bawa does not document an exact recovery response. Require maintainer confirmation of what the key controls, whether and how replacement is supported, what happens to existing data, and which result demonstrates recovery. Keep those questions open until confirmation is available, and record no pass until the expectations are agreed and met.
+- **Leaked data key:** `docs/08` does not document an exact recovery response. Require maintainer confirmation of what the key controls, whether and how replacement is supported, whether access using the old key can be invalidated, how existing ciphertext is affected, and which result demonstrates recovery. Keep those questions open until confirmation is available, and record no pass until the expectations are agreed and met.
 - **Missed payment:** Bawa does not document an exact missed-payment recovery response. Independently check transaction status on the intended chain. Require maintainer confirmation of safe reconciliation, duplicate-prevention behaviour and the expected tracker record before treating recovery as a pass.
 - **Malicious dependency:** Bawa does not document a definitive clean-state check or expected recovery output. Require maintainer confirmation of trusted dependency versions, restoration steps and acceptance checks before running Bawa again.
 
