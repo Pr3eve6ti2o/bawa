@@ -19,15 +19,15 @@ Twelve honest limitations. This guide does not promise:
 
 These engineering limitations are not weaknesses of the guide — they are part of being honest about the engineering problem, not an excuse for preventable documentation omissions.
 
-Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag". This is distinct from "tested-with-pinned-tooling" (Core 4.8.4, the exact version in the committed `tools/hdwallet-gen/package-lock.json`); the 4.9.2 tag is not a matching source reference for that 4.8.4 dependency.
+Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "[source-verified against the Trust Wallet Core 4.9.2 tag](../14-wallet-app-implementation/README.md)". This is distinct from "tested-with-pinned-tooling" (Core 4.8.4, the exact version in the committed `tools/hdwallet-gen/package-lock.json`); the 4.9.2 tag is not a matching source reference for that 4.8.4 dependency.
 
 Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
-Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`. This dedicated 4.9.2 demo re-run was distinct from the EIP-1559 proof and full verification pass, which were run against 4.8.4. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
+Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and [independent Python verification](../09-signing-and-hardware/README.md) recovered the published fixture sender [`0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`](../14-wallet-app-implementation/README.md). This dedicated 4.9.2 demo re-run was distinct from the EIP-1559 proof and full verification pass, which were run against 4.8.4. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
 ## 2. Privacy: xpubs are sensitive public material
 
-An account-level xpub with non-hardened branches does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history and balances when payments are observable; customer relationships are inferences requiring attribution. Combining the xpub with a leaked private key for one of its non-hardened children allows recovery of the parent private key.
+An [account-level xpub with non-hardened branches](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history and balances when payments are observable; customer relationships are inferences requiring attribution. Combining the xpub with a leaked private key for one of its non-hardened children allows recovery of the parent private key.
 
 - Treat xpubs as sensitive public material. Treat zpubs the same way.
 - Do not paste them into, for example, public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages; disclose only what is needed, and only where needed.
@@ -90,7 +90,7 @@ On a trusted machine, run:
 
     python3 tools/decrypt_seed.py /path/to/seed.enc.json
 
-The script is mode 644, not executable. It asks for the data key and displays the mnemonic on the controlling terminal by default. Use `--stdout` only for an explicit, controlled pipeline; use `--output` for an atomic 0600 plaintext file.
+[The script](../../tools/decrypt_seed.py) is mode 644, not executable. It asks for the data key and displays the mnemonic on the controlling terminal by default. Use `--stdout` only for an explicit, controlled pipeline; use `--output` for an atomic 0600 plaintext file.
 
 This encrypted-seed recovery route is for an existing backup, not permission to digitise your offline mnemonic. Separated copies alone do not provide encryption or guarantee survival of a fire or flood.
 
