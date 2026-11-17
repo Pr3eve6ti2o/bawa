@@ -740,7 +740,7 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 | Asset-entry thresholds | No verified generic entry threshold is published. Check each provider's own eligibility and minimum-balance terms; do not rely on a third-party-reported range. |
 | Headline insurance programme totals | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). See [BitGo](https://www.bitgo.com/resources/insurance) for its primary insurance disclosure. Headline programme cover is shared across customers and is not guaranteed cover for each account; check the policy wording for the insured entity, covered events, exclusions and deductibles. |
 
-Obtain a written quote showing the annual rate, any minimum charge and possible onboarding, transaction, network and exit charges. Ask how asset values are measured for billing. Do not infer an annual bill from the entry threshold.
+Obtain a written quote showing the annual rate, any minimum charge and possible onboarding, transaction, network and exit charges. For written-quote guidance, see [section 20, question 6](#20-paid-security-consumer-multisig-with-inheritance). Ask how asset values are measured for billing. Do not infer an annual bill from the entry threshold.
 
 Check the insurance terms as well as the headline total:
 
@@ -749,7 +749,7 @@ Check the insurance terms as well as the headline total:
 - Market losses and protocol failures are generally outside that cover.
 - Check exclusions, deductibles, the insured legal entity and who receives a payout: each matters.
 
-Crypto holdings in these arrangements are generally outside [FDIC](https://www.fdic.gov/) and [SIPC](https://www.sipc.org/) protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
+Crypto holdings in BitGo arrangements are outside [FDIC](https://www.fdic.gov/) and [SIPC](https://www.sipc.org/) protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
 
 ### Onboarding and exit
 
@@ -760,7 +760,7 @@ Keep the initial process deliberate:
 3. **Set operating controls.** Set up strong authentication, separate approval roles, permitted destinations and a recovery process for lost operator access.
 4. **Test before the main transfer.** Agree a small deposit and withdrawal test. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
 
-Plan departure before funding. Check notice periods, withdrawal limits, approval delays, termination charges and how statements can be exported. Make sure every asset can leave on a network supported by your intended destination.
+Plan departure before funding. Check notice periods, withdrawal limits, approval delays, termination charges and how statements can be exported. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination.
 
 Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process.
 
