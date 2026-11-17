@@ -35,6 +35,18 @@ Treat mnemonic phishing, fake wallet apps and browser extensions, social enginee
 
 > **Warning:** Whoever holds your mnemonic or private key controls the wallet. Never hand either over to a service, support agent or wallet maker; no legitimate service asks you to do so. If either has been disclosed, treat it as permanently compromised and follow the exposure response below.
 
+The trusted side consists of recovery storage you control and a verified wallet on a trusted device. External people, services, software sources, phone-number accounts and transaction data are outside that boundary. An identity claim or software installation alone does not establish trust; a suspected compromised device is not a trusted recovery or signing environment.
+
+| Adversary and capability | Trust crossing | Required handling |
+| --- | --- | --- |
+| Phisher or social engineer: can impersonate support, a service or a wallet maker and fabricate recovery requests. | Mnemonic/private key moves from owner-controlled storage to an external person, site or service. | Refuse disclosure. Enter recovery material only for recovery you initiated in a verified wallet on a trusted device. |
+| Malicious wallet/extension publisher or malware operator: can capture secrets or alter transactions through installed code. | External installation/update code gains access to the recovery or signing environment. | Verify software provenance and release authenticity before installation or update; do not restore or sign on a suspected compromised device. |
+| SIM-swap attacker: can intercept SMS codes and take over phone-based account recovery, but does not thereby obtain wallet keys. | Phone-number or account control is mistaken for owner identity or authority over wallet recovery. | Do not rely on SMS or account access alone to authenticate recovery requests, authorize signing or disclose secrets. |
+| Address poisoner or clipboard hijacker: can plant look-alike addresses or replace copied destinations. | Untrusted transaction-history or clipboard data becomes the recipient of a signed payment. | Independently confirm the intended address, then check the full destination and amount on a trusted signing display before approval. |
+| Fake security responder or report interceptor: can impersonate project recipients or obtain exposed reports. | Nonpublic vulnerability details leave the reporter for an external recipient. | Require an authenticated, private reporting channel as specified below; a claimed support identity is not sufficient. |
+
+**Vulnerability disclosure:** The reporting channel must be **authenticated** (the reporter can verify the intended project recipient) and **private** (report access is restricted to the reporter and authorized responders). No vulnerability-disclosure channel is published in this repository yet; see the incident-response playbook’s open item **OI-065** for this unresolved gap. Do not post sensitive vulnerability details publicly or send reports to unverified contacts. Never include a mnemonic, private key or usable recovery backup in a report.
+
 Keep mnemonics, private keys, all private extended keys, recovery data keys, production `.env` files, wallet backups, credentials and API secrets out of anything public.
 
 Treat xpubs and zpubs as **sensitive public material**. Account for the disclosure risk: an xpub cannot sign, but exposing it discloses addresses, balances, payment history and relationships. Restrict their disclosure accordingly.
