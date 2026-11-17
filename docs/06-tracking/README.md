@@ -498,7 +498,7 @@ Use a standard node RPC to answer specific questions about chain state and execu
 
 Do not rely on logs alone: they miss native-coin movements. Reconstructing value moved inside contract calls may require execution traces; check client and provider support before relying on them. Identify the token contract before calling `balanceOf`. Do not assume access to old state automatically solves asset discovery.
 
-Use an indexer to turn these scattered facts into address activity, token-transfer histories and NFT holdings. Match balances to the correct asset price data before calculating net worth: balances alone cannot establish value. Use price data from the relevant time for historical valuations. Distinguish endpoints by the processing behind them, not their request format; providers sometimes expose indexed methods through JSON-RPC themselves.
+Use an indexer to turn these scattered facts into address activity, token-transfer histories and NFT holdings. Match balances to the correct asset price data before calculating net worth: balances alone cannot establish value. Use price data from the relevant time for historical valuations. Distinguish endpoints by the processing behind them, not their request format.
 
 ### Build the ingestion pipeline
 
@@ -541,7 +541,7 @@ Distinguish HD derivation from discovery. HD derivation calculates an address at
 
 Account for [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)’s external-chain scan: it stops after **20 consecutive addresses with no transaction history**. Count an emptied address as used, and allow for other wallets to use different windows. If indices **0–19** have no history, a default scan can stop before a payment at **20**.
 
-Durably record the wallet/account, derivation scheme, branch, index, address and order reference **before issuing the address**. Back up this allocation ledger and track its entries directly, including expired invoices. Do not rely on a seed to recover those records: it regenerates keys, not your allocation history. When importing without those records, extend discovery deliberately rather than assuming the default scan found everything.
+See the allocation-ledger paragraph in section 7.
 
 ### Protect the watch-only view
 
