@@ -703,7 +703,7 @@ References:
 - [Trust Wallet Assets](https://github.com/trustwallet/assets)
 ## Release gates and CI
 
-Treat this section as a specification to implement, not as an existing release process. Record the current baseline: zero tags exist, and no release process has ever run. Keep every gate without its required procedure and evidence **blocked (unverified)**.
+Treat this section as a specification to implement, not as an existing release process. Record the observation date alongside the baseline for audited commit `3019b02`: at the 8 November 2026 check, zero tags were observed, and no release-process run was found in the evidence audited for that commit; zero tags do not establish lifetime release-process history. Keep every gate without its required procedure and evidence **blocked (unverified)**.
 
 ### Establish the release sequence
 
