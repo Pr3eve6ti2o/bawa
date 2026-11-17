@@ -3252,7 +3252,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Status:** OPEN.
 
-**Operational restriction:** **Unknown outcome is not permission to resend.** Blind replacement transfers are prohibited. Before any retry, require independently verified history checking for TON and a verified independent manual txid lookup procedure for TRX. An unresolved status must remain unresolved.
+**Operational restriction:** **Unknown outcome is not permission to resend.** Blind replacement transfers are prohibited. Before any retry, require independently verified history checking for TON and a verified independent manual txid lookup procedure for TRX. An unresolved status must remain unresolved. Persist the signed bytes and txid at signing time, including for TON, as required by M24 I18, so the transfer can be reconciled by transaction identity. Do not resolve a transfer shown as ‘pending’ by resending it without first reconciling the original by transaction identity. Resending means composing and submitting a new transfer; if both transfers settle, the user pays twice. Rebroadcasting means re-submitting the identical signed bytes of the original transaction; it does not create a new transaction and cannot double-pay.
 
 **Blocks writing completion:** No.
 
@@ -3270,7 +3270,7 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Status:** OPEN.
 
-**Operational restriction:** Section 10 must describe the limitation explicitly and specify the requirements for authenticated environment identification, a separate mainnet storage namespace and deliberate handling of existing vaults. Changing AAD requires compatible decryption and re-sealing. Changing the database name requires explicit discovery or migration. Neither is a cosmetic rename. The guide must teach independent recoverability before destructive migration.
+**Operational restriction:** Section 10 must describe the limitation explicitly and specify the requirements for authenticated environment identification, a separate mainnet storage namespace and deliberate handling of existing vaults. Changing AAD causes existing vault ciphertext to fail authentication when decrypted using the new AAD; compatible decryption using the original AAD and re-sealing under the new AAD are required. Changing the database name leaves existing vault data undiscovered in the old database; explicit discovery or migration is required. Neither is a cosmetic rename. The guide must teach independent recoverability before destructive migration.
 
 **Blocks writing completion:** No.
 
