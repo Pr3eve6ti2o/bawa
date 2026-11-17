@@ -292,7 +292,7 @@ Do not require a separate Sepolia address fixture, because ETH addresses are net
 
 ## Verification and testing
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 Use this file as verification guidance for public outputs, not as a signing capability.
 

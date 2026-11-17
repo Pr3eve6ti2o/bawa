@@ -122,7 +122,7 @@ Limit watch-only providers to public-chain data and broadcasting signed transact
 
 Limit ordinary screens to public data; treat unlock, import and recovery screens as secret-handling components. Keep secrets out of logs, analytics, crash reports, UI state and watch-only requests. WASM alone establishes no security boundary.
 
-Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 ### A.5 Keep claims within verified bounds
 
@@ -4158,7 +4158,7 @@ The derivation policy is unchanged. Apply the guide’s existing account, path, 
 
 ### J-01 — Keep the trust boundary explicit
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2. The EIP-1559 proof rerun against this pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4. The EIP-1559 proof rerun against the 4.9.2 pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
 
 Keep mnemonic validation, approved key derivation, seed bundle encryption, vault unlocking and signing within trusted local key operations.
 
@@ -4498,7 +4498,7 @@ Use the shared threat table in `docs/15` (the repository guide) alongside this *
 | Android template and native code | **Malicious template code** | Code executing with the wallet’s privileges while you have it unlocked can read secrets or misuse the in-process signing route. Private storage, encrypted storage and restricted interfaces do not defeat that attacker. |
 | Endpoint configuration and transport | **Endpoint substitution** | TLS, response validation, J-12’s per-adapter checks and section G’s frozen-payload review constrain endpoint use. A provider can satisfy identity checks while lying about balances, fees or chain state. These controls do not prevent denial of service or all metadata exposure. |
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation; the guide assigns signing to built apps through the Core pin in J-13. **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation; place signing in the Android wallet you build, through the Core pin in J-13 (the repository tools pin Trust Wallet Core 4.8.4). **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
 
 TESTNET-only does not mean testnet-tested. Until then, treat this as a testnet guide for a testnet wallet.
 
@@ -4767,7 +4767,7 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
    **OPEN** — Android-project publication: Blocked pending OI-069, awaiting the owner’s decision on whether and where to publish the validation draft.
 
-   Bawa contains no transaction construction or signing implementation. Keep signing in the built apps, via Trust Wallet Core 4.9.2.
+   Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 **Warning** — A different, empty or misidentified AAR changes or omits the Core implementation your app needs. Use the section C source pin and compare the resulting artefact with the approved acquisition record; stop if the artefact is missing or the comparison fails.
 
@@ -5195,7 +5195,7 @@ Passing these checks does not authorise mainnet work; any mainnet work requires 
 
 **Cause:** A timeout leaves the outcome unknown; the provider may already have accepted the transaction.
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Signing belongs only in the built Android wallet, via Trust Wallet Core 4.9.2.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 **Warning** — The provider may already hold the transaction despite the timeout; retain the exact signed bytes and locally calculated transaction ID, then reconcile that ID before considering any rebroadcast.
 
