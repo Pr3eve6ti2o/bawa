@@ -438,9 +438,9 @@ The signer must validate the consistency of UTXO data and scripts, independently
 
 “Wallet policy” is this guide’s term for the signer’s rules for which spends it will authorise. It is related to, but is not the same as, script policy. “Sighash policy” specifies which sighash modes the signer will accept; “acceptable” means the signer accepts only the modes that policy names.
 
-Before approving, check on the device’s own trusted screen:
+Verify the addresses are test-network addresses. Do not approve or sign unless all the following checks pass on the device’s own trusted screen (this guide’s stricter policy):
 
-- the intended test-network setting;
+- the intended test-network setting (testnet4): the device must show the testnet4 network name or indicator;
 - every recipient `<TESTNET_ADDRESS>` and amount, compared with an independent record of your intended payment;
 - the total fee and any additional outputs, with change independently verified by the signer.
 
@@ -448,7 +448,7 @@ Before approving, check on the device’s own trusted screen:
 
 Only after these checks and on-device approval may the signer add partial signatures or [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) Taproot signatures (Taproot’s `SIGHASH_DEFAULT` is defined by [BIP-341](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki)). For combining and finalising, see [Combiner, merge signed copies](#combiner-merge-signed-copies) and [Finalizer, build the final input scripts](#finalizer-build-the-final-input-scripts) below. Return the PSBT with unknown fields preserved. It may still need other signatures; finalisation and broadcast are later stages.
 
-**Expected result:** the intended test address and amount on the signer’s screen, followed by a signature-bearing PSBT; private keys remain in the signing domain.
+**Expected result:** the intended test addresses and amounts for all recipients as defined by this guide’s policy, shown on the signer’s screen, followed by a signature-bearing PSBT; private keys remain in the signing domain (they never cross to the tracker). The online display alone is not this check.
 
 ### Sources
 
