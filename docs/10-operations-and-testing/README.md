@@ -655,7 +655,7 @@ change coin type
 hope
 ```
 
-The professional way is to answer these questions first:
+The following questions form a useful initial checklist, not an exhaustive review or an established standard:
 
 1. What curve is used?
 2. What mnemonic/seed specification is used?
@@ -672,10 +672,22 @@ The professional way is to answer these questions first:
 13. What test vectors exist?
 14. What official wallet must you interoperate with?
 15. What repository is considered canonical by the chain ecosystem?
+16. Which signature scheme and signature encoding are required?
+17. What are the exact signing preimage, hashing, and serialization rules?
+18. How is replay protection applied across chains and networks?
+19. Which account and contract versions are supported, and how do they affect addresses and signing?
+20. What recovery and address-discovery procedures are required?
+21. What fee/gas rules and estimation procedures apply?
+22. How are transaction nonces allocated and tracked?
+23. For UTXO-based chains, how are UTXOs selected and change outputs and addresses handled?
 
 Then write a chain-specific test fixture.
 
-Only after that should the chain enter your generic registry.
+Only after that should the chain be added to the upstream root `registry.json`. Pin the upstream version to an exact release version or full commit SHA and record that pin with the fixture.
+
+Map the verified derivation paths and their names, defaults and supported alternatives, curve, `publicKeyType`, address prefixes/HRPs, hashing rules, and extended-key parameters (including public/private version bytes) to the registry schema at that pin.
+
+Keep `coinId`, the registry's coin identifier, distinct from protocol chain IDs and network IDs. Record those identifiers separately; do not substitute `coinId` for identifiers required by network selection or replay protection.
 
 ---
 
