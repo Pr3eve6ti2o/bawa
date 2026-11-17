@@ -501,7 +501,7 @@ Start at `requested`. Enter `allocated` once the request has its receiving addre
 
 Mapping note: These are application-level states to be mapped onto the settlement states in [`MAINNET-GUIDE` section 12 ("Wallet tracking and payment monitoring")](../mainnet/MAINNET-GUIDE.md), the mainnet settlement reference. In particular, docs/07 `seen` is not MAINNET `seen`.
 
-Apply one progression rule: **do not skip any state to reach finalisation** — process every applicable stage in order, even when evidence for several stages arrives together.
+Apply one progression rule to the normal success path: **do not skip any applicable state to reach finalisation**, where finalisation means entering `reconciled` — process every applicable stage in order, even when evidence for several stages arrives together. The explicitly listed `manual_review -> reconciled` route is an exception to this ordering rule: after manual review confirms that the requirements for reconciliation are met, it may bypass `paid`, `claimed`, and `fulfilled` and enter `reconciled` directly.
 
 Allow these transitions:
 
@@ -527,7 +527,7 @@ Also allow these conditional routes:
 - When the acceptance deadline passes, allow `observed`, `seen`, `matched`, `sufficient`, `included`, `confirmed` and `reorged` to enter `expired`.
 - For ambiguous or contradictory evidence, allow `observed`, `seen`, `matched`, `underpaid`, `sufficient`, `included`, `confirmed`, `reorged`, `finalized`, `paid` or `claimed` to enter `manual_review`.
 
-Treat these routes as exhaustive. A duplicate report is an identical replay of an already-recorded report; keep the request in its current state when such a replay arrives. A second distinct report of the same event is not a duplicate and must be evaluated under these routes. The monitoring cutoff remains unspecified: application policy must define it relative to the acceptance deadline, including whether and for how long monitoring continues after that deadline.
+Treat these routes as a whitelist of permitted transitions, not a completeness claim about all possible state/report combinations; no unlisted transition is permitted. A duplicate report is an identical replay of an already-recorded report; keep the request in its current state when such a replay arrives. A second distinct report of the same event is not a duplicate and must be evaluated under these routes. The monitoring cutoff remains unspecified: application policy must define it relative to the acceptance deadline, including whether and for how long monitoring continues after that deadline.
 
 ### Checks and exception handling
 
