@@ -836,11 +836,11 @@ This section is part of THE SINGLE COSTS REFERENCE for the whole guide set. Prov
 
 ### Figures
 
-No vendor publishes these figures as a tariff: institutional custody onboarding, annual custody service minimum, asset-based custody fee and dedicated enterprise network HSM appliance costs are quoted per client. Obtain written quotations from the custody provider or HSM manufacturer for each item; no public price was found for them at this check, and no 30 October 2026 date is carried forward as a check date for them.
+No vendor publishes these figures as a tariff: institutional custody onboarding, annual custody service minimum, asset-based custody fee and dedicated enterprise network HSM appliance costs are quoted per client. Obtain written quotations from the custody provider or HSM manufacturer for each item; no public price was found for them in a search of the providers named in this section — Anchorage, BitGo and Coinbase Custody — on 8 November 2026 (the guide's check date). The earlier 30 October 2026 date is superseded and is not carried forward as a check date for them.
 
-These bands are not market limits. Ask whether an annual minimum offsets asset-based charges or is additional. Redundant equipment, hosted HSM rental, backups, integration, support, staff, external review, withdrawal charges and network fees may be separate.
+Ask whether an annual minimum offsets asset-based charges or is additional. Redundant equipment, hosted HSM rental, backups, integration, support, staff, external review, withdrawal charges and network fees may be separate.
 
-Recheck every price before committing, including taxes, minimum balances and exit fees; do not use these dated allowances as an offer from any provider.
+Recheck every price before committing, including taxes, minimum balances and exit fees; do not use this information as an offer from any provider.
 
 ### Custody exposure
 
