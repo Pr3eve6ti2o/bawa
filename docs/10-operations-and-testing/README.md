@@ -439,10 +439,10 @@ For every test layer, require the exact command, the file it runs and the expect
 
 ### Reproduce the published-vector reference check
 
-Create a fresh clone at the pin, then run the environment setup and `test/differential_test.py` from the repository root:
+Create a fresh clone, then add a separate detached worktree at the repair pin `e3b65fb` and run the environment setup and `test/differential_test.py` from that worktree's repository root. `082f7915` is the reported verification commit, and `a5bc56e` is the audited main commit; execution at the recipe's `e3b65fb` pin has not been verified:
 
 ```
-git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
+git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git worktree add --detach ../bawa-f4 e3b65fb832db287fdc8d54794980dd0b3456cc12 && cd ../bawa-f4 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
 ```
 
 > **Expected result:**
