@@ -344,14 +344,14 @@ The steps follow the **BIP-174 PSBT flow**. BIP-371 covers Taproot PSBTs.
 2. **Build on the watch-only side.** Prepare an unsigned PSBT for the intended test payment. Bawa does not document construction commands or wallet-specific controls; use your watch-only wallet’s documentation. 
   **Expected result:** an **unsigned PSBT** (see the full [Hand-off checks](#hand-off-checks) checklist), ready for the Updater to complete, then for the separate signer.
 
-3. **Transfer and review.** Pass the PSBT to the signer using a supported QR, file or SD-card route. Bawa does not document device-specific transfer support; check your wallet and signer documentation before choosing a route. Compare the address and amount on the **signing device’s screen** with the intended test payment. Stop if either differs or cannot be reviewed. 
+3. **Transfer and review.** Pass the PSBT to the signer using a supported QR, file or SD-card route. Bawa does not document device-specific transfer support; check your wallet and signer documentation before choosing a route. For this walkthrough, the user must compare the address and amount on the **signing device’s screen** with the intended test payment and stop if either differs or cannot be reviewed. 
   **Expected result:** the intended address and amount on the signing device itself. The online display alone is not this check.
 
 4. **Authorise and return.** Only after that review, authorise test-only signing and return the signed PSBT to the watch-only side. Bawa does not document exact device messages or signing controls; follow your device’s signing instructions. 
   **Expected result:** a **signed PSBT** crossing back to the online side; signing remains in its separate trust domain.
 
 5. **Finalise, then broadcast.** The watch-only side finalises and broadcasts solely to the verified testnet. This is a separate stage from authorisation. Bawa does not document wallet-specific broadcast success messages or confirmation procedures; consult your wallet’s documentation. 
-  **Expected result:** the **signed transaction** passed to the network from the online side. Verify the broadcast by looking up its transaction id on an explorer for the chosen testnet.
+  **Expected result:** the **signed transaction** passed to the network from the online side. Verify the broadcast by looking up its transaction id on an explorer for [testnet4](#derivation-policy-versus-the-standards); use your local node for regtest.
 
 ### Reference, not an integration promise
 
