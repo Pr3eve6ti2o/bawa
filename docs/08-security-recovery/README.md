@@ -17,13 +17,13 @@ Twelve honest limitations. This guide does not promise:
 11. that "audited" means immune to implementation mistakes;
 12. that a wallet is recoverable without preserving its derivation policy.
 
-These limitations are not weaknesses of the guide — they are part of being honest about the engineering problem.
+These engineering limitations are not weaknesses of the guide — they are part of being honest about the engineering problem, not an excuse for preventable documentation omissions.
 
-Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
+Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
 
 Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
-Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
+Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`. This dedicated 4.9.2 demo re-run was distinct from the EIP-1559 proof and full verification pass, which were run against 4.8.4. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
 ## 2. Privacy: xpubs are sensitive public material
 
