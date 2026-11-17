@@ -246,7 +246,7 @@ For each collection cycle, fetch, preserve raw chain facts with their chain/netw
 
 Bawa names SQLite as a common choice for personal local storage and proposes a logical schema in section 10, but does not document reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
 
-SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity such as `(watch, transaction id, output index)`.
+SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity: a canonical key for the underlying fact, independent of which observation reports it. For a transaction output, the identity is `(transaction id, output index)`, and the watch-scoped key is `(watch, transaction id, output index)`. Observations with the same normalized transaction ID and output index for the same watch resolve to the same fact. Raw-observation record IDs, block references and confirmation/reorg/finality state are not part of the identity.
 
 Configure a finality rule per chain, for example a chosen number of Bitcoin confirmations. Mark facts settled only once they meet it. Until a finality rule is configured, keep freshness and finality as `UNKNOWN`.
 
@@ -298,7 +298,7 @@ Keep these logical records:
 
 - **watches**: ID; unique `(chain, network, address)`.
 - **observations**: ID; watch; source; read time; raw payload if available; request outcome.
-- **facts**: unique `(watch, fact identity)`; raw-observation link; block reference if available; confirmation/reorg/finality state.
+- **facts**: unique `(watch, fact identity)` so equivalent observations resolve to one fact; raw-observation links; block reference if available; confirmation/reorg/finality state. Reconciliation/reorgs update links, block references and state without changing the existing fact's identity; a different transaction or output is a different fact.
 - **sync**: `(watch, source)`; last attempt/success; checkpoint; source anchor if available; freshness.
 
 Keep raw observations unchanged so you can rebuild dashboard facts. Use each fact's watch reference to keep chain and network explicit.
@@ -322,6 +322,8 @@ Model overlapping data. Update or insert using the same stable fact identity.
 **(3) Lag, then outage**
 
 Compare the source's progress with a current chain view where available; otherwise, leave freshness unknown. Retain the last good view. Retry with bounded back-off.
+
+This guide's retry policy—not a sourced standard—is exponential back-off with a 1-second base delay, a 30-second cap and a maximum of 6 retries after the initial attempt (7 attempts total) per polling cycle. Retry delays are 1, 2, 4, 8, 16 and 30 seconds. On exhaustion, stop this retry cycle and wait for the next scheduled poll.
 
 **Expected:** attempts recorded separately from successful polls; stale or unknown values labelled, not treated as zero balances. A successful request alone is not a freshness check.
 
