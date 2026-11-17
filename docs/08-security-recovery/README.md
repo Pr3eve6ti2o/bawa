@@ -32,13 +32,13 @@ An account-level xpub with non-hardened branches does not normally let an attack
 - Treat xpubs as sensitive public material. Treat zpubs the same way.
 - Do not paste them into, for example, public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages; disclose only what is needed, and only where needed.
 - For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower extended public node (with chain code) suffices.
-- An xpub or zpub alone CANNOT recover the wallet's private keys: it reproduces only public descendants reachable by non-hardened derivation below the exported account node, but can recreate a scoped watch-only wallet ([docs/RECOVERY.md](../RECOVERY.md)).
+- An xpub or zpub alone CANNOT recover the wallet's private keys: it reproduces only public descendants reachable by non-hardened derivation below the exported account node, but can recreate a scoped watch-only wallet ([docs/RECOVERY.md](../RECOVERY.md#1-an-xpub-or-zpub-cannot-recover-the-wallet)).
 - Bawa documents an xpub import-and-verify procedure in [docs/05, section 7](../05-watch-only/README.md) (derive.js with a heredoc xpub and address comparison), but does not document a persistent watch-only import workflow — check your chosen watch-only tool's documentation.
 ## 3. Backup and recovery
 
 A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms can matter.
 
-Recoverable material = mnemonic (with scheme/passphrase requirements) OR (encrypted seed bundle + matching 32-byte data key). Recovery record = recoverable material + exact derivation/account metadata + network + chain/wallet/address-presentation configuration.
+Recoverable material = mnemonic (with scheme/passphrase requirements) OR (encrypted seed bundle + matching 32-byte data key). Recovery record = recoverable material + exact derivation/account metadata + network + chain/wallet/address-presentation configuration. See the recovery record in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-record).
 
 Definitions: chain derivation policy = the chain's derivation rules; exact chain/path policy = the precise derivation rules and paths used; account selection = the chosen account; account/branch = the chosen account and derivation branch; chain-specific configuration = additional settings required by the chain; offline recovery set = the complete recovery record kept offline; fresh = without existing wallet state; meaningful funds = funds whose loss would matter to you; verified procedure = a procedure successfully used to recreate the same wallet independently. For TON, include the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
 
@@ -46,7 +46,7 @@ Encryption at rest protects a stored artefact; it does not make plaintext secret
 
 ### Recovery drill (before funding)
 
-Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Check that, in an executed and recorded rehearsal using a clean install on a trusted machine, you restore from the actual backup, recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address, compare it with a previously recorded address and complete a successful testnet signing check.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Check that, in an executed and recorded rehearsal using a clean install on a trusted machine, you restore from the actual backup, recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address, compare it with a previously recorded address and complete a successful testnet signing check.
 
 Do this before trusting the wallet with meaningful funds.
 
@@ -96,7 +96,7 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
 ### Restore gate (conceptual/testnet only)
 
-1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
+1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
 
 2. **Proposed first-address check:** compare the restored receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account, network, receiving branch and address index (or equivalent).
 
@@ -106,7 +106,7 @@ This encrypted-seed recovery route is for an existing backup, not permission to 
 
 ### Compromise rehearsal (testnet only)
 
-A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
+A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
 
 ### Passphrase and backup checklist
 
@@ -132,7 +132,7 @@ Before using an existing encrypted backup, complete its decryption-handling chec
 
 If any of these remain undocumented, recovery is blocked.
 
-Bawa's [docs/RECOVERY.md](../RECOVERY.md) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
+Bawa's [docs/RECOVERY.md](../RECOVERY.md#part-2-the-encrypted-seed-decryption-workflow-part-1-the-artefact-the-key-and-the-output-modes) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
 
 Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked.
 
@@ -140,7 +140,7 @@ Treat xpubs and zpubs as **sensitive public material**. An encrypted xpub still 
 
 ### Restore drill (before funding, then quarterly)
 
-Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
+Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
 
 1. **Record the first-address reference.** Record the unfunded testnet wallet's first-address reference and network/account/derivation context, including address policy and any applicable TON settings. Use a recorded public address from your own wallet, not an example address. Bawa does not document a first-address generation procedure — check the relevant wallet and chain documentation for that procedure before relying on the reference.
 
@@ -152,7 +152,7 @@ Complete recovery on a clean trusted machine before funding, as required by [doc
 
 ### Compromised seed (conceptual only)
 
-A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md) requires:
+A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook) requires:
 
 1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet's documented generation procedure.
 2. **Move EVERY asset/token to the replacement wallet.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify every holding, transfer it and verify receipt before retiring the old wallet.
@@ -160,7 +160,7 @@ A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md) requires:
 
 ### Recovery rehearsal procedure
 
-Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-record). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
 
 **The rehearsal has never been executed.** Show every unexecuted gate as **FAIL**.
 
