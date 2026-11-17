@@ -658,7 +658,7 @@ Treat Ethereum's views as gates, not fixed depths: verify that the payment block
 
 For TON, require a verified finalised masterchain reference covering the payment's shard block; this is the anchor ([TON finality and proof-verification documentation](https://docs.ton.org/v3/documentation/dapps/basic-proofing-concepts)).
 
-Apply TRON's confirmation rules: solidification requires block production by at least **19 different Super Representatives**, each at the target height or higher ([TRON consensus documentation](https://developers.tron.network/docs/concensus)). This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check that `contractRet` is `SUCCESS` separately.
+Apply TRON's confirmation rules: solidification requires block production by at least **19 different Super Representatives**, each at the target height or higher ([TRON consensus documentation](https://developers.tron.network/docs/concensus)). This usually takes roughly a minute on mainnet. Broadcast `true` acknowledges completion of the call, not inclusion, execution success or solidification. Check execution success separately using the solidified transaction-info response: the top-level `result` must not be `FAILED`, and `receipt.result` must be `SUCCESS`. Neither field alone proves solidification.
 
 ### Reorg handling
 
