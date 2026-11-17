@@ -737,6 +737,7 @@ Before deciding, check:
 - Event uniqueness, acceptance and confirmations.
 - The total, tolerance and top-up permission.
 - Payment and discovery times against the deadline.
+- Check whether late acceptance is authorised. The merchant or its designated approver must authorise it through a documented late-acceptance policy or an explicit, recorded approval for this payment before release.
 - Earlier fulfilment or refunds, and whether fulfilment remains possible.
 
 Release only when the amount meets policy and late acceptance is authorised. If fulfilment cannot proceed, refuse it and record the reason and your decision about the received funds.
