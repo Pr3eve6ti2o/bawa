@@ -2454,7 +2454,7 @@ If you find an unexpected permission change, follow the verified TRON-specific r
 
 Do not send wallet secrets to support, “validation” sites or claim sites. That includes seed words, private keys, a BIP-39 passphrase or a vault unlock passphrase. Calling a request “validation” or “recovery” does not change what disclosure gives the recipient.
 
-A password change does not rotate the wallet’s keys. If keys have been disclosed, changing a password is not a substitute for following the verified recovery procedure.
+A password change does not by itself rotate the wallet’s keys or restore control. If keys have been disclosed, following the verified recovery procedure is required.
 
 ##### Fake wallet apps and extensions
 
@@ -2466,7 +2466,7 @@ Never import a mainnet mnemonic merely to test an unfamiliar app or extension. T
 
 ##### Giveaways, double-your-coins and pay-to-claim offers
 
-Payment-first giveaways, “double your coins” promises and pay-to-claim messages are scams. If a supposed claim, unlock or support process requires you to send funds first, do not pay: following that instruction transfers funds to the scammer.
+Payment-first giveaways, “double your coins” promises and pay-to-claim messages are common scam patterns and should be treated as scams unless independently verified. If a supposed claim, unlock or support process requires you to send funds first, do not pay without verifying its legitimacy through trusted official channels: you risk sending funds to a scammer.
 
 Apart from genuine gas or protocol fees and repayment of secured debt, a claim, unlock or support process demanding payment first is a scam.
 
