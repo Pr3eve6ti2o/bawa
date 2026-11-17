@@ -789,13 +789,13 @@ Commit local credit atomically with its outcome. For external fulfilment, use a 
 
 ### Resolve stored outcomes after a lost response
 
-If finalisation completes but its response is lost, resolve the stored outcome first on retry. Return a matching result without another credit or repeated finalisation effect.
+If finalisation completes but its response is lost, resolve the stored outcome first on retry. Return a matching result without another credit or repeated finalisation effect (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
 If any saved outcome contradicts the evidence, preserve both and flag a discrepancy for review. Do not quietly replace the result.
 
 ### Distinguish extra money from replay
 
-Retain every distinct transfer. Route an overpayment, or a second distinct payment against `<REQUEST_ID>`, to review or an overpaid state rather than ordinary settlement.
+Retain every distinct transfer (see the docs/06 event-identity passages at [lines 586–590](../06-tracking/README.md#L586-L590) and [line 687](../06-tracking/README.md#L687)). Route an overpayment, or a second distinct payment against `<REQUEST_ID>`, to review or an overpaid state rather than ordinary settlement (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)).
 
 Use idempotent invoice creation to prevent accidental reissue, and reconciliation to detect multiple payments.
 
