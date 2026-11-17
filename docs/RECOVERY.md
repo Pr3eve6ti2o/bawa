@@ -92,6 +92,14 @@ For a pre-funding rehearsal, complete the written or encrypted backup first. Rec
 
 For a later recovery, use those pre-existing originals. Do not populate an expected-address field with an address produced by the restore being tested.
 
+Acquire and preserve independent originals as follows:
+
+1. For a rehearsal, export or capture public addresses directly from the original wallet before running the restore test. Include the configuration and derivation selectors for each address, and save the reference separately from the restored wallet.
+2. For a later recovery, retrieve records created before the recovery: an original-wallet address export or screenshot, a pre-existing watch-only wallet populated from the original wallet, or receiving-address/payment records independently tied to the original wallet. A transaction or explorer entry is acceptable only if separate evidence establishes which address belongs to that wallet.
+3. Record each reference's source, original date if known, when and how it was captured or retrieved, and the evidence linking it to the original wallet. Preserve an unchanged copy, together with the configuration and derivation selectors needed to reproduce each expected address.
+
+A list generated solely from the recovered secrets is not independent evidence, even if saved in a separate file or imported into a watch-only wallet.
+
 Identify the secret-recovery route to test. Do not treat a successful recovery from the written mnemonic as a test of the encrypted file and its saved data key.
 
 If no independent original public output is available, recover that evidence before treating the wallet as verified. Do not pass the comparison check without it.
