@@ -1,6 +1,6 @@
 # Changelog
 
-This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH). Entries under [Unreleased] describe changes since the last versioned section; a versioned section is a release only once it is tagged. No release tags exist yet, so [1.1.0] below is the recorded version state, not a tagged release.
+This changelog does not claim full conformance to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): the date for [1.1.0] is not evidenced. Adherence to [Semantic Versioning](https://semver.org/) is not established by the available evidence, and there is no declared public API. Entries under [Unreleased] describe changes since the last versioned section; a versioned section is a release only once it is tagged. No release tags exist yet, so [1.1.0] below is the recorded version state, not a tagged release.
 
 ## [Unreleased]
 
@@ -17,12 +17,9 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- Reconciled version metadata: `CHANGELOG.md` now lists `[Unreleased]` then `[1.1.0]`, matching both `package.json` files at 1.1.0; 1.2.0 was never released (R16 F2 resolved; R16 F4 remains open: zero tags).
-- Corrected claims that `CHANGELOG.md` said 1.2.0 in the README changelog rules, docs/10 release metadata and the Android guide release-metadata item.
-- Recorded the CI workflow correction: the workflow runs the syntax check, smoke tests (28/28) and the differential test; GitHub Actions run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed successfully on 8 November 2026 (D09).
 - Corrected Wallet Core pin wording: the installed pin is 4.8.4; 4.9.2 is the demonstrated reference (D21; GitHub pre-release), not the pin; 4.9.3 is the latest stable, not yet adopted (re-pinning and re-verification remain open).
-- Corrected the platform-draft pin claim: only the repository tools pin Wallet Core 4.8.4; the Web draft pins 4.9.2 and the Android AAR procedure checks out tag 4.9.2.
-- Fixed the broken docs/15 cross-reference in docs/10 to use `../15-threat-model-and-theft-prevention/README.md`.
+- Clarified the platform-draft pin references: repository tools pin Wallet Core 4.8.4; the Web guide specifies Wallet Core 4.9.2 as its reference pin in its tool table; the Android AAR procedure checks out tag 4.9.2.
+- Removed the carried-over CI workflow entry and its incorrect "smoke tests (28/28)" figure: 28 is the whole npm-test total at `e3b65fb8`, not a `smoke.test.js` count.
 
 ## [1.1.0] — Documentation and hardening pass — date not evidenced
 
