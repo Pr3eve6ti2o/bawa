@@ -222,7 +222,7 @@ Treat any mainnet work as a **separate, reviewed change**. The [mainnet guide](d
 
 ## 7. Essential commands
 
-These instructions describe the `main` worktree based on `16c074e` (staging commit `2bb9a98`), not a released version.
+These instructions describe the `main` worktree based on `3019b02` (staging commit `2bb9a98`), not a released version.
 
 Run from the repository root with your virtual environment active, except where noted.
 
