@@ -210,7 +210,7 @@ Record each version's exact pin once, in this table. Keep version ranges only as
 
 **Open item (OI-007):** Commit and verify the app wrapper JAR before treating the draft wrapper's Gradle version as a project pin.
 
-Version pins are not a lockfile — until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile — until a lockfile generated from a clean install is committed, reproducibility has not been demonstrated.
 
 **Open item (OI-008):** Partially resolved (2026-11-08): `tools/hdwallet-gen/package-lock.json` was added by the phase-1 repair at e3b65fb832db287fdc8d54794980dd0b3456cc12. No Android-app dependency lockfile is evidenced; Android dependency locking remains open. The Node-tooling lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. Owner: W4 (Android follow-up).
 
@@ -4539,7 +4539,7 @@ Keep every adapter on testnet. Passing these checks does not authorise mainnet w
 
 2. **Generate and commit the dependency lockfile from a clean install.**
 
-   **OPEN** — As of 2026-11-08, no lockfile exists for the Android app. Version pins are not a lockfile. Until you generate a lockfile from a clean install and commit it, no install reproduces the exact dependency graph you test. Reproducible installation: Blocked pending OI-008.
+   **OPEN** — As of 2026-11-08, no lockfile exists for the Android app. Version pins are not a lockfile. Until you generate a lockfile from a clean install and commit it, reproducibility has not been demonstrated. Reproducible installation: Blocked pending OI-008.
 
 ### J.6 Threat model — Android platform slice
 
