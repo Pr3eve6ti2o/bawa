@@ -41,7 +41,7 @@ Process these branches in each cycle:
 1. **Pending and underpaid direct deposits:** fetch chain data, match the expected payment, total matching payments, check confirmation, claim atomically, then fulfil the order.
 2. **Expired deposits:** run a short late-payment scan, then move the deposit to the manual-review state, `manual_review`.
 3. **External invoice recovery:** query paid invoices and recover their fulfilment through idempotent finalisation.
-4. **Slow-path pending payments:** run the slow-path lookup.
+4. **Slow-path pending payments:** run the slow-path lookup (a fallback search of chain history for payments still pending in your database).
 
 Keep the invoice-recovery and slow-path branches separate because they provide different evidence with different timing, not extra chain feeds. Do not let either branch bypass payment matching or confirmation. Require each to satisfy both checks before the common idempotent finalisation gate can complete the order.
 
@@ -94,7 +94,7 @@ Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs wi
 
 Use the hosted TRON ecosystem's indexed transaction and event data. For a small application, this often avoids the need to run a full TRON indexer yourself.
 
-Retain the general matching model: network, contract, transaction-event, recipient, amount and block-finality state.
+Retain the general matching model: network, contract, transaction-event (the specific payment transfer or event within a transaction, rather than the transaction as a whole), recipient, amount and block-finality state.
 
 #### TON
 
@@ -112,7 +112,7 @@ Model the evidence each chain exposes:
 - **Solana:** use the explicit commitment levels `processed`, `confirmed`, `finalized`.
 - **TRON:** account for the solidification/reorganisation information exposed by its event APIs.
 
-Support richer states in your payment database: `seen`, `included`, `confirmed`, `finalized`, `reorged`, `expired`, `late`, `manual_review`, `paid`. Do not force every blockchain into one integer called `confirmations`.
+Support richer states in your payment database: `seen` (detected by your application, with block inclusion not yet verified), `included` (present in a block on the current canonical chain), `confirmed`, `finalized`, `reorged` (previous block inclusion invalidated by a chain reorganization), `expired`, `late`, `manual_review`, `paid`. Do not force every blockchain into one integer called `confirmations`.
 
 ### Price quotes as payment state
 
@@ -149,7 +149,7 @@ Convert to human-readable decimal strings only at the presentation boundary.
 A watcher tells you what it currently sees; a reconciler checks whether your database still agrees with the chain. Use both:
 
 - Frequent watcher → new activity → database.
-- Periodic reconciler → re-scan a known range → compare with database → repair missing/stale records.
+- Periodic reconciler → re-scan a known range (an explicit start-to-end interval of block heights or other chain-specific positions) → compare with database → repair missing/stale records (add missed payment records and correct records that disagree with current chain data).
 
 Retain a chain-native cursor:
 
@@ -159,7 +159,7 @@ Retain a chain-native cursor:
 - **XRPL** — ledger index/transaction cursor.
 - **Cosmos** — block height/pagination cursor.
 
-The exact cursor depends on the chain. Do not rely only on wall-clock timestamps. Record successful reconciliation checkpoints so that, after an outage, your application can report "Last successfully reconciled height = H" and resume from a safe boundary.
+The exact cursor depends on the chain. Do not rely only on wall-clock timestamps. Record successful reconciliation checkpoints so that, after an outage, your application can report "Last successfully reconciled height = H" and resume from a safe boundary (a verified chain position at or before that checkpoint, with enough overlap to re-scan potentially missed or reorg-affected blocks).
 
 ## 4. Bitcoin descriptors and PSBT
 
