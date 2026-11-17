@@ -226,7 +226,7 @@ This guide gives no fixed retention period. Check your local retention rules and
 
 **Source basis:** convergence on the US OFAC position. **Checked 9 November 2026.**
 
-The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations carry **strict liability**: penalties are possible even without knowledge or intent.
+The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations may result in **civil penalties on a strict-liability basis**, even without knowledge or intent (OFAC FAQ 562; OFAC’s October 2021 *Sanctions Compliance Guidance for the Virtual Currency Industry*).
 
 > **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or blocked funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
 
@@ -1547,7 +1547,7 @@ Mistaking tracking for transaction preparation or approval creates **wrong-netwo
 
 The validation drafts do not establish a mainnet sending path.
 
-- **Web draft:** `app-web/src/tx.js` is the programme’s only signing implementation. Its transaction tests are fully mocked. Send, sign and broadcast were never exercised live in a browser or on any network. Those live paths are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **Web draft:** `app-web/src/tx.js` contains the Web draft’s signing implementation. Its transaction tests are fully mocked. Send, sign and broadcast were never exercised live in a browser or on any network. Those live paths are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Android draft:** `SigningCoordinator.kt` was never compiled into an APK and never run on a device; there was no AAR. Source-level coordinator checks are not evidence of a working device signing capability. Device operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Core check:** the Core 4.9.2 EIP-1559 check, D21, was limited to Node v24, with independent Python fixture-sender recovery and no broadcast. It provides evidence for the tested fixture path, not browser, device or network operation. Those live integrations remain **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 
@@ -1698,7 +1698,7 @@ Permit2 has distinct authorisation paths:
 
 - `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers.
 - ERC-20 transfers through Permit2 still require token-level allowance to Permit2 at execution.
-- Reducing an allowance or calling `lockdown` does not invalidate outstanding permit signatures. `invalidateNonces` and `invalidateUnorderedNonces` are the separate invalidation operations.
+- Reducing an allowance via `AllowanceTransfer.approve`, or calling `AllowanceTransfer.lockdown`, does not invalidate outstanding permit signatures. An accepted `AllowanceTransfer.permit` consumes and increments the relevant nonce even when it sets a lower allowance. `AllowanceTransfer.invalidateNonces` and `SignatureTransfer.invalidateUnorderedNonces` are the respective explicit nonce-invalidation operations.
 
 Do not describe an allowance reduction or `lockdown` as cancellation of outstanding permit signatures. These distinctions are not an approval or cancellation procedure, and they do not establish a token-send capability in either draft.
 
