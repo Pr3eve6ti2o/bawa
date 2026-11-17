@@ -506,9 +506,9 @@ For the signing checks, see [PSBT hand-off: Creator, Updater and Signer](#psbt-h
 
 Merge only PSBTs for exactly the same unsigned transaction. In multisig, different signers may return separate copies containing their partial signatures. The Combiner brings those signatures and supporting fields together without changing the transaction.
 
-Count distinct valid signatures against each input’s spending policy, not the number of returned files. Merging the same signature twice does not help meet a threshold.
+In this guide, the Combiner verifies each partial signature’s validity when merging. Spending policy means the rule stating which signatures authorise a spend; satisfying stack means the witness data that satisfies the spending script; script policy means how keys become spendable outputs. Count distinct valid signatures against each input’s spending policy, not the number of returned files. Merging the same signature twice does not help meet a threshold.
 
-Reject mismatched transactions. If fields conflict, stop and investigate rather than silently choosing a value. Combining creates no signatures and is not a cryptographic signature-aggregation protocol.
+Reject mismatched transactions. If fields conflict, this guide’s stricter Combiner policy is to stop and investigate rather than silently choosing a value. BIP-174 permits arbitrary choice of conflicting fields. Combining creates no signatures and is not a cryptographic signature-aggregation protocol.
 
 **Expected result:** one PSBT with the transaction unchanged, supporting metadata retained and returned signatures associated with the correct inputs. More signatures may still be needed.
 
@@ -516,7 +516,7 @@ Reject mismatched transactions. If fields conflict, stop and investigate rather 
 
 Finalisation follows [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki).
 
-Finalisation works input by input. Using sufficient signatures and the required script data, the finaliser constructs the final `scriptSig`, witness, or both, as appropriate. Script-based multisig needs signatures arranged as its spending script requires.
+Finalisation works input by input. If `PSBT_IN_SIGHASH_TYPE` is present and any signature’s sighash differs from that value, the Input Finaliser MUST fail that input. Using sufficient signatures and the required script data, the finaliser constructs the final `scriptSig`, witness, or both, as appropriate. Script-based multisig needs signatures arranged as its spending script requires.
 
 For Taproot, use the BIP-371 data for the chosen spending path. A script-path witness needs the selected tapscript, control block and satisfying stack; collecting signatures alone is not enough.
 
