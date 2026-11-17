@@ -3170,7 +3170,11 @@ Every value in Doc 4 must retain a trace to its supporting slice and finding, ve
 
 ## 21. Mainnet open-items register
 
-This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5274). [README §18](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md) is a **testnet-only gate catalogue — not mainnet authorisation**.
+This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5273). [README §18](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md) is a **testnet-only gate catalogue — not mainnet authorisation**.
+
+Register citations such as M-series and F-series references are guide-internal cross-references to other parts of this guide and the audit record, not inspectable external sources. A status change still requires inspectable evidence meeting the row’s clearance condition.
+
+`56396a20` is the evidence baseline—the `main` head on 2026-11-09, when the research slices were verified first-hand. By contrast, `a5bc56e` is the audited `main` commit to which the audit findings are pinned.
 
 Under M36 F7, M-series IDs are allocated only to actual items, not placeholders. A shared issue has two scope-specific rows: an OI row in Doc 3 and an M- row here, with the M- row linking to its OI counterpart. Closing either row does not close the other. Every status change must cite evidence meeting that row’s clearance condition. Registering a gap does not clear it.
 
