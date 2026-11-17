@@ -2432,7 +2432,7 @@ A revocation check on one chain is not a review of authority granted on another.
 
 Use a verified TRON-specific procedure for approval review and revocation. Include account permissions in that review: TRON’s `AccountPermissionUpdateContract` (**ID 46**) changes account permissions, a different control layer from an EVM token allowance.
 
-The reported figure of about **$129 million** relates to one case involving this mechanism; the case date is unverified here. It is a single-case figure, not a TRON-wide loss total.
+The reported figure of about **$129 million** refers to the November 2024 USDT address-poisoning theft, not to account-permission hijacking via `AccountPermissionUpdateContract` (ID 46). The victim made a 100-USDT test transfer first, then sent the large transfer to the poisoned address `THc...bu8` instead of the intended `TMS...bu8`; the attacker voluntarily returned the funds. The separate Q4 2024 ID 46 account-permission hijacking wave involved about 2,130 wallets hijacked, 14,545 at risk, and roughly **$31.5 million exposed**—an exposure figure, not an amount stolen. No single $129M ID 46 case is established; the separate 2026 Arkea/Kraken theft of about $129.6M is a different incident.
 
 If you find an unexpected permission change, follow the verified TRON-specific response procedure. Do not apply EVM allowance instructions to it, or treat a Revoke.cash result as a review of a TRON account.
 
@@ -3360,7 +3360,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M15’s TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. It separately records `AccountPermissionUpdateContract`, ID 46, with a reported figure of approximately $129M. The supplied TRON revocation route is TronScan’s account-page **Approval** tab → **Cancel Contract Approval**, pending a live re-check. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20 still requires verification of TRON’s TRC-20 approval, allowance, delegated-transfer mechanics and revocation; EVM or Permit2 wording must not be copied across without that verification.
+**Evidence or uncertainty:** M15’s TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. It separately records `AccountPermissionUpdateContract` (ID 46) in the Q4 2024 account-permission hijacking wave—about 2,130 wallets hijacked, 14,545 at risk, and roughly $31.5M in exposure, not an amount stolen—while the approximately $129M figure refers to the separate November 2024 USDT address-poisoning theft. The supplied TRON revocation route is TronScan’s account-page **Approval** tab → **Cancel Contract Approval**, pending a live re-check. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20 still requires verification of TRON’s TRC-20 approval, allowance, delegated-transfer mechanics and revocation; EVM or Permit2 wording must not be copied across without that verification.
 
 **Status:** OPEN.
 
