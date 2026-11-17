@@ -436,13 +436,13 @@ Deleting a queued item does not revoke signatures. For normal cancellation, exec
 
 3. **Write the recovery inventory.** Preserve the selected network and numeric chain ID, [Safe address], deployment transaction, owner addresses, threshold, implementation/version, enabled modules, guards, fallback handler and any recovery or upgrade arrangements. Keep dated offline copies and verify them against current on-chain state before recovery. This record is not a signing secret, but it is privacy-sensitive.
 
-4. **Test with little money.** Send a small test amount to the deployed Safe, then propose a transfer out. Collect approvals separately. Have each signer check the chain, Safe address, nonce, destination, asset, amount and decoded calldata, including every batched call and token approval. Execute and check the receipt and balances. Test that your intended apps support contract accounts.
+4. **Test with little money.** Send a small test amount to the deployed Safe, then propose a transfer out. Collect approvals separately. Have each signer check the chain, Safe address, nonce, destination, asset, amount, outer transaction operation, gas/reimbursement fields and decoded calldata, including every batched call (and its operation) and token approval. Execute and check the receipt and balances. Test that your intended apps support contract accounts.
 
-5. **Practise without a dependency.** Reconnect to the existing address through another compatible client. If proposals are missing, recreate them and obtain fresh signatures. Simulate one owner being unavailable and spend with the remaining quorum. Replace a lost or suspect owner promptly while quorum remains, then update the inventory. Creating another Safe does not recover assets in this one.
+5. **Practise without a dependency.** Reconnect to the existing address through another compatible client. If proposals are missing, try recovering them from the Safe Transaction Service, saved exports or another participant; if recovery fails, recreate them and obtain fresh signatures. Simulate one owner being unavailable and spend with the remaining quorum. Replace a lost or suspect owner promptly while quorum remains, then update the inventory. Creating another Safe does not recover assets in this one.
 
 ### Where it fails
 
-Multisig cannot rescue a compromised quorum or several owners approving the same harmful transaction. Treat enabled modules as separate spending authority: they may execute outside the usual owner threshold. A broken guard can block execution.
+Multisig cannot rescue a compromised quorum or several owners approving the same harmful transaction. Treat enabled modules as separate spending authority: they may execute outside the usual owner threshold. The original Transaction Guard (v1.3.0) covers only the owner execTransaction path, not module calls; Module Guards arrived in v1.5.0. A broken guard can block execution.
 
 Contract bugs and chain failures remain risks. An approved token spender may take tokens without a new Safe vote. Without enough usable owners or a functioning recovery route authorised in advance, access may be permanently lost.
 
@@ -450,7 +450,7 @@ Contract bugs and chain failures remain risks. An approved token spender may tak
 
 For basic self-managed use, deployment gas and transaction gas are the only chain costs; no software subscription is required. Off-chain proposals and signatures cost no gas; on-chain approvals, execution, owner changes and cancellations do. Fees vary with the network and congestion.
 
-Keep the network's gas coin available to the submitting account, or test a sponsorship arrangement. Money inside the Safe does not automatically pay the submitting account's fee. Hardware, hosted services and relayer charges are separate possible expenses.
+Keep the network's gas coin available to the submitting account, or test a sponsorship arrangement. Money inside the Safe does not automatically pay the submitting account's fee; the Safe gas-refund mechanism (gasPrice/refundReceiver/gasToken) is optional. Hardware, hosted services and relayer charges are separate possible expenses.
 
 Choose this over a paid service if you can maintain independent owner backups, review calls and rehearse recovery yourself. Payment can buy coordination, monitoring or assistance; payment alone cannot replace missing signing authority. Before paying, establish whether the provider can spend or block recovery, and whether an independent quorum still works if it disappears.
 ## 13. Free multisig and descriptor backups
