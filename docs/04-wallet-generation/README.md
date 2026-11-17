@@ -14,7 +14,7 @@ Generation is a one-time trusted operation. When you generate a wallet, Bawa’s
 7. Encrypts your mnemonic with AES-256-GCM.
 8. Shows your mnemonic and the separate data key only on the terminal.
 9. Waits for your confirmations.
-10. Writes the seed bundle with restrictive permissions.
+10. Writes the seed bundle with restrictive permissions, refusing by default to overwrite an existing `seed.enc.json`; `--force` permits replacement.
 
 The surrounding tools have distinct roles:
 
@@ -24,7 +24,7 @@ The surrounding tools have distinct roles:
 - `compare.js` gives you a diagnostic cross-check of derived addresses against the parent application’s expectations.
 - `decrypt_seed.py` is your recovery utility for the application-specific seed bundle.
 
-At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the npm `test` script targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was absent and the suite belonged only to an unpushed local repair copy.
+At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, the npm `test` script targets `test/smoke.test.js`, which is in this tree. The smoke suite passed 130 checks with 0 failures in an auditor live run at `a5bc56e`, matching the result recorded in section 8; the suite itself does not print a total count. At the former pin `082f7915` the file was absent and the suite belonged only to an unpushed local repair copy.
 
 Keep the empty BIP-39 passphrase and the 24-word mnemonic: both are fixed policy. A non-empty passphrase or a different word count gives you a different wallet. The confirmations exist because you have no second chance to record the mnemonic.
 
