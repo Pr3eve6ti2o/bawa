@@ -75,16 +75,16 @@ Evidence labels are **VERIFIED** (checked first-hand), **APPROVED BUT UNEXECUTED
 
 **VERIFIED** — the network scope in this table has been checked first-hand.
 
-| Chain | Allowed network |
-| --- | --- |
-| Bitcoin | testnet4 |
-| Ethereum | Sepolia |
-| TRON | Nile |
-| TON | testnet |
+| Chain | Allowed network | Policy citation | Mainnet in this guide set |
+| --- | --- | --- | --- |
+| Bitcoin | testnet4 | Bawa chain policy (`docs/02`) | Excluded |
+| Ethereum | Sepolia | Bawa chain policy (`docs/02`) | Excluded |
+| TRON | Nile | Bawa chain policy (`docs/02`) | Excluded |
+| TON | testnet | Bawa chain policy (`docs/02`) | Excluded |
 
 Do not substitute testnet3 for testnet4, another Ethereum testnet for Sepolia or Shasta for Nile.
 
-Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
+Mainnet is excluded from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
 Do not provide hidden network switches or a user-supplied endpoint escape hatch. Reject imported requests and deep links that select an unsupported network.
 
@@ -92,7 +92,7 @@ Use test funds only; do not use recovery material that controls real assets.
 
 ### A.3 Required wallet operations
 
-The operations below are **APPROVED BUT UNEXECUTED**: they define what the completed wallet must do. Live wallet creation has been performed from the web draft in a real browser (V2, 8 November 2026: 24-word creation, exact ordered backup re-entry accepted, wallet saved, portfolio shown); the Android draft has never had a live creation, restore or testnet spend. No live testnet spend has been made from either draft, and no mnemonic restore has been exercised from either draft — send, signing and broadcast were not exercised.
+The Android operations below are **APPROVED BUT UNEXECUTED**: they define what the completed Android wallet must do. This label applies only to Android execution, not to the existing CLI tools or the web draft's executed creation. Live wallet creation has been performed from the web draft in a real browser (V2, 8 November 2026: 24-word creation, exact ordered backup re-entry accepted, wallet saved, portfolio shown); the Android draft has never had a live creation, restore or testnet spend. No live testnet spend has been made from either draft, and no mnemonic restore has been exercised from either draft — send, signing and broadcast were not exercised.
 
 Keep the BIP-39 passphrase empty by policy. Use the separate vault unlock passphrase as the PBKDF2 input for the vault.
 
@@ -201,8 +201,8 @@ This guide is testnet only. VERIFIED means the value was checked first-hand on 8
 | CMake | Core module build | 3.18.1 | 3.18.1 | VERIFIED |
 | protoc | Core code generation | 3.20.3 | libprotoc 3.20.3, from `build/local/bin/protoc` via `tools/install-dependencies` | VERIFIED |
 | protobuf-javalite | Core module build | 3.22.3 | 3.22.3 (upstream) | VERIFIED |
-| Node | Repo tools verification | `>=22 <23` | Node 22 (declared range); verification ran on Node v24.22.2, outside the declared range, and was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) | VERIFIED |
-| Python | Repo tools verification | `>=3.11` | Python 3.12.3 with `cryptography==50.0.2` and `bip-utils==2.12.2` | VERIFIED |
+| Node | Repo tools verification | `>=22 <23` | `>=22 <23` (declared range, not a pin); verification ran on Node v24.22.2, outside the declared range, and was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) | VERIFIED |
+| Python | Repo tools verification | `>=3.11` | Python 3.12.3 with `cryptography==50.0.2` and `bip-utils==2.12.2` at the repair pin; main now records `bip-utils==2.12.3` | VERIFIED |
 
 Record each version's exact pin once, in this table. Keep version ranges only as compatibility declarations: a range is not a pin and must never serve as a reproducible pin.
 
@@ -225,7 +225,7 @@ Treat the app build and the Core module build as two different builds: they use 
 
 ### B.3 Java: two JDKs
 
-Keep two full JDK installations for Bawa's testnet builds: **JDK 21 for the wallet build** and **JDK 17 for the Core module build**. These are stated Bawa major-version requirements, not a general Android rule. Do not replace Core's JDK 17 with JDK 21 because it is newer, or downgrade the wallet build to JDK 17 to match Core.
+Keep two full JDK installations for Bawa's testnet builds: **JDK 21 for the wallet build** and **JDK 17 for the Core module build**. This split is Bawa policy (a project choice), not a Gradle/Java compatibility requirement or a general Android rule: Gradle 8.9 and 8.10.2 both run on Java 21. Do not replace Core's JDK 17 with JDK 21 because it is newer, or downgrade the wallet build to JDK 17 to match Core.
 
 **Open item (OI-001):** Vendor and patch-level pins were never supplied; use a supported security update within each required major and record the complete version output.
 
@@ -311,7 +311,7 @@ Install and verify the SDK before running Gradle for the testnet wallet.
 | Component | SDK package identifier | Version evidence required |
 |---|---|---|
 | App build | `platforms;android-34` | Verified against the validation draft's `app/build.gradle.kts`: `compileSdk = 34`, `targetSdk = 34`, `minSdk = 26`; the draft declares no `buildToolsVersion` — `34.0.0` is the AGP 8.5.2 default (AGP 8.5 release notes); confirm installed API level `34` and the installed Build-Tools package revision from `source.properties`. |
-| Core module build | `platforms;android-35` | Upstream Core module pin; confirm installed API level `35`. |
+| Core module build | `platforms;android-35` | Upstream Core module pin; confirm installed API level `35`. The `compileSdk = 34` app may consume a Core AAR built with `compileSdk = 35` only if the AAR is compatible: the dependency's `minCompileSdk` must be at most `34`, and the app must satisfy its consumer-facing API and resource requirements. |
 
 Install both platform packages. Check the Bawa checkout's `compileSdk` settings and any explicit `buildToolsVersion`; substitute exact package identifiers only if the checkout requires a newer validated combination. Do not infer a Core Build-Tools version or a Java language target from its platform pin.
 
@@ -447,7 +447,7 @@ Installing Build-Tools `34.0.0` does not force Gradle to use them. Confirm and r
 - [Build-Tools release notes](https://developer.android.com/tools/releases/build-tools)
 - [Set up the Android 14 SDK](https://developer.android.com/about/versions/14/setup-sdk)
 - [SDK environment variables](https://developer.android.com/tools/variables)
-- [Android Gradle Plugin 8.5 release notes](https://developer.android.com/build/releases/past-releases/agp-8-5-0-release-notes)
+- [Android Gradle Plugin 8.5 release notes](https://developer.android.com/build/releases/agp-8-5-0-release-notes)
 
 ### B.5 Native toolchain: NDK, CMake, protoc
 
@@ -503,7 +503,7 @@ read -r -p 'Absolute path to the installed CMake executable: ' CMAKE_BIN &&
 "$CMAKE_BIN" --version
 ```
 
-**Expected result:** The version output begins with `cmake version 3.18.1`.
+**Expected result:** The first line of the version output is exactly `cmake version 3.18.1`.
 
 Check the installed NDK Clang executable:
 
@@ -561,7 +561,7 @@ Pin Trust Wallet Core to exactly `4.9.2` for the Bawa Android wallet's testnet-o
 - **Git tag:** `4.9.2`
 - **Required full commit:** `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`
 
-Keep both the tag and the full commit as review-controlled constants. The tag-to-commit mapping was verified against the GitHub API on 8 November 2026; the tag object is the commit itself.
+Keep both the tag and the full commit as review-controlled constants. The tag-to-commit mapping was verified against the GitHub API on 8 November 2026; the lightweight tag ref points directly at the commit, with no separate tag object.
 
 A version range is not a pin. Never use `4.+`, `4.9.+`, `[4.9.2,5.0)`, `latest.release` or a moving branch.
 
