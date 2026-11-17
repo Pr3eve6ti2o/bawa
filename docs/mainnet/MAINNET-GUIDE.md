@@ -4144,7 +4144,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 | 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
 | 14. Standard-wallet import of a Bawa mnemonic not recorded | m02, m28-OI-08 | OPEN — R-14 (extended): cross-wallet recovery evidence record documenting target wallet/version, import settings and steps, observed recovery results, and supporting logs; cross-wallet recovery still unverified (M23 F36, M22 F44). |
-| 15. 4.9.1 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
+| 15. 4.9.3 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
 | 16. CI pin values to obtain and re-verify (Python 3.13 patch version, Ubuntu runner image digest, three action commit SHAs) | m05 O1, O2 | OPEN — do not guess. |
 | 17. bip-utils 2.12.3 differential re-run | m05 O4 | OPEN — dedicated run. |
 | 18. Node 24 migration verification (Web 31/31 and Android 55/55 on an exact Node 24 patch, before 2027-04-30) | m05 O5 | OPEN — dedicated run. |
@@ -4153,7 +4153,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 | 21. Funding-source links unverified from the VM (Coinbase help 403, Binance P2P FAQ 202, CoinATMRadar 403, Paxful home 403, Tonviewer API not probed) | m26 items 2–6 | OPEN — carried as M-19; re-verify from an unblocked route before linking. |
 | 22. No fee figure publishable as current; no funding service recommended (all named services are examples to check only) | m26 items 11–12 | OPEN — carried as M-14 (dated baselines only; teach on-screen fee checks). |
 | 23. Hardware-wallet chain compatibility (BTC/ETH/TRX/TON per device) unverified | m32 OI-06 | OPEN — must not recommend a device without it. |
-| 24. Prices to re-check before quoting (Keystone 3 Pro, Blockstream Jade/Jade Plus, BitBox02, Etherscan API plans, Blockchair/TronGrid/TonAPI/TonCenter/mempool.space Enterprise, GoPlus/Blockaid capabilities) | m32 OI-01–OI-05 | OPEN — R-18 (corrected: M32 re-checked D17 figures 2026-11-09, unchanged, + dated hardware prices); link only until a browser-based check lands. |
+| 24. Prices to re-check before quoting (Keystone 3 Pro, Blockstream Jade/Jade Plus, BitBox02, Etherscan API plans, Blockchair/TronGrid/TonAPI/TonCenter/mempool.space Enterprise, GoPlus/Blockaid capabilities) | m32 OI-01–OI-05 | OPEN — R-18; link only until a browser-based check lands. |
 | 25. Regulatory scope limits (HMRC manual sections, India successor law, OFAC guidance PDF text, MiCA Regulation (EU) 2023/1114 text, OFAC five-year retention, US/UK/EU/India only; no other jurisdiction checked) | m33 items 1–6, 8 | OPEN — carried as M-25; read each source directly before any rule is published. |
 | 26. `docs/09` migration details (descriptor examples, placeholders, expected-result text, verified mainnet replacements) | m17 O7 | OPEN — file-and-line audit of `docs/09` first. |
 | 27. 24-word policy enforcement unverified (policy stated, enforcement behaviour not shown) | m02 | OPEN — verify separately. |
