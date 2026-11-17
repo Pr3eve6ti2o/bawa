@@ -582,7 +582,7 @@ Treat `reconciled` as terminal audit closure, not another word for successful pa
 **Expected:** an ordered history for `<REQUEST_ID>`, with every required check recorded, late payments routed to review, and no fulfilment authorised by observation alone.
 ## 12. Observation and chain-specific matching
 
-Deduplicate observations using a chain-specific event key, then require an unambiguous link to a payment request. Compare the destination, asset and atomic amount with the request, validate the fields below, and apply your confirmation/finality policy before accepting a match.
+Deduplicate observations using a chain-specific event key (see [docs/06, lines 586–590 and 687](../06-tracking/README.md)), then require an unambiguous link to a payment request. Look up stored requests in the relevant chain/network using an explicit request ID, a persisted event-to-request mapping, or the destination together with any request-specific memo, tag or reference. Apply the available identifiers together and require exactly one consistent candidate. If no request matches, leave the observation unmatched; if multiple requests match or identifiers conflict, keep it unresolved until additional request-specific evidence resolves the ambiguity. Do not break ties by amount or timing alone. Compare the destination, asset and atomic amount with the request, validate the fields below, and apply your confirmation/finality policy before accepting a match (see [docs/12, line 320](../12-chain-registry-and-assets/README.md)).
 
 ### Bitcoin
 
