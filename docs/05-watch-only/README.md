@@ -1,6 +1,6 @@
 # Watch-only derivation
 
-> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. See the README §1 status warning. The interfaces below describe their behaviour.
+> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. The interfaces below describe their behaviour.
 
 ## 1. What watch-only derivation is
 
@@ -50,12 +50,13 @@ The intended exit statuses are:
 | Status | Meaning |
 | --- | --- |
 | `2` | Usage or read error |
-| `1` | Derivation or validation failure |
+| `2` | Extended-key validation failure (`validateExtendedKey`) |
+| `1` | Derivation or post-derivation address-validation failure |
 | `0` | Success: bare address on stdout, without JSON |
 
 For stdin, the 200-character limit counts all characters read, including any trailing newline. Accumulated input exceeding that total is rejected while reading, before derivation.
 
-Testnet-format extended public keys (`vpub`/`tpub`) are not supported by this workflow. A valid-checksum `vpub` can cause `derive.js` to abort with exit 1 and no address, emitting only an opaque WASM-abort message. See the testnet-format key limitation in docs/11.
+Testnet-format extended public keys (`vpub`/`tpub`) are not supported by this workflow. Since the pre-validation added in `d2f0960`, a valid-checksum `vpub` is rejected by `validateExtendedKey`: `derive.js` exits `2` with the error `extended key version 045f1cf6 is not allowed for btc` and no address on stdout. See the testnet-format key limitation in docs/11.
 
 The approved receiving paths are:
 
