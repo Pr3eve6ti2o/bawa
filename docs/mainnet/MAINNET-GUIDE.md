@@ -631,7 +631,7 @@ Re-check backups periodically. The repo prescribes no interval.
 These have different purposes:
 
 - The **BIP-39 passphrase** changes the seed and therefore the wallet. Bawa policy is an **empty BIP-39 passphrase**.
-- The **vault unlock passphrase** only opens the local vault. The documented minimum is **8 characters** — an acceptance rule, not a strength assessment.
+- The **vault unlock passphrase** only opens the local vault. The minimum length remains unset in WEB-GUIDE.
 
 > **Warning** When restoring, do not substitute the vault unlock passphrase for the BIP-39 passphrase. A wrong BIP-39 passphrase silently derives a different valid wallet, with no error to tell you that it is not your wallet.
 
@@ -643,9 +643,7 @@ The repo vault is the `seed.enc.json` bundle, not browser storage. Without its s
 
 #### Web draft browser vault
 
-The Web draft uses **PBKDF2 with 600,000 iterations** and a **10-minute auto-lock**. These are draft-only parameters, not repo controls. The browser vault has never been independently reviewed.
-
-The claim of “10 minutes of inactivity” is inaccurate: the timer re-arms only on unlock, not on activity.
+The Web draft uses **PBKDF2 with 600,000 iterations** and a **10-minute auto-lock**. These are draft-only parameters, not repo controls.
 
 > **Warning** If using the Web draft browser vault, keep independent offline recovery material and do not rely on browser storage as your only copy. It is weaker storage than an offline bundle: browser compromise can expose keys, and clearing browser data can erase the only copy and strand funds.
 
@@ -655,7 +653,7 @@ The Android vault is Keystore-bound.
 
 > **Warning** Before uninstalling the Android app, moving to another device or adding a fingerprint, check that independent offline recovery material survives. The Keystore key does not survive uninstall or a device move, and adding a fingerprint may invalidate the Keystore wrapping key. Without its Keystore key, the vault cannot be opened; a copied vault or database is not a portable backup.
 
-Android has **no inactivity auto-lock**. Its biometric gate is UI-layer only, not enforced in `WalletSession.unlock()`. `FLAG_SECURE` covers only the Backup and Import routes, not the whole app.
+The Android draft specifies **no inactivity timeout**; any biometric gating is a **UI-layer design** rather than an enforced session control. `FLAG_SECURE` covers only the Backup and Import routes, not the whole app.
 
 Passing the Android **3-word backup quiz does not meet the full ordered 24-word re-entry requirement**. Do not treat that quiz as full backup verification.
 
