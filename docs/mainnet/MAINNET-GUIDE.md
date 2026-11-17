@@ -1912,7 +1912,7 @@ The stuck-transaction decision tree is **wait → RBF bump if accepting-node pol
    Before any replacement approval, recheck the intended recipient, amount and change to reduce the risk of a **wrong address** or **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to reduce the risk of another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
 
 3. **Consider CPFP only where an output is controlled.**  
-   A sender can spend unconfirmed change, or a recipient can spend the stuck payment output, in a high-fee child. Both transactions confirm, and **both fees are paid**.
+   A sender can spend unconfirmed change, or a recipient can spend the stuck payment output, in a high-fee child only if they control the output being spent. Both transactions confirm, and **both fees are paid**.
 
    The dated package illustration uses a parent and child of approximately **140 vB each**, with a target package rate of **3 sat/vB**. Keeping the parent at the original fee above gives a combined fee of approximately **840 sats ≈ $0.62**, of which the child pays approximately **700 sats ≈ $0.52**. This is derived package arithmetic, not a live recommendation: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** for an actual package.  
    *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
@@ -1920,7 +1920,7 @@ The stuck-transaction decision tree is **wait → RBF bump if accepting-node pol
    Before any child approval, establish control of its input and check parent and child payment details for **wrong address** and **wrong amount**. Review both fees together, including change handling, to prevent a further **stuck transaction** or excessive **lost fee**. Do not disclose signing secrets to prevent **theft**. Stop if output control, the combined budget or an available reviewed signing flow is unresolved. This mechanism and its arithmetic do not establish a CPFP feature in the Web draft.
 
 4. **Stop rather than re-send blindly.**  
-   Disappearance from mempools is not cancellation. If the original never confirms, no fee is collected and its inputs remain unspent. The recorded Core default `mempoolexpiry` was **336 hours (14 days)**; the setting on a particular node is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a universal cancellation deadline. Re-creating the payment while the original may still confirm risks a duplicate payment. Stop further spending until the original’s status is resolved.  
+   Disappearance from mempools is not cancellation. If the original never confirms and is not replaced, no fee is collected and its inputs remain unspent. The recorded Core default `mempoolexpiry` was **336 hours (14 days)**; the setting on a particular node is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a universal cancellation deadline. Re-creating the payment while the original may still confirm risks a duplicate payment. Stop further spending until the original’s status is resolved.  
    *Source: m12 §1; m07 F20; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 ### Ethereum procedure and dated baseline table
@@ -1940,7 +1940,7 @@ Start with read-only network and fee checks. The table below is a historical est
 
    `maxFeePerGas = 2 × B + T`
 
-   The **2×** factor is not an EIP-1559 requirement. At the stated maximum base-fee increase of **12.5% per full block**, doubling B preserves room for the full selected tip through **five** maximum increases. It does not double gas usage, does not mean twice the base fee will be charged, and does not cover an ETH/USD move.  
+   The **2×** factor is not an EIP-1559 requirement. At the stated maximum base-fee increase of **12.5% per full block**, doubling B preserves room for the full selected tip through **five** maximum increases, provided the **1-wei minimum upward adjustment** does not dominate. At small base fees, that minimum can exceed a 12.5% increase, so the doubling heuristic does not scale down without limit. It does not double gas usage, does not mean twice the base fee will be charged, and does not cover an ETH/USD move.  
    *Sources: m12 §2; m08 F2.1–F2.9; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 5. **Estimate gas separately for the exact proposed transaction.** Use `eth_estimateGas`. The **21,000 gas** intrinsic baseline is included in every transaction, but using **21,000 gas** as a total-gas shortcut is valid only for a plain ETH transfer to an ordinary externally owned account (EOA) with empty calldata and no access list; sending ETH to a contract can invoke receive/fallback behaviour even without calldata.  
