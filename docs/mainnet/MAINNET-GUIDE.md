@@ -3829,8 +3829,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 **Affected sections:** §17 and §2.
 
 **Evidence:**
-- M27 sets the hard rule: a small amount does not bypass the independent-security-review gate (`docs/14`, L411/L439). That gate sits before rung 3.
-- M24 K08 records the mandatory security review gate as BLOCKED. M24 K17 specifies ten conjunctive gates; M24 K26 / OI-102 provides the review-gate acceptance criteria.
+- A small amount does not bypass the independent-security-review gate (`docs/14`, L411/L439). That gate sits before rung 3.
 - M13’s verified-correct list records the `docs/16` external review gate as OPEN.
 - M06 R10 gives BLOCKED as the expected result for release-gate enforcement on the current evidence.
 
@@ -3840,7 +3839,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Blocks writing completion:** No — the gate blocks release, not writing.
 
-**Clearance condition:** The independent security review itself, with recorded scope, owners, criteria, result matrix, failure disposition and sign-off under OI-102. Any status change must cite that review evidence. Registering this gap does not clear it.
+**Clearance condition:** The independent security review itself, with recorded scope, owners, criteria, result matrix, failure disposition and sign-off. Any status change must cite that review evidence. Registering this gap does not clear it.
 
 **Gate/source links:** M24 K08, K17 and K26 / OI-102; re-checked register — M-31, 2026-11-09.
 
