@@ -2533,7 +2533,7 @@ A new phone does not automatically restore the wallet. The new device needs an i
 
 #### Extended public key (xpub) exposure
 
-An exposed extended public key (xpub) reveals the account’s addresses and transaction history. This is a privacy loss; the xpub does not authorise spending. Keep it private if you do not want that account activity disclosed.
+An account extended public key (xpub) enables derivation of existing and future non-hardened descendant addresses, including receive and change addresses. Anyone with the xpub can discover transaction history from the blockchain and continue monitoring the account’s activity and balances; that history is not contained in the xpub. Exposure is a privacy loss, but the xpub does not authorise spending. Keeping it private means restricting disclosure to intended recipients, not avoiding use in a watch-only wallet.
 
 #### Platform gaps and compensating behaviour
 
@@ -2598,7 +2598,7 @@ The test/CI suite proves **offline derivation only**. These component results do
 
 ### Gate catalogue and rehearsal status
 
-Keep the gate catalogue and definitions in **`docs/10`** as the gate list. The component-test table above is not a replacement catalogue.
+Use the M06 R01–R10 gate catalogue and definitions in this guide as the authoritative gate list; the component-test table above is not a replacement catalogue.
 
 The available evidence supplies no command for the following required checks. Their M06 status therefore remains **BLOCKED**; do not infer a gate pass from a component result. (M06 R01–R10.)
 
