@@ -778,8 +778,8 @@ Treat a broadcast timeout as unknown submission status (Section F). It does not 
 
 If you suspect compromise of a vault file, phrase or signing key:
 
-1. Stop using the affected wallet.
-2. Move test funds to a fresh test wallet created from a new phrase.
+1. Stop using the affected wallet for anything except one final recovery signing with the old key to move the funds.
+2. Generate a replacement phrase in a trustworthy environment—a clean, offline environment you control, not the possibly compromised one—then move test funds to a fresh test wallet created from that phrase.
 3. Record what happened, when and what was exposed.
 4. Rotate any provider credentials that were in the same environment.
 
@@ -843,7 +843,7 @@ Check every line before any release claim:
 
 ### Sources
 
-Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+Consult `docs/08-security-recovery`, `docs/13-wallet-app-architecture`, `docs/14-wallet-app-implementation`, `docs/15-threat-model-and-theft-prevention`, `docs/16-security-decision-guide` and `SECURITY.md` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
@@ -857,7 +857,7 @@ Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb832db287fdc8d5
 ### Installation and development setup
 
 1. Clone and pin the repo as described in Section B. Start from a clean tree.
-2. Run `npm install` from that clean tree, then commit `package.json` and `package-lock.json` together. Follow Section B’s lockfile precondition: use `npm ci` only for later installs, once the lockfile exists. Do not substitute it for this initial install.
+2. Run `npm install` from that clean tree. The install must actually generate a root `package-lock.json`; verify that it did, then commit `package.json` and `package-lock.json` together. Follow Section B’s lockfile precondition: use `npm ci` only for later installs, once the root lockfile exists and agrees with the project manifest (`package.json`). Do not substitute it for this initial install.
 3. Build with the single canonical path from Section B. Use that same path for the files you deploy; do not add an alternative build path.
 4. Serve the app locally for development and open it in a browser. Check the local browser load separately from the deployed-build checks below.
 
@@ -867,9 +867,9 @@ Deploy the app as static files: the bundle, the `.wasm` beside it, and `src/inde
 
 1. [ ] Fetch the deployed `.wasm` URL beneath the application prefix. Check both a 200 response and `Content-Type: application/wasm`. Inspect the fetched response rather than relying on the file’s presence in the output.
 2. [ ] Check that served responses carry the Content Security Policy from Section I. Load the app in a browser with that policy in place; confirm that it still loads and allows WASM compilation as Section I states.
-3. [ ] Run the fixture gate on the deployed build. Check that it passes before any wallet operation is offered.
+3. [ ] Load the deployed app in a fresh browser session to invoke Section C’s startup fixture gate. Verify that it derives the canonical ripple fixtures — BTC `zpub`, ETH `xpub`, TRX `xpub` plus the TRON anchor address `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`, and the TON fixture documented in repo `docs/11` — and compares each result with its documented expected value. The gate passes only when all values match. Verify that the app refuses wallet operations while the gate is pending or failed and offers them only after the gate passes.
 4. [ ] Run the Section E probes for BTC testnet4, Sepolia, Nile and TON testnet. Check that all four testnet endpoints answer.
-5. [ ] Before publishing, search the built output for key material. Check that no API key, mnemonic, private key, seed or data key appears in the deployed files.
+5. [ ] Before publishing, recursively scan all built output that will be deployed, including bundles, assets, source maps and decompressed copies of precompressed files. Use pattern and exact-value searches for mnemonic word sequences (including 12/15/18/21/24-word BIP-39 sequences), private-key encodings (`xprv`, WIF and 64-hex-digit raw keys, with or without `0x`), provider-specific API-key formats, and actual API-key, seed and data-key values in every representation used by the build, including hex and base64 where applicable. This check passes only when none of those patterns or values appears in the deployed files. Resolve any match, rebuild and repeat the scan before publishing.
 6. [ ] Serve over HTTPS outside local development; see Section F's secure-context guard for scanning.
 
 ### Environment example
@@ -884,8 +884,8 @@ Do not read the validation-draft row as a list of components available in the re
 
 | Status | Scope |
 | --- | --- |
-| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock; fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing. |
-| Unimplemented | token management and token sends; QR receive (in scope, user decision 2026-11-08 — the repo guide requires it; Section G records it as in scope and unimplemented); QR payment-request scanning (Section F) is unimplemented until implemented and verified through Section H; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live wallet creation and live restore performed in the V2 browser run (2026-11-08); live spend was not exercised. |
+| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock; fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing; live wallet creation and live restore performed in the V2 browser run (2026-11-08). |
+| Unimplemented | token management and token sends; QR receive (in scope, user decision 2026-11-08 — the repo guide requires it; Section G records it as in scope and unimplemented); QR payment-request scanning (Section F) is unimplemented until implemented and verified through Section H; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised. |
 
 A successful build or testnet send does not replace the release gates below.
 
@@ -900,11 +900,11 @@ Treat these gates as requirements, not passes. Never mark one passed until it ha
 5. **External security review completed.** Complete the review in Section I. Record its scope, reviewer and date, and retain the evidence.
 6. **Recovery rehearsal executed and recorded.** Follow the Section I procedure, execute the rehearsal and retain its record.
 
-No independent security review, no chain-specific verification, no tested recovery and no reproducible builds are claimed here — those are release gates.
+No independent security review, no chain-specific verification (gate 2’s separately recorded per-chain element, with results recorded per chain), no tested recovery and no reproducible builds are claimed here — those are release gates.
 
 ### Maintenance and upgrade policy
 
-1. Before adopting any newer Core version, re-run the fixture gate and the EIP-1559 proof against it. Record the date and version as described in Section B.
+1. Adopt any newer Core version only after re-running the fixture gate and the EIP-1559 proof against it and obtaining successful results from both; record the date and version as described in Section B.
 2. Before each release, re-check every external link sequentially, with delays between requests. Record the check date beside any link that blocks automated checks.
 
 A link section that cannot be re-checked is a finding, not a footnote.
@@ -1002,8 +1002,8 @@ See also Sections E and F.
 **Cause:** The chain ID check failed, or you left `txMode` at the Core default.
 
 1. **Fix:** Confirm that `eth_chainId` returns Sepolia’s chain ID: `0xaa36a7` (`11155111`). Complete this check before you construct the signing input.
-2. Set `txMode` to `1` (`Enveloped`) and verify that the signed bytes start with `0x02`.
-3. **Check:** Decode the signed transaction and confirm that the maximum-fee field matches the approved value.
+2. Set `txMode` to `1` (`Enveloped`) before signing. **Post-signing check (only if signing produces bytes):** Verify that the signed bytes start with `0x02`. If signing fails and returns no bytes, diagnose the failure using step 1 and the `txMode` setting, not the `0x02` prefix or decode checks.
+3. **Check (only if signing produces bytes):** Decode the signed transaction and confirm that the maximum-fee field matches the approved value.
 
 See also Sections E and F.
 
@@ -1070,17 +1070,17 @@ No template assessed on 8 November 2026 covers Bitcoin, Ethereum, TRON and TON t
 
 You need all five checks to pass, even when you reuse only a few controls.
 
-1. **Exclude secrets.** Confirm that the template holds no secret and no mnemonic at any point. Keep phrase display and re-entry in the isolated ceremony, outside the template.
+1. **Exclude secrets.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that no secrets or mnemonics are held or handled within that scope. Keep phrase display and re-entry in the isolated ceremony, outside the template.
 
-2. **Preserve derivation and key storage.** Check that the template does not redefine derivation paths or introduce its own key storage. Keep presentation reuse separate from these responsibilities.
+2. **Preserve derivation and key storage.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that none redefines derivation paths or introduces its own key storage. Keep presentation reuse separate from these responsibilities.
 
-3. **Preserve transaction review.** Confirm that the template cannot skip, hide or reorder transaction review. Check any reused account or connect controls against the same requirement.
+3. **Preserve transaction review.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that none can skip, hide or reorder transaction review. Apply the same check to any reused account or connect controls, including their dependencies and runtime behaviour.
 
 4. **Check testnet-only operation.** Confirm that the template works testnet-only and shows testnet status. Require both behaviours; network coverage on its own does not satisfy this check.
 
 5. **Read the repository licence.** Confirm that the licence is readable in the candidate's repository and permits your use. Resolve an unclassified licence rather than treating it as permission.
 
-If any check fails, do not use the template. If none passes, build the UI from section G.
+If any check fails, do not use the template; build the UI from Section G instead.
 
 Keplr and Taho were checked as possible template sources on 8 November 2026 and could not be verified as public repositories, so they are not listed as template options.
 
