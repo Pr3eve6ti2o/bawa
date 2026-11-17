@@ -742,13 +742,13 @@ Define quote policy in your application; it is not a Bawa feature. Bawa does not
 
 Freeze a quote snapshot into the payment request before presenting the amount. Keep live price collection separate from payment calculation and blockchain watching. Use the frozen amount in the watcher; do not let a market move change what the payer was asked to send.
 
-Preserve these seven fields together:
+Preserve these seven fields together as the pricing and acceptance subset of the canonical request-field list below. The quoted atomic amount is the request’s amount in atomic units, not a separate amount:
 
 1. **Quote timestamp:** Record the time the quoted rate refers to. Use it to establish the quote’s age and pricing moment. Do not give a cached rate a fresh timestamp when you read it.
 2. **Price source:** Record the provider and feed or currency pair used, so you can identify where the rate came from when providers disagree.
 3. **Quoted price:** Store the exact conversion rate, including currencies and direction, so both sides can reproduce the calculation.
 4. **Quoted atomic amount:** Store the exact integer amount requested, so what the payer was asked for remains clear regardless of decimal formatting.
-5. **Expiry:** Record the limit of the quote’s validity to show how long the rate was offered. Do not leave an open-ended price promise.
+5. **Expiry:** Record the limit of the quote’s validity to show how long the rate was offered. Expiry belongs to the request record and must also be persisted for token payments. Do not leave an open-ended price promise.
 6. **Rounding rule:** Record the precision, direction and stage of rounding to explain any smallest-unit difference between the conversion result and the payable amount.
 7. **Acceptance/tolerance rule:** Record the permitted deviation, if any, and its units. Do not choose acceptance standards after seeing the payment.
 
@@ -876,15 +876,21 @@ Keep orders, payment records, quoting, address allocation, matching, confirmatio
 
 Treat a token’s ticker as a label, not an asset identifier. Unrelated contracts can share a symbol, including on the same network, and a familiar symbol can appear on several chains. A ticker cannot identify the asset being paid.
 
-For each token payment, persist at least these seven fields:
+For each payment request, including token payments, persist at least the following canonical fields. Quote timestamp, price source and quoted price apply when a conversion quote is used:
 
 1. network/chain ID;
 2. asset type;
-3. token contract or chain-specific asset address;
+3. token contract or chain-specific asset address, where applicable;
 4. expected decimal precision;
 5. recipient address;
 6. amount expressed in atomic units;
-7. any required memo or tag.
+7. any required memo or tag;
+8. expiry (the request-level validity deadline);
+9. quote timestamp;
+10. price source;
+11. quoted price;
+12. rounding rule;
+13. acceptance/tolerance rule.
 
 Use [Trust Wallet Assets](https://github.com/trustwallet/assets) for presentation metadata, token lists and logos, not as evidence that a payment has settled. Base settlement on a verified chain event checked against the requested network and token contract or equivalent asset address. Never accept a matching symbol or metadata entry as settlement evidence.
 
