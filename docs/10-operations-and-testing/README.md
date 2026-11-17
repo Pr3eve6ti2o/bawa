@@ -1550,7 +1550,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 ### Lost or stolen device
 
-1. **Contain.** Stop signing transactions and interacting with any suspected service. Stop using the affected device if you still have access to it. Keep devices and incident records intact rather than wiping devices or deleting records.
+1. **Contain.** Stop signing transactions on affected devices or through suspected services, and stop interacting with those services. Use a known-clean device and verified, trusted tools for necessary rescue transactions. Stop using the affected device if you still have access to it. Consider remotely locking the device and revoking affected sessions from a known-clean device to limit further access. Keep incident records intact and preserve devices rather than wiping them where safe. If ongoing risk to funds or sensitive data cannot be contained otherwise, consider wiping an affected device, preserving relevant evidence first where feasible.
 
 2. **Move to a clean device.** Use a separate, trusted device for recovery and apply the clean-environment requirements above.
 
