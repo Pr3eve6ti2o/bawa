@@ -493,7 +493,7 @@ It does not protect against theft of both secrets, malware capturing them during
 
 1. **Check compatibility first.** Confirm that your everyday wallet and your intended recovery tools explicitly support BIP-39 passphrases. An application password field is not evidence of support. Check length and character limits. Plain ASCII reduces keyboard and Unicode surprises. Never accept silent truncation.
 
-2. **Generate the passphrase offline.** Use strong randomness rather than inventing a memorable sentence. One practical method is a published [7,776-entry dice-word list](https://www.eff.org/dice): roll a fair die five times, look up that five-digit result, and repeat for at least six independently selected words. Fix the separator, such as one ordinary space, and record the result exactly. Check that the complete string fits every intended recovery tool.
+2. **Generate the passphrase offline.** Use strong randomness rather than inventing a memorable sentence. One practical method is a published [7,776-entry dice-word list](https://www.eff.org/dice): roll a fair die five times, look up that five-digit result, and repeat for at least seven independently selected words. Fix the separator, such as one ordinary space, and record the result exactly. Check that the complete string fits every intended recovery tool.
 
 3. **Back up the secrets separately.** Keep 2–3 offline copies of the mnemonic and 2–3 of the passphrase, without storing the two together. Choose sites that would not all be affected by the same fire or flood. For each copy, choose and record physical controls: the locked container, authorised key-holders and retrieval arrangements.
 
@@ -503,7 +503,7 @@ It does not protect against theft of both secrets, malware capturing them during
 
 5. **Rehearse independently before substantial funding.** Use a fresh, trusted machine with clean, verified software. Keep secret entry and address derivation offline. Retrieve a mnemonic backup, enter the exact backed-up passphrase and reproduce the recorded derivation settings. Derive the reference address and compare it with the earlier record.
 
-   Do not depend on the original device, cached secrets or an existing wallet file. Test each intended recovery route independently, including whether it still works when one storage site is unavailable.
+   Do not depend on the original device, cached secrets or an existing wallet file. Test each intended recovery route independently: the mnemonic backup, the mnemonic plus BIP-39 passphrase, the age-encrypted recovery file, and recovery with one storage site unavailable.
 
 If a drill produces an unexpected address, stop: check the passphrase and derivation settings rather than assuming the wallet is empty. If you have lost the passphrase but a working device can still sign, migrate to a new, tested wallet before that access disappears.
 
