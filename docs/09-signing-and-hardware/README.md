@@ -184,7 +184,7 @@ broadcast node / RPC (watch-only side)
 - [Trezor](https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md)
 ## Watch-only hand-off: descriptors and PSBT
 
-**Conceptual only, testnet/signet/regtest; never real funds.**
+**Conceptual workflow, testnet, signet or regtest only; never real funds.**
 
 Tracking and authorisation belong in separate trust domains. The signing domain includes private keys, seeds, the signer device and its screen, and the offline seed backup; recovery happens inside it. The tracker, the web server and the network are outside it. Private keys and seeds never leave the signing domain. Under this guide's threat model, the signing domain is offline/hardware-isolated. A browser vault does not meet that definition and is in tension with this rule; browser signing is not an intended signing domain and must not be treated as meeting the rule. Signing inconvenience is not a reason to load a seed onto the web server.
 
@@ -287,7 +287,7 @@ Those path notes do not replace device-specific descriptor/PSBT setup instructio
 ---
 ## A test-only hardware-signing rehearsal
 
-**Conceptual only: testnet, signet or regtest; never real funds.** These are workflow checks, not guarantees of particular device messages or tool output.
+**Conceptual workflow, testnet, signet or regtest only; never real funds.** These are workflow checks, not guarantees of particular device messages or tool output.
 
 ```text
 ONLINE — WATCH-ONLY
@@ -459,13 +459,13 @@ Sources for the PSBT hand-off section above.
 - BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - BIP-380: https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
-- Community worked example, not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
+- Vendor worked example (Coldcard/Coinkite), not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
 
 ## Watch-only hand-off: combine, finalise, extract, broadcast
 
 **Conceptual workflow, testnet, signet or regtest only; never real funds.**
 
-The watch-only coordinator normally performs the Combiner, Finalizer and Extractor roles, then requests broadcast from a node. Only the signer creates spending signatures, after reviewing the destination, amount, change and fee. Private keys and seeds stay in the signing domain. These are roles, not fixed device types: a signer may also finalise.
+The watch-only coordinator performs the Combiner role only when separate copies exist; it performs the Finalizer and Extractor roles, then requests broadcast from a node. Only the signer creates spending signatures, after reviewing the destination, amount, change and fee. Private keys and seeds stay in the signing domain. These are roles, not fixed device types: a signer may also finalise.
 
 A PSBT is a data container, not authorisation by itself. Receiving or combining it grants no spending authority; valid signatures authorise what they commit to. However, a sufficiently signed PSBT may let its holder finish and broadcast without another device approval. Handle signed PSBTs accordingly.
 
@@ -551,7 +551,7 @@ Verify `<TXID>` through your node or an explorer for that same test chain. For r
 - BIP-174: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 - BIP-371: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
 - Bitcoin Core PSBT documentation: https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md
-- Coldcard community worked example, not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
+- Vendor worked example (Coldcard/Coinkite), not a specification: https://Coldcard.com/learn/hardware-wallets/what-is-a-psbt
 
 ## Output descriptors: make the watch target explicit
 
