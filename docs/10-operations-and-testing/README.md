@@ -76,6 +76,8 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 | Python | repo | `>=3.11` | Unresolved (tested 3.12.3; CI uses 3.13) | Range, not a pin |
 | npm | repo | no version specified | Unresolved | Unresolved required pin; resolve before any npm-based release validation |
 
+Release tested-version record: Python `3.12.3`. The declared `>=3.11` range is not an exact tested version, and CI's Python `3.13` is separate from this release-tested record. The exact tested npm version is **not recorded**; record the exact output of `npm --version` from the release-validation environment before any npm-based release validation.
+
 ## Clone and install
 
 Use these steps to prepare an inspection checkout, not to certify a release.
@@ -84,7 +86,13 @@ Use these steps to prepare an inspection checkout, not to certify a release.
 
 Run `git clone https://github.com/Pr3eve6ti2o/bawa.git`, then enter the checkout with `cd bawa`.
 
-Verify the intended commit or tag before installing dependencies. For this reference, select and verify commit `754721cd`; do not assume that the default cloned head matches it.
+Verify the intended commit or tag before installing dependencies. This installation reference was written against the earlier commit `754721cd` (full SHA `754721cd00efdc13852c0124fb727f33f9505a0f`), which is an ancestor of the audited commit `a5bc56e`, not the audited head. Select and verify that earlier commit explicitly; do not assume that the default cloned head matches it.
+
+```sh
+git checkout --detach 754721cd00efdc13852c0124fb727f33f9505a0f
+git rev-parse --verify HEAD
+test "$(git rev-parse --verify HEAD)" = "754721cd00efdc13852c0124fb727f33f9505a0f"
+```
 
 ### Node dependencies
 
