@@ -1,7 +1,7 @@
 ---
 title: Further reading
 description: Primary specifications, Wallet Core sources, vendor documentation and community research to consult alongside this guide set; Link availability was checked on 9 November 2026. Known exceptions and verified alternatives are noted alongside the affected links. Availability is not evidence of what Bawa implements.
-last-updated: 2026-11-08
+last-updated: 2026-11-17
 ---
 
 # Further reading
@@ -27,6 +27,8 @@ Use these specifications as the authority on requirements, not as evidence of wh
 | [BIP-49](https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki) | Check the requirements in the canonical BIP-49 specification. |
 | [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki) | Check the requirements in the canonical BIP-86 specification. |
 | [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) | Review PSBT's structure for carrying unsigned transactions, signing data and partial signatures between wallet tools. |
+| [BIP-371](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki) | Review Taproot PSBT fields for the internal key, derivation information, leaf scripts and control blocks. |
+| [BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki) / [BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki) / [BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki) | Review output descriptors for expressing script policy, derivation origin and address ranges. |
 | [SLIP-39](https://github.com/satoshilabs/slips/blob/master/slip-0039.md) | Check the requirements for Shamir-based mnemonic shares, with 20 words for 128-bit secrets and 33 words for 256-bit secrets. Note (9 November 2026): the GitHub blob link returned HTTP 429 (rate-limiting, not dead); the same file via https://raw.githubusercontent.com/satoshilabs/slips/master/slip-0039.md returned HTTP 200. |
 | [Bitcoin Core descriptors](https://raw.githubusercontent.com/bitcoin/bitcoin/master/doc/descriptors.md) | Check output-script notation, including script types, ways to express keys and checksum rules. |
 | [Solana](https://docs.solana.com/clusters) | Consult this primary source alongside the Solana coverage in docs/02. Note (9 November 2026): the former destination returned HTTP 404; this replacement was verified HTTP 200. |
