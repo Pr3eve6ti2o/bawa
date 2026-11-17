@@ -3422,15 +3422,17 @@ OPEN means independent clearance evidence remains outstanding, not that the repa
 
 **Evidence/uncertainty:** M30 O1 reports that a grep for TON confirmation statements found nothing: ‘NOT this slice’s to invent — it is open item O1’. M24 J21 records retained thresholds of BTC 6 / ETH 12 / TRX 19 / TON 1 masterchain seqno, but explicitly qualifies them: ‘confirmation policy ≠ finality guarantee; cited mainnet history required (none supplied — documentary gap)’. That retained list does not clear the missing TON threshold or establish its finality meaning. TON Docs verification 2026-11-10 (checked first-hand): ‘Payment Processing on TON — Overview Guide’ — ‘TON achieves transaction finality after a single masterchain block confirmation, typically within 1 second. Once a transaction from a shardchain appears in a masterchain block, it becomes irreversible’; ‘TON Messages and Transactions Overview’ — ‘a transaction becomes final when the first masterchain block references it’. The documentary gap on the threshold’s finality meaning is closed; the remaining gap is exercising the check in the authorised small-amount rehearsal (M-35).
 
-**Status:** RESOLVED 2026-11-10 — the user approved the recommended threshold (1 masterchain seqno after inclusion, with the outgoing-message outcome checked) as an exercise acceptance policy, and the proposed §12/§14 wording. The quoted TON Docs state that a transaction becomes final when the first masterchain block references it; they do not prescribe the additional seqno wait or outgoing-message outcome check.
+**Status:** RESOLVED 2026-11-10 (decision and wording only) — the user approved the recommended threshold (1 masterchain seqno after inclusion, with the outgoing-message outcome checked) as an exercise acceptance policy and repository policy, and the proposed §12/§14 wording. The quoted TON Docs state that a transaction becomes final when the first masterchain block references it; they do not prescribe the additional seqno wait or outgoing-message outcome check.
 
 **Exercise-ready threshold:** The inclusion event is the receiving transaction’s inclusion in a shardchain block. The seqno anchor is the first masterchain block referencing that shardchain block, at seqno N. Require observation of a masterchain block at seqno N+1 or later. The outgoing-message scope is the payment’s internal message traced to the receiving transaction. The outcome criterion is that the receiving transaction succeeded: the payment was credited and not bounced or failed. The threshold is met only when both the seqno requirement and the outcome criterion are satisfied.
+
+Follow-up (2026-11-10) — RESOLVED covers only the decision and wording; the check still needs to be exercised in the authorised small-amount rehearsal (M-35), and the cited mainnet history was never supplied, so both remain outstanding.
 
 **Operational restriction:** None remaining for §12/§14 threshold prose. The threshold is stated per the approved wording. The check itself remains manual until TON confirmation tracking is implemented (M-25 F18).
 
 **Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
-**Clearance condition:** Met 2026-11-10 — the user’s approval of the number and wording, plus the TON Docs verification of the threshold’s finality meaning (see Evidence).
+**Clearance condition:** Unmet overall — the number and wording are met by the user’s approval on 2026-11-10, but the cited mainnet history remains unmet because it was never supplied, and the exercise remains unmet because the check still needs to be exercised in the authorised small-amount rehearsal (M-35).
 
 **Gate/source links:** Re-checked register, 9 November 2026: M30 O1; M24 J21; user decision 2026-11-10; TON Docs check 2026-11-10.
 
