@@ -422,13 +422,13 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Invalid chain names:** Use names outside the documented accepted set. Expect an unsupported-chain error, never selection of a default chain.
 
-- **Inherited-property inputs:** Try `constructor`, `toString` and `__proto__` as lookup names. At object-taking APIs, supply required fields only through a prototype. Expect rejection, no inherited configuration values and unchanged prototypes.
+- **Inherited-property inputs:** Try `constructor`, `toString` and `__proto__` as lookup names. At object-taking APIs, supply required fields only through a prototype. Build `__proto__` fixtures with `Object.create(null)` for own-key payloads or a fresh object literal whose prototype is set only in the fixture literal; never mutate an existing object's prototype in the test harness. After fixture construction and before the API call, snapshot `Object.prototype` and the target object's own prototype (identity and own property descriptors). Expect rejection, no inherited configuration values and no changes to either prototype.
 
 - **Negative indexes:** Submit `-1` to each index input. Expect a range error before derivation, without unsigned conversion or clamping.
 
 - **Indexes at or above 2³¹:** Test `2147483648` and larger integers wherever public or unhardened child indexes are required. Expect range rejection, not wrapping or silent hardened derivation.
 
-- **Oversized JSON lines:** Record the enforced byte limit first. Test just above it and substantially larger, with and without a final newline. Expect bounded-memory rejection within the recorded timeout, without processing the offending record. No enforced limit means this check fails.
+- **Oversized JSON lines:** Record the enforced per-line byte limit, encoding, whether newline bytes count, a per-case timeout and a numeric peak-memory ceiling for the implementation under test (measurement metric and baseline, if any). Use otherwise valid single-line JSON records; record the encoded payload-byte count, newline-byte count and effective byte count compared with the limit. Test `limit + 1` counted bytes and a recorded substantially larger counted size (e.g. `10 × limit`), each with and without a final newline. Use a spy at the record-processing entry point and record-specific output/state checks as the processing oracle. Pass only if every case is rejected within the recorded timeout, measured peak memory stays at or below the same ceiling, and the offending record triggers zero processing calls and no record-derived output or state changes. No enforced limit means this check fails.
 
 - **Invalid Base58:** Put a forbidden character, such as `0`, into a copied public-key encoding. Expect decoding failure, not character stripping or fallback interpretation.
 
