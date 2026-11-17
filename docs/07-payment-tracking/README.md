@@ -450,7 +450,7 @@ Use these formats to communicate what to send. Neither establishes that the requ
 - **The on-chain event:** assess the evidence and associate it with a particular request. Before comparing atomic amounts, derive the expected atomic amount by normalising the requested amount using the expected asset's decimal precision. Check its network, asset, recipient, atomic amount and applicable memo/tag, then apply your expiry rules. A wallet's holdings cannot show that a particular event meets those terms.
 - **The fulfilled order:** record the business outcome after your application has accepted payment evidence and completed fulfilment. A matching transfer does not itself deliver goods, provide a service or update the order.
 
-Keep explicit links between these objects. Do not treat the existence of one as proof that the others exist. Creating a valid `<REQUEST_ID>` leaves it awaiting payment; creation alone records neither receipt of funds nor order fulfilment.
+Keep explicit links between these objects. The application must define the relationship between requests, payment events and orders, including the linking fields, where the links are stored and the permitted cardinalities. Do not treat the existence of one as proof that the others exist. Creating a valid `<REQUEST_ID>` leaves it awaiting payment; creation alone records neither receipt of funds nor order fulfilment.
 
 ### Allocate addresses in your application
 
@@ -458,7 +458,7 @@ Bawa exposes public roots for watch-only address derivation; it does not assign 
 
 #### Prefer a separate address
 
-Allocate a separate derived address to each request where practical. Attach the allocation to `<REQUEST_ID>` and keep the network, token, expected amount, expiry time and payer instructions in the request record. A bare recipient address makes reconciliation fragile without that invoice state.
+Allocate a separate derived address to each request where practical. Attach the allocation to `<REQUEST_ID>` and keep the network, token, expected amount, expiry time and payer instructions in the request record. Payer instructions are additional request metadata, not part of the six-field schema. A bare recipient address makes reconciliation fragile without that invoice state.
 
 #### Handle shared recipients explicitly
 
