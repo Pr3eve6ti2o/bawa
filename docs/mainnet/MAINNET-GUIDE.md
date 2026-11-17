@@ -3162,11 +3162,13 @@ The code baseline for Doc 4 is **`Pr3eve6ti2o/bawa`, `main` at `56396a20`**. Its
 - **36 mainnet research slices, M01–M36**, containing approximately **1,050 findings**, verified first-hand on **2026-11-09**.
 - **Live verification round 2**, with results recorded as **T1 15 PASS**, **T2 19/0/3** (19 PASS, 0 FAIL, 3 INFO) and **T3 9/9**. Preserve that notation and consult the underlying records for the individual results.
 - The **200-finding documentation fix** pushed at **`56396a20`**.
-- The **F4 worktree fix**, committed at `b3814e0b` (2026-11-10 push). Its local evidence is `~/workspace/bawa-wallet/F4-FIX-RERUN-EVIDENCE.md`. [M36; M28]
+- The **F4 worktree fix**, committed at `b3814e0b` (2026-11-10 push). Its reader-verifiable public locator is [the fix commit](https://github.com/Pr3eve6ti2o/bawa/commit/b3814e0b). [M36; M28]
 
 Every value in Doc 4 must retain a trace to its supporting slice and finding, verification record or fix evidence, together with the applicable date and version or commit. Link verdicts trace to M31; the underlying claim still needs its own evidence. A later successful link check does not refresh an older price, result or implementation finding.
 
 **Before publication, re-run the link table against the guide’s final link list and inspect destination content again.** Carry **2026-11-09** with the baseline link evidence, and record any subsequent check under its actual check date. Update the verdicts and access caveats from that re-check: a link live at the baseline can move. [M31 open item 7]
+
+The pre-publication link-table re-run remains an **unclosed publication-check item** because no re-run record was supplied; this is not a demonstrated link defect.
 
 ## 21. Mainnet open-items register
 
@@ -3190,9 +3192,11 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected sections:** §21, §9 and §16.
 
-**Evidence or uncertainty:** M24 K19; M06 R01, including the negative test in `tools/hdwallet-gen/test/smoke.test.js` using a disposable private extended key.
+**Evidence or uncertainty:** M24 K19; M06 R01, including the negative test in `test/smoke.test.js` using a disposable private extended key.
 
 **Status:** OPEN.
+
+OPEN means independent clearance evidence remains outstanding, not that the repaired `compare.js` private-input defect is still live; the stale §17/§18 framing that presented the repaired defect as live is a separate documentation defect.
 
 **Operational restriction:** The defective tools’ output is never sufficient evidence of their own repair.
 
@@ -3200,7 +3204,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** Independent fixture-oracle verification using only the published vector must demonstrate private-material rejection and wrong-network/path rejection, with the exact expected addresses recorded. The evidence must identify the fixed commit, artefact, test evidence and reviewer. OI-096 stays open until that evidence exists; its closure remains separate from the mainnet row’s closure.
 
-**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5274); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/tools/hdwallet-gen/test/smoke.test.js).
+**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5273); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/test/smoke.test.js).
 
 ### M-02 — Bad-checksum inputs bypass the private-key guard; a typo can trigger a multi-gigabyte allocation
 
