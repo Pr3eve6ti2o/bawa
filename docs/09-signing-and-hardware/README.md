@@ -554,7 +554,7 @@ For PSBT sources, see the [Sources](#sources) list in [PSBT hand-off: Creator, U
 
 See also the [PSBT hand-off: Creator, Updater and Signer](#psbt-hand-off-creator-updater-and-signer) and [Watch-only hand-off: combine, finalise, extract, broadcast](#watch-only-hand-off-combine-finalise-extract-broadcast) sections.
 
-Keep descriptor handling within Bawa’s xpub/address-only boundary: public keys, script policy and derivation metadata, never signing secrets. Use testnet, signet or regtest only, with no real funds or real-funds wallet exports.
+Keep descriptor handling within Bawa’s xpub/address-only boundary: public keys, script policy and derivation metadata, never signing secrets. Use testnet, signet or regtest only, with no real funds or real-funds wallet exports (including exports from previously funded zero-balance wallets, wallets intended for real funds and shared-seed wallets).
 
 ### What a descriptor fixes
 
@@ -570,7 +570,7 @@ A descriptor makes the output construction and derivation rule explicit. Its opt
 
 Read a ranged public-key descriptor as an optional bracketed origin, the exported account extended public key, a derivation suffix and a final wildcard:
 
-`[<fingerprint>/84'/1'/0']<xpub>/0/*`
+`[<fingerprint>/84'/1'/0']<xpub>/0/*` (schematic, not import-ready; see [the 8-character checksum](#the-8-character-checksum))
 
 | Part | Meaning |
 | --- | --- |
