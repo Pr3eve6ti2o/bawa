@@ -895,7 +895,7 @@ The share-generation ceremony and recovery process deserve as much scrutiny as e
 
 For any platform, obtain a written share-and-control map: who holds each share, including backups and subcontractor-held shares? How many usable shares are required, and who can restore or replace them? Can the provider reach that threshold without your participation? Can you reach it without the provider's servers, login system or support team?
 
-If the provider controls a signing quorum, it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
+If the provider controls a [signing quorum](../GLOSSARY.md#signing-quorum), it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
 
 For the costs reference, see [sections 18–22](#18-paid-security-hsm-based-signing). Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
 
@@ -940,10 +940,11 @@ Do not count "we have backup files" as proof that you can still sign; without a 
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a signing quorum. The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
 
 ```text
-on-chain multisig [separate complete private keys]
+Typical signing paths
+on-chain multisig [separate complete private keys; one standard signature per key/message; policy visibility is mechanism- and spend-dependent]
   → [M individual signatures]
   → [chain enforces M-of-N; policy visible]
 
@@ -1241,7 +1242,7 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 Exit checks — complete these seven checks BEFORE signing with any paid provider:
 
-1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a signing quorum without you? Can you reach one without the provider?
+1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a [signing quorum](../GLOSSARY.md#signing-quorum) without you? Can you reach one without the provider?
 2. Prove independent recovery: using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof.
 3. Write down exit terms: notice periods, withdrawal limits, approval delays, termination charges, data export. Get them in writing before funding.
 4. Test a withdrawal: move a small amount out while the service is operating normally, to a fresh wallet you control. Record the time it took and the fees charged.
