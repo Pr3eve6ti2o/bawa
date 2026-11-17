@@ -810,7 +810,7 @@ Distinguish these three control models:
 
 [Anchorage](https://www.anchorage.com/) describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
 
-[Coinbase Custody](https://www.coinbase.com/custody)-style offerings are described around HSM-backed cold storage, geographically separated vaults, biometric controls and recurring SOC 1 and SOC 2 audits. Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
+[Coinbase Custody](https://www.coinbase.com/custody)-style offerings are described around HSM-backed cold storage, geographically distributed secrets, biometric controls and SOC 1 and SOC 2 audits (Type 1 reports are point-in-time; Type 2 reports cover a period). Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
 
 Treat the named providers as examples, not Bawa recommendations. Bawa endorses neither provider, and naming them does not imply Bawa compatibility.
 
