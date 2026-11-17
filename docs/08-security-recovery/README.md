@@ -996,13 +996,13 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 ### Make the exit real
 
-Retain the wallet descriptor or equivalent configuration, including the threshold, all co-signers' public keys or extended public keys, derivation paths, script or account settings, and network. Protect this metadata: it can reveal addresses and balances. It does not replace secret-key backups.
+Retain the complete wallet descriptors or equivalent configuration, including the threshold, all co-signers' public keys or extended public keys, key-origin fingerprints, derivation paths and rules, the exact script or policy and its wrappers, key order or sorting rules, receive and change branches, account settings, checksums, discovery settings, and network. Protect this metadata: it can reveal addresses and balances. It does not replace secret-key backups.
 
-For a provider-independent arrangement, rehearse recovery before depositing substantial funds: using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer changes.
+For a provider-independent arrangement, rehearse recovery before depositing substantial funds (an amount whose loss would matter to the holder, judged before funding): using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer, threshold, script, contract, tooling, backup-format, encryption-credential, device, permission or provider-dependency changes.
 
 If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change (a permitted change to the rules for authorising spending). Budget for the relevant network fees. If you use a custodial service, test withdrawals while the service is operating — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
 
-Watch for lost recovery keys, stale configurations, incompatible recovery software, shared cloud backups and departing staff. A recovery promise is not a substitute for a rehearsal.
+Watch for lost recovery keys, missing secrets, missing wallet-policy metadata, stale configurations, incompatible recovery software, corrupt or inaccessible backups, shared cloud backups whose common dependency can fail or expose every copy at once, departing staff and provider-dependent recovery. A recovery promise is not a substitute for a rehearsal.
 ## 20. Paid security: consumer multisig with inheritance
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
