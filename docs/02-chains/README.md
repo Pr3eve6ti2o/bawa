@@ -267,6 +267,8 @@ Use `m/44'/195'/0'/0/i`; `195` is the TRON coin type. The account public root is
 
 For the same key, TRON and Ethereum use the same secp256k1 point. Expand the compressed public key to 65 bytes (`0x04 || X || Y`). Hash `X||Y` only with Keccak-256—not NIST SHA3-256, not the compressed point, not the `0x04` marker, and not hex text—to get a 32-byte digest. The last 20 bytes are `H`, also the Ethereum address payload for the same key.
 
+> **Build-scoped warning:** In Bawa main at `3019b02`, using `@trustwallet/wallet-core` **4.8.4 WASM**, reproduced on **Node 22.23.4**, passing a 33-byte compressed `secp256k1` `PublicKey` (`keyType` 0) to TRON `CoinTypeExt.deriveAddressFromPublicKey` aborts the WASM runtime. Decompress it and construct a 65-byte `04 || X || Y` `secp256k1Extended` object (`keyType` 1), or reject the input before that call; JavaScript `try/catch` is not a safe recovery strategy for this runtime abort. BTC and ETH accepted 33-byte input in the tested build, but that does not establish TRON support or behavior in other builds. Removing `02`/`03` leaves only X, not X||Y.
+
 For TRON encoding, prepend `0x41` to get `P = 0x41 || H` (21 bytes). Append the first 4 bytes of `SHA-256(SHA-256(P))` to get 25 bytes. Base58-encode those bytes to get a 34-character address beginning with `T`.
 
 The hex form is `41` plus 40 hex digits: 42 characters, with no `0x`. Removing the initial `41` recovers `H`. Ethereum displays `H` as `0x` plus 40 hex digits: `0x` is notation, while `41` is a real byte. Never obtain `H` by trimming characters from the Base58 address.
