@@ -376,3 +376,5 @@ Keep the residual limits in view rather than treating the combined setup as comp
 
 Source check (2026-11-08): the Vajra1 article and site home returned HTTP 500, as did the tested URL and browser User-Agent variants, WordPress REST API and feed; both citations have been replaced with Trezor's passphrase guide, verified live that day.
 
+Source check (2026-11-17): all three sources were re-verified by live content inspection that day. The inline Coinspaid malware article now loads (previously HTTP 403 on 2026-11-08; updated 2026-11-16) and supports the malware claim: keyloggers, clipboard hijackers and remote access tools, with cracked software and counterfeit browser extensions as infection routes. The inline BitGo supply-chain article supports the implant claim: a covert implant inside devices sold by a single reseller captured recovery phrases during setup, and Ledger's Genuine Check cannot detect an added implant. Source [3], lune.fi, now loads (connection failure on 2026-11-16; crawled 2026-11-17) and covers seed phrases, blind signing, clipboard hijacking and address poisoning, SIM swap, multisig and approvals.
+
