@@ -1,6 +1,6 @@
 # Canonical References
 
-These are the primary specifications and upstream projects Bawa relies on. Re-check current implementation behavior before production releases.
+This list covers the specifications Bawa cites and the upstream projects its tools depend on. Specifications cited only as procedure references, such as BIP-371, are not implemented dependencies. Re-check current implementation behavior before production releases.
 Last updated 2026-11-17.
 
 ## Standards
