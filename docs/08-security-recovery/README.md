@@ -560,13 +560,13 @@ Choose this over a paid encryption product when you can manage offline file hand
 
 ### Failure modes
 
-Flash storage can fail silently—keep independent copies and test them periodically. Encryption may detect damage, but it cannot reconstruct missing bytes. Lost passphrases, truncated files, obsolete software and undocumented derivation settings can all leave intact-looking backups unusable. Rehearse again after changing the recovery procedure.
+Flash storage can fail silently—keep independent copies and test them periodically. age's AEAD authenticated decryption always detects unauthorised modification or truncation, but it cannot reconstruct missing bytes. Lost passphrases, truncated files, obsolete software and undocumented derivation settings can all leave intact-looking backups unusable. Rehearse again after changing the recovery procedure.
 
 Re-encrypting a leaked mnemonic does not make that wallet safe again: create an entirely new wallet on a fresh, trusted device, transfer every asset and token, and stop using the old wallet permanently.
 
 ### Recovery drill ([age documentation](https://age-encryption.org/))
 
-Before depositing a meaningful amount, run this drill offline on a fresh, trusted machine running clean, verified software.
+Before depositing any amount, run this drill offline on a fresh, trusted machine running clean software from a verified release obtained through the official distribution channel and checked against the publisher's release signing.
 
 1. Retrieve one encrypted copy and its separately stored file passphrase.
 
