@@ -647,7 +647,7 @@ Keep finality separate from freshness:
 
 ### Finish the local installation
 
-Bawa does not document endpoint/network mapping, dependency installation, database creation, ingestion code, cron configuration, dashboard setup or reliability tests. Finish these parts locally:
+Bawa documents endpoint/network mapping, but does not document tracking-specific dependency installation, database creation, ingestion code, cron configuration, dashboard setup or reliability tests. Finish these parts locally:
 
 - Record your network-to-URL choices.
 - Install dependencies and create the database.
