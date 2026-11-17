@@ -988,7 +988,16 @@ Stop before moving on to Python setup or repository checks.
 - Record the failing command, package directory, OS, tool versions and sanitised error details. Use placeholders for sensitive fields and machine-specific paths; never send credentials or wallet material.
 - Do not change dependency pins or force an installation merely to suppress the error.
 
-Bawa does not document an npm failure-recovery procedure. Confirm the supported npm version, any platform prerequisites and the appropriate remedy for your selected revision with the maintainer before retrying.
+This section provides initial npm failure-recovery guidance. Maintainer confirmation is not required before retrying after correcting a clearly identified environmental cause. Consult the maintainer when npm-version or platform requirements for your selected revision are unclear, the failure persists, or a remedy would require dependency changes.
+
+1. Inspect the error output and local npm debug log to identify the cause. Check the selected revision's manifests and setup documentation for npm-version requirements, alongside the Node requirement above.
+2. Address the identified cause:
+   - For network, registry or proxy errors, restore connectivity or correct the authorised configuration. Do not disable TLS verification.
+   - For permissions or disk-space errors, restore normal user access to the package directory and npm cache, or free space. Do not rerun the installation with `sudo`.
+   - For cache-integrity errors, run `npm cache verify` and inspect the result.
+   - For missing build prerequisites, follow the selected revision's documented platform setup. If the required prerequisites are unclear, ask the maintainer rather than guessing.
+3. Once the cause has been addressed, rerun the originally failing `npm install` command from the same package directory. Do not delete lockfiles or bypass dependency checks to make the retry pass.
+4. If the retry fails or no clear remedy is available, stop and share the sanitised diagnostics recorded above with the maintainer. Confirm the appropriate remedy before retrying again.
 
 **Expected result:** the previously failing installation completing successfully after its cause has been addressed. Until then, treat setup as incomplete.
 
