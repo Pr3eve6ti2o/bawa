@@ -446,9 +446,9 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Corrupted AES-GCM ciphertext:** Flip a ciphertext bit while retaining the original nonce and tag. Expect authentication failure and no released plaintext.
 
-- **Wrong data keys:** Supply a different published key of the required length. Expect authentication failure, not fallback to another key or acceptance of unauthenticated bytes.
+- **Wrong data keys:** Supply a different published key of the required length whose decoded bytes differ from the correct key's decoded bytes. Expect authentication failure, not fallback to another key or acceptance of unauthenticated bytes.
 
-- **Truncated recovery artefacts:** Test empty artefacts and cuts within headers, nonces, payloads and tags, where present. Expect structural or authentication errors, never best-effort or partial recovery.
+- **Truncated recovery artefacts:** Test empty artefacts and cuts within headers, nonces, payloads and tags, where present. These cases must produce structural or authentication errors, never best-effort or partial recovery. Cuts that produce a complete, still-valid prefix are not required to fail.
 
 - **Unexpected existing outputs:** Place existing files and directories at output locations. With overwrite disabled, expect refusal before modification. Existing contents and directory entries must remain unchanged, without truncation, merging or replacement.
 
