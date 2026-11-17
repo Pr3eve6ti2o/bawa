@@ -101,7 +101,6 @@ Confirm:
 
 - Chain ID.
 - RPC endpoint.
-- Network name.
 - Native currency.
 - Explorer.
 
@@ -109,7 +108,7 @@ See [Tracking](06-tracking/README.md).
 
 ### How does payment tracking differ from wallet tracking?
 
-Distinguish **wallet tracking, which asks what an address owns**, from **payment tracking, which asks whether an observed chain event satisfies a particular payment request**.
+Distinguish **wallet tracking, which covers native balance, nonce, contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership**, from **payment tracking, which asks whether an observed chain event satisfies a particular payment request**.
 
 For payment tracking, use the request's:
 
@@ -117,10 +116,10 @@ For payment tracking, use the request's:
 - Asset.
 - Recipient.
 - Amount **in atomic units**.
-- Memo or tag.
+- Memo or tag when required.
 - Expiry.
 
-Follow **allocation → observation → confirmation → reconciliation**, and handle duplicates, retries and temporary outages throughout.
+Follow **request → allocation → observation → confirmation → reconciliation**, and handle duplicates, retries and temporary outages throughout.
 
 See [Payment tracking](07-payment-tracking/README.md) and [Operations & testing](10-operations-and-testing/README.md).
 
