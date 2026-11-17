@@ -1365,7 +1365,7 @@ For suspected or confirmed seed compromise, see **Incident response**. A backup 
 
 Secret scanning belongs in everyday development as well as release preparation.
 
-Bawa does not document a scanner configuration, a reproducibility procedure, review acceptance criteria or passing reports for its release gates. It also does not publish a signing key in the repository. **Keep every gate without its own evidence marked BLOCKED.** Installation success or the differential test alone must never pass a gate.
+Bawa does not document a scanner configuration, a reproducibility procedure, review acceptance criteria or passing reports for its release gates. It also does not publish a public verification key in the repository. **Keep every gate without its own evidence marked BLOCKED.** Installation success or the differential test alone may pass only its corresponding explicitly scoped gate, not unrelated release gates.
 
 Confirm the missing procedures, criteria and gate-specific evidence with the maintainer, including where public verification material can be obtained and authenticated. Never request private signing material.
 
