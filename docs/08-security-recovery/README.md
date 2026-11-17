@@ -1039,7 +1039,7 @@ These are listed annual plan prices. Ask what features, limits and support are i
 
 A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable.
 
-The process may include a six-month inactivity check (checking whether the holder has been inactive), a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable.
+The default process includes a six-month waiting period starting when the recipient requests access; it does not verify death or require proof of death, and the owner can reject the request at any time within those six months. Optional Enhanced Verification (Private Client, US residents only) requires a US-issued death certificate validated by Casa and eliminates the six-month wait (see the [Casa inheritance FAQ](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)). The recipient is expected to have enough identity and location information to be reachable.
 
 A recipient who has lost their key or cannot be found is a recognised failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
 
