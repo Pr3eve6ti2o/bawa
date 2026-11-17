@@ -870,7 +870,7 @@ The fee path remains `/v1/fees/recommended`. It is identical on mainnet; only th
 The **2026-11-09, `muse-vm`** same-time comparison was:
 
 - mempool.space recommended `fastestFee 3 sat/vB`;
-- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97 sat/vB`.
+- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97,200 sat/vB`.
 
 That disagreement is **unresolved**. The Blockstream unit annotation is not a reconciled conversion to build into the wallet. Keep both sources visible; never quote one alone.
 
@@ -1831,7 +1831,7 @@ The same evidence window contains a sharply different estimator record:
 | Source and check time | Dated estimate as recorded | Status |
 |---|---|---|
 | mempool.space recommended set; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `fastestFee`: **3 sat/vB** | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
-| blockstream.info fee-estimates; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `"1": 0.972 BTC/kB (≈97 sat/vB)`, `"6": 0.685`, `"504": 0.10` | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
+| blockstream.info fee-estimates; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `"1": 0.972 BTC/kB (≈97,200 sat/vB)`, `"6": 0.685`, `"504": 0.10` | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
 
 The Blockstream units and parenthetical conversion above are reproduced **as recorded**, not independently validated. The evidence reports them as sharply higher than the mempool.space recommendation. No reconciliation is established here, and this record is not a validated alternative sending rate.
 
@@ -3284,7 +3284,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 ### M-07 — Fee-source disagreement is unresolved
 
-**Question/risk:** mempool.space and blockstream.info disagree sharply at the same instant: the reported fastest-rate comparison was 3 sat/vB versus ≈97 sat/vB. Quoting either source alone risks overpaying or underpaying. The comparison does not settle the underlying unit interpretation.
+**Question/risk:** mempool.space and blockstream.info disagree sharply at the same instant: the reported fastest-rate comparison was 3 sat/vB versus ≈97,200 sat/vB. Quoting either source alone risks overpaying or underpaying. The comparison does not settle the underlying unit interpretation.
 
 **Affected section:** §14.
 
