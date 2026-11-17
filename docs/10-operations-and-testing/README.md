@@ -1564,9 +1564,9 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 7. **Preserve evidence.** Retain relevant logs and incident records separately from the clean installation. Escalate unresolved account or session exposure through the relevant issuers. Prepare a redacted record of maintainer-dependent questions under the escalation requirements below.
 
-8. **Review before resuming.** Establish what the device loss exposed and close the original access path. Keep any wallet with exposed signing secrets permanently retired, and leave unresolved recovery or revocation checks open.
+8. **Review before resuming.** Establish what the device loss exposed and close the original access path. If migration is required, independently verify the intended networks and fresh-seed destination addresses, and confirm finalized receipt of all transferable holdings before treating migration as complete. Document immovable holdings and failed or unverified transfers or revocations as exceptions, including reasons, residual access/exposure, mitigations applied, and required follow-up; apply and verify available mitigations for residual access. Keep any wallet with exposed signing secrets permanently retired, and leave unresolved recovery or revocation checks open. Unverified required transfers or unresolved affected account/session access block resumption and a recovery pass; documenting an exception does not clear these blockers.
 
-> **Expected result:** Confirm either trusted-device recovery with no reason to suspect signing-secret exposure, or complete fresh-seed migration with the old wallet permanently retired. Resolve affected account and session access before recording a recovery pass.
+> **Expected result:** Do not record a recovery pass until either trusted-device recovery is verified with no reason to suspect signing-secret exposure, or fresh-seed migration is complete with the old wallet permanently retired. In either case, all affected account and session access must be resolved. An incomplete or unverified applicable recovery path or unresolved affected access blocks a pass; leaving checks open does not satisfy this gate.
 
 ### Suspected vault compromise
 
