@@ -851,11 +851,11 @@ Commit finalisation atomically with the credit or an outbox entry (see the [paym
 
 ### Audit trail
 
-Maintain an append-only journal with UTC timestamps, source, actor/job identity and schema/software versions. Preserve original decisions when correcting them.
+Maintain an append-only journal with UTC timestamps, source, actor/job identity and schema/software versions. Preserve original decisions when correcting them ([persist first; reconcile later](../06-tracking/README.md#10-persist-first-reconcile-later)).
 
-Before scanning, log the run ID, trigger, input checkpoint and range bounds. After durable processing, append the run's comparisons, repairs, errors, completion status and safe checkpoint.
+Before scanning, log the run ID, trigger, input checkpoint and range bounds. After durable processing, append the run's comparisons, repairs, errors, completion status and safe checkpoint ([checkpointing](../06-tracking/README.md#L746)).
 
-Retain the linked payment records in causal order:
+Retain the linked payment records in causal order ([persist raw observations first](../06-tracking/README.md#L582)):
 
 1. **Request:** `<REQUEST_ID>`, creation/revision history, chain/network, asset identifier, base-unit amount, recipient, required memo/tag, validity limits and policy snapshot.
 2. **Observation:** `<TXID>`, chain/network and native event/output/log identity, cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
