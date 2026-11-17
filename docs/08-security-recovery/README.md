@@ -920,9 +920,9 @@ These are not current quotations; recheck every price and term before purchasing
 | Example provider | Indicative figures | Scope and limits |
 |---|---|---|
 | Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
-| Fireblocks | Tokenisation add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). | A product-specific listing for the tokenisation add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
+| Fireblocks | Off Exchange add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). Tokenisation add-on: no published price ([Fireblocks pricing](https://www.fireblocks.com/pricing)). | A product-specific listing for the Off Exchange add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
 
-Ask which onboarding, support, recovery, extra-user and exit charges are included; network fees remain separate unless the contract explicitly covers them.
+Ask which recurring platform/subscription fees, usage charges, minimums/overages and feature/add-on charges apply and which onboarding, support, recovery, extra-user and exit charges are included; confirm who pays network fees and whether they are bundled or passed through.
 
 ### Counterparty failure and a provable exit
 
