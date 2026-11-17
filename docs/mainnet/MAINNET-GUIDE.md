@@ -2575,7 +2575,7 @@ These are the results recorded at the **2026-11-09 evidence baseline**. Separate
 
 | Suite | Date basis | Scope and recorded result |
 |---|---|---|
-| **T1 — repo tools** | 2026-11-09 baseline | **15 PASS**; live generation under a real pty; decrypt round trip **4/4**; `derive.js` **9/9** and `compare.js` **9/9** against independent `bip_utils` re-derivation; daemon protocol, including bad-chain rejection; `npm test` **28/28**; differential test **byte-identical**. |
+| **T1 — repo tools** | 2026-11-09 baseline | **15 PASS**; live generation under a real pty; decrypt round trip **4/4**; `derive.js` **9/9** and `compare.js` **9/9** against independent `bip_utils` re-derivation; daemon protocol, including bad-chain rejection; `npm test` **28/28** at the 2026-11-09 baseline — a live run at a5bc56e on 2026-11-16 returned **130 ok / 0 not ok**, and a re-run in the 3019b02 worktree on 2026-11-17 also returned **130 ok / 0 not ok**; differential test **byte-identical**. |
 | **T2 — Web draft** | 2026-11-09 baseline | Real-browser testing: **19 PASS / 0 FAIL / 3 INFO**; **0 console errors**, **0 page errors**, **0 failed requests**. The **3 INFO remain INFO**, not additional passes. |
 | **T3 — fix spot checks** | 2026-11-09 baseline | **9 MATCH / 0 MISMATCH** in spot checks of the **200-finding fix**. These are spot-check results, not a claim that every finding was independently retested. |
 
