@@ -86,6 +86,8 @@ Record the rehearsal and the result of comparing the restored public outputs wit
 
 ### Procedure
 
+Follow the numbered steps below for a pre-funding rehearsal or a later recovery.
+
 ### 1. Establish the backup and independent comparison targets
 
 For a pre-funding rehearsal, complete the written or encrypted backup first. Record public addresses from the original wallet, together with the configuration and derivation selectors needed to reproduce each address.
