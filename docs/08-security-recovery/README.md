@@ -1045,7 +1045,7 @@ A recipient who has lost their key or cannot be found is a recognised failure mo
 
 ### Unchained-style service
 
-A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider's key is intended to be inaccessible to staff alone. Inheritance may be offered as a paid extension.
+A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider states that its key is intended to be inaccessible to staff alone. Unchained's [Signature plan](https://unchained.com/pricing) includes inheritance setup and coordination for your heirs.
 
 Use these figures from [Unchained pricing](https://unchained.com/pricing), re-checked live on **8 November 2026 (UTC)**:
 
@@ -1056,7 +1056,7 @@ Use these figures from [Unchained pricing](https://unchained.com/pricing), re-ch
 | Signature | US$6,000 for the first year, renewing at US$4,500 a year |
 | IRA | $250 per IRA account per year (checked 8 November 2026) |
 
-Pricing and availability are US-focused: check whether the service supports your residence, local regulations and time zones before relying on it.
+Unchained's [IRA offering](https://unchained.com/pricing) is available in the US only: check whether the service supports your residence, local regulations and time zones before relying on it.
 
 ### Assisted multisig with inheritance
 
