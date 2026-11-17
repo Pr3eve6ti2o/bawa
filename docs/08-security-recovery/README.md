@@ -802,10 +802,11 @@ This reduces opportunities to extract keys from application memory, server disks
 
 ### Establish who controls the signer
 
-Distinguish these two control models:
+Distinguish these three control models:
 
 - **Full HSM custody:** a provider operates the key infrastructure and releases transactions under its custody agreement. You depend on its authorisation, recovery and withdrawal processes. Holding an account with that provider is not the same as directly controlling a wallet key.
-- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted. Check who can change policy, recover backups, cause a signature or block access — the product label alone does not settle custody.
+- **Shared/collaborative control:** for example, in 2-of-2 multisig, the holder and provider each hold a key and both must sign.
+- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted. Check who can change policy, change the quorum/threshold, rotate keys, approve new destinations, recover backups, export recovery material, cause a signature or block access — the product label alone does not settle custody.
 
 [Anchorage](https://www.anchorage.com/) describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
 
