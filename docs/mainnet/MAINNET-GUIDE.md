@@ -3697,7 +3697,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 **Evidence:**
 - M33 covers US/UK/EU/India only. The guide may say “check your local law” and “keep records”, and give jurisdiction-named, dated, sourced facts, subject to the 7-item never-claim list in this guide’s §17, “Never-claim rules the gates enforce”.
 - India’s 30%/1% TDS figures rest on convergence of secondary sources only; the official sites were unreachable.
-- M33 records no tax coverage in the current guides. The repository’s only law sentence is at `docs/RECOVERY.md:680`.
+- M33 records no tax coverage in the current guides.
 - M36 F6 places law, tax and records in front-matter §3, not in a footnote.
 
 **Status:** OPEN.
@@ -3706,7 +3706,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Read each source directly before publishing any rule. The outstanding source checks are M33 items 1–6 and 8: HMRC manual sections, India’s successor law, the OFAC guidance PDF text, the text of MiCA Regulation (EU) 2023/1114, and OFAC five-year retention.
+**Clearance condition:** Read each source directly before publishing any rule. The five outstanding source checks are HMRC manual sections, India’s successor law, the OFAC guidance PDF text, the text of MiCA Regulation (EU) 2023/1114, and OFAC five-year retention. Item 7 and the M33 items list are not recorded in the repository.
 
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-25 — M33 and M36 F6; [docs/RECOVERY.md:680 at 56396a20](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/docs/RECOVERY.md#L680).
 
