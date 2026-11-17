@@ -363,17 +363,20 @@ Bawa ships no device integration and does not document a device-specific setup p
 
 Under **[BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)/[BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki)**, a native-SegWit descriptor carries **script policy, derivation origin and ranged derivation patterns (/0/*)**. ‘Script policy’ is the guide’s term for ‘how those keys become spendable outputs’ (see [the definition](#output-descriptors-make-the-watch-target-explicit)), not a BIP-380 term. See also [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md).
 
-- **Receiving:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
-- **Change:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
+- **Receiving and change:** See the canonical receive/change descriptor pair in [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt).
 
-These paths use testnet coin type `1` in the BIP-44 style. Record the fingerprint and derivation origin from the signer’s own export; do not assume the example path matches your device.
+These are BIP-84-style paths using the BIP-44 hierarchy, with testnet coin type `1`. Record the fingerprint and derivation origin from the signer’s own export; do not assume the example path matches your device.
 
 The PSBT workflow comes from **BIP-174/371**, not a Bawa device integration. Bawa does not document a device-specific recipe. Use your wallet and signer documentation to confirm these details before attempting the rehearsal:
 
 | Area | What to confirm |
 |---|---|
 | Onboarding | Device setup, firmware compatibility, test-network selection and verification, and test-fund setup. Use test funds only. |
-| Descriptors | Wallet-specific import/export syntax, policy selection and exact address-range settings. Confirm the fingerprint and exact origin/path against the signer’s own export. |
+| Descriptors | Wallet-specific import/export syntax, policy selection (not a standardised BIP-380 field) and exact address-range settings. Confirm the fingerprint and exact origin/path against the signer’s own export. |
+| Fee policy | Which fee policy to apply. |
+| Sighash policy | Which sighash policy to apply. |
+| Recipient/change verification | How to verify recipients and change. |
+| Signing/extraction ownership | Who is responsible for signing and extraction. |
 | PSBT | Construction, validation and finalisation procedures; format compatibility and supported transfer routes. |
 | Integration | Bawa does not ship a device integration, so there is no Bawa connector setup to follow. Use your wallet and signer documentation for device-specific signing controls and broadcast/status procedures. |
 
@@ -591,10 +594,7 @@ Changing the wrapper changes the output script and address, even with the same k
 
 ### Testnet receiving and change
 
-For an external hardware signer exporting the BIP-84 testnet account-zero origin shown above, use these templates:
-
-- **Receiving:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
-- **Change:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
+For an external hardware signer exporting the BIP-84 testnet account-zero origin shown above, use the canonical receive/change descriptor pair in [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt).
 
 Read these as the BIP-44-style account hierarchy: `/0/*` conventionally tracks external receiving addresses, and `/1/*` tracks internal change addresses.
 
@@ -639,8 +639,7 @@ These templates show the structure only; they are not import-ready strings and h
 
 | Purpose | Descriptor body template |
 |---|---|
-| Receiving | `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)` |
-| Change | `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)` |
+| Receiving and change | See the canonical receive/change descriptor pair in [Watch-only hand-off: descriptors and PSBT](#watch-only-hand-off-descriptors-and-psbt). |
 | Both branches | `wpkh([<fingerprint>/84'/1'/0']<xpub>/<0;1>/*)` |
 
 Here, `<0;1>` is literal multipath syntax, not a placeholder. It selects branches `0` and `1`; the trailing `*` varies the address index within each branch. In this convention, those remain separate receiving and change sequences, simply written compactly.
