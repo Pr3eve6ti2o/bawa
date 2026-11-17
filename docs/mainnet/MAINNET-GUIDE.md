@@ -3748,7 +3748,7 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** §13 must state that change handling is unresolved. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts.
+**Operational restriction:** §13 must state that change returns to the sending address. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts.
 
 **Blocks writing completion:** No.
 
