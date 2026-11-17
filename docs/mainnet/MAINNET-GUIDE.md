@@ -1590,7 +1590,7 @@ Keeping those duties outside the Signer prevents preparation or fee decisions fr
 
 ### 13.5 Change handling
 
-The Web draft’s Bitcoin code returns change to the sending address. Change-branch derivation is not implemented: this is design gap G4. The first change-address path is `m/84'/0'/0'/1/0`, but the draft does not derive or use that change-branch address. It does not provide fresh change addresses.
+The Web draft’s Bitcoin code returns change to the sending address. Change-branch derivation is not implemented in the Web draft at revision `56396a20`: this is design gap G4. The first change-address path is `m/84'/0'/0'/1/0`, but the draft does not derive or use that change-branch address. It does not provide fresh change addresses.
 
 The relevant loss modes are **wrong address, wrong amount and lost fee**. Prevention requires review of every output, not just the recipient output. Every proposed change output must match an address derived from your own seed and be verified as controlled by the intended signer. A “change” label is not an ownership check. **Stop before signing if any output is unreviewed, or if a proposed change output cannot be verified in that way.**
 
@@ -1866,7 +1866,7 @@ Check both the absolute fee and the estimated rate against the planned mainnet f
 
 Include any uneconomic change added to the fee explicitly. If change is omitted, the selected-input surplus not assigned to recipient outputs is part of the fee; it is not a later refund.
 
-The Web draft says change returns to the sending address. That is UI wording, not evidence of a constructed transaction. **Change-branch derivation is not implemented at this commit (G4).** Do not promise a derived change-branch address. The external signer must show the actual proposed change destination and value.
+The Web draft says change returns to the sending address. That is UI wording, not evidence of a constructed transaction. **Change-branch derivation is not implemented in the Web draft at revision `56396a20` (G4).** Do not promise a derived change-branch address. The external signer must show the actual proposed change destination and value.
 
 **Loss-and-stop gate for accounting:** correct arithmetic cannot fix a **wrong address** or **wrong amount**, so compare every recipient and change output with the independently checked intent. Missing signed-size information or stale rates leave a **stuck transaction** risk; refresh and reconcile them before approval. Omitted change or an excessive total can become a **lost fee**; reject any unexplained difference from the planned mainnet fee budget. Unreviewed signing software or requests for signing secrets create a **theft** risk; stop rather than bypass the signer review. Stop on any unverified input, unexplained output, missing estimate or budget mismatch.
 
@@ -1903,7 +1903,7 @@ The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP
 
    `replacement fee ≥ evicted fees + replacement vsize × incremental relay fee rate`
 
-   At the dated check, Core’s default incremental relay reference was **100 sat/kvB = 0.1 sat/vB**. The worked replacement example used **140 vB**, moving from **1 to 3 sat/vB**: approximately **140 → 420 sats**, an increase of **280 sats ≈ $0.21**. That dollar figure is the increase, not the replacement’s total fee. Whether this satisfies any particular node’s policy is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.  
+   At the dated check, Bitcoin Core's default incremental relay reference was **100 sat/kvB = 0.1 sat/vB** for versions 29.1 and later (from September 2025); earlier versions defaulted to **1000 sat/kvB = 1 sat/vB**. The worked replacement example used **140 vB**, moving from **1 to 3 sat/vB**: approximately **140 → 420 sats**, an increase of **280 sats ≈ $0.21**. That dollar figure is the increase, not the replacement’s total fee. Whether this satisfies any particular node’s policy is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.  
    *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
    Before any replacement approval, recheck the intended recipient, amount and change for **wrong address** and **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to avoid another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
@@ -1940,7 +1940,7 @@ Start with read-only network and fee checks. The table below is a historical est
    The **2×** factor is not an EIP-1559 requirement. At the stated maximum base-fee increase of **12.5% per full block**, doubling B preserves room for the full selected tip through **five** maximum increases. It does not double gas usage, does not mean twice the base fee will be charged, and does not cover an ETH/USD move.  
    *Sources: m12 §2; m08 F2.1–F2.9; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-5. **Estimate gas separately for the exact proposed transaction.** Use `eth_estimateGas`. The **21,000 gas** baseline applies only to a plain ETH transfer with no calldata, no access list and no recipient-code execution—not to every transfer or any contract call.  
+5. **Estimate gas separately for the exact proposed transaction.** Use `eth_estimateGas`. The **21,000 gas** intrinsic baseline is included in every transaction, but using **21,000 gas** as a total-gas shortcut is valid only for a plain ETH transfer to an ordinary externally owned account (EOA) with empty calldata and no access list; sending ETH to a contract can invoke receive/fallback behaviour even without calldata.  
    *Sources: m12 §2; m08 F2.1–F2.9; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 For an eligible transaction, let **Bᵢ** be the inclusion-block base fee, **T** the priority cap and **F** the maximum fee cap:
