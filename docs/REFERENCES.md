@@ -1,6 +1,7 @@
 # Canonical References
 
 These are the primary specifications and upstream projects Bawa relies on. Re-check current implementation behavior before production releases.
+Last updated 2026-11-17.
 
 ## Standards
 
@@ -8,16 +9,36 @@ These are the primary specifications and upstream projects Bawa relies on. Re-ch
 - BIP-39 — https://bips.dev/39/
 - BIP-43 — https://bips.dev/43/
 - BIP-44 — https://bips.dev/44/
+- BIP-49 — https://bips.dev/49/
 - BIP-84 — https://bips.dev/84/
+- BIP-86 — https://bips.dev/86/
 - BIP-141 — https://bips.dev/141/
 - BIP-173 — https://bips.dev/173/
 - BIP-174 / PSBT — https://bips.dev/174/
 - BIP-321 — https://bips.dev/321/
+- BIP-325 — https://bips.dev/325/
+- BIP-340 — https://bips.dev/340/
+- BIP-341 — https://bips.dev/341/
+- BIP-342 — https://bips.dev/342/
+- BIP-350 — https://bips.dev/350/
 - BIP-371 / Taproot PSBT — https://bips.dev/371/
+- BIP-380 — https://bips.dev/380/
+- BIP-381 — https://bips.dev/381/
+- BIP-382 — https://bips.dev/382/
+- BIP-383 — https://bips.dev/383/
+- BIP-386 — https://bips.dev/386/
+- EIP-20 — https://eips.ethereum.org/EIPS/eip-20
+- EIP-55 — https://eips.ethereum.org/EIPS/eip-55
+- EIP-155 — https://eips.ethereum.org/EIPS/eip-155
 - EIP-681 — https://eips.ethereum.org/EIPS/eip-681
+- EIP-721 — https://eips.ethereum.org/EIPS/eip-721
+- EIP-1155 — https://eips.ethereum.org/EIPS/eip-1155
+- EIP-1559 — https://eips.ethereum.org/EIPS/eip-1559
 - SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
+- SLIP-0039 — https://github.com/satoshilabs/slips/blob/master/slip-0039.md
 - SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
 - SLIP-0132 — https://github.com/satoshilabs/slips/blob/master/slip-0132.md
+- SLIP-0173 — https://github.com/satoshilabs/slips/blob/master/slip-0173.md
 - TON TEP-3 — https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md
 
 ## Trust Wallet ecosystem
