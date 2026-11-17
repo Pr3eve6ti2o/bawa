@@ -314,7 +314,7 @@ Do not expect Wallet Core to communicate with blockchain nodes, fetch balances o
 
 Keep the independent verifier pinned to [bip-utils](https://pypi.org/project/bip-utils/) 2.12.3. Consult its documentation for coverage of its separate implementations of HD-wallet standards and chain-specific key and address schemes. Use it only for standards and paths supported by both implementations.
 
-Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failure to investigate, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
+Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failed check requiring investigation, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
 
 ### Keep the comparison boundary public
 
@@ -322,7 +322,7 @@ Use this order:
 
 1. **Choose published test material.** Use the vectors linked by [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) or those included in [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki). Record the fixture, chain, network and derivation path explicitly. Follow the specifications that define the standards; do not substitute library agreement for them.
 2. **Derive and capture independently.** Give each implementation the same published fixture inputs and declared parameters. Require each to perform its own derivation. Do not pass computed intermediates from one engine to the other. Capture each result separately, retaining only public outputs such as receiving addresses and public keys.
-3. **Compare only after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failure to investigate.
+3. **Compare only after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failed check requiring investigation.
 
 Exclude mnemonics, seeds, private keys and data keys from comparison artefacts, even when they come from published fixtures. Never use real-wallet secrets or backups in tests, including xprvs and hardware-wallet secrets.
 
