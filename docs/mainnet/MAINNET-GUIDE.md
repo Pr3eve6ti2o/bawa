@@ -2100,7 +2100,7 @@ The source’s stated multiplier between the draft budget and the network ceilin
 
 #### Conflicting USDT figures
 
-There is no single verified USDT transfer cost to quote from this evidence.
+There is no single verified USDT transfer cost to quote from this evidence. The Dwellir reconciliation verifies the USDT transfer cost for that specific check, but this evidence does not establish a standing figure to quote for other transfers.
 
 - **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — existing-holder estimates.** Tronsave, dated **28 October 2026**, supplied **64,285 energy**, corresponding to **≈6.43 TRX ≈$2.04** under the baseline arithmetic. Dwellir, dated **3 November 2026**, quoted **$2.07**. These are secondary-source estimates, not a verified Bawa transfer receipt or an all-in fee promise.  
   *Source record: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
@@ -2323,7 +2323,7 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 
 > **Stop** If you suspect recovery-material exposure, stop routine use and move funds to fresh recovery material in a clean environment. Deletion, a PIN change or a remote wipe does not revoke copied keys. Leaving funds under the exposed material allows anyone holding a usable copy to retain authority over those funds.
 
-> **Warning** If you use a small test transfer, it limits that test’s loss only. Repeat the character-by-character check of the entire pasted address against an independently verified destination for the actual transfer; skipping it risks sending the full actual amount to a substituted destination.
+> **Warning** If you use a small test transfer, it limits that test’s loss only; a test sent to an address copied from transaction history can itself go to a poisoned address. Check the entire pasted address character by character against an independently verified destination before the test, and repeat that check before the actual transfer; skipping it risks sending the full actual amount to a substituted destination.
 
 **Decoding is not approval to sign.** Meaningfully decoded data can still authorise loss. Refusing blind signing does not remove the need to examine the authority requested. Review and revoke token approvals regularly. Outstanding permit signatures need separate consideration; they must not be treated as cancelled merely because an allowance has changed. An accepted Permit2 permit consumes its nonce, even when it sets a lower allowance, so a permit signature using that consumed nonce in the same nonce scope cannot be replayed.
 
