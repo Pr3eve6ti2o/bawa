@@ -20,9 +20,9 @@ Reference comparison table:
 | Solana | Reference-only | 501 | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. |
 | Cardano | Reference-only | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` |
 
-Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO (CIP-1852); TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
+Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO; TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. CIP-1852 documents Cardano HD derivation (purpose 1852', paths, and roles). A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
 
-Why this, and what breaks if you change it: the derivation policy per chain is fixed because each chain's address format, curve, and account model differ. Substituting another chain's path or coin type produces addresses on the wrong ledger or in the wrong format, and a restore that scans only the substituted path shows an empty wallet. Do not add alternative paths.
+Why this, and what breaks if you change it: the derivation policy per chain is fixed because each chain's address format, curve, and account model differ. Substituting another chain's path or coin type selects different keys, and a restore that scans only the substituted path may fail to discover previously used addresses. Do not add alternative paths.
 
 Reuse and configuration boundaries: reuse the mnemonic, seed, and secp256k1 key where the chain's standard says they are reusable. Configuration that belongs to the chain — network, chain ID, RPC endpoint, contract version, wallet ID, address format — is per-chain and never inherited from another chain.
 ## 3. Bitcoin
