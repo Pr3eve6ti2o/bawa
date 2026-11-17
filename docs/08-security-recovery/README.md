@@ -152,9 +152,11 @@ Complete recovery on a clean trusted machine before funding, as required by [doc
 
 A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md) requires:
 
-1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet's documented generation procedure.
-2. **Move EVERY asset/token to the replacement wallet.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify every holding, transfer it and verify receipt before retiring the old wallet.
-3. **Retire the old wallet PERMANENTLY.**
+1. **Generate a NEW wallet on a fresh trusted device where migration is needed.** A compromised seed cannot be “changed.” Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet’s documented generation procedure.
+
+2. **Make a scoped inventory and migrate identified, transferable assets.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify holdings, assess transferability, account for transfer fees, transfer assets that can be migrated and verify receipt. Do not assume every holding can be identified or transferred; some holdings may be inaccessible under the exposed keys. Record the inventory’s scope and known limitations. For some assets, key rotation is an alternative to moving them; consult the relevant documentation rather than assuming transfer is the only remedy.
+
+3. **Retire the compromised seed PERMANENTLY.** Do not reuse it. Migration or asset-specific key rotation does not “change” the seed, and retirement does not establish that every holding has been identified, transferred or recovered.
 
 ### Recovery rehearsal procedure
 
