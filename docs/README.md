@@ -35,16 +35,16 @@ Choose the guide for your job. You do not need to read everything. For a full pa
 - [FAQ](FAQ.md) — **Reference:** find answers to common questions.
 - [Further reading](FURTHER-READING.md) — **Reference:** choose what to read next.
 - [References](REFERENCES.md) — **Reference:** find the referenced sources.
-- [Security](SECURITY.md) — **Reference:** look up the supporting security guidance. For decisions, use the [Security Decision Guide](16-security-decision-guide/README.md).
-- [Testing](TESTING.md) — **Reference:** look up the supporting testing guidance. For operations and testing tasks, use [Operations & Testing](10-operations-and-testing/README.md).
 
 ## Explanation — understand concepts and reasons
 
 - [01 — Fundamentals](01-fundamentals/README.md) — **Explanation:** understand the fundamentals before you choose software or run it.
 - [15 — Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md) — **Explanation:** understand threats and the reasons for theft-prevention measures before you make security decisions.
+- [Security](SECURITY.md) — **Explanation:** understand the trust boundaries and security posture. For decisions, use the [Security Decision Guide](16-security-decision-guide/README.md).
+- [Testing](TESTING.md) — **Explanation:** understand the layered testing strategy. For operations and testing tasks, use [Operations & Testing](10-operations-and-testing/README.md).
 
 ## Recommended reading order
 
 Fundamentals → Chains → Tool Map → Generation → Watch-Only → Tracking → Payment Tracking → Security/Recovery → Signing → Operations/Testing → Trust Wallet Verification → Chain Registry → Wallet App Architecture → Wallet App Implementation → Threat Model → Security Decision Guide.
 
-The order is deliberate: first understand the rule, then choose software, then run it, then watch the network, then build application logic around what the network reports.
+The opening sequence is deliberate: first understand the rule, then choose software, then run it for one-time generation (04), then watch the network, then build application logic around what the network reports; later guides extend that foundation with security and recovery (08), signing (09), operations and testing (10), verification (11), the registry (12), the threat model (15), and security decisions (16).
