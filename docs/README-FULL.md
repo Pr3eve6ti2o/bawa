@@ -325,7 +325,7 @@ The contracts below are defined once, in their home sections, and used everywher
 
 ### 5.1 Shared security baseline
 
-No signing in the repo. Filesystem permissions required by policy: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Only `seed.enc.json` 0600 is evidenced as enforced; the other permissions are policy requirements, not verified as enforced. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is a baseline policy requirement, not a claim of verified enforcement: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address; this implementation does not export or support BIP32-style xpub derivation for TON); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet will not find Bawa funds; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
+No signing in the repo. Filesystem permissions required by policy: `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600. Only `seed.enc.json` 0600 is evidenced as enforced; the other permissions are policy requirements, not verified as enforced. Never-claim rules apply throughout. The derivation policy (`bawa-derivation-policy-v1`) is a baseline policy requirement, not a claim of verified enforcement: account 0, receiving branch 0 only; paths BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` (account node, one deposit address; this implementation does not export or support BIP32-style xpub derivation for TON); BIP-39 passphrase empty by policy. The testnet4 mainnet-derivation deviation is documented in §9: Bawa pins Core's mainnet segwit derivation (`m/84'/0'/0'/0/i`, zpub) on testnet4 — the standards-conformant testnet pair is `m/84'/1'/0'/0/i` with vpub `0x045f1cf6`. A standard testnet wallet using default or standard recovery will not find Bawa funds, but custom-path, key, or descriptor imports can recover them; the implementation is not changed. Home: §9 (derivation policy) and §17 (security posture).
 
 ### 5.2 Supported capabilities
 
@@ -528,7 +528,7 @@ Backup bundle: <dir>
 
 Step 6 checks these lines. Do not treat any earlier message as completion.
 
-The `--force` and `--regenerate` flags are only for regenerating an existing wallet; a first wallet uses neither. Step 7 covers regeneration.
+In this procedure, use `--force` and `--regenerate` for regenerating an existing wallet and omit both for first creation. Step 7 covers regeneration.
 
 **Step 5 — Check permissions**
 
@@ -995,7 +995,7 @@ python3 tools/decrypt_seed.py
 `--stdout` and `--output` are mutually exclusive.
 
 - Use `--stdout` only for an explicit, controlled pipeline. The mnemonic must not end up in CI logs.
-- Use `--output` only when you explicitly require a plaintext file. The script writes it atomically at `0600` and refuses symlinked outputs. Its completion message is `recovered mnemonic written to <path> (0600)`.
+- Use `--output` only when you explicitly require a plaintext file. The script writes it atomically at `0600` and refuses the output path if that path itself is detected as a symlink; this check does not establish protection against symlinked parent directories or filesystem races. Its completion message is `recovered mnemonic written to <path> (0600)`.
 
 Remove any temporary decrypted copy after verification.
 
@@ -1202,7 +1202,7 @@ Keep network identity, derivation policy, address encoding and asset identity se
 
 Use the [`bip_utils` repository](https://github.com/ebellocchia/bip_utils) and [`bip-utils` on PyPI](https://pypi.org/project/bip-utils/) for independent verification.
 
-Keep `@hdwallet/core` as a research-only reference. An automated check on npm returned 403 on 8 November 2026; the registry API confirmed that the package exists. It is not production-ready and is not used by the runtime.
+This guide treats `@hdwallet/core` as a research-only reference, and it is not used by the runtime. An automated check on npm returned 403 on 8 November 2026; the registry API confirmed that the package exists. Prerelease tags alone do not establish that the package is not production-ready.
 
 ## 17. Security posture
 
@@ -1263,7 +1263,7 @@ Pin note: this rewrite is pinned to e3b65fb832db287fdc8d54794980dd0b3456cc12. Th
 
 What passing does NOT prove: passing the readiness gates does not prove the guide is safe; passing the release gates does not prove it is production-ready; passing any gate does not authorise mainnet use; a successful build or testnet send does not replace the release gates. No gate may be marked passed on the basis of a check that was not run, a file that does not exist in the pinned tree, or a count that combines test layers (never combine counts — no "86/86").
 
-Platform gates (mapped from the Web and Android guides): Web fixture gate — enforced in-engine plus offline engine tests; no live-network gate run (the integrated browser flow was run end to end on 2026-11-08: 14 PASS, 0 FAIL, 3 INFO across 17 steps; send, sign and broadcast were not exercised — no testnet funds). Android fixture gate — defined, pure-logic half checked (55 pure-module tests); the on-device gate was not run in the recorded verifications: no Core 4.8.4 AAR exists in the main tree and no device run is recorded. Android debug APK — no debug APK exists in the main tree; the build steps are an unexecuted procedure, not a verified path.
+Platform gates (mapped from the Web and Android guides): Web fixture gate — enforced in-engine plus offline engine tests; no live-network gate run (the integrated browser flow was run end to end on 2026-11-08: 14 PASS, 0 FAIL, 3 INFO across 17 steps; send, sign and broadcast were not exercised — no testnet funds). Android fixture gate — defined, pure-logic half checked (55 pure-module tests); the on-device gate was not run in the recorded verifications: no Core 4.8.4 AAR exists in the main tree and no device run is recorded. Android debug APK — no debug APK exists in the main tree; the documented build steps are not a verified path.
 
 ## 19. About this guide
 

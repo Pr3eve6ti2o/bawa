@@ -35,7 +35,7 @@ Command (shown, not executed): python3 tools/make_wallet.py
 
 Bawa (`Pr3eve6ti2o/bawa`) separates mnemonic generation and encrypted storage from public-root derivation, with executable checks for the covered results.
 
-**Bawa is a guide and blueprint first**, not a hosted wallet, custodian, exchange, node client or security audit. You or your AI agent must implement, build and test documentation-only capabilities.
+**Bawa is a guide and blueprint first**, not a hosted wallet, custodian, exchange or security audit; this repository provides no node client. You or your AI agent must implement, build and test documentation-only capabilities.
 
 Use a wallet application instead if you need to check balances or construct, sign or broadcast transactions.
 

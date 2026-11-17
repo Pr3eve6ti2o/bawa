@@ -66,7 +66,7 @@ Use `docs/README.md` to find the relevant guide and `IMPLEMENTATION.md` for impl
 | `differential_test.py` | Compares BTC and ETH index 0 against `bip-utils`. |
 | `smoke.test.js` | Node smoke tests. |
 | `test_bawa_cli.py` | Launcher unit tests. |
-| `test_make_wallet.py` | Wallet-generator tests. |
+| `test_make_wallet.py` | Seed-bundle validation tests only (`assert_bundle_verified` and `parse_seed_bundle`); no generation, /dev/tty prompts, or encryption round trip. |
 
 `.github/workflows/ci.yml` runs on pushes and pull requests using Node 22 and Python 3.13. It runs `npm install` in `tools/hdwallet-gen/`, checks JavaScript syntax, runs the smoke tests, installs Python reference-test dependencies and runs the differential test.
 
@@ -74,6 +74,6 @@ That CI sequence does not run the launcher or wallet-generator unit tests. Do no
 
 ## Making changes
 
-Put routing changes in `tools/bawa_cli.py`, secret-handling changes in `tools/make_wallet.py`, `tools/decrypt_seed.py`, and `tools/hdwallet-gen/generate.js`, and public-root tooling changes in `tools/hdwallet-gen/`. Do not move secret handling into the launcher or the watch-only tools.
+Put routing changes in `tools/bawa_cli.py`, secret-handling changes in `tools/make_wallet.py`, `tools/decrypt_seed.py`, and `tools/hdwallet-gen/generate.js`, and public-root tooling changes in `tools/hdwallet-gen/`. For new code, do not introduce secret handling into the launcher or the watch-only tools.
 
 Update the relevant tests and ship the README/docs changes with the behaviour they describe. Keep documentation-only work distinguishable from executable functionality.
