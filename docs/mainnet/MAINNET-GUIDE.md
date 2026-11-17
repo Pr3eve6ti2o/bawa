@@ -1964,7 +1964,7 @@ Recorded readings are distinguished below from derived spending examples. The hi
 | Plain ETH transfer example | **21,000 gas** at base **0.128 + tip 0.02 = 0.148 gwei** gives approximately **3,108 gwei = 0.000003108 ETH ≈ $0.007**. Derived charge, not a measured fee for the reader’s transaction: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Maximum fee reserve | The source’s example cap gives **21,000 × 0.276704742 gwei ≈ 0.0000058108 ETH ≈ $0.0123**. This is a reserve, not the expected charge. The cap is recorded separately; the displayed base-fee estimate above is rounded. Application to a proposed send: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Balance before a first send | Required balance: **payment amount + gas limit × maxFeePerGas**. An account with no ETH cannot fund an ordinary self-paid mainnet transaction. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
-| Higher observed base fee, still a quiet window | Across approximately **15 h**, the maximum mined-block base fee was **0.2408 gwei**, at block **26377373**. At that base plus a **0.02 gwei** tip, the same plain transfer would cost approximately **0.0000054768 ETH ≈ $0.0116**, about **1.7×** the baseline. The derived send cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a live congestion recommendation. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
+| Higher observed base fee, still a quiet window | Across approximately **15 h**, the maximum mined-block base fee was **0.2408 gwei**, at block **26377373**. At that base plus a **0.02 gwei** tip, the same plain transfer would cost approximately **0.0000054768 ETH ≈ $0.0116**, about **1.76×** the baseline. The derived send cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a live congestion recommendation. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Gas-price sensitivity | For the same **21,000 gas** case, each additional **1 gwei** adds approximately **0.000021 ETH ≈ $0.044** at the dated exchange rate. Application to a proposed send: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 
 **Before Ethereum approval**, refresh the network/head check, fee inputs and exact-transaction gas estimate immediately. Prevent a **wrong address** or **wrong amount** by checking the chain, recipient and value against the intended payment. Prevent a **stuck transaction** by checking fresh base-fee information and cap headroom. Limit a **lost fee** by reviewing the gas estimate, price caps, expected charge and maximum reserve separately; unused reserve is not the same as a refundable paid fee. To prevent **theft**, do not disclose wallet secrets or approve unexpected spending, including an unexpected “refund” transaction.
@@ -1988,7 +1988,7 @@ Before any retry, match the recipient or contract to the intended destination to
 
 #### Caps: headroom is not automatically spent
 
-Setting `maxFeePerGas` far above the market does not, by itself, increase the fee when the base fee and priority cap are unchanged. Unused headroom is not paid.
+Once `maxFeePerGas` covers the base fee plus the priority cap, increasing it further does not raise the effective gas price while the base fee and priority cap remain unchanged. Raising a previously binding `maxFeePerGas` can, however, increase the paid tip, up to the priority cap. Unused headroom is not paid.
 
 The risks are different: a high maximum permits inclusion after the base fee rises, while an unnecessarily high **priority** cap can genuinely overpay. A generous maximum is not the same thing as a generous tip.  
 *Sources: m12 §2; m08 F2.1–F2.9.*
@@ -2038,9 +2038,9 @@ Conversion must be explicit in both directions:
 
 *Source: m08 F3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-Do not smooth over the Web draft’s self-transfer mismatch. Its plain self-transfer estimate was **29,060 gas**, against the review’s **21,000 gas** plain-transfer reference. An estimate is not a receipt showing gas actually used. The supplied evidence does not establish why the estimate was higher, so its use as a plain-transfer cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**; the gap must not be presented as a demonstrated extra charge.
+Do not smooth over the Web draft’s self-transfer mismatch. The native-ETH self-transfer estimate was **29,060 gas**, against the review’s **21,000 gas** plain native-ETH transfer reference. An estimate is not a receipt showing gas actually used. The supplied evidence does not establish why the estimate was higher, so its use as a plain-transfer cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**; the gap must not be presented as a demonstrated extra charge.
 
-The separate **zero-amount self-transfer at 37,973 gas** also cannot stand in for a real transfer. It understates a real transfer and must not be quoted as its gas requirement or cost.  
+The separate **zero-amount ERC-20 self-transfer (`transfer(self, 0)`) at 37,973 gas** also cannot stand in for a real token transfer. It may understate a real token transfer’s gas use, but no measured comparison was supplied, so it must not be quoted as that transfer’s gas requirement or cost. Fees paid for any gas actually consumed are lost to the sender.  
 *Source: m08 F2.8. Check for both comparisons: 2026-11-09 ~11:54 UTC, muse-vm.*
 
 **Real USDC transfer gas and cost: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** No genuine transfer figure has been verified. The ETH builder is not enough: a genuine ERC-20 transfer procedure is needed before this guide can support a USDC send or quote its cost.  
@@ -2246,7 +2246,7 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 
 ### Draft warnings
 
-- **TRX `feeLimit`:** the draft confuses a smart-contract budget with the mainnet maximum. At the dated review, **1,000,000 SUN** was a smart-contract budget only; the reported mainnet ceiling estimate was **15,000,000,000 SUN**. Neither is a quote for actual expenditure or a recommended setting. The smaller value must not be presented as the maximum accepted on mainnet.  
+- **TRX `feeLimit`:** the draft confuses a smart-contract budget with the mainnet maximum. At the dated review, **1,000,000 SUN** was a smart-contract budget only; the mainnet ceiling, obtained by querying the live `getMaxFeeLimit` chain parameter, was **15,000,000,000 SUN**. Neither is a quote for actual expenditure or a recommended setting. The smaller value must not be presented as the maximum accepted on mainnet.  
   *Source and check: m12 §7, baseline 2026-11-09 ~11:54 UTC, muse-vm.*
 
 - **TON estimation timing:** the draft’s broadcast-only wording is misleading. `estimateFee` simulation exists **before signing**, using the exact unsigned body and deployment inputs where applicable. The procedure above is not dependent on first broadcasting a transaction.  
