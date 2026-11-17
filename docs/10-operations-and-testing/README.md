@@ -1272,7 +1272,7 @@ Bawa documents checkpoint rewind and replay conceptually in [tracking](../06-tra
 
 ## What to back up and how to rotate it
 
-Back up the complete recovery set, not only the wallet’s working files. Bawa does not document backup file locations, export or encryption procedures, restore checks or retention counts. Confirm these with the maintainer before relying on your backups.
+Back up the complete recovery set, not only the wallet’s working files. Bawa documents keeping backup components in separate locations and 2–3 offline copies in separate places, provides AES-GCM tooling (`tools/decrypt_seed.py`) and documents the section 3 recovery drill required before funding. The storage guidance does not specify exact filesystem paths, and the redundant-copy recommendation is not a retention count. Confirm any unspecified backup paths, export/encryption procedures and retention requirements with the maintainer before relying on your backups.
 
 ### 1. Keep a complete recovery set
 
