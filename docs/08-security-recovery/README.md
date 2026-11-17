@@ -822,7 +822,7 @@ You can still choose institutional custody as an individual, but recognise that 
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-This section is part of THE SINGLE COSTS REFERENCE for the whole guide set. Providers named are examples, NOT Bawa recommendations.
+For the costs reference, see [sections 18–22](#18-paid-security-hsm-based-signing). Providers named are examples, NOT Bawa recommendations.
 
 ### Setup and onboarding, in outline
 
@@ -897,7 +897,7 @@ For any platform, obtain a written share-and-control map: who holds each share, 
 
 If the provider controls a signing quorum, it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
 
-This section is part of **THE SINGLE COSTS REFERENCE** for the whole guide set. Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
+For the costs reference, see [sections 18–22](#18-paid-security-hsm-based-signing). Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
 
 ### Setup and onboarding
 
@@ -919,7 +919,7 @@ These are not current quotations; recheck every price and term before purchasing
 
 | Example provider | Indicative figures | Scope and limits |
 |---|---|---|
-| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (checked 8 November 2026, UTC). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
+| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
 | Fireblocks | Tokenisation add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). | A product-specific listing for the tokenisation add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
 
 Ask which onboarding, support, recovery, extra-user and exit charges are included; network fees remain separate unless the contract explicitly covers them.
