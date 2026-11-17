@@ -47,7 +47,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 | Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware plus open-source components |
 | Hardware signer | Ledger | Secure signing plus device UX | Device-app development has its own SDK/review model | Hardware plus developer stack |
 | Local EVM development | Foundry/Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
-| Public blockchain data | Official explorer/RPC | Quick manual verification | Privacy- and rate-limit-sensitive | Usually free for modest manual use |
+| Public blockchain data | Explorer/RPC role (e.g., [Solana Explorer](https://explorer.solana.com/) and [Solana public mainnet RPC](https://solana.com/docs/references/clusters) at `https://api.mainnet.solana.com`) | Quick manual verification | Privacy- and rate-limit-sensitive | Provider-dependent; verify current pricing and usage limits in the selected service's documentation |
 
 ## 4. One-sentence decision rule
 
@@ -63,7 +63,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 
 **Version-record runbook**
 
-For each audit pin, expand step 3 into these checks and keep a record. Work from the pinned release, not a different release or the default branch.
+For each audit pin, expand step 3 into these checks and keep a record. Work from the pinned release, not a different release or the default branch. The mutable `master`/`main` links in §2 (including `bitcoin/bips` and `solana-com`) are discovery links, not audit-pin evidence; use immutable, commit-specific source permalinks that support verification of the pinned release in the audit record.
 
 1. **Check releases.** Match the exact version you intend to pin to the release it came from. Record both the version and the release identifier.
 2. **Check tests.** Find the tests and reference vectors covering the behaviour you need at that release. Run the relevant tests and record their names, commands and results. Note coverage gaps. If you cannot run a test, record that rather than treating it as passed.
@@ -79,7 +79,7 @@ Release:
 Tests covering this pin:
 Test commands and results:
 Coverage gaps:
-Dependencies and resolved versions:
+Dependencies (for each: declared constraint/allowed version range; separately, exact resolved version with lockfile or other resolution evidence, or "not determined"):
 Maintenance state and basis:
 ```
 
