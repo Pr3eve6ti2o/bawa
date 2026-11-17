@@ -860,17 +860,19 @@ Get withdrawal conditions, fees, timescales and data-export arrangements in writ
 
 Plan to **RE-KEY** when leaving:
 
-1. Establish fresh keys under the new security boundary.
-2. Verify the receiving addresses independently and transfer balances while the old provider and quorum are still available.
-3. Update deposit addresses and watch-only public roots, retain transaction and approval records, then revoke obsolete service access.
+1. Confirm the new security boundary and quorum before proceeding; abort departure if any check fails.
+2. Establish fresh keys under the new security boundary.
+3. Verify the receiving addresses independently and transfer balances while the old provider and quorum are still available.
+4. Update deposit addresses and watch-only public roots; retain transaction and approval records.
+5. Verify that the old keys can no longer move funds, then revoke obsolete service access.
 
 Supported wrapped-key migration may be useful, but reusing a key can preserve dependence on anyone holding an old recovery copy. Fresh keys and an on-chain transfer provide a clearer separation.
 
 ### Required security review and signing flow
 
-An external security review of the complete design is required before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review.
+An external security review of the complete design is recommended by this guide before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review.
 
-Flow: signing request, into quorum approval, into HSM signature, into broadcast.
+Flow: signing request (validate the request and transaction), into quorum approval (bind approvals to the exact signing payload), into HSM signature (verify the returned signature), into broadcast.
 ## 19. Paid security: institutional MPC platforms
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
