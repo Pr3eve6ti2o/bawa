@@ -218,7 +218,7 @@ Export after the hardened boundary. A root xpub cannot traverse `44'/60'/0'`. Th
 
 1. Confirm the originating wallet’s chain and receiving policy. Use `m/44'/60'/0'/0/i` only where that is the intended ETH policy.
 2. Obtain the **public** export for `m/44'/60'/0'`. Keep your mnemonic, seed and all private extended keys outside the receiving service.
-3. Record the chain, account origin and permitted `/0/i` suffix alongside your service configuration. An xpub does not encode its complete ancestry or uniquely identify the application chain; its prefix is not proof of either.
+3. Record the chain, account origin and permitted `/0/i` suffix alongside your service configuration; this record is the guard against cross-chain xpub misuse. Separate per-chain roots are a policy, not a technical restriction, and the tools do not enforce it. BTC, ETH and TRX xpubs share version `0x0488b21e`; an xpub carries no chain tag and does not encode its complete ancestry, so its prefix is not proof of chain or account origin. Cross-chain misuse can derive silently: a BTC `zpub` supplied as `eth` derives an ETH address from BTC key material without a version error.
 
 **Procedure 2 — run one derivation**
 
@@ -246,7 +246,7 @@ For Bitcoin mainnet, single-signature accounts:
 
 | Public format | Encoding and address policy | Address prefix | Public version |
 | --- | --- | --- | --- |
-| `xpub` | BIP-32 encoding; BIP-44 legacy P2PKH | `1` | `0x0488b21e` |
+| `xpub` | BIP-32 encoding; P2PKH or P2SH (SLIP-0132) | `1` or `3` | `0x0488b21e` |
 | `ypub` | BIP-49 wrapped SegWit P2SH-P2WPKH | `3` | `0x049d7cb2` |
 | `zpub` | BIP-84 native SegWit P2WPKH | `bc1q` | `0x04b24746` |
 
