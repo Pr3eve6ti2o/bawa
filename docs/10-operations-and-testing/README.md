@@ -1017,7 +1017,7 @@ Run the maintainer-confirmed checks after that install. Once they pass, commit t
 
 Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
-These checks are guidance for your own setup, not Bawa monitoring features. Bawa does not document freshness thresholds, payment-confirmation rules or recovery procedures. Confirm those with the maintainer.
+These checks are guidance for your own setup, not Bawa monitoring features. Payment-confirmation rules are documented in MAINNET-GUIDE section 14 (pinned wallet policies reviewed 2026-11-10 under register entry M-38): Bitcoin 6 confirmations (a customary recommendation, not a protocol requirement); Ethereum at least 12 confirmations and canonical finalised inclusion (12 confirmations alone are insufficient); TRON 19 distinct active Super Representatives out of 27 with solidified inclusion via `/walletsolidity/*`, never a block count. Bawa does not document freshness thresholds or recovery procedures. Confirm those with the maintainer.
 
 ### Personal, $0, no server
 
