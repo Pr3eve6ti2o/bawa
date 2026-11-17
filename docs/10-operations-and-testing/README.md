@@ -504,7 +504,7 @@ Read each result with its provenance, environment and coverage limits. Do not co
 
 > At `754721cd`, the operator's 2026-11-09 run of `npm test` on Node v24.22.2 passed 28/28 with exit 0.
 >
-> The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
+> The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range. Because `requirements.txt` pins bip-utils==2.12.3, the 28/28 result is not a reproduction against the current pins.
 
 Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet-gen test`, which runs `node ../../test/smoke.test.js`. The smoke test file has been committed since `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
