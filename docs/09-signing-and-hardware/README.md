@@ -357,11 +357,11 @@ The steps follow the **BIP-174 PSBT flow**. BIP-371 covers Taproot PSBTs.
 
 The [Trezor firmware path reference](https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md) documents per-coin derivation paths. Paths differ by curve and blockchain family; public nodes are possible only where the derivation rules support them.
 
-Bawa does not ship a device integration. The Trezor reference is not a Bawa-Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path.
+Bawa ships no device integration and does not document a device-specific setup procedure. The Trezor reference is not a Bawa-Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path. A PSBT whose origin is Bawa cannot be imported from an external signer (see [the descriptor convention](#the-descriptor-convention-is-different) and [the documented deviation](#output-descriptors-make-the-watch-target-explicit)).
 
 ### What the runbook still needs
 
-Under **[BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)/[BIP-381](https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki)/[BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki)**, a native-SegWit descriptor carries **script policy, derivation origin and ranged derivation patterns (/0/*)**. See also [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md).
+Under **[BIP-380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)/[BIP-382](https://github.com/bitcoin/bips/blob/master/bip-0382.mediawiki)**, a native-SegWit descriptor carries **script policy, derivation origin and ranged derivation patterns (/0/*)**. ‘Script policy’ is the guide’s term for ‘how those keys become spendable outputs’ (see [the definition](#output-descriptors-make-the-watch-target-explicit)), not a BIP-380 term. See also [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [SLIP-0044](https://github.com/satoshilabs/slips/blob/master/slip-0044.md).
 
 - **Receiving:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/0/*)`
 - **Change:** `wpkh([<fingerprint>/84'/1'/0']<xpub>/1/*)`
