@@ -2908,7 +2908,7 @@ Never request mnemonics, private keys (including xprv and zprv), data keys, `pro
 Check the possible causes below in this exact order, **one item at a time**. Corrections are to the derivation inputs or configuration, not to the expected original. After each correction, **re-derive and fully re-compare** against the unchanged original before making another correction. Do not skip ahead or change several settings together. (M16-F43)
 
 1. **Mnemonic — words, spelling or order differ.** Use the original words, with the original spelling and order.
-2. **Passphrase — the BIP-39 policy or passphrase differs.** Apply the exact recorded BIP-39 policy. Use an empty passphrase only where it was originally empty; otherwise use the original, separately backed-up passphrase. Never substitute the backup-decryption password.
+2. **Passphrase — fixed empty BIP-39 passphrase.** The verifier reproducer uses Bawa's fixed empty BIP-39 passphrase; the evidenced Bawa path exposes no passphrase input. Never substitute the backup-decryption password.
 3. **Curve — an assumed library default differs from the record.** Use the recorded curve, not an assumed default.
 4. **Coin type — the path component differs.** Use the recorded coin-type component.
 5. **Purpose — the purpose or address policy differs.** Use the recorded purpose and address policy.
@@ -2984,7 +2984,7 @@ Only that the tested round trip worked. The recorded result was **4/4 at the 202
 
 **What does exit status `0` prove?**
 
-Only that the process reported successful completion—not that its address output is correct. `compare.js` can print wrong addresses with exit status `0`. A downstream command’s success also says nothing about whether decryption succeeded; check the decrypt process itself. (OI-096; M16-F11, M16-F33; M04)
+Only that the process reported successful completion—not that its address output is correct. After the `e3b65fb8` repair, included at `a5bc56e`, `compare.js` rejects private extended keys with exit status `1`. A downstream command's success also says nothing about whether decryption succeeded; check the decrypt process itself. (OI-096; M16-F11, M16-F33; M04)
 
 **Does an empty wallet mean funds were never sent?**
 
