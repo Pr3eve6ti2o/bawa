@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "linkedom": "^0.18.0",
+    "patchright": "^1.64.3",
+    "tsx": "^4.0.0"
+  },
+  "description": "Read-only TronScan Approval-tab check using the vendored trawl Cloudflare solvers (patchright + headless Chromium).",
+  "name": "bawa-captcha-tronscan-check",
+  "private": true,
+  "scripts": {
+    "check": "tsx run-tronscan-check/test-tronscan.ts"
+  },
+  "type": "module",
+  "version": "1.0.0"
+}

@@ -1,0 +1,422 @@
+package com.myAllVideoBrowser.ui.main.home.browser
+
+import android.graphics.Bitmap
+import android.os.Build
+import android.webkit.HttpAuthHandler
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.lifecycle.viewModelScope
+import com.myAllVideoBrowser.data.local.room.entity.HistoryItem
+import com.myAllVideoBrowser.ui.main.history.HistoryViewModel
+import com.myAllVideoBrowser.ui.main.settings.SettingsViewModel
+import com.myAllVideoBrowser.util.FaviconUtils
+import com.myAllVideoBrowser.util.proxy_utils.CustomProxyController
+import com.myAllVideoBrowser.util.proxy_utils.OkHttpProxyClient
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.myAllVideoBrowser.R
+import com.myAllVideoBrowser.ui.main.home.browser.detectedVideos.IVideoDetector
+import com.myAllVideoBrowser.ui.main.home.browser.webTab.WebTab
+import com.myAllVideoBrowser.ui.main.home.browser.webTab.WebTabViewModel
+import com.myAllVideoBrowser.util.CookieUtils
+import com.myAllVideoBrowser.util.SingleLiveEvent
+import com.myAllVideoBrowser.util.VideoUtils
+import io.reactivex.rxjava3.disposables.Disposable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
+import java.io.ByteArrayInputStream
+import androidx.core.net.toUri
+import com.myAllVideoBrowser.ui.main.home.browser.adblocker.AdBlockEngine
+import com.myAllVideoBrowser.util.AppLogger
+
+val disableWebRtcJs = """
+    (function() {
+        function blockWebRTC(win) {
+            try {
+                // Stub RTCPeerConnection as a constructor that throws NotSupportedError
+                const DummyRTCPeerConnection = function() {
+                    throw new win.DOMException("RTCPeerConnection not supported", "NotSupportedError");
+                };
+                DummyRTCPeerConnection.prototype = {};
+                
+                win.RTCPeerConnection = DummyRTCPeerConnection;
+                win.webkitRTCPeerConnection = DummyRTCPeerConnection;
+                win.mozRTCPeerConnection = DummyRTCPeerConnection;
+                
+                win.RTCSessionDescription = function() {};
+                win.webkitRTCSessionDescription = function() {};
+                win.mozRTCSessionDescription = function() {};
+                
+                win.RTCIceCandidate = function() {};
+                win.webkitRTCIceCandidate = function() {};
+                win.mozRTCIceCandidate = function() {};
+            } catch (e) {}
+        }
+
+        // 1. Block on main window
+        blockWebRTC(window);
+    })();
+""".trimIndent()
+
+val injectJsInterceptor = """
+        (function() {
+            const oldSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.send = function(body) {
+                if (window.AndroidBridge && window.AndroidBridge.shouldInterceptPost(this._url, body || "")) {
+                    this.abort(); // Kill the XHR
+                    return;
+                }
+                oldSend.apply(this, arguments);
+            };
+
+            const oldFetch = window.fetch;
+            window.fetch = async function(input, init) {
+                const url = typeof input === 'string' ? input : input.url;
+                const method = init?.method?.toUpperCase() || 'GET';
+                if (method === 'POST' && window.AndroidBridge) {
+                    if (window.AndroidBridge.shouldInterceptPost(url, init.body || "")) {
+                        return new Response('', { status: 200 }); // Return empty
+                    }
+                }
+                return oldFetch.apply(this, arguments);
+            };
+        })();
+    """.trimIndent()
+
+enum class ContentType {
+    M3U8,
+    MPD,
+    VIDEO,
+    AUDIO,
+    OTHER
+}
+
+class CustomWebViewClient(
+    private val tabViewModel: WebTabViewModel,
+    private val settingsModel: SettingsViewModel,
+    private val videoDetectionModel: IVideoDetector,
+    private val historyModel: HistoryViewModel,
+    private val okHttpProxyClient: OkHttpProxyClient,
+    private val updateTabEvent: SingleLiveEvent<WebTab>,
+    private val pageTabProvider: PageTabProvider,
+    private val proxyController: CustomProxyController,
+    private val adBlockEngine: AdBlockEngine
+) : WebViewClient() {
+    var videoAlert: MaterialAlertDialogBuilder? = null
+    private var lastSavedHistoryUrl: String = ""
+    private var lastSavedTitleHistory: String = ""
+    private var lastRegularCheckUrl = ""
+    private val regularJobsStorage: MutableMap<String, List<Disposable>> = mutableMapOf()
+    private var approvedUrl: String? = null
+
+    companion object {
+        fun emptyResponse(): WebResourceResponse {
+            return WebResourceResponse(
+                "text/plain",
+                "utf-8",
+                ByteArrayInputStream("".toByteArray())
+            )
+        }
+
+        fun isBotChallengeOrCaptcha(url: String): Boolean {
+            val lowerUrl = url.lowercase()
+            return lowerUrl.contains(".within.website/x/cmd/anubis") ||
+                    lowerUrl.contains("/challenges.cloudflare.com/") ||
+                    lowerUrl.contains("/cdn-cgi/challenge-platform/") ||
+                    // Google reCAPTCHA & Google bot challenges / CAPTCHAs
+                    lowerUrl.contains("/recaptcha") ||
+                    lowerUrl.contains("recaptcha.net") ||
+                    lowerUrl.contains("gstatic.com/recaptcha") ||
+                    lowerUrl.contains("google.com/recaptcha") ||
+                    lowerUrl.contains("google.com/sorry") ||
+                    lowerUrl.contains("google.com/captcha") ||
+                    lowerUrl.contains("google.com/botguard") ||
+                    lowerUrl.contains("accounts.google.com/signin/v2/challenge") ||
+                    lowerUrl.contains("accounts.google.com/v3/signin/challenge") ||
+                    // Other common CAPTCHAs and bot challenges
+                    lowerUrl.contains("hcaptcha.com") ||
+                    lowerUrl.contains("/hcaptcha") ||
+                    lowerUrl.contains("arkoselabs.com") ||
+                    lowerUrl.contains("funcaptcha.com") ||
+                    // Facebook checkpoint & identity verification
+                    lowerUrl.contains("facebook.com/checkpoint") ||
+                    lowerUrl.contains("facebook.com/login/checkpoint") ||
+                    lowerUrl.contains("facebook.com/identity") ||
+                    lowerUrl.contains("facebook.com/confirm_code") ||
+                    lowerUrl.contains("facebook.com/two_step_verification")
+        }
+    }
+
+    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+        val viewTitle = view?.title
+        val title = tabViewModel.currentTitle.get()
+        val userAgent = view?.settings?.userAgentString ?: tabViewModel.userAgent.get()
+
+        if (url != null && lastSavedHistoryUrl != url) {
+            historyModel.viewModelScope.launch(historyModel.executorSingleHistory) {
+                val faviconUrl = FaviconUtils.getFaviconUrl(url)
+                saveUrlToHistory(url, faviconUrl, viewTitle ?: title)
+
+                videoDetectionModel.onStartPage(
+                    url,
+                    userAgent
+                        ?: BrowserFragment.MOBILE_USER_AGENT
+                )
+                tabViewModel.onUpdateVisitedHistory(
+                    url,
+                    title,
+                    userAgent
+                )
+            }
+        }
+        super.doUpdateVisitedHistory(view, url, isReload)
+    }
+
+    override fun onReceivedHttpAuthRequest(
+        view: WebView?, handler: HttpAuthHandler?, host: String?, realm: String?
+    ) {
+        if (proxyController.getCurrentRunningProxy().host == host) {
+            val creds = proxyController.getProxyCredentials()
+
+            if (creds.first.isNotEmpty() || creds.second.isNotEmpty()) {
+                handler?.proceed(creds.first, creds.second)
+            }
+        }
+        super.onReceivedHttpAuthRequest(view, handler, host, realm)
+    }
+
+    override fun shouldInterceptRequest(
+        view: WebView?, request: WebResourceRequest?
+    ): WebResourceResponse? {
+        if (request?.url == null) {
+            return super.shouldInterceptRequest(view, request)
+        }
+
+        val url = request.url.toString()
+
+        if (isBotChallengeOrCaptcha(url)) {
+            return super.shouldInterceptRequest(view, request)
+        }
+
+        val headers = request.requestHeaders ?: emptyMap()
+        val acceptHeader = headers.entries.find { it.key.equals("Accept", ignoreCase = true) }?.value ?: ""
+        val requestedWith = headers.entries.find { it.key.equals("X-Requested-With", ignoreCase = true) }?.value
+        val lowerUrl = url.lowercase()
+
+        val resourceType = when {
+            request.isForMainFrame -> "main_frame"
+            lowerUrl.contains(".js") || acceptHeader.contains("javascript") -> "script"
+            lowerUrl.contains(".css") || acceptHeader.contains("css") -> "stylesheet"
+            lowerUrl.contains(".png") || lowerUrl.contains(".jpg") || lowerUrl.contains(".jpeg") ||
+                lowerUrl.contains(".gif") || lowerUrl.contains(".webp") || lowerUrl.contains(".svg") ||
+                acceptHeader.contains("image") -> "image"
+            lowerUrl.contains(".mp4") || lowerUrl.contains(".m3u8") || lowerUrl.contains(".mpd") ||
+                lowerUrl.contains(".webm") || lowerUrl.contains(".mp3") || lowerUrl.contains(".m4a") -> "media"
+            requestedWith != null -> "xmlhttprequest"
+            acceptHeader.contains("html") -> "subdocument"
+            else -> "other"
+        }
+
+        if (settingsModel.isAdBlockOn.get()) {
+            val tabInputUrl = tabViewModel.getTabTextInput().get() ?: ""
+            val sourceUrl = if (tabInputUrl.startsWith("http")) tabInputUrl else url
+            val isAd = adBlockEngine.isAd(
+                url,
+                sourceUrl,
+                resourceType
+            )
+
+            if (isAd) {
+                AppLogger.d("AdBlock (GET/Resource): Blocked $url")
+                return emptyResponse()
+            }
+        }
+
+
+        val isCheckM3u8 = settingsModel.isCheckIfEveryRequestOnM3u8.get()
+        val isCheckOnMp4 = settingsModel.getIsCheckEveryRequestOnMp4Video().get()
+        val isCheckOnAudio = settingsModel.isCheckOnAudio.get()
+
+        if (isCheckOnMp4 || isCheckM3u8 || isCheckOnAudio) {
+            val requestWithCookies = request.let { resourceRequest ->
+                try {
+                    CookieUtils.webResourceRequestToOkHttpRequest(resourceRequest)
+                } catch (_: Throwable) {
+                    null
+                }
+            }
+
+            val contentType =
+                VideoUtils.getContentTypeByUrl(url, requestWithCookies?.headers, okHttpProxyClient)
+            val isInterruptIntreceptedResources =
+                settingsModel.isInterruptIntreceptedResources.get()
+            when {
+
+                contentType == ContentType.M3U8 || contentType == ContentType.MPD || url.contains(".m3u8") || url.contains(
+                    ".mpd"
+                ) || (url.contains(".txt") && url.contains("hentaihaven")) -> {
+                    val isM3u8 =
+                        ContentType.M3U8 == contentType || (url.contains(".txt")) || url.contains(".m3u8")
+                    val isMpd = ContentType.MPD == contentType || url.contains(".mpd")
+
+                    if (requestWithCookies != null && isCheckM3u8) {
+                        videoDetectionModel.verifyLinkStatus(
+                            requestWithCookies, tabViewModel.currentTitle.get(), isM3u8, isMpd
+                        )
+                    }
+                    if (isInterruptIntreceptedResources) {
+                        return emptyResponse()
+                    }
+                }
+
+                else -> {
+                    if ((isCheckOnMp4 || isCheckOnAudio) && contentType != ContentType.OTHER) {
+                        val disposable = videoDetectionModel.checkRegularVideoOrAudio(
+                            requestWithCookies,
+                            isCheckOnAudio,
+                            isCheckOnMp4
+                        )
+
+                        val currentUrl = tabViewModel.getTabTextInput().get() ?: ""
+                        if (currentUrl != lastRegularCheckUrl) {
+                            regularJobsStorage[lastRegularCheckUrl]?.forEach {
+                                it.dispose()
+                            }
+                            regularJobsStorage.remove(lastRegularCheckUrl)
+                            lastRegularCheckUrl = currentUrl
+                        }
+                        if (disposable != null) {
+                            val overall = mutableListOf<Disposable>()
+                            overall.addAll(regularJobsStorage[currentUrl]?.toList() ?: emptyList())
+                            overall.add(disposable)
+                            regularJobsStorage[currentUrl] = overall
+                        }
+                        if (isInterruptIntreceptedResources) {
+                            return emptyResponse()
+                        }
+                    }
+                }
+            }
+        }
+
+        return super.shouldInterceptRequest(
+            view, request
+        )
+    }
+
+    override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+        super.onPageStarted(view, url, favicon)
+
+        view.evaluateJavascript(injectJsInterceptor, null)
+
+        videoAlert = null
+        val pageTab = pageTabProvider.getPageTab(tabViewModel.thisTabIndex.get())
+        val headers = pageTab.getHeaders() ?: emptyMap()
+        val favi = pageTab.getFavicon() ?: view.favicon ?: favicon
+
+        updateTabEvent.value = WebTab(
+            url,
+            view.title,
+            favi,
+            headers,
+            view,
+            id = pageTab.id
+        )
+        tabViewModel.onStartPage(url, view.title)
+    }
+
+    override fun shouldOverrideUrlLoading(view: WebView, url: WebResourceRequest): Boolean {
+        val newUrl = url.url.toString()
+        if (newUrl.startsWith("http") && url.isForMainFrame) {
+            if (approvedUrl == newUrl) {
+                approvedUrl = null
+                return false
+            }
+
+            val currentUrl = view.url
+            val currentHost = currentUrl?.toUri()?.host
+            val newHost = url.url.host
+
+            if (settingsModel.isAskRedirection.get() && currentHost != null && newHost != null && currentHost != newHost) {
+                showRedirectionDialog(view, newUrl, newHost)
+                return true
+            }
+
+            if (!tabViewModel.isTabInputFocused.get()) {
+                tabViewModel.setTabTextInput(newUrl)
+            }
+            return false
+        } else {
+            return true
+        }
+    }
+
+    private fun showRedirectionDialog(view: WebView, newUrl: String, newHost: String) {
+        val context = view.context
+        MaterialAlertDialogBuilder(context)
+            .setTitle(context.getString(R.string.redirection_dialog_title))
+            .setMessage("${context.getString(R.string.redirection_dialog_message)} $newHost")
+            .setPositiveButton(context.getString(R.string.yes)) { _, _ ->
+                approvedUrl = newUrl
+                view.loadUrl(newUrl)
+            }
+            .setNegativeButton(context.getString(R.string.no), null)
+            .setNeutralButton(context.getString(R.string.dontshow)) { _, _ ->
+                settingsModel.setIsAskRedirection(false)
+                approvedUrl = newUrl
+                view.loadUrl(newUrl)
+            }
+            .show()
+    }
+
+    override fun onPageFinished(view: WebView, url: String) {
+        super.onPageFinished(view, url)
+        tabViewModel.finishPage(url)
+    }
+
+    override fun onRenderProcessGone(
+        view: WebView?, detail: RenderProcessGoneDetail?
+    ): Boolean {
+        val pageTab = pageTabProvider.getPageTab(tabViewModel.thisTabIndex.get())
+
+        val webView = pageTab.getWebView()
+        if (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                view == webView && detail?.didCrash() == true
+            } else {
+                view == webView
+            }
+        ) {
+            webView?.destroy()
+            return true
+        }
+
+        return super.onRenderProcessGone(view, detail)
+    }
+
+    private suspend fun saveUrlToHistory(url: String, favicon: Any?, title: String?) {
+        val isTitleEmpty = title?.trim()?.isEmpty() == true
+
+        if (!isTitleEmpty && lastSavedTitleHistory != title && lastSavedHistoryUrl != url && url.isNotEmpty() && !url.contains(
+                "about:blank"
+            )
+        ) {
+            lastSavedHistoryUrl = url
+            lastSavedTitleHistory = title ?: ""
+
+            val faviconUrl = when (favicon) {
+                is String -> favicon
+                else -> FaviconUtils.getFaviconUrl(url)
+            }
+
+            yield()
+
+            historyModel.saveHistory(
+                HistoryItem(
+                    url = url, faviconUrl = faviconUrl, title = title
+                )
+            )
+        }
+    }
+}
