@@ -566,7 +566,7 @@ From `manual_review`, restart only an unfulfilled request at `observed`, followi
 
 Append the dispute while preserving the delivery record and original stored result. Keep contrary evidence alongside them and flag the disagreement as a discrepancy. Continue into `manual_review`.
 
-Do not silently replace the result or repeat delivery. Do not restart the payment route during post-fulfilment review.
+Do not silently replace the result or repeat delivery. The no-repeat-delivery rule is application policy. Do not restart the payment route during post-fulfilment review.
 
 #### Close at `reconciled`
 
