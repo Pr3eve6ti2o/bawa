@@ -54,12 +54,12 @@ Keep the local repair result separate from checkout results: “The phase-1 repa
 
 Prepare the reference environment before installing dependencies:
 
-- Prefer a Unix-like environment for the interactive `/dev/tty` generation flow.
+- Use a compatible Unix-like environment with an accessible interactive TTY (`/dev/tty`) for generation.
 - Use Node.js matching the repository engine requirement, `>=22 <23`.
 - Provide npm, but resolve its version pin before any npm-based release validation.
 - Use Python 3.11+ and a Python virtual environment for local tooling.
 - Reserve enough disk space for dependencies and recovery backups.
-- Use an offline or trusted machine for actual wallet generation.
+- Use a trusted host, preferably offline, for actual wallet generation.
 
 > **Warning:** Generating a real wallet on an untrusted shell or CI runner risks exposing its secrets. Use an offline or trusted machine for actual wallet generation. Confirm that the generation environment meets this requirement before proceeding.
 
@@ -904,7 +904,7 @@ Treat an SBOM as an inventory of components, not as certification of security. C
 
 ### Re-check external links
 
-Re-check every external link before each release. Make requests sequentially, with delays between requests. Avoid checking five links at a time, which caused false 429 rate-limit responses in the 8 November 2026 audit.
+Re-check every external link before each release. Make requests sequentially, with delays between requests. The 8 November 2026 audit encountered 429 rate-limit responses during link checks.
 
 Record the check date beside any link that blocks automated checks. Record any link section that cannot be re-checked as a finding, not as a footnote.
 
@@ -927,11 +927,11 @@ Both the root package and `tools/hdwallet-gen` declare version `1.1.0`. Their in
 - **npm**. Bawa does not specify an npm version.
 - **Python 3.11 or newer**, matching `>=3.11`, with virtual-environment support.
 - Enough free storage for dependencies and later recovery backups.
-- Preferably a Unix-like environment: the interactive generation flow uses `/dev/tty`.
+- A compatible Unix-like environment and an accessible interactive TTY are required: the interactive generation flow uses `/dev/tty`.
 
 Bawa does not document OS-specific prerequisite installation commands or a disk-space figure. Confirm the supported toolchain, tested npm version and storage requirements with the maintainer rather than guessing a bootstrap recipe.
 
-For actual wallet generation, use an offline or trusted machine, not on an untrusted shell or CI runner. If the installation machine must remain offline, first confirm the dependency-transfer and verification process with the maintainer; Bawa does not document an offline installation procedure.
+For actual wallet generation, use a trusted host, preferably offline, not on an untrusted shell or CI runner. If the installation machine must remain offline, first confirm the dependency-transfer and verification process with the maintainer; Bawa does not document an offline installation procedure.
 
 **Expected result:** Git and npm available, Node within `>=22 <23`, and Python at least `3.11` with virtual-environment support.
 
