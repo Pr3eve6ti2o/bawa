@@ -630,10 +630,10 @@ If several requests fit, do not guess. Treat an indexed transaction as evidence 
 Read the receiving account's transactions and inbound messages through a node/API or indexer.
 
 - Use `(<NETWORK>, <ACCOUNT_ADDRESS>, <LT>, <TX_HASH>)` as the native-receipt key. `<LT>` is the receiving transaction's logical time.
-- Check the network, exact recipient, inbound atomic value, transaction identity, execution/bounce outcome and block/finality state.
+- Check the network, exact recipient, inbound atomic value, transaction identity, execution/bounce outcome and block/finality state ([TON transaction finality](https://docs.ton.org/v3/documentation/dapps/transactions/finality)).
 - Verify a credited, non-bounced inbound payment. Do not treat a sender-side transaction alone as proof of receipt.
 - Use a dedicated address to identify the request. For a shared address, require the exact assigned comment/memo as part of the request-matching key. Do not use the memo in place of transaction identity.
-- Retain the wallet contract type and wallet ID used to derive the address. Recreating the wallet with different settings can produce a different destination.
+- Retain the wallet contract type and wallet ID used to derive the address. Recreating the wallet with different settings can produce a different destination ([TON wallet contracts](https://docs.ton.org/v3/documentation/smart-contracts/contracts-specs/wallet-contracts)).
 
 If you cannot reach a chain feed, leave the outcome unknown. Missing observations do not establish that nothing was paid.
 
