@@ -2899,7 +2899,7 @@ Baseline: 2026-11-09, `main` head `56396a20`.
 
 ### Troubleshooting
 
-Never request mnemonics, data keys or secret-bearing transcripts in a troubleshooting exchange. Keep that material out of reports and replies. (M16-F11, M16-F33; M04)
+Never request mnemonics, private keys (including xprv and zprv), data keys, `production.env`, backup artefacts, credentials, API secrets, or secret-bearing transcripts in a troubleshooting exchange. Keep that material out of reports and replies. (M16-F11, M16-F33; M04)
 
 #### A re-derived address does not match the recorded original
 
@@ -2922,7 +2922,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### The recorded address has no current balance
 
-**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README §13 empty-passphrase instruction and its “never sent” conclusion must not be applied as written. (M16-F45)
+**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README-FULL §13 (line 1039) empty-passphrase instruction and its “never sent” conclusion must not be applied as written. (M16-F45)
 
 **Action:** reproduce the recorded address with the recorded path and passphrase policy, using the ordered checks above. Keep address reproduction, current balance, transaction history and address discovery separate. Examine independent transaction evidence on the recorded network. (M16-F43, M16-F45)
 
