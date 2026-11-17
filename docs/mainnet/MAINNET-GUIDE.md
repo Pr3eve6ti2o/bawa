@@ -3876,11 +3876,12 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 - M36 item 3 requires the user’s word before changing the repair-commit pin for the mainnet guide.
 - M36 item 5 identifies §5 proof staleness: use the `MAIN_HEAD` capture form or update the SHA at push.
 - M24 K01’s §4 text fix was committed at b3814e0b in the 2026-11-10 push (b3814e0b is an ancestor of a5bc56e); the §15/L3732/L4756 decisions remain OPEN.
+- The README fix is committed at `b3814e0b` (2026-11-10 push), titled “docs: fix README §4 pin procedure to use a separate worktree (F4)”.
 - M01 F35 item 11 prohibits silently treating `56396a20` as an authorised mainnet baseline.
 
 **Status:** RESOLVED 2026-11-10 — the user decided: pin Doc 4 to the immutable repair-commit SHA `e3b65fb832db287fdc8d54794980dd0b3456cc12`; the §5 step-4 proof uses the literal baseline HEAD SHA; the `MAIN_HEAD` capture in step 1 is supporting context only.
 
-**Operational restriction:** None remaining for §5 finalisation. The repair-commit value is supplied (M36 F3); the §4 text fix is committed at `b3814e0b` (2026-11-10 push).
+**Operational restriction:** None remaining for §5 finalisation. The repair-commit value is supplied (M36 F3); the README fix is committed at `b3814e0b` (2026-11-10 push).
 
 **Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
@@ -3896,11 +3897,11 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Evidence:**
 - M36 item 2 records the pending decisions.
-- M24 K01 records L4756 as superseded by the §4 worktree procedure, while the §15/L3732/L4756 decisions remain OPEN.
+- M24 K01 records L4756 as superseded by the §4 worktree procedure, while the decisions on the `docs/README-FULL.md` §15 (Updating and rebuilding) worktree treatment and the Android L3732/L4756 updates remain OPEN.
 - M01 F35 identifies L4756 as the old checkout and L3732 as the wrong “Doc 1, §3” reference. The pin procedure is §4.
 - M19 D16 places the F4 follow-ups at parent level, not within M19. See also M28-OI-10.
 
-**Status:** RESOLVED 2026-11-10 — the user approved the §15 worktree treatment and the Android L3732/L4756 updates; applied and pushed in this revision.
+**Status:** RESOLVED 2026-11-10 — the user approved the `docs/README-FULL.md` §15 (Updating and rebuilding) worktree treatment and the Android L3732/L4756 updates; applied and pushed in this revision.
 
 **Operational restriction:** None remaining for the §15/Android cross-references. The F4 worktree procedure remains the baseline for §4/§5.
 
