@@ -1630,7 +1630,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 ### Escalation and acceptance requirements
 
-Keep maintainer-dependent escalation pending while no vulnerability-disclosure procedure, contact or channel exists. Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
+Keep maintainer-dependent disclosure work pending while no vulnerability-disclosure procedure or private reporting contact is currently provided in this repository; do not delay independent containment. Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
 
 > **Warning:** Sharing incident records containing secrets can extend the exposure. Keep incident material separate from the clean installation and redact secrets from anything shared with a maintainer. Never send a seed, private key, data key or unredacted `.env`. Check each item for secrets before sharing it.
 
