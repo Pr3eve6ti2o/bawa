@@ -833,11 +833,11 @@ Store the height reached by the latest successful reconciliation, or its chain e
 
 ### Three-sided check
 
-Choose confirmation requirements, amount tolerances and late-payment treatment. Check the request's recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement with the saved finalisation outcome.
+Choose confirmation requirements, amount tolerances and late-payment treatment. Check the request's recorded terms against unique matching events that satisfy the confirmation policy, then compare the resulting entitlement with the saved finalisation outcome ([reconciliation](../12-chain-registry-and-assets/README.md#L320)).
 
 Recheck individual matches as well as the accepted total. Count each event once: re-observing it must not add its value again.
 
-Commit finalisation atomically with the credit or an outbox entry. Enforce a stable idempotency key for that entitlement, including in downstream consumers. Never generate a fresh credit key per reconciliation run.
+Commit finalisation atomically with the credit or an outbox entry (see the [payment lifecycle state machine](#payment-lifecycle-state-machine)). Enforce a stable idempotency key for that entitlement, including in downstream consumers. Never generate a fresh credit key per reconciliation run.
 
 ### Worked recovery
 
@@ -845,7 +845,7 @@ Commit finalisation atomically with the credit or an outbox entry. Enforce a sta
 
 1. Replay `<SAFE_HEIGHT>` through `<END_HEIGHT>`, containing `<HEIGHT>`.
 2. Find the missing event during replay and restore its record.
-3. Check the restored event. It matches the request and meets `<CONFIRMATION_POLICY>`, so the stored outcome needs correction.
+3. Check the restored event. It matches the request and meets `<CONFIRMATION_POLICY>`, so the stored outcome needs correction (see the [MAINNET-GUIDE section 12 state table](../mainnet/MAINNET-GUIDE.md#L1379-L1388)).
 4. Record the corrected finalisation and `<CREDIT_ID>` under `<IDEMPOTENCY_KEY>`.
 5. Replay the same range a second time. Retain that credit rather than issuing another.
 
