@@ -119,7 +119,7 @@ Keep chain and account-origin metadata alongside the xpub. Do not treat address 
 
 Mirror the Wallet Core API sequence in `derive.js`. Apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
 
-Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
+Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. As a command-line program, `derive.js` reports failures with plain `console.error` and exits with code 2 for read/usage errors or private-key rejection, or code 1 for runtime failures; it does not return typed errors.
 
 Call the temporary public-key object’s `delete` method from a `finally` block, including when address conversion fails.
 
