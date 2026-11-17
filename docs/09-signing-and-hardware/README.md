@@ -430,9 +430,13 @@ Adding these fields does not approve the transaction. They give the signer evide
 
 ### 3. Signer, verify on device, then sign
 
-Transfer the PSBT using QR, a file or an SD card, as supported by your signer.
+Transfer the PSBT using QR, a file or an SD card, provided both the transfer route and the PSBT representation are compatible end to end with your signer (see the [device-screen check](#hand-off-checks)).
 
-The signer must validate the consistency of UTXO data and scripts, derive its own matching public keys, and verify change against its expected wallet policy. A coordinator’s fingerprint or “change” label is not proof. The signer must also enforce an acceptable sighash policy.
+The signer must validate the consistency of UTXO data and scripts, independently verify its own matching public keys, and verify change against its expected wallet policy (see [Shared definitions note](#shared-definitions-note)). A coordinator’s fingerprint or “change” label is not proof. The signer must also enforce an acceptable sighash policy (see [Shared definitions note](#shared-definitions-note)). Under BIP-174, an Input Finalizer may finalise only if a sighash type is provided.
+
+#### Shared definitions note
+
+“Wallet policy” is this guide’s term for the signer’s rules for which spends it will authorise. It is related to, but is not the same as, script policy. “Sighash policy” specifies which sighash modes the signer will accept; “acceptable” means the signer accepts only the modes that policy names.
 
 Before approving, check on the device’s own trusted screen:
 
