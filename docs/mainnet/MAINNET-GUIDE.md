@@ -826,7 +826,7 @@ Apply the complete mapping, not just the first URL that makes a request work.
 - `nileex.io/join/get`
 - `mempool.space/testnet4/faucet`
 
-No mainnet faucet exists. Do not turn either deletion into a guessed mainnet faucet URL.
+Do not replace either deleted testnet URL with a guessed mainnet faucet URL.
 
 The testnet URLs in this inventory were all live at the same time during the dated checks. A responding testnet URL therefore proves nothing about completing the migration. It can return plausible data for the wrong chain: the BTC checks found exactly that behaviour on testnet3. Check the endpoint actually configured, not merely a hostname copied into a terminal.
 
@@ -1032,7 +1032,7 @@ Creating a wallet needs no paid service. A paid RPC tier is an optional upgrade,
 
 ### First funding
 
-There are no mainnet faucets. First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
+First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
 
 Funding carries **wrong network, wrong address, wrong amount, stuck transaction and theft** risks. Before authorising a transfer or withdrawal, pin the expected mainnet, refresh the required inputs and verify your receiving address, the appropriate native asset, integer amount, fee bounds and total debit. Keep seed phrases and private keys local; providers must never receive them. Stop if the rehearsal requirement is unmet, a check fails or cannot be completed, or a provider requests a secret. A timed-out broadcast is **UNKNOWN**: stop and apply the txid-reconciliation rule above, including the TRX limitation, rather than making another transfer. Never fund a published fixture address. The addresses below belong to the public 15-word ripple test vector and must never receive real funds; stop if any appears as the destination.
 
