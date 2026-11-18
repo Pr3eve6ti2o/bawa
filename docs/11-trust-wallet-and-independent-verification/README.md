@@ -160,7 +160,7 @@ Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/19
 
 Do not count this separate derivation as repository-test coverage.
 
-Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: at the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`; no address is produced. Changing only the derivation path does not fix this `vpub` rejection; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
 
 ### Agreed comparison paths
 

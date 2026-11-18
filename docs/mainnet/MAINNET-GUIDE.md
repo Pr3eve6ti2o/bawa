@@ -521,7 +521,7 @@ The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is a
 >
 > A recognised prefix is not enough to pass these checks. For Bawa BTC mainnet, the expected input is `zpub` (`0x04b24746`). The SLIP-0132 mainnet reference entries also include public `xpub` (`0x0488B21E`) and private `xprv` (`0x0488ADE4`); private extended keys are excluded from the watch-only environment. These reference entries are not an alternative to Bawa’s recorded BIP-84 policy. [M28 §6.1; M28-016; M28-083; M27 §3.1]
 >
-> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: with Core `4.8.4`, both produce no address and exit `1` with an opaque WASM-abort error. [M28-016; M28-083; D31 F8]
+> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: at the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`; no address is produced. [M28-016; M28-083; D31 F8]
 >
 > After the input checks, the resulting address must **exactly match the independent offline reference** for the recorded policy; see §9. Otherwise, **STOP**. A valid-looking string, agreement between tool outputs, or exit `0` must not override a stop. [M04; M27; M35]
 
@@ -1089,7 +1089,7 @@ Both implementations must also start from an independently checked public node. 
 
 #### Public-only input and output contract
 
-- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. Those testnet inputs trigger an opaque WASM abort with exit 1; do not feed them in as a network test.
+- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. At the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`. No address is produced; do not feed BTC testnet `vpub` or `tpub` keys in as a network test.
 - Supply the public node through **stdin, never argv**. The single-address stdin limit is **200 characters including the trailing newline**, not 200 characters plus a newline.
 - The single-address interface uses exit **2** for usage or read errors, **1** for derivation or validation failure, and **0** for success with a bare address. A zero exit still requires the independent comparison above.
 - For the daemon, wait for its first output line, `{"ready": true}`, before sending requests. Requests are JSONL objects with the fields `chain`, `xpub` and `index`; the `xpub` field carries the BTC `zpub` as well. `index` must be an integer from **0 to 2147483647**, inclusive.
