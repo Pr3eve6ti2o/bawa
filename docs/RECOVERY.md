@@ -602,7 +602,7 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
 2. **Move every asset and token, then verify every receipt.**
 
-   Work from a clean signing environment. Inventory every account and network used by the old wallet, including tokens and NFTs that its default balance screen may omit. Prioritise the highest-value non-native assets rather than emptying convenient accounts first.
+   Work from a clean signing environment. Inventory every account and network used by the old wallet, including tokens and NFTs that its default balance screen may omit. Prioritise the highest-value, freely-transferable non-native assets rather than emptying convenient accounts first. [3]
 
    On each network, retain enough native gas coin for outgoing token transfers. Move the remaining spendable native gas coin last, allowing for the final transaction's own fee, especially where a sweeper bot may be watching.
 
