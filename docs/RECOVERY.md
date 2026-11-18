@@ -638,6 +638,8 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
 Preserve transaction references, addresses and timestamps, not secrets. An exchange may be able to act on assets it still controls, but do not mistake that possibility for an on-chain reversal or a promise of recovery. Never pay a 'recovery service'. [3]
 
+Create the Part 2 incident record as a dated Markdown file (`incident-YYYY-MM-DD.md`) containing a UTC timeline, transaction references, public addresses and any exchange or reporting case numbers. Store it in an encrypted, access-restricted local `incidents/` folder, separate from wallet files and seed backups. Retain it while any related case is open and for at least 12 months after the final case closes; if no case was opened, retain it for at least 12 months after the last update. Follow any longer legally required retention period.
+
 > **Expected result:** An evidence record and any available exchange or reporting reference numbers, not a claimed reversal or a supposedly repaired seed.
 
 ### Part 3: Device-loss playbook
