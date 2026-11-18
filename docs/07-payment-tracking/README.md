@@ -599,12 +599,12 @@ Treat a mempool output as an attempted payment, not confirmation. Block inclusio
 
 ### EVM tokens
 
-Use [`eth_getLogs`](https://ethereum.org/en/developers/apis/json-rpc/#eth_getlogs) on the intended network, filtering by the expected token contract and ERC-20 `Transfer` signature.
+Use [`eth_getLogs`](https://ethereum.org/developers/docs/apis/json-rpc/#eth_getlogs) on the intended network, filtering by the expected token contract and ERC-20 `Transfer` signature.
 
 - Use `(<CHAIN_ID>, <TX_HASH>, <LOG_INDEX>)` as the event key.
 - Verify the node's chain ID, emitting contract, event signature, sender, recipient, atomic token amount, transaction hash, log index and block number/hash.
 - Enforce any sender restriction: if the request specifies an allowed sender address, require the ERC-20 `Transfer` event's `from` address to match it.
-- Reject non-canonical logs and logs whose [`removed` flag](https://ethereum.org/en/developers/apis/json-rpc/#eth_getfilterchanges) is `true`.
+- Reject non-canonical logs and logs whose [`removed` flag](https://ethereum.org/developers/docs/apis/json-rpc/#eth_getfilterchanges) is `true`.
 - If an accepted log is subsequently removed, invalidate that observation and reassess the request.
 
 Distinguish the block views and removal signal:
