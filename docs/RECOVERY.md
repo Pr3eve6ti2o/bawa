@@ -616,6 +616,8 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
    After evacuation, revoke outstanding approvals only where doing so serves a useful purpose and does not put further funds at risk. Do not replenish a compromised address merely to tidy up permissions.
 
+   Use only revocation instructions verified for the affected chain. Revoke.cash is reference-only, not an independently verified live workflow for this guide; verify its entry point, live workflow, and current chain support before relying on it for EVM approvals. Do not use Revoke.cash or EVM allowance instructions for TRON. Follow a separately verified TRON-specific response procedure instead. No verified TRON revocation route is documented here; if none is available, record TRON revocation as unresolved rather than treating this step as chain-complete.
+
    Do not mistake revocation for a repair. A holder of the leaked seed can sign new transactions and re-approve allowances. Never use revocation as a reason to keep using the wallet.
 
    Confirm any useful revocations, or record the reason for taking no action. Keep the old seed marked as compromised regardless.
