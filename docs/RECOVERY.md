@@ -634,7 +634,7 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
 #### If funds are already gone
 
-**Trace, notify and report.** Treat on-chain transfers as irreversible. For funds already taken, follow the only remaining steps: trace the transactions, notify any identifiable receiving exchange through its official channels and report the theft to the relevant authorities.
+**Trace, notify and report.** Treat on-chain transfers as irreversible ([Bitcoin.org’s guidance on irreversible payments](https://bitcoin.org/en/you-need-to-know#bitcoin-payments-are-irreversible)). For funds already taken, follow the remaining steps: trace the transactions, notify any identifiable receiving exchange through its official channels and report the theft to the relevant authorities.
 
 Preserve transaction references, addresses and timestamps, not secrets. An exchange may be able to act on assets it still controls, but do not mistake that possibility for an on-chain reversal or a promise of recovery. Never pay a 'recovery service'. [3]
 
