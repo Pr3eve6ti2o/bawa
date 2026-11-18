@@ -138,7 +138,7 @@ https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.
 
 ### Ledger
 
-Ledger's developer documentation separates device apps, signing flows and wallet integration. Its current documentation also emphasises user review and clear transaction presentation on the signing device.
+Ledger's developer documentation separates device apps, signing flows and wallet integration. The portal describes Clear Signing as providing human-readable transaction details (checked 17 November 2026; portal homepage only).
 
 See:
 
@@ -188,7 +188,7 @@ broadcast node / RPC (watch-only side)
 
 Tracking and authorisation belong in separate trust domains. The signing domain includes private keys, seeds, the signer device and its screen, and the offline seed backup; recovery happens inside it. The tracker, the web server and the network are outside it. Private keys and seeds never leave the signing domain. Under this guide's threat model, the signing domain is offline/hardware-isolated. A browser vault does not meet that definition and is in tension with this rule; browser signing is not an intended signing domain and must not be treated as meeting the rule. Signing inconvenience is not a reason to load a seed onto the web server.
 
-Bawa does not ship a device integration. This flow follows the descriptor and PSBT standards; use your chosen watch-only wallet and signer’s documentation to set it up.
+Bawa does not ship a device integration. This section outlines an external workflow using descriptors and PSBTs; use your chosen watch-only wallet and signer’s documentation to set it up. Within Bawa, signing is available only in the built apps.
 
 ### What each part carries
 
