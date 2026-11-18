@@ -694,12 +694,12 @@ Preserve this separation when making additional copies. Never put the artefact, 
 
 #### Step 2, choose media and record access controls
 
-Choose backup media and protective storage for the risks at each location. Bawa does not prescribe either.
+Choose backup media and protective storage for the risks at each location. Bawa prescribes paper or metal for offline mnemonic backups, but leaves the choice between them open.
 
 - **Paper:** Allow for degradation, fire and water damage. Use protective packaging with the understanding that it helps but does not remove these failure modes.
 - **Metal:** Do not mistake resistance to fire and water for secrecy. Treat a stolen metal seed backup as giving full spending access unless a separately held BIP-39 passphrase is required.
 
-For **every copy**, record its medium, custodian, authorised access and physical theft controls, such as locked storage and procedures for releasing it. Keep this inventory restricted and free of recovery secrets.
+For **every copy**, choose and record physical access controls.
 
 **Never digitise the mnemonic.** Do not photograph it or put it in cloud storage, email, notes apps or password managers. Remember that a photo can sync automatically, and that a compromised master password can expose the seed alongside everything else in the same vault.
 
