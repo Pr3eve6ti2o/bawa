@@ -944,12 +944,12 @@ An M-of-N multisig wallet needs signatures from at least M of its N independent 
 
 ```text
 Typical signing paths
-on-chain multisig [separate complete private keys; one standard signature per key/message; policy visibility is mechanism- and spend-dependent]
-  → [M individual signatures]
-  → [chain enforces M-of-N; policy visible]
+on-chain multisig [separate complete private keys; one standard signature per key/message where applicable; policy visibility is mechanism- and spend-dependent]
+  → [M individual signatures where applicable; aggregated signatures and contract approvals need not show M separately visible signatures]
+  → [chain enforces M-of-N wallet authorisation policy; policy visibility is mechanism- and spend-dependent]
 
 MPC [key shares across participants]
-  → [threshold policy enforced off chain]
+  → [signing threshold enforced off chain; distinct from wallet authorisation policy]
   → [one ordinary signature on chain]
 ```
 
@@ -959,7 +959,7 @@ With a threshold above one and genuinely separate signers (each with independent
 
 A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
 
-If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids the service dependency but leaves that work with you. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
+If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids relying on a service to do that work but leaves it with you; dependencies on hosted coordinators, proprietary formats, software maintenance and hardware vendors may remain. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
 
 ### Establish custody: count the keys
 
