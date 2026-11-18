@@ -1556,7 +1556,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only while there is no reason to suspect signing-secret exposure. If exposure is suspected or established, generate a replacement wallet with a fresh seed instead.
 
-4. **Move assets.** For migration, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets and continuing with other holdings as they can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For migration, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings and continuing with other holdings as they can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
 5. **Revoke approvals.** From the clean environment, use a trusted interface to inventory token allowances, NFT/operator approvals, and supported permit-based permissions for every affected account on each network it used. For suspicious permissions, verify the network, account, and spender/operator before signing the appropriate zero-allowance, approval-removal, or supported permit-revocation transaction. Confirm transaction finality and independently recheck on-chain state to verify zero allowances and cleared NFT/operator or permit permissions, as applicable; record transaction references and any failed, unsupported, or unverified revocations. Do not delay required fresh-seed migration to attempt or verify revocation: an attacker retaining the signing key can reapprove.
 
@@ -1576,7 +1576,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only after establishing that there is no reason to suspect signing-secret exposure. Otherwise, generate a replacement wallet with a fresh seed. Apply the fresh-seed migration requirement rather than relying on a vault-password change.
 
-4. **Move assets.** For migration, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets before continuing with other holdings that can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For migration, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings before continuing with other holdings that can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
 5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface. Keep approval revocation separate from the migration required for signing-secret exposure.
 
@@ -1616,7 +1616,7 @@ For each scenario, begin containment immediately; perform urgent approval/sessio
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only while there is no reason to suspect signing-secret exposure. A genuinely approval-only incident does not automatically require wallet replacement. If signing secrets were exposed, or malicious code could have read them, generate a replacement wallet with a fresh seed and take the migration route.
 
-4. **Move assets.** For the migration route, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets before continuing with other holdings that can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For the migration route, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings before continuing with other holdings that can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
 5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted external interface such as [Revoke.cash](https://revoke.cash/) on supported chains; this repository provides no revocation procedure. For each affected chain and owner account, identify the relevant token contracts and suspicious spender/operator addresses, submit the corresponding allowance or NFT-approval revocations, and wait for confirmed successful transactions. Independently verify the resulting on-chain state for each scoped chain, account, token contract and spender/operator using a trusted explorer or RPC (allowance `0`, token-specific approval cleared or operator approval `false`, as applicable). Disconnecting the dApp does not revoke on-chain approvals. For an incident established as approval-only, make this the principal containment action once the scope is known.
 
