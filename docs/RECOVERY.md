@@ -546,9 +546,13 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
    > **Expected result:** A confirmed testnet receipt and a confirmed outgoing transaction signed by the recovered wallet, not merely a transaction prepared by the interface.
 
+   For both transactions in step 8, apply the [MAINNET-GUIDE confirmation policy](../mainnet/MAINNET-GUIDE.md#L2639-L2640): **confirmed** means at least 6 confirmations on Bitcoin testnet (a customary recommendation, not a protocol requirement), or at least 12 confirmations **and** inclusion in a canonical finalised block on Ethereum testnet. For Ethereum, 12 confirmations alone are insufficient.
+
 9. **Record the result and repeat the routine.**
 
    Keep a sanitised record containing the date, procedure version, **PASS** or **FAIL**, software and firmware versions, network, policy reference, compared addresses and testnet transaction references. Record failures too. Show **FAIL** for any unexecuted gate. Keep mnemonics, passphrases, private keys and data keys out of the record.
+
+   **Procedure version** identifies the revision of this recovery procedure followed, distinct from software and firmware versions. Use the scheme `RECOVERY-v<major>.<minor>`, incrementing `major` when required steps or PASS/FAIL gates change and `minor` for clarifications that leave them unchanged. This revision's procedure version is `RECOVERY-v1.0`; record that value when following this revision.
 
    Repeat the full routine quarterly, using only a tiny testnet amount. Repeat it after firmware updates, using the updated firmware, before resuming normal use.
 
