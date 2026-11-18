@@ -2923,7 +2923,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### An address tool aborts, or returns plausible but wrong output
 
-**Cause:** BTC testnet `vpub`/`tpub` inputs to `derive.js` can cause an opaque WASM abort, exit status `1` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` accepts private extended keys and silently prints wrong addresses with exit status `0`; `derive.js` returns valid-looking addresses for mismatched-chain keys. (M04; OI-096)
+**Cause:** BTC testnet `vpub` inputs to `derive.js` produce an explicit rejection with exit status `2` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` rejects private extended keys with a `FATAL` diagnostic and exit status `1`; `derive.js` can still produce valid-looking addresses for the wrong chain from shared-version `xpub` inputs. (M04; OI-096)
 
 **Action:** do not feed BTC testnet `vpub`/`tpub` keys to `derive.js`. Do not use `compare.js` with private extended keys, or accept mismatched-chain output from `derive.js` as validation. Plausible output plus exit status `0` is not validation. If an address mismatch remains, use the ordered mismatch tree above. (M04; OI-096; M16-F43)
 

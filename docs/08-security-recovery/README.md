@@ -439,7 +439,7 @@ Choose this over a paid service if you can maintain independent owner backups, r
 
 Keep the map as well as the keys — Bitcoin output descriptors (BIP 380 family) describe the scripts and keys used to construct outputs; for recovery, export them with key-origin fingerprints, complete derivation paths and both receive and change branches; multisig descriptors also record the signing threshold and key ordering or sorting rule; a compatible wallet can then reproduce the addresses rather than guess your configuration. Seed words, restored with the correct BIP-39 passphrase, recreate a key tree; they do not identify the chosen wallet policy or the other cosigners. A public descriptor, the matching seed/passphrase and the network/account record make single-sig recovery reproducible. Multisig needs the complete public policy and enough signing secrets to meet its threshold. Even two seeds for an independent 2-of-3 arrangement cannot recreate the third cosigner's public key.
 
-What this protects against (and does not): a descriptor backup protects against lost wallet configuration, a broken coordinator and a vendor disappearing, provided another implementation supports the descriptor; it cannot authorise spending, replace missing signing secrets, or stop an attacker who holds a signing quorum; a 2-of-3 arrangement tolerates one unavailable signer, not two. Public-key material is still privacy-sensitive: like an xpub, a descriptor can reveal linked addresses, balances and future activity — keep it out of public repositories and support tickets; descriptor syntax can also carry private keys: deliberately select the PUBLIC/watch-only export, not a private export.
+What this protects against (and does not): a descriptor backup protects against lost wallet configuration, a broken coordinator and a vendor disappearing, provided another implementation supports the descriptor; it cannot authorise spending, replace missing signing secrets, or stop an attacker who holds a [signing quorum](../GLOSSARY.md#signing-quorum); a 2-of-3 arrangement tolerates one unavailable signer, not two. Public-key material is still privacy-sensitive: like an xpub, a descriptor can reveal linked addresses, balances and future activity — keep it out of public repositories and support tickets; descriptor syntax can also carry private keys: deliberately select the PUBLIC/watch-only export, not a private export.
 
 Set up and rehearse (5 steps): (1) check compatibility first — choose a free coordinator and compatible signers; confirm that an independent wallet can import the exact descriptor features you use ("supports multisig" is not enough); practise with published test fixtures on a test network (their keys are public and must never receive valuable funds). (2) verify the policy — for a 2-of-3 wallet, enrol three independently generated signers; confirm the threshold and fingerprints on trusted signer displays; arrange devices and secret backups so one incident cannot expose or destroy two signing secrets. (3) export both branches — save complete public receive and change descriptors, whether exported separately or together, including their checksums; do not reconstruct them by hand; compare several derived addresses with the original wallet and trusted signer displays; a checksum detects copying errors, not malicious substitution — an attacker's replacement can have a valid checksum and redirect new deposits. (4) make independent copies and import one — put the public export and recovery metadata on two independent offline media; in a clean installation of another compatible wallet, import the descriptors as watch-only; check several recorded receive and change addresses; this check should not require any seed. (5) test discovery and signing separately — rescan from before first use, covering every issued address index on both branches; with the published fixtures, restore enough test signers and complete a test-network spend without the original coordinator; check live signing backups through trusted on-device workflows, never by entering seeds into an online coordinator. An empty restored view is not proof that funds have disappeared: check the network, paths, missing change branch, scan start and address range; changing the key-ordering rule can change addresses; a mistaken BIP-39 passphrase produces different valid keys rather than a "wrong password" error.
 
@@ -868,7 +868,7 @@ Copper markets MPC custody together with off-exchange settlement; keeping tradin
 
 For any platform, obtain a written share-and-control map: who holds each share, including backups and subcontractor-held shares? How many usable shares are required, and who can restore or replace them? Can the provider reach that threshold without your participation? Can you reach it without the provider's servers, login system or support team?
 
-If the provider controls a signing quorum, it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
+If the provider controls a [signing quorum](../GLOSSARY.md#signing-quorum), it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
 
 This section is part of **THE SINGLE COSTS REFERENCE** for the whole guide set. Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
 
@@ -913,7 +913,7 @@ Do not count "we have backup files" as proof that you can still sign; without a 
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a signing quorum. The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
 
 ```text
 on-chain multisig [separate complete private keys]
@@ -953,7 +953,7 @@ Before funding:
 
 Have each signer verify the payment independently rather than merely approve a notification.
 
-Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a signing quorum.
+Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a [signing quorum](../GLOSSARY.md#signing-quorum).
 
 ### Check the figures for the particular service
 
@@ -1162,12 +1162,12 @@ A bounty programme pays researchers who report vulnerabilities responsibly throu
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-| Bounty item | Dated figure |
+| Bounty item | Figure |
 |---|---|
-| Top critical awards | Were roughly 5–10% of realistically exposed funds |
-| Bounty pot | Was typically 2–3 times that award |
-| Ceilings | Ranged from thousands to more than US$10 million |
-| Platform fee | Was roughly another tenth of the rewards paid |
+| Top critical awards | Were roughly 5–10% of realistically exposed funds (unsourced estimate) |
+| Bounty pot | Unsourced estimate |
+| Ceilings | Ranged from thousands to more than US$10 million (unsourced estimate) |
+| Platform fee | Was roughly another tenth of the rewards paid (unsourced estimate) |
 
 Set the scope, the severity scale, the payout rules and the response times before launch; a bounty without a working disclosure route is not a programme (see §7 — no reporting route is documented; that is an open item owned by the maintainers).
 
@@ -1214,7 +1214,7 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 Exit checks — complete these seven checks BEFORE signing with any paid provider:
 
-1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a signing quorum without you? Can you reach one without the provider?
+1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a [signing quorum](../GLOSSARY.md#signing-quorum) without you? Can you reach one without the provider?
 2. Prove independent recovery: using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof.
 3. Write down exit terms: notice periods, withdrawal limits, approval delays, termination charges, data export. Get them in writing before funding.
 4. Test a withdrawal: move a small amount out while the service is operating normally, to a fresh wallet you control. Record the time it took and the fees charged.

@@ -302,12 +302,12 @@ A compromised seed has no reset mechanism. Create a replacement wallet on a fres
 - [ ] Complete every serious-holder check.
 - [ ] Use multisignature across different hardware makers and physical locations. Document the signing threshold and distribute keys so that no one person or site holds a quorum. Avoid concentrating a quorum on one maker’s devices.
 - [ ] Name each authorised signer and give each their own separate signing device. Keep the signer register and contact details current.
-- [ ] Back up the multisignature recovery configuration as well as the individual seed backups. Test recovery of the required signing quorum and compare the expected public outputs.
+- [ ] Back up the multisignature recovery configuration as well as the individual seed backups. Test recovery of the required [signing quorum](../GLOSSARY.md#signing-quorum) and compare the expected public outputs.
 - [ ] Obtain an external security review before production custody. Resolve findings that block safe custody before accepting funds.
 - [ ] Run dependency and secret scanning on custody repositories and release workflows. Give findings an owner and resolve custody-critical issues before deployment.
 - [ ] Maintain a written incident plan assigning named people to incident leadership, custody migration and communications. Include deputies, contact routes, escalation authority and the compromised-seed replacement procedure.
 
-- [ ] **Expected result:** A tested signing quorum, named signers with separate devices, a completed external review, scan findings with accountable owners and an incident plan that identifies who must act.
+- [ ] **Expected result:** A tested [signing quorum](../GLOSSARY.md#signing-quorum), named signers with separate devices, a completed external review, scan findings with accountable owners and an incident plan that identifies who must act.
 
 ## Incident-response playbook
 

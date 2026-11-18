@@ -109,7 +109,7 @@ Using the published 15-word ripple fixture mnemonic for wallet creation violates
 
 Read the descriptor examples in this file as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
 
-Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins: a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
+Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins (see the origin definition at L530): a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
 
 ## Hardware wallets
 
@@ -139,7 +139,7 @@ That distinction should remain intact.
 
 ## Bitcoin Descriptors & PSBT
 
-An xpub can be ambiguous for serious Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
+An xpub can be ambiguous for Bitcoin watch-only systems. Output descriptors can retain script policy, derivation origin and address ranges.
 
 [Bitcoin Core descriptors](https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md) should be read alongside [BIP-174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) for offline and hardware-backed transaction workflows.
 
@@ -316,7 +316,7 @@ TESTNET ONLY
 
 ### Walkthrough
 
-The steps follow the **BIP-174/371 PSBT flow**.
+The steps follow the **BIP-174 PSBT flow**. BIP-371 covers Taproot PSBTs.
 
 1. **Establish the boundary.** Keep tracking public-only and signing separate. Private keys and seeds must never leave the signing domain. Bawa does not document a device-specific setup; follow your device’s onboarding, test-network selection and firmware compatibility guidance. Without a verified test-only setup, keep this as a paper exercise. 
   **Expected result:** xpub/addresses on the tracking side, with the private key confined to the signing domain, not loaded into the web server.
@@ -337,7 +337,7 @@ The steps follow the **BIP-174/371 PSBT flow**.
 
 The [Trezor firmware path reference](https://github.com/trezor/trezor-firmware/blob/main/docs/misc/coins-bip44-paths.md) documents per-coin derivation paths. Paths differ by curve and blockchain family; public nodes are possible only where the derivation rules support them.
 
-Bawa does not ship a device integration. The Trezor reference is not a Bawa-Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path.
+Bawa ships no device integration and does not document a device-specific setup procedure. The Trezor reference is not a Bawa-Trezor setup guide, and Bawa does not prescribe a device-specific testnet derivation path.
 
 ### What the runbook still needs
 
@@ -396,7 +396,7 @@ No keys are needed to construct this proposal from known outpoints and output sc
 
 The coordinator adds information that the signer needs to validate the proposal:
 
-- **UTXOs, unspent transaction outputs:** legacy inputs need `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they must agree.
+- **UTXOs, unspent transaction outputs:** legacy inputs should include `non_witness_utxo`, the complete previous transaction. SegWit inputs can use `witness_utxo`, containing the previous output’s amount and locking script; signers may also require complete previous transactions, particularly for SegWit v0 fee checks. Previous transactions must match the input outpoints. If both UTXO forms are present, they should agree (guidance derived from BIP-174).
 - **Key origins:** attach public keys, `<fingerprint>` and derivation paths from the descriptor. Include output derivations to help identify change, without treating those claims as proof.
 - **Scripts:** include required redeem scripts and witness scripts. For Taproot, use BIP-371’s internal-key and derivation fields, plus leaf scripts and control blocks where needed for script-path spending.
 - **Sighash:** record the intended signature-hash mode, or agree the signer’s default. Ordinary `SIGHASH_ALL` and Taproot’s `SIGHASH_DEFAULT` commit to all outputs. Other modes can leave transaction parts changeable. An explicitly requested mode must be honoured or signing refused.
