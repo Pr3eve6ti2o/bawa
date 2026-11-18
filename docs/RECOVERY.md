@@ -711,7 +711,7 @@ Inspect every copy periodically for readability and damage, without photographin
 
 Test independent recovery before relying on a backup. Use a trusted recovery setup without erasing the only working wallet. Confirm that recovery produces the **expected wallet**, not merely that an import completes.
 
-Re-test **annually and after firmware updates**, including any separately held BIP-39 passphrase required by the recovery route. Record the date and outcome, not the secrets. Schedule the next annual test, and treat an untested backup as **unproven**.
+Re-test **quarterly and after firmware updates to the external hardware recovery setup**, including any separately held BIP-39 passphrase required by the recovery route. Record the date and outcome, not the secrets. Schedule the next quarterly test, and treat an untested backup as **unproven**.
 
 > **Expected result:** A dated, non-secret record of readability checks and successful independent recovery tests, with the next annual test scheduled.
 
