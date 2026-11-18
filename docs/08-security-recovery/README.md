@@ -1000,7 +1000,7 @@ Retain the complete wallet descriptors or equivalent configuration, including th
 
 For a provider-independent arrangement, rehearse recovery before depositing substantial funds (an amount whose loss would matter to the holder, judged before funding): using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer, threshold, script, contract, tooling, backup-format, encryption-credential, device, permission or provider-dependency changes.
 
-If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change (a permitted change to the rules for authorising spending). Budget for the relevant network fees. If you use a custodial service, test withdrawals while the service is operating — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
+If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change (a permitted change to the rules for authorising spending) only if it has the signing authority required for that action and can carry it out using the complete wallet descriptors or equivalent configuration without relying on the provider's participation, approval or systems. Budget for the relevant network fees, any applicable withdrawal, closure, co-signer or recovery charges, and replacement-wallet set-up costs. If you use a custodial service, test withdrawals while the service is operating, but a successful test shows only that the tested withdrawal worked at that time; it does not establish independent signing authority or guarantee future access — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
 
 Watch for lost recovery keys, missing secrets, missing wallet-policy metadata, stale configurations, incompatible recovery software, corrupt or inaccessible backups, shared cloud backups whose common dependency can fail or expose every copy at once, departing staff and provider-dependent recovery. A recovery promise is not a substitute for a rehearsal.
 ## 20. Paid security: consumer multisig with inheritance
@@ -1012,7 +1012,7 @@ Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa co
 ### Why consider them
 
 - With a single-signature wallet, one lost or stolen seed can cost the funds or lock them away permanently.
-- A managed 2-of-3 arrangement lets you retain signing ability if one key is lost while still making a single stolen key insufficient on its own.
+- A managed 2-of-3 arrangement with a genuine cryptographic threshold can let you retain signing ability if one key is lost while still making a single stolen key insufficient on its own, but recovery may still depend on a co-operative co-signer or the custodian's procedures.
 - Inheritance features address a different risk from everyday theft — what happens if the holder dies, loses capacity or becomes unreachable.
 - A trusted family member or adviser should be able to recover funds, not merely learn that a wallet existed.
 
