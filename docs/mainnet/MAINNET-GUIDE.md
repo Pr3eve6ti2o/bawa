@@ -1,6 +1,6 @@
 # Bawa — Mainnet non-custodial wallet guide (Doc 4)
 
-Doc 4 is one new standalone document: the mainnet guide for creating a non-custodial wallet with the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`), covering Bitcoin, Ethereum, TRON and TON mainnet with real funds. Guide prose only — no app or UI code. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet.
+Doc 4 is one new standalone document: the mainnet guide for creating a non-custodial wallet with the Bawa repository (`Pr3eve6ti2o/bawa`, with repair commit `e3b65fb8` as the procedural and code baseline and `56396a20` only as the historical documentation snapshot), covering Bitcoin, Ethereum, TRON and TON mainnet with real funds. Guide prose only — no app or UI code. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet.
 
 Evidence baseline: 2026-11-09 (research slices M01–M36; live checks dated 2026-11-09). The code pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (short `e3b65fb8`), decided 2026-11-10 — see §5 and M-33.
 
@@ -24,7 +24,7 @@ The three warnings below appear in full here and in §2, and are presented befor
 
 ### No inherited assurance
 
-> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (README §18 L1160). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
+> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (docs/README-FULL.md §19 L1264). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
 
 > **Stop** If you are treating any gate, review or completion as permission to use real funds, stop the mainnet procedure. Do not proceed on that basis; ignoring this stop risks irreversible real-fund loss.
 
@@ -58,9 +58,9 @@ Appendix. UI templates (pointer)
 
 ### What this guide is and who it is for
 
-This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa` at `56396a20`). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
+This guide is for readers who want a straightforward way to create a non-custodial mainnet wallet using Bawa (`Pr3eve6ti2o/bawa`, with repair commit `e3b65fb8` as the procedural and code baseline and `56396a20` only as the historical documentation snapshot). It covers Bitcoin, Ethereum, TRON and TON mainnet, with real funds. It provides guide prose only, not app or UI code.
 
-Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (README §§18–19).
+Doc 4 is one new standalone document. Docs 1–3 remain unchanged as the testnet guide set; they do not cover mainnet (docs/README-FULL.md §19, line 1264).
 
 The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethereum `m/44'/60'`, TRON `m/44'/195'` and TON `m/44'/607'`. The testnet4 derivation deviation disappears on mainnet; do not “fix” the Bitcoin mainnet path to `m/84'/1'`.
 
@@ -69,7 +69,7 @@ The repository already uses mainnet derivation paths: Bitcoin `m/84'/0'`, Ethere
 - **Not a hosted wallet, custody service or exchange.** This guide is for non-custodial use.
 - **No security, audit or production-readiness claim.** Do not treat the repository or this guide as audited or production-ready.
 - **No hardware-wallet support or multisig.** Neither is provided by the repository.
-- **No verified sending procedure.** The repository contains no transaction construction or signing code (README L1197). Signing exists only in the separate Web/Android validation drafts. No send/sign/broadcast flow has been exercised on-chain on any network. Every send procedure in this guide is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **No verified sending procedure.** The repository contains no transaction construction or signing code (docs/README-FULL.md §17 L1201). Signing exists only in the separate Web/Android validation drafts. No send/sign/broadcast flow has been exercised on-chain on any network. Every send procedure in this guide is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Testnet gates are not mainnet authorisation.** README §18 places any mainnet work outside the testnet guide set as a separate, reviewed change. Passing the testnet gates does not authorise it.
 
 ### Mainnet warnings
@@ -109,7 +109,7 @@ The risks apply throughout the wallet workflow:
 
 Never use transaction history as an address book. Use this full-address verification procedure for every destination:
 
-1. Establish the **full intended recipient address** from a verified source outside transaction history. Retain that original source as the comparison reference.
+1. Establish the **full intended recipient address** from a verified source outside transaction history. Retain that original source as the comparison reference. Before trusting any source, including an address-book entry, authenticate it by confirming the full destination’s binding to the intended recipient directly with that recipient through a second, independent channel; a successful test payment does not establish that binding.
 2. After pasting, compare the **entire pasted address** against the original verified reference. Require a full-string match, not an endpoint match.
 3. On the signing display, before confirmation, compare the **entire destination** against that same original verified reference — not merely against the pasted copy.
 
@@ -127,7 +127,7 @@ Clipboard swappers can replace a correctly copied address with a lookalike match
 
 ### No inherited assurance
 
-> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (README §18 L1160). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
+> **Warning** If you are considering real-fund use, do not treat this documentation as assurance. Nothing in this guide claims that the repository, the drafts or this guide are audited, secure or production-ready. The testnet gates do not authorise mainnet work (docs/README-FULL.md §19 L1264). “Complete” means prose done and checked — never authorisation for real-fund use. Ignoring this distinction risks irreversible real-money loss.
 
 > **Stop** If you are treating any gate, review or completion as permission to use real funds, stop the mainnet procedure. Do not proceed on that basis; ignoring this stop risks irreversible real-fund loss.
 
@@ -218,7 +218,7 @@ For **US federal income tax**, the IRS states: “The Internal Revenue Code and 
 
 This guide gives no fixed retention period. Check your local retention rules and keep records.
 
-> **Warning** If a transaction is missing from your log, add its details and retain the records. For US federal tax, leaving gaps risks tax under-reporting. Without the necessary records, you cannot prove basis, cannot prove holding period, and cannot answer a tax enquiry. This loss mode follows from the US IRS record-keeping standard above — direct; checked 9 November 2026.
+> **Warning** If a transaction is missing from your log, add its details and retain the records. For US federal tax, leaving gaps risks tax under-reporting. Record gaps can contribute to reporting errors and make it difficult or impossible to substantiate basis, holding period, or other return positions if sufficient evidence cannot be obtained. This loss mode follows from the US IRS record-keeping standard above — direct; checked 9 November 2026.
 
 ### Sanctions and AML — US only
 
@@ -226,9 +226,9 @@ This guide gives no fixed retention period. Check your local retention rules and
 
 **Source basis:** convergence on the US OFAC position. **Checked 9 November 2026.**
 
-The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations carry **strict liability**: penalties are possible even without knowledge or intent.
+The converging sources report that OFAC sanctions apply to **US persons** and apply equally to virtual-currency transactions. Virtual-currency addresses appear on the **SDN List**. Violations may result in **civil penalties on a strict-liability basis**, even without knowledge or intent (OFAC FAQ 562; OFAC’s October 2021 *Sanctions Compliance Guidance for the Virtual Currency Industry*).
 
-> **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or seized funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
+> **Stop** If you are a US person and a proposed transaction involves a sanctioned address or counterparty, pause and check the applicable US rules, seeking qualified local advice where needed. Proceeding can lead to penalties for transacting with a sanctioned address, even without knowledge or intent, and to frozen or blocked funds via a sanctioned counterparty. Source basis: US OFAC, convergence; checked 9 November 2026.
 
 Neither an SDN List check nor following this guide’s checks is presented here as sufficient for US OFAC compliance.
 
@@ -272,7 +272,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 | **Build a watch-only view** | §5 → §6 → §§7–9: derivation with `tools/hdwallet-gen/derive.js`. Under `bawa-derivation-policy-v1`, TON is generation-only: one deposit address, no xpub. |
 | **Compare derivations against an independent reference** | §5 → §6 → §§7–9: derivation, then comparison with `tools/hdwallet-gen/compare.js` against that reference. |
 | **Recover from a backup** | §5 → §6 → §§7–9: backup dependencies, decryption with `tools/decrypt_seed.py`, then recovery rehearsal. Decryption is not import; Bawa supplies no import tool. [M16-F09] |
-| **Track balances** | §5 → §6 → §§7–9: watch-only setup and tracking prerequisites, using `tools/hdwallet-gen/daemon.js` as the tracking entry point. |
+| **Track balances** | §5 → §6 → §§7–9: watch-only setup and tracking prerequisites, using `tools/hdwallet-gen/derive_daemon.js` as the tracking entry point. |
 | **Send** | §5 → §6 → §§7–9 for prerequisites only, then an external sending route or the app drafts. The drafts’ send/sign/broadcast was never exercised on-chain in either verification round: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. [M16-F09; M27] |
 
 ### Prerequisites and stop conditions
@@ -283,7 +283,7 @@ Gate status below is the **2026-11-09 baseline**, not a statement that the gates
 - [ ] **Repository cloned and pinned — §5.** Use `Pr3eve6ti2o/bawa` at `b8298197`. Do this **before any generation**. Stop if the checkout does not match the pinned revision. [M01]
 - [ ] **Node, Python and dependencies installed — §6.** Follow the documented runtime requirements and dependency pins. Stop on unresolved installation or version mismatches; do not substitute npm “latest” for the repo pin. [M05]
 - [ ] **Independent security review gate met before real funds.** Stop before **any use with real funds on mainnet**, including the first small receive. This gate is not reserved for sending. [OI-055]
-- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [README §18]
+- [ ] **Backup material and dependencies inventoried before funding.** The seed bundle and its **matching 32-byte data key are a paired dependency**. Stop before funding if either is missing or the recovery dependency inventory is incomplete. [M16-F25] Recovery rehearsal has never been executed: **FAIL — “Unexecuted = FAIL”**. A decrypt round trip is not that rehearsal. [`docs/README-FULL.md` §18, L1241]
 - [ ] **Rehearsal gates respected.** Follow the ladder: testnet first (**FAIL until executed**) → unfunded mainnet watch-only check → small mainnet receive → small mainnet send → normal use (**not cleared**). The small receive and small send are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. Do not advance beyond an unpassed rung. A pass covers only the wallet, chain, network, derivation policy and signing route actually rehearsed. [M27]
 
 ## 5. Clone and pin with a worktree
@@ -383,7 +383,7 @@ Use a separate worktree so pinning the code does not replace the guide you are r
 
 **Decided 2026-11-10 — proof form.** Step 4 uses the literal baseline HEAD SHA in the proof; the literal SHA is the check. The `MAIN_HEAD` capture in step 1 is supporting context only — record it for provenance, do not substitute it for the literal SHA. If main advances and Doc 4 is re-issued, update the literal SHA in step 4 to the new baseline.
 
-**Decided 2026-11-10 — cross-references.** The F4 treatment in Doc 1 §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
+**Decided 2026-11-10 — cross-references.** The F4 treatment in `docs/README-FULL.md` §15 and the Android guide at L3732 and L4756 were updated to the worktree procedure in the 2026-11-10 push; those locations no longer carry the old in-place detach.
 
 ## 6. Node and Python installation
 
@@ -477,7 +477,9 @@ For the offline regression check, use only the published **15-word “ripple sci
 
 The TON fixture uses **V4 R2**, wallet ID **`698983191`**, and the non-bounceable address format. The drafts’ wallet ID `0` is wrong for this fixture: it produces a different address. [M29, M16-F07]
 
-| Chain | Derivation path | Expected public-fixture address |
+**Public test-vector warning: funding any address in the table below is immediate loss because the mnemonic is public.**
+
+| Chain | Derivation path | First receiving-address fixture — never fund |
 |---|---|---|
 | BTC | `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
@@ -497,7 +499,7 @@ On Bitcoin mainnet, Bawa uses the standard BIP-84 native-SegWit account `m/84'/0
 | TRX | `m/44'/195'/0'/0/i` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `m/44'/607'/0'` — generation-only | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
 
-The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is absent from both `derive.js` and `daemon.js`. [M29; M04]
+The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is absent from both `derive.js` and `derive_daemon.js`. [M29; M04]
 
 **Derive, serve and compare**
 
@@ -505,7 +507,7 @@ The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is a
 
 2. **Complete the input checks in the blocker box below before supplying a key.** Use `derive.js` to derive from the checked public extended key at the recorded receiving index. The repo’s watch-only tools already derive the mainnet paths for BTC, ETH and TRX. [M02; M04]
 
-3. **Use `daemon.js` when serving watch-only derivation over its protocol.** The same public-only boundary and input checks apply. Respect its protocol limits: `MAX_XPUB_LENGTH = 200`, `MAX_LINE_LENGTH = 4096`, and `MAX_INDEX = 2147483647`. [M04; M27 §3.1]
+3. **Use `derive_daemon.js` when serving watch-only derivation over its protocol.** The same public-only boundary and input checks apply. Respect its protocol limits: `MAX_XPUB_LENGTH = 200`, `MAX_LINE_LENGTH = 4096`, and `MAX_INDEX = 2147483647`. [M04; M27 §3.1]
 
 4. **Use `compare.js` as a comparison aid against independent references, not as an input validator.** The independent-reference comparison procedure is in §9. Its output and exit status do not remove the blockers below. [M04; M27; M35]
 
@@ -573,7 +575,7 @@ Use only the published 15-word “ripple scissors…” test vector, with an emp
 
 **Funding any address in the table below is immediate loss because the mnemonic is public.**
 
-| Chain | Recorded path or wallet parameters | Expected fixture address |
+| Chain | Recorded path or wallet parameters | First receiving-address fixture — never fund |
 |---|---|---|
 | BTC | `m/84'/0'/0'/0/0` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `m/44'/60'/0'/0/0` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
@@ -629,7 +631,7 @@ Re-check backups periodically. The repo prescribes no interval.
 These have different purposes:
 
 - The **BIP-39 passphrase** changes the seed and therefore the wallet. Bawa policy is an **empty BIP-39 passphrase**.
-- The **vault unlock passphrase** only opens the local vault. The documented minimum is **8 characters** — an acceptance rule, not a strength assessment.
+- The **vault unlock passphrase** only opens the local vault. The minimum length remains unset in WEB-GUIDE.
 
 > **Warning** When restoring, do not substitute the vault unlock passphrase for the BIP-39 passphrase. A wrong BIP-39 passphrase silently derives a different valid wallet, with no error to tell you that it is not your wallet.
 
@@ -641,9 +643,7 @@ The repo vault is the `seed.enc.json` bundle, not browser storage. Without its s
 
 #### Web draft browser vault
 
-The Web draft uses **PBKDF2 with 600,000 iterations** and a **10-minute auto-lock**. These are draft-only parameters, not repo controls. The browser vault has never been independently reviewed.
-
-The claim of “10 minutes of inactivity” is inaccurate: the timer re-arms only on unlock, not on activity.
+The Web draft uses **PBKDF2 with 600,000 iterations** and a **10-minute auto-lock**. These are draft-only parameters, not repo controls.
 
 > **Warning** If using the Web draft browser vault, keep independent offline recovery material and do not rely on browser storage as your only copy. It is weaker storage than an offline bundle: browser compromise can expose keys, and clearing browser data can erase the only copy and strand funds.
 
@@ -653,11 +653,11 @@ The Android vault is Keystore-bound.
 
 > **Warning** Before uninstalling the Android app, moving to another device or adding a fingerprint, check that independent offline recovery material survives. The Keystore key does not survive uninstall or a device move, and adding a fingerprint may invalidate the Keystore wrapping key. Without its Keystore key, the vault cannot be opened; a copied vault or database is not a portable backup.
 
-Android has **no inactivity auto-lock**. Its biometric gate is UI-layer only, not enforced in `WalletSession.unlock()`. `FLAG_SECURE` covers only the Backup and Import routes, not the whole app.
+The Android draft specifies **no inactivity timeout**; any biometric gating is a **UI-layer design** rather than an enforced session control. In the Android starter code, `MainActivity.onCreate` sets `FLAG_SECURE` unconditionally on the activity window, so it covers the entire activity, not only the Backup and Import routes.
 
 Passing the Android **3-word backup quiz does not meet the full ordered 24-word re-entry requirement**. Do not treat that quiz as full backup verification.
 
-Neither the Web nor Android draft implements clipboard clearing.
+Neither the Web nor Android draft implements clipboard clearing: Android specifies clearing an owned clip only under an approved policy and after checking that no newer user clip has replaced it, but guarded clipboard access and ownership-aware clearing remain **OPEN** with **NO DRAFT API** (ANDROID-GUIDE:3087–3089); the Web draft only requires that the app never write the mnemonic to the clipboard, not that it clear clipboard contents (WEB-GUIDE:299–301).
 
 ### Forgotten vault unlock passphrase
 
@@ -706,16 +706,18 @@ A valid mnemonic is not proof that the intended wallet has been recovered either
 
 > **Never** If mnemonic validation would require submitting the phrase to an unverified validator, do not upload it. Use an independently assessed local method instead; uploading the phrase can expose control of the wallet.
 
-The published addresses below are regression targets only:
+The published addresses below are regression targets only.
 
-| Asset | Public fixture address |
+> **Never** When using these fixtures, restrict them to public regression checks and never fund them. They are not your wallet’s recovery targets; treating them as deposit destinations risks losing funds.
+
+**Public test-vector warning: funding any address in the table below is immediate loss because the mnemonic is public.**
+
+| Asset | First receiving-address fixture — never fund |
 | --- | --- |
 | BTC | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
 | TRX | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
 | TON | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
-
-> **Never** When using these fixtures, restrict them to public regression checks and never fund them. They are not your wallet’s recovery targets; treating them as deposit destinations risks losing funds.
 
 **Before the first real deposit**, including a funded rehearsal receipt, require all of the following:
 
@@ -773,7 +775,7 @@ Account for all transient copies and remove transient secrets when the checks ar
 
 #### Rehearsal status
 
-The recorded recovery rehearsal status is **FAIL** (README §18): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
+The recorded recovery rehearsal status is **FAIL** (`docs/README-FULL.md` §18, line 1241): no rehearsal has been executed on a clean install. A decrypt round trip is not the rehearsal.
 
 The required staged protocol is:
 
@@ -813,13 +815,13 @@ All service responses, heights and fee figures below are dated observations: **c
 
 Apply the complete mapping, not just the first URL that makes a request work.
 
-| Testnet URL fragment | Mainnet replacement | Occurrences in the replacement inventory |
-|---|---|---:|
-| `ethereum-sepolia-rpc.publicnode.com` | `ethereum-rpc.publicnode.com` | 8 |
-| `nile.trongrid.io` | `api.trongrid.io` | 6 |
-| `mempool.space/testnet4/api` | `mempool.space/api` | 5 |
-| `eth-sepolia.blockscout.com/api/v2` | `eth.blockscout.com/api/v2` | 5 |
-| `testnet.toncenter.com/api/v2` | `toncenter.com/api/v2` | 4 |
+| Testnet URL fragment | Mainnet replacement | Exact full-URL occurrences | Substring-line occurrences |
+|---|---|---:|---:|
+| `ethereum-sepolia-rpc.publicnode.com` | `ethereum-rpc.publicnode.com` | 11 | 11 |
+| `nile.trongrid.io` | `api.trongrid.io` | 10 | 10 |
+| `mempool.space/testnet4/api` | `mempool.space/api` | 10 | 10 |
+| `eth-sepolia.blockscout.com/api/v2` | `eth.blockscout.com/api/v2` | 6 | 6 |
+| `testnet.toncenter.com/api/v2` | `toncenter.com/api/v2` | 9 | 14 |
 
 **Delete, without replacement:**
 
@@ -933,9 +935,9 @@ Treat this as a per-input payment gate, not just an RPC test:
 
 **Stop before creating or approving a signing input** if the chain query fails or differs from `1`, an input check is unresolved, usable fee data is missing, the required independent cross-check cannot be demonstrated, or private signing material is requested. Reject any signed result whose chain ID does not match.
 
-#### Draft edits to review at this revision
+#### Local-only draft edit checklist (not repository state)
 
-Endpoint responses do not prove that these code changes have been made.
+The table below is a local-only draft checklist, not a description of repository state: the referenced `connectivity.js`, `tx.js`, and `app-web` paths do not exist at `56396a20`, as verified by `git ls-tree`.
 
 | Location | Required mainnet edit or behaviour |
 |---|---|
@@ -955,9 +957,9 @@ The mainnet HTTP endpoint is `https://api.trongrid.io`. In the **2026-11-09 chec
 
 The officially listed alternatives were JSON-RPC at `https://api.trongrid.io/jsonrpc` and gRPC at `grpc.trongrid.io:50051` and `grpc.trongrid.io:50052`. **Their liveness was not tested.** TronScan API DNS resolution failed twice from the VM during that check. Those failures were inconclusive: its status is **unverified-from-VM; re-check required**, not a confirmed general outage.
 
-TRON has no chain ID: the signing input carries no network-identifier field. Network binding comes from the **chosen endpoint and the recent block referenced by the transaction**. Both need checking; an address alone cannot establish the network. The derivation path, `m/44'/195'/0'/0/i`, is identical on mainnet and Nile, and a TRX address carries no network tag. A Nile address shown to a mainnet sender is indistinguishable by inspection. Network identity therefore comes from wallet configuration. The QR payload is only the bare T-address; there is no `tron:` URI.
+The **TRON native-transaction schema** carries no network-identifier field in its signing input; this is distinct from the TVM `CHAINID` opcode. The transaction’s recent-block reference is part of the signed data. **Endpoint selection determines which network the client contacts; it is not signed network binding.** Both need checking; an address alone cannot establish the network. The derivation path, `m/44'/195'/0'/0/i`, is identical on mainnet and Nile, and a TRX address carries no network tag. A Nile address shown to a mainnet sender is indistinguishable by inspection. Network identity therefore comes from wallet configuration. The QR payload is only the bare T-address; there is no `tron:` URI.
 
-The activation figures verified in the **2026-11-09 check** were **1 TRX for system-contract creation plus 0.1 TRX for creation-bandwidth**. These are dated figures, not a suggested funding amount. **Who pays, and whether first funding auto-activates an account, were unverified.**
+The **2026-11-09 check** verified **1 TRX for system-contract creation**. Whether an additional **0.1 TRX creation-bandwidth burn** applies depends on **who pays and whether first funding auto-activates an account**, both **unverified** in that check. These are dated figures, not a suggested funding amount.
 
 Before any prospective send, check all five loss modes: **wrong network, wrong address, wrong amount, stuck transaction and theft**. Confirm the wallet’s mainnet endpoint and the recent-block reference. Independently confirm the complete intended recipient T-address, then require a **read-only `wallet/getaccount` check of that recipient on the same mainnet endpoint**. Verify the intended amount and current applicable charges separately; do not turn the dated creation figures into a transfer amount. Require successful fresh reads and an understood recipient account state, and do not repeat a transfer whose outcome is unknown. Keep mnemonics and signing keys out of endpoint requests, explorers and QR tools. **Stop without signing** if the network, recipient, amount, charges, activation requirements or transaction status remain unresolved, or if a service asks for wallet secrets. Do not send funds as a connectivity or activation test.
 
@@ -1016,8 +1018,8 @@ The following values were recorded in the **Android draft configuration**, check
 | Network | Configured threshold at that check | Policy interpretation |
 |---|---:|---|
 | BTC | 6 | A customary threshold, not a network requirement. Show the actual confirmation count. At `C=1`, display the payment provisionally as **“unconfirmed for settlement”**. |
-| ETH | 12 | Configured threshold only; enforcement has not been demonstrated. |
-| TRX | 19 | Use the node’s solidified / last-irreversible view, never elapsed time or raw height subtraction. |
+| ETH | `finalized` | Confirmation policy resolved as `finalized` in M-38; enforcement has not been demonstrated. |
+| TRX | 19 of 27 Super Representatives (not 19 blocks) | Use the node’s solidified / last-irreversible view, never elapsed time or raw height subtraction. |
 | TON | 1 | Masterchain-anchored; track `seqno`, not wall-clock time. |
 
 An API’s current block height is not a confirmation policy. Retargeting an endpoint does not demonstrate that these rules are enforced. Confirmations reduce reversal risk; they do not make a payment irreversible.
@@ -1032,7 +1034,7 @@ Creating a wallet needs no paid service. A paid RPC tier is an optional upgrade,
 
 ### First funding
 
-There are no mainnet faucets. First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
+First mainnet funding is an ordinary incoming transfer of the appropriate native asset from existing holdings, or a withdrawal following legitimate acquisition through a service you choose.
 
 Funding carries **wrong network, wrong address, wrong amount, stuck transaction and theft** risks. Before authorising a transfer or withdrawal, pin the expected mainnet, refresh the required inputs and verify your receiving address, the appropriate native asset, integer amount, fee bounds and total debit. Keep seed phrases and private keys local; providers must never receive them. Stop if the rehearsal requirement is unmet, a check fails or cannot be completed, or a provider requests a secret. A timed-out broadcast is **UNKNOWN**: stop and apply the txid-reconciliation rule above, including the TRX limitation, rather than making another transfer. Never fund a published fixture address. The addresses below belong to the public 15-word ripple test vector and must never receive real funds; stop if any appears as the destination.
 
@@ -1078,7 +1080,7 @@ The 2026-11-09 run used the repo tools at `56396a20` in a scratch copy, with `np
 
 Those successful fixture checks do not remove **OI-096**, which remains unfixed:
 
-- `derive.js` ignores the purpose, coin type and account components of a supplied path. A mismatched path can therefore produce a valid-looking address on the wrong branch and still exit 0.
+- `derive.js` accepts an xpub on stdin plus a chain and index, and uses fixed per-chain paths. It does not authenticate the xpub's intended chain or full derivation origin from serialization alone. BTC/ETH/TRX xpubs share version `0488b21e`, so an accepted xpub supplied for the wrong chain can still produce a syntactically valid address and exit 0.
 - `compare.js` accepts a private extended key and silently prints wrong addresses, also with exit 0. **Never feed any private key to `compare.js`.**
 
 Exit 0 and a plausible-looking address prove nothing about whether the intended branch or destination was used.
@@ -1249,7 +1251,7 @@ curl -fsS -w '\n' --get \
 
 On **2026-11-09, `muse-vm`**, `getnowblock` returned block **87850524**. The Tronscan account API returned live TRC-20 balances for the fixture. No token amounts, response-field mappings or history-pagination procedure are established here. A token holding is not a native TRX holding, and neither is a receipt for a particular transfer.
 
-The confirmation policy is **19**, established using the node’s **solidified / last-irreversible view**—never elapsed time or raw height subtraction. The head and account requests above do not establish that condition for a transfer.
+The confirmation policy is **19 of 27 Super Representatives (not 19 blocks)**, established using the node’s **solidified / last-irreversible view**—never elapsed time or raw height subtraction. The head and account requests above do not establish that condition for a transfer.
 
 The draft has **no TRX txid lookup adapter**. A TRX transfer therefore stays pending on manual refresh. No manual investigation procedure is supplied here. That unresolved state is a stop condition for reconciliation, not evidence that another payment is needed.
 
@@ -1280,9 +1282,9 @@ On **2026-11-09, `muse-vm`**, Toncenter `getMasterchainInfo` returned `ok:true` 
 
 The presence of `last_transaction_id` was **not verified history**. It establishes neither a complete transaction list nor receipt of a particular payment. Likewise, `ok:true` reports a successful API response, not payment acceptance. TonAPI’s masterchain-head route is a **head check only**, not account, history or payment verification.
 
-The confirmation policy is **1 masterchain seqno**: a TON payment is treated as confirmed once a masterchain block references the shardchain block containing the transaction, and the transaction's outgoing message is verified as successful (delivered, not bounced, not failed). Count masterchain seqno progression from inclusion, not the wallet's account seqno — which advances on every outgoing message the wallet sends — and not wall-clock time. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
+The confirmation policy is **1 masterchain seqno**, meaning confirmation at the first referencing masterchain block (seqno N): a TON payment is treated as confirmed once the payment’s internal message has been traced from the sender’s wallet transaction to the intended recipient’s receiving transaction, that receiving transaction is verified to have successfully credited the payment (not bounced or failed), and masterchain block N references the shardchain block containing that receiving transaction. Count referencing block N itself as the single required confirmation, with no additional seqno progression to N+1; do not use the wallet's account seqno — which advances on every outgoing message the wallet sends — or wall-clock time to determine confirmation. Observing a masterchain head alone does not establish that a payment is anchored. This is a confirmation policy, not a finality guarantee. TON confirmation tracking is not implemented in the drafts, so this check is manual.
 
-**TON reconciliation can never be automatic in this draft:** `tx.js:320` leaves `txid` as `null`. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
+In this draft, `tx.js:320` leaves the TON `txid` as `null`, so TON reconciliation cannot be automatic here. A live head, a balance response or a present `last_transaction_id` does not remove that blocker. Leave an unverified payment unresolved rather than treating these observations as a receipt or a reason to resend.
 
 ### Shared explorer rules
 
@@ -1330,10 +1332,10 @@ Every form below is **UNVERIFIED-NEEDS-CHECK**: a research target, not a finding
 
 | Network | Research target | Optional amount fragment to check |
 |---|---|---|
-| BTC | `bitcoin:<ADDRESS>` — BIP-321 | `&amount=<BTC>` |
+| BTC | `bitcoin:<ADDRESS>` — BIP-321 | `?amount=<BTC>` |
 | ETH | `ethereum:pay-<ADDRESS>@1` — ERC-681 | `?value=<WEI>` |
 | TON | `ton://transfer/<UQC7...>` | `?amount=<NANOCOINS>` |
-| TRX | Bare `T...` address; no `tron:` URI exists | No amount form established here |
+| TRX | Testnet examples use bare `T...` addresses; `tron:` URI support is not established by those examples | Amount encoding is not established by those testnet examples |
 
 For each target, generate the QR, decode it, and compare the **full address**, plus the amount where supplied, against the intended request. Confirm the wallet’s configured network before any send. This is the local check against **wrong-address, wrong-network and wrong-amount payments**, including theft through a substituted QR destination. Stop if decoding, comparison or wallet interpretation is unresolved, if the destination changes, or if a tool asks for wallet secrets. A successful decode alone does not establish live wallet support.
 
@@ -1382,10 +1384,11 @@ Observation and request-status labels are not the application’s `paid` decisio
 | `expired` | The request’s expiry has been reached; this does not prove that no payment exists or can arrive later. |
 | `late` | An attributed payment falls after expiry under the timing basis that the policy must define. |
 | `manual_review` | Attribution, evidence, timing or an amount discrepancy remains unresolved and must not produce automatic `paid`. |
+| `paid` | Business acceptance decision: the application has accepted the payment as satisfying the invoice under the configured acceptance policy, including amount and chain-specific confirmation/finality requirements; not a chain-observation label. |
 
 A mainnet policy must explain how correctly attributed, deduplicated payments reach `paid`. For a matching total, that requires checked units, current canonical evidence meeting the policy’s confirmation or finality requirements, and resolved expiry and late-payment conditions. The decision must retain its policy version and reason. A wrong address or network cannot be cured by more confirmations, and a wrong amount cannot be cured by a favourable balance screen.
 
-`docs/07`’s BTC **1/3/6** bands are **ILLUSTRATIVE application policy, not Bawa’s policy**. Do not transplant them into mainnet operation. The actual mainnet thresholds and transitions remain open. Until they are defined, stop at recording observations and review rather than enabling automatic `paid`.
+`docs/07` advises choosing chain-specific settings rather than blindly copying them. Define and validate Bawa’s mainnet confirmation/finality policy for each chain instead of transplanting example or testnet settings unchanged. The actual mainnet thresholds and transitions remain open. Until they are defined, stop at recording observations and review rather than enabling automatic `paid`.
 
 A discrepancy or an unresolved transaction does not authorise another payment. Retrying a pending or stuck transfer risks duplication; switching destinations or supplying secrets during review risks theft. Stop those actions rather than treating them as settlement checks.
 
@@ -1505,7 +1508,7 @@ These are the required meanings of the history labels, **not verified guarantees
 Two draft limitations prevent the general TXID reconciliation rule from being treated as a universal capability:
 
 - **TRX:** there is no TXID lookup adapter. A TRX transfer stays **Pending** on manual refresh; that retained label is not fresh verification of its outcome. No manual investigation procedure is supplied.
-- **TON:** reconciliation **can never be automatic in this draft**. `txid` is `null` at `tx.js:320`.
+- **TON:** reconciliation cannot be automatic in this draft. `txid` is `null` at `tx.js:320`.
 
 ### Rehearsal
 
@@ -1513,7 +1516,7 @@ Every mainnet send procedure carries this label:
 
 **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**
 
-Send/sign/broadcast was **never exercised anywhere, on any network** in the work covered by this draft. Testnet verification is not evidence of a tested send.
+The work covered by this draft included testnet verification **without any send**; send/sign/broadcast was **never exercised anywhere, on any network**. That non-send testnet verification is not evidence of a tested testnet or mainnet send.
 
 The exact wallet-specific steps, agreement on the tiny test amount, the fee, receipt evidence and funded execution are all open and require separate authorisation. No rehearsal procedure is supplied here.
 
@@ -1534,7 +1537,7 @@ This section states what sending and signing Bawa and the drafts can and cannot 
 
 ### 13.1 What Bawa is and is not — the no-signing boundary
 
-Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/09` separates signing from tracking: “Signing remains a trusted-side operation.”
+Bawa is a tracker, not a wallet that signs. It contains no transaction construction, signing, broadcast or PSBT code. The searches of `tools/` and `test/` found no such implementation; the “sign” matches in `derive.js` are inside “assign”. `docs/13-wallet-app-architecture/README.md:84` separates signing from tracking: “Signing remains a trusted-side operation.”
 
 Mistaking tracking for transaction preparation or approval creates **wrong-network, wrong-address and wrong-amount** loss modes. The prevention is to keep tracked observations separate from an explicitly reviewed payload and trusted-side signing. An address or balance shown by the tracker is not a transaction approval.
 
@@ -1544,7 +1547,7 @@ Mistaking tracking for transaction preparation or approval creates **wrong-netwo
 
 The validation drafts do not establish a mainnet sending path.
 
-- **Web draft:** `app-web/src/tx.js` is the programme’s only signing implementation. Its transaction tests are fully mocked. Send, sign and broadcast were never exercised live in a browser or on any network. Those live paths are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **Web draft:** `app-web/src/tx.js` contains the Web draft’s signing implementation. Its transaction tests are fully mocked. Send, sign and broadcast were never exercised live in a browser or on any network. Those live paths are **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Android draft:** `SigningCoordinator.kt` was never compiled into an APK and never run on a device; there was no AAR. Source-level coordinator checks are not evidence of a working device signing capability. Device operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **Core check:** the Core 4.9.2 EIP-1559 check, D21, was limited to Node v24, with independent Python fixture-sender recovery and no broadcast. It provides evidence for the tested fixture path, not browser, device or network operation. Those live integrations remain **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 
@@ -1564,7 +1567,7 @@ The Android header is misleading. `EthSepoliaAdapter.kt` claims:
 
 That check is not implemented. `approve()` checks only that `decodedSummary`, `sender` and `recipient` are non-blank. `signApproved()` checks only payload equality and `reviewToken == payload.hashCode()`. Neither the coordinator nor the adapter checks chain ID, network, amount or fee.
 
-EIP-155 chain binding means a conforming mainnet node rejects a Sepolia-signed payload. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
+For type-2 transactions, EIP-1559 includes `chain_id` in the signed data, so a conforming Ethereum mainnet node rejects a payload signed with Sepolia’s chain ID. That does not resolve the Android review defect. If a changed caller supplies `chainId 1` while the review still says Sepolia, the payload passes the existing approval checks; a mainnet-signed transaction from that payload can spend real ETH. This is a **wrong-network loss mode**, not a failure of chain binding. **Stop while a mismatch between the reviewed network and the signed chain ID can pass approval.**
 
 The required correction is code-level enforcement binding the intended network to the exact payload signed, alongside the missing amount and fee checks. A header, network label or endpoint selection is not that enforcement. The Web mainnet change and Android checks are implementation work; their live operation is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. See §17 and §21.
 
@@ -1582,13 +1585,13 @@ The role model in `docs/09` is separate from those checks:
 - The signer holds the private key or hardware wallet.
 - The network broadcasts.
 
-The **Signer** role reviews and signs an already-prepared, approved payload. It must never discover accounts or balances, select coins, choose fees, assemble transactions or broadcast. This is a guide requirement, **not an established implementation boundary**: the Web `tx.js` includes UTXO selection and live fee use.
+The **Signer** role reviews and signs an already-prepared, approved payload. It must never discover accounts or balances, select coins, choose fees, assemble transactions or broadcast. The Web `tx.js` includes UTXO selection and live fee use; whether the signing path itself performs those duties is **not established**.
 
 Keeping those duties outside the Signer prevents preparation or fee decisions from silently changing an approved amount or fee. **Stop if signing depends on the Signer performing those duties, or if that separation cannot be demonstrated.** The draft does not establish it merely by having approval functions. See §17 and §21.
 
 ### 13.5 Change handling
 
-The Web draft’s Bitcoin code returns change to the sending address. Change-branch derivation is not implemented: this is design gap G4. The first change-address path is `m/84'/0'/0'/1/0`, but the draft does not derive or use that change-branch address. It does not provide fresh change addresses.
+The Web draft’s Bitcoin code returns change to the sending address. Change-branch derivation is not implemented in the Web draft at revision `56396a20`: this is design gap G4. The first change-address path is `m/84'/0'/0'/1/0`, but the draft does not derive or use that change-branch address. It does not provide fresh change addresses.
 
 The relevant loss modes are **wrong address, wrong amount and lost fee**. Prevention requires review of every output, not just the recipient output. Every proposed change output must match an address derived from your own seed and be verified as controlled by the intended signer. A “change” label is not an ownership check. **Stop before signing if any output is unreviewed, or if a proposed change output cannot be verified in that way.**
 
@@ -1615,7 +1618,7 @@ These are code-level capabilities, not evidence of a completed send. The Android
 |---|---|---|
 | BTC | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a BTC transaction. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
 | ETH | `EthSendComposer.kt` supports native ETH transfers only, with sending conditional on the `chainId` port. No ERC-20 transfers, contract calls or data payloads. | Transfer-only code with a fixed gas limit of `21000`. This is not a general contract-call or token-send path. |
-| TRX | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a TRX transaction. | The TRX path supports native TRX only. In `tx.js`, `signTrx` builds a transfer contract with `feeLimit` hardcoded to **1,000,000 SUN (1 TRX)**. There is no TRC-20 send path and no pre-send resource check. |
+| TRX | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a TRX transaction. | The TRX path supports native TRX only. In `tx.js`, `signTrx` builds a transfer contract with `feeLimit` hardcoded to **1,000,000 SUN (1 TRX)**. `feeLimit` is an energy-fee budget for smart-contract execution, not the cost of a native TRX transfer or a cap on total transaction fees. Native TRX transfers consume bandwidth rather than energy; applicable bandwidth and account-activation fees are not capped by this setting. There is no TRC-20 send path and no pre-send resource check. |
 | TON | Signing is refused: “TON signing is unimplemented in this build”. The Send screen reports “not implemented”. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
 
 The Web broadcast paths are testnet submission implementations. HTTP 200 probes on **2026-11-09** confirmed mainnet endpoint reachability only: no transaction was submitted and no funds moved. The TRX `feeLimit` is a hardcoded limit, not an observed fee or a resource estimate.
@@ -1658,7 +1661,7 @@ The confirmation thresholds below are Android draft configuration in `NetworkCon
 | Chain | Android configured confirmations | Web `reconcileTx` behaviour |
 |---|---:|---|
 | BTC | 6 | Checks `getTx(txid)` and its confirmed flag. |
-| ETH | 12 | Checks `eth_getTransactionReceipt` for status `0x1`. |
+| ETH | 12 + canonical finalised inclusion | Requires `eth_getTransactionReceipt` status `0x1`, at least 12 confirmations, and canonical finalised inclusion: the receipt’s `blockHash` must match the canonical block at its height, and that height must be at or below the `finalized` head. |
 | TRX | 19 | No txid lookup adapter: “stays pending, manual refresh”. |
 | TON | 1 | Checks history for the txid. |
 
@@ -1695,7 +1698,7 @@ Permit2 has distinct authorisation paths:
 
 - `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers.
 - ERC-20 transfers through Permit2 still require token-level allowance to Permit2 at execution.
-- Reducing an allowance or calling `lockdown` does not invalidate outstanding permit signatures. `invalidateNonces` and `invalidateUnorderedNonces` are the separate invalidation operations.
+- Reducing an allowance via `AllowanceTransfer.approve`, or calling `AllowanceTransfer.lockdown`, does not invalidate outstanding permit signatures. An accepted `AllowanceTransfer.permit` consumes and increments the relevant nonce even when it sets a lower allowance. `AllowanceTransfer.invalidateNonces` and `SignatureTransfer.invalidateUnorderedNonces` are the respective explicit nonce-invalidation operations.
 
 Do not describe an allowance reduction or `lockdown` as cancellation of outstanding permit signatures. These distinctions are not an approval or cancellation procedure, and they do not establish a token-send capability in either draft.
 
@@ -1734,7 +1737,7 @@ The numerical examples in this part are dated estimates from the **2026-11-09 ~1
 
 1. **Check immediately before sending.** Obtain the fee from a live source and record the UTC check time. Never quote a figure from this guide as the current fee.
 
-2. **Show both the rate and the total before signing.** The review must show Bitcoin in **sat/vB and sats**, Ethereum in **gwei and ETH**, TRON in **points / energy and TRX**, and TON in **nanoTON and TON**. It must also explain the proposed transaction’s change or refund behaviour.
+2. **Show both the rate and the total before signing.** The review must show Bitcoin’s **fee rate in sat/vB and total fee in sats**; Ethereum’s **estimated gas usage and gas limit (gas units)**, **estimated effective fee rate and applicable fee caps (gwei per gas)**, and **estimated total fee versus maximum fee budget (ETH)** (for EIP-1559, the maximum execution-fee budget is gas limit × maxFeePerGas); TRON’s **required bandwidth (points) and energy (units)** as resource quantities, not rates, plus any **TRX** needed for resource shortfalls or other fees; and TON’s **estimated fees in nanoTON and TON**, which are denominations, not fee rates. It must also explain the proposed transaction’s change or refund behaviour.
 
 3. **Treat “enough” as a balance rule, not a deposit amount.** A native-coin payment needs spendable funds covering the intended payment plus its freshly reviewed fee budget. A token payment needs the intended token balance and the native coin or resources required for its fee. There is no fixed funding amount in this guide.
 
@@ -1742,13 +1745,13 @@ The numerical examples in this part are dated estimates from the **2026-11-09 ~1
 
 5. **Have a chain-specific stuck/failed-transaction route before authorising a payment.** That route belongs to an external toolchain, not Bawa. If the transaction’s status or the toolchain’s recovery controls cannot be established, stop rather than improvise another transaction.
 
-6. **Do not confuse a token balance with the ability to send.** USDT without ETH cannot fund an Ethereum send; USDT without TRX or usable energy cannot fund a TRON send; Jettons without TON cannot fund a TON send. A token-only wallet without the required native coin or resources cannot send anything. Receiving and reading balances need no gas; sending always needs the applicable fee or resource budget.
+6. **Do not confuse a token balance with the ability to send.** Self-funded Ethereum USDT sends need ETH; TRON USDT sends need both bandwidth and energy, supplied by usable resources or TRX burned to cover shortfalls, plus any other applicable fees; self-funded TON Jetton sends need TON. A token-only wallet may nevertheless send through sponsorship, a paymaster, a relayer or a gasless flow where supported by the network, wallet and transaction. “Gasless” does not eliminate network fees or resource consumption; it changes how they are funded and may charge the user in tokens instead. Before allowing a send, verify that the sender or a supported funding mechanism can cover the applicable fee and resource budget. Reading balances does not itself incur an on-chain fee. Receiving is not universally fee-free: TON incoming-message processing and storage can incur fees, paid from attached value or account funds as applicable.
 
-7. **Check the address before signing.** A confirmed payment to a wrong address is not reversible on Bitcoin, Ethereum, TRON or TON. Address-checking before signing is the only protection against that loss.
+7. **Check the address before signing.** A confirmed payment is not necessarily final; finality depends on the chain’s consensus rules. On Bitcoin, Ethereum, TRON or TON, the sender generally cannot unilaterally reverse a finalized payment to a wrong address. Address-checking before signing is an important safeguard, not the only protection against this loss. A recipient’s return of funds is a new transaction, not a reversal of the original payment.
 
 8. **Keep provenance attached to every fee figure.** Record its source and check time, including a writing-time re-check. Mark every unverified figure **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. A historical estimate does not become a current fee merely because it appears in a reviewed document.
 
-**Loss-and-stop gate for these requirements:** prevent a **wrong address** by independently checking the full destination against the external signer’s final review; prevent a **wrong amount** by checking the amount and denomination against the payment intent. Reduce the risk of a **stuck transaction** with fresh, cross-checked fees and a reviewed recovery route. Check the total fee and change/refund behaviour against the plan to avoid a **lost fee**. Reduce exposure to **theft** by using a reviewed signer and keeping signing secrets out of fee services and unreviewed recovery helpers. Stop before signing if any of these checks is missing or cannot be reconciled.
+**Loss-and-stop gate for these requirements:** prevent a **wrong address** by independently checking the full destination against the external signer’s final review; prevent a **wrong amount** by checking the amount and denomination against the payment intent. Reduce the risk of a **stuck transaction** with fresh, cross-checked fees and a reviewed recovery route. Check the total fee and change/refund behaviour against the plan to avoid **excessive or unintended fees**. Reduce exposure to **theft** by using a reviewed signer and keeping signing secrets out of fee services and unreviewed recovery helpers. Stop before signing if any of these checks is missing or cannot be reconciled.
 
 ### Bawa boundary and external toolchains
 
@@ -1765,6 +1768,8 @@ A named external signer/toolchain is therefore a prerequisite for each chain. **
 | TRON | Not established by the evidence — blocked | Points / energy and total TRX; the native-coin/resource budget for token sends; recipient and amount review; documented first-send, change/refund and stuck/failed-transaction behaviour. |
 | TON | Not established by the evidence — blocked | NanoTON and total TON; native-TON budget for Jettons; recipient and amount review; documented first-send, change/refund and stuck/failed-transaction behaviour. |
 
+No external signer toolchain has been named or tested for any chain, so this guide records no tested external-signing route. Each table row remains “Not established by the evidence — blocked” until a toolchain for that chain is named, reviewed and tested.
+
 For every row, the external review must address **wrong address** and **wrong amount** through final destination and amount checks; **stuck transaction** and **lost fee** through fresh fee, status, change/refund and recovery checks; and **theft** through review of the signer and handling of signing material. Stop if the toolchain is unnamed or any required control is unreviewed. This part does not establish an authorised send or recovery path.
 
 ### Bitcoin procedure: obtain a live rate and calculate the total
@@ -1777,7 +1782,7 @@ Immediately before a proposed signing, open:
 
 `https://mempool.space/api/v1/fees/recommended`
 
-Save the response and its UTC retrieval time. The response has **no embedded observation timestamp**, so retaining the values alone does not preserve their freshness. Refresh after any material delay.
+Save the response and the UTC time when this guide retrieved it. This is the retrieval time, not the time when the estimator observed the network. The response has **no embedded observation timestamp**, so the saved values and retrieval time do not establish the freshness of the estimator’s underlying observations. Refresh after any material delay.
 
 The five fields are **rates in sat/vB**, not total fees:
 
@@ -1791,13 +1796,13 @@ Cross-check with another estimator. Use the mempool.space recommended set as the
 
 Choose urgency from the fresh fields. None guarantees confirmation within its named interval. Bitcoin’s roughly ten-minute block interval is an average, not a promise.
 
-Calculate the planned total from the external wallet’s estimate of the eventual signed virtual size:
+Calculate the planned total fee from the external wallet’s estimate of the eventual signed virtual size:
 
 ```text
 planned fee (sats) = ceil(estimated signed vsize × chosen rate in sat/vB)
 ```
 
-The amount being sent does not determine that fee. The input/output layout and signed virtual size do.
+At the chosen rate, the amount being sent affects the fee only through the input/output layout it requires. The vsize used for the planned fee is an estimate; the eventual signed vsize may differ.
 
 As a node alternative, `estimatesmartfee 2` and `estimatesmartfee 6` return rates in **BTC/kvB**. Multiply the returned rate by **100,000** to convert it to sat/vB. This is a unit conversion, not a fee quote. A missing estimate is not a zero-fee recommendation.
 
@@ -1864,7 +1869,7 @@ Check both the absolute fee and the estimated rate against the planned mainnet f
 
 Include any uneconomic change added to the fee explicitly. If change is omitted, the selected-input surplus not assigned to recipient outputs is part of the fee; it is not a later refund.
 
-The Web draft says change returns to the sending address. That is UI wording, not evidence of a constructed transaction. **Change-branch derivation is not implemented at this commit (G4).** Do not promise a derived change-branch address. The external signer must show the actual proposed change destination and value.
+The Web draft says change returns to the sending address. That is UI wording, not evidence of a constructed transaction. **Change-branch derivation is not implemented in the Web draft at revision `56396a20` (G4).** Do not promise a derived change-branch address. The external signer must show the actual proposed change destination and value.
 
 **Loss-and-stop gate for accounting:** correct arithmetic cannot fix a **wrong address** or **wrong amount**, so compare every recipient and change output with the independently checked intent. Missing signed-size information or stale rates leave a **stuck transaction** risk; refresh and reconcile them before approval. Omitted change or an excessive total can become a **lost fee**; reject any unexplained difference from the planned mainnet fee budget. Unreviewed signing software or requests for signing secrets create a **theft** risk; stop rather than bypass the signer review. Stop on any unverified input, unexplained output, missing estimate or budget mismatch.
 
@@ -1886,7 +1891,7 @@ These notes apply to the Web draft at `Pr3eve6ti2o/bawa @ 56396a20`. All figures
 **Overpayment and change deserve separate checks.** Once a transaction confirms, the miner keeps its actual fee. In the dated worked example, each unnecessary **+1 sat/vB** on a **140 vB** transaction adds approximately **140 sats ≈ $0.10**. The recorded P2WPKH dust threshold was **294 sats**, using Core’s default dust relay fee of **3,000 sat/kvB**. Omitting change turns the remainder into fee; it does not leave that remainder in the wallet. **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** applies to the worked cost for a proposed transaction and to the dust setting used by a particular node.  
 *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP if you control an output → stop; never re-send blindly**.  
+The stuck-transaction decision tree is **wait → RBF bump if accepting-node policy permits (including full-RBF without opt-in) → CPFP if you control an output → stop; never re-send blindly**; signalling is neither a universal prerequisite nor a guarantee of replacement acceptance.  
 *Source: m07 F20; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 1. **Wait and inspect the original transaction.**  
@@ -1901,13 +1906,13 @@ The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP
 
    `replacement fee ≥ evicted fees + replacement vsize × incremental relay fee rate`
 
-   At the dated check, Core’s default incremental relay reference was **100 sat/kvB = 0.1 sat/vB**. The worked replacement example used **140 vB**, moving from **1 to 3 sat/vB**: approximately **140 → 420 sats**, an increase of **280 sats ≈ $0.21**. That dollar figure is the increase, not the replacement’s total fee. Whether this satisfies any particular node’s policy is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.  
+   At the dated check, Bitcoin Core's default incremental relay reference was **100 sat/kvB = 0.1 sat/vB** for versions 29.1 and later (from September 2025); earlier versions defaulted to **1000 sat/kvB = 1 sat/vB**. The worked replacement example used **140 vB**, moving from **1 to 3 sat/vB**: approximately **140 → 420 sats**, an increase of **280 sats ≈ $0.21**. That dollar figure is the increase, not the replacement’s total fee. Whether this satisfies any particular node’s policy is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.  
    *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-   Before any replacement approval, recheck the intended recipient, amount and change for **wrong address** and **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to avoid another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
+   Before any replacement approval, recheck the intended recipient, amount and change to reduce the risk of a **wrong address** or **wrong amount**; check the replacement’s rate, total fee and accepting-node policy to reduce the risk of another **stuck transaction** or an unnecessary **lost fee**. Disclose no wallet secrets to prevent **theft**. Stop if those checks remain unresolved. The RBF branch ends in this Web draft: do not substitute a new payment for a missing bump flow.
 
 3. **Consider CPFP only where an output is controlled.**  
-   A sender can spend unconfirmed change, or a recipient can spend the stuck payment output, in a high-fee child. Both transactions confirm, and **both fees are paid**.
+   A sender can spend unconfirmed change, or a recipient can spend the stuck payment output, in a high-fee child only if they control the output being spent. Both transactions confirm, and **both fees are paid**.
 
    The dated package illustration uses a parent and child of approximately **140 vB each**, with a target package rate of **3 sat/vB**. Keeping the parent at the original fee above gives a combined fee of approximately **840 sats ≈ $0.62**, of which the child pays approximately **700 sats ≈ $0.52**. This is derived package arithmetic, not a live recommendation: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** for an actual package.  
    *Source: m12 §1; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
@@ -1915,7 +1920,7 @@ The stuck-transaction decision tree is **wait → RBF bump if signalled → CPFP
    Before any child approval, establish control of its input and check parent and child payment details for **wrong address** and **wrong amount**. Review both fees together, including change handling, to prevent a further **stuck transaction** or excessive **lost fee**. Do not disclose signing secrets to prevent **theft**. Stop if output control, the combined budget or an available reviewed signing flow is unresolved. This mechanism and its arithmetic do not establish a CPFP feature in the Web draft.
 
 4. **Stop rather than re-send blindly.**  
-   Disappearance from mempools is not cancellation. If the original never confirms, no fee is collected and its inputs remain unspent. The recorded Core default `mempoolexpiry` was **336 hours (14 days)**; the setting on a particular node is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a universal cancellation deadline. Re-creating the payment while the original may still confirm risks a duplicate payment. Stop further spending until the original’s status is resolved.  
+   Disappearance from mempools is not cancellation. If the original never confirms and is not replaced, no fee is collected and its inputs remain unspent. The recorded Core default `mempoolexpiry` was **336 hours (14 days)**; the setting on a particular node is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a universal cancellation deadline. Re-creating the payment while the original may still confirm risks a duplicate payment. Stop further spending until the original’s status is resolved.  
    *Source: m12 §1; m07 F20; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 ### Ethereum procedure and dated baseline table
@@ -1935,10 +1940,10 @@ Start with read-only network and fee checks. The table below is a historical est
 
    `maxFeePerGas = 2 × B + T`
 
-   The **2×** factor is not an EIP-1559 requirement. At the stated maximum base-fee increase of **12.5% per full block**, doubling B preserves room for the full selected tip through **five** maximum increases. It does not double gas usage, does not mean twice the base fee will be charged, and does not cover an ETH/USD move.  
+   The **2×** factor is not an EIP-1559 requirement. At the stated maximum base-fee increase of **12.5% per full block**, doubling B preserves room for the full selected tip through **five** maximum increases, provided the **1-wei minimum upward adjustment** does not dominate. At small base fees, that minimum can exceed a 12.5% increase, so the doubling heuristic does not scale down without limit. It does not double gas usage, does not mean twice the base fee will be charged, and does not cover an ETH/USD move.  
    *Sources: m12 §2; m08 F2.1–F2.9; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
-5. **Estimate gas separately for the exact proposed transaction.** Use `eth_estimateGas`. The **21,000 gas** baseline applies only to a plain ETH transfer with no calldata, no access list and no recipient-code execution—not to every transfer or any contract call.  
+5. **Estimate gas separately for the exact proposed transaction.** Use `eth_estimateGas`. The **21,000 gas** intrinsic baseline is included in every transaction, but using **21,000 gas** as a total-gas shortcut is valid only for a plain ETH transfer to an ordinary externally owned account (EOA) with empty calldata and no access list; sending ETH to a contract can invoke receive/fallback behaviour even without calldata.  
    *Sources: m12 §2; m08 F2.1–F2.9; check: 2026-11-09 ~11:54 UTC, `muse-vm`.*
 
 For an eligible transaction, let **Bᵢ** be the inclusion-block base fee, **T** the priority cap and **F** the maximum fee cap:
@@ -1962,7 +1967,7 @@ Recorded readings are distinguished below from derived spending examples. The hi
 | Plain ETH transfer example | **21,000 gas** at base **0.128 + tip 0.02 = 0.148 gwei** gives approximately **3,108 gwei = 0.000003108 ETH ≈ $0.007**. Derived charge, not a measured fee for the reader’s transaction: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Maximum fee reserve | The source’s example cap gives **21,000 × 0.276704742 gwei ≈ 0.0000058108 ETH ≈ $0.0123**. This is a reserve, not the expected charge. The cap is recorded separately; the displayed base-fee estimate above is rounded. Application to a proposed send: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Balance before a first send | Required balance: **payment amount + gas limit × maxFeePerGas**. An account with no ETH cannot fund an ordinary self-paid mainnet transaction. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
-| Higher observed base fee, still a quiet window | Across approximately **15 h**, the maximum mined-block base fee was **0.2408 gwei**, at block **26377373**. At that base plus a **0.02 gwei** tip, the same plain transfer would cost approximately **0.0000054768 ETH ≈ $0.0116**, about **1.7×** the baseline. The derived send cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a live congestion recommendation. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
+| Higher observed base fee, still a quiet window | Across approximately **15 h**, the maximum mined-block base fee was **0.2408 gwei**, at block **26377373**. At that base plus a **0.02 gwei** tip, the same plain transfer would cost approximately **0.0000054768 ETH ≈ $0.0116**, about **1.76×** the baseline. The derived send cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**, not a live congestion recommendation. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 | Gas-price sensitivity | For the same **21,000 gas** case, each additional **1 gwei** adds approximately **0.000021 ETH ≈ $0.044** at the dated exchange rate. Application to a proposed send: **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. | m12 §2; m08 F2.1–F2.9 — **2026-11-09 ~11:54 UTC, `muse-vm`** |
 
 **Before Ethereum approval**, refresh the network/head check, fee inputs and exact-transaction gas estimate immediately. Prevent a **wrong address** or **wrong amount** by checking the chain, recipient and value against the intended payment. Prevent a **stuck transaction** by checking fresh base-fee information and cap headroom. Limit a **lost fee** by reviewing the gas estimate, price caps, expected charge and maximum reserve separately; unused reserve is not the same as a refundable paid fee. To prevent **theft**, do not disclose wallet secrets or approve unexpected spending, including an unexpected “refund” transaction.
@@ -1986,7 +1991,7 @@ Before any retry, match the recipient or contract to the intended destination to
 
 #### Caps: headroom is not automatically spent
 
-Setting `maxFeePerGas` far above the market does not, by itself, increase the fee when the base fee and priority cap are unchanged. Unused headroom is not paid.
+Once `maxFeePerGas` covers the base fee plus the priority cap, increasing it further does not raise the effective gas price while the base fee and priority cap remain unchanged. Raising a previously binding `maxFeePerGas` can, however, increase the paid tip, up to the priority cap. Unused headroom is not paid.
 
 The risks are different: a high maximum permits inclusion after the base fee rises, while an unnecessarily high **priority** cap can genuinely overpay. A generous maximum is not the same thing as a generous tip.  
 *Sources: m12 §2; m08 F2.1–F2.9.*
@@ -2036,9 +2041,9 @@ Conversion must be explicit in both directions:
 
 *Source: m08 F3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-Do not smooth over the Web draft’s self-transfer mismatch. Its plain self-transfer estimate was **29,060 gas**, against the review’s **21,000 gas** plain-transfer reference. An estimate is not a receipt showing gas actually used. The supplied evidence does not establish why the estimate was higher, so its use as a plain-transfer cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**; the gap must not be presented as a demonstrated extra charge.
+Do not smooth over the Web draft’s self-transfer mismatch. The native-ETH self-transfer estimate was **29,060 gas**, against the review’s **21,000 gas** plain native-ETH transfer reference. An estimate is not a receipt showing gas actually used. The supplied evidence does not establish why the estimate was higher, so its use as a plain-transfer cost is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**; the gap must not be presented as a demonstrated extra charge.
 
-The separate **zero-amount self-transfer at 37,973 gas** also cannot stand in for a real transfer. It understates a real transfer and must not be quoted as its gas requirement or cost.  
+The separate **zero-amount ERC-20 self-transfer (`transfer(self, 0)`) at 37,973 gas** also cannot stand in for a real token transfer. It may understate a real token transfer’s gas use, but no measured comparison was supplied, so it must not be quoted as that transfer’s gas requirement or cost. Fees paid for any gas actually consumed are lost to the sender.  
 *Source: m08 F2.8. Check for both comparisons: 2026-11-09 ~11:54 UTC, muse-vm.*
 
 **Real USDC transfer gas and cost: UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL.** No genuine transfer figure has been verified. The ETH builder is not enough: a genuine ERC-20 transfer procedure is needed before this guide can support a USDC send or quote its cost.  
@@ -2052,22 +2057,23 @@ Before any USDC authorisation, verify the Ethereum token contract and recipient 
 
 #### Model: bandwidth, energy and the scope of `feeLimit`
 
-Bandwidth pays for the transaction’s byte footprint. Energy pays for TVM execution. Free bandwidth is a network limit, not a guaranteed personal allowance; it may be reduced during high traffic.
+Bandwidth pays for the transaction’s byte footprint. Energy pays for TVM execution. TRON documents a renewable **600-point free-bandwidth allowance** for each activated externally owned account (`getFreeNetLimit`); no supplied evidence documents an automatic high-traffic reduction.
 
 Freezing allocates renewable resources by **stake share**. There is no fixed stake-to-resource conversion rate.
 
-`feeLimit` is the **smart-contract energy budget only**. It is not an upfront flat fee and does not cover native bandwidth or account activation. Only unused portions of the native fee and fee-limit budget are returnable; resources already consumed are not restored merely because execution failed.
+`feeLimit` is the **smart-contract energy budget only**. It is a cap, not an upfront flat fee or prepaid deposit, and does not cover native bandwidth or flat account-activation fees. Unused budget is simply not consumed; resources already consumed are not restored merely because execution failed.
 
-There is an internal rate conflict in the evidence. The m12 summary assigns **0.001 TRX per energy unit**, but the measured chain parameters distinguish the energy price from the bandwidth price. That common-rate energy claim is **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. The dated arithmetic below uses the measured energy parameter, not that shorthand.  
+There is an internal rate conflict in the evidence. The measured energy price (`getEnergyFee`) is **100 SUN = 0.0001 TRX per energy unit**. The m12 summary’s **0.001 TRX per energy unit** claim is **CONTRADICTED** by the measured chain parameters: **0.001 TRX** matches the bandwidth price instead. The dated arithmetic below uses the measured energy parameter, not that shorthand.  
 *Sources: m12 §3; m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
 #### Procedure: establish the resource position before signing
 
 1. **Check activation and available resources.** Use `wallet/getaccount` and `wallet/getaccountresource`, or inspect the corresponding account information in TronScan. Do not assume that a new address is activated or that a nominal free-bandwidth limit is available.
-2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation.  
+2. **Calculate only the uncovered resource burn.** At the dated measured rates, uncovered bandwidth of `B` points gives `B × 0.001 TRX`; uncovered energy of `E` units gives `E × 100 SUN`. These are separate calculations. Add applicable charges outside the contract-energy budget, including activation. Contract-triggered account activation is a nonstandard exception: neither flat fee applies, but it consumes approximately **25,000 additional Energy**, whose uncovered portion must be included in the resource-burn calculation.  
    *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 3. **Estimate contract execution.** `estimateenergy` was unavailable on TronGrid mainnet at the check, returning “this node does not support estimate energy”. A `triggerconstantcontract` dry run is the alternative in the supplied evidence. A reverted dry run is not a successful-transfer estimate.
 4. **Recheck close to signing.** Activation, available resources, the live burn parameters and the intended budget must still match the proposed operation.
+5. **Check the live fee cap.** Before signing, read `getMaxFeeLimit` from the live chain parameters (**15,000,000,000 SUN**) and compare it with the encoded transaction’s `fee_limit`, also in SUN; do not sign unless `fee_limit` is at or below the returned live cap.
 
 Locally check the recipient or contract against the intended destination to prevent a **wrong address**; compare the displayed value with the intended value to prevent a **wrong amount**; investigate unresolved broadcasts for a **stuck transaction**; review resource coverage and all applicable charges to limit a **lost fee**; and reject unrecognised contracts, permissions or signing requests that could enable **theft**. Stop if the dry run fails, the current energy price cannot be reconciled, earlier transaction status is unresolved or any signing detail differs from the reviewed operation.
 
@@ -2080,7 +2086,7 @@ Locally check the recipient or contract against the intended destination to prev
 | TRX price reference | **$0.317467 per TRX** | Conversion input for the baseline estimates only | m09 F07–F10 |
 | Bandwidth burn | **1,000 SUN per point = 0.001 TRX** | Recorded transaction-fee parameter; applies to uncovered bandwidth | m09 F07–F10; m12 §3 |
 | Energy burn | **100 SUN per unit = 0.0001 TRX** | Measured parameter used for the dated energy arithmetic; conflicts with the summary’s common-rate claim | m09 F07–F10; m12 §3 |
-| Free bandwidth limit | **600 points/day** | Network limit, not guaranteed availability; may be reduced during high traffic | m09 F07–F10; m12 §3 |
+| Free bandwidth limit | **600 points/day** | Renewable 600-point allowance per activated externally owned account; no supplied evidence of automatic high-traffic reduction | m09 F07–F10; m12 §3 |
 | Account-creation parameters | **0.1 TRX** create-account; **1 TRX** create-new-account | Recorded parameters, not an all-in transfer quote | m09 F07–F10 |
 | Network `feeLimit` ceiling | **15,000,000,000 SUN — 15,000 TRX** | Protocol ceiling for the contract-energy budget, not a default | m09 F10; m12 §§3, 7 |
 | Web draft `feeLimit` | **1,000,000 SUN — 1 TRX**, budgeting **10,000 energy** at the measured parameter | Smart-contract energy only; not the mainnet maximum | m09 F10; m12 §§3, 7 |
@@ -2094,15 +2100,15 @@ The source’s stated multiplier between the draft budget and the network ceilin
 
 #### Conflicting USDT figures
 
-There is no single verified USDT transfer cost to quote from this evidence.
+There is no single verified USDT transfer cost to quote from this evidence. The Dwellir reconciliation verifies the USDT transfer cost for that specific check, but this evidence does not establish a standing figure to quote for other transfers.
 
 - **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — existing-holder estimates.** Tronsave, dated **28 October 2026**, supplied **64,285 energy**, corresponding to **≈6.43 TRX ≈$2.04** under the baseline arithmetic. Dwellir, dated **3 November 2026**, quoted **$2.07**. These are secondary-source estimates, not a verified Bawa transfer receipt or an all-in fee promise.  
   *Source record: m09 F07–F10. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — base-energy claims and range.** Secondary sources conflict between **65,000** and **14,650 energy**, both described as base energy for a USDT transfer. No verified reconciliation is supplied. The proposed **13,000–65,000 energy** range is also unverified and must not be presented as an empirical operating range.  
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — base-energy claims and range.** Dwellir reconciles the figures as **14,650 base energy + 49,635 penalty energy = 64,285 total energy**; the roughly **65,000-energy** total must not also be described as base energy. The proposed **13,000–65,000 energy** range is wrong at both ends: **13,000** is **1,650** below the measured base, while **65,000** excludes the **130,285-energy** new-recipient case. It must not be presented as an empirical operating range.  
   *Sources: m09 F07–F10; m12 §3. Check: 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — new-holder cost.** No defensible total was established. Extra bandwidth and activation must be accounted for; the existing-holder estimate cannot simply be carried across.  
+- **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL — full new-holder cost.** The new-recipient energy component is **130,285 energy**, equivalent to **13.0285 TRX** and approximately **$4.17** at the stated rates. This is the energy component only, not an all-in total; bandwidth and any applicable activation costs must be accounted for separately. The existing-holder estimate cannot simply be carried across.  
   *Sources: m09 F07–F10; m12 §3.*
 
 The record also contains a **reverted dry run for 1 USDT**, reporting **8,624 energy** and **6,640 penalty**. These are failed-simulation readings, not a transfer receipt. They must never be quoted as a USDT transfer cost.  
@@ -2134,24 +2140,28 @@ All monetary figures below are **dated estimates, not standing fees**. The revie
 
 The accounting model separates the phases, in order:
 
-**storage → credit → compute/gas → action → forwarding → bounce**
+**storage → credit → compute → action (including forwarding)**; **bounce** is a possible message outcome.
 
 These are distinct phases. The account’s current balance is consulted before and during execution; a nominal transfer amount alone is not a sufficient balance check.
 
-For the sending account, the `estimateFee` accounting is:
+For the sending account, the `estimateFee` subtotal is:
 
 ```text
-in_fwd_fee + gas_fee + storage_fee + fwd_fee
+source_fees.in_fwd_fee + source_fees.gas_fee + source_fees.storage_fee + source_fees.fwd_fee
 ```
 
-There is an action phase, but that does **not** justify adding an invented “action fee” to these returned fields.
+The response also carries a `destination_fees` array for destination-side fee estimates; any returned entries must be considered separately from the sending-account subtotal.
+
+The TON fee model includes an action fee, but `estimateFee` does not return a separate `action_fee` field.
 
 A Jetton transfer needs whole-chain estimation, covering:
 
-- the main TON transfer;
-- deployment of the recipient’s Jetton wallet, if it is new;
+- the main TON transfer to the sender's Jetton wallet;
+- the sender-side Jetton wallet's execution and forwarding to the recipient's Jetton wallet;
+- deployment of the recipient's Jetton wallet, if it is new;
 - the TON forwarded to the recipient;
-- the Jetton wallet’s notification forwarding fee.
+- the Jetton wallet's notification forwarding fee;
+- the `destination_fees` on every message leg.
 
 The sending account’s estimate alone is not a whole-chain Jetton quote. Attached TON is not the fee; `forward_ton_amount` is not the fee; excesses are not expenditure. Keep the funding supplied to messages separate from the amounts actually consumed.
 
@@ -2203,7 +2213,7 @@ The following amounts were unresolved at the same TON check:
 
 Any proposed correction needs its own local review for **wrong address, wrong amount, stuck transaction, lost fee and theft**. A successful simulation does not remove these loss modes.
 
-- **Wrong address.** A transfer to the wrong valid destination can lose the entire principal plus fees. At a wrong uninitialised destination, a bounceable message may bounce, losing delivery fees while possibly returning value; a non-bounceable message may strand the value without a bounce. Address checking before signing is the only protection against these wrong-destination outcomes. Stop if the destination cannot be confirmed.
+- **Wrong address.** A transfer to the wrong valid destination can lose the entire principal plus fees. At a wrong uninitialised destination, a bounceable message may bounce, losing delivery fees while possibly returning value; a non-bounceable message may strand the value without a bounce. Address checking before signing is the primary safeguard against these wrong-destination outcomes; protocol bouncing provides limited protection because a bounceable message to a wrong, uninitialised destination may bounce, returning value less delivery fees. Stop if the destination cannot be confirmed.
 
 - **Wrong amount and lost fee.** Too little value can consume fees before delivery fails. Check both the intended amount and whether value plus the complete fee obligation is covered—not merely whether the nominal transfer amount fits the balance. Stop if the amount is wrong, the balance is insufficient or the complete cost is unknown.
 
@@ -2236,7 +2246,7 @@ The comparison record supplies totals but not numerical rate inputs. Those missi
 
 **Before a send on any of these chains, review wrong address, wrong amount, stuck transaction, lost fee and theft locally.** Confirm the intended recipient and amount, keep signing material private, and ensure the proposed transaction is the one reviewed. Check the fee immediately before sending and record its **source, check time, rate or resource basis, and total**.
 
-For a native-asset send, “enough” is a balance rule: the spendable balance must cover the intended value plus the complete fee. For a token send, token quantity and fee funding are separate checks; a token-only wallet cannot send. The review must also record whether first-send deployment or other first-send conditions change the cost.
+For a native-asset send, “enough” is a balance rule: the spendable balance must cover the intended value plus the complete fee. For a token send, token quantity and fee funding are separate checks. On TRON, sufficient staked bandwidth and energy can cover a token transfer with no liquid TRX; any fees not covered by those resources still require TRX. The review must also record whether first-send deployment or other first-send conditions change the cost.
 
 Recovery must remain chain-specific. BTC, ETH and TRX need their respective stuck/failed-transaction recovery checks alongside the reviews in parts 1–3. TON needs the current-state and bounce checks above. This comparison supplies no general retry instruction.
 
@@ -2244,10 +2254,10 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 
 ### Draft warnings
 
-- **TRX `feeLimit`:** the draft confuses a smart-contract budget with the mainnet maximum. At the dated review, **1,000,000 SUN** was a smart-contract budget only; the reported mainnet ceiling estimate was **15,000,000,000 SUN**. Neither is a quote for actual expenditure or a recommended setting. The smaller value must not be presented as the maximum accepted on mainnet.  
+- **TRX `feeLimit`:** the draft confuses a smart-contract budget with the mainnet maximum. At the dated review, **1,000,000 SUN** was a smart-contract budget only; the mainnet ceiling, obtained by querying the live `getMaxFeeLimit` chain parameter, was **15,000,000,000 SUN**. Neither is a quote for actual expenditure or a recommended setting. The smaller value must not be presented as the maximum accepted on mainnet.  
   *Source and check: m12 §7, baseline 2026-11-09 ~11:54 UTC, muse-vm.*
 
-- **TON estimation timing:** the draft’s broadcast-only wording is misleading. `estimateFee` simulation exists **before signing**, using the exact unsigned body and deployment inputs where applicable. The procedure above is not dependent on first broadcasting a transaction.  
+- **TON estimation timing:** The draft's procedure was not supplied, so the guide cannot characterize its wording, and correct implementation in the draft has not been verified. `estimateFee` simulation exists **before signing**, using the exact unsigned body and deployment inputs where applicable. This simulation does not require first broadcasting a transaction.  
   *Sources: m12 §7; m12 §4; m10 F9/F10.*
 
 - **BTC fee sources:** the draft’s examples derive from mempool.space **testnet** fee data. Re-point the examples to **mainnet** data and retain the source and check time with each replacement figure. No draft fee example is established as a mainnet fact merely by appearing in the Web text.  
@@ -2258,11 +2268,11 @@ A transfer delivered to a wrong valid address is irreversible on all four chains
 - **G1** — BTC congested rate — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G2** — BTC node-specific relay/dust values — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G3** — ETH failed ERC-20/approval gas ranges — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G4** — BTC change-branch derivation — review outstanding.
+- **G4** — BTC change-branch derivation — DUPLICATE of the P126-c2 change-branch item.
 - **G5** — TRX USDT new-holder energy — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G6** — TRX `getUnfreezeDelayDays` live value — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **G6** — TRX `getUnfreezeDelayDays` live value — CLOSED: live `getUnfreezeDelayDays` is 14 days (chain parameter 70).
 - **G7** — TON Jetton transfer fee and new-recipient increment — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
-- **G8** — TON complete `estimateFee` accounting and V4R2 versus Jetton totals — **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
+- **G8** — TON complete `estimateFee` accounting and V4R2 versus Jetton totals — PARTLY CLOSED: `destination_fees` and the action-fee field are now recorded; Jetton totals remain **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**.
 - **G9** — Web draft source inspection — review outstanding.
 - **G10** — Repo capability claims — evidence outstanding.
 
@@ -2274,7 +2284,7 @@ The likelihoods below are conditional planning judgements for ordinary-use expos
 
 ### What changes on mainnet
 
-The testnet-only threats drop out: testnet-faucet exhaustion, quotas and unavailability; theft of valueless test coins; and disruption confined to rehearsal.
+The threats tied to testnet-specific service dependencies cease to apply on mainnet: testnet-faucet exhaustion, quotas and unavailability. Theft of valueless test coins is not a financial-loss mode, though it can affect rehearsal availability and integrity; the theft mechanism itself does not disappear on mainnet. Disruption also remains a threat and can affect live operations rather than being confined to rehearsal.
 
 None of the wallet-compromise mechanisms disappears. A testnet mnemonic reused on mainnet, or malware retained on a shared device, can cause real loss. Keep untrusted rehearsal software out of a clean, separate mainnet signing environment.
 
@@ -2291,18 +2301,18 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 | Clipboard/address-substitution malware | Medium | Single transfer to the substituted destination | Compare the entire pasted address character by character with an independently verified destination. |
 | Digital recovery exposure: info-stealers, clipboard, photos, notes, cloud | High | All funds under exposed usable material | Keep readable recovery backups only on offline paper or metal. |
 | Recovery phishing, fake support, fake wallet sites | High | All funds under disclosed usable material | Enter recovery words only in an independently authenticated wallet restore flow. |
-| Reusing testnet recovery material on mainnet | Medium | All mainnet funds under the reused material | Generate independent mainnet recovery material. |
+| Reusing testnet recovery material on mainnet | Medium | All mainnet funds under the reused material, if the secret becomes known; reuse alone does not disclose a secret. | Generate independent mainnet recovery material. |
 | Infected rehearsal device carried into mainnet use | Medium | Single transfer or all funds under captured material | Keep untrusted rehearsal software out of a clean, separate mainnet signing environment. |
 | Address poisoning through transaction history | High | Full amount of the mistaken transfer | Use an independently verified address-book entry, never an address copied from history. |
 | Excessive/malicious EVM token approvals | High | Authorised tokens up to the remaining allowance | Approve only the exact token amount needed. |
 | Malicious EVM permits, including Permit2 | Medium | Tokens and amounts within usable authorisation | Verify chain, token, spender, amount, expiry and authority before signing. |
 | Blind signing | High | Single transfer or wider authority, depending on the payload | Refuse to sign data the wallet cannot meaningfully decode. |
-| Compromised dependency/build/update | Medium | Many holders; up to all funds under compromised material | Require evidence linking source tag → exact lockfile → clean build → tests → artefact hash → release. |
-| Fake release/unverified distribution | Medium | All funds under exposed material; potentially many holders | Accept a release only after verifying its signature against an independently authenticated publisher key. |
-| Tampered/pre-initialised hardware | Medium | All funds under captured or preset material | Use maker-direct hardware only; initialise it yourself with freshly generated words. |
-| Predictable/hand-made/publicly known recovery material | Medium | All funds under that material; many holders if the flaw is shared | Use a reviewed cryptographically secure generator; never hand-pick words or use test fixtures. |
-| Signing-device theft | Medium | Funds accessible to the signer; seed-wide if keys are copied | Use device locking and encryption. |
-| Recovery-backup theft | Medium | All funds if the stolen material satisfies recovery requirements | Secure recovery words separately from the signing device and any BIP-39 passphrase. |
+| Compromised dependency/build/update | Medium | Many holders; up to all funds under compromised material, limited to funds exposed to the compromised software’s key access — not every holder automatically. | Require evidence linking source tag → exact lockfile → clean build → tests → artefact hash → release. |
+| Fake release/unverified distribution | Medium | All funds under exposed material; potentially many holders. Scope also includes funds at risk from induced malicious transfers without secret extraction. | Accept a release only after verifying its signature against an independently authenticated publisher key. |
+| Tampered/pre-initialised hardware | Medium | All funds under captured or preset material; also funds at risk from manipulated transactions without material capture. | Use maker-direct hardware only; initialise it yourself with freshly generated words. |
+| Predictable/hand-made/publicly known recovery material | Medium | All funds controlled by that material, subject to quorum and passphrase requirements; many holders if the flaw is shared. “Hand-made” means predictable human-invented secrets, not correctly generated random manual entropy. | Use a reviewed cryptographically secure generator; never hand-pick words or use test fixtures. |
+| Signing-device theft | Medium | Funds accessible to the signer, subject to lock state and quorum; seed-wide only if copied keys confer that authority, not automatically from a copied child key. | Use device locking and encryption. |
+| Recovery-backup theft | Medium | All funds if the stolen material satisfies recovery requirements — that is, supplies sufficient spending authority through a recovery path; recovering one multisig signer is not necessarily enough. | Secure recovery words separately from the signing device and any BIP-39 passphrase. |
 | Recovery loss/destruction/unusable backups | Medium | All access if no usable route survives | Keep offline backups in separate, secure, fire/water-protected failure domains. |
 | Insider/household misuse | Medium | Funds within that authority; treasury-wide if a quorum is captured | For a treasury, split multisig across makers and locations; no person or site may hold a quorum. |
 | Coercion/ransom demands | Medium | Compelled transfers, potentially all accessible funds; personal harm | Put personal safety before protecting the wallet. |
@@ -2313,13 +2323,13 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 
 > **Stop** If you suspect recovery-material exposure, stop routine use and move funds to fresh recovery material in a clean environment. Deletion, a PIN change or a remote wipe does not revoke copied keys. Leaving funds under the exposed material allows anyone holding a usable copy to retain authority over those funds.
 
-> **Warning** If you use a small test transfer, it limits that test’s loss only. Repeat the character-by-character check of the entire pasted address against an independently verified destination for the actual transfer; skipping it risks sending the full actual amount to a substituted destination.
+> **Warning** If you use a small test transfer, it limits that test’s loss only; a test sent to an address copied from transaction history can itself go to a poisoned address. Check the entire pasted address character by character against an independently verified destination before the test, and repeat that check before the actual transfer; skipping it risks sending the full actual amount to a substituted destination.
 
-**Decoding is not approval to sign.** Meaningfully decoded data can still authorise loss. Refusing blind signing does not remove the need to examine the authority requested. Review and revoke token approvals regularly. Outstanding permit signatures need separate consideration; they must not be treated as cancelled merely because an allowance has changed.
+**Decoding is not approval to sign.** Meaningfully decoded data can still authorise loss. Refusing blind signing does not remove the need to examine the authority requested. Review and revoke token approvals regularly. Outstanding permit signatures need separate consideration; they must not be treated as cancelled merely because an allowance has changed. An accepted Permit2 permit consumes its nonce, even when it sets a lower allowance, so a permit signature using that consumed nonce in the same nonce scope cannot be replayed.
 
 **Verification and recovery continuity need their own controls.** Keep `bip_utils` pinned and verification-only. Verify that recovery works without exposing the material or relaxing the recovery-entry and offline-backup rules. Document an explicit inheritance plan. Keep any BIP-39 passphrase separate from the recovery words, and keep the words separate from the signing device. Offline backups need separate, secure, fire/water-protected failure domains.
 
-**Coercion remains a personal-safety threat.** Neither a BIP-39 passphrase nor a vault unlock passphrase guarantees protection under coercion; the same is true of hidden backups, decoy wallets, a device PIN and multisig. Personal safety comes before protecting the wallet.
+**Coercion remains a personal-safety threat.** A decoy wallet can plausibly satisfy a coercer who is unaware of the real wallet. Multisig prevents one coerced holder alone from moving treasury funds when a quorum of independent holders is required. A BIP-39 passphrase can itself be compelled. A vault unlock passphrase or device PIN can also be demanded. Hidden backups do not eliminate coercion risk. These mechanisms can provide benefits, but none guarantees protection under coercion. Personal safety comes before protecting the wallet.
 
 ### Permit2: two independent paths
 
@@ -2330,7 +2340,7 @@ No technical mechanism in this model is genuinely mainnet-exclusive. What is new
 
 The token approval, any standing Permit2 allowance and outstanding permit signatures therefore need separate attention. Before signing a permit, verify the chain, token, spender, amount, expiry and authority. A wallet displaying decoded fields does not make the requested authority acceptable.
 
-Reducing an allowance or using `lockdown` does **not** invalidate outstanding permit signatures. Where supported, use the appropriate `invalidateNonces` or `invalidateUnorderedNonces` operation to invalidate them. Do not mistake an allowance change for signature cancellation.
+Reducing an allowance by itself or using `lockdown` does **not** invalidate outstanding permit signatures. Where supported, use `invalidateNonces` to invalidate the relevant ordered (sequential) nonces used by `AllowanceTransfer`, or `invalidateUnorderedNonces` to invalidate the relevant unordered nonces used by `SignatureTransfer`. Do not mistake an allowance change for signature cancellation.
 
 Never assume that disconnecting or clearing state cancels outstanding signatures. A signature that remains usable is still part of the exposure, subject to its authorisation and the transfer prerequisites above.
 
@@ -2368,13 +2378,13 @@ Address poisoning corrupts the place you choose a recipient from. An attacker se
 
 There are three forms: **zero-value transfers**, **tiny or dust transfers**, and **fake-token transfers**. Looking only for zero-value entries misses the other two. An entry’s presence in transaction history is not evidence that its address belongs to your intended recipient.
 
-Tsuchiya and Christin of Carnegie Mellon, reporting at **USENIX Security 2025**, measured about **270 million attempts** against about **17 million victim addresses** on Ethereum and BNB Smart Chain between **July 2022 and June 2024**. They identified **6,633 successful incidents** and at least **$83.8 million in confirmed stablecoin losses**. That loss figure is a stablecoin-only lower bound, not an all-asset total.
+Tsuchiya, Dong, Soska and Christin of Carnegie Mellon, reporting at **USENIX Security 2025**, measured about **270 million attempts** against about **17 million victim addresses** on Ethereum and BNB Smart Chain between **July 2022 and June 2024**. They identified **6,633 successful transfers** and estimated at least **$83.8 million in stablecoin losses**. That loss figure is a stablecoin-only lower bound, not an all-asset total.
 
 Reported cases show both the scale of individual losses and the trap in relying on a test payment:
 
 - **May 2024:** a victim sent **1,155 WBTC**, worth about **$68 million**, to a lookalike address. The attacker later returned about **22,960 ETH**, over **96% of the value**. That return was exceptional, not a recovery expectation.
 - **May 2025:** **$2.6 million in USDT** was lost across two zero-value-transfer scams.
-- **December 2025:** about **$50 million in USDT** was lost after a correct **$50 test payment**. Minutes after the test, the victim copied a poisoned address from history for the main payment.
+- **December 2025:** about **$50 million in USDT** was lost after a **$50 test payment**. The victim copied a poisoned address from history for the main payment.
 
 These case figures retain their own dates and scopes; do not add them to the study’s stablecoin-only loss figure.
 
@@ -2387,8 +2397,8 @@ A clipboard swapper, or clipper, replaces clipboard contents between copying and
 Lookalike clippers deliberately preserve the first and last characters people commonly check. A matching beginning and ending therefore does not establish that the pasted address is unchanged.
 
 - **2017 — CryptoShuffler:** Kaspersky reported **23 BTC stolen**, worth about **$140,000** at the time.
-- **November 2022 — Laplas Clipper:** it substituted first-and-last-character lookalikes. Researchers reproduced a convincing lookalike in about **five seconds**.
-- **2025 — MassJacker:** CyberArk identified **778,531 unique attacker addresses**, with about **$95,300 held** and about **$336,700 passed through** at analysis time. These are address-count, balance and flow observations, not a verified total of victim losses.
+- **2022 — Laplas Clipper:** it substituted first-and-last-character lookalikes. In a reported test, researchers reproduced a convincing lookalike in about **five seconds**.
+- **2025 — MassJacker:** CyberArk identified **over 778,531 unique attacker addresses**, with only **423** holding approximately **$95,300 in total** at analysis time. These are address-count and balance observations, not a verified total of victim losses.
 
 No credible total loss figure exists for clippers. The MassJacker balances and flows do not provide one.
 
@@ -2403,7 +2413,7 @@ Neither substitutes for the other. Comparing every character against a poisoned 
 
 Use this procedure for each payment:
 
-1. **Establish the recipient outside history.** Obtain the intended recipient’s full destination from a verified source outside transaction history. Keep that original source available throughout the payment. Do not use a recent-transaction entry to choose or reselect the recipient.
+1. **Establish the recipient outside history.** Obtain the intended recipient’s full destination from a verified source outside transaction history. Keep that original source available throughout the payment. Do not use a recent-transaction entry to choose or reselect the recipient. Before trusting any source, including an address-book entry, authenticate it by confirming the full destination’s binding to the intended recipient directly with that recipient through a second, independent channel; a successful test payment does not establish that binding.
 2. **Check after pasting.** Compare the entire pasted destination with the original verified source, character by character—not just the first and last characters.
 3. **Check on the signing display.** Before authorising the payment, compare the full destination shown for signing with the original verified source. Comparing it only with the pasted text is not enough.
 4. **Repeat for the main payment after any test.** Check its full destination again after pasting and on the signing display. Continue using the original verified source; do not return to history to select the recipient.
@@ -2444,25 +2454,25 @@ If you find an unexpected permission change, follow the verified TRON-specific r
 
 Do not send wallet secrets to support, “validation” sites or claim sites. That includes seed words, private keys, a BIP-39 passphrase or a vault unlock passphrase. Calling a request “validation” or “recovery” does not change what disclosure gives the recipient.
 
-A password change does not rotate the wallet’s keys. If keys have been disclosed, changing a password is not a substitute for following the verified recovery procedure.
+A password change does not by itself rotate the wallet’s keys or restore control. If keys have been disclosed, following the verified recovery procedure is required.
 
 ##### Fake wallet apps and extensions
 
-A store listing is not authentication. A counterfeit client can capture wallet material you import **or create within it**, or redirect deposits. Reinstalling the genuine app cannot recover funds already transferred.
+A store listing is not authentication. A counterfeit client can capture wallet material you import **or create within it**, or redirect deposits. Reinstalling the genuine app cannot reverse transfers to an address you do not control; funds that remain at an address you still control may be recoverable by restoring access through a genuine client.
 
-Start from the maker’s canonical site or repository, then check the publisher, package identity and requested permissions. Verify signatures where a verification process exists. Do not treat availability in an app or extension store as a replacement for those checks.
+First establish the exact URL of the maker’s canonical site or repository through an independently authenticated channel; use that authenticated source as the trust anchor. Follow its official download or store links, then check the publisher, package identity and requested permissions. Before installing, authenticate the exact artifact using verification material obtained from that trust anchor: verify its signature against the maker’s authenticated signing key where a signature-verification process exists, or compare its digest with an authenticated release digest. A valid signature from an unknown signer is insufficient. If the artifact cannot be authenticated, do not install it. Do not treat availability in an app or extension store as a replacement for these checks.
 
 Never import a mainnet mnemonic merely to test an unfamiliar app or extension. That is not a verified restore or a recovery drill.
 
 ##### Giveaways, double-your-coins and pay-to-claim offers
 
-Payment-first giveaways, “double your coins” promises and pay-to-claim messages are scams. If a supposed claim, unlock or support process requires you to send funds first, do not pay: following that instruction transfers funds to the scammer.
+Payment-first giveaways, “double your coins” promises and pay-to-claim messages are common scam patterns and should be treated as scams unless independently verified. If a supposed claim, unlock or support process requires you to send funds first, do not pay without verifying its legitimacy through trusted official channels: you risk sending funds to a scammer.
 
-A legitimate wallet or support route never requires a payment to claim or unlock funds.
+Apart from genuine gas or protocol fees and repayment of secured debt, a claim, unlock or support process demanding payment first is a scam.
 
-#### Seed words: four legitimate moments
+#### Seed words: examples of legitimate handling
 
-Seed words belong in four moments, and nowhere else:
+The following are examples of legitimate contexts for handling seed words; the list is not exhaustive, and some contexts overlap:
 
 1. **Generation** — when the verified wallet generates them.
 2. **Offline backup recording** — recording those words in your offline backup.
@@ -2505,10 +2515,13 @@ Before generating, restoring or using a wallet:
 - [ ] Keep the device backup distinct from the wallet recovery plan.
 - [ ] Keep wallet software separate from rehearsal software.
 - [ ] Check the device for tampering before generating or restoring a wallet.
+- [ ] Install wallet apps and updates only from the project's authoritative distribution channel; confirm the expected publisher and verify any provided release or package signatures against trusted signing keys.
+- [ ] End all active remote-access and screen-sharing sessions, and disable or remove such software before generating, restoring, or using a wallet.
+- [ ] Check for malware and other software compromise, including suspicious apps, browser extensions, or security-setting changes. The absence of visible tampering does not prove the device is safe. Do not generate, restore, or use a wallet on a device known or suspected to be compromised.
 
 #### Device backup is not wallet recovery
 
-> **Never** When backing up or replacing a device, do not rely on the device backup for wallet recovery. Device backups do not restore wallets. Preserve the recovery material independently; without it, losing the device can leave you unable to recover.
+> **Never** rely on a device backup alone for wallet recovery when backing up or replacing a device. A restore may reinstall the wallet app and restore app state while leaving the seed and private keys unavailable. Preserve the recovery material independently; without it, losing the device can leave you unable to recover.
 
 A new phone does not automatically restore the wallet. The new device needs an independent recovery plan: restore the wallet from preserved recovery material on that device, then repeat the recovery rehearsal. Recovery requires that material, not possession of the old device.
 
@@ -2520,7 +2533,7 @@ A new phone does not automatically restore the wallet. The new device needs an i
 
 #### Extended public key (xpub) exposure
 
-An exposed extended public key (xpub) reveals the account’s addresses and transaction history. This is a privacy loss; the xpub does not authorise spending. Keep it private if you do not want that account activity disclosed.
+An account extended public key (xpub) enables derivation of existing and future non-hardened descendant addresses, including receive and change addresses. Anyone with the xpub can discover transaction history from the blockchain and continue monitoring the account’s activity and balances; that history is not contained in the xpub. Exposure is a privacy loss, but the xpub does not authorise spending. Keeping it private means restricting disclosure to intended recipients, not avoiding use in a watch-only wallet.
 
 #### Platform gaps and compensating behaviour
 
@@ -2529,7 +2542,7 @@ Do not assume that a control available on one platform or route applies elsewher
 - **Automatic locking:** lock the device yourself. Neither the inaccurate Web inactivity claim nor Android’s conditional vault model is a reason to leave it unlocked.
 - **Clipboard clearing:** neither draft provides it. Avoid copying secrets; if you have copied one, clear the clipboard yourself where the OS allows.
 - **Capture prevention:** Android’s `FLAG_SECURE` coverage stops at the Backup/Import routes. On either draft, keep recovery material out of screenshots and screen recordings; phrase display and screen locking do not prevent capture.
-- **Web content security policy:** the policy is absent. Keep the browser patched and run no untrusted software, but recognise that these hygiene measures do not supply the missing policy.
+- **Web content security policy:** the policy is absent. Browser patching does not compensate for a missing content-security policy. Keep the browser patched and run no untrusted software, but do not treat these hygiene measures as substitutes for the missing policy.
 
 These are compensating behaviours, not fixes for the missing controls. They do not remove the vaults’ limits.
 
@@ -2585,7 +2598,7 @@ The test/CI suite proves **offline derivation only**. These component results do
 
 ### Gate catalogue and rehearsal status
 
-Keep the gate catalogue and definitions in **`docs/10`** as the gate list. The component-test table above is not a replacement catalogue.
+Use the M06 R01–R10 gate catalogue and definitions in this guide as the authoritative gate list; the component-test table above is not a replacement catalogue.
 
 The available evidence supplies no command for the following required checks. Their M06 status therefore remains **BLOCKED**; do not infer a gate pass from a component result. (M06 R01–R10.)
 
@@ -2602,7 +2615,7 @@ The available evidence supplies no command for the following required checks. Th
 | M06 R09 | **BLOCKED** |
 | M06 R10 | **BLOCKED** |
 
-The **README §18 recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
+The **docs/README-FULL.md §18 (line 1241) recovery gate is FAIL (unexecuted)**: **“Unexecuted = FAIL”**. The recovery rehearsal has never been executed. Its required clean-install restore and small-amount mainnet signing check cannot be replaced by the recorded decrypt round trip. Use §10 for the recovery procedure; the mainnet half remains **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL**. (M27; M16-F14; M28-012.)
 
 Keep these verification claims separate:
 
@@ -2637,15 +2650,17 @@ The following are **the guide's pinned wallet policies**, not finality guarantee
 | Network | Pinned wallet policy | Mainnet confirmation status |
 |---|---|---|
 | Bitcoin | **6 confirmations**. | **CONFIRMED (qualified)** — a customary recommendation, not a protocol requirement. bitcoin.org FAQ and “Some things you need to know”: “6 confirmations is often considered to be as safe as waiting 6 months on a credit card transaction”; 6 is the “Minimum recommendation for high-value bitcoin transfers”. (M-38.) |
-| Ethereum | **≥12 confirmations AND canonical finalised inclusion (`finalized`)**. **12 alone is insufficient.** The 12 is retained as a legacy PoW-era extra minimum **without primary-source support**, normally subsumed by finalisation. | **CONFIRMED**: `finalized` and “12 alone is insufficient”. **UNVERIFIABLE**: 12 as a standalone threshold; no primary source states it. ethereum.org, “Proof-of-stake”, describes finalisation via a supermajority link between two checkpoints (≥⅔ staked ETH). The page's only “12” is the 12-second slot, not a confirmation threshold. (M-38.) |
+| Ethereum | **≥12 confirmations AND canonical finalised inclusion (`finalized`)**. The cited passage does not assess the confidence, information or reorganisation resistance provided by 12 unfinalised confirmations; **finalisation is the supported criterion**. The 12 is retained as a legacy PoW-era extra minimum **without primary-source support**, normally subsumed by finalisation. | **CONFIRMED**: `finalized` as the finality criterion. **UNVERIFIABLE**: 12 as a standalone threshold; it is not established by the cited passage. ethereum.org, “Proof-of-stake”, describes finalisation via a supermajority link between two checkpoints (≥⅔ staked ETH). The page's only “12” is the 12-second slot, not a confirmation threshold. (M-38.) |
 | TRON | **19 distinct active Super Representatives out of 27**, with solidified inclusion verified through **`/walletsolidity/*`**. Do not substitute a block count. | **CONFIRMED** — TRON developer docs, “Consensus and DPoS” (updated 2026-10-20): blocks are solidified once at least 19 distinct active SRs have each produced a block at that height or above. `walletsolidity/getnowblock` reports the latest solidified block. (M-38.) |
-| TON | **1 masterchain seqno after inclusion, with the outgoing-message outcome checked**. An unrelated `seqno` step is not proof of inclusion. The check remains **manual** until TON confirmation tracking is implemented (M-25 F18); exercising it belongs to the authorised small-amount rehearsal (M-35). | **CONFIRMED — finality meaning of the threshold**. TON Docs (2026-11-10): “TON achieves transaction finality after a single masterchain block confirmation”; “a transaction becomes final when the first masterchain block references it”. This does not mean confirmation tracking is implemented. (M-13.) |
+| TON | **1 masterchain seqno after inclusion of the transaction in question, with that transaction's outgoing-message outcome checked**. This is the repo's counting convention, distinct from the sourced first-reference finality event. An unrelated `seqno` step is not proof of that transaction's inclusion. The check remains **manual** until TON confirmation tracking is implemented (M-25 F18); exercising it belongs to the authorised small-amount rehearsal (M-35). | **CONFIRMED — first-reference finality event only**. TON Docs (2026-11-10): “a transaction becomes final when the first masterchain block references it”. This does not confirm the repo's counting convention or mean that confirmation tracking is implemented. (M-13.) |
 
 Recheck these policies against current chain documentation and retain the sources and review date before relying on them for mainnet checks. An endpoint probe does not validate a confirmation policy, and neither check establishes receipt or spending behaviour. (M28-OI-02; M28-OI-03; M16-F36; M16-F42.)
 
 ## 17. Mainnet review gates
 
 A review gate ties a decision to an observable check, required evidence and a stop condition. This section is the locally authoritative mainnet gate catalogue; §21 records its open items. Describing a check, adding a register entry or finishing a procedure does not perform the check.
+
+**§17 record baseline:** As of the 2026-11-09 baseline, no execution or review record exists for any §17 gate. Each `Status: unperformed` rests on the absence of such a record, not on a documented execution or review result.
 
 Keep three states separate:
 
@@ -2739,7 +2754,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### TON wallet ID — wrong-account loss mode
 
-**Status: unperformed.** The open input gives the TON wallet ID as `698983191`; drafts record `0`. That discrepancy remains open.
+**Status: unperformed.** The open input gives the TON wallet ID as `698983191`; drafts record `0`. That discrepancy remains open. Under TEP-0003 §7, the same mnemonic and key pair may correspond to multiple wallet contracts and accounts.
 
 - **Observable check:** Check that the TON route covered by this evidence uses wallet ID `698983191`, not the draft value `0`, and that restoration and address comparisons correspond to that ID.
 - **Required evidence:** A corrected, reviewed scope record and independent public-address comparisons identifying the wallet ID used.
@@ -2747,7 +2762,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### OI-096 helpers — silently wrong derived address and seed/secret disclosure
 
-**Status: unperformed; defects live.** `compare.js` accepts private keys and can print silently wrong addresses while exiting `0`. `derive.js` has wrong-branch address outputs.
+**Status: unperformed; defects repaired; independent clearance evidence missing (M-01 OPEN).** At `a5bc56e`, following the `e3b65fb8` repair, `compare.js` rejects private extended keys with an explicit `FATAL` before WASM initialisation, and a `vpub` input is explicitly rejected with exit code `2` rather than an opaque abort. `derive.js` still returns valid-looking addresses for mismatched-chain keys (BTC/ETH/TRX xpubs share version `0488b21e`).
 
 - **Observable check:** Require an evidenced resolution of the relevant defects before relying on either helper. Check derived addresses against independent targets for the exact branch and scope, and review the private-key input boundary.
 - **Required evidence:** Reviewed corrective work and reproducible comparison results for the affected behaviours. Process exit status is not comparison evidence.
@@ -2821,7 +2836,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Generator timeout — missing recovery material
 
-**Status: unperformed.** The generator has a 120-second timeout after secret display.
+**Status: unperformed.** The 120-second timeout covers the entire generator subprocess (`docs/04:176`), not a fresh allowance after secret display.
 
 - **Observable check:** Check that the creation procedure accounts for the timeout and has an evidenced stop condition for an incomplete attempt. Secret display must not be mistaken for complete recovery-material capture.
 - **Required evidence:** Observed timeout behaviour, reviewed handling of the incomplete case and a recovery-material completeness check, without recording the secrets.
@@ -2834,7 +2849,7 @@ These are wording and decision rules, not optional cautions:
 - **Do not claim that the repository constructs, signs or broadcasts transactions.** Those claims are forbidden. Send/sign/broadcast have never been exercised on any network, and no Bawa signing path is available.
 - **Do not turn a testnet pass into a mainnet assurance claim.** A testnet pass does not mean “safe”. Independent security review is mandatory before real funds, including the small receive at rung 3.
 - **Do not call a decrypt round trip a rehearsal.** A “recovery tested” label is not an executed rehearsal either.
-- **Do not use exit `0` from `compare.js` as proof of anything.** OI-096 leaves silently wrong address outputs live.
+- **Do not use exit `0` from `compare.js` as proof of anything.** The OI-096 defects are repaired at `a5bc56e` following `e3b65fb8`, including explicit rejection of private extended keys, but a successful exit alone does not establish address correctness or supply the missing independent clearance evidence (M-01 OPEN).
 - **Do not describe anything unverified as “safe”, “secure” or “production-ready”.**
 - **Do not substitute one check for another.** A decrypt round trip, an address match or a result from another wallet/chain/network/policy/route cannot stand in for a missing check.
 - **Do not promote writing status into operational authority.** “Complete”, an open-item entry or a prose review is not authorisation to receive, hold or send real funds.
@@ -2851,10 +2866,10 @@ Unperformed operational checks may remain open when the writing is complete, but
 2. **Before-creation coverage.** Every setup, creation and import entry point—including recovery and FAQ routes—is preceded by the required warnings.
 3. **Action-level coverage.** Every money-movement instruction locally names its loss modes, teaches prevention and states when to stop.
 4. **Consistency and navigation.** Warning copies agree with §2, links reach their sections, and no shortcut bypasses a prerequisite or stop condition.
-5. **Evidence and wording.** Every value, count and date is checked against cited evidence. Repository facts are attributed to `56396a20` without presenting that head as an approved mainnet revision. There are no “safe”, “secure” or “production-ready” claims, and no legal or tax advice.
+5. **Evidence and wording.** Every value, count and date must be checked against cited evidence. This check is not satisfied until the P129 28-of-28 figure is reconciled with the live 130-ok run and the P121 counts (8, 6, 5, 5, 4) are reconciled with the recounts (exact: 11, 10, 10, 6, 9; substring: 11, 10, 10, 6, 14). Repository facts are attributed to `56396a20` without presenting that head as an approved mainnet revision. There are no “safe”, “secure” or “production-ready” claims, and no legal or tax advice.
 6. **Register coverage.** Every uncertainty, deferral and TODO maps to an M- entry with all required fields. Shared issues retain separate scope-specific rows.
 7. **Gate independence.** Each mainnet criterion has an observable check, required evidence and an explicit consequence if unmet. Testnet results are not treated as mainnet passes.
-8. **Outstanding-item treatment.** No writing blocker remains unresolved. Unperformed operational checks stay visibly unperformed, with dependent action stopped. Registering a gap does not clear it.
+8. **Outstanding-item treatment.** No writing blocker may remain unresolved. This check is not satisfied while the P128 payment-procedure gaps remain open. Unperformed operational checks stay visibly unperformed, with dependent action stopped. Registering a gap does not clear it.
 9. **Separate review.** An inspectable review record identifies the reviewed prose revision, scope and remaining restrictions. A testnet review is not a substitute; neither scope’s review replaces the other’s. This prose review also does not satisfy the independent security review gate.
 
 #### Six writing blockers and their clearance conditions
@@ -2876,7 +2891,7 @@ A status change must cite inspectable evidence meeting the entry’s clearance c
 
 A shared issue requires **two scope-specific rows**: an **OI row in Doc 3** and an **M- row in Doc 4**. Cross-link them, but do not merge their authority. Closing either row does not close the other; each needs its own scope-appropriate clearance evidence.
 
-**README §18 is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
+**`docs/README-FULL.md` §18 is a testnet-only gate catalogue, not mainnet authorisation.** References to it may support testnet scope only. This section defines the local mainnet gates, and §21 records their outstanding work without turning missing checks into passes.
 
 ## 18. Troubleshooting and FAQ
 
@@ -2884,7 +2899,7 @@ Baseline: 2026-11-09, `main` head `56396a20`.
 
 ### Troubleshooting
 
-Never request mnemonics, data keys or secret-bearing transcripts in a troubleshooting exchange. Keep that material out of reports and replies. (M16-F11, M16-F33; M04)
+Never request mnemonics, private keys (including xprv and zprv), data keys, `production.env`, backup artefacts, credentials, API secrets, or secret-bearing transcripts in a troubleshooting exchange. Keep that material out of reports and replies. (M16-F11, M16-F33; M04)
 
 #### A re-derived address does not match the recorded original
 
@@ -2893,7 +2908,7 @@ Never request mnemonics, data keys or secret-bearing transcripts in a troublesho
 Check the possible causes below in this exact order, **one item at a time**. Corrections are to the derivation inputs or configuration, not to the expected original. After each correction, **re-derive and fully re-compare** against the unchanged original before making another correction. Do not skip ahead or change several settings together. (M16-F43)
 
 1. **Mnemonic — words, spelling or order differ.** Use the original words, with the original spelling and order.
-2. **Passphrase — the BIP-39 policy or passphrase differs.** Apply the exact recorded BIP-39 policy. Use an empty passphrase only where it was originally empty; otherwise use the original, separately backed-up passphrase. Never substitute the backup-decryption password.
+2. **Passphrase — fixed empty BIP-39 passphrase.** The verifier reproducer uses Bawa's fixed empty BIP-39 passphrase; the evidenced Bawa path exposes no passphrase input. Never substitute the backup-decryption password.
 3. **Curve — an assumed library default differs from the record.** Use the recorded curve, not an assumed default.
 4. **Coin type — the path component differs.** Use the recorded coin-type component.
 5. **Purpose — the purpose or address policy differs.** Use the recorded purpose and address policy.
@@ -2907,7 +2922,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### The recorded address has no current balance
 
-**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README §13 empty-passphrase instruction and its “never sent” conclusion must not be applied as written. (M16-F45)
+**Cause:** current balance is not transaction history. An address may have received funds and subsequently spent them. Separately, reproducing a wallet with an assumed empty BIP-39 passphrase can produce the wrong address when the original policy was non-empty. The README-FULL §13 (line 1039) empty-passphrase instruction and its “never sent” conclusion must not be applied as written. (M16-F45)
 
 **Action:** reproduce the recorded address with the recorded path and passphrase policy, using the ordered checks above. Keep address reproduction, current balance, transaction history and address discovery separate. Examine independent transaction evidence on the recorded network. (M16-F43, M16-F45)
 
@@ -2923,7 +2938,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### An address tool aborts, or returns plausible but wrong output
 
-**Cause:** BTC testnet `vpub`/`tpub` inputs to `derive.js` can cause an opaque WASM abort, exit status `1` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` accepts private extended keys and silently prints wrong addresses with exit status `0`; `derive.js` returns valid-looking addresses for mismatched-chain keys. (M04; OI-096)
+**Cause:** BTC testnet `vpub` inputs to `derive.js` produce an explicit rejection with exit status `2` and no address. This is an input-support failure, not evidence of broken derivation. Separately, `compare.js` rejects private extended keys with a `FATAL` diagnostic and exit status `1`; `derive.js` can still produce valid-looking addresses for the wrong chain from shared-version `xpub` inputs. (M04; OI-096)
 
 **Action:** do not feed BTC testnet `vpub`/`tpub` keys to `derive.js`. Do not use `compare.js` with private extended keys, or accept mismatched-chain output from `derive.js` as validation. Plausible output plus exit status `0` is not validation. If an address mismatch remains, use the ordered mismatch tree above. (M04; OI-096; M16-F43)
 
@@ -2939,7 +2954,7 @@ Check the possible causes below in this exact order, **one item at a time**. Cor
 
 #### The UI says “backup confirmed”, but full re-entry has not happened
 
-**Cause:** Web import marks the backup confirmed without re-entry through `setBackupConfirmed` at `main.js:529`. Android’s draft uses a 3-word quiz where its guide requires full ordered 24-word re-entry. Neither satisfies the backup gate. (M16-F28, M16-F47)
+**Cause:** In the local-only, off-branch Web draft, import marks the backup confirmed through `setBackupConfirmed` without re-entry. Android's draft uses a 3-word quiz where its guide requires full ordered 24-word re-entry. Neither satisfies the backup gate. (M16-F28, M16-F47)
 
 **Action:** require **full ordered 24-word re-entry** for the backup gate. Any flow that cannot perform the gate is **unsupported**, regardless of its confirmation flag or quiz result. A decrypt round trip is not the recovery rehearsal. Re-entry is not a request to send the words in a troubleshooting message. (M16-F28, M16-F47; M03, M16)
 
@@ -2969,7 +2984,7 @@ Only that the tested round trip worked. The recorded result was **4/4 at the 202
 
 **What does exit status `0` prove?**
 
-Only that the process reported successful completion—not that its address output is correct. `compare.js` can print wrong addresses with exit status `0`. A downstream command’s success also says nothing about whether decryption succeeded; check the decrypt process itself. (OI-096; M16-F11, M16-F33; M04)
+Only that the process reported successful completion—not that its address output is correct. After the `e3b65fb8` repair, included at `a5bc56e`, `compare.js` rejects private extended keys with exit status `1`. A downstream command's success also says nothing about whether decryption succeeded; check the decrypt process itself. (OI-096; M16-F11, M16-F33; M04)
 
 **Does an empty wallet mean funds were never sent?**
 
@@ -2977,7 +2992,7 @@ No. No current balance does not mean “never received funds”; earlier receipt
 
 **What should I do when the seed is lost?**
 
-Complete seed loss—no mnemonic, no bundle, no device and no surviving signing access—is **TOTAL and IRREVERSIBLE loss of spending access**. No support desk, recovery service, reset or reconstruction from an xpub/zpub can restore it. Any offer to recover a lost mnemonic or passphrase for a fee is a scam. (M16-F22–M16-F29)
+Complete seed loss—no mnemonic, no bundle, no device and no surviving signing access—is **TOTAL and IRREVERSIBLE loss of spending access**. No support desk, recovery service, reset or reconstruction from an xpub/zpub can restore it. Any offer promising to restore spending access for a fee despite such complete loss is a scam. (M16-F22–M16-F29)
 
 **What should I do when the seed is exposed?**
 
@@ -2985,7 +3000,7 @@ An exposed seed requires migration to independent keys. Changing a PIN or app pa
 
 **Which Node version should I use?**
 
-For this baseline, use the repo-pinned **Node 22.23.4**. The declared range is `>=22 <23`; Node `v24.22.2` is outside it. (M05, M06)
+The tested and verified baseline is **Node v22.23.4**, not an exact repo pin. The declared range is `>=22 <23` (greater than or equal to 22 and less than 23); Node `v24.22.2` is outside it. (M05, M06)
 
 ## 19. Updating and rebuilding
 
@@ -2993,7 +3008,7 @@ For this baseline, use the repo-pinned **Node 22.23.4**. The declared range is `
 
 Doc 4’s current pin is the repair commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`. **Re-pinning to a newer head is OPEN**, pending the user’s decision. For any agreed update, re-run the **§5 worktree procedure** against the new head; §5 contains the full procedure. **Never update by checking a new commit out in place inside the working directory:** an in-place detach silently replaces the guide being read. (M28; F4 fix)
 
-The cross-reference to the F4 treatment in **Doc 1 §15 was updated to the worktree procedure** in the 2026-11-10 push. (M28; F4 fix; M-34 decided 2026-11-10)
+The cross-reference to the F4 worktree treatment was updated in the 2026-11-10 push to point to **`docs/README-FULL.md` §15 (Updating and rebuilding)**. (M28; F4 fix; M-34 decided 2026-11-10)
 
 Do not carry over the testnet guides’ old in-place pinning procedure, treat the testnet4 deviation as a mainnet defect, or reuse testnet endpoints, addresses or network metadata as mainnet configuration. Testnet gate outcomes are not mainnet evidence. (M28 §0; M36 F4)
 
@@ -3003,13 +3018,13 @@ Version records at the **2026-11-09 baseline**: (M05)
 
 | Component | Recorded pin | Candidate or constraint |
 |---|---|---|
-| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
+| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** — tag `4.9.1` points to commit `17e3cd4d`; npm tarball SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
 | Node | **22.23.4**; repo range `>=22 <23` | Node **v24** is outside that range. |
 | bip-utils | **2.12.3** (adopted 2026-11-13: differential test PASS, identical BTC/ETH addresses, 14/14 unit tests) | none — 2.12.3 is the current latest stable and the adopted pin |
 
 **A candidate is not a pin. No version is qualified for mainnet until it passes the promotion checks.** (M05 F7)
 
-Installation belongs in §6. Install the Node tools with `npm ci --ignore-scripts` in `tools/hdwallet-gen`. (M05 F11) **Gap:** CI pins are missing. (M05 F12)
+Installation belongs in §6. Install the Node tools with `npm ci --ignore-scripts` in `tools/hdwallet-gen`. (M05 F11) **Gap:** `ci.yml:21` pins `node-version` to `22`; only the exact `22.23.4` patch pin is missing. (M05 F12)
 
 ### Post-update re-verification
 
@@ -3066,6 +3081,8 @@ All counts above, and the category tallies below, belong to the **2026-11-09** s
 
 **M31 tally: 55 links — 54 LIVE and 1 LIVE-VIA-RAW.**
 
+Standards and links are different counting units: the reference set lists 32 named standards (21 BIPs, 5 SLIPs, 6 EIPs), but without the M31 per-URL table, readers cannot reproduce how those 32 standards correspond to the 55 counted links.
+
 The standards reference set includes:
 
 - **Bitcoin:** BIP-32, BIP-39, BIP-43, BIP-44, BIP-49, BIP-84, BIP-86, BIP-141, BIP-173, BIP-174, BIP-321, BIP-340, BIP-341, BIP-342, BIP-350, BIP-371, BIP-380, BIP-381, BIP-382, BIP-383 and BIP-386.
@@ -3102,7 +3119,7 @@ The [TON JSON-RPC endpoint](https://toncenter.com/api/v2/jsonRPC) is **LIVE (POS
 
 **M31 tally: 18 links — 14 LIVE, 2 DEAD-404 and 2 LIVE-via-API with VM-blocked homepages.**
 
-- **PublicNode:** use [https://ethereum.publicnode.com](https://ethereum.publicnode.com). POST `eth_chainId` returned 200. Compare the returned chain ID with the intended mainnet; a successful response alone does not establish that the endpoint is serving the intended chain. Do not carry forward the wrong hostname that returned 404. [M31 F01]
+- **PublicNode:** use [https://ethereum.publicnode.com](https://ethereum.publicnode.com). POST `eth_chainId` returned 200. Compare the returned chain ID with the intended mainnet; a successful response alone does not establish that the endpoint is serving the intended chain. The wrong hostname that returned 404 is unrecorded in this guide; no hostname may be inferred or carried forward for that failure on this evidence. [M31 F01]
 - **Blockstream:** cite a working sub-path, such as [the tip-height endpoint](https://blockstream.info/api/blocks/tip/height). Address queries use the `/api/address/<address>` path. Do not cite the bare API root: it returned 404 with “endpoint does not exist”. [M31 F03]
 - **Tronscan:** retain **LIVE-via-API** and the homepage access caveat. The homepage was blocked from `muse-vm` by Cloudflare with 403; the service was verified through `apilist.tronscan.org`, which returned 200. This does not verify homepage access from that environment. [M31 F06]
 - **Etherscan:** retain **LIVE-via-API** and the same access distinction. The homepage returned 403 from the VM, while `api.etherscan.io` and `docs.etherscan.io` were live. Cite those checked destinations rather than treating the homepage as verified. [M31 F07]
@@ -3143,17 +3160,23 @@ M31 excluded **103 URLs without checking them**. Excluded is not a dead-link ver
 The code baseline for Doc 4 is **`Pr3eve6ti2o/bawa`, `main` at `56396a20`**. Its evidence base comprises:
 
 - **36 mainnet research slices, M01–M36**, containing approximately **1,050 findings**, verified first-hand on **2026-11-09**.
-- **Live verification round 2**, with results recorded as **T1 15 PASS**, **T2 19/0/3** and **T3 9/9**. Preserve that notation and consult the underlying records for the individual results.
+- **Live verification round 2**, with results recorded as **T1 15 PASS**, **T2 19/0/3** (19 PASS, 0 FAIL, 3 INFO) and **T3 9/9**. Preserve that notation and consult the underlying records for the individual results.
 - The **200-finding documentation fix** pushed at **`56396a20`**.
-- The **F4 worktree fix**, committed at `b3814e0b` (2026-11-10 push). Its local evidence is `~/workspace/bawa-wallet/F4-FIX-RERUN-EVIDENCE.md`. [M36; M28]
+- The **F4 worktree fix**, committed at `b3814e0b` (2026-11-10 push). Its reader-verifiable public locator is [the fix commit](https://github.com/Pr3eve6ti2o/bawa/commit/b3814e0b). [M36; M28]
 
 Every value in Doc 4 must retain a trace to its supporting slice and finding, verification record or fix evidence, together with the applicable date and version or commit. Link verdicts trace to M31; the underlying claim still needs its own evidence. A later successful link check does not refresh an older price, result or implementation finding.
 
 **Before publication, re-run the link table against the guide’s final link list and inspect destination content again.** Carry **2026-11-09** with the baseline link evidence, and record any subsequent check under its actual check date. Update the verdicts and access caveats from that re-check: a link live at the baseline can move. [M31 open item 7]
 
+The pre-publication link-table re-run remains an **unclosed publication-check item** because no re-run record was supplied; this is not a demonstrated link defect.
+
 ## 21. Mainnet open-items register
 
-This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5274). [README §18](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md) is a **testnet-only gate catalogue — not mainnet authorisation**.
+This register records mainnet-scope questions and risks for Bawa at [`56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20). It follows the re-checked register (M35 re-check addendum, dated 9 November 2026 — a local working file, not part of this guide), retaining its evidence locators. Read it alongside Doc 3’s register (ANDROID-GUIDE.md, Consolidated open-items register, L5273). [README §18](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/README.md) is a **testnet-only gate catalogue — not mainnet authorisation**.
+
+Register citations such as M-series and F-series references are guide-internal cross-references to other parts of this guide and the audit record, not inspectable external sources. A status change still requires inspectable evidence meeting the row’s clearance condition.
+
+`56396a20` is the evidence baseline—the `main` head on 2026-11-09, when the research slices were verified first-hand. By contrast, `a5bc56e` is the audited `main` commit to which the audit findings are pinned.
 
 Under M36 F7, M-series IDs are allocated only to actual items, not placeholders. A shared issue has two scope-specific rows: an OI row in Doc 3 and an M- row here, with the M- row linking to its OI counterpart. Closing either row does not close the other. Every status change must cite evidence meeting that row’s clearance condition. Registering a gap does not clear it.
 
@@ -3169,9 +3192,11 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected sections:** §21, §9 and §16.
 
-**Evidence or uncertainty:** M24 K19; M06 R01, including the negative test in `tools/hdwallet-gen/test/smoke.test.js` using a disposable private extended key.
+**Evidence or uncertainty:** M24 K19; M06 R01, including the negative test in `test/smoke.test.js` using a disposable private extended key.
 
 **Status:** OPEN.
+
+OPEN means independent clearance evidence remains outstanding, not that the repaired `compare.js` private-input defect is still live; the stale §17/§18 framing that presented the repaired defect as live is a separate documentation defect.
 
 **Operational restriction:** The defective tools’ output is never sufficient evidence of their own repair.
 
@@ -3179,15 +3204,15 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** Independent fixture-oracle verification using only the published vector must demonstrate private-material rejection and wrong-network/path rejection, with the exact expected addresses recorded. The evidence must identify the fixed commit, artefact, test evidence and reviewer. OI-096 stays open until that evidence exists; its closure remains separate from the mainnet row’s closure.
 
-**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5274); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/tools/hdwallet-gen/test/smoke.test.js).
+**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5273); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/test/smoke.test.js).
 
-### M-02 — Bad-checksum inputs bypass the private-key guard; a typo can trigger a multi-gigabyte allocation
+### M-02 — Bad-checksum inputs and the private-key guard
 
-**Question/risk:** `isPrivateExtendedKey` returns `false` on checksum failure. A bad-checksum `zprv` therefore reaches Core and aborts opaquely. A bad-checksum ETH `xpub` makes WASM attempt an allocation of approximately 2.6 GB before aborting. A `false` result from this guard is not proof that the input is public.
+**Question/risk:** `isPrivateExtendedKey` returns `false` on checksum failure. At `a5bc56e`, validation in `extended-key.js:111`, `extended-key.js:200` and `extended-key.js:249` rejects a bad-checksum `zprv` before WASM, so it does not reach Core or abort opaquely. No approximately 2.6 GB WASM allocation for a bad-checksum ETH `xpub` is established at `a5bc56e`. A `false` result from this guard is not proof that the input is public.
 
 **Affected sections:** §8 and §9.
 
-**Evidence or uncertainty:** M04 F8 records the behaviour reproduced twice. M04 F9 identifies `derive.js:39–56`: the checksum check at lines 50–53 returns `false` before the version-byte check. See also M04 F10. The ‘explicit rejection’ framing for the bad-checksum vector at `docs/11:248` is wrong and must not be carried into this guide.
+**Evidence or uncertainty:** M04 F8 records the behaviour reproduced twice. M04 F9 describes the checksum check returning `false` before the version-byte check; that logic moved from `derive.js` to `extended-key.js` in `e3b65fb8` and resides there at `a5bc56e`, while `derive.js:39–56` now covers stdin and index validation. See also M04 F10. The error in the bad-checksum vector’s framing at `docs/11:248` is its private-key attribution, not its description of the rejection as explicit; that attribution must not be carried into this guide.
 
 **Status:** OPEN.
 
@@ -3197,7 +3222,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** A code fix must provide decoded private-material rejection and correct checksum handling, verified through the M-01 fixture-oracle procedure.
 
-**Gate/source links:** Re-checked register: M04 F8–F10; [M-01 fixture-oracle gate](#m-01--oi-096-must-not-certify-its-own-repair).
+**Gate/source links:** Re-checked register: M04 F8–F10; no Doc 3 OI counterpart is recorded for M-02, and M-02’s shared-issue classification remains unestablished.
 
 ### M-03 — TON wallet-ID false metadata in the Android draft (headline defect)
 
@@ -3227,7 +3252,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Status:** OPEN.
 
-**Operational restriction:** **Unknown outcome is not permission to resend.** Blind replacement transfers are prohibited. Before any retry, require independently verified history checking for TON and a verified independent manual txid lookup procedure for TRX. An unresolved status must remain unresolved.
+**Operational restriction:** **Unknown outcome is not permission to resend.** Blind replacement transfers are prohibited. Before any retry, require independently verified history checking for TON and a verified independent manual txid lookup procedure for TRX. An unresolved status must remain unresolved. Persist the signed bytes and txid at signing time, including for TON, as required by M24 I18, so the transfer can be reconciled by transaction identity. Do not resolve a transfer shown as ‘pending’ by resending it without first reconciling the original by transaction identity. Resending means composing and submitting a new transfer; if both transfers settle, the user pays twice. Rebroadcasting means re-submitting the identical signed bytes of the original transaction; it does not create a new transaction and cannot double-pay.
 
 **Blocks writing completion:** No.
 
@@ -3245,7 +3270,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Status:** OPEN.
 
-**Operational restriction:** Section 10 must describe the limitation explicitly and specify the requirements for authenticated environment identification, a separate mainnet storage namespace and deliberate handling of existing vaults. Changing AAD requires compatible decryption and re-sealing. Changing the database name requires explicit discovery or migration. Neither is a cosmetic rename. The guide must teach independent recoverability before destructive migration.
+**Operational restriction:** Section 10 must describe the limitation explicitly and specify the requirements for authenticated environment identification, a separate mainnet storage namespace and deliberate handling of existing vaults. Changing AAD causes existing vault ciphertext to fail authentication when decrypted using the new AAD; compatible decryption using the original AAD and re-sealing under the new AAD are required. Changing the database name leaves existing vault data undiscovered in the old database; explicit discovery or migration is required. Neither is a cosmetic rename. The guide must teach independent recoverability before destructive migration.
 
 **Blocks writing completion:** No.
 
@@ -3257,7 +3282,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Question/risk:** The Android draft has unresolved send and signing gaps:
 
-- The adapter header claims a chain-ID check that does not exist in `SigningCoordinator`.
+- The adapter header’s chain-ID claim concerns chain-context consistency under `ANDROID-GUIDE:3194(a)`, not a live `eth_chainId` call; a missing check in `SigningCoordinator` is not established.
 - The send path is ETH-only, and zero-amount sends are allowed.
 - A broadcast timeout is `UNKNOWN`. Rebroadcasting identical signed bytes cannot double-pay, but a fresh composition can.
 - TON can show a silent zero on the wrong network: Toncenter returns a successful `0`, with `fresh=true`.
@@ -3302,7 +3327,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 ### M-08 — TRON energy estimation: prescribed method is unavailable on the primary endpoint
 
-**Question/risk:** `wallet/estimateenergy` is unsupported on TronGrid mainnet, leaving the Android guide’s energy-estimation instruction without a working method on the primary endpoint. The only dry-run figure, 8624 energy, came from a `REVERTED` call and must never be quoted as a transfer cost. `fee_limit` is not a universal cap.
+**Question/risk:** `wallet/estimateenergy` is unsupported on TronGrid mainnet. The Android guide’s energy-estimation instruction is a generic method requirement, with no named or demonstrated mainnet recipe for the primary endpoint. The only dry-run figure, 8624 energy, came from a `REVERTED` call and must never be quoted as a transfer cost. `fee_limit` is not a universal cap.
 
 **Affected section:** §14.
 
@@ -3320,7 +3345,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 ### M-09 — ETH real-transfer gas is unverified; the “independent” RPCs are one upstream
 
-**Question/risk:** No real-transfer gas figure is verified. The zero-amount self-transfer figure of 37,973 gas understates a real transfer and must not be presented as its cost. publicnode, drpc, 1rpc and blast returned byte-identical values: these represent the same upstream, not independent confirmations.
+**Question/risk:** No real-transfer gas figure is verified. The zero-amount self-transfer figure of 37,973 gas may understate a real transfer's gas use, but no measured comparison was supplied; it must not be presented as the cost of a real transfer. publicnode, drpc, 1rpc and blast returned byte-identical block and `gasPrice` values, but matching values do not identify the underlying infrastructure; the independence of these endpoints is not established.
 
 **Affected sections:** §11 and §14.
 
@@ -3338,13 +3363,13 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 ### M-10 — Permit/Permit2 model correction
 
-**Question/risk:** The reading that “a Permit2 signature works without an on-chain approval” understates the authority granted. `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers. The token’s ERC-20 approval to Permit2 is a prerequisite; `SignatureTransfer` bypasses only the in-Permit2 allowance. Reducing an allowance or using lockdown does not invalidate outstanding permit signatures: use the applicable nonce-invalidation mechanism, `invalidateNonces` or `invalidateUnorderedNonces`.
+**Question/risk:** The reading that “a Permit2 signature works without an on-chain approval” understates the authority granted. `AllowanceTransfer` and `SignatureTransfer` are independent paths, not sequential layers. The token's ERC-20 approval to Permit2 is required only at transfer execution, not for signing a permit or installing an in-Permit2 allowance; `SignatureTransfer` bypasses only the in-Permit2 allowance. Reducing an allowance or using lockdown does not invalidate outstanding permit signatures: use the applicable nonce-invalidation mechanism, `invalidateNonces` or `invalidateUnorderedNonces`. An accepted Permit2 permit consumes its nonce even when it sets a lower allowance, so a permit already used cannot be replayed by reducing the allowance.
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary Uniswap document was **not opened**, and its re-check remains outstanding. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
+**Evidence or uncertainty:** M13 F11 and §6.1 record the correction as verified by a web check on 2026-11-09 against five secondary sources. The primary-document re-check required by M-10 was completed first-hand on 2026-11-17 against the Uniswap Permit2 documentation at developers.uniswap.org (overview page updated 2026-08-27; allowance-transfer page updated 2026-08-25), confirming expiry via allowance expiration timestamps and signature deadlines, with `expiration = 0` expiring permissions at `block.timestamp`; AllowanceTransfer incrementing nonces per owner, token, and spender; SignatureTransfer unordered single-use nonce bitmaps; revocation by setting amount or expiration to `0`; and re-approval via `approve` or `permit`, but the contract entry points `invalidateNonces` and `invalidateUnorderedNonces` are not detailed on those pages and were not verified by this documentation re-check. M15 F8/F9 record Permit/Permit2 signatures as the leading drainer method in large-loss cases in both years covered. An empty transaction history is not an all-clear.
 
-**Status:** OPEN — primary-doc re-check outstanding.
+**Status:** OPEN — primary-doc re-check completed 2026-11-17; `invalidateNonces`/`invalidateUnorderedNonces` entry points not covered by that re-check.
 
 **Operational restriction:** Teach both the token’s allowance to Permit2 and the permissions within Permit2. Inspect the chain, token, spender, amount, expiry and authority before signing. Never assume that disconnecting or using a clearing action cancels outstanding signatures.
 
@@ -3352,7 +3377,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** Cite a re-check against the primary Uniswap Permit2 documentation covering expiry, invalidation, revocation and re-approval behaviour.
 
-**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; [primary Uniswap Permit2 documentation — re-check target, not yet checked](https://docs.uniswap.org/contracts/permit2/overview).
+**Gate/source links:** Register addendum, 2026-11-09 — M13 F11 and §6.1; M15 F8/F9; [primary Uniswap Permit2 documentation — re-checked first-hand 2026-11-17](https://developers.uniswap.org/docs/protocols/permit2/overview).
 
 ### M-11 — TRON approval mechanics differ from EVM revocation tooling
 
@@ -3368,17 +3393,17 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Cite a live re-check of TronScan’s account-page **Approval → Cancel Contract Approval** route and verified TRC-20 approval, allowance and delegated-transfer mechanics.
+**Clearance condition:** Pending: cite a live re-check of TronScan’s account-page **Approval → Cancel Contract Approval** route and evidence verifying TRC-20 approval, allowance and delegated-transfer mechanics. Per P22, the live TronScan re-check remains outstanding because Cloudflare blocks access to tronscan.org from datacenter egress.
 
 **Gate/source links:** Register addendum, 2026-11-09 — M15 TRX row; M13 F20; [TronScan — Approval-tab route awaiting live re-check](https://tronscan.org/).
 
 ### M-12 — Address-poisoning taxonomy; the test-payment habit is defeated
 
-**Question/risk:** Address poisoning has three forms: zero-value, dust and fake-token. Only zero-value poisoning is covered in the repo. A small test transfer validates only that payment: the victim can later take a different, poisoned address from history for the main payment, defeating the test-payment habit.
+**Question/risk:** Address poisoning has three forms—zero-value, dust and fake-token—all named in this guide’s §16 taxonomy. A small test transfer validates only that payment: the victim can later copy a different, poisoned address from transaction history for the main payment, so the full-address check must be repeated for the actual transfer.
 
 **Affected sections:** §15 and §12.
 
-**Evidence or uncertainty:** M15 F1 records the December 2025 $50M poisoning case and Laplas, November 2022, using clipboard substitution with a convincing lookalike. Dust and fake-token poisoning are unnamed anywhere in the repo. M13 F07 establishes that a small test transfer limits only that test’s loss: the full-address check must be repeated for the actual transfer.
+**Evidence or uncertainty:** This guide’s §16 taxonomy names zero-value, dust and fake-token poisoning (M:116 and M:2369). M15 F1 records the December 2025 $50M case, in which the victim copied a poisoned address from transaction history, and the November 2022 Laplas case, which used clipboard substitution with a convincing lookalike. M13 F07 establishes that a small test transfer limits only that test’s loss: the full-address check must be repeated for the actual transfer.
 
 **Status:** OPEN.
 
@@ -3391,19 +3416,23 @@ Those entries appear later in this register. All other rows, including M-01–M-
 **Gate/source links:** Register addendum, 2026-11-09 — M15 F1; M13 F07; M13 F20 open items.
 ### M-13 — TON confirmation threshold (decided 2026-11-10)
 
-**Question/risk:** No TON confirmation/finality threshold exists in any guide. Inventing one would present an unverified settlement claim for real funds.
+**Question/risk:** The retained evidence includes a TON 1-masterchain-seqno reference, but the quoted TON Docs do not establish the recommended additional seqno wait or outgoing-message outcome check. These must be identified as exercise-policy choices; presenting them as documented settlement guarantees would make an unverified claim for real funds.
 
 **Affected sections:** §12, §14.
 
 **Evidence/uncertainty:** M30 O1 reports that a grep for TON confirmation statements found nothing: ‘NOT this slice’s to invent — it is open item O1’. M24 J21 records retained thresholds of BTC 6 / ETH 12 / TRX 19 / TON 1 masterchain seqno, but explicitly qualifies them: ‘confirmation policy ≠ finality guarantee; cited mainnet history required (none supplied — documentary gap)’. That retained list does not clear the missing TON threshold or establish its finality meaning. TON Docs verification 2026-11-10 (checked first-hand): ‘Payment Processing on TON — Overview Guide’ — ‘TON achieves transaction finality after a single masterchain block confirmation, typically within 1 second. Once a transaction from a shardchain appears in a masterchain block, it becomes irreversible’; ‘TON Messages and Transactions Overview’ — ‘a transaction becomes final when the first masterchain block references it’. The documentary gap on the threshold’s finality meaning is closed; the remaining gap is exercising the check in the authorised small-amount rehearsal (M-35).
 
-**Status:** RESOLVED 2026-11-10 — the user approved the recommended threshold (1 masterchain seqno after inclusion, with the outgoing-message outcome checked) and the proposed §12/§14 wording; the TON Docs check in Evidence confirms the threshold’s finality meaning.
+**Status:** RESOLVED 2026-11-10 (decision and wording only) — the user approved the recommended threshold (1 masterchain seqno after inclusion, with the outgoing-message outcome checked) as an exercise acceptance policy and repository policy, and the proposed §12/§14 wording. The quoted TON Docs state that a transaction becomes final when the first masterchain block references it; they do not prescribe the additional seqno wait or outgoing-message outcome check.
+
+**Exercise-ready threshold:** The inclusion event is the receiving transaction’s inclusion in a shardchain block. The seqno anchor is the first masterchain block referencing that shardchain block, at seqno N. Require observation of a masterchain block at seqno N+1 or later. The outgoing-message scope is the payment’s internal message traced to the receiving transaction. The outcome criterion is that the receiving transaction succeeded: the payment was credited and not bounced or failed. The threshold is met only when both the seqno requirement and the outcome criterion are satisfied.
+
+Follow-up (2026-11-10) — RESOLVED covers only the decision and wording; the check still needs to be exercised in the authorised small-amount rehearsal (M-35), and the cited mainnet history was never supplied, so both remain outstanding.
 
 **Operational restriction:** None remaining for §12/§14 threshold prose. The threshold is stated per the approved wording. The check itself remains manual until TON confirmation tracking is implemented (M-25 F18).
 
 **Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
-**Clearance condition:** Met 2026-11-10 — the user’s approval of the number and wording, plus the TON Docs verification of the threshold’s finality meaning (see Evidence).
+**Clearance condition:** Unmet overall — the number and wording are met by the user’s approval on 2026-11-10, but the cited mainnet history remains unmet because it was never supplied, and the exercise remains unmet because the check still needs to be exercised in the authorised small-amount rehearsal (M-35).
 
 **Gate/source links:** Re-checked register, 9 November 2026: M30 O1; M24 J21; user decision 2026-11-10; TON Docs check 2026-11-10.
 
@@ -3443,8 +3472,9 @@ M12 also records gaps G1–G10 with check procedures.
 - M21 J-8 adds a pre-funding authorisation gate after gate 6: complete gates 1–6 unfunded first, record owner-approved loss limits, and permit only a bounded mainnet canary with fresh keys.
 - M27 states the hard rule that a small amount does not bypass the independent-security-review gate, citing docs/14 L411/L439. That gate sits before rung 3, not merely before sending.
 - M24 K14 adds a gate for mainnet small-amount rehearsal evidence. M24 K17 specifies ten conjunctive gates. M24 K08 marks the mandatory security-review gate BLOCKED.
+- Evidence for the M-31/M-15 closure recorded by the owner on 2026-11-13: R02/E01 — 11 findings, all ADDRESSED. This closure covers the review gate only and does not authorise funding, rehearsal, or any real-funds use.
 
-**Status:** OPEN.
+**Status:** CLOSED (review gate only). Closure recorded by the owner on 2026-11-13 based on R02/E01 evidence: 11 findings, all ADDRESSED. This closure does not authorise funding, rehearsal, or any real-funds use.
 
 **Operational restriction:** No funding until gates 1–6 are complete unfunded, loss limits are recorded and owner-approved, and the independent security review has taken place. Rehearsals require separate authorisation, must be bounded, and must use fresh disposable accounts.
 
@@ -3465,8 +3495,8 @@ M12 also records gaps G1–G10 with check procedures.
 - M16 F45 identifies the README §13 overclaim and the unqualified assumption of an empty BIP-39 passphrase.
 - M16 F47 records that Web import skips the backup gate, while Android uses a 3-word quiz rather than the required 24-word re-entry. These are funding-gate defects, not UX differences.
 - M16 F22–F23 records that Web deletion requires the vault passphrase and Android import refuses while a bundle exists. The only escapes identified are undocumented out-of-app clears.
-- M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten.
-- M16 F42 supplies the required synthesis for §10: a 12-step ordered procedure with hard stops.
+- M16 F24 records the silent typo-wallet risk when the BIP-39 passphrase is forgotten: a mistyped BIP-39 passphrase silently derives a different valid wallet with no error, so the user may fund the wrong wallet.
+- M16 F42 supplies the required synthesis for §10: an ordered 9-step recovery procedure plus separate 3-step procedures, with hard stops.
 
 **Status:** OPEN.
 
@@ -3474,7 +3504,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** §10 prose follows M16 F42’s 12-step order, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android.
+**Clearance condition:** §10 prose follows the 9-step recovery order and keeps the 3-step procedures separate, retaining M16 F42’s hard stops, and the Android deletion prerequisites are established during guide writing. M16 explicitly warns not to copy the Web deletion rule across to Android.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M16 F45, F47, F22–F23, F24 and F42. [Repository at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20): README §13.
 
@@ -3484,7 +3514,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 **Affected sections:** §11, §4.
 
-**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/get` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found all the testnet endpoints still live, so a stale testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
+**Evidence/uncertainty:** M11 identifies both faucet URLs — `nileex.io/join/getJoinPage` and `mempool.space/testnet4/faucet` — as having no mainnet equivalent: delete them, do not replace them. M11 also found some testnet endpoints still live, but not all—the Nile faucet URL (`nileex.io/join/get`) returns 404—so a stale but reachable testnet URL can pass a superficial connectivity check while directing the reader to the wrong network. M07 F4 documents the testnet3 trap: an endpoint can serve plausible block data while serving the wrong chain.
 
 **Status:** OPEN.
 
@@ -3515,7 +3545,7 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 **Clearance condition:** A live-tested Etherscan V2 route with its API-key requirements stated, or a replacement explorer with dated verification.
 
 **Gate/source links:** Re-checked register, 9 November 2026: M18 F10; M11; M08. [Repository docs at 56396a20](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20/docs): docs/06:287 and docs/06:731.
-### M-19 — Link library: 4 dead links, 4 links unverified from the VM
+### M-19 — Link library: 4 dead links, 5 links unverified from the VM
 
 **Question/risk:** Doc 4 §20 may cite a dead or unverified URL, sending a reader to the wrong or an unreachable source.
 
@@ -3526,14 +3556,20 @@ M11 records HTTP 403 responses on Etherscan pages due to bot protection and says
 - 195 `LIVE`, plus 1 `LIVE-VIA-RAW`, 2 `LIVE-via-API`, 1 `LIVE-via-support`, 1 `LIVE-via-registry` and 1 `LIVE POST-only`.
 - 4 `DEAD-404`: the wrong PublicNode hostname, for which the replacement [`ethereum.publicnode.com`](https://ethereum.publicnode.com) was verified; a PyPI template URL; the bare Blockstream API root; and a Maven registry URL that returns an anonymous 404 by design.
 - 3 `UNVERIFIED`: WCAG 2.2, which exists according to W3C search but whose page was VM-blocked; the CoinsPaid hot-wallet page; and the CISA backup PDF.
-- 1 `UNVERIFIED` because the shop was rate-limited: Keycard Shell.
+- **Keycard Shell:** the product page remains **UNVERIFIED (shop rate-limited)**. It returned 429 with `local_rate_limited`; it was not established to be dead. The intended fallback is the checked official Keycard root recorded in M31, but its URL is not recorded in this guide and must be obtained from the M31 record before use. Re-check the product page after the limit resets. [M31 F08]
 - 1 `EXISTS-VM-BLOCKED`: the Medium SIM-swap article. Its replacements, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article, were both `LIVE`.
 
-The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 DevSecOps and 12 other.
+M31 reports excluding **103 URLs without checking them**. Excluded is not a dead-link verdict. The recorded groups are:
+- **26 testnet-only URLs**, including endpoints and faucets;
+- **18 reference-only chain URLs** for Solana, Cardano, Cosmos, XRPL and Polkadot;
+- **40 Android-toolchain URLs**, owned by the Android slice;
+- **7 DevSecOps-tooling URLs**.
+
+These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplained in the record**. [M31]
 
 **Status:** OPEN (4 links).
 
-**Operational restriction:** Use the verified replacements, including M31’s operator-verified replacement URLs for the NCSC guide, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article. Do not cite the 4 unverified links until a non-VM network re-check is recorded.
+**Operational restriction:** Use the verified replacements, including M31’s operator-verified replacement URLs for the NCSC guide, the NZ government SIM-swap guide and the cryptowatchdog SIM-swap article. Do not cite the 5 unverified links until a non-VM network re-check is recorded.
 
 **Blocks writing completion:** No — §20 remains link-only until the re-check lands.
 
@@ -3566,7 +3602,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** Re-checked register (2026-11-09), M-20; M24 K21–K26, covering proposed Doc 3 rows OI-097–OI-102.
 
-### M-21 — 4.9.3 is the upgrade candidate pending qualification; 4.9.2 was a prerelease; 4.8.4 remains pinned
+### M-21 — 4.9.3 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
 
 **Question/risk:** The guide may prescribe `4.9.2` as the default because npm calls it `latest`, treat `4.9.1` and `4.9.2` as interchangeable, or promise an Android AAR that does not exist.
 
@@ -3574,23 +3610,23 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 
-- **M05 F2/F3/F7:** `4.9.2` was a GitHub prerelease (`prerelease: true`), published on 2026-11-06, and was never the installed reference engine. `4.9.3` is the latest stable full release and replaces `4.9.1` as the upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`. Keep `tools/hdwallet-gen` pinned to `4.8.4`; the `4.8.4` → `4.9.3` re-pin remains a separate deferred item, and adoption requires a passing qualification run. Never use `latest`; use explicit version pins.
+- **M05 F2/F3/F7:** `4.9.2` was npm `latest` at writing on 2026-11-09, but its GitHub release has `prerelease: true` and was published on 2026-11-06. As of `a5bc56e`, `4.9.3`, published on 2026-11-11T08:08:04Z, is the latest stable release. `4.9.1` has `prerelease: false` but is no longer the latest stable release or upgrade candidate. `4.9.1` and `4.9.2` share source commit `17e3cd4d`, but their npm tarballs and SHA-1 hashes differ. Neither `4.9.1` nor `4.9.2` carries an Android `.aar`. Keep `tools/hdwallet-gen` pinned to `4.8.4`; the `4.8.4` → `4.9.3` re-pin remains a separate deferred item, and adoption requires a passing qualification run. Never use `latest`; use explicit version pins.
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
 **Status:** OPEN.
 
-**Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.1` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.2` results as `4.9.1` results.
+**Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.3` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.1` or `4.9.2` results as `4.9.3` results.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** The `4.9.1` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
+**Clearance condition:** The `4.9.3` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
 
 **Gate/source links:** Re-checked register (2026-11-09), M-21; M05 F2/F3/F7 and O3; M23; M24 K18 / OI-090. Repository context: [Bawa at `56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20).
 
 ### M-22 — Auto-lock claims corrected
 
-**Question/risk:** A reader may leave a wallet unattended believing that it auto-locks. The Web timer re-arms only on unlock or mnemonic access through `requireMnemonic()`, and Android has no auto-lock at all.
+**Question/risk:** A reader may leave a wallet unattended believing that it auto-locks. The Web timer re-arms only on unlock, not as a general inactivity timer, and the Android draft specifies no inactivity timeout.
 
 **Affected sections:** §10, §15.
 
@@ -3601,7 +3637,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
-**Operational restriction:** Describe the Web default as a 10-minute timer re-armed by unlocking or by an operation that calls `requireMnemonic()`, not as a general inactivity timer. Tell readers to lock explicitly before leaving the wallet. State plainly that Android has no inactivity auto-lock and requires manual locking.
+**Operational restriction:** Describe the Web default as a 10-minute timer re-armed only by unlocking, not as a general inactivity timer. Tell readers to lock explicitly before leaving the wallet. State plainly that the Android draft specifies no inactivity timeout, and tell readers to lock manually before leaving the wallet unattended.
 
 **Blocks writing completion:** No.
 
@@ -3639,12 +3675,12 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 
-- **M28-OI-04:** no fee section exists in the testnet guide to convert.
+- **M28-OI-04:** no fee section exists in Docs 1–3 (the testnet guide set) to convert.
 - **M28-OI-06:** TON is generation-only, but a mainnet reader will expect to send TON.
 - **M10:** TON is generation-only in the repository. The Web and Android drafts carry a send path, but it has never been exercised.
 - **M18 F06:** the generation-only TON path provides a single deposit address, with no `xpub`.
 
-**Status:** RESOLVED 2026-11-10 — the user approved the recommended scope: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
+**Status:** RESOLVED 2026-11-10 — based on reported user approval of the recommended scope, with no independent repo record of that approval: §13 stays capability-boundaries only (TON receivable, not sendable), with the proposed scope paragraph and §13.7 box; no TON send procedure, broadcast instructions or rehearsal procedure.
 
 **Operational restriction:** None remaining for §13’s TON-send subsection. §14’s TON procedure is new mainnet prose, not a conversion (M28-OI-04); identifying external signing software remains open (M-39).
 
@@ -3660,18 +3696,18 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Affected section:** §3.
 
 **Evidence:**
-- M33 covers US/UK/EU/India only. The guide may say “check your local law” and “keep records”, and give jurisdiction-named, dated, sourced facts, subject to M33’s 8-item never-claim list.
+- M33 covers US/UK/EU/India only. The guide may say “check your local law” and “keep records”, and give jurisdiction-named, dated, sourced facts, subject to the 7-item never-claim list in this guide’s §17, “Never-claim rules the gates enforce”.
 - India’s 30%/1% TDS figures rest on convergence of secondary sources only; the official sites were unreachable.
-- M33 records no tax coverage in the current guides. The repository’s only law sentence is at `docs/RECOVERY.md:680`.
+- M33 records no tax coverage in the current guides.
 - M36 F6 places law, tax and records in front-matter §3, not in a footnote.
 
 **Status:** OPEN.
 
-**Operational restriction:** Limit §3’s jurisdiction-specific coverage to US/UK/EU/India. Label the India figures, including TDS, as secondary-source convergence. State no rule for any other jurisdiction, and apply M33’s 8-item never-claim list in full.
+**Operational restriction:** Limit §3’s jurisdiction-specific coverage to US/UK/EU/India. Label the India figures, including TDS, as secondary-source convergence. State no rule for any other jurisdiction, and apply the 7-item never-claim list in this guide’s §17, “Never-claim rules the gates enforce”, in full.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Read each source directly before publishing any rule. The outstanding source checks are M33 items 1–6 and 8: HMRC manual sections, India’s successor law, the OFAC guidance PDF text, the text of MiCA Regulation (EU) 2023/1114, and OFAC five-year retention.
+**Clearance condition:** Read each source directly before publishing any rule. The five outstanding source checks are HMRC manual sections, India’s successor law, the OFAC guidance PDF text, the text of MiCA Regulation (EU) 2023/1114, and OFAC five-year retention. Item 7 and the M33 items list are not recorded in the repository.
 
 **Gate/source links:** Re-checked register, 2026-11-09, entry M-25 — M33 and M36 F6; [docs/RECOVERY.md:680 at 56396a20](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/docs/RECOVERY.md#L680).
 
@@ -3713,7 +3749,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
-**Operational restriction:** §13 must state that change handling is unresolved. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts.
+**Operational restriction:** §13 must state that change returns to the sending address. Require review of every output, verification that change returns to an address controlled by the intended signer, and calculation of the absolute fee from retained UTXO amounts.
 
 **Blocks writing completion:** No.
 
@@ -3729,7 +3765,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 - M07 F17–F21 records live verification of BIP-125: RBF is opt-in before signing, with `sequence < 0xffffffff-1`. The draft implements no RBF, bump flow, broadcast, CPFP or change-branch derivation.
-- M07 F17–F21 identifies CPFP as the receive-side rescue when RBF is unavailable. Its decision tree is: **wait → RBF bump if signalled → CPFP if the reader controls an output → stop**. Never re-send blindly.
+- M07 F17–F21 identifies CPFP as a rescue option for whoever controls a spendable output of the unconfirmed transaction. Its decision tree is: **wait → RBF bump if the reader can replace the transaction → CPFP if the reader controls a spendable output → stop**. RBF is available without signalling under the full-RBF default since Bitcoin Core 28.0; the RBF branch is not restricted to signalled transactions. Never re-send blindly.
 - M17 O3 records no replace, cancel or RBF procedure for any chain, and no primary sources. M17 O5 requires criteria for retrying after a broadcast timeout and a manual TRX transaction-ID (`txid`) investigation procedure.
 - M08 records that a nonce gap or stuck transaction blocks every later nonce. A speed-up is a same-nonce replacement with policy-compliant higher fees. Cancellation is a paid competing transaction, not an undo. No receipt and a still-pending nonce mean unresolved, not “send it again”.
 
@@ -3752,7 +3788,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Evidence:**
 - M10 F1–F2 records the TON fixture on mainnet with state `active`, balance `0`, a past transaction at `lt 42954571000001`, code and data present, and last activity on 2023-12-01.
 - M07 F9 records 32 transactions and 311,775 sats funded for the BTC fixture.
-- M29 treats funding the fixture addresses as immediate loss because the mnemonic is public. The warning must precede any mnemonic/address table.
+- M29 instructs readers to **treat funds sent to the fixture addresses as lost** because the mnemonic is public. The warning must precede any mnemonic/address table.
 - M03 F06 states that the 15-word vector must never become a funded wallet or a recovery wallet.
 
 **Status:** OPEN (standing rule).
@@ -3773,7 +3809,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 - M18 F20 marks all four mainnet payload candidates `UNVERIFIED-NEEDS-CHECK`: BTC BIP-321, ETH ERC-681 `@1`, TON `ton://transfer`, and a TRX bare address.
-- M20 F1 records no QR decode code in either draft; receive-QR and scanning are spec-only.
+- M20 F1 records no QR decode code in either draft; scanning remains absent/spec-only. Receive-QR generation exists but is deficient at EC-L (ANDROID-GUIDE:3174).
 - M24 H06 records QR error correction L rather than the required M, and a dead `CAMERA` permission under OI-060.
 - M25 F19 records bare-address QR output at EC-L, with no scanning. The guide requires M, so a decision is needed.
 - M24 K16 adds the receive-QR and scanning round-trip gate: EC=M, an implemented scanner, and evidence covering permission grant, denial and revocation.
@@ -3794,18 +3830,16 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Affected sections:** §17 and §2.
 
 **Evidence:**
-- M27 sets the hard rule: a small amount does not bypass the independent-security-review gate (`docs/14`, L411/L439). That gate sits before rung 3.
-- M24 K08 records the mandatory security review gate as BLOCKED. M24 K17 specifies ten conjunctive gates; M24 K26 / OI-102 provides the review-gate acceptance criteria.
+- A small amount does not bypass the independent-security-review gate (`docs/14`, L411/L439). That gate sits before rung 3.
 - M13’s verified-correct list records the `docs/16` external review gate as OPEN.
 - M06 R10 gives BLOCKED as the expected result for release-gate enforcement on the current evidence.
+- Evidence for the M-31/M-15 closure recorded by the owner on 2026-11-13: R02/E01 — 11 findings, all ADDRESSED. This closure covers the review gate only and does not authorise funding, rehearsal, or any real-funds use.
 
-**Status:** OPEN.
-
-**Operational restriction:** No real-funds use before the independent-security-review gate is cleared. Doc 4 must state that gate-passing is not a substitute for the review. “Complete” under M36 F8 means the prose is done and checked, never authorisation for real-fund use.
+**Status:** CLOSED (review gate only). Closure recorded by the owner on 2026-11-13 based on R02/E01 evidence: 11 findings, all ADDRESSED. This closure does not authorise funding, rehearsal, or any real-funds use. Doc 4 must state that gate-passing is not a substitute for the review. “Complete” under M36 F8 means the prose is done and checked, never authorisation for real-fund use.
 
 **Blocks writing completion:** No — the gate blocks release, not writing.
 
-**Clearance condition:** The independent security review itself, with recorded scope, owners, criteria, result matrix, failure disposition and sign-off under OI-102. Any status change must cite that review evidence. Registering this gap does not clear it.
+**Clearance condition:** The independent security review itself, with recorded scope, owners, criteria, result matrix, failure disposition and sign-off. Any status change must cite that review evidence. Registering this gap does not clear it.
 
 **Gate/source links:** M24 K08, K17 and K26 / OI-102; re-checked register — M-31, 2026-11-09.
 
@@ -3817,14 +3851,14 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 - M36 F9 identifies borrowed testnet assurance as the most likely structural failure mode.
-- M28 records the mainnet rewrite findings: all 60+ “Mainnet is absent” lines across 7 files invert; the derivation deviation disappears on mainnet; the `docs/09` hardware-signing rehearsal inverts to “small amount first”; and the `docs/08` plus `RECOVERY` rehearsal becomes 3 stages. These are rewrite findings, not mainnet spending evidence.
-- M30 records 81 testnet-scope sentences swept individually, not bulk-deleted.
+- Repo-wide verification found 15 “Mainnet is absent” hits in 4 files at baseline `56396a20` and 17 hits in 6 files at `a5bc56e`; M-28 does not record these counts. The derivation deviation disappears on mainnet; the `docs/09` hardware-signing rehearsal prohibits real funds and stops before signing; and the `docs/08` plus `RECOVERY` rehearsal becomes 3 stages. These are scope and rewrite findings, not mainnet spending evidence.
+- M-26 states that 81 testnet-scope sentences require individual review rather than bulk deletion. M-26 remains OPEN; it does not record a completed sweep.
 - M20 records that V2/D21 stop at construction/signing. Send/sign/broadcast/confirmation remains UNVERIFIED.
 - M19 records the verification-block contradiction between L13–L19 and L70–L72.
 
 **Status:** OPEN (standing discipline).
 
-**Operational restriction:** Every claim must carry its verification scope: fixture/offline, controllable testnet or authorised rehearsal. No chain inherits another’s pass (M24 I17). A pass applies only to the wallet, chain, network, derivation policy and signing route actually rehearsed (M27 hard rule).
+**Operational restriction:** Every claim must carry its verification scope: fixture/offline, controllable testnet or authorised rehearsal. No chain inherits another’s pass (M24 I17). A pass applies only to the wallet, chain, network, derivation policy and signing route actually rehearsed.
 
 **Blocks writing completion:** No.
 
@@ -3841,12 +3875,13 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 **Evidence:**
 - M36 item 3 requires the user’s word before changing the repair-commit pin for the mainnet guide.
 - M36 item 5 identifies §5 proof staleness: use the `MAIN_HEAD` capture form or update the SHA at push.
-- M24 K01 records the §4 text fix as uncommitted and the §15/L3732/L4756 decisions as OPEN.
+- M24 K01’s §4 text fix was committed at b3814e0b in the 2026-11-10 push (b3814e0b is an ancestor of a5bc56e); the §15/L3732/L4756 decisions remain OPEN.
+- The README fix is committed at `b3814e0b` (2026-11-10 push), titled “docs: fix README §4 pin procedure to use a separate worktree (F4)”.
 - M01 F35 item 11 prohibits silently treating `56396a20` as an authorised mainnet baseline.
 
 **Status:** RESOLVED 2026-11-10 — the user decided: pin Doc 4 to the immutable repair-commit SHA `e3b65fb832db287fdc8d54794980dd0b3456cc12`; the §5 step-4 proof uses the literal baseline HEAD SHA; the `MAIN_HEAD` capture in step 1 is supporting context only.
 
-**Operational restriction:** None remaining for §5 finalisation. The repair-commit value is supplied (M36 F3); the §4 text fix is committed at `b3814e0b` (2026-11-10 push).
+**Operational restriction:** None remaining for §5 finalisation. The repair-commit value is supplied (M36 F3); the README fix is committed at `b3814e0b` (2026-11-10 push).
 
 **Blocks writing completion:** NO — resolved by the 2026-11-10 decision.
 
@@ -3862,11 +3897,11 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 - M36 item 2 records the pending decisions.
-- M24 K01 records L4756 as superseded by the §4 worktree procedure, while the §15/L3732/L4756 decisions remain OPEN.
+- M24 K01 records L4756 as superseded by the §4 worktree procedure, while the decisions on the `docs/README-FULL.md` §15 (Updating and rebuilding) worktree treatment and the Android L3732/L4756 updates remain OPEN.
 - M01 F35 identifies L4756 as the old checkout and L3732 as the wrong “Doc 1, §3” reference. The pin procedure is §4.
 - M19 D16 places the F4 follow-ups at parent level, not within M19. See also M28-OI-10.
 
-**Status:** RESOLVED 2026-11-10 — the user approved the §15 worktree treatment and the Android L3732/L4756 updates; applied and pushed in this revision.
+**Status:** RESOLVED 2026-11-10 — the user approved the `docs/README-FULL.md` §15 (Updating and rebuilding) worktree treatment and the Android L3732/L4756 updates; applied and pushed in this revision.
 
 **Operational restriction:** None remaining for the §15/Android cross-references. The F4 worktree procedure remains the baseline for §4/§5.
 
@@ -3881,7 +3916,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Affected sections:** §13 (whole section); §§11, 12, 14; §16; §17.
 
-**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision.
+**Evidence or uncertainty:** M17 O1; M24-G10 (deferred acceptance plans BTC/TRX/TON/token/interrupted-submission/replacement, named only, not steps); M28-OI-01; M36 F12; M16-F17 (tiny amounts); M20 OI-097 (rehearsal evidence — its substance is carried here; see M-20). Rehearsal-procedure draft landed 2026-11-10 (M-35 lane, review only, nothing executed): proposed tiny amounts APPROVED FOR REVIEW 2026-11-10 (owner decision) — BTC 0.0002, ETH 0.001, TRX 1 per move, TON 0.05 nominal receive-only (no TON send drafted). This is NOT authorisation to execute transactions. Recorded gap: the OI-097 QR-scan step is not drafted — needs a reviewer decision. On 2026-11-13, the owner declined M-35 funding; all four rehearsal addresses were retired and must never be funded.
 
 **Status:** OPEN (amounts approved for review only 2026-11-10; execution NOT authorised).
 
@@ -3895,7 +3930,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 ### M-36 — "Larger amounts" threshold for the hardware/PSBT direction is undefined
 
-**Question/risk:** Hardware/PSBT signing is the recommended direction for larger Bitcoin amounts (M17 F3), but no threshold for "larger amounts" is defined anywhere; §13 presents it as a direction only, never as a procedure.
+**Question/risk:** §13 presents limitations and prohibitions, not a hardware/PSBT recommendation for larger Bitcoin amounts. The guide defines no threshold for “larger amounts”; interpreting §13 as a larger-amounts signing direction would misstate its scope.
 
 **Affected sections:** §13; §15; §17.
 
@@ -3907,7 +3942,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Maintainer decision stating a number or a rule (M17 O6).
+**Clearance condition:** Until a maintainer decision states a number or a rule for “larger amounts” (M17 O6), the guide defines no larger-amounts threshold and §13 carries no larger-amounts direction.
 
 **Gate/source links:** M17 F3, O6.
 
@@ -3921,7 +3956,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
-**Operational restriction:** Approval expiry prevents further signing under that approval; it does not revoke signed bytes, cancel a submitted transaction, or prove funds remain unspent.
+**Operational restriction:** Proposed policy, not established behaviour: each approval would be single-use, and further signing under it would be blocked after use or expiry. Approval expiry would not revoke signed bytes, cancel a submitted transaction, or prove funds remain unspent. §13.4 supports frozen exact-payload binding only; it does not establish single-use or approval-expiry enforcement.
 
 **Blocks writing completion:** No.
 
@@ -3971,17 +4006,17 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Affected sections:** §18; §10.
 
-**Evidence or uncertainty:** M16 open item 5; M16-F27.
+**Evidence or uncertainty:** M16-F43; M16-F45.
 
 **Status:** OPEN.
 
-**Operational restriction:** §18 gives no steps; do not copy the Web rule across to Android.
+**Operational restriction:** No in-place change operation for the vault unlock passphrase has been established for Web or Android.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Established and documented procedure, or a stated "none exists".
+**Clearance condition:** For each platform—Web and Android—an in-place change operation for the vault unlock passphrase is established and documented, or it is explicitly stated that none exists.
 
-**Gate/source links:** M16 open item 5, F27.
+**Gate/source links:** M16-F43, M16-F45.
 
 ### M-41 — Address discovery procedure missing
 
@@ -4003,7 +4038,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 ### M-42 — Exact file:line citations for RECOVERY.md / README §§12/13/18 not supplied
 
-**Question/risk:** §18 cites sections and steps, not file:line references; exact citations cannot be published without line-numbered text at 56396a20.
+**Question/risk:** §18 principally cites finding IDs, not file:line references; steps 1–10 form its own troubleshooting tree, and it includes only one README section reference. Exact file:line citations cannot be published without line-numbered text at 56396a20.
 
 **Affected sections:** §18.
 
@@ -4011,7 +4046,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
-**Operational restriction:** §18 cites sections and steps, not file:line.
+**Operational restriction:** §18 principally cites finding IDs and includes one README section reference; steps 1–10 are its own troubleshooting tree. It provides no file:line citations.
 
 **Blocks writing completion:** No.
 
@@ -4051,7 +4086,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Source re-check against m09/m12 to settle which value is correct.
+**Clearance condition:** Verify the energy-unit fee against an independent source—the TRON chain parameters (`getEnergyFee`) or authoritative TRON developer documentation—and cite that source to resolve the conflict between m12 §3’s “0.001 TRX per energy unit” and the measured 100 SUN/unit (0.0001 TRX).
 
 **Gate/source links:** m12 §3; m09/m12.
 
@@ -4087,7 +4122,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Implementation check against the draft, plus policy values defined (see M-13, M-38).
+**Clearance condition:** Sourced, chain-specific drop criteria remain undefined for every chain. Clearance requires supplying and citing those criteria for each chain before **Dropped** may be applied. The label requires evidenced removal or expiry under the relevant chain’s criteria; absence from a response is not enough, and the label is not permission to resend.
 
 **Gate/source links:** m17 F11/F15.
 
@@ -4095,12 +4130,12 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 | Item | Source | Status after the re-check |
 |---|---|---|
-| 1. Live mainnet send/sign/broadcast never exercised on any chain | m17 O1, m28-OI-01, m28-OI-09, m29 | OPEN — H-02–H-05; confirmed by M20/M24 (send/sign/broadcast/confirmation UNVERIFIED on every chain). |
+| 1. Live mainnet send/sign/broadcast never exercised on any chain | m17 O1, m28-OI-01, m28-OI-09, m29 | OPEN — H-02–H-05; send/sign/broadcast/confirmation remain UNVERIFIED on every chain. |
 | 2. Hardware/PSBT mainnet procedure: no named device, no reviewed procedure, no non-BTC hardware procedure | m17 O2, m02 | OPEN — needs a named device + reviewed procedure. |
 | 3. Stuck-transaction recovery: no replace/cancel/RBF procedure for any chain, no primary sources | m17 O3 | OPEN — carried as M-28. |
 | 4. Criteria for retrying after a broadcast timeout; TRX manual txid investigation procedure | m17 O5 | OPEN — carried as M-28. |
-| 5. “Larger amounts” threshold undefined — when hardware signing becomes required rather than recommended | m17 O6 | OPEN — maintainer decision. |
-| 6. History classification criteria partial (failed / replaced / dropped, fee presentation, reorg rewind) | m17 O4 | OPEN — needs sourced chain-specific criteria + a testnet reorg demonstration. |
+| 5. No “larger amounts” direction exists in §13; no threshold is defined | m17 O6 | OPEN — §13 contains no larger-amounts hardware-signing or PSBT recommendation. |
+| 6. History classification criteria partial (failed / replaced / dropped, fee presentation, reorg rewind) | m17 O4 | OPEN — needs sourced chain-specific criteria, including reorg rewind; the specific requirement for a testnet reorg demonstration is unverified. |
 | 7. Send-screen checklist implementation status unverified (full-address comparison, smallest-unit and balance validation, change ownership, freshness, decoded-transaction review) | m17 O8 | OPEN — needs a UI-by-UI audit of the Web draft Send screen. |
 | 8. BTC change policy missing: change destinations, derivation, signer control, discovery and recovery not established | m02 F9, m29 | OPEN — carried as M-27. |
 | 9. Mainnet endpoints need live re-verification at guide-writing time (`mempool.space/api`, PublicNode mainnet RPC, Blockscout mainnet, `api.trongrid.io`, `toncenter.com/api/v2`) | m28-OI-02 | OPEN — carried as M-17/M-18/M-19; probe live, do not copy testnet values. |
@@ -4108,8 +4143,8 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 11. External security review still blocks mainnet use; gate-passing is not a substitute for the review | m28-OI-05 | OPEN — carried as M-31. |
 | 12. TON send is generation-only; a mainnet reader will expect to send TON | m28-OI-06 | RESOLVED 2026-11-10 — carried as M-24 (§13 stays capability-boundaries only; TON receivable, not sendable). |
 | 13. TON key-name discrepancy (`TONCENTER_API_KEY` vs `TONCENTER_TESTNET_API_KEY`) | m28-OI-12 | OPEN — resolve to the mainnet name. |
-| 14. Standard-wallet import of a Bawa mnemonic never performed | m02, m28-OI-08 | OPEN — R-14 (extended); cross-wallet recovery still unverified (M23 F36, M22 F44). |
-| 15. 4.9.1 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
+| 14. Standard-wallet import of a Bawa mnemonic not recorded | m02, m28-OI-08 | OPEN — R-14 (extended): cross-wallet recovery evidence record documenting target wallet/version, import settings and steps, observed recovery results, and supporting logs; cross-wallet recovery still unverified (M23 F36, M22 F44). |
+| 15. 4.9.3 qualification run (EIP-1559 with chain ID 1, mainnet derivation fixtures, mainnet endpoints) | m05 O3 | OPEN — carried as M-21. |
 | 16. CI pin values to obtain and re-verify (Python 3.13 patch version, Ubuntu runner image digest, three action commit SHAs) | m05 O1, O2 | OPEN — do not guess. |
 | 17. bip-utils 2.12.3 differential re-run | m05 O4 | OPEN — dedicated run. |
 | 18. Node 24 migration verification (Web 31/31 and Android 55/55 on an exact Node 24 patch, before 2027-04-30) | m05 O5 | OPEN — dedicated run. |
@@ -4118,29 +4153,29 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 21. Funding-source links unverified from the VM (Coinbase help 403, Binance P2P FAQ 202, CoinATMRadar 403, Paxful home 403, Tonviewer API not probed) | m26 items 2–6 | OPEN — carried as M-19; re-verify from an unblocked route before linking. |
 | 22. No fee figure publishable as current; no funding service recommended (all named services are examples to check only) | m26 items 11–12 | OPEN — carried as M-14 (dated baselines only; teach on-screen fee checks). |
 | 23. Hardware-wallet chain compatibility (BTC/ETH/TRX/TON per device) unverified | m32 OI-06 | OPEN — must not recommend a device without it. |
-| 24. Prices to re-check before quoting (Keystone 3 Pro, Blockstream Jade/Jade Plus, BitBox02, Etherscan API plans, Blockchair/TronGrid/TonAPI/TonCenter/mempool.space Enterprise, GoPlus/Blockaid capabilities) | m32 OI-01–OI-05 | OPEN — R-18 (corrected: M32 re-checked D17 figures 2026-11-09, unchanged, + dated hardware prices); link only until a browser-based check lands. |
+| 24. Prices to re-check before quoting (Keystone 3 Pro, Blockstream Jade/Jade Plus, BitBox02, Etherscan API plans, Blockchair/TronGrid/TonAPI/TonCenter/mempool.space Enterprise, GoPlus/Blockaid capabilities) | m32 OI-01–OI-05 | OPEN — R-18; link only until a browser-based check lands. |
 | 25. Regulatory scope limits (HMRC manual sections, India successor law, OFAC guidance PDF text, MiCA Regulation (EU) 2023/1114 text, OFAC five-year retention, US/UK/EU/India only; no other jurisdiction checked) | m33 items 1–6, 8 | OPEN — carried as M-25; read each source directly before any rule is published. |
 | 26. `docs/09` migration details (descriptor examples, placeholders, expected-result text, verified mainnet replacements) | m17 O7 | OPEN — file-and-line audit of `docs/09` first. |
 | 27. 24-word policy enforcement unverified (policy stated, enforcement behaviour not shown) | m02 | OPEN — verify separately. |
 | 28. In-browser fixture reproduction on mainnet endpoints unverified | m29 | OPEN — check derivation, displayed addresses and network selection without funding. |
 | 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 21 Warning callouts in this guide (119 repo-wide); unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
-| 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED in part — UI-appendix placement decided; §5 proof-staleness remains OPEN, carried as M-33. |
+| 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED / RESOLVED — UI-appendix placement decided; §5 proof-staleness (M-33) RESOLVED 2026-11-10. |
 | 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | RESOLVED 2026-11-10 — carried as M-34 (worktree treatment applied and pushed). |
 | 32. Landing and re-check of all 36 source slices | M35 §3 item 32; O-M35-1 | CLOSED — all 36 slices landed and were re-checked. |
 
-**Item 30:** UI-appendix placement is **DECIDED**. The write-phase plan (2026-11-09 ~22:41 IST) specifies **no new UI appendix**: Doc 4 points to the Doc 2/Doc 3 appendices with “vetted for testnet; mainnet vetting open”. The §5 proof-staleness half remains **OPEN**, carried as **M-33**.
+**Item 30:** UI-appendix placement is **DECIDED**. The write-phase plan (2026-11-09 ~22:41 IST) specifies **no new UI appendix**: Doc 4 points to the Doc 2/Doc 3 appendices with “vetted for testnet; mainnet vetting open”. The §5 proof-staleness half, tracked as **M-33**, is **RESOLVED 2026-11-10**.
 
-**Item 32 and O-M35-1 are CLOSED** by this re-check: all 36 slices landed and were re-checked. **O-M35-2 STANDS in part:** the re-check re-adjudicated every §3 item and re-verified each R/H row’s evidence, but did not re-run any source slice’s first-hand evidence — live probes, greps and code reads remain the source slices’ own. **O-M35-3 STANDS:** no mainnet procedure in this register was executed; every H-row is a rehearsal specification, not a verified procedure; no real funds were spent, by rule. **O-M35-4 STANDS:** “Larger amounts” and fee figures are deliberately absent. No amount, fee or price in this register is publishable as current — the guide must teach on-screen checks and reader-affordable-loss amounts, never a figure from this research.
+**Item 32 and O-M35-1 are CLOSED** by this re-check: all 36 slices landed and were re-checked. **O-M35-2** is the re-check’s scope claim—re-adjudication of every §3 item and re-verification of each R/H row’s evidence. **O-M35-2 STANDS in part:** the re-check re-adjudicated every §3 item and re-verified each R/H row’s evidence, but did not re-run any source slice’s first-hand evidence — live probes, greps and code reads remain the source slices’ own. **O-M35-3 STANDS:** no mainnet procedure in this register was executed; every H-row is a rehearsal specification, not a verified procedure; no real funds were spent, by rule. **O-M35-4 STANDS:** “Larger amounts” and fee figures are deliberately absent. No amount, fee or price in this register is publishable as current — the guide must teach on-screen checks and reader-affordable-loss amounts, never a figure from this research.
 
 ## Appendix — UI templates (pointer)
 
-Doc 4 carries no UI appendix of its own. For UI guidance, see the appendices of Doc 2 (WEB-GUIDE.md, Appendix — Optional pre-existing UI templates, L1032) and Doc 3 (ANDROID-GUIDE.md, Appendix — Optional pre-existing UI templates, L5384). Those appendices are vetted for testnet; mainnet vetting open. No template coverage is claimed here, and no UI is created in this guide: UI comes from a pre-existing template only, and if none is available, no UI is created.
+Doc 4 carries no UI appendix of its own. For UI guidance, see the appendices of Doc 2 (WEB-GUIDE.md, Appendix — Optional pre-existing UI templates, L1032) and Doc 3 (ANDROID-GUIDE.md, Appendix — Optional pre-existing UI templates: no drop-in fit, L5384). Those appendices are vetted for testnet; mainnet vetting open. No template coverage is claimed here, and no UI is created in this guide: UI comes from a pre-existing template only, and if none is available, no UI is created.
 
 ## 22. Prose credit
 
-The prose of this mainnet wallet guide was drafted with the assistance of GPT-6-Astra, an external language model accessed through AgentRouter. The drafting drew on the findings of the mainnet research programme (36 research agents, M01–M36) and the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`).
+The prose of this mainnet wallet guide was drafted with the assistance of GPT-6-Astra, an external language model accessed through AgentRouter. The drafting drew on the findings of the mainnet research programme (36 research slices, M01–M36) and the Bawa repository (`Pr3eve6ti2o/bawa` at `56396a20`, the programme’s historical evidence baseline); the guide’s current evidentiary pin is repair commit `e3b65fb8` (M:5).
 
-The drafting model did not verify the guide, did not run the repository tools, did not perform any mainnet transaction and did not authorise any real-fund use. Every claim in this guide traces to a cited research finding or a recorded live check; the model supplied wording, not evidence.
+The drafting model did not verify the guide, did not run the repository tools, did not perform any mainnet transaction and did not authorise any real-fund use. The guide draws on cited research findings and recorded live checks, but not every statement or prescription is individually cited; the model supplied wording, not evidence.
 
 Review, verification, assembly and the done-gate (see §17) are the maintainer’s responsibility. Corrections, the open-items register (§21) and the review record are maintained with the guide, not with the drafting model.
 
