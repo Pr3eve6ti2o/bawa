@@ -65,7 +65,7 @@ describe.sequential('App', () => {
   it('renders the wallet title and the empty dashboard', async () => {
     await withRenderedApp('/', (div) => {
       expect(div.textContent).toContain('Bawa Web Wallet');
-      expect(div.textContent).toContain('No wallets yet');
+      expect(div.textContent).toContain('No wallet yet');
     });
   });
 
