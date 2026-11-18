@@ -469,7 +469,7 @@ Pick the chain first. Use the Cosmos Chain Registry for chain IDs, address prefi
 
 Use that chain's REST/LCD or gRPC application queries for balances. Use its CometBFT RPC for blocks and consensus information (https://docs.cosmos.network/cometbft/latest/api-reference/rpc). Do not treat these interfaces as interchangeable URLs.
 
-Use the bank module's `AllBalances` query for one address on one chain (see the [Cosmos SDK bank module documentation](https://docs.cosmos.network/main/build/modules/bank)). It returns a paginated list of denominations and integer amounts, so read every page. This query is scoped to the address's bank-module balances; staked or unbonding positions and unclaimed staking rewards require separate module queries. Apply asset metadata for display units and, for IBC hash denominations, resolve denomination traces when available rather than guessing from a ticker.
+Use the bank module's `AllBalances` query for one address on one chain (see the [Cosmos SDK bank module documentation](https://docs.cosmos.network/sdk/v0.53/build/modules/bank/README)). It returns a paginated list of denominations and integer amounts, so read every page. This query is scoped to the address's bank-module balances; staked or unbonding positions and unclaimed staking rewards require separate module queries. Apply asset metadata for display units and, for IBC hash denominations, resolve denomination traces when available rather than guessing from a ticker.
 
 Bank balances exclude delegated stake, unbonding positions, unclaimed rewards and separate contract-token balances. Locked vesting coins may still appear, so do not treat the total as necessarily spendable.
 
