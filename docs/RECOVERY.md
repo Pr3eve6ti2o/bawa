@@ -366,9 +366,9 @@ The tool checks whether the path is a symbolic link before loading its JSON and 
 
 If you find an unexpected link, establish which file you intended to recover before trying again. Do not blindly follow the link.
 
-> **Expected result:** a Python traceback ending with `ValueError: refusing symlinked encrypted artifact`, with exit status `1`, for a symlinked input.
+> **Expected result:** an error line on stderr containing `refusing symlinked encrypted artifact`, with exit status `1` and no traceback, for a symlinked input.
 
-The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifact` are also raised as uncaught `ValueError`s, producing Python tracebacks and exit status `1`. By contrast, a symlinked `--output` path, including a dangling symlink, is rejected with `refusing symlinked output path` and exit status `1` without a traceback. Without a controlling terminal and with neither `--stdout` nor `--output`, the tool reports `no controlling terminal; use --stdout or --output explicitly` and exits with status `1` without a traceback.
+The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifact` are also raised as `ValueError`s, but are caught and reported as error lines on stderr with exit status `1` and no traceback. Similarly, a symlinked `--output` path, including a dangling symlink, is rejected with `refusing symlinked output path` and exit status `1` without a traceback. Without a controlling terminal and with neither `--stdout` nor `--output`, the tool reports `no controlling terminal; use --stdout or --output explicitly` and exits with status `1` without a traceback.
 
 ### 2. Check the output and temporary paths
 
