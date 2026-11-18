@@ -292,12 +292,15 @@ Expect the tool to look for `BAWA_DATA_KEY` first:
 
 - A **non-empty** value is used as the hexadecimal key.
 - If the variable is **unset or empty**, the tool asks interactively with `Bawa data key (hex): `. The prompt does not echo the key.
+  If terminal echo cannot be disabled, `getpass.GetPassWarning` is treated as an error and the tool raises `ValueError("terminal echo cannot be disabled; refusing to read data key")` instead of accepting echoed input.
 
 For either route, supply 64 hexadecimal digits, represented here by `<YOUR-32-BYTE-HEX-KEY>`. Both routes strip surrounding whitespace and then decode hexadecimal. The decoded result must be **exactly 32 bytes**. Supply a data-encryption key, not a password, mnemonic or wallet private key.
 
 Expect invalid hexadecimal to be rejected. A decoded value of any other length raises `data key must be exactly 32 bytes`. Do not expect a bad non-empty environment value to trigger a retry through the prompt.
 
 For manual recovery, prefer the prompt. For automation, inject the environment variable through a protected secret-handling mechanism. Do not place the real key in a shell command that may enter history, in a script or in a job log.
+
+Here, a protected secret-handling mechanism means an access-controlled facility, such as a secret manager or CI secret store, configured to supply the key directly to the tool's environment at runtime without exposing its value in shell commands, history, scripts or logs.
 
 > **Expected result:**
 >
