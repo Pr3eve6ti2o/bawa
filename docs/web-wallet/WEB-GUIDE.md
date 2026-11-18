@@ -15,7 +15,7 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 > - **Tool versions observed:** Node v24.22.2 (outside the declared `>=22 <23` range), Trust Wallet Core 4.9.2, esbuild 0.25.5, Python 3.12.3 with bip-utils 2.12.2 and cryptography 50.0.2
 > - **Environment:** Ubuntu 24.04 on the research VM
 > - **Actually run:** differential test (PASS), endpoint probes of all four testnets, fixture derivations
-> - **Not run:** live wallet creation and live restore in a real browser, Core 4.9.2 EIP-1559 re-run (both open items, sections [D](#d-vault-and-backup) and [F](#f-send-and-signing))
+> - **Run:** live wallet creation and live restore (V2, 2026-11-08, real headless browser, 14 PASS / 0 FAIL / 3 INFO across 17 steps); Core 4.9.2 EIP-1559 demonstration for the construction/signing scope (D21, 2026-11-08). **Open:** live spend (not exercised; no testnet funds; section [D](#d-vault-and-backup)) and in-browser EIP-1559 proof, send, sign and broadcast (section [F](#f-send-and-signing)).
 > - **Evidence:** repo clone at `082f7915`, validation-draft build logs
 > - **Sources fetched on:** 2026-11-08
 
@@ -67,7 +67,7 @@ All links checked: **2026-11-08**.
 
 ### Open items
 
-- **Live browser work — Section D:** live wallet creation and live restore in a real browser were performed on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser). Live spend was not exercised (no testnet funds). See Doc 3, Consolidated open-items register, `OI-039`.
+- **Live browser work — Section D:** live wallet creation and live restore were performed on 2026-11-08 using Playwright 1.65.0 with Chromium 158 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; recorded in the Android guide’s V2 evidence). No other browser is validated for this guide. Live spend was not exercised (no testnet funds). See Doc 3, Consolidated open-items register, `OI-039`.
 - **Core 4.9.2 EIP-1559 — Section F:** the demonstration was completed on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. See Doc 3, Consolidated open-items register, `OI-004`.
 - **Repo documentation:** docs **03** and **12** of the repo guide received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089). See Doc 3, Consolidated open-items register, `OI-017`.
 
@@ -94,11 +94,11 @@ All links checked: **2026-11-08**.
    | Python | `>=3.11` | Observed version: 3.12.3. |
    | Trust Wallet Core (`@trustwallet/wallet-core`) | `4.9.2` | Exact pin: no `^` or `~`. Published 2026-11-06. |
    | esbuild — dev dependency | `0.25.5` | Exact pin: no `^` or `~`. |
-   | http-server — dev dependency | Exact installed version; record during setup | Install it, record the installed version in `package.json` without `^` or `~`, and commit the lockfile with it. No numeric version is supplied here. |
+   | http-server — dev dependency | `14.1.1` (pin dated 2026-11-17) | Install `http-server@14.1.1`, record this exact version in `package.json` without `^` or `~`, and commit the lockfile with it. Verified first-hand from the npm registry as the latest version as of 2026-11-17; this is not a 2026-11-08 validation record, since no installed version was recorded during that validation. |
 
    Use the declared Node range for your setup. Do not treat the observed out-of-range run as verification on a runtime within that range.
 
-   Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and `4.9.1`/`4.9.2` added Zcash v5 transactions.
+   Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and the `4.9.x` releases added Zcash v5 transactions.
 
    The Web/WASM integration itself is unchanged: `dist/index.js` and `dist/index.d.ts` are byte-identical between `4.8.4` and `4.9.2`, `Ethereum.proto` is unmodified, and `initWasm()` is still called with no arguments.
 
@@ -209,7 +209,7 @@ Offline fixtures verify derivation conformance; they do not imply mainnet connec
    |---|---|---|---|---|
    | `ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal` | Empty | `m/44'/195'/0'/0/0` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` | bip-utils-derived, Core-confirmed (D31, 2026-11-08) |
 
-The TON fixture is recorded in the repo guide, docs/11, "TON fixture (V3, 2026-11-08)": Wallet V4 R2, wallet ID 698983191, workchain 0, `m/44'/607'/0'`. Testnet forms of the same account: bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`, non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`. The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 files); Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08), and the in-browser run on 4.9.2 remains open.
+The TON fixture is recorded in the repo guide, docs/11, "TON fixture (V3, 2026-11-08)": Wallet V4 R2, wallet ID 698983191, workchain 0, `m/44'/607'/0'`. Testnet forms of the same account: bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`, non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`. The upstream WASM parity corpus exists (`wasm/tests/` at tag 4.9.2, 22 top-level `.test.ts` files plus 11 files under `Blockchain/`, for 33 files recursively); Node parity was 6/6 MATCH on Core 4.9.2 and 4.8.4 (D30, 2026-11-08), and the in-browser run on 4.9.2 remains open.
 
 The Android guide uses the same repo canonical ripple pair (Android guide, section D.7 fixture gate). Do not pair one fixture’s words with another fixture’s address.
 
@@ -222,7 +222,7 @@ The Android guide uses the same repo canonical ripple pair (Android guide, secti
    . .venv/bin/activate
    ```
 
-2. **Install from the repo’s `requirements.txt`.** It pins `cryptography==50.0.2` and `bip-utils==2.12.3`.
+2. **Install from the repo’s `requirements.txt`.** At the front-matter-pinned checkout (`e3b65fb832db287fdc8d54794980dd0b3456cc12`), it pins `cryptography==50.0.2` and `bip-utils==2.12.2`. `main` later moved to `bip-utils==2.12.3`.
 
    ```sh
    python3 -m pip install -r requirements.txt
@@ -277,9 +277,9 @@ Use this section for testnet only.
 
 The Web app combines PBKDF2 with 600,000 iterations and AES-256-GCM. Its application-specific associated data (AAD) value is `"bawa-web-vault-v1"`.
 
-That AAD deliberately differs from the repo’s `"nova-shop-seed-v1"`. A vault file made by this Web app is not compatible with the repo’s `seed.enc.json`. Do not substitute the Web vault file for that file or treat the two as interchangeable backups.
+That AAD deliberately differs from the repo’s `"nova-shop-seed-v1"`. The distinct constant alone does not establish that `"bawa-web-vault-v1"` is reserved exclusively for seed files, and enforcement of the separate AAD by the Web app has not been demonstrated. A vault file made by this Web app is not compatible with the repo’s `seed.enc.json`. Do not substitute the Web vault file for that file or treat the two as interchangeable backups.
 
-The 600,000-iteration count follows the OWASP 2023 password-hashing guidance cited by the repo guide. Require the app to define a vault unlock passphrase policy. No minimum length is in evidence; the value remains unset in the open items below. Do not infer a length requirement from the PBKDF2 iteration count.
+The 600,000-iteration count follows the PBKDF2 branch of the OWASP 2023 password-storage guidance cited by the repo guide (600,000 iterations for PBKDF2-HMAC-SHA256), used here because FIPS-140 compliance requires PBKDF2, while OWASP’s headline recommendation is Argon2id. Require the app to define a vault unlock passphrase policy. No minimum length is in evidence; the value remains unset in the open items below. Do not infer a length requirement from the PBKDF2 iteration count.
 
 ### Session lifetime
 
@@ -365,11 +365,11 @@ Derive addresses locally. Never upload an extended public key (xpub) to a remote
 
 1. **Enter Sepolia.** Use `https://ethereum-sepolia-rpc.publicnode.com`, the public, keyless JSON-RPC endpoint, for state, fees and broadcast. Use `https://eth-sepolia.blockscout.com/api/v2`, the Blockscout indexer, for address history ([API reference](https://docs.blockscout.com/devs/apis)). Before you construct **every signing input**, query `eth_chainId` and require the decoded value `11155111`. Block signing on an error or mismatch. Carry that ID in the input and enforce it again offline; checking only at startup is insufficient.
 
-2. **Obtain test funds.** Use the [Alchemy Sepolia faucet](https://sepoliafaucet.com/). It offers 0.1 ETH per 24 hours under current eligibility rules; limits change often. Eligibility requires at least 0.001 ETH on mainnet, enough real mainnet transactions, and a low testnet balance; a brand-new wallet is not automatically eligible. If you are not eligible, use the [QuickNode Sepolia faucet](https://faucet.quicknode.com/ethereum/sepolia) as a fallback.
+2. **Obtain test funds.** Use the [Alchemy Sepolia faucet](https://www.alchemy.com/faucets/ethereum-sepolia). It offers 0.1 ETH per 24 hours under current eligibility rules; limits change often. Eligibility requires at least 0.001 ETH on mainnet, enough real mainnet transactions, and a low testnet balance; a brand-new wallet is not automatically eligible. If you are not eligible, use the [QuickNode Sepolia faucet](https://faucet.quicknode.com/ethereum/sepolia) as a fallback.
 
 3. **Check the setup.** Confirm that `eth_chainId` returns `0xaa36a7` (verified 2026-11-08) and that your funded address shows on the Sepolia explorer. Dated probe example (2026-11-08): chain head `12090390`; Blockscout `total_blocks` `12090067` (a stale cached counter — see item 4 under "Freshness is part of the result").
 
-The Ethereum Foundation announced Sepolia’s retirement, with end of support on 30 September 2026. The timeline is still in flux; the PublicNode endpoint above was verified live on 2026-11-08.
+Sepolia has full support through 2026, including the Glamsterdam upgrade activating on 6 October 2026, followed by a long-term-support phase in 2027; the 30 September end-of-support date belonged to Holesky, which was shut down in October 2025 and replaced by Hoodi. The timeline is still in flux; the PublicNode endpoint above was verified live on 2026-11-08.
 
 Use the keyless PublicNode endpoint by default; [Alchemy](https://www.alchemy.com/docs/reference/ethereum-api-quickstart) is a keyed alternative. If you use a keyed provider, keep its key in a restricted server-side relay, never in code, committed configuration or a browser bundle. Web build-time environment variables are public, not secret storage.
 
@@ -395,9 +395,9 @@ Use the keyless PublicNode endpoint by default; [Alchemy](https://www.alchemy.co
 1. Record the outcome and last-success time for every refresh. Advance the last-success time only when that feed refreshes successfully. Track freshness separately for each balance, each token and each history feed; a successful update to one must not make the others look current.
 2. Surface every failed refresh as **Not refreshed** (`NotRefreshed` in code). Retain previous balances and history, visibly marked stale. If a feed has never loaded successfully, show unavailable data for that feed, not an invented balance. Never translate timeouts, rate limits, authentication errors, malformed responses or failed pagination into zero balances or empty history.
 3. Make address monitoring cancellable. Treat broadcast acceptance as submitted, not confirmed. Keep submission, pending observation, inclusion and execution outcome as distinct states, rather than a single success flag. Track inclusion and define the confirmation policy, including thresholds, separately for each chain and testnet network. Do not use one universal confirmation number. Allow confirmation state to move backwards after a reorganisation.
-4. Never treat Blockscout’s `total_blocks` as the chain head: it is a stale cached counter. Checked 2026-11-08, it lagged the RPC head by 267 blocks at 11:32 and 323 blocks at 11:44. History from the indexer must be reconciled against the RPC. Never present a `total_blocks` figure as the current head.
+4. Never treat Blockscout’s `total_blocks` as the chain head: it is a stale cached counter. History from the indexer must be reconciled against the RPC. Never present a `total_blocks` figure as the current head.
 
-Repository docs 06, 07 and 13 confirm all of these requirements.
+Repository docs 06 and 07 confirm all of these requirements.
 
 ### Token balances without guesswork
 
@@ -428,7 +428,7 @@ Restrict discovery to receiving-branch addresses in the validation draft. Change
 - [Ethereum JSON-RPC docs](https://ethereum.org/developers/docs/apis/json-rpc/) — canonical URL, checked 2026-11-08.
 - [TRON — getting testnet tokens](https://developers.tron.network/docs/getting-testnet-tokens-on-tron), checked 2026-11-08.
 - [TON — get coins](https://docs.ton.org/onboarding/wallet-apps/get-coins), checked 2026-11-08.
-- Repository docs 06, 07, 13 and 14 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+- Repository docs 06, 07 and 13 at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
@@ -454,11 +454,7 @@ scanner opens only after the user taps Scan; it never opens automatically.
 
 **Steps.**
 
-1. **Request camera permission and a secure context.** Request `getUserMedia`
-   with `{ video: { facingMode: "environment" } }` and require a secure context
-   (HTTPS outside local development; loopback development only). If permission
-   is denied or no camera is available, show the failure message and return to
-   the Send form with the address field unchanged.
+1. **Check prerequisites, then request camera permission.** First verify that the page is in a secure context (HTTPS outside local development; loopback development only). Next verify that `navigator.mediaDevices` exists, the Permissions Policy allows camera access, and the bundled decoder worker from `qr-scanner@1.4.2` (step 2) is loadable. Only after all prerequisites pass, request `getUserMedia` with `{ video: { facingMode: "environment" } }`. If any prerequisite fails, permission is denied, or no camera is available, show the failure message and return to the Send form with the address field unchanged.
 2. **Decode with the guarded decoder.** Use `qr-scanner@1.4.2` with its bundled
    worker. Native `BarcodeDetector` is an optimisation only: use it when
    `getSupportedFormats()` includes `qr_code`, and only after the local
@@ -486,6 +482,10 @@ results, and never auto-resume. The scanner never opens an encoded link.
 - Wrong network: `Request does not match selected network.`
 - Unsupported amount: `Amount is not supported.`
 - More than one code in frame: `Show only one payment QR code.`
+- Stale request at signing: `Payment request is no longer current; scan it again.`
+- Wrong chain: `Request does not match selected chain.`
+- Scan timeout: `QR code scan timed out.`
+- Step 4 revalidation failure: `Payment request failed revalidation.`
 
 **Payload formats (D25).** Parse the decoded text with
 `E.parsePaymentRequest`, then verify it with `E.verifyPaymentRequest` against
@@ -494,8 +494,8 @@ the selected network, recipient and associated request. Approved forms only:
 | Chain | Approved payload form |
 |---|---|
 | BTC (testnet4) | BIP-321: `bitcoin:?tb=<ADDRESS>&amount=<BTC>` |
-| ETH (Sepolia) | ERC-681: `ethereum:pay-<ADDRESS>@11155111?value=<WEI>` (`@11155111` mandatory; `pay-` prefix) |
-| TON (testnet) | `ton://transfer/<ADDRESS>?amount=<NANO>&text=<MEMO>` — never `bin`, `jetton` or `exp` |
+| ETH (Sepolia) | ERC-681: `ethereum:pay-<ADDRESS>@11155111?value=<WEI>` — this guide’s D25 policy requires the `pay-` prefix and `@11155111`; these are not ERC-681 mandates |
+| TON (testnet) | `ton://transfer/<ADDRESS>?amount=<NANO>&text=<MEMO>` — this guide’s D25 whitelist policy excludes `bin`, `jetton` and `exp`; this is not a TON protocol restriction |
 | TRX (Nile) | Bare address only |
 
 **Out of scope.** Non-payment QR codes, other barcode types, scanning from a
@@ -516,7 +516,7 @@ third-party notices inventory. See Doc 3, Consolidated open-items register,
 3. **Bind approval to the exact transaction input.** Do not carry approval over to a different input. Keep the approved input as the reference for the later comparison with the signed result.
 4. **Sign through Core’s single signing entry point** in the built app.
 5. **Check the signing output for errors before accepting any returned bytes.** Stop on an error; the presence of bytes is not a substitute for checking the result.
-6. **Decode the actual signed bytes with a chain-specific decoder.** Compare the decoded transaction against the approved intent, including recipients, amounts, change, fees and contract calls, plus chain/network, nonce, gas and data where applicable. Checking the unsigned input alone does not establish what will be broadcast. Block submission on a mismatch or decoding failure.
+6. **Decode the actual signed bytes with a chain-specific decoder.** Compare the decoded transaction against the approved intent, including recipients, amounts, change, fees and contract calls, plus chain/network, nonce, gas and data where applicable. Checking the unsigned input alone does not establish what will be broadcast. Decoded bytes alone have limits: BTC fee calculation requires previous-output data, identifying change requires ownership context, a raw BTC transaction does not establish mainnet versus testnet, EIP-1559 fee caps are not the eventual fee, and interpreting calldata requires ABI context. Block submission on a mismatch or decoding failure.
 7. **Display the decoded transaction before an explicit broadcast action.** Base that display on the bytes you decoded, rather than displaying the unsigned request again. Broadcast only signed transaction bytes, never a signing input or an unsigned transaction. Do not turn a successful signature into an automatic send.
 
 The signing coordinator holds no private keys; only the key module adds signing secrets. Keep secret-bearing messages inside that key-module boundary.
@@ -548,7 +548,7 @@ Apply these constraints alongside the common ceremony. A single signing entry po
 | Bitcoin | Check UTXO inputs, the fee and change outputs; use the witness-stripped txid described above. |
 | Ethereum | Enforce chain ID `11155111` before every signing input (Section E), and check nonce, gas and data. |
 | TRON | Use the Nile network only; look up transaction identifiers through the TronGrid Nile API. |
-| TON | The repo is generation-only. In the app, use a sequence number, `expireAt` set to now plus 60 seconds, wallet version `2` (V4R2) and mode `3` for a TON transfer. Take the destination address from the address object’s data. Compatibility with any specific wallet is unverified. |
+| TON | The repo is generation-only. In the app, the sequence number must match the wallet’s current on-chain state. Encode `expireAt` as an unsigned 32-bit Unix timestamp in seconds (not milliseconds); the wallet checks it against TON block time, so “now plus 60 seconds” must account for clock skew and inclusion delay. Wallet version `2` is Core’s enum mapping for V4R2, not a universal TON version number; it must match the wallet contract. An undeployed wallet needs its matching StateInit in the external message and the contract’s initial sequence number. Mode `3` combines `+1` (pay transfer fees separately from the sent amount) and `+2` (ignore certain action-phase send errors), and does not guarantee transfer success. Take the destination address from the address object’s data. A TON external-message hash is not generally the eventual on-chain transaction hash; retrieve the transaction hash from the chain after inclusion. Compatibility with any specific wallet is unverified. |
 
 ### Confirmation tracking
 
@@ -589,7 +589,7 @@ Choose the look, framework and components yourself. This section defines a contr
 
 ### Screen obligations
 
-The canonical screen list and permitted-data contract are defined in docs/14 section 5.1. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
+The canonical screen list and permitted-data contract are defined in `docs/14-wallet-app-implementation`, section 5.1, at `e3b65fb8`. This guide provides platform-specific implementation guidance, not a separate screen inventory. Review is a required state of Send; Lock is a required app state.
 
 **Validation evidence:** the screen list and expected states come from the Web validation draft’s build log. The draft is local-only, in no repository: its fourteen screens were written and its 31 unit tests pass, and the integrated browser flow was run on 2026-11-08 (V2: 14 PASS / 0 FAIL / 3 INFO across 17 steps, real headless browser; Section D). Live spend was not exercised. Treat this as evidence for the screen list and expected states, not for a completed live-spend flow.
 
@@ -600,14 +600,14 @@ If you want a starting point for the presentation layer, the UI-template appendi
 
 Receive-QR and scanning are both in scope, resolved by the user on 2026-11-08. Remaining OPEN items concern specification details, implementation/API integration and verification — not whether to include either feature.
 
-Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
+Receive must show the selected address, an explicit network label and an actual QR using the Receive QR payloads table in docs/07. The network label (for example, “testnet4”) comes from the selected network context — the configured network/endpoint — not from the address or the QR payload. Generate and verify the QR through `P.renderAndVerifyQr`, with error correction explicitly set to M. Display request information not carried by the QR separately.
 
 QR payment-request scanning is specified in Section F. See Doc 3, Consolidated open-items register, `OI-037`.
 
 ### Sources
 
 - Web validation draft build log — local-only, in no repository; validation evidence for the Web screen list and expected states (Section D).
-- Repo guide, `docs/14`, section 5.1, at `e3b65fb832db287fdc8d54794980dd0b3456cc12` — shared screen contract.
+- Repo guide, `docs/14-wallet-app-implementation`, section 5.1, at `e3b65fb832db287fdc8d54794980dd0b3456cc12` — shared screen contract.
 
 ### Open items
 
@@ -778,8 +778,8 @@ Treat a broadcast timeout as unknown submission status (Section F). It does not 
 
 If you suspect compromise of a vault file, phrase or signing key:
 
-1. Stop using the affected wallet.
-2. Move test funds to a fresh test wallet created from a new phrase.
+1. Stop using the affected wallet for anything except one final recovery signing with the old key to move the funds.
+2. Generate a replacement phrase in a trustworthy environment—a clean, offline environment you control, not the possibly compromised one—then move test funds to a fresh test wallet created from that phrase.
 3. Record what happened, when and what was exposed.
 4. Rotate any provider credentials that were in the same environment.
 
@@ -818,7 +818,7 @@ Do not stop at Ethereum. A hosted provider can return stale or misleading result
 
 ### Make the genuine app verifiable
 
-Publish the exact commit the build came from, the build commands and the expected output hashes (Section J), so a reader can distinguish the genuine app from a copy. Publish those details for the build you serve, not merely for a similarly named app.
+Publish the exact commit the build came from, the build commands and the expected output hashes (Section J), to support verification of the served build. These details do not by themselves establish that the app is genuine: the reader also needs trusted provenance or a trusted hash reference, not merely information asserted by the app being checked. Publish those details for the build you serve, not merely for a similarly named app.
 
 Require the external security review release gate to cover the vault, the signing ceremony, the network layer and the UI’s secret handling. It remains unscoped until a reviewer, date and retained evidence exist. Naming these required areas does not mean a review has been scoped or run. Name the scope, reviewer, date and retained evidence before using review labels.
 
@@ -843,7 +843,7 @@ Check every line before any release claim:
 
 ### Sources
 
-Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+Consult `docs/08-security-recovery`, `docs/13-wallet-app-architecture`, `docs/14-wallet-app-implementation`, `docs/15-threat-model-and-theft-prevention`, `docs/16-security-decision-guide` and `SECURITY.md` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
 ### Open items
 
@@ -857,7 +857,7 @@ Consult repo docs 08, 13, 14, 15, 16 and `SECURITY.md` at `e3b65fb832db287fdc8d5
 ### Installation and development setup
 
 1. Clone and pin the repo as described in Section B. Start from a clean tree.
-2. Run `npm install` from that clean tree, then commit `package.json` and `package-lock.json` together. Follow Section B’s lockfile precondition: use `npm ci` only for later installs, once the lockfile exists. Do not substitute it for this initial install.
+2. Run `npm install` from that clean tree. The install must actually generate a root `package-lock.json`; verify that it did, then commit `package.json` and `package-lock.json` together. Follow Section B’s lockfile precondition: use `npm ci` only for later installs, once the root lockfile exists and agrees with the project manifest (`package.json`). Do not substitute it for this initial install.
 3. Build with the single canonical path from Section B. Use that same path for the files you deploy; do not add an alternative build path.
 4. Serve the app locally for development and open it in a browser. Check the local browser load separately from the deployed-build checks below.
 
@@ -867,9 +867,9 @@ Deploy the app as static files: the bundle, the `.wasm` beside it, and `src/inde
 
 1. [ ] Fetch the deployed `.wasm` URL beneath the application prefix. Check both a 200 response and `Content-Type: application/wasm`. Inspect the fetched response rather than relying on the file’s presence in the output.
 2. [ ] Check that served responses carry the Content Security Policy from Section I. Load the app in a browser with that policy in place; confirm that it still loads and allows WASM compilation as Section I states.
-3. [ ] Run the fixture gate on the deployed build. Check that it passes before any wallet operation is offered.
+3. [ ] Load the deployed app in a fresh browser session to invoke Section C’s startup fixture gate. Verify that it derives the canonical ripple fixtures — BTC `zpub`, ETH `xpub`, TRX `xpub` plus the TRON anchor address `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`, and the TON fixture documented in repo `docs/11` — and compares each result with its documented expected value. The gate passes only when all values match. Verify that the app refuses wallet operations while the gate is pending or failed and offers them only after the gate passes.
 4. [ ] Run the Section E probes for BTC testnet4, Sepolia, Nile and TON testnet. Check that all four testnet endpoints answer.
-5. [ ] Before publishing, search the built output for key material. Check that no API key, mnemonic, private key, seed or data key appears in the deployed files.
+5. [ ] Before publishing, recursively scan all built output that will be deployed, including bundles, assets, source maps and decompressed copies of precompressed files. Use pattern and exact-value searches for mnemonic word sequences (including 12/15/18/21/24-word BIP-39 sequences), private-key encodings (`xprv`, WIF and 64-hex-digit raw keys, with or without `0x`), provider-specific API-key formats, and actual API-key, seed and data-key values in every representation used by the build, including hex and base64 where applicable. This check passes only when none of those patterns or values appears in the deployed files. Resolve any match, rebuild and repeat the scan before publishing.
 6. [ ] Serve over HTTPS outside local development; see Section F's secure-context guard for scanning.
 
 ### Environment example
@@ -884,8 +884,8 @@ Do not read the validation-draft row as a list of components available in the re
 
 | Status | Scope |
 | --- | --- |
-| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock; fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing. |
-| Unimplemented | token management and token sends; QR receive (in scope, user decision 2026-11-08 — the repo guide requires it; Section G records it as in scope and unimplemented); QR payment-request scanning (Section F) is unimplemented until implemented and verified through Section H; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live wallet creation and live restore performed in the V2 browser run (2026-11-08); live spend was not exercised. |
+| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock; fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing; live wallet creation and live restore performed in the V2 browser run (2026-11-08). |
+| Unimplemented | token management and token sends; QR receive (in scope, user decision 2026-11-08 — the repo guide requires it; Section G records it as in scope and unimplemented); QR payment-request scanning (Section F) is unimplemented until implemented and verified through Section H; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised. |
 
 A successful build or testnet send does not replace the release gates below.
 
@@ -900,11 +900,11 @@ Treat these gates as requirements, not passes. Never mark one passed until it ha
 5. **External security review completed.** Complete the review in Section I. Record its scope, reviewer and date, and retain the evidence.
 6. **Recovery rehearsal executed and recorded.** Follow the Section I procedure, execute the rehearsal and retain its record.
 
-No independent security review, no chain-specific verification, no tested recovery and no reproducible builds are claimed here — those are release gates.
+No independent security review, no chain-specific verification (gate 2’s separately recorded per-chain element, with results recorded per chain), no tested recovery and no reproducible builds are claimed here — those are release gates.
 
 ### Maintenance and upgrade policy
 
-1. Before adopting any newer Core version, re-run the fixture gate and the EIP-1559 proof against it. Record the date and version as described in Section B.
+1. Adopt any newer Core version only after re-running the fixture gate and the EIP-1559 proof against it and obtaining successful results from both; record the date and version as described in Section B.
 2. Before each release, re-check every external link sequentially, with delays between requests. Record the check date beside any link that blocks automated checks.
 
 A link section that cannot be re-checked is a finding, not a footnote.
@@ -1002,8 +1002,8 @@ See also Sections E and F.
 **Cause:** The chain ID check failed, or you left `txMode` at the Core default.
 
 1. **Fix:** Confirm that `eth_chainId` returns Sepolia’s chain ID: `0xaa36a7` (`11155111`). Complete this check before you construct the signing input.
-2. Set `txMode` to `1` (`Enveloped`) and verify that the signed bytes start with `0x02`.
-3. **Check:** Decode the signed transaction and confirm that the maximum-fee field matches the approved value.
+2. Set `txMode` to `1` (`Enveloped`) before signing. **Post-signing check (only if signing produces bytes):** Verify that the signed bytes start with `0x02`. If signing fails and returns no bytes, diagnose the failure using step 1 and the `txMode` setting, not the `0x02` prefix or decode checks.
+3. **Check (only if signing produces bytes):** Decode the signed transaction and confirm that the maximum-fee field matches the approved value.
 
 See also Sections E and F.
 
@@ -1070,17 +1070,17 @@ No template assessed on 8 November 2026 covers Bitcoin, Ethereum, TRON and TON t
 
 You need all five checks to pass, even when you reuse only a few controls.
 
-1. **Exclude secrets.** Confirm that the template holds no secret and no mnemonic at any point. Keep phrase display and re-entry in the isolated ceremony, outside the template.
+1. **Exclude secrets.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that no secrets or mnemonics are held or handled within that scope. Keep phrase display and re-entry in the isolated ceremony, outside the template.
 
-2. **Preserve derivation and key storage.** Check that the template does not redefine derivation paths or introduce its own key storage. Keep presentation reuse separate from these responsibilities.
+2. **Preserve derivation and key storage.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that none redefines derivation paths or introduces its own key storage. Keep presentation reuse separate from these responsibilities.
 
-3. **Preserve transaction review.** Confirm that the template cannot skip, hide or reorder transaction review. Check any reused account or connect controls against the same requirement.
+3. **Preserve transaction review.** Review the template’s own code, its dependencies and its runtime behaviour to confirm that none can skip, hide or reorder transaction review. Apply the same check to any reused account or connect controls, including their dependencies and runtime behaviour.
 
 4. **Check testnet-only operation.** Confirm that the template works testnet-only and shows testnet status. Require both behaviours; network coverage on its own does not satisfy this check.
 
 5. **Read the repository licence.** Confirm that the licence is readable in the candidate's repository and permits your use. Resolve an unclassified licence rather than treating it as permission.
 
-If any check fails, do not use the template. If none passes, build the UI from section G.
+If any check fails, do not use the template; build the UI from Section G instead.
 
 Keplr and Taho were checked as possible template sources on 8 November 2026 and could not be verified as public repositories, so they are not listed as template options.
 

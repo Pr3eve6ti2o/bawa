@@ -75,16 +75,16 @@ Evidence labels are **VERIFIED** (checked first-hand), **APPROVED BUT UNEXECUTED
 
 **VERIFIED** — the network scope in this table has been checked first-hand.
 
-| Chain | Allowed network |
-| --- | --- |
-| Bitcoin | testnet4 |
-| Ethereum | Sepolia |
-| TRON | Nile |
-| TON | testnet |
+| Chain | Allowed network | Policy citation | Mainnet in this guide set |
+| --- | --- | --- | --- |
+| Bitcoin | testnet4 | Bawa chain policy (`docs/02`) | Excluded |
+| Ethereum | Sepolia | Bawa chain policy (`docs/02`) | Excluded |
+| TRON | Nile | Bawa chain policy (`docs/02`) | Excluded |
+| TON | testnet | Bawa chain policy (`docs/02`) | Excluded |
 
 Do not substitute testnet3 for testnet4, another Ethereum testnet for Sepolia or Shasta for Nile.
 
-Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
+Mainnet is excluded from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
 Do not provide hidden network switches or a user-supplied endpoint escape hatch. Reject imported requests and deep links that select an unsupported network.
 
@@ -92,7 +92,7 @@ Use test funds only; do not use recovery material that controls real assets.
 
 ### A.3 Required wallet operations
 
-The operations below are **APPROVED BUT UNEXECUTED**: they define what the completed wallet must do. Live wallet creation has been performed from the web draft in a real browser (V2, 8 November 2026: 24-word creation, exact ordered backup re-entry accepted, wallet saved, portfolio shown); the Android draft has never had a live creation, restore or testnet spend. No live testnet spend has been made from either draft, and no mnemonic restore has been exercised from either draft — send, signing and broadcast were not exercised.
+The Android operations below are **APPROVED BUT UNEXECUTED**: they define what the completed Android wallet must do. This label applies only to Android execution, not to the existing CLI tools or the web draft's executed creation. Live wallet creation has been performed from the web draft in a real browser (V2, 8 November 2026: 24-word creation, exact ordered backup re-entry accepted, wallet saved, portfolio shown); the Android draft has never had a live creation, restore or testnet spend. No live testnet spend has been made from either draft, and no mnemonic restore has been exercised from either draft — send, signing and broadcast were not exercised.
 
 Keep the BIP-39 passphrase empty by policy. Use the separate vault unlock passphrase as the PBKDF2 input for the vault.
 
@@ -151,9 +151,9 @@ Expected result: a commit hash starting with `e3b65fb832db287fdc8d54794980dd0b34
 
 Keep the README run guide, `docs/RECOVERY.md`, `tools/hdwallet-gen` and docs 01, 02, 04, 05, 08, 09, 13, 14, 15 and 16 beside this guide. Include docs 03, 06, 07, 10, 11 and 12, which the repository guide also carries.
 
-The pinned checkout at `e3b65fb832db287fdc8d54794980dd0b3456cc12` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly the four JavaScript tools and `decrypt_seed.py`, and all four tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
+The pinned checkout at `e3b65fb832db287fdc8d54794980dd0b3456cc12` was inspected first-hand for the files this guide cites (re-inspected 9 November 2026; the repair changed exactly six files: `tools/hdwallet-gen/compare.js`, `tools/hdwallet-gen/derive.js`, `tools/hdwallet-gen/derive_daemon.js`, `tools/decrypt_seed.py`, `test/smoke.test.js`, and `tools/hdwallet-gen/package-lock.json`; `generate.js` was untouched, and all four JavaScript tools pass `node --check` at this pin). Every repository-derived claim that depends on a file not cited here remains unverified.
 
-Docs 03 and 12 are the shallowest in the repository and have never received a deep pass. Treat anything taken from them as unreviewed until the repository guide deepens them. **Open item (OI-017):** docs 03 and 12 received a deep pass (D01–D16, 2026-11-08). The docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089).
+Docs 03 and 12 are the shallowest in the repository, but received a deep pass (D01–D16, 2026-11-08). **Open items (OI-017/OI-089):** the docs/12 findings are folded into the repo guide at merge; the docs/03 findings (D01–D09) are recorded in the merge notes and remain to be folded (OI-089).
 
 Never change a derivation policy. If the documentation, recovery instructions and reference implementation disagree, record the discrepancy and stop the affected work. Use only published test vectors or explicit placeholders in examples.
 
@@ -201,8 +201,8 @@ This guide is testnet only. VERIFIED means the value was checked first-hand on 8
 | CMake | Core module build | 3.18.1 | 3.18.1 | VERIFIED |
 | protoc | Core code generation | 3.20.3 | libprotoc 3.20.3, from `build/local/bin/protoc` via `tools/install-dependencies` | VERIFIED |
 | protobuf-javalite | Core module build | 3.22.3 | 3.22.3 (upstream) | VERIFIED |
-| Node | Repo tools verification | `>=22 <23` | Node 22 (declared range); verification ran on Node v24.22.2, outside the declared range, and was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) | VERIFIED |
-| Python | Repo tools verification | `>=3.11` | Python 3.12.3 with `cryptography==50.0.2` and `bip-utils==2.12.2` | VERIFIED |
+| Node | Repo tools verification | `>=22 <23` | `>=22 <23` (declared range, not a pin); verification ran on Node v24.22.2, outside the declared range, and was re-run on Node v22.23.4 on 2026-11-08 with identical results (D22) | VERIFIED |
+| Python | Repo tools verification | `>=3.11` | Python 3.12.3 with `cryptography==50.0.2` and `bip-utils==2.12.2` at the repair pin; main now records `bip-utils==2.12.3` | VERIFIED |
 
 Record each version's exact pin once, in this table. Keep version ranges only as compatibility declarations: a range is not a pin and must never serve as a reproducible pin.
 
@@ -210,7 +210,7 @@ Record each version's exact pin once, in this table. Keep version ranges only as
 
 **Open item (OI-007):** Commit and verify the app wrapper JAR before treating the draft wrapper's Gradle version as a project pin.
 
-Version pins are not a lockfile — until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile — until a lockfile generated from a clean install is committed, reproducibility has not been demonstrated.
 
 **Open item (OI-008):** Partially resolved (2026-11-08): `tools/hdwallet-gen/package-lock.json` was added by the phase-1 repair at e3b65fb832db287fdc8d54794980dd0b3456cc12. No Android-app dependency lockfile is evidenced; Android dependency locking remains open. The Node-tooling lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. Owner: W4 (Android follow-up).
 
@@ -225,7 +225,7 @@ Treat the app build and the Core module build as two different builds: they use 
 
 ### B.3 Java: two JDKs
 
-Keep two full JDK installations for Bawa's testnet builds: **JDK 21 for the wallet build** and **JDK 17 for the Core module build**. These are stated Bawa major-version requirements, not a general Android rule. Do not replace Core's JDK 17 with JDK 21 because it is newer, or downgrade the wallet build to JDK 17 to match Core.
+Keep two full JDK installations for Bawa's testnet builds: **JDK 21 for the wallet build** and **JDK 17 for the Core module build**. This split is Bawa policy (a project choice), not a Gradle/Java compatibility requirement or a general Android rule: Gradle 8.9 and 8.10.2 both run on Java 21. Do not replace Core's JDK 17 with JDK 21 because it is newer, or downgrade the wallet build to JDK 17 to match Core.
 
 **Open item (OI-001):** Vendor and patch-level pins were never supplied; use a supported security update within each required major and record the complete version output.
 
@@ -311,7 +311,7 @@ Install and verify the SDK before running Gradle for the testnet wallet.
 | Component | SDK package identifier | Version evidence required |
 |---|---|---|
 | App build | `platforms;android-34` | Verified against the validation draft's `app/build.gradle.kts`: `compileSdk = 34`, `targetSdk = 34`, `minSdk = 26`; the draft declares no `buildToolsVersion` — `34.0.0` is the AGP 8.5.2 default (AGP 8.5 release notes); confirm installed API level `34` and the installed Build-Tools package revision from `source.properties`. |
-| Core module build | `platforms;android-35` | Upstream Core module pin; confirm installed API level `35`. |
+| Core module build | `platforms;android-35` | Upstream Core module pin; confirm installed API level `35`. The `compileSdk = 34` app may consume a Core AAR built with `compileSdk = 35` only if the AAR is compatible: the dependency's `minCompileSdk` must be at most `34`, and the app must satisfy its consumer-facing API and resource requirements. |
 
 Install both platform packages. Check the Bawa checkout's `compileSdk` settings and any explicit `buildToolsVersion`; substitute exact package identifiers only if the checkout requires a newer validated combination. Do not infer a Core Build-Tools version or a Java language target from its platform pin.
 
@@ -447,7 +447,7 @@ Installing Build-Tools `34.0.0` does not force Gradle to use them. Confirm and r
 - [Build-Tools release notes](https://developer.android.com/tools/releases/build-tools)
 - [Set up the Android 14 SDK](https://developer.android.com/about/versions/14/setup-sdk)
 - [SDK environment variables](https://developer.android.com/tools/variables)
-- [Android Gradle Plugin 8.5 release notes](https://developer.android.com/build/releases/past-releases/agp-8-5-0-release-notes)
+- [Android Gradle Plugin 8.5 release notes](https://developer.android.com/build/releases/agp-8-5-0-release-notes)
 
 ### B.5 Native toolchain: NDK, CMake, protoc
 
@@ -503,7 +503,7 @@ read -r -p 'Absolute path to the installed CMake executable: ' CMAKE_BIN &&
 "$CMAKE_BIN" --version
 ```
 
-**Expected result:** The version output begins with `cmake version 3.18.1`.
+**Expected result:** The first line of the version output is exactly `cmake version 3.18.1`.
 
 Check the installed NDK Clang executable:
 
@@ -544,6 +544,41 @@ Invoke that absolute path for the version check:
 
 Require that exact version output.
 
+**PowerShell equivalents.** Run the same B.5 checks from the Core checkout root in PowerShell:
+
+```powershell
+(Get-Command sdkmanager -CommandType Application -ErrorAction Stop).Source
+# Expected: sdkmanager is found under the selected SDK root.
+
+sdkmanager --install 'ndk;28.0.12674087' 'cmake;3.18.1'
+# Expected: those exact NDK and CMake packages are installed.
+
+$NDK_PROPERTIES = Read-Host 'Absolute path to the NDK package source.properties'
+Select-String -LiteralPath $NDK_PROPERTIES -Pattern '^Pkg\.Revision' -CaseSensitive |
+    ForEach-Object { $_.Line }
+# Expected: Pkg.Revision = 28.0.12674087
+
+$CMAKE_BIN = Read-Host 'Absolute path to the installed CMake executable'
+& $CMAKE_BIN --version
+# Expected: cmake version 3.18.1
+
+$NDK_CLANG = Read-Host 'Absolute path to the installed NDK Clang executable'
+& $NDK_CLANG --version
+# Expected: Clang runs and reports its version.
+
+# tools/install-dependencies: no direct PowerShell equivalent; it is a Bash
+# script and must run in its supported Bash environment.
+# The protoc checks require its output to exist and be runnable on this host.
+
+# pwd -P has no direct portable PowerShell equivalent. For these two checks,
+# use the physical checkout root (no symlink/junction components).
+Join-Path -Path (Get-Location).ProviderPath -ChildPath 'build/local/bin/protoc'
+# Expected: the absolute path to build/local/bin/protoc.
+
+& (Join-Path -Path (Get-Location).ProviderPath -ChildPath 'build/local/bin/protoc') --version
+# Expected: libprotoc 3.20.3
+```
+
 Include the Core release reference, module pin locations, SDK root and installed package IDs, NDK package revision, CMake version output, and a successful NDK Clang invocation in the toolchain record. Also record the protoc source—Core's protobuf `3.20.3` dependency declaration and `tools/install-dependencies`—along with its absolute path and version output.
 
 **Sources**
@@ -561,7 +596,7 @@ Pin Trust Wallet Core to exactly `4.9.2` for the Bawa Android wallet's testnet-o
 - **Git tag:** `4.9.2`
 - **Required full commit:** `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`
 
-Keep both the tag and the full commit as review-controlled constants. The tag-to-commit mapping was verified against the GitHub API on 8 November 2026; the tag object is the commit itself.
+Keep both the tag and the full commit as review-controlled constants. The tag-to-commit mapping was verified against the GitHub API on 8 November 2026; the lightweight tag ref points directly at the commit, with no separate tag object.
 
 A version range is not a pin. Never use `4.+`, `4.9.+`, `[4.9.2,5.0)`, `latest.release` or a moving branch.
 
@@ -644,7 +679,7 @@ For a full installation, download Gradle 8.9, compare its checksum against the t
 
 If no wrapper is available to check, create a validation project yourself and generate its standard wrapper from that checksum-verified Gradle 8.9 installation. Record Gradle 8.9 as the wrapper's originating version. Do not treat the local draft as an existing Android project or complete wrapper.
 
-Use a POSIX shell with `mktemp` available for the commands below. Select the Java 17 JDK for command-line Gradle through `JAVA_HOME`, and put that JDK's tools on `PATH`.
+Use a POSIX shell with `mktemp` available for the commands below. Before any Gradle invocation, verify that the Gradle wrapper launcher is genuine and that its wrapper JAR has been authenticated. Java 17 is a valid runtime choice for command-line Gradle; Java 21 also runs Gradle 8.9 and 8.10.2. Select the chosen JDK through `JAVA_HOME`, and put that JDK's tools on `PATH`.
 
 **Validate the wrapper before running it**
 
@@ -714,10 +749,10 @@ Permit working localhost TCP between the Gradle client and daemon, typically thr
 
    **Expected result:** The installed packages include Android SDK platform 34 and build-tools 34.0.0. An entry under available packages does not count as installed.
 
-3. **Check the CMake binary.** Put the CMake binary selected for the module on `PATH`.
+3. **Check the CMake binary.** Invoke the CMake binary selected for the module by its explicit path, as in B.5. Replace `<module-selected-version>` with the applicable module pin.
 
    ```sh
-   cmake --version
+   "$ANDROID_SDK_ROOT/cmake/<module-selected-version>/bin/cmake" --version
    ```
 
    **Expected result:** The selected binary runs and reports its version. Compare that version against the applicable module pin before continuing.
@@ -740,7 +775,7 @@ Permit working localhost TCP between the Gradle client and daemon, typically thr
 
    **Expected result:** The fixture prints `Hello, world.`, executes Android Java compilation rather than reporting `NO-SOURCE`, and produces a non-empty debug AAR.
 
-A complete fixture pass establishes daemon, loopback and SDK wiring only; it does not validate wallet compilation. Reject a partial pass. Never weaken a version pin or skip a later gate.
+A complete fixture pass that actually exercised daemon communication establishes daemon, loopback and SDK wiring only; it does not validate wallet compilation. Reject a partial pass. Never weaken a version pin or skip a later gate.
 
 **Sources**
 
@@ -777,7 +812,7 @@ There is no testnet-only build variant. Testnet-only operation comes from endpoi
 
 **Open item (OI-025):** no testnet-only variant exists; deciding whether one is needed is open.
 
-The empty-project build has never been run from this guide. No Gradle build has run for this Android project, no APK has been produced, and no device or emulator run has happened. The sandbox loopback block stopped Gradle before any build logic ran; this establishes nothing about the application code, only about that sandbox. The fixture in B.7 and the smoke build here are **APPROVED BUT UNEXECUTED** until you record a passing run for each.
+No empty-project build run has been recorded in this audit. The audit evidence records no completed Gradle build for this Android project, no APK output, and no device or emulator run. In the recorded attempt, the sandbox loopback block stopped Gradle before any build logic ran; this establishes nothing about the application code, only about that sandbox. The fixture in B.7 and the smoke build here are **APPROVED BUT UNEXECUTED** in this audit until you record a passing run for each. Approval alone does not constitute a passing run.
 
 Run the following checks in order. Make the selected B.1 tools available on your shell's `PATH`, record the results and stop on any mismatch. The Expected results below are acceptance criteria, not recorded outcomes.
 
@@ -823,13 +858,19 @@ Run the following checks in order. Make the selected B.1 tools available on your
 
    **Expected result:** The Gradle daemon builds the empty project successfully and produces `app-debug.apk`.
 
-   Check that the APK is non-empty:
+   Check that this build produces a fresh, non-empty APK. Before running the build, remove any pre-existing `app-debug.apk` files under `app`:
+
+   ```sh
+   find app -type f -name app-debug.apk -delete
+   ```
+
+   After cleanup succeeds, run or rerun the build command above, then check the APK:
 
    ```sh
    test -n "$(find app -type f -name app-debug.apk -exec test -s {} \; -print)"
    ```
 
-   **Expected result:** Exits successfully with no output. The check fails if no non-empty `app-debug.apk` is found under `app`.
+   **Expected result:** The final check exits successfully with no output. It fails if the build run after cleanup produces no non-empty `app-debug.apk` under `app`. An APK from a previous build cannot satisfy the check because it was removed before this run.
 
 5. **Check out and verify Core.** Follow the B.6 fresh-directory procedure to obtain the upstream Core repository outside the Android project. Do not reuse a working tree. Run inside that checkout and select the tag ref explicitly:
 
@@ -868,15 +909,15 @@ This is a toolchain sign-off, not permission to enable the wallet.
 
 Use this section for the Bawa testnet wallet only. Treat it as your first build verification gate: do not proceed with an unidentified AAR, an incomplete binding or a Wallet Core version other than `4.9.2`.
 
-No downloadable Android AAR exists for any Wallet Core release, including `4.9.2`. The release assets carry kdoc, `Package.swift`, a Swift tarball and xcframeworks — no AAR.
+No downloadable Android AAR is included among the Wallet Core `4.9.2` release assets. The release is marked Pre-release (`prerelease: true`); its assets carry kdoc, `Package.swift`, a Swift tarball and xcframeworks — no AAR.
 
 **Open item (OI-005):** The source build in this section has never been completed; no locally built AAR exists.
 
-Wallet Core's GitHub Packages Maven registry, `https://maven.pkg.github.com/trustwallet/wallet-core`, is the official Android distribution route for `com.trustwallet:wallet-core` and `com.trustwallet:wallet-core-proto`. It requires authentication; see the [GitHub Docs Gradle registry guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry). The bare registry URL returns HTTP 404 anonymously because authentication is required; that 404 is not evidence that the registry is dead.
+Wallet Core's GitHub Packages Maven registry, `https://maven.pkg.github.com/trustwallet/wallet-core`, is the official Android distribution route for `com.trustwallet:wallet-core` and `com.trustwallet:wallet-core-proto`. It requires authentication; see the [GitHub Docs Gradle registry guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry). The bare registry URL returns HTTP 404 anonymously. An HTTP 404 from the bare registry URL does not, by itself, establish its cause or whether the registry is live or dead; authentication is required before drawing any conclusion about the registry’s state.
 
-Configure your GitHub username as `GITHUB_USER` and a GitHub personal access token with `read:packages` scope as `GITHUB_TOKEN` in `~/.gradle/gradle.properties`, as specified in the GitHub Docs Gradle registry guidance. Never commit credential values.
+Configure your GitHub username as `GITHUB_USER` and a GitHub personal access token with `read:packages` scope as `GITHUB_TOKEN` in `~/.gradle/gradle.properties`, as specified in the GitHub Docs Gradle registry guidance; these properties work only if Gradle reads `~/.gradle/gradle.properties` for this registry, and no credentialed resolution has been demonstrated. Never commit credential values.
 
-**Open item (OI-006):** Whether `4.9.2` artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route; the `flatDir`-first local build is the verified path.
+**Open item (OI-006):** Whether `4.9.2` artefacts exist in GitHub Packages is unverified — verify with credentials before relying on that route.
 
 JitPack is not usable: the `4.8.4` log records a build failure with `LicenceNotAcceptedException` for `ndk;28.0.12674087`, and `4.9.2` also fails to build.
 
@@ -942,7 +983,6 @@ Do not edit anything in this checkout to make the build pass.
 
 - [Wallet Core 4.9.2 release](https://github.com/trustwallet/wallet-core/releases/tag/4.9.2)
 - [Wallet Core 4.9.2 Android build configuration](https://github.com/trustwallet/wallet-core/tree/4.9.2/android)
-- [Trust Wallet docs home](https://developer.trustwallet.com/)
 - [Wallet Core repository](https://github.com/trustwallet/wallet-core)
 
 ### C.2 Install the Android toolchain
@@ -983,7 +1023,7 @@ Record the selected JDK, SDK, NDK and CMake versions, including the installed SD
 
 ### C.3 Run the code-generation pre-step
 
-A fresh Core checkout does not contain the generated binding sources. `jni/proto` holds only `.gitkeep`, and `jni/java` holds two hand-written files. Upstream CI runs Android code generation before any Gradle command.
+A fresh Core checkout does not contain the generated binding sources. `jni/proto` holds only `.gitkeep`, and `jni/java` holds `wallet/` containing `core/`. Upstream CI runs Android code generation before any Gradle command.
 
 Without this pre-step, the Gradle build fails on missing generated sources. The old C.4 checklist's "generated at build time" claim was wrong; this pre-step replaces it.
 
@@ -1021,7 +1061,7 @@ ls jni/proto jni/java/wallet/core/jni
 
 **Expected result:** Generated files are present under both directories, including `HDWallet.java` under `jni/java/wallet/core/jni`.
 
-If either directory is still empty or contains only the original checkout files, stop: generation did not run. Treat a missing generated `HDWallet.java` in a fresh checkout as evidence that generation has not run yet, not as evidence that Wallet Core lacks `HDWallet`.
+If either directory is still empty or lacks the expected generated files, stop: generation has not produced the expected output; a missing generated `HDWallet.java` in a fresh checkout is consistent with generation not having run, not proof of it or evidence that Wallet Core lacks `HDWallet`, and `ls` alone does not establish whether present files are generated or checked in.
 
 **Sources**
 
@@ -1032,7 +1072,7 @@ If either directory is still empty or contains only the original checkout files,
 
 ### C.4 Build Core, then the protobuf artefact
 
-**APPROVED BUT UNEXECUTED:** This entire build has never been run; the steps below are a specified procedure for the testnet-only wallet, not a record of a passing run.
+**APPROVED BUT UNEXECUTED:** No build was executed in this audit; the steps below are a specified procedure for the testnet-only wallet, not a record of a passing run.
 
 Run both builds from the source repository's `android/` directory using its upstream Gradle 8.10.2 wrapper under JDK 17, with NDK 28.0.12674087 and CMake 3.18.1.
 
@@ -1102,11 +1142,11 @@ Keep the wallet on testnet throughout these checks.
 
 Do not judge the Android API by browsing `jni/java` alone. The `wallet.core.jni` binding classes are generated at build time from `include/TrustWalletCore/*.h` through codegen. The complete generated binding is not checked in: `jni/java` contains hand-written helpers, not the complete generated JNI API. The AAR module's `sourceSets` includes both the generated bindings and those helpers. The separate `wallet-core-proto` JAR supplies the protobuf message classes.
 
-A missing generated `HDWallet.java` in a fresh checkout is not evidence that Core lacks `HDWallet`. If it is missing from the generated output after C.3, generation did not run: **STOP** and fix generation before continuing.
+A missing generated `HDWallet.java` in a fresh checkout is consistent with generation not having run, not proof of it or evidence that Core lacks `HDWallet`; if it is missing from the generated output after C.3, generation has not produced the expected output: **STOP** and fix generation before continuing.
 
-Use the D.2 verified inventory as the authority for the required API. Do not reduce it to whichever methods happen to be convenient.
+Use the D.2 inventory as the authority for the required Java surface shown below. This inventory is derived from the C headers and is not a verified Java binding surface; the C entry points do not establish the Java methods. Do not reduce it to whichever methods happen to be convenient.
 
-| Area | Verified surface |
+| Area | Required Java surface |
 | --- | --- |
 | binding package | `wallet.core.jni` |
 | wallet construction | `HDWallet(mnemonic, passphrase)`, `HDWallet.create(strength, passphrase)` |
@@ -1118,7 +1158,7 @@ Use the D.2 verified inventory as the authority for the required API. Do not red
 | signing and planning | `AnySigner.sign`, `AnySigner.signJSON`, `AnySigner.plan` |
 | external-signature workflow | `TransactionCompiler.preImageHashes`, `TransactionCompiler.compileWithSignatures` |
 
-The `passphrase` argument in both construction entry points is the BIP-39 passphrase: pass an empty value by policy. Do not substitute the vault unlock passphrase, which is the PBKDF2 input.
+The `passphrase` argument in both construction entry points is the BIP-39 passphrase, which is empty by policy: pass an empty value. Do not substitute the vault-unlock passphrase: it is a separate input to the vault PBKDF2, not the BIP-39 passphrase.
 
 Keep the 24-word BIP-39 mnemonic distinct from the 64-byte BIP-39-derived seed. `mnemonic()`, `seed()` and `entropy()` expose different secret material; they are not interchangeable and are not diagnostic APIs. Never put their results in logs, analytics, crash reports or ordinary UI state.
 
@@ -1210,7 +1250,7 @@ Check the corresponding native implementations as well. Public declarations and 
 - Do not drop a required function.
 - Do not re-implement derivation in Kotlin.
 
-Keep the four-ABI baseline: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. A debug build filters to `x86` and `arm64-v8a` only; the release build carries all four ABIs. Do not treat a successful debug build as confirmation of release ABI coverage.
+Keep the four-ABI baseline: `arm64-v8a`, `armeabi-v7a`, `x86` and `x86_64`. A debug build filters to `x86` and `arm64-v8a` only; under Gradle defaults, the release build is expected to carry all four ABIs, but release ABI coverage has not been verified. Do not treat a successful debug build as confirmation of release ABI coverage.
 
 Require `jni/<abi>/libTrustWalletCore.so` for each baseline ABI in the release AAR. If you ship a narrower ABI set, make that decision deliberately and document the exact filter and its device/emulator consequences.
 
@@ -1333,7 +1373,7 @@ dependencyResolutionManagement {
 }
 ```
 
-**Expected result:** Dependency repositories are configured in settings, with `flatDir` first and GitHub Packages last; the GitHub Packages repository accepts only the `com.trustwallet` group.
+**Expected result:** Dependency repositories are configured in settings, with `flatDir` first and GitHub Packages last; the GitHub Packages repository's `includeGroup("com.trustwallet")` filter restricts routing to the `com.trustwallet` group for that repository only.
 
 Supply `GITHUB_USER` and `GITHUB_TOKEN` through the environment used to run Gradle. Never commit their values or put them in build files or settings.
 
@@ -1341,7 +1381,7 @@ In `core/build.gradle.kts`, replace the previous Core declarations with explicit
 
 A `flatDir` artefact has no Maven POM carrying transitive dependencies. Retain the protobuf runtime and other dependencies at their reviewed, pinned versions.
 
-Never publish the locally built AAR under `com.trustwallet` coordinates. Repository order alone is not proof of local resolution; inspect the resolved dependencies in C.7.
+Never publish the locally built AAR under `com.trustwallet` coordinates: this is a Bawa project safeguard to avoid confusion with the official artefacts, not a Gradle restriction. Repository order alone is not proof of local resolution; inspect the resolved dependencies in C.7.
 
 ### C.7 Compile Bawa and pass the fixture gate
 
@@ -1467,17 +1507,17 @@ Apply these index and API rules:
 - Insert the index as a non-hardened decimal component.
 - Never derive branch `1`.
 - Never move the index into the hardened account position.
-- Derive exactly `0/<index>` below each account public key. For Core extended-public-key derivation, use the full policy path from the table. Do not derive hardened account ancestors from an account xpub.
+- For BTC, ETH and TRX, derive exactly `0/<index>` below each account public key. For Core extended-public-key derivation, use the full policy path from the table. Do not derive hardened account ancestors from an account xpub. TON is generation-only (D.6): one deposit address, no xpub and no indexed derivation.
 - Use `getKey(coin, path)` for explicit indexed derivation. Use `getKeyForCoin` and `getAddressForCoin` only as default-path conveniences for index `0`, after the gate confirms that Core's default matches the policy.
 - Use only published test vectors for verification. If a Core default, exported node or WASM result disagrees with the table, report the mismatch and block the integration.
 
 Bawa's Bitcoin testnet4 implementation uses the mainnet derivation `m/84'/0'/0'/0/<index>` with a `zpub`; retain this pinned implementation. SLIP-0044 reserves coin `1` for testnet, while SLIP-0132 assigns Bitcoin Testnet `vpub` (`0x045f1cf6`) with `m/84'/1'`. Importing a Bawa mnemonic into a standard testnet wallet therefore derives a different account.
 
-**Open item (OI-028):** The repository guide's `docs/09` teaches `m/84'/1'`, while `docs/05`, the code and both app guides use `m/84'/0'`; the deviation and its consequence are documented in the repo guide, docs/02, 'Derivation and network policy'. This deviation is documented, not resolved.
+**Open item (OI-028):** docs/09 teaches Bawa's coin-0 policy and documents its testnet deviation; its coin-1 example concerns an external hardware signer.
 
 Repository-tool checks against the published test vector (Core `4.8.4` WASM, 8 November 2026) verified that the Bawa tools emit `zpub` for BTC and `xpub` for ETH and TRX. The policy passes an explicit `HDVersion.ZPUB` or `HDVersion.XPUB`, so the prefix is a serialisation choice driven by that parameter, not by the network. On testnet4, the BTC key still serialises as `zpub` with mainnet version bytes `0x04b24746`; `xpub` uses version bytes `0x0488b21e`.
 
-For the network-mismatch check, expect a prefix-checking tool to show `zpub` for a Bawa testnet4 key. That is expected for this policy, not an error. A `vpub` would indicate the different derivation `m/84'/1'`.
+For the network-mismatch check, expect a prefix-checking tool to show `zpub` for a Bawa testnet4 key. That is expected for this policy, not an error. A `vpub` would flag an unexpected testnet native-SegWit serialisation, not prove a different derivation branch.
 
 BTC uses native SegWit P2WPKH, with witness version `0` and a 20-byte witness programme. BTC testnet receive addresses start with `tb1q`; the guide's live addresses start with `bc1q` because the fixtures are mainnet-formatted. Treat a `bc1q` address on testnet4 as a fixture address, never a testnet receive address.
 
@@ -1507,7 +1547,7 @@ For imports:
 
 The 24-word generation setting does not introduce a new word-count restriction on imports. Use only published test vectors for fixtures.
 
-**Published ripple fixture:** The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+**Published ripple fixture:** The fixture phrase is 15 words because it is a published test vector; new wallets generated by this guide use 24-word phrases. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
 24 words encode 256 random bits plus 8 checksum bits; the checksum adds no independent randomness; the empty BIP-39 passphrase contributes no additional secret; seed-guessing resistance is separate from randomness quality, implementation security and device compromise. For the full note, see the FAQ (repository guide, Doc 1, section 14).
 
@@ -1524,13 +1564,13 @@ Enforce public-only validation inside `WalletEngine`; do not rely on the UI. Rej
 - public-key export results;
 - any compiler input advertised as public-key-only.
 
-Do not rely on an `xpub` or `zpub` text prefix. Decode and validate the Base58Check structure and checksum:
+Do not rely on an `xpub` or `zpub` text prefix. Decode and validate the Base58Check structure and checksum. Enforce the following Bawa contract restrictions of this policy, rather than treating them as universal extended-key validity rules:
 
 - Require a 78-byte payload, excluding the 4-byte checksum.
-- Require the exact allowed public version for the coin.
+- Require the exact public version allowed for the coin by this policy.
 - Require depth 3 for the exported account node.
 - Require child number `0x80000000` for hardened account 0.
-- Require a valid 33-byte compressed secp256k1 public key beginning with `0x02` or `0x03`.
+- For secp256k1 coins, require a valid 33-byte compressed secp256k1 public key beginning with `0x02` or `0x03`. This requirement does not apply to TON, which uses ed25519.
 
 Reject private versions and private-key payloads, including key data beginning with the `0x00` marker. Reject unknown versions rather than trying several interpretations. Do not automatically re-encode an incoming BTC `xpub` as a `zpub`.
 
@@ -1580,9 +1620,6 @@ TON is generation-only in this repository. Core's TON result was confirmed by an
 
 The intended TON wallet for cross-checking is unnamed; the gate stays **FAIL** until it is named.
 
-**Sources**
-
-- [TON TEP-3 wallets standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md)
 
 ### D.7 Mandatory offline fixture gate
 
@@ -1606,7 +1643,7 @@ TON — same mnemonic and passphrase; ton_path: m/44'/607'/0'; contract: Wallet 
 
 The fixture mnemonic's entropy is `ba5821e8c356c05ba5f025d9532fe0f21f65d594`. Core's own test table uses the BIP-39 passphrase `TREZOR`, which gives a different seed and different addresses; Bawa uses the empty BIP-39 passphrase. Do not substitute the table's passphrase or its resulting expectations.
 
-> The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+> The fixture phrase is 15 words because it is a published test vector; new wallets generated by this guide use 24-word phrases. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
 The previous Android draft used the BIP-84 abandon vector and the Hardhat default as anchors; those vectors remain in this guide only as quoted test vectors for the round-trip and rejection checks below, not as the wallet's fixtures. Three mnemonics appear because each anchors a different published standard (BIP-84, Hardhat, Core), not because the wallet uses three mnemonics. The Web guide uses the same ripple pair as this guide.
 
@@ -1681,7 +1718,7 @@ A check that fails must report `FAILED` and keep the gate closed; never substitu
 
   **Key:** `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`
 
-  **Expected result:** The gate rejects it for an unknown version.
+  **Expected result:** The gate rejects it for version/key-type mismatch.
 
 A first-hand Core 4.8.4 WASM run on 8 November 2026 confirmed the ripple BTC, ETH and TRX addresses and the TON address from the same test vector.
 
@@ -1697,7 +1734,7 @@ The testnet fixture gate reports **READY** only when every check in D.7 passes. 
 
 - [BIP-84 and its published test vectors](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
 - [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
-- [Hardhat default accounts](https://hardhat.org/hardhat-network/docs/reference#initial-state)
+- [Hardhat default accounts](https://v2.hardhat.org/hardhat-network/docs/reference#initial-state)
 
 ### Derivation warnings (D31, 2026-11-08)
 
@@ -1713,7 +1750,7 @@ With the same BIP-39 passphrase, a testnet wallet restricted to discovery under 
 
 Limit signing and planning to testnet. Keep all native signing inputs and outputs inside the adapter.
 
-For `AnySigner.sign` and `signJSON`, use the selected coin's schema and error handling source-verified against the Trust Wallet Core 4.9.2 tag. As with the 4.8.4 tag source check, this covers the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
+For `AnySigner.sign` and `signJSON`, verify the selected coin's schema and error handling against the Trust Wallet Core 4.9.2 tag sources before relying on them. This verification remains outstanding and must cover the protobuf fields, EIP-1559 Enveloped mode and big-endian `uint256` encoding.
 
 Core's ETH signer needs `txMode: 1` (Enveloped) for EIP-1559 — the protobuf enum value is `1`, while `0x02` is the wire type byte; do not confuse the two.
 
@@ -1730,7 +1767,7 @@ Keep TON generation-only.
 
 ### D.9 Manage native lifetime and address the deletion gap
 
-The Trust Wallet Core 4.8.4 source confirms `GenericPhantomReference` plus `WCFinalizingDaemon` as the native-cleanup machinery. Check whether the generated `HDWallet` exposes an explicit `delete()` method.
+The Trust Wallet Core 4.8.4 source confirms `GenericPhantomReference` plus `WCFinalizingDaemon` as the native-cleanup machinery. Check whether the generated `HDWallet` exposes an explicit `delete()` method. The absence of `delete()` in the C header `TWHDWallet.h` proves nothing about the generated Java binding's API; only checking the packaged generated binding settles whether explicit release exists.
 
 Phantom-reference cleanup is driven by reachability and garbage collection; it does not prove deterministic deletion when an operation returns. Calling `System.gc()`, dropping a reference or waiting briefly does not meet the deletion requirement.
 
@@ -1770,7 +1807,7 @@ Applies: security rules S-1 to S-15 (repository guide, docs/08 and docs/15).
 
 - Preserve the repository's envelope format and derivation policy. Encrypt vault contents with AES-256-GCM. Generate a 32-byte data key from a cryptographically secure random source; never derive it from a mnemonic, device identifier or user credential. Use a fresh 12-byte nonce for every encryption, including rewrites and retries; never reuse it with the same data key.
 
-- For Android, use the repository's fixed additional authenticated data (AAD), `nova-shop-seed-v1`, specified in the repository's `tools/decrypt_seed.py` line 19, the repository's `tools/hdwallet-gen/generate.js` line 147 and the validation draft's `VaultEnvelope.kt` (`const val AAD = "nova-shop-seed-v1"`). Match the prescribed bytes and encoding; never substitute file paths, build versions, wallet labels, local strings or the Web vault's `bawa-web-vault-v1`.
+- For Android, use the repository's fixed additional authenticated data (AAD), `nova-shop-seed-v1`, specified in the repository's `tools/decrypt_seed.py` line 22, the repository's `tools/hdwallet-gen/generate.js` lines 36, 178, 225 and the validation draft's `VaultEnvelope.kt` (`const val AAD = "nova-shop-seed-v1"`). Match the prescribed bytes and encoding; never substitute file paths, build versions, wallet labels, local strings or the Web vault's `bawa-web-vault-v1`.
 
 - Store nonce, ciphertext and authentication tag in the existing envelope encoding; exclude plaintext and the unwrapped data key. Complete GCM authentication before releasing, parsing or passing plaintext to wallet code; never stream unauthenticated output into a parser.
 
@@ -1807,6 +1844,15 @@ The Keystore prescriptions are **APPROVED BUT UNEXECUTED**: supported-device har
 - Refuse to store secrets if you cannot establish the required hardware backing, authentication gate, verification or safe storage. Clear transient material and report the failure without secret-bearing diagnostics. Never fall back to plaintext SharedPreferences, unencrypted files or a software wrapping key.
 
 Loss or invalidation of the device wrapping key can make the vault unreadable. Use the existing mnemonic-restoration flow for recovery and keep the derivation policy unchanged. Never use a hidden copy of the wrapping key.
+
+**Additional testnet-wallet requirements**
+
+- **Recents:** The testnet wallet must exclude secret screens from recents thumbnails.
+- **Lifecycle/callback invalidation:** The testnet wallet must invalidate secrets and authentication state on lifecycle transitions and callback invalidation; stale callbacks must not restore access.
+- **Key disposal:** The testnet wallet must deterministically dispose of the wrapping key and transient secret material, without relying on garbage collection.
+- **Autofill:** The testnet wallet must disable autofill for secret fields.
+- **Saved state:** The testnet wallet must never persist secrets in saved instance state.
+- **IME learning:** The testnet wallet must disable IME learning and personalised suggestions for secret input.
 
 **Sources**
 
@@ -2029,11 +2075,11 @@ Run these checks in a shell with `curl` and `jq`. Treat all example heights and 
 
 **Bitcoin testnet4**
 
-**VERIFIED** — As of 2026-11-08, the draft selection at `NetworkConfig.kt:36-38`, `https://blockstream.info/testnet/api/`, served **testnet3**, with tip **5,303,415** (R04 F12). It is **not acceptable** for this guide’s Bitcoin testnet4 adapter.
+**VERIFIED** — As of 2026-11-08, the draft endpoint `https://blockstream.info/testnet/api/` served **testnet3**, with tip **5,303,415** (R04 F12). It is **not acceptable** for this guide’s Bitcoin testnet4 adapter.
 
 > **Warning** — The draft URL supplies testnet3 data to a testnet4 integration. Replace it with the testnet4 endpoint and repeat the identity checks; do not accept the configuration until the defect and check results agree.
 
-Fix `NetworkConfig.kt:36-38` to select `https://mempool.space/testnet4/api` for this worked example. Blocked pending OI-033.
+Replace the draft endpoint `https://blockstream.info/testnet/api/` (R04 F12) with `https://mempool.space/testnet4/api` for this worked example. Blocked pending OI-033.
 
 ```sh
 btc_api='https://mempool.space/testnet4/api'
@@ -2042,13 +2088,13 @@ curl -fsS "$btc_api/blocks/tip/height"
 
 > **Expected result**
 >
-> **VERIFIED** — As of 2026-11-08, the live check recorded this example output (R07 F8):
+> **VERIFIED** — As of 2026-11-08, the live check recorded this example height (R07 F8):
 >
 > ```text
 > 159813
 > ```
 >
-> Use the dated contrast with the draft’s testnet3 tip as the worked example’s network-identity check. Recheck the live tip and pinned network identity for each build; do not require a future response to equal this example height.
+> `159813` is a dated example only, not a network-identity check. For each build, recheck the live tip and establish the pinned network identity by comparing the endpoint’s genesis or checkpoint block hash against the corresponding known testnet4 genesis or checkpoint hash; do not require a future response to equal this example height.
 
 **Ethereum Sepolia execution RPC**
 
@@ -2064,13 +2110,15 @@ curl -fsS \
 
 > **Expected result**
 >
-> **VERIFIED** — As of 2026-11-08, the live check recorded this example output, equivalent to decimal **11155111** (R07 F8):
+> **VERIFIED** — As of 2026-11-08, the live check recorded this example raw JSON-RPC response (R07 F8):
 >
-> ```text
-> 0xaa36a7
+> ```json
+> {"jsonrpc":"2.0","id":1,"result":"0xaa36a7"}
 > ```
 >
-> Reject the endpoint if the command fails. Treat a passing result as the provider’s declared chain identity, not authentication of its other answers.
+> The `jq` filter extracts bare `0xaa36a7` from `.result`, equivalent to decimal **11155111**.
+>
+> Reject the endpoint if the command fails. A passing `eth_chainId` response verifies only the declared chain (Sepolia, 11155111); it does not by itself identify which provider served it or authenticate that provider's other answers.
 
 **Ethereum Sepolia history indexer**
 
@@ -2107,13 +2155,13 @@ Reconcile an indexed block with the execution RPC before accepting the indexer. 
 
 > **Expected result**
 >
-> **APPROVED BUT UNEXECUTED** — As of 2026-11-08, the required successful output for this reconciliation check is:
+> **EXECUTED / PASS** — On 2026-11-15, the Blockscout reconciliation check passed at block 12141208, with the indexed hash equal to the execution RPC hash:
 >
 > ```text
 > Sepolia indexer block hash matches the execution RPC.
 > ```
 >
-> Capture an actual run before accepting the indexer. A failed request, missing block or hash mismatch must prevent acceptance; matching hashes still leave reliance on both providers’ honesty.
+> A failed request, missing block or hash mismatch must prevent acceptance; one matching block does not establish history completeness, and matching hashes still leave reliance on both providers’ honesty.
 
 **TRON Nile**
 
@@ -2167,11 +2215,11 @@ curl -fsS "$ton_api/getMasterchainInfo" |
 | Bitcoin testnet4 | 6 | Count confirmations in the accepted chain. Use the threshold as the wallet’s completion policy, while retaining reorganisation handling; do not treat it as irreversible protocol finality. |
 | Ethereum Sepolia | 12 | Use the threshold for the wallet’s confirmed state. Report protocol finalisation only when the inclusion block belongs to the RPC’s `finalized` view. Preserve receipt success or failure separately. |
 | TRON Nile | 19 | Require the threshold and inclusion in the solidified chain before treating inclusion as final. Preserve execution success or failure separately; full-node depth alone does not establish solidification. |
-| TON testnet | 1 masterchain seqno | Require masterchain anchoring of the transaction’s shard inclusion and apply the seqno-based threshold. Keep anchored inclusion separate from message-trace and execution outcomes. |
+| TON testnet | 1 masterchain seqno beyond the recorded anchor | Require masterchain anchoring of the transaction’s shard inclusion. Record the anchoring masterchain seqno when the shard inclusion is observed; the threshold is met only when the masterchain has advanced at least one seqno beyond that anchor. The anchor seqno itself does not count. Keep anchored inclusion separate from message-trace and execution outcomes. |
 
 **Testnet walkthrough**
 
-> **Warning** — As of 2026-11-08, importing a Bawa mnemonic into a standard Bitcoin testnet wallet derives a different BTC account. Preserve the pinned derivation policy and use the existing offline engine; compare its first public address with the receiving address before obtaining test funds.
+> **Warning** — As of 2026-11-08, importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different BTC account. Preserve the pinned derivation policy and use the existing offline engine; compare its first public address with the receiving address before obtaining test funds.
 
 Preserve the documented BTC testnet4 deviation, OI-032: use `m/84'/0'/0'/0/i` with a zpub. SLIP-0044 reserves coin **1** for testnet, and SLIP-0132 assigns Bitcoin Testnet `vpub 0x045f1cf6` with `m/84'/1'`. Document this compatibility consequence without changing the pinned implementation. Keep the zpub outside the adapter.
 
@@ -2325,21 +2373,24 @@ Return `Unsupported` for token schemes that Bawa does not explicitly support. Bi
 
 ### Network identity
 
-**VERIFIED** — As of 2026-11-08, the draft endpoint at `NetworkConfig.kt:36-38`, `https://blockstream.info/testnet/api/`, serves **testnet3**, not testnet4. The live check returned tip height `5,303,415`. This endpoint is **not acceptable** for Bitcoin testnet4.
+**VERIFIED** — As of 2026-11-08, the draft endpoint `https://blockstream.info/testnet/api/` serves **testnet3**, not testnet4. The live check returned tip height `5,303,415` (R04 F12). This endpoint is **not acceptable** for Bitcoin testnet4.
 
 **Warning** — The draft endpoint returns observations from the wrong chain. Replace it with a testnet4 provider; check network identity before accepting balances, history or confirmations.
 
-Fix the endpoint defect at `NetworkConfig.kt:36-38` and configure the Bitcoin provider for **mempool.space testnet4**. Bitcoin provider integration: Blocked pending OI-033.
+Fix the endpoint defect at `https://blockstream.info/testnet/api/` (R04 F12) and configure the Bitcoin provider for **mempool.space testnet4**. Bitcoin provider integration: Blocked pending OI-033.
 
-Run the testnet4 tip-height check as network-identity proof:
+Verify the provider's chain against the pinned testnet4 genesis hash before running the tip-height check:
 
 ```sh
-curl https://mempool.space/testnet4/api/blocks/tip/height
+expected_genesis='00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043'
+provider_genesis=$(curl --fail --silent --show-error https://mempool.space/testnet4/api/block-height/0) || exit 1
+[ "$provider_genesis" = "$expected_genesis" ] || { echo "testnet4 genesis hash mismatch; reject this provider" >&2; exit 1; }
+curl --fail https://mempool.space/testnet4/api/blocks/tip/height
 ```
 
 > **Expected result**
 >
-> The response body contains an integer representing the testnet4 tip height. **VERIFIED** — As of 2026-11-08, the live check of this endpoint returned `159813`. Expect a larger number now. Record the returned height and check date; never hardcode `159813` as the current tip.
+> The provider's height-0 block hash must exactly match the independently pinned testnet4 genesis hash above before accepting its network identity. Reject the provider if the hash lookup fails or mismatches. The tip-height response then contains an integer representing the testnet4 tip height; an integer height alone is not network-identity proof. **VERIFIED (height only)** — As of 2026-11-08, the live tip-height check returned `159813`. Expect a larger number now. Record the matched genesis hash, returned height, and check date; never hardcode `159813` as the current tip.
 
 ### Queries and watching
 
@@ -2347,11 +2398,11 @@ curl https://mempool.space/testnet4/api/blocks/tip/height
 
 Keep derivation and address discovery local. Do not upload an xpub, register an HD wallet with a provider or ask a provider to derive addresses. Preserve the existing local discovery policy and its limits.
 
-Use Esplora’s per-address balance, UTXO and transaction-history queries, transaction retrieval and chain-tip information. For Electrum, calculate the protocol’s script hash locally from each watched address’s script, then use the corresponding balance, history, unspent-output and subscription methods.
+Use Esplora's per-address statistics to derive balances, and use its UTXO and transaction-history queries, transaction retrieval and chain-tip information. For Electrum, calculate the protocol's scripthash locally from each watched address's scriptPubKey as hex(reverse(SHA256(scriptPubKey))), then use the corresponding balance, history, unspent-output and subscription methods. Subscriptions report history-status changes, not transaction payloads.
 
 Fetch confirmed and mempool history where the provider supports them. Deduplicate transactions that appear under several wallet addresses. Do not substitute a UTXO list for transaction history.
 
-Account for the remaining disclosure from per-address queries. A provider can still correlate requests by connection, timing and address activity.
+Account for the remaining disclosure from per-address queries. Per-address querying reduces disclosure but does not guarantee unlinkability or anonymity. A provider can still correlate requests by connection, timing and address activity.
 
 ### Building and fees
 
@@ -2383,7 +2434,7 @@ Report unusable fee estimates explicitly when sparse testnet activity prevents a
 
 ### Confirmation
 
-**VERIFIED** — Apply a BTC threshold of **6 confirmations** (BUILD-LOG Stage 2 / `NetworkConfig.kt`, `confirmationsRequired`).
+Apply a BTC policy threshold of **6 confirmations**; this is not a Bitcoin guarantee of irreversibility.
 
 Track the transaction ID, inclusion block hash and inclusion height against the current canonical tip:
 
@@ -2402,8 +2453,8 @@ Handle a reorganisation as a reversible state transition, including after the th
 ### Sources
 
 - [mempool.space testnet4 tip-height endpoint](https://mempool.space/testnet4/api/blocks/tip/height) — checked 2026-11-08.
-- [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; defect at `NetworkConfig.kt:36-38` (OI-033).
-- BUILD-LOG Stage 2 / `NetworkConfig.kt`, `confirmationsRequired` — BTC threshold of 6 confirmations; check date: 2026-11-08.
+- [Draft Blockstream endpoint — testnet3, rejected for testnet4](https://blockstream.info/testnet/api/) — checked 2026-11-08; endpoint defect confirmed by live-check record R04 F12 (OI-033).
+- BUILD-LOG Stage 2 / this guide's Confirmation and finality policy table — BTC policy threshold of 6 confirmations; check date: 2026-11-08.
 
 ### F.6 — Ethereum Sepolia
 
@@ -2478,9 +2529,9 @@ Record the quote’s block context and freshness. Rebuild the unsigned transacti
 
 > **Warning**
 >
-> **VERIFIED** — As of 2026-11-08, Blockscout Sepolia’s `total_blocks` is a stale cached counter: it stayed at **12088950** across **11.5 minutes** while the execution RPC head advanced **495 blocks** (R07 F4). Using this counter as the current head misreports progress. Never present it as the current head; reconcile indexed block hashes with the execution RPC.
+> **VERIFIED** — As of 2026-11-08, Blockscout Sepolia’s `total_blocks` indexed count stayed at **12088950** across **11.5 minutes** while the execution RPC head advanced **495 blocks** (R07 F4). The indexed count is distinct from the indexed tip (latest indexed block) and the execution head (latest block reported by the execution RPC). Never present the indexed count as the current head; reconcile indexed block hashes with the execution RPC.
 
-Track the receipt’s block hash and canonical inclusion through **12 confirmations**, the Ethereum threshold (BUILD-LOG Stage 2 / `NetworkConfig.kt`).
+Track the receipt’s block hash and canonical inclusion through **12 confirmations**, an application-configured threshold (BUILD-LOG Stage 2 / this guide’s confirmation policy).
 
 Mark a receipt with execution status `0` as **included but failed**, even after it reaches the confirmation threshold. Do not display it as a successful transfer because it consumed gas or entered a block.
 
@@ -2622,7 +2673,7 @@ curl --fail --silent --show-error 'https://testnet.toncenter.com/api/v2/getMaste
 
 **Expected result**
 
-> The documented request returns masterchain information, including the masterchain seqno. The command rejects URLs outside `https://testnet.toncenter.com/`.
+> The documented request returns masterchain information, including the masterchain seqno. The validating probe wrapper (the `case` statement above) rejects URLs outside `https://testnet.toncenter.com/`; a literal `curl` invocation performs no such prefix check.
 >
 > **VERIFIED** — As of 2026-11-08, the `getMasterchainInfo` check at [TON Center testnet](https://testnet.toncenter.com/) returned masterchain seqno `96561294` (~2.5/sec). Treat this as a dated example; do not require later responses to match it.
 
@@ -2636,7 +2687,7 @@ Verify the jetton master before resolving the holder’s jetton wallet contract 
 
 ### Fees
 
-**Warning** — Exporting keys for fee estimation exposes key material. Use the documented unsigned or simulation mode; check that estimation neither exports keys nor creates dummy signing material.
+**Warning** — Exporting keys for fee estimation exposes key material. Use the documented unsigned or simulation mode; check that estimation neither exports keys nor creates placeholder signature bytes for simulation (dummy signatures, not generated or exported private keys).
 
 Estimate fees through the testnet API or SDK using the actual candidate message, account state and any required state initialisation.
 
@@ -2800,7 +2851,7 @@ Never report both “cancelled” and “signature delivered” for one request.
 
 **Return public signing results only.** The signer returns either the required signatures or signature components, or the chain-specific signed transaction representation, together with public metadata. It returns no private keys. A returned transaction is a candidate result, not authority to replace or modify the frozen approved transaction. Before broadcast the app must: (a) decode the candidate and check its fields, signing parameters and chain context match the frozen scope, permitting only expected signature-related additions; (b) independently verify every required signature using the expected public keys and the signing preimages and context from the frozen scope; (c) validate the actual final transaction to be broadcast. Keep the local transaction-ID calculation and adapter-ID comparison as an additional consistency check only.
 
-**VERIFIED** — As of 2026-11-08, the draft’s `CoreWalletEngine` returns `out.encoded` for BTC/ETH and `out.json` for TRX, and verifies only the transaction-ID match (`CoreWalletEngine.kt:431-466`). That check alone is insufficient. Require the app to satisfy the contract above before broadcast.
+**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the draft’s `CoreWalletEngine` returns `out.encoded` for BTC/ETH and `out.json` for TRX, and verifies only the transaction-ID match (`CoreWalletEngine.kt:431-466`). That check alone is insufficient. Require the app to satisfy the contract above before broadcast.
 
 Return an error without signature material on failure. Do not expose partial results from a request that fails validation.
 
@@ -3112,38 +3163,38 @@ Do not provide **private-key export** on any surface, in diagnostics, through an
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| `Screens.Welcome` | **VERIFIED** — As of 2026-11-08, draft symbol declarations:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Welcome`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.unlockWallet()`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.listWallets()`, `WalletSession.unlock()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.unlockWallet()`. | **Wallet listing:** `WalletSession.listWallets()`.<br>**Unlock entry points:** `WalletViewModel.unlockWallet()`, `WalletSession.unlock()`, `WalletEngine.unlockWallet()`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for the metadata-only projection, provisioned-key protection report, read-only policy summary, permitted-network enumeration and protected authentication/device-credential hand-off. | **Warning** Inferring key protection from device capability can overstate the vault’s protection. Use the provisioned key’s actual report; check that the report describes the existing key before displaying a backing claim.<br><br>**Loading:** Show that you are checking wallet storage and device protection.<br>**Ready:** Offer the available create, import and open routes. Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.<br>**Hardware backing:** Show the actual reported protection of provisioned vault keys, distinguishing **StrongBox**, **trusted execution environment**, **software backing** and **unknown** where the platform can report those distinctions. Before provisioning, show **not yet provisioned**. Do not treat device capability as proof of an existing key’s protection. Do not describe the whole wallet as hardware-signed merely because a vault wrapping key is hardware-backed.<br>**Stale:** Mark an earlier security report as last known, not current verification.<br>**Locked:** Show the locked state and supported unlock action; give Locked precedence over cached content.<br>**Gate-failed:** State that opening did not proceed. Offer a deliberate retry or a supported device-credential route.<br>**Error:** Distinguish an unreadable or invalidated vault from “no wallet found”. Do not encourage replacement creation as though the original wallet did not exist.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, especially vault files, key objects, credentials and mnemonic material. Treat wallet presence and security status solely as metadata, not permission to inspect the vault. Keep credential handling within the vault’s trusted boundary. | Trace listing and unlock delegation through the cited entry points. Confirm that presentation receives metadata and lifecycle/result messages only. Exercise the reported backing categories, the unprovisioned state, stale reports, authentication failure and supported recovery routes. Confirm that Locked overrides cached content and that unreadable or invalidated vaults never follow the “no wallet found” route.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Until then, treat this as a testnet guide for a testnet wallet. |
+| `Screens.Welcome` | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, draft symbol declarations:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Welcome`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.unlockWallet()`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.listWallets()`, `WalletSession.unlock()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.unlockWallet()`. | **Wallet listing:** `WalletSession.listWallets()`.<br>**Unlock entry points:** `WalletViewModel.unlockWallet()`, `WalletSession.unlock()`, `WalletEngine.unlockWallet()`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for the metadata-only projection, provisioned-key protection report, read-only policy summary, permitted-network enumeration and protected authentication/device-credential hand-off. | **Warning** Inferring key protection from device capability can overstate the vault’s protection. Use the provisioned key’s actual report; check that the report describes the existing key before displaying a backing claim.<br><br>**Loading:** Show that you are checking wallet storage and device protection.<br>**Ready:** Offer the available create, import and open routes. Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.<br>**Hardware backing:** Show the actual reported protection of provisioned vault keys, distinguishing **StrongBox**, **trusted execution environment**, **software backing** and **unknown** where the platform can report those distinctions. Before provisioning, show **not yet provisioned**. Do not treat device capability as proof of an existing key’s protection. Do not describe the whole wallet as hardware-signed merely because a vault wrapping key is hardware-backed.<br>**Stale:** Mark an earlier security report as last known, not current verification.<br>**Locked:** Show the locked state and supported unlock action; give Locked precedence over cached content.<br>**Gate-failed:** State that opening did not proceed. Offer a deliberate retry or a supported device-credential route.<br>**Error:** Distinguish an unreadable or invalidated vault from “no wallet found”. Do not encourage replacement creation as though the original wallet did not exist.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, especially vault files, key objects, credentials and mnemonic material. Treat wallet presence and security status solely as metadata, not permission to inspect the vault. Keep credential handling within the vault’s trusted boundary. | Trace listing and unlock delegation through the cited entry points. Confirm that presentation receives metadata and lifecycle/result messages only. Exercise the reported backing categories, the unprovisioned state, stale reports, authentication failure and supported recovery routes. Confirm that Locked overrides cached content and that unreadable or invalidated vaults never follow the “no wallet found” route.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Until then, treat this as a testnet guide for a testnet wallet. |
 
 ### H.2 Create wallet
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| `Screens.Create` | **VERIFIED** — As of 2026-11-08, draft symbol declarations:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Create`, `Screens.Backup`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.createWallet()`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.create()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.createWallet()`. | **Creation entry points:** `WalletViewModel.createWallet()`, `WalletSession.create()`, `WalletEngine.createWallet()`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for reading the existing creation policy, checking readiness, observing and reconciling an operation by reference, reading the public wallet summary and obtaining backup status. | **Warning** Sending generated material to ordinary UI exposes private material, while a silent downgrade conceals unsupported protection. Keep generation and secret-dependent engine work inside the vault’s trusted boundary and reject silent downgrades; check operation results and follow only vault-directed recovery.<br><br>**Creation boundary:** Limit presentation requests to the existing read-only policy reference and a non-secret label. Let the vault generate secrets and invoke secret-dependent engine work within its trusted boundary. Do not accept UI-provided entropy, a seed or a derivation override. Return only lifecycle and result messages to presentation.<br>**Loading:** Show protection provisioning and wallet creation. Disable duplicate submission.<br>**Ready:** Show completion with the correct backup status. “Wallet created” does not mean “mnemonic backed up”.<br>**Stale:** Show that an interrupted operation has an unknown or old result. Query its existing operation reference rather than creating another wallet.<br>**Locked:** Show that creation or opening cannot continue until the required vault access becomes available.<br>**Gate-failed:** Show that requested provisioning or unlock authentication did not complete.<br>**Error:** Distinguish unsupported protection, storage failure and incomplete creation. Offer reconciliation or retry only as the vault directs; never silently downgrade protection.<br>**Connectivity:** Create without requiring a network source of randomness. Do not disguise connectivity failure as secret-generation failure.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, especially generated entropy, the mnemonic, seeds, private keys and data-encryption keys. Route backup to H.4 through `Screens.Backup` using only a wallet reference; do not pass backup contents or secret-bearing state. | Trace creation delegation and confirm that generation and secret-dependent engine calls remain within the vault’s trusted boundary. Complete creation without connectivity. Verify that duplicate submission cannot start another creation, and reconcile interruption through the original operation reference. Exercise protection, storage, authentication and incomplete-creation failures separately. Confirm accurate backup status and a wallet-reference-only hand-off to `Screens.Backup`; inspect presentation boundaries for forbidden data.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Live creation has not run: Blocked pending OI-031. TESTNET-only does not mean testnet-tested. |
+| `Screens.Create` | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, draft symbol declarations:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Create`, `Screens.Backup`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.createWallet()`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.create()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.createWallet()`. | **Creation entry points:** `WalletViewModel.createWallet()`, `WalletSession.create()`, `WalletEngine.createWallet()`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for reading the existing creation policy, checking readiness, observing and reconciling an operation by reference, reading the public wallet summary and obtaining backup status. | **Warning** Sending generated material to ordinary UI exposes private material, while a silent downgrade conceals unsupported protection. Keep generation and secret-dependent engine work inside the vault’s trusted boundary and reject silent downgrades; check operation results and follow only vault-directed recovery.<br><br>**Creation boundary:** Limit presentation requests to the existing read-only policy reference and a non-secret label. Let the vault generate secrets and invoke secret-dependent engine work within its trusted boundary. Do not accept UI-provided entropy, a seed or a derivation override. Return only lifecycle and result messages to presentation.<br>**Loading:** Show protection provisioning and wallet creation. Disable duplicate submission.<br>**Ready:** Show completion with the correct backup status. “Wallet created” does not mean “mnemonic backed up”.<br>**Stale:** Show that an interrupted operation has an unknown or old result. Query its existing operation reference rather than creating another wallet.<br>**Locked:** Show that creation or opening cannot continue until the required vault access becomes available.<br>**Gate-failed:** Show that requested provisioning or unlock authentication did not complete.<br>**Error:** Distinguish unsupported protection, storage failure and incomplete creation. Offer reconciliation or retry only as the vault directs; never silently downgrade protection.<br>**Connectivity:** Create without requiring a network source of randomness. Do not disguise connectivity failure as secret-generation failure.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, especially generated entropy, the mnemonic, seeds, private keys and data-encryption keys. Route backup to H.4 through `Screens.Backup` using only a wallet reference; do not pass backup contents or secret-bearing state. | Trace creation delegation and confirm that generation and secret-dependent engine calls remain within the vault’s trusted boundary. Complete creation without connectivity. Verify that duplicate submission cannot start another creation, and reconcile interruption through the original operation reference. Exercise protection, storage, authentication and incomplete-creation failures separately. Confirm accurate backup status and a wallet-reference-only hand-off to `Screens.Backup`; inspect presentation boundaries for forbidden data.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Live creation has not run: Blocked pending OI-031. TESTNET-only does not mean testnet-tested. |
 
 ### H.3 Import wallet
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| `Screens.Import` | **VERIFIED** — As of 2026-11-08, draft symbol declarations:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Import`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.importWallet()` and balances/history state.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.import()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.previewImport()`, `WalletEngine.deriveAddress()`. | **Import entry points:** `WalletViewModel.importWallet()`, `WalletSession.import()`.<br>**Engine operations:** `WalletEngine.previewImport()`, `WalletEngine.deriveAddress()`.<br>**Public presentation:** balances/history state in `WalletViewModel`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for import-capability and policy reads, entry to the protected import ceremony, operation observation, the public wallet summary, backup status and engine-coordinated public-data refresh. `previewImport()` is not a substitute for the protected input ceremony. | **Warning** Ordinary import controls can leak the mnemonic through autofill, saved state or third-party input paths. Keep supported input and validation inside the vault-owned ceremony; verify the same capture precautions as backup presentation and check that only lifecycle and result messages reach presentation.<br><br>**Import boundary:** Do not collect a mnemonic in ordinary UI and pass it onwards. Keep `WalletEngine.previewImport()` and any secret-dependent address derivation within the protected ceremony. Preserve the empty BIP-39 passphrase policy. Do not add private-key import, alternative derivation searches or new import formats merely because a template supports them.<br>**Loading:** Distinguish validation inside the ceremony, local wallet-record creation and public network-data fetching through lifecycle messages.<br>**Ready:** Show import acceptance, discovered public wallet information and accurate backup status. Keep full public addresses available.<br>**Stale:** Preserve the successful import when balances or history have not refreshed. Show **Not refreshed** (`NotRefreshed`) for unrefreshed data; do not instruct another import as the remedy.<br>**Locked:** Show that the protected import session is unavailable or has closed.<br>**Gate-failed:** Show that required vault authentication did not complete.<br>**Error:** Show a non-secret validation or storage reason. Never quote rejected mnemonic fragments or other input.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, including the entered mnemonic, BIP-39 passphrase, validation buffers and input fragments in error messages. Prevent ordinary autofill, saved-state and third-party input paths from leaking import material.<br>**Connectivity boundary:** Route subsequent discovery and balance/history refresh through engine-coordinated permitted connectivity. Supply connectivity only with the public query material required by the existing engine design; keep public refresh separate from import acceptance. | Trace import delegation and confirm that supported input, validation and secret-dependent engine calls remain inside the protected ceremony. Exercise accepted and rejected input, authentication failure, session closure and storage failure. Confirm that errors contain no input and that capture precautions prevent leakage through ordinary input and state paths. Verify the empty BIP-39 passphrase policy and reject unsupported import extensions. Preserve successful import when public refresh fails; check backup status, public-only connectivity queries and presentation payloads.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Live restore has not run: Blocked pending OI-031. |
+| `Screens.Import` | **UNPUSHED DRAFT** — Symbol declarations as of 2026-11-08, not verified main evidence:<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Import`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.importWallet()` and balances/history state.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.import()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.previewImport()`, `WalletEngine.deriveAddress()`. | **Import entry points:** `WalletViewModel.importWallet()`, `WalletSession.import()`.<br>**Engine operations:** `WalletEngine.previewImport()`, `WalletEngine.deriveAddress()`.<br>**Public presentation:** balances/history state in `WalletViewModel`.<br>**OPEN** — As of 2026-11-08: **NO DRAFT API — adapter requirement** for import-capability and policy reads, entry to the protected import ceremony, operation observation, the public wallet summary, backup status and engine-coordinated public-data refresh. `previewImport()` is not a substitute for the protected input ceremony. | **Warning** Ordinary import controls can leak the mnemonic through autofill, saved state or third-party input paths. Keep supported input and validation inside the vault-owned ceremony; verify the same capture precautions as backup presentation and check that presentation receives only the allowed data. Allowed: lifecycle and result messages carrying only non-secret status (import acceptance, discovered public wallet information, backup status). Forbidden: the mnemonic, the BIP-39 passphrase, validation buffers, input fragments, and error messages quoting input.<br><br>**Import boundary:** Do not collect a mnemonic in ordinary UI and pass it onwards. Keep `WalletEngine.previewImport()` and any secret-dependent address derivation within the protected ceremony. Preserve the empty BIP-39 passphrase policy. Do not add private-key import, alternative derivation searches or new import formats merely because a template supports them.<br>**Loading:** Distinguish validation inside the ceremony, local wallet-record creation and public network-data fetching through lifecycle messages.<br>**Ready:** Show import acceptance, discovered public wallet information and accurate backup status. Keep full public addresses available.<br>**Stale:** Preserve the successful import when balances or history have not refreshed. Show **Not refreshed** (`NotRefreshed`) for unrefreshed data; do not instruct another import as the remedy.<br>**Locked:** Show that the protected import session is unavailable or has closed.<br>**Gate-failed:** Show that required vault authentication did not complete.<br>**Error:** Show a non-secret validation or storage reason. Never quote rejected mnemonic fragments or other input.<br>**Must never receive:** Exclude the shared forbidden set from ordinary UI and every shared sink, including the entered mnemonic, BIP-39 passphrase, validation buffers and input fragments in error messages. Prevent ordinary autofill, saved-state and third-party input paths from leaking import material.<br>**Connectivity boundary:** Route subsequent discovery and balance/history refresh through engine-coordinated permitted connectivity. Supply connectivity only with the public query material required by the existing engine design; keep public refresh separate from import acceptance. | Trace import delegation and confirm that supported input, validation and secret-dependent engine calls remain inside the protected ceremony. Exercise accepted and rejected input, authentication failure, session closure and storage failure. Confirm that errors contain no input and that capture precautions prevent leakage through ordinary input and state paths. Verify the empty BIP-39 passphrase policy and reject unsupported import extensions. Preserve successful import when public refresh fails; check backup status, public-only connectivity queries and presentation payloads.<br><br>**OPEN** — As of 2026-11-08, build and device/emulator verification: Blocked pending OI-005 and OI-035. Live restore has not run: Blocked pending OI-031. |
 
 ### H.4 Mnemonic backup
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
 | `Screens.Backup` — reveal and status | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens`, including `Screens.Backup`.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.pendingBackupWords`.<br><br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession`, the required ceremony boundary. | As of 2026-11-08:<br><br>**VERIFIED** — `WalletViewModel.pendingBackupWords` holds the 24 mnemonic words in ViewModel memory until verification. `Screens.Backup` renders them as ordinary `Text` composables. This path does not satisfy the vault-owned ceremony.<br><br>**OPEN** — Backup reveal remains unimplemented at the required vault-owned boundary. **NO DRAFT API — adapter requirement**: non-secret backup-status retrieval, freshly authorised reveal, session observation and session termination. | **Warning** — ViewModel-held words expose mnemonic material to ordinary UI state. Keep reveal unavailable until a vault-owned component inside the `WalletSession`/vault boundary passes review; check that only lifecycle, status and result messages plus non-secret acknowledgement metadata reach the presentation layer.<br><br>Show **Loading** while preparing the protected surface and requesting authentication; reveal nothing behind the prompt.<br>Show **Ready** with non-secret backup status and access to the ceremony only after a fresh successful gate.<br>Show **Stale** for old acknowledgements; never reuse an old session or authorisation to reopen the mnemonic.<br>End the protected session and remove its mnemonic surface before showing **Locked**.<br>Reveal nothing on **Gate-failed**; show cancellation, lockout or another non-secret reason.<br>Close the reveal session on **Error** and show a non-secret recovery action outside the secret-rendering area.<br><br>Exclude the shared forbidden set, including mnemonic text, individual confirmation words, screenshots and encrypted mnemonic payloads intended for presentation-side decryption. Label states in text rather than colour alone. | **OPEN** — Inspect the vault-owned component and its presentation-facing payloads. Reject any mnemonic words or secret inputs in `WalletViewModel` or ordinary screen state. Exercise every state and confirm that no content appears behind authentication and no old authorisation reopens the ceremony.<br><br>Runtime checks: Blocked pending OI-005 and OI-035. |
-| `Screens.Backup` — ordered confirmation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:195-227` — `Screens.Backup` quiz.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.verifyBackup()` and `pendingBackupWords`.<br><br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.markBackupVerified()`. | As of 2026-11-08:<br><br>**VERIFIED** — The draft selects three positions with `(0 until 24).shuffled(Random(System.currentTimeMillis())).take(3)`. On a three-word match, `WalletViewModel.verifyBackup()` clears `pendingBackupWords` and calls `WalletSession.markBackupVerified()`. This completion path is a draft defect; it does not satisfy §E.3.<br><br>**OPEN** — **NO DRAFT API — adapter requirement**: full ordered re-entry and validation inside the vault-owned ceremony. | **Warning** — A three-word match can mark backup complete without the required full confirmation. Replace the quiz with full ordered re-entry of all 24 mnemonic words inside the vault-owned ceremony; check that only the vault records the result.<br><br>Keep the confirmation exercise and every secret input inside that boundary. Never set a “backed up” boolean merely by opening the screen. Keep the backup gate locked until you replace the quiz: Blocked pending OI-071. | **OPEN** — Check that only successful full ordered re-entry within the vault boundary can reach `markBackupVerified()`. Reject screen entry, partial matches, incorrect ordering and failed gates as completion conditions. Confirm that no confirmation words reach ordinary UI state. |
+| `Screens.Backup` — ordered confirmation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:195-227` — `Screens.Backup` quiz.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel.verifyBackup()` and `pendingBackupWords`.<br><br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.markBackupVerified()`. | As of 2026-11-08:<br><br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — The draft selects three positions with `(0 until 24).shuffled(Random(System.currentTimeMillis())).take(3)`. On a three-word match, `WalletViewModel.verifyBackup()` clears `pendingBackupWords` and calls `WalletSession.markBackupVerified()`. This completion path is a draft defect; it does not satisfy §E.3.<br><br>**OPEN** — **NO DRAFT API — adapter requirement**: full ordered re-entry and validation inside the vault-owned ceremony. | **Warning** — A three-word match can mark backup complete without the required full confirmation. Replace the quiz with full ordered re-entry of all 24 mnemonic words inside the vault-owned ceremony; check that only the vault records the result.<br><br>Keep the confirmation exercise and every secret input inside that boundary. Never set a “backed up” boolean merely by opening the screen. Keep the backup gate locked until you replace the quiz: Blocked pending OI-071. | **OPEN** — Check that only successful full ordered re-entry within the vault boundary can reach `markBackupVerified()`. Reject screen entry, partial matches, incorrect ordering and failed gates as completion conditions. Confirm that no confirmation words reach ordinary UI state. |
 | `Screens.Backup` — Android windows and lifecycle | `app/src/main/java/com/bawa/wallet/ui/App.kt:104-120` — `MainActivity` and `FLAG_SECURE` handling. | As of 2026-11-08:<br><br>**VERIFIED** — The draft’s window-level handling applies `FLAG_SECURE` while the Backup or Import route is visible and clears it elsewhere. This implemented protection is insufficient on its own.<br><br>**OPEN** — **NO DRAFT API — adapter requirement**: vault-owned reveal teardown and protected-surface lifecycle integration. | **Warning** — Recents thumbnails can expose mnemonic content, and `FLAG_SECURE` does not protect against an external camera or a compromised device. Apply `FLAG_SECURE` to every hosting window before loading or rendering the mnemonic; test recents capture and lifecycle closure before enabling reveal.<br><br>Hide backup content from the app switcher. Disable recents screenshots where supported; on other supported versions, test and use a `FLAG_SECURE` window with a placeholder/closure strategy.<br><br>Do not rely solely on painting over content in `onPause`; thumbnail capture may already have occurred.<br><br>Close the reveal and discard its transient secret state inside the vault boundary on backgrounding, navigation away or session expiry. Require a new gate on return. Keep protections active until you finish tearing down the secret surface.<br><br>Offer no copy, share, print, QR or private-key export action. | **OPEN** — As of 2026-11-08, no Core AAR, Gradle build, APK or device/emulator run exists. Blocked pending OI-005 and OI-035.<br><br>Test supported Android versions for flag activation before content loading, recents hiding, background/navigation/expiry closure, teardown ordering and fresh authentication on return. |
 
 ### H.5 Portfolio dashboard
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| `Screens.Portfolio` — holdings, valuation and freshness | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens`, including `Screens.Portfolio`.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel` balances state.<br><br>`core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter`. | As of 2026-11-08:<br><br>**VERIFIED** — `WalletViewModel` contains balances state. `ChainAdapter` provides the balance API surface through `getBalance()` and `getTokenBalances()`.<br><br>**OPEN** — **NO DRAFT API — adapter requirement**: portfolio-level observation and refresh orchestration, price and valuation data, and separate freshness metadata. Treat these as integration requirements, not an established end-to-end call path. | Show **Loading** while fetching balances and valuations; do not substitute a temporary zero portfolio.<br><br>Show **Ready** with wallet and testnet network context, holdings, valuation currency and relevant observation times.<br><br>Show **Stale** with separate freshness for on-chain balances and price data. Display “last updated” rather than presenting an old total as live.<br><br>Show **Error** with distinct total-failure, partial-result, unavailable-price and individual-asset cases.<br><br>Keep unknown prices unknown; never classify their assets as zero-value. Keep the warning visible whenever untrusted metadata contributes to presentation. Never imply that the portfolio total verifies those assets.<br><br>Label states in text rather than colour alone. | **OPEN** — Blocked pending OI-005 and OI-035.<br><br>Trace refresh through the real balance methods into presentation state after implementing the orchestration adapter. Independently delay or fail balance and price responses. Check wallet/network context, currency, observation times, independently stale sources, unknown-price handling, warning persistence and distinctions between total and partial failure. |
+| `Screens.Portfolio` — holdings, valuation and freshness | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens`, including `Screens.Portfolio`.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel` balances state.<br><br>`core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter`. | As of 2026-11-08:<br><br>**UNPUSHED DRAFT** — The unpushed draft declares `WalletViewModel` balances state and `ChainAdapter.getBalance()` / `ChainAdapter.getTokenBalances()` as the balance API surface; these declarations are not verified on main.<br><br>**OPEN** — **NO INSPECTABLE API ON MAIN — adapter requirement**: portfolio-level observation and refresh orchestration, price and valuation data, and separate freshness metadata. Treat these as integration requirements, not an established end-to-end call path. | Show **Loading** while fetching balances and valuations; do not substitute a temporary zero portfolio.<br><br>Show **Ready** with wallet and testnet network context, holdings, valuation currency and relevant observation times.<br><br>Show **Stale** with separate freshness for on-chain balances and price data. Display “last updated” rather than presenting an old total as live.<br><br>Show **Error** with distinct total-failure, partial-result, unavailable-price and individual-asset cases.<br><br>Keep unknown prices unknown; never classify their assets as zero-value. Keep the warning visible whenever untrusted metadata contributes to presentation. Never imply that the portfolio total verifies those assets.<br><br>Label states in text rather than colour alone. | **OPEN** — Blocked pending OI-005 and OI-035.<br><br>Trace refresh through the real balance methods into presentation state after implementing the orchestration adapter. Independently delay or fail balance and price responses. Check wallet/network context, currency, observation times, independently stale sources, unknown-price handling, warning persistence and distinctions between total and partial failure. |
 | `Screens.Portfolio` — access state and data boundary | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens`, including `Screens.Portfolio`.<br><br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel` presentation boundary. | As of 2026-11-08:<br><br>**OPEN** — **NO DRAFT API — adapter requirement**: connectivity-state observation and shared vault-state observation. Supply only non-secret state and gate outcomes to the presentation layer. | Remove wallet totals and holdings from the visible surface on **Locked**; let Locked take precedence over cached content.<br><br>Show **Gate-failed** when a requested unlock or protected navigation does not proceed.<br><br>Exclude the shared forbidden set from `Screens.Portfolio`, its ViewModel state and presentation-facing observation payloads. Explicitly exclude account derivation secrets, extended keys, vault records and authenticated connectivity URLs.<br><br>Do not treat public financial data as suitable for telemetry merely because it is not key material. | **OPEN** — Blocked pending OI-005 and OI-035.<br><br>Lock a populated portfolio and confirm that cached totals and holdings disappear. Fail an unlock or protected-navigation gate and confirm that the requested action does not proceed. Inspect presentation payloads and telemetry paths for forbidden data; reject automatic telemetry eligibility based solely on financial data containing no key material. |
 
 ### H.6 Asset list
 
-As of 2026-11-08, **VERIFIED** covers the cited draft declarations only.
+As of 2026-11-08, **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) covers the cited draft declarations only.
 
 | Screen | Actual source path and symbol | Actual API / call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
@@ -3151,7 +3202,7 @@ As of 2026-11-08, **VERIFIED** covers the cited draft declarations only.
 
 ### H.7 Asset detail
 
-As of 2026-11-08, **VERIFIED** covers the cited draft declarations only.
+As of 2026-11-08, **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) covers the cited draft declarations only.
 
 | Screen | Actual source path and symbol | Actual API / call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
@@ -3169,12 +3220,12 @@ Until then, treat this as a testnet guide for a testnet wallet. Mainnet is absen
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| Receive — address allocation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.reserveAddress()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine`. | **VERIFIED** — As of 2026-11-08, the cited draft symbols provide receive-address state in `WalletViewModel`, reservation through `WalletSession.reserveAddress()`, and the engine entry points `WalletEngine.deriveAddress(chain, xpub, index)` and `WalletEngine.tonDepositAddress(walletId)`. Verify their delegation during integration; this symbol mapping does not establish an executed call chain. | **Warning** — Secret-bearing data that you pass to Receive can reach ordinary UI channels. Keep the forbidden set, public-key derivation objects and any secret encoded as a QR outside Receive; check that ordinary UI receives only the approved public request and verified rendering reference.<br><br>Show **Loading** while obtaining and validating the address. Preserve the existing address-allocation policy. Do not allocate a new address during recomposition or when reopening the view unless that policy requires it. | Trace the wiring between receive-address state, reservation and the applicable engine entry point. Exercise recomposition and reopening; confirm that allocation follows the unchanged policy. Inspect UI-boundary payloads and reject forbidden data or derivation objects. |
+| Receive — address allocation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.reserveAddress()`.<br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine`. | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the cited draft symbols provide receive-address state in `WalletViewModel`, reservation through `WalletSession.reserveAddress()`, and the engine entry points `WalletEngine.deriveAddress(chain, xpub, index)` and `WalletEngine.tonDepositAddress(walletId)`. Verify their delegation during integration; this symbol mapping does not establish an executed call chain. | **Warning** — Secret-bearing data that you pass to Receive can reach ordinary UI channels. Keep the forbidden set, public-key derivation objects and any secret encoded as a QR outside Receive; check that ordinary UI receives only the approved public request and verified rendering reference.<br><br>Show **Loading** while obtaining and validating the address. Preserve the existing address-allocation policy. Do not allocate a new address during recomposition or when reopening the view unless that policy requires it. | Trace the wiring between receive-address state, reservation and the applicable engine entry point. Exercise recomposition and reopening; confirm that allocation follows the unchanged policy. Inspect UI-boundary payloads and reject forbidden data or derivation objects. |
 | Receive — address validation and public request | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — receive-address state in `WalletViewModel`.<br>Use these as integration points, not as evidence of a validator or request builder. | **OPEN** — As of 2026-11-08, ownership validation, permitted-network validation and payment-request construction require adapters: **NO DRAFT API — adapter requirement**.<br>The QR payload format is pinned in the repo guide's docs/07 Receive QR payloads table (D25). Encode the selected chain's approved payload with error correction explicitly set to M. Decode the actual QR output used by the UI, require the decoded text to match the intended payload, then parse and verify it against the selected network, recipient and associated request. Do not present a failed result as a verified QR. | Validate ownership and permitted network context before approving public receive data. The payload format is pinned in docs/07; retain the requirement for a **verified payment-request QR**; do not substitute the draft’s bare-address bitmap.<br>Show **Ready** only with the complete address, unmistakable network name, relevant asset information and matching verified QR. Keep the full address available wherever you show receive content.<br>Show **Error** for address, network or ownership mismatches. Disable copy and sharing for a failed request. | Confirm that address, ownership and network failures produce **Error** and prevent copy or share. Check every Ready field against the approved request and verified rendering. The payload format is pinned in the repo guide's docs/07 (OI-061); test payment-request interoperability against the pinned format. |
-| Receive — QR generation and decode-back verification | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — QR rendering within `Screens.Receive`, using `QRCodeWriter`.<br>V4 QR audit, 2026-11-08. | **VERIFIED** — As of 2026-11-08, this is the only draft QR-generation point. The draft configures ZXing core **3.5.3** `QRCodeWriter` for a **512×512** bitmap containing the bare address only. Its QR is display-only and unverified at runtime. The implementation lacks payment-request fields, decode-back verification and the required **Stale** and **Error** states. It also encodes with the ZXing default error correction L, not the required M.<br>Output decoding and decoded-payment-request verification: **NO DRAFT API — adapter requirement**. | Generate the QR without requesting camera permission. Show **Loading** while preparing it.<br>Decode the actual generated output, then validate the decoded request against the approved public request and current context. Do not substitute validation of the input text for verification of the rendered output. Return a verified rendering reference only after those checks succeed.<br>Show **Error** for a QR mismatch and prevent copy or share of the failed request. Keep all secrets out of QR payloads. | Decode the actual generated bitmap and compare its address and supported payment-request fields with the approved request. Reject mismatched output and withhold Ready, copy and sharing. Treat decode-back verification as an implementation requirement, not existing draft behaviour. Complete format-dependent checks after resolving the payload contract: Blocked pending OI-061. |
+| Receive — QR generation and decode-back verification | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — unpushed draft reference only for QR generation within `Screens.Receive`, using `QRCodeWriter`; not main implementation evidence.<br>V4 QR audit, 2026-11-08. | **DRAFT/UNVERIFIABLE** — As of 2026-11-08, this is an unpushed draft QR-generation reference only; the implementation remains **OPEN**. The draft configures ZXing core **3.5.3** `QRCodeWriter` for a **512×512** BitMatrix containing the bare address only. Its QR is display-only and unverified at runtime. The implementation lacks payment-request fields, decode-back verification and the required **Stale** and **Error** states. It also encodes with the ZXing default error correction L, not the required M.<br>Output decoding and decoded-payment-request verification: **NO DRAFT API — adapter requirement**. | Generate the QR without requesting camera permission. Show **Loading** while preparing it.<br>Decode the actual generated output, then validate the decoded request against the approved public request and current context. Do not substitute validation of the input text for verification of the rendered output. Return a verified rendering reference only after those checks succeed.<br>Show **Error** for a QR mismatch and prevent copy or share of the failed request. Keep all secrets out of QR payloads. | Decode the actual generated BitMatrix and compare its address and supported payment-request fields with the approved request. Reject mismatched output and withhold Ready, copy and sharing. Treat decode-back verification as an implementation requirement, not existing draft behaviour. Complete format-dependent checks after resolving the payload contract: Blocked pending OI-061. |
 | Receive — context and vault-state changes | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — balances and receive-address state in `WalletViewModel`. | **OPEN** — As of 2026-11-08, context observation and shared vault-state observation require adapters: **NO DRAFT API — adapter requirement**. Connect them to the existing UI state without introducing secret-bearing state. | Show **Stale** and require revalidation of cached requests or QR renderings after wallet, network or policy-context changes. Do not invalidate a locally validated address solely because the balance feed is offline.<br>Give **Locked** precedence over cached content: hide wallet-specific receive content and disable sharing.<br>Show **Gate-failed** when a required unlock does not complete. Do not automatically continue a queued share.<br>Communicate every state without relying on colour alone. | Change the wallet, network and policy context; confirm that cached approval cannot survive the change. Take the balance feed offline without changing context; confirm that this alone does not invalidate the address. Lock while receive content is cached, then cancel or fail a required unlock; confirm hidden content, disabled sharing and no automatic queued share. |
 | Receive — public copy and verified sharing | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — receive-address state in `WalletViewModel`.<br>Use these as UI integration points. | **OPEN** — As of 2026-11-08, guarded public copying and current-context verified-request sharing require adapters: **NO DRAFT API — adapter requirement**. | **Warning** — Sharing after a context change can give the recipient an obsolete request. Recheck the request’s context immediately before sharing; cancel the action if current validation fails.<br><br>Guard every clipboard action and name the selected network in copy warnings. Require current validation before copying approved public fields or sharing a verified request. Reject a verification badge from an earlier context. Never copy or share a failed request. | Change context between verification and the copy or share action; confirm that the action requires fresh validation and cannot rely on the earlier badge. Check that copy warnings name the selected network and that outbound data contains only approved public fields. Confirm that a failed required unlock does not resume sharing automatically. |
-| Receive — camera permission and scanning dependency | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — `QRCodeWriter` rendering.<br>V4 QR audit — Android manifest and scanner findings. | **VERIFIED** — As of 2026-11-08, the Android manifest declares an unused `CAMERA` permission. Neither draft contains a scanner library or camera code; QR scanning exists nowhere in the drafts. The dead permission is a draft defect.<br>QR scanning: **NO DRAFT API — adapter requirement**. | Remove the dead `CAMERA` permission, or retain it only once an implemented scanner uses it. Do not request camera permission for receive-QR generation.<br>Keep both receive-QR and scanning in scope, following the 2026-11-08 scope decision. Apply the shared QR, camera and data-boundary guards when implementing scanning. | Inspect the manifest for unused permission declarations and confirm that Receive generation needs no camera grant. Demonstrate an implemented scanner before claiming scanning availability.<br>**OPEN** — Scanning verification is Blocked pending OI-060. |
+| Receive — camera permission and scanning dependency | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Receive`.<br>`app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:629-643` — `QRCodeWriter` rendering.<br>V4 QR audit — Android manifest and scanner findings. | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the Android manifest declares an unused `CAMERA` permission. Neither draft contains a scanner library or camera code; QR scanning exists nowhere in the drafts. The dead permission is a draft defect.<br>QR scanning: **NO DRAFT API — adapter requirement**. | Remove the dead `CAMERA` permission, or retain it only once an implemented scanner uses it. Do not request camera permission for receive-QR generation.<br>Keep both receive-QR and scanning in scope, following the 2026-11-08 scope decision. Apply the shared QR, camera and data-boundary guards when implementing scanning. | Inspect the manifest for unused permission declarations and confirm that Receive generation needs no camera grant. Demonstrate an implemented scanner before claiming scanning availability.<br>**OPEN** — Scanning verification is Blocked pending OI-060. |
 
 ### H.9 Send
 
@@ -3186,12 +3237,12 @@ As of 2026-11-08, use these draft mappings as implementation targets for the tes
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 | --- | --- | --- | --- | --- |
-| `Screens.Send`<br><br>**1. Obtain recipient input.** | **VERIFIED** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for guarded camera input and user-initiated clipboard paste. | Route camera input and pasted content through the guarded public-input route. Require explicit user action before reading payment-request content from the clipboard. | Check that both input routes apply the public-input guards and that paste cannot proceed without your explicit action. |
-| `Screens.Send`<br><br>**Warning** — A silent network switch changes the intended chain context → reject unsupported or mismatched requests → check that the selected network remains unchanged.<br><br>**2. Parse and validate the request.** | **VERIFIED** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for payment-request parsing and recipient/network validation. | Parse the payment request and validate the recipient against the selected network context. Do not let an unsupported or mismatched request silently change that context. `P.scanPaymentRequest` must pass decoded text through `E.parsePaymentRequest`, then `E.verifyPaymentRequest`. Apply the same per-chain checks as the render path. Display the parsed request details, preserve ETH's full suggested value, and identify information supplied by configuration or separate request metadata. A successful scan or parse is not proof of payment. | Test unsupported and network-mismatched requests. Confirm rejection without a change to the selected network. |
-| `Screens.Send`<br><br>**3. Prepare the immutable review.** | **VERIFIED** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter`. | Use the draft surfaces `ChainAdapter.getBalance()`, `ChainAdapter.getTokenBalances()` and `ChainAdapter.estimateFee()`.<br><br>**OPEN** — NO DRAFT API — adapter requirement for preparing and freezing the review, obtaining spend inputs and performing any supported simulation. | Obtain the required spendable balance, fees, spend inputs and any supported simulation through connectivity. Use those inputs to prepare the immutable review and frozen transaction scope. Do not approve a review while required inputs remain unavailable. | Check that the review has the required spendable-balance, fee and spend-input data. Check that any supported simulation contributes to the review and that the frozen scope represents the reviewed payment. |
-| `Screens.Send`<br><br>**4. Show the immutable review.** | **VERIFIED** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for reading and displaying the immutable review. | Show the immutable review prepared for approval. Keep that review tied to the frozen scope; do not substitute values from a subsequently edited draft. | Check that the displayed review agrees with the frozen scope and that later draft edits cannot silently alter either. |
-| `Screens.Send`<br><br>**Warning** — Private-key output exposes keys beyond the signer → return public signing results only → check that no private keys leave the signing boundary.<br><br>**5. Authorise signing explicitly.** | **VERIFIED** — `app/src/main/java/com/bawa/wallet/signing/SigningCoordinator.kt` — `SigningCoordinator.signApproved`.<br><br>`core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.signFrozenPayload`. | Enter `SigningCoordinator.signApproved(review, currentPayload)` after explicit approval; use `WalletEngine.signFrozenPayload(FrozenPayload): Result<ByteArray>` as the signing boundary.<br><br>**OPEN** — NO DRAFT API — adapter requirement for collecting approval and handling authorisation.<br><br>**VERIFIED** — `CoreWalletEngine` returns `out.encoded` for BTC/ETH and `out.json` for TRX (R04 F25/F27). | **Return public signing results only.** Return the required signatures or signature components, or the chain-specific signed transaction representation, in either case together with public metadata. Return no private keys. Treat any returned transaction as a candidate, not as authority to replace or modify the frozen approved transaction. | Check that explicit approval and agreement with the frozen scope precede signing. Check that results contain only the permitted public signing material and reach the coordinator’s pre-broadcast checks before any broadcast. |
-| `Screens.Send`<br><br>**Warning** — Broadcasting an altered candidate can submit an unapproved transaction → complete every pre-broadcast check → reject any mismatch or validation failure.<br><br>**6. Validate and broadcast the final transaction.** | **VERIFIED** — `app/src/main/java/com/bawa/wallet/signing/SigningCoordinator.kt` — `SigningCoordinator.signApproved`.<br><br>`core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter.broadcastSigned`. | Within `SigningCoordinator.signApproved(review, currentPayload)`, broadcast through `adapter.broadcastSigned(signedBytes, expectedTxId)`.<br><br>**VERIFIED** — `CoreWalletEngine` checks transaction-ID agreement only (R04 F25/F27).<br><br>**OPEN** — NO DRAFT API — adapter requirement for candidate assembly/decoding, candidate-field and signing-context checks, independent signature verification and final-transaction validation. | Perform the checks inside the coordinator before its broadcast call. Assemble a candidate from the frozen transaction if the signer returns signatures or components. **(a)** Decode the candidate and check its fields, signing parameters and chain context against the frozen scope, allowing only expected signature-related additions. **(b)** Verify every required signature independently using the expected public keys and the signing preimages and context from the frozen scope. **(c)** Validate the actual final transaction that you will broadcast. Calculate its transaction ID locally before submission; compare the adapter-returned ID afterwards as an additional consistency check only. | Test altered candidate fields, signing parameters and chain context; missing or invalid required signatures; and invalid final transactions. Confirm that matching transaction IDs cannot bypass these checks and that only the validated final transaction reaches `broadcastSigned`. |
+| `Screens.Send`<br><br>**1. Obtain recipient input.** | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for guarded camera input and user-initiated clipboard paste. | Route camera input and pasted content through the guarded public-input route. Require explicit user action before reading payment-request content from the clipboard. | Check that both input routes apply the public-input guards and that paste cannot proceed without your explicit action. |
+| `Screens.Send`<br><br>**Warning** — A silent network switch changes the intended chain context → reject unsupported or mismatched requests → check that the selected network remains unchanged.<br><br>**2. Parse and validate the request.** | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for payment-request parsing and recipient/network validation. | Parse the payment request and validate the recipient against the selected network context. Do not let an unsupported or mismatched request silently change that context. `P.scanPaymentRequest` must pass decoded text through `E.parsePaymentRequest`, then `E.verifyPaymentRequest`. Apply the same per-chain checks as the render path. Display the parsed request details, preserve ETH's full suggested value, and identify information supplied by configuration or separate request metadata. A successful scan or parse is not proof of payment. | Test unsupported and network-mismatched requests. Confirm rejection without a change to the selected network. |
+| `Screens.Send`<br><br>**3. Prepare the immutable review.** | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter`. | Use the draft surfaces `ChainAdapter.getBalance()`, `ChainAdapter.getTokenBalances()` and `ChainAdapter.estimateFee()`.<br><br>**OPEN** — NO DRAFT API — adapter requirement for preparing and freezing the review, obtaining spend inputs and performing any supported simulation. | Obtain the required spendable balance, fees, spend inputs and any supported simulation through connectivity. Use those inputs to prepare the immutable review and frozen transaction scope. Do not approve a review while required inputs remain unavailable. | Check that the review has the required spendable-balance, fee and spend-input data. Check that any supported simulation contributes to the review and that the frozen scope represents the reviewed payment. |
+| `Screens.Send`<br><br>**4. Show the immutable review.** | **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.Send`. | **OPEN** — NO DRAFT API — adapter requirement for reading and displaying the immutable review. | Show the immutable review prepared for approval. Keep that review tied to the frozen scope; do not substitute values from a subsequently edited draft. | Check that the displayed review agrees with the frozen scope and that later draft edits cannot silently alter either. |
+| `Screens.Send`<br><br>**Warning** — Private-key output exposes keys beyond the signer → return public signing results only → check that no private keys leave the signing boundary.<br><br>**5. Authorise signing explicitly.** | **UNPUSHED DRAFT REFERENCE ONLY** — `app/src/main/java/com/bawa/wallet/signing/SigningCoordinator.kt` — `SigningCoordinator.signApproved`.<br><br>**UNPUSHED DRAFT REFERENCE ONLY** — `core/src/main/java/com/bawa/wallet/core/WalletEngine.kt:37` — `WalletEngine.signFrozenPayload`. | Unpushed draft sketch only (exact signatures and implementations are unverified): enter `SigningCoordinator.signApproved(review, currentPayload)` after explicit approval; use `WalletEngine.signFrozenPayload(FrozenPayload): Result<ByteArray>` as the proposed signing boundary.<br><br>**OPEN** — NO DRAFT API — adapter requirement for collecting approval and handling authorisation.<br><br>**VERIFIED** — `CoreWalletEngine` returns `out.encoded` for BTC/ETH and `out.json` for TRX (R04 F25/F27). | **Return public signing results only.** Return the required signatures or signature components, or the chain-specific signed transaction representation, in either case together with public metadata. Return no private keys. Treat any returned transaction as a candidate, not as authority to replace or modify the frozen approved transaction. | Check that explicit approval and agreement with the frozen scope precede signing. Check that results contain only the permitted public signing material and reach the coordinator’s pre-broadcast checks before any broadcast. |
+| `Screens.Send`<br><br>**Warning** — Broadcasting an altered candidate can submit an unapproved transaction → complete every pre-broadcast check → reject any mismatch or validation failure.<br><br>**6. Validate and broadcast the final transaction.** | **UNPUSHED DRAFT REFERENCE ONLY** — `app/src/main/java/com/bawa/wallet/signing/SigningCoordinator.kt` — `SigningCoordinator.signApproved`.<br><br>**UNPUSHED DRAFT REFERENCE ONLY** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter.broadcastSigned`. | Unpushed draft call sketch only (not verified on main; exact signatures and execution unverified): `SigningCoordinator.signApproved(review, currentPayload)` → `adapter.broadcastSigned(signedBytes, expectedTxId)`.<br><br>**VERIFIED** — `CoreWalletEngine` checks transaction-ID agreement only (R04 F25/F27).<br><br>**OPEN** — NO DRAFT API — adapter requirement for candidate assembly/decoding, candidate-field and signing-context checks, independent signature verification and final-transaction validation. | Perform the checks inside the coordinator before its broadcast call. Assemble a candidate from the frozen transaction if the signer returns signatures or components. **(a)** Decode the candidate and check its fields, signing parameters and chain context against the frozen scope, allowing only expected signature-related additions. **(b)** Verify every required signature independently using the expected public keys and the signing preimages and context from the frozen scope. **(c)** Validate the actual final transaction that you will broadcast. Calculate its transaction ID locally before submission as the chain-defined identifier of the original final transaction, derived per the selected chain’s rules and scoped to the selected chain and network; compare it with the adapter-returned ID afterwards as an additional consistency check only. | Test altered candidate fields, signing parameters and chain context; missing or invalid required signatures; and invalid final transactions. Confirm that matching transaction IDs cannot bypass these checks and that only the validated final transaction reaches `broadcastSigned`. |
 | `Screens.Send`<br><br>**Warning** — Creating another payment can duplicate an uncertain submission → reconcile the original transaction → check its history and confirmation state.<br><br>**7. Reconcile uncertain submission.** | **VERIFIED** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter.trackConfirmation` and `ChainAdapter.getHistory`. | Use the draft surfaces `ChainAdapter.trackConfirmation()` and, where needed, `ChainAdapter.getHistory()`.<br><br>**OPEN** — NO DRAFT API — adapter requirement for submission reconciliation. | Reconcile the original final transaction using its locally calculated transaction ID. Track its outcome rather than preparing or signing another payment to resolve uncertainty. | Test an uncertain broadcast outcome. Confirm that tracking and history refer to the original transaction and that reconciliation does not create, sign or submit another payment. |
 
 
@@ -3199,7 +3250,7 @@ The owner decided on 2026-11-08 to keep both receive-QR and scanning in scope.
 
 ### Screen-to-implementation traceability
 
-As of 2026-11-08, **VERIFIED** — the cited draft paths contain the named symbols. Apply the shared contract boundaries to every row. Treat the verification criteria as requirements, not demonstrated outcomes.
+As of 2026-11-08, **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) covers only the presence of the named symbols in the cited draft paths. Apply the shared contract boundaries to every row. Treat the verification criteria as requirements, not demonstrated outcomes.
 
 As of 2026-11-08, Trust Wallet Core 4.9.2 is the signing pin for built apps. The live EIP-1559 proof against this pin was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. See Doc 3, Consolidated open-items register, `OI-004`.
 
@@ -3218,7 +3269,7 @@ Use testnet for every verification criterion. TESTNET-only does not mean testnet
 
 ### H.10 Transaction history
 
-**VERIFIED** — As of 2026-11-08, the draft contains `Screens.History`, `WalletViewModel` history state, `ChainAdapter.getHistory()` and `ChainAdapter.trackConfirmation()` at the source locations below.
+**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the draft contains `Screens.History`, `WalletViewModel` history state, `ChainAdapter.getHistory()` and `ChainAdapter.trackConfirmation()` at the source locations below.
 
 Apply the shared contract to every row. Treat the cited methods as integration points, not evidence of completed screen wiring.
 
@@ -3286,7 +3337,7 @@ Implement the adapter operation in this order. Do not switch by assigning a UI p
 
    Implement these checks at the adapter boundary. Do not accept an endpoint’s display name as identity evidence.
 
-   **VERIFIED** — As of 2026-11-08, the draft BTC endpoint serves testnet3 (`core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt`). **OPEN** — BTC network-identity acceptance: Blocked pending OI-033.
+   **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the draft BTC endpoint serves testnet3 (`core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt`). **OPEN** — BTC network-identity acceptance: Blocked pending OI-033.
 
 > **Warning** — Committing a switch with an unresolved signing outcome can lose its association with the original network. Resolve and record any possible completion before committing; stop the transition while the outcome remains unresolved.
 
@@ -3320,18 +3371,18 @@ Apply the shared contract boundaries throughout. Treat the cited methods as draf
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| Wallet management — metadata, selection and renaming | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.WalletManagement`; `Screens.Security` for the draft limitation (`Screens` declaration at line 53).<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.listWallets()`. | As of 2026-11-08:<br>**VERIFIED** — Draft listing entry point: `WalletSession.listWallets()`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for wallet-summary and backup-status reads, wallet selection and renaming. | Show **Loading** while reading wallet metadata. Show wallet identity, backup status and available management actions in **Ready**. Make protected management actions unavailable in **Locked**.<br>Invalidate previous approvals when you select another wallet, as for a network change. Accept only a non-secret label when you rename a wallet.<br>**VERIFIED** — As of 2026-11-08, `Screens.Security` limits the draft to one sealed spending mnemonic per install. Add further wallets as watch-only rows only.<br>Never pass the forbidden set or backup contents to this screen during any management operation, including inventory and deletion. Offer no private-key export before deletion, after deletion or as a recovery shortcut. | Inspect the listing projection and adapter wiring for non-secret metadata only. Check wallet identity, backup status, available actions and Locked precedence over cached content. Verify selection-driven approval invalidation, non-secret renaming and the single-spending-mnemonic/watch-only constraint. |
+| Wallet management — metadata, selection and renaming | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.WalletManagement`; `Screens.Security` for the draft limitation (`Screens` declaration at line 53).<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.listWallets()`. | As of 2026-11-08:<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — Draft listing entry point: `WalletSession.listWallets()`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for wallet-summary and backup-status reads, wallet selection and renaming. | Show **Loading** while reading wallet metadata. Show wallet identity, backup status and available management actions in **Ready**. Make protected management actions unavailable in **Locked**.<br>Invalidate previous approvals when you select another wallet, as for a network change. Accept only a non-secret label when you rename a wallet.<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, `Screens.Security` limits the draft to one sealed spending mnemonic per install. Add further wallets as watch-only rows only.<br>Never pass the forbidden set or backup contents to this screen during any management operation, including inventory and deletion. Offer no private-key export before deletion, after deletion or as a recovery shortcut. | Inspect the listing projection and adapter wiring for non-secret metadata only. Check wallet identity, backup status, available actions and Locked precedence over cached content. Verify selection-driven approval invalidation, non-secret renaming and the single-spending-mnemonic/watch-only constraint. |
 | Wallet management — deletion inventory and confirmation | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.WalletManagement`. | As of 2026-11-08:<br>**OPEN** — **NO DRAFT API — adapter requirement** for deletion planning, inventory revalidation, confirmation data and retained-recovery-route exception records. | Show **Loading** while calculating deletion scope. Include every app-controlled wallet store: relevant local key and Keystore entries; secret containers and app-controlled wallet files; engine caches, history caches, drafts and generated receive/QR artefacts; app-controlled backups and associated backup records; and other registered wallet-specific caches.<br>Mark an old deletion plan **Stale**. Revalidate its inventory before execution; never delete using an old inventory.<br>Record **retained recovery routes as exceptions** in both the confirmation and receipt, including a user-held paper copy, external backup, another device or original import source. Record route metadata and disposition only, never recovery material. | Compare the inventory with every registered wallet-specific store without returning secret or backup contents to the UI. Change the inventory after planning and confirm that execution requires revalidation. Inspect confirmation and receipt data for metadata-only recovery-route exceptions. |
-| Wallet management — deletion and receipt | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.WalletManagement`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.delete(walletId)`. | As of 2026-11-08:<br>**VERIFIED** — `WalletSession.delete(walletId)` deletes the wallet.<br>**OPEN** — **NO DRAFT API — adapter requirement** for authorisation, full-inventory deletion coordination, deletion receipts and retry orchestration. | **Warning** — Deletion can remove local keys and app-controlled backups. Review the current inventory and retained recovery-route exceptions before authorising. Cancel if inventory revalidation or the supported vault gate fails.<br>Execute deletion only after authorisation. Coordinate vault deletion, engine-cache deletion, connectivity subscription shutdown and removal of registered platform artefacts across the complete inventory.<br>Show **Loading** while deleting. Keep protected deletion unavailable in **Locked**. Show **Gate-failed** when the destructive action does not proceed. In **Error**, show partial deletion as partial deletion, identify failed items and offer a retry that revalidates the remaining inventory and repeats authorisation. Never show an unconditional “wallet deleted” banner.<br>Distinguish **deleted**, **deliberately retained**, **outside app control**, and **failed or unknown**. Do not claim that deleting local keys erased external backups, old cloud snapshots or blockchain records. Keep only the necessary non-secret deletion receipt and exception record as deletion bookkeeping. | **OPEN** — As of 2026-11-08, full-inventory coverage by `WalletSession.delete(walletId)` remains unverified, including Keystore entries, secret containers, engine caches, generated QR artefacts and app-controlled backups.<br>Verify each inventory item’s actual disposition, subscription shutdown and platform artefact removal. Exercise gate failure, inventory drift, partial failure and retry. Check that receipts report item-level outcomes and retain no secret or backup contents. |
+| Wallet management — deletion and receipt | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.WalletManagement`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.delete(walletId)`. | As of 2026-11-08:<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `WalletSession.delete(walletId)` deletes the wallet.<br>**OPEN** — **NO DRAFT API — adapter requirement** for authorisation, full-inventory deletion coordination, deletion receipts and retry orchestration. | **Warning** — Deletion can remove local keys and app-controlled backups. Review the current inventory and retained recovery-route exceptions before authorising. Cancel if inventory revalidation or the supported vault gate fails.<br>Execute deletion only after authorisation. Coordinate vault deletion, engine-cache deletion, connectivity subscription shutdown and removal of registered platform artefacts across the complete inventory.<br>Show **Loading** while deleting. Keep protected deletion unavailable in **Locked**. Show **Gate-failed** when the destructive action does not proceed. In **Error**, show partial deletion as partial deletion, identify failed items and offer a retry that revalidates the remaining inventory and repeats authorisation. Never show an unconditional “wallet deleted” banner.<br>Distinguish **deleted**, **deliberately retained**, **outside app control**, and **failed or unknown**. Do not claim that deleting local keys erased external backups, old cloud snapshots or blockchain records. Keep only the necessary non-secret deletion receipt and exception record as deletion bookkeeping. | **OPEN** — As of 2026-11-08, full-inventory coverage by `WalletSession.delete(walletId)` remains unverified, including Keystore entries, secret containers, engine caches, generated QR artefacts and app-controlled backups.<br>Verify each inventory item’s actual disposition, subscription shutdown and platform artefact removal. Exercise gate failure, inventory drift, partial failure and retry. Check that receipts report item-level outcomes and retain no secret or backup contents. |
 
 ### H.14 Security and backup settings
 
 | Screen | Actual source path and symbol | Actual API/call path | UI and data-boundary obligations | Verification criterion |
 |---|---|---|---|---|
-| Security — policy, protection and status | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security` (`Screens` declaration at line 53). | As of 2026-11-08:<br>**OPEN** — **NO DRAFT API — adapter requirement** for security-policy summaries, security status and authentication-readiness reporting. | Show **Loading** while checking current key protection, authentication readiness and backup metadata. In **Ready**, show actual hardware-backing status, lock policy, authentication availability, backup acknowledgement and known backup coverage. Label **Stale** hardware or backup reports explicitly as last known. In **Error**, distinguish key invalidation, unavailable authentication, unreadable backup metadata and failed maintenance.<br>Show hardware protection by its actual role. Do not infer that every wallet signature executes in hardware from hardware-backed protection of a wrapping key. Show **unknown** wherever the platform or implementation cannot establish the fact.<br>**VERIFIED** — As of 2026-11-08, `Screens.Security` limits the draft to one sealed spending mnemonic per install. Add further wallets as watch-only rows only.<br>For every Security operation, never receive the forbidden set, key aliases used as capabilities, backup bytes, decryption keys or secret-bearing diagnostic reports. Offer no private-key export. | Trace each displayed protection claim to evidence of the key’s actual role. Check unknown and last-known reporting without substituting unsupported hardware claims. Exercise each distinct error condition. Inspect all screen inputs and state for secrets, backup contents and capabilities; verify the draft wallet limitation. |
-| Security — locking and policy changes | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.lock(walletId)`. | As of 2026-11-08:<br>**VERIFIED** — Draft locking entry point: `WalletSession.lock(walletId)`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for authorising and applying policy-permitted security changes. | **Warning** — Disabling authentication or backup-screen protection can permit unauthorised signing or expose a mnemonic. Restrict changes to the existing policy. Reject any change that bypasses signing authentication or disables backup-screen protection.<br>Apply permitted changes only after the supported vault gate succeeds. Use `WalletSession.lock(walletId)` for locking. Require the supported vault gate for protected settings and reveal actions in **Locked**. Apply no setting change or reveal in **Gate-failed**.<br>Offer no switches that bypass signing authentication or disable backup-screen protection. Introduce no new backup format or key-management scheme on this screen. | Verify Locked precedence over cached content. Fail the supported gate and confirm that no setting changes or reveal occur. Check every permitted change against the existing policy and inspect the settings surface for bypass switches. |
-| Security — backup metadata and recovery evidence | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.markBackupVerified(walletId)`. | As of 2026-11-08:<br>**VERIFIED** — Draft write entry point: `WalletSession.markBackupVerified(walletId)`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for backup-status reads, backup inventory, recovery-route exception reads and configured Auto Backup/device-transfer treatment reporting. | Show configured Android Auto Backup treatment and device-transfer treatment separately from each other and from known backup instances. Explain that excluding a file from future backups does not remove old copies. Keep unobservable external copies as recorded exceptions, not verified deletions.<br>Keep calls to `WalletSession.markBackupVerified(walletId)` separate from evidence of a successful recovery test. A backup timestamp or user acknowledgement is not a successful recovery test.<br>Show acknowledgement and known coverage using non-secret metadata only; never load backup bytes into Security. | Check the separation of configured treatment, known instances and recorded exceptions. Confirm that neither an acknowledgement, a timestamp nor the draft write call produces a successful-recovery claim.<br>**OPEN** — As of 2026-11-08, no live restore has occurred; recovery-test verification is Blocked pending OI-031. |
-| Security — mnemonic and backup reveal | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`, `Screens.Backup`.<br>`app/src/main/java/com/bawa/wallet/ui/App.kt:104-120` — `MainActivity`. | As of 2026-11-08:<br>**VERIFIED** — `MainActivity` applies `FLAG_SECURE` on Backup/Import routes only.<br>**OPEN** — **NO DRAFT API — adapter requirement** for the Security-to-H.4 reveal route and authentication orchestration. | **Warning** — Unprotected reveal can expose your mnemonic. Use H.4’s fresh authentication gate and screen protections. Stop if authentication or any required protection fails.<br>Route mnemonic reveal through H.4; do not implement a second reveal path. Require H.4’s fresh authentication gate, `FLAG_SECURE`, app-switcher hiding and session teardown for every backup reveal. Keep reveal material out of Security inputs, ordinary UI state and navigation arguments. | Trace the Security action into H.4. Verify fresh authentication, `FLAG_SECURE`, app-switcher hiding and session teardown independently. Do not infer authentication, recents controls or teardown from the route-level flag. Confirm that gate failure reveals nothing and that Security never receives reveal material. |
+| Security — policy, protection and status | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security` (`Screens` declaration at line 53). | As of 2026-11-08:<br>**OPEN** — **NO DRAFT API — adapter requirement** for security-policy summaries, security status and authentication-readiness reporting. | Show **Loading** while checking current key protection, authentication readiness and backup metadata. In **Ready**, show actual hardware-backing status, lock policy, authentication availability, backup acknowledgement and known backup coverage. Label **Stale** hardware or backup reports explicitly as last known. In **Error**, distinguish key invalidation, unavailable authentication, unreadable backup metadata and failed maintenance.<br>Show hardware protection by its actual role. Do not infer that every wallet signature executes in hardware from hardware-backed protection of a wrapping key. Show **unknown** wherever the platform or implementation cannot establish the fact.<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, `Screens.Security` limits the draft to one sealed spending mnemonic per install. Add further wallets as watch-only rows only.<br>For every Security operation, never receive the forbidden set, key aliases used as capabilities, backup bytes, decryption keys or secret-bearing diagnostic reports. Offer no private-key export. | Trace each displayed protection claim to evidence of the key’s actual role. Check unknown and last-known reporting without substituting unsupported hardware claims. Exercise each distinct error condition. Inspect all screen inputs and state for secrets, backup contents and capabilities; verify the draft wallet limitation. |
+| Security — locking and policy changes | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.lock(walletId)`. | As of 2026-11-08:<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — Draft locking entry point: `WalletSession.lock(walletId)`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for authorising and applying policy-permitted security changes. | **Warning** — Disabling authentication or backup-screen protection can permit unauthorised signing or expose a mnemonic. Restrict changes to the existing policy. Reject any change that bypasses signing authentication or disables backup-screen protection.<br>Apply permitted changes only after the supported vault gate succeeds. Use `WalletSession.lock(walletId)` for locking. Require the supported vault gate for protected settings and reveal actions in **Locked**. Apply no setting change or reveal in **Gate-failed**.<br>Offer no switches that bypass signing authentication or disable backup-screen protection. Introduce no new backup format or key-management scheme on this screen. | Verify Locked precedence over cached content. Fail the supported gate and confirm that no setting changes or reveal occur. Check every permitted change against the existing policy and inspect the settings surface for bypass switches. |
+| Security — backup metadata and recovery evidence | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`.<br>`app/src/main/java/com/bawa/wallet/wallet/WalletSession.kt` — `WalletSession.markBackupVerified(walletId)`. | As of 2026-11-08:<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — Draft write entry point: `WalletSession.markBackupVerified(walletId)`.<br>**OPEN** — **NO DRAFT API — adapter requirement** for backup-status reads, backup inventory, recovery-route exception reads and configured Auto Backup/device-transfer treatment reporting. | Show configured Android Auto Backup treatment and device-transfer treatment separately from each other and from known backup instances. Explain that excluding a file from future backups does not remove old copies. Keep unobservable external copies as recorded exceptions, not verified deletions.<br>Keep calls to `WalletSession.markBackupVerified(walletId)` separate from evidence of a successful recovery test. A backup timestamp or user acknowledgement is not a successful recovery test.<br>Show acknowledgement and known coverage using non-secret metadata only; never load backup bytes into Security. | Check the separation of configured treatment, known instances and recorded exceptions. Confirm that neither an acknowledgement, a timestamp nor the draft write call produces a successful-recovery claim.<br>**OPEN** — As of 2026-11-08, no live restore has occurred; recovery-test verification is Blocked pending OI-031. |
+| Security — mnemonic and backup reveal | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`, `Screens.Backup`.<br>`app/src/main/java/com/bawa/wallet/ui/App.kt:104-120` — `MainActivity`. | As of 2026-11-08:<br>**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `MainActivity` applies `FLAG_SECURE` on Backup/Import routes only.<br>**OPEN** — **NO DRAFT API — adapter requirement** for the Security-to-H.4 reveal route and authentication orchestration. | **Warning** — Unprotected reveal can expose your mnemonic. Use H.4’s fresh authentication gate and screen protections. Stop if authentication or any required protection fails.<br>Route mnemonic reveal through H.4; do not implement a second reveal path. Require H.4’s fresh authentication gate, `FLAG_SECURE`, app-switcher hiding and session teardown for every backup reveal. Keep reveal material out of Security inputs, ordinary UI state and navigation arguments. | Trace the Security action into H.4. Verify fresh authentication, `FLAG_SECURE`, app-switcher hiding and session teardown independently. Do not infer authentication, recents controls or teardown from the route-level flag. Confirm that gate failure reveals nothing and that Security never receives reveal material. |
 | Security — diagnostic identifier copying | `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt` — `Screens.Security`. | As of 2026-11-08:<br>**OPEN** — **NO DRAFT API — adapter requirement** for permitted diagnostic-identifier copying through the guarded clipboard. | **Warning** — A clipboard action can carry data beyond this screen. Restrict copying to permitted non-secret diagnostic identifiers. Reject secret-bearing values and key aliases that act as capabilities.<br>Copy permitted identifiers only through the guarded clipboard, with a warning for every action. Never receive secret-bearing diagnostic reports. | Exercise every permitted copy action. Check payload classification, the warning and guarded-clipboard handling. Reject identifiers or reports that contain secrets or act as capabilities. |
 
 ### Sources
@@ -3367,10 +3418,10 @@ Apply the shared contract boundaries throughout. Treat the cited methods as draf
 - `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53` — `Screens.History`; checked 2026-11-08.
 - `app/src/main/java/com/bawa/wallet/ui/WalletViewModel.kt` — `WalletViewModel` history state; checked 2026-11-08.
 - `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121` — `ChainAdapter`, including `getHistory()` and `trackConfirmation()`; checked 2026-11-08.
-- **VERIFIED** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53`, `Screens` and its `TxDetail` member; checked 2026-11-08.
-- **VERIFIED** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121`, `ChainAdapter` declarations, including `getHistory()`, `trackConfirmation()` and `broadcastSigned()`; checked 2026-11-08.
-- **VERIFIED** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53`, `Screens` and its `NetworkSelection` member; checked 2026-11-08.
-- **VERIFIED** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt`, `NetworkConfig`, its four testnet endpoints and the BTC endpoint’s testnet3 identity; checked 2026-11-08.
+- **UNPUSHED DRAFT** — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53`, `Screens` and its `TxDetail` member; draft symbol declarations as of 2026-11-08, not verified main evidence.
+- **UNPUSHED DRAFT REFERENCES ONLY** — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt:121`, `ChainAdapter` declarations, including `getHistory()`, `trackConfirmation()` and `broadcastSigned()`; not verified on main.
+- **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `app/src/main/java/com/bawa/wallet/ui/screens/Screens.kt:53`, `Screens` and its `NetworkSelection` member; checked 2026-11-08.
+- **DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — `core/src/main/java/com/bawa/wallet/core/NetworkConfig.kt`, `NetworkConfig`, its four testnet endpoints and the BTC endpoint’s testnet3 identity; checked 2026-11-08.
 - Requirements provenance: section H requirements — check date: 2026-11-08.
 - Android Developers: [Biometric authentication](https://developer.android.com/identity/sign-in/biometric-auth) — checked 2026-11-08.
 - Android Developers: [Android Keystore](https://developer.android.com/privacy-and-security/keystore) — checked 2026-11-08.
@@ -3378,7 +3429,7 @@ Apply the shared contract boundaries throughout. Treat the cited methods as draf
 - Android reference: [Activity recents controls](https://developer.android.com/reference/android/app/Activity) — checked 2026-11-08.
 - Android Developers: [Runtime permissions](https://developer.android.com/training/permissions/requesting) — checked 2026-11-08.
 - Android Developers: [Clipboard handling](https://developer.android.com/develop/ui/views/touch-and-input/copy-paste) — checked 2026-11-08.
-- Android Developers: [Auto Backup](https://developer.android.com/guide/topics/data/autobackup) — checked 2026-11-08.
+- Android Developers: [Auto Backup](https://developer.android.com/identity/data/autobackup) — checked 2026-11-08.
 
 ## I — Testing
 
@@ -3399,7 +3450,7 @@ A higher layer never repairs a lower-layer failure.
 
 Keep all network tests on testnet. No production network or real funds.
 
-**VERIFIED** — As of 2026-11-08 (R13 F12): Fixture gate defined (§I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
+**DRAFT/UNVERIFIABLE** — As of 2026-11-08 (R13 F12): Fixture gate defined (§I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
 
 ### Result statuses
 
@@ -3590,7 +3641,7 @@ Run Core and an independent, pinned `bip_utils` installation against the **same 
 
 Use the repository §11 ripple fixture as the primary input.
 
-The fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+The fixture phrase is 15 words because it is a published test vector; new wallets generated by this guide use 24-word phrases. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
 
 As of 2026-11-08, use Trust Wallet Core **4.9.2** for the comparison. Do not count evidence from **4.8.4** as a pass on **4.9.2**. **APPROVED BUT UNEXECUTED** — Re-run the EIP-1559 proof against 4.9.2 before publication; Blocked pending OI-004.
 
@@ -3647,7 +3698,7 @@ Keep TON generation separate from the BTC, ETH and TRX address-index matrix.
 
 ### TON fixture — check 6
 
-As of 2026-11-08, **VERIFIED** — Trust Wallet Core 4.8.4 established this fixture through `getAddressForCoin(ton)`. Independent pure-stdlib SLIP-0010 derivation reproduced the public key. The recorded `@ton/ton` candidate sweep matched Core’s address only with V4R2 and wallet ID `698983191` — the wallet ID was the missing configuration parameter; hashing Core’s `TONWallet.buildV4R2StateInit` output produced the same account address. This complete fixture closes OI-013. Evidence: R04 F20; R18 F4; V3 live verification, 2026-11-08.
+As of 2026-11-08, **OPEN (unexecuted draft)** — the recorded Trust Wallet Core 4.8.4 run established this fixture through `getAddressForCoin(ton)`. Independent pure-stdlib SLIP-0010 derivation reproduced the public key. The recorded `@ton/ton` candidate sweep matched Core’s address only with V4R2 and wallet ID `698983191` — the wallet ID was the missing configuration parameter; hashing Core’s `TONWallet.buildV4R2StateInit` output produced the same account address. The fixture record is complete for publication purposes and closes OI-013 for draft publication only; this is not a verified on-device completion. Evidence: R04 F20; R18 F4; V3 live verification, 2026-11-08.
 
 **Warning** — The published mnemonic exposes its associated keys, and wallet ID `0` produces a different account. Use this vector only for offline tests, never for funds; keep its 15-word mnemonic out of the 24-word wallet flow. Check the wallet ID and complete public outputs against the fixture.
 
@@ -3725,7 +3776,7 @@ Reject private extended keys wherever the policy requires a public extended key.
 
 ### Reproduce the differential test
 
-As of 2026-11-08, **VERIFIED** — the recorded reference run at `082f7915` returns `bip_utils reference checks: PASS` with exit status `0`. Its coverage includes **BTC/ETH index 0 only** (R13 F4). Run the remaining required cases separately.
+As of 2026-11-08, **OPEN (unexecuted draft)** — perform the reference run in the pinned `e3b65fb832db287fdc8d54794980dd0b3456cc12` worktree using the reproduction recipe below. Separately, the historical reference run at `082f7915` returned `bip_utils reference checks: PASS` with exit status `0`; its coverage was **BTC/ETH index 0 only** (R13 F4). Run the remaining required cases separately.
 
 1. Clone Bawa, check out the recorded commit and run the reference checks.
 
@@ -3922,7 +3973,7 @@ Require the signer to return either the required signatures/components or the ch
 - Validate the final transaction.
 - Reject any mismatch, decoding failure, invalid signature or transaction-validation failure.
 
-**Warning** — Signing a changed payload produces a signature outside your approval. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks.
+**Warning** — Exact-payload approval is approval bound to the frozen scope contents. Any candidate whose contents differ from the approved frozen scope is outside that approval. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks. Use testnet fixtures and bind signing to the frozen scope; reject any candidate that fails the scope, signature or final-transaction checks.
 
 Exercise these approval transitions:
 
@@ -4018,9 +4069,9 @@ Apply the following fixture-driven checks to the actual logging, saved-state, sn
 3. Assert that no fixture mnemonic, private key, seed, data key or secret-bearing serialisation appears in the captured outputs. Do not let the redaction assertion print the secret it detects.
 4. Check normalised, encoded and structured-field representations as well as exact mnemonic strings.
 
-**Warning** — Snapshot or dump uploads can disclose secret material. Test upload rejection using local capture; confirm that raw secret-bearing dumps cannot reach an external reporting service.
+**Warning** — Snapshot or dump uploads can disclose secret material. Test that raw secret-bearing dumps are rejected at the upload boundary before any external transmission, using local capture that covers the outbound request, not only the local file; confirm that they cannot reach an external reporting service.
 
-5. Verify that secret-display screens follow the snapshot policy, including screenshot and recent-task behaviour, and that raw secret-bearing dumps cannot be uploaded.
+5. Verify that secret-display screens follow the snapshot policy, including screenshot and recent-task behaviour, and that raw secret-bearing dumps are rejected at the upload boundary before any external transmission. As a positive control, confirm that a benign (non-secret) upload still succeeds, proving that rejection is secret-specific.
 
 **What this proves:** A passing run demonstrates that the exercised watch-only paths do not activate signing, the tested public interfaces do not cross into secret handling, and the tested reporting paths do not disclose secret material for the exercised fixtures.
 
@@ -4134,7 +4185,7 @@ Mark every unvisited surface, missing device pass or untested lifecycle path **O
 
 ### Sources
 
-**VERIFIED** — As of 2026-11-08, R20 Appendix A records HTTP 200 responses for every URL below.
+Each URL below carries its own 2026-11-08 check date; the off-repo R20 Appendix A record was not supplied here.
 
 - [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) — checked 2026-11-08.
 - [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) — checked 2026-11-08.
@@ -4146,11 +4197,15 @@ Mark every unvisited surface, missing device pass or untested lifecycle path **O
 - [TRON network documentation](https://developers.tron.network/docs/networks) — checked 2026-11-08.
 - [Android instrumented testing](https://developer.android.com/training/testing/instrumented-tests) — checked 2026-11-08.
 
+**Wycheproof exclusion** — The guide’s testing uses published BIP-32/39 vectors and fixtures. The Wycheproof adversarial corpus (positive and rejection cases for cryptographic primitives) is out of scope because Bawa implements no cryptographic primitives itself; primitives come from Trust Wallet Core. No Wycheproof coverage is specified.
+
+**EIP-155 exclusion** — The wallet’s Ethereum signing is EIP-1559 Enveloped only. Legacy transactions and their EIP-155 replay protection (chain-ID-bound signing preimage and adjusted `v`) are out of scope and not specified.
+
 ## J — Security documentation
 
 Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
-Read the shared security baseline in the repository guide (`docs/08`) and the single threat model (`docs/15`). Use this section for the Android-specific checks and procedures.
+Read the shared security baseline in the repository guide (`docs/08-security-recovery`, §3 "Backup and recovery" and §6 "Incident response: what to do when something is compromised") and the single threat model (`docs/15-threat-model-and-theft-prevention`, "Establish the threat model and trust boundary" and "Incident-response playbook"). Use this section for the Android-specific checks and procedures.
 
 These are requirements, not claims about the current build. Each rule needs an enforcing check. Enforce each rule in code, run repeatable tests and record results for the supported Android versions and devices.
 
@@ -4289,11 +4344,11 @@ Keep these procedures on testnet; passing these checks does not authorise mainne
 
    Do not silently downgrade wrapping protection. Do not substitute plaintext storage, obfuscation or application-managed wrapping. Retain watch-only functions only where they require no wallet secrets.
 
-> **Warning** — Replacing the vault after key invalidation can discard existing encrypted material. Preserve it and report the unlock or recovery requirement; check invalidation and failed-unwrap paths.
+> **Warning** — Replacing the vault after key invalidation can discard existing encrypted material. Preserve it and report whether the cause is authentication gating (unlocking may resolve it) or a permanently invalidated wrapping key (unlocking cannot restore it; recovery through the mnemonic is required); check invalidation and failed-unwrap paths.
 
 3. Preserve the existing vault and seed bundle when the wrapping key becomes invalid or unavailable.
 
-   Report that unlocking or recovery is required. Do not treat a failed unwrap as an empty vault or initialise replacement wallet material.
+   Report whether the cause is authentication gating or a permanently invalidated wrapping key. Unlocking may resolve authentication gating, but it cannot restore a permanently invalidated wrapping key; recovery through the mnemonic is required in that case. Do not treat a failed unwrap as an empty vault or initialise replacement wallet material.
 
    **Check:** Exercise supported security levels, unavailable hardware, missing required device authentication, key invalidation and failed unwrap operations. Confirm the chosen refusal or report-and-continue behaviour, and confirm that no fallback writes secret material or replaces the vault.
 
@@ -4368,9 +4423,9 @@ Invalidate the preview whenever the input, network or selected account changes. 
 
 ### J-09 — Keep the backup gate locked until ordered re-entry matches
 
-> **Warning** — As of 2026-11-08, the draft’s 3-word quiz does not satisfy this rule. Replace it with full ordered 24-word re-entry; until then, keep the gate locked. Check the complete match under the approved normalisation rules. **OPEN** — Blocked pending OI-071.
+> **Warning** — As of 2026-11-08, the draft’s 3-word quiz does not satisfy this rule. Replace it with full ordered re-entry at the wallet’s own word count (12, 15, 18, 21, or 24 words; 24 words for newly generated wallets); until then, keep the gate locked. Check the complete match under the approved normalisation rules: BIP-39 NFKD normalisation of the mnemonic and passphrase plus the scheme’s word-separator rules. **OPEN** — Blocked pending OI-071.
 
-Keep the backup gate locked until complete ordered re-entry matches the wallet’s mnemonic under the approved normalisation rules.
+Keep the backup gate locked until complete ordered re-entry at the wallet’s own word count matches the wallet’s mnemonic under the approved normalisation rules.
 
 Reject a checkbox, successful checksum, correct word count, partial match or successful import as sufficient evidence of backup completion.
 
@@ -4484,7 +4539,7 @@ Keep every adapter on testnet. Passing these checks does not authorise mainnet w
 
 2. **Generate and commit the dependency lockfile from a clean install.**
 
-   **OPEN** — As of 2026-11-08, no lockfile exists for the Android app. Version pins are not a lockfile. Until you generate a lockfile from a clean install and commit it, no install reproduces the exact dependency graph you test. Reproducible installation: Blocked pending OI-008.
+   **OPEN** — As of 2026-11-08, no lockfile exists for the Android app. Version pins are not a lockfile. Until you generate a lockfile from a clean install and commit it, reproducibility has not been demonstrated. Reproducible installation: Blocked pending OI-008.
 
 ### J.6 Threat model — Android platform slice
 
@@ -4612,7 +4667,7 @@ Changing the vault unlock passphrase cannot protect funds controlled by an expos
 
 2. **Migrate to a fresh seed on a trusted device.**
 
-   Generate a new mnemonic and derive a fresh seed with an empty BIP-39 passphrase. Keep the new mnemonic away from the suspect device. Check that recovery reproduces the replacement testnet addresses.
+   Generate a new mnemonic and derive a fresh seed with an empty BIP-39 passphrase. Keep the new mnemonic away from the suspect device. Check that recovery with the new mnemonic and empty BIP-39 passphrase reproduces the replacement testnet addresses. Recovering the original mnemonic with an empty BIP-39 passphrase reproduces the original seed and addresses only if the original derivation used an empty BIP-39 passphrase.
 
    Restore the original keys only as needed to transfer remaining testnet funds to the verified replacement addresses. Check each transfer’s destination, value and fees before signing, then verify its on-chain result. Treat the original mnemonic and its addresses as compromised after migration.
 
@@ -4675,11 +4730,11 @@ Changing the vault unlock passphrase cannot protect funds controlled by an expos
 - Requirements provenance: section J requirements — check date: 2026-11-08.
 - Android: [Keystore system](https://developer.android.com/privacy-and-security/keystore) — check date: 2026-11-08.
 - Android: [AOSP Keystore/KeyMint](https://source.android.com/docs/security/features/keystore) — check date: 2026-11-08.
-- Android: Biometric authentication — check date: 2026-11-08.
-- [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) — check date: 2026-11-08. **VERIFIED** — As of 2026-11-08, the URL returned HTTP 200.
+- Android: [Biometric authentication](https://developer.android.com/identity/sign-in/biometric-auth) — check date: 2026-11-08.
+- [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) — check date: 2026-11-08.
 - Bitcoin BIPs: [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) — check date: 2026-11-08.
-- Bitcoin BIPs: BIP-44 — check date: 2026-11-08.
-- Bitcoin BIPs: BIP-84 — check date: 2026-11-08.
+- Bitcoin BIPs: [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) — check date: 2026-11-08.
+- Bitcoin BIPs: [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) — check date: 2026-11-08.
 - NIST: [SP 800-38D — GCM](https://csrc.nist.gov/pubs/sp/800/38/d/final) — check date: 2026-11-08.
 - Wallet Core: [TransactionCompiler API](https://github.com/trustwallet/wallet-core/blob/4.9.2/include/TrustWalletCore/TWTransactionCompiler.h) — check date: 2026-11-08.
 
@@ -4773,20 +4828,20 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
 3. **Build and stage the Core AAR through section C.**
 
-   As of 2026-11-08, Trust Wallet Core offers no downloadable Android AAR for any release, including 4.9.2, and no Maven Central acquisition route exists. Build the AAR from source using section C; do not substitute a newer version.
+   As of 2026-11-08, the Trust Wallet Core 4.9.2 release assets include no AAR. Build the AAR from source using section C; do not substitute a newer version.
 
    **OPEN** — As of 2026-11-08, the source-build route has not produced an AAR for this guide. AAR staging and integration: Blocked pending OI-005. Reject stubs, empty AARs and unrelated binaries.
 
    After the source build produces an AAR, check and record its identity and contents:
 
    - Record the Core source revision and version.
-   - Compute the AAR digest, compare it with the approved acquisition record, and record its provenance and the comparison result.
+   - Compute the SHA-256 digest of the AAR file produced by the section C source build at the pinned Core revision, compare it with the digest recorded in the approved acquisition record for that same source-built artefact, and record its provenance and the comparison result.
    - Inspect and record the generated Java bindings packaged in the AAR.
    - Inspect and record the native libraries and ABIs packaged in the AAR.
 
    Compare the actual artefact. A filename does not establish its identity, and setting a checksum variable does not perform an integrity check.
 
-   Stage the checked artefact as `wallet-core-4.9.2.aar` in the Android project’s `core/libs/` only at section C’s copy step. Do not treat that staging directory as a download location or the source-build output location.
+   As a draft-only step for the unpushed Android project, stage the checked artefact as `wallet-core-4.9.2.aar` in the project’s `core/libs/` only at section C’s copy step. This staging directory is not a main-backed location; do not treat it as a download location or the source-build output location.
 
    **APPROVED BUT UNEXECUTED** — As of 2026-11-08, the Core 4.9.2 pin still needs its live EIP-1559 proof. Re-run the proof against 4.9.2 before publication; do not carry forward evidence from 4.8.4 as validation of this pin. Publication: Blocked pending OI-004.
 
@@ -4849,7 +4904,7 @@ Keep mainnet outside this guide set. Passing these gates does not authorise main
 
 Keep `env.example` in version control with placeholders only. Do not source this reference file. Use the endpoint variables as overrides; `NetworkConfig` holds the endpoint defaults.
 
-**VERIFIED** — As of 2026-11-08, the draft’s `env.example` specifies these variable names and placeholders (R04 F30).
+**DRAFT/UNVERIFIABLE** (unpushed draft reference only, not verified on main) — As of 2026-11-08, the draft’s `env.example` specifies these variable names and placeholders (R04 F30).
 
 ```dotenv
 # Trust Wallet Core 4.9.2
@@ -5133,7 +5188,7 @@ Check that you can:
 - [Android Developers — app signing](https://developer.android.com/studio/publish/app-signing) — checked 2026-11-08.
 - [Gradle User Manual](https://docs.gradle.org/current/userguide/userguide.html) — Gradle wrapper, build environment and daemon behaviour; checked 2026-11-08.
 - [GitHub Packages — working with the Gradle registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry) — package authentication; checked 2026-11-08.
-- [Android Developers — R8](https://developer.android.com/build/shrink-code) — checked 2026-11-08.
+- [Android Developers — R8](https://developer.android.com/topic/performance/app-optimization/enable-app-optimization) — checked 2026-11-08.
 - [Android Developers — native ABIs](https://developer.android.com/ndk/guides/abis) — checked 2026-11-08.
 
 ## L. Recovery by symptom
@@ -5152,7 +5207,7 @@ Passing these checks does not authorise mainnet work; any mainnet work requires 
 
 **Cause:** A wrong derivation path or a non-empty BIP-39 passphrase derives a different wallet. This mismatch does not lose the funds; it leaves them unreachable from this policy.
 
-**Warning** — As of 2026-11-08, Bawa’s testnet4 deviation means that importing a Bawa mnemonic into a standard testnet wallet derives a different account (OI-032). Use the fixed derivation policy and an empty BIP-39 passphrase; check the path, not the balance, first.
+**Warning** — As of 2026-11-08, Bawa’s testnet4 deviation means that importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different account (OI-032). Use the fixed derivation policy and an empty BIP-39 passphrase; check the path, not the balance, first.
 
 1. Close and reopen the wallet, enter the mnemonic exactly, and leave the BIP-39 passphrase empty.
 
@@ -5209,7 +5264,7 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 
 **Cause:** Device loss or possible mnemonic exposure requires containment before recovery.
 
-**Warning** — Changing the vault unlock passphrase cannot protect an exposed mnemonic; only a fresh seed and migration can address that exposure. Contain the incident through §J.8, retire the compromised material, and verify the new seed’s addresses against the fixed policy.
+**Warning** — Changing the vault unlock passphrase cannot protect an exposed mnemonic; addressing that exposure requires migration to independent, uncompromised keys, such as those derived from a fresh seed generated on a trusted device. Contain the incident through §J.8, retire the compromised material, and verify the replacement keys’ addresses against the fixed policy.
 
 1. Follow the §J.8 incident playbook: contain the incident, choose trusted-device recovery or fresh-seed migration, revoke sessions, escalate, and notify.
 
@@ -5229,9 +5284,9 @@ As of 2026-11-08, Bawa contains no transaction construction or signing implement
 
 **Cause:** The host or sandbox may block Gradle’s loopback TCP, or the wrapper JAR may be missing.
 
-**OPEN** — As of 2026-11-08, the committed `gradlew` is a launcher note without a wrapper JAR (OI-035). The project has never run a Gradle build or produced an APK, including a debug APK.
+**OPEN** — As of 2026-11-08, the committed `gradlew` is a launcher note without a wrapper JAR (OI-035). As of 2026-11-08, no Gradle build had run in the project and no APK had been produced, including a debug APK.
 
-**Warning** — Blocked loopback TCP or a missing wrapper JAR prevents the intended Gradle invocation; complete §K.1 where loopback TCP works, then check the pinned Gradle version. Do not disable security controls broadly.
+**Warning** — Blocked loopback TCP prevents the intended daemon-based Gradle invocation, while a missing wrapper JAR prevents the wrapper invocation; complete §K.1 where loopback TCP works, then check the pinned Gradle version with `./gradlew --version`, which may still run where loopback TCP works or without the daemon. Do not disable security controls broadly.
 
 1. Complete §K.1 in an environment where Gradle can use loopback TCP, obtaining and verifying the wrapper JAR before invoking `./gradlew`.
 
@@ -5276,7 +5331,7 @@ The single canonical register for all three guides (D36 F2). Per-section
 "Unverified / open items" lists are replaced by short pointers to this
 register. Per-section references use the canonical ID, in the form:
 Open item (`OI-004`) — see Doc 3, Consolidated open-items register, `OI-004`.
-Old IDs appear only in the Aliases / provenance column.
+Old IDs appear in the Aliases / provenance column and in the introductory gap explanations.
 
 Unassigned IDs (no entry): OI-002, OI-003, OI-009, OI-010, OI-012, OI-016,
 OI-018, OI-020, OI-021, OI-022, OI-023, OI-024, OI-029, OI-030, OI-034,
@@ -5304,16 +5359,16 @@ in the lane files.
 | OI-025 | No testnet-only build variant exists; deciding whether one is needed is open. | Doc 3 §B, §K | Builder | OPEN (documented) | W4 OI-A25; W5 OI-09. |
 | OI-026 | Verify and record the current Command-line Tools and Platform-Tools revisions, each installed platform package revision, and the downloaded Command-line Tools archive's SHA-256 checksum; no current-release numbers are asserted here. | Doc 3 §B | Builder | OPEN | W4 OI-A26. |
 | OI-027 | Confirm and record the retained GitHub Packages URL before accepting the repository configuration. | Doc 3 §C | Builder | OPEN | W4 OI-A27. |
-| OI-028 | The repo guide's docs/09 teaches m/84'/1', while docs/05, the code and both app guides use m/84'/0'. The deviation and its consequence are documented in Doc 1, docs/02, 'Derivation and network policy'. Documented, not resolved. | Doc 1 docs/02, docs/09; Doc 3 §D | Maintainers | OPEN (documented) | W4 OI-A28. |
+| OI-028 | docs/09 teaches Bawa's coin-0 policy and documents its testnet deviation; its coin-1 example concerns an external hardware signer. | Doc 1 docs/02, docs/09; Doc 3 §D | Maintainers | OPEN (documented) | W4 OI-A28. |
 | OI-031 | Android live wallet creation, live restore and live testnet spend have never been performed in the Android app; the procedures are specified, not demonstrated. | Doc 3 §D, §E, §G, §I, §K | Builder | OPEN | W5 OI-04; W3 live-work rows (Web row OI-039). |
-| OI-032 | Testnet4 uses the mainnet derivation m/84'/0'/0' and zpub; SLIP-0044 reserves coin 1 for testnet and SLIP-0132 assigns testnet vpub. Importing a Bawa mnemonic into a standard testnet wallet derives a different account. Documented, not changed. | Doc 1 docs/02; Doc 2 §C; Doc 3 §D, §F, §I | Maintainers | OPEN (documented, not changed) | W5 OI-07; W3 §C. |
+| OI-032 | Testnet4 uses the mainnet derivation m/84'/0'/0' and zpub; SLIP-0044 reserves coin 1 for testnet and SLIP-0132 assigns testnet vpub. Importing a Bawa mnemonic into a wallet using default BIP-84 testnet derivation derives a different account. Documented, not changed. | Doc 1 docs/02; Doc 2 §C; Doc 3 §D, §F, §I | Maintainers | OPEN (documented, not changed) | W5 OI-07; W3 §C. |
 | OI-033 | Draft defect: the draft BTC endpoint serves testnet3, not testnet4. | Doc 3 §F.5 | Builder | OPEN (draft defect; correct endpoint in §F.2) | W5 OI-12. |
 | OI-035 | No Gradle build, no APK, no device or emulator run ever; gradlew is a launcher note without a wrapper JAR. | Doc 3 §B, §K | Builder | OPEN | W5 OI-25. |
 | OI-036 | No verified faucet procedure for funding test accounts (Android). The Web faucet procedures were verified per D26; the Android faucet procedure is still owed. | Doc 3 §F, §I.8 | Builder | OPEN | W5 OI-29; W3 §E (Web row OI-048). |
 | OI-037 | QR scope: keep receive-QR and scanning — RESOLVED by the user on 2026-11-08. Remaining open items concern specification details, implementation and verification, not whether to include either feature. | Doc 1 docs/07, docs/13, docs/14; Doc 2 §F, §G, §J; Doc 3 §H | User (decided) | RESOLVED (2026-11-08) | W3 §G/§J. |
 | OI-038 | QR payment-request scanning spec — open/build items (D24 F12): esbuild worker integration; native selection/failover controls; browser and camera coverage; loopback camera verification; EIP-681 @chainId forms; ton-test://; bare BTC/ETH/TON addresses in a QR; authoritative testnet-context checks; session timeout duration; decoder third-party notices inventory. | Doc 2 §F; Doc 3 §H | Builder | OPEN | W3 §F (D24 F12). |
 | OI-039 | Web live creation and live restore performed in the V2 browser run (2026-11-08, 14 PASS / 0 FAIL / 3 INFO across 17 steps); live spend was not exercised (no testnet funds). | Doc 2 §A, §D, §F, §H, §J, §K | Builder | OPEN (spend only) | W3 §A/§D/§F/§H/§J/§K; Android row OI-031. |
-| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 exact); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
+| OI-042 | Web repo root lockfile: the Bawa repository ships no root package-lock.json. Partially resolved: tools/hdwallet-gen/package-lock.json exists at e3b65fb832db287fdc8d54794980dd0b3456cc12 (Core 4.8.4 was current at repair time; the lockfile's presence does not by itself establish an exact Core pin); no root lockfile. The tools lockfile is present at the documented clone pin e3b65fb832db287fdc8d54794980dd0b3456cc12. | Doc 2 §B; Doc 1 docs/10 | Maintainers | OPEN (partially resolved) | W3 §B; Android row OI-008. |
 | OI-043 | Web account-0 public nodes and TRX anchor Core confirmation — Core-confirmed in a recorded run (D31, 2026-11-08). | Doc 2 §C | Builder | CLOSED (D31, 2026-11-08) | W3 §C; Android row OI-067. |
 | OI-044 | Web TON fixture — recorded in the repo guide, docs/11, 'TON fixture (V3, 2026-11-08)'. | Doc 2 §C; Doc 1 docs/11 | Builder | CLOSED (V3, 2026-11-08) | W3 §C; Android row OI-013. |
 | OI-045 | Web WASM parity corpus — the upstream corpus exists (wasm/tests/ at tag 4.9.2); Node parity 6/6 MATCH on 4.9.2 and 4.8.4 (D30, 2026-11-08). The in-browser run on 4.9.2 remains open (OI-092). | Doc 2 §C | Builder | CLOSED (corpus); in-browser run open via OI-092 | W3 §C; Android row OI-015. |
@@ -5349,7 +5404,7 @@ in the lane files.
 | OI-076 | Reproducible builds unverified (Android). | Doc 3 §K.4 | Builder | OPEN | W5 OI-20. |
 | OI-077 | Dependency and secret scanning never run; no scanner named or validated. | Doc 3 §J.13, §K | Maintainers | OPEN | W5 OI-21; W3 §J (Web row OI-059). |
 | OI-078 | Paid-security prices (Doc 1 docs/08) dated 30 October 2026 — CLOSED by the D17 re-check (8 November 2026): Casa $250/$2,100/$7,500/$2,750 per year; Unchained and Fireblocks figures as in docs/08. | Doc 1 docs/08 | Maintainers | CLOSED (D17, 2026-11-08) | W5 OI-23. |
-| OI-079 | 14 links unverified (HTTP 429 from the research VM: deepwiki ×6, solana.com/docs ×8) — SUPERSEDED by D18: 13 replacements confirmed live (11 by page 200, 2 by API 200) and applied in the lane files. | Doc 1; Doc 2; Doc 3 | Maintainers | CLOSED (superseded by D18) | W5 OI-24. |
+| OI-079 | 14 links unverified (HTTP 429 from the research VM: deepwiki ×6, solana.com/docs ×8) — SUPERSEDED by D18: 13 of the 14 unverified links were replaced and confirmed live (11 by page 200, 2 by API 200), with replacements applied in the lane files; the disposition of the remaining 1 link is not recorded in this register. | Doc 1; Doc 2; Doc 3 | Maintainers | CLOSED (superseded by D18) | W5 OI-24. |
 | OI-080 | Incident-response/compromise playbook — CLOSED: §J.8 publishes the incident section (four scenarios, fresh-seed migration rule). Execution of the playbook is untested. | Doc 3 §J.8 | Maintainers | CLOSED | W5 OI-27. |
 | OI-081 | Local testing stage (regtest/signet) unverified; no verified procedure for any chain (Android). | Doc 3 §F, §I.8 | Builder | OPEN | W5 OI-28; W3 §E/§H (Web row OI-049). |
 | OI-082 | Supported-device matrix undefined (Keystore/KeyMint minimums, supported Android versions, API/ABI matrix). | Doc 3 §B, §I.9, §J | Builder | OPEN | W5 OI-30. |
@@ -5397,7 +5452,7 @@ As of 2026-11-08, the following assessments describe project scope, licences and
 | Rank | Project and source | Assessed reference | Licence and maintenance | Compatibility and required adaptation |
 |---|---|---|---|---|
 | 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is also Bawa’s BTC policy (`m/84'/0'/0'/0/i`); matching BIP-84 does not establish drop-in suitability. Exclude its engine and derivation code. |
-| 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet work: implement section H’s wallet screens, states and behaviour yourself. |
+| 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet-specific work: implement section H’s wallet screens, states and behaviour yourself. |
 | 3 | **Now in Android** — `android/nowinandroid` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-11-08; 22,056 stars | Architecture reference only. Adapt the structure to your wallet; implement the section H UI yourself. |
 | 4 | **EUDI Wallet UI** — `eu-digital-identity-wallet/eudi-app-android-wallet-ui` | Source check dated 2026-11-08 | EUPL-1.2 copyleft; last push 2026-11-06; 234 stars | Identity wallet, not a crypto wallet. Consider components only; adapt them to section H and meet the licence’s source-sharing obligations. |
 | 5 | **Jetpack Compose Template** — `seve-andre/jetpack-compose-template` | Source check dated 2026-11-08 | MIT; last push 2026-03-18; 62 stars; quiet for about eight months | Generic starter. Implement all wallet-specific screens and behaviour, and establish compatibility in your own build. |
@@ -5415,7 +5470,7 @@ As of 2026-11-08, use the following order when consulting full-app references. T
 | 3 | **Gem** | GPL-3.0 | 412 | Full-app reference only; copyleft obligations apply to reuse. |
 | 4 | **Green** | GPL-3.0 | 275 | Full-app reference only; copyleft obligations apply to reuse. |
 | 5 | **Nunchuk** | GPL-3.0 | 87 | Full-app reference only; copyleft obligations apply to reuse. |
-| 6 | **Schildbach** | GPLv3 according to its site and files | — | The GitHub tree has no licence file; GitLab hosts the live tree. |
+| 6 | **Schildbach** | [F-Droid listing](https://f-droid.org/en/packages/de.schildbach.wallet/) states "License: GPLv3" / "GNU General Public License v3.0 only" ([licence text](https://www.gnu.org/licenses/gpl-3.0.en.html)) | — | Verified live 2026-11-17: the [official GitHub mirror](https://github.com/bitcoin-wallet/bitcoin-wallet) has no licence file in its root file list; F-Droid names [GitLab](https://gitlab.com/bitcoin-wallet/bitcoin-wallet) as the live source tree. |
 
 ### Excluded sources and design-only kits
 
@@ -5424,14 +5479,14 @@ As of 2026-11-08, exclude these sources from template selection:
 - **Mycelium** — MS-RSL reference licence, not free reuse.
 - **Ivy Wallet** — archived money manager, not a crypto wallet.
 - **Archived `gem-android`** — the monorepo supersedes it.
-- **Trust Wallet app** — closed source; only Wallet Core is open.
+- **Trust Wallet app** — closed source; Wallet Core is open.
 
 As of 2026-11-08, these paid kits provide designs, not Android code:
 
 - **Binity** — $19–24; 41 screens.
 - **IOWallet** — 116 screens; v3.0, dated 27 January 2026.
 
-As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do not treat a design kit’s screen count as coverage of section H’s contract.
+As of 2026-11-08, no free Figma Community crypto-wallet kit was found in the searches conducted for this guide. Re-search before relying on this finding. Do not treat a design kit’s screen count as coverage of section H’s contract.
 
 ### Decide what to reuse
 
@@ -5457,7 +5512,7 @@ As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do
 
    Re-check the selected source rather than relying on the dated assessment. Record its exact version or commit and inspect the code you intend to reuse.
 
-   Retain notices when you reuse MIT or Apache-2.0 code. Meet GPL-3.0 and EUPL-1.2 source-sharing obligations where they apply. Naming a project does not change its licence.
+   This licensing summary is a non-exhaustive checklist and does not replace reading each licence. Retain notices when you reuse MIT code. Under Apache-2.0 §4(d), retain all copyright, patent, trademark and attribution notices from the source, including the contents of any NOTICE file, in redistributed copies. Meet GPL-3.0 and EUPL-1.2 source-sharing obligations where they apply. Naming a project does not change its licence.
 
    Do not treat an audit of a source project as an audit of your adaptation: it covers that project’s code, not your reuse.
 
@@ -5493,11 +5548,11 @@ Until then, treat this as a testnet guide for a testnet wallet. Mainnet is absen
 
 ## Improve this guide
 
-If a step fails as written, a link is dead, or a value has changed, report it against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide). Include the section, the exact command or link, and the output you saw. No contribution guide is published yet; do not open reports against a fork.
+If a step fails as written, a link is dead, or a value has changed, open an issue against the Bawa repository (`Pr3eve6ti2o/bawa`, pinned at `e3b65fb832db287fdc8d54794980dd0b3456cc12` in this guide) at https://github.com/Pr3eve6ti2o/bawa/issues. Include the section, the exact command or link, and the output you saw. Follow the contribution guide at https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/CONTRIBUTING.md (checked 2026-11-17); do not open reports against a fork.
 
 ## Need help?
 
-No help destination is published for this guide yet. Work from the symptom-led recovery in section L and the repository guide’s troubleshooting (README §13–14) first. If the failure is a defect in the guide itself, report it as above.
+As of 2026-11-17, no help destination is published in the Bawa repository at the pinned commit `e3b65fb832db287fdc8d54794980dd0b3456cc12` (no `SUPPORT.md` or equivalent help file at that commit; checked 2026-11-17). Work from the symptom-led recovery in section L and the repository guide’s troubleshooting ([README §13 — architecture troubleshooting](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/13-wallet-app-architecture/README.md) and [README §14 — implementation troubleshooting](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/14-wallet-app-implementation/README.md)) first. If the failure is a defect in the guide itself, report it as above.
 
 ## Prose credit
 

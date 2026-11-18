@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.3 (the current latest stable) is a separate, uncompleted step; do not present 4.9.2 or 4.9.3 as the installed pin until the manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
+Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and require Node.js `>=22 <23` for the repository tools and Web app. The upgrade to 4.9.3 (the current latest stable) exists on feature branch `E02` (commit `decad63`) but is not integrated into main; do not present 4.9.2 or 4.9.3 as the installed pin on main until its manifests change. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, and the Web draft declares the same range.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
@@ -75,7 +75,7 @@ Read the mnemonic internally, check the 24-word count and validate it with Walle
 
 Enforce Bawa's empty BIP-39 passphrase policy. Treat a changed passphrase as selecting a different wallet, not merely changing an encryption password.
 
-Accept both mnemonic and passphrase for import. Validate the mnemonic with Mnemonic.isValid and enforce the passphrase policy before using Wallet Core's HDWallet.createWithMnemonic operation. Reject non-empty passphrase input rather than silently replacing it with an empty value. Make an explicit policy change before supporting a non-empty passphrase. Do not treat mnemonic validation as proof of the passphrase or the intended wallet.
+Accept both mnemonic and passphrase for import. Validate the mnemonic with Mnemonic.isValid and enforce the passphrase policy before using Wallet Core's HDWallet.createWithMnemonic operation. Require the implementation to reject non-empty passphrase input rather than silently replacing it with an empty value; this is a requirement, not implemented behaviour, and generation currently has no passphrase input to reject. Make an explicit policy change before supporting a non-empty passphrase. Do not treat mnemonic validation as proof of the passphrase or the intended wallet.
 
 Show a mnemonic only on the one-time offline backup screen. Keep import entry masked throughout, and never retain import text in persisted forms or navigation state.
 
@@ -117,26 +117,26 @@ Keep chain and account-origin metadata alongside the xpub. Do not treat address 
 
 ### Public-only flow
 
-Mirror the Wallet Core API sequence in `derive.js`. Apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
+`derive.js` is currently a CLI using `console.error` and exit codes, not a promise-returning library. The required derivation-module interface must mirror its Wallet Core API sequence. Under this contract, apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
 
-Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. As a command-line program, `derive.js` reports failures with plain `console.error` and exits with code 2 for read/usage errors or private-key rejection, or code 1 for runtime failures; it does not return typed errors.
+Under the required contract, obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
 
 Call the temporary public-key object’s `delete` method from a `finally` block, including when address conversion fails.
 
-Do not print or exit from the library. In the CLI adapter, print only the successful, validated address.
+Do not print or exit from the required derivation module. Keep diagnostics and exit-code handling in the CLI adapter, and print only the successful, validated address to stdout.
 
 ### Validation and failures
 
-Reject invalid paths, wrong networks, out-of-range indices and private material at a public-only boundary with typed errors. Never use a fallback derivation. Do not silently derive a different account after rejecting an import.
+The error taxonomy in this section is a required interface contract, not existing `derive.js` behaviour: the tool reports failures through plain stderr and exit codes. Reject invalid paths, wrong networks, out-of-range indices and private material at a public-only boundary with the contract's typed errors. Never use a fallback derivation. Do not silently derive a different account after rejecting an import.
 
 - **Inputs:** Accept exactly `btc`, `eth` or `trx`. Enforce the 200-character xpub limit before trimming, including while reading standard input, and reject empty trimmed input. Require a numeric integer index from `0` to `2147483647` inclusive. Treat both endpoints as non-hardened. Use distinct error kinds such as `UnsupportedChain`, `InvalidIndex`, `EmptyXpub` and `XpubTooLong`.
-- **Private extended keys:** Base58Check-decode the input, check its double-SHA-256 checksum, then compare the four-byte version against the eight-entry private-version set in `derive.js`, including recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. Return `PrivateExtendedKey` for recognised private extended keys, and never convert private input into public form. Keep address allocation from becoming a route for handling signing material.
+- **Private extended keys:** Base58Check-decode the input, check its double-SHA-256 checksum, then compare the four-byte version against the eight-entry private-version set defined in `extended-key.js` and imported by `derive.js`, including recognised [SLIP-132 versions](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) and testnet forms. Do not decide from a textual prefix alone. The required derivation-module contract must use `PrivateExtendedKey` as the typed error kind for recognised private extended keys, and must never convert private input into public form. Keep address allocation from becoming a route for handling signing material.
 - **Malformed keys:** Do not treat passing the private-version guard as confirmation of a valid xpub. Require Wallet Core to parse it, and reject invalid encoding, checksum or key structure with a typed failure rather than an address.
-- **Runtime failures:** Distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. Treat an empty address or a false validation result as a failure.
+- **Runtime failures:** Under this contract, distinguish `CoreInitialisationFailed`, `PublicDerivationFailed`, `AddressDerivationFailed` and `AddressValidationFailed`. Treat an empty address or a false validation result as a failure.
 
-Apply the extended-key-prefix and long-Base58 redaction from `derive.js` to retained native error text. Do not attach raw input to errors or telemetry, because an xpub still exposes an account’s address family.
+As a required policy, apply extended-key-prefix and long-Base58 redaction to retained native error text. Do not attach raw input to errors or telemetry, because an xpub still exposes an account’s address family.
 
-Keep standard-input read failures in the CLI adapter. Match `derive.js`: exit with `2` for read errors, usage errors and private-key rejection, and with `1` for runtime failures.
+Keep standard-input read failures in the CLI adapter. Require exit code `2` for read errors, usage errors and private-key rejection, and exit code `1` for runtime failures. These redaction and exit-code policies are requirements, not guarantees of existing `derive.js` behaviour.
 
 ### Regression checks
 
@@ -149,10 +149,10 @@ Record source-check results as “source-verified against the Trust Wallet Core 
 > - Confirm that BTC returns `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` and passes Bitcoin validation.
 > - Confirm that ETH returns `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`, preserves its checksum casing and passes Ethereum validation.
 > - Repeat the same chain, xpub and index, and confirm that the address remains identical.
-> - Confirm that `0` and `2147483647` pass the index gate, while negative, fractional and larger indices fail with typed errors.
-> - Confirm that invalid paths, wrong networks and hardened children below an account public key fail with typed errors, without a fallback derivation or a silently substituted account.
+> - Confirm that `0` and `2147483647` pass the index gate, while negative, fractional and larger indices fail with a stderr message and a non-zero exit, with no address on stdout.
+> - Confirm that invalid paths, wrong networks and hardened children below an account public key fail with a stderr message and a non-zero exit, with no address on stdout and without a fallback derivation or a silently substituted account.
 > - Confirm that synthetic private-version fixtures are rejected before public-key derivation.
-> - Confirm that empty, overlong or malformed input and `ton` return typed errors, without key material or a successful address on standard output.
+> - Confirm that empty, overlong or malformed input and `ton` fail with a stderr message and a non-zero exit, without key material or an address on stdout.
 
 ## Storage module
 
@@ -167,7 +167,7 @@ Keep storage behind one module. Give payment code public records or signing resu
 
 Never persist a plaintext mnemonic or private key. Never place the data key in the seed bundle, app database, `.env` or ciphertext backup archive.
 
-Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more lowercase words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
+Keep `make_wallet.py` as an orchestrator without payment-module imports. Have it run `generate.js`, read public JSON only, reject seed-like stdout containing 12 or more consecutive lowercase alphabetic words and require every self-check to pass. Limit its `.env` output to `XPUB_BTC`, `XPUB_ETH`, `XPUB_TRX` and `TON_DEPOSIT_ADDRESS`, using `0600` permissions and temporary-file, fsync and rename writes.
 
 An existing `seed.enc.json` causes refusal unless `generate.js --force` is passed. When that flag is set and the file exists, the generator copies it to `seed.enc.json.bak.<timestamp>` and proceeds to replace it. `make_wallet.py` accepts `--force` or `--regenerate` and passes `--force` to `generate.js`.
 
@@ -187,7 +187,7 @@ Use versioned migrations for storage changes, preserving authenticated encryptio
 
 ### 3.3 Platform protection and memory
 
-Set the shared application inactivity timeout to 10 minutes. This explicitly adopts the Web validation draft's ten-minute auto-lock interval as shared policy. At 754721cd, that interval is evidenced for the Web draft, and no inactivity timeout was found in the Android draft. Both platforms must meet the shared timeout; this policy statement does not establish that both drafts already comply. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
+Set the shared application inactivity timeout to 10 minutes as a selected policy choice adopted from the Web validation draft (WEB-GUIDE:286/887), not as a repository default. At 754721cd, that interval is evidenced only for the Web draft; Android compliance remains undecided (OI-011). Both platforms must meet the selected timeout; this is a requirement, not a description of current cross-platform compliance. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
 
 Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
@@ -215,7 +215,7 @@ Provide one-tap copy for the receive address, with automatic clipboard clearing 
 
 ### 3.6 Vault passphrase policy and Web draft evidence
 
-Set the shared minimum vault unlock passphrase length to 8 characters. This explicitly adopts the minimum enforced by the Web validation draft in `main.js` as shared policy. Enforcement outside the Web draft is not established by the supplied evidence. Reject weak passphrases under the recorded policy.
+Propose 8 characters as the shared minimum vault unlock passphrase length for prospective adoption, not as established shared policy. The Web validation draft leaves the minimum unset (WEB-GUIDE:282/336; OI-046), and `main.js` is absent from both cited trees. The supplied evidence does not establish enforcement of an 8-character minimum. If adopted, require both platforms to enforce that minimum. Reject weak passphrases under the recorded policy.
 
 Keep the Web validation draft’s vault distinct from the repository envelope. Treat its PBKDF2-600k with AES-256-GCM and its own AAD `bawa-web-vault-v1` as draft implementation choices. Preserve the distinction that this AAD is deliberately not the repository’s AAD. Do not claim `seed.enc.json` compatibility.
 
@@ -223,7 +223,7 @@ Treat 600,000 PBKDF2-HMAC-SHA-256 iterations as a defensible floor for the FIPS-
 
 ## Network and signing modules
 
-This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)). The app owns those responsibilities.
+This flow is conceptual; run broadcast tests only on explicitly configured testnets. Wallet Core does not communicate with nodes, retrieve balances or broadcast transactions ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core); live public repository page verified 2026-11-17). The app owns those responsibilities.
 
 ### 4.1 Network module
 
@@ -248,11 +248,11 @@ The daemon has fixed derivation paths and no network selector. Its chain labels 
 
 ### 4.2 Signing module
 
-Build the public transaction fields of a chain-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning the chain’s `SigningOutput`. Bitcoin input carries UTXOs, outputs, fee and change; Ethereum input carries chain ID, nonce, gas and data ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)).
+Build the public transaction fields of a coin-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning serialised `SigningOutput` protobuf bytes ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)). Coin-specific field examples include UTXOs, outputs, fee and change for Bitcoin, and chain ID, nonce, gas and data for Ethereum; exact schema details vary by coin and Core version (this repository pins Core 4.8.4).
 
 The signing coordinator holds no private keys. Only the key module adds signing secrets and invokes `AnySigner`; secret-bearing messages never leave that boundary. The key module must bind approval to the exact input. Check `SigningOutput` errors before accepting bytes.
 
-For offline/hardware signing, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction. Keys remain on the device; bind signatures to the reviewed input ([Vultisig Wallet Core repository](https://github.com/vultisig/wallet-core)).
+For offline/hardware signing, where supported for the selected coin and Core version, `TransactionCompiler` provides pre-image hashes for the device to sign and compiles the returned signatures into a transaction; some coins use a custom `PreSigningOutput` protobuf ([Trust Wallet Core TransactionCompiler interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWTransactionCompiler.h)). Require keys to remain on the device; bind signatures to the reviewed input.
 
 Obtain approval for recipients, amounts, change, fees and contract calls before signing. Decode the actual signed bytes with a chain-specific decoder, compare them against that approved intent, including chain/network, nonce, gas and data where applicable, and display the decoded transaction before an explicit broadcast action. A mismatch or decoding failure blocks submission.
 
@@ -306,7 +306,7 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft does not state that QR codes are not offered: it specifies testnet-only QR payment-request scanning (Section F) and bundles no QR encoder, and no receive-QR is specified. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 443), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
 
 ### 5.2 Confirmation and send flow
 
@@ -324,7 +324,7 @@ Do not treat broadcast acknowledgement as confirmation. Track inclusion, confirm
 
 ### 5.3 Accessibility, clipboard and capture
 
-Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) for accessibility across screens and required states (verified live 8 November 2026; w3.org blocks automated checks).
+Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) for accessibility across screens and required states (link checked live on 2026-11-17).
 
 Apply the shared clipboard rule from section 3:
 
@@ -368,7 +368,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
   >
   > `test/differential_test.py` independently checks the BTC and ETH fixtures above and prints `PASS`.
 
-  Exception at 754721cd: unlike `derive.js` and `derive_daemon.js`, `compare.js` does not reject private extended keys; given a private extended key it prints silently wrong addresses with exit 0 (D06 F1). Do not feed `compare.js` anything but a verified account public root.
+  Historical exception at 754721cd only: unlike `derive.js` and `derive_daemon.js`, `compare.js` did not reject private extended keys; given a private extended key it printed silently wrong addresses with exit 0 (D06 F1). As of a5bc56e, `compare.js` routes input through `validateExtendedKey` from `extended-key.js`, which rejects private extended keys before derivation. Do not feed `compare.js` anything but a verified account public root.
 
   Assert exact equality in CI. Track the extension of independent coverage to TRX and indices `1` and `2` as an open item. Treat these checks as public-derivation coverage, not custody or signing coverage. Treat the addresses as fixtures, not payment destinations, and label the BTC vector as mainnet-formatted.
 
@@ -396,7 +396,7 @@ Do not combine these counts or use them as evidence of a build, device run or li
 
 ### 6.2 Release and update security
 
-Apply OWASP MASVS L1 as the floor, with L2/R coverage for apps storing sensitive data. Maintain a threat model and commission an external penetration test. Automate dependency and secret scanning. Require signed, reproducible builds and use a staged rollout.
+Apply the legacy OWASP MASVS verification levels: L1 as the floor, with L2/R coverage for apps storing sensitive data. This guide does not pin a MASVS version. MASVS alone does not cover web/Core or wallet-specific transaction security, so provide separate coverage for those. Maintain a threat model and commission an external penetration test. Automate dependency and secret scanning. Require signed, reproducible builds and use a staged rollout.
 
 Block release for any of the following:
 

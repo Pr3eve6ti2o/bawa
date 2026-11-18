@@ -12,9 +12,9 @@ Required coverage — not all items below are implemented:
 - BIP-44 Ethereum outputs;
 - extended-key serialization and checksum behavior.
 
-Current automated coverage comprises BTC/ETH/TRX watch-only smoke derivations at indices 0–1, CLI and daemon checks, and an address-only differential test for BIP-84 Bitcoin and BIP-44 Ethereum at index 0. It does not cover BIP-39 mnemonic validation or mnemonic-to-seed vectors, BIP-32 master/child vectors including hardened and leading-zero cases, or extended-key serialisation/checksum behaviour.
+Current automated coverage comprises BTC/ETH/TRX watch-only smoke derivations at indices 0–1, CLI and daemon checks, and an address-only differential test for BIP-84 Bitcoin and BIP-44 Ethereum at index 0. It does not cover BIP-39 mnemonic validation or mnemonic-to-seed vectors, or BIP-32 master/child vectors including hardened and leading-zero cases. No extended-key serialisation round-trip test was found, while checksum-rejection behaviour is tested.
 
-The current Trust Wallet Core generator contains public regression fixtures. The root README, section 18, lists **Full published-vector coverage** as **FAIL**: vectors covering TRX and indices 1–2, not only BTC/ETH index 0.
+The current Trust Wallet Core generator contains public regression fixtures. The row at `docs/README-FULL.md:1248` lists **Full published-vector coverage** as **FAIL**: vectors covering TRX and indices 1–2, not only BTC/ETH index 0.
 
 ## Independent differential verification
 
@@ -46,27 +46,27 @@ Never put a real mnemonic, seed, xprv, hardware-wallet secret or production back
 Required automated negative/security coverage — this is not a list of passing tests.
 
 - malformed JSON — **no automated coverage**;
-- oversized JSON lines — **no automated coverage**;
-- invalid chain names — **partial — daemon only**;
+- oversized JSON lines — **covered**;
+- invalid chain names — **covered**;
 - negative indexes — **covered**;
 - indexes at or above 2^31 — **no automated coverage**;
-- malformed Base58/checksums — **no automated coverage**;
-- private extended keys supplied where public keys are required — **no automated coverage**;
+- malformed Base58/checksums — **covered**;
+- private extended keys supplied where public keys are required — **covered**;
 
-Known exception: tools/hdwallet-gen/compare.js has no private-extended-key check; a 2026-11-09 probe feeding an xprv to it printed the same BTC address three times (exit 0). No regression test covers this.
+Current safeguard: tools/hdwallet-gen/compare.js rejects private extended keys pre-WASM via validateExtendedKey; smoke.test.js section 8 covers this. The 2026-11-09 xprv probe (exit 0) is historical only and does not reproduce (live probe exits 1).
 
-- corrupted AES-GCM ciphertext — **no automated coverage**;
-- wrong data keys — **no automated coverage**;
-- truncated recovery artifacts — **no automated coverage**;
+- corrupted AES-GCM ciphertext — **covered** (smoke.test.js section 10: "verifySeedBundle: tampered ciphertext rejected" at :1166);
+- wrong data keys — **covered** (smoke.test.js section 10: "verifySeedBundle: wrong key rejected" at :1169);
+- truncated recovery artifacts — **covered** (malformed-bundle rejection check);
 - symlinked secret paths — **no automated coverage**;
 - unexpected existing outputs — **no automated coverage**;
 - missing .env — **no automated coverage**.
 
-Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:83–92` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive_daemon.js:76–85` rejects over-long lines ("request too large") and malformed JSON ("bad json").
+Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:52–57` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive_daemon.js:71,87–91` rejects over-long lines ("request too large") and malformed JSON ("bad json").
 
 ## TON-specific coverage
 
-TON needs explicit fixtures for:
+The following TON fixture needs have been identified; this list is not asserted to be complete. In the recorded fixture, workchain is inferred from the address’s `0:` prefix rather than stated as an explicit fixture field. TON needs explicit fixtures for:
 
 - mnemonic scheme;
 - derivation path;
@@ -89,11 +89,11 @@ Payment tracking must be tested separately from wallet derivation:
 ~~~
 address allocation
       ↓
-known funding event
+observed blockchain event
       ↓
 chain observation
       ↓
-payment match
+payment match (totaling matching payments + unique event/payment identification)
       ↓
 confirmation/finality
       ↓
@@ -106,7 +106,7 @@ reconciliation
 
 Exercise duplicate observations, provider failures, restarts, reorgs and late payments.
 
-Entry point: the test taxonomy and the release gates for this revision live in docs/10. The executable suites are the smoke suite at test/smoke.test.js, run with npm test from tools/hdwallet-gen (28 tests), and the differential test at test/differential_test.py. Use npm run check from tools/hdwallet-gen to verify the tools' syntax and the daemon's startup probe, and .github/workflows/ci.yml for the CI steps. The supported Node range is >=22 <23.
+Entry point: the release gates for this revision live in docs/10. The executable suites are the smoke suite at test/smoke.test.js, run with npm test from tools/hdwallet-gen (130 runtime checks at a5bc56e, including the daemon's startup probe), and the differential test at test/differential_test.py. Use npm run check from tools/hdwallet-gen to verify the tools' syntax only, and .github/workflows/ci.yml for the CI steps. The supported Node range is >=22 <23.
 
 Verification record (2026-11-09, muse-vm, Node v24.22.2 — outside the declared >=22 <23 range): on commit 754721cd, smoke suite 28/28 exit 0; check exit 0; differential test exit 0 with the BTC bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd and ETH 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7 addresses in the provisioned environment, and exit 1 in a clean venv with ModuleNotFoundError: No module named 'bip_utils' before installing the pinned requirements. Full published-vector coverage — FAIL, linked to README section 18, line 1128. The Node-version requirement has been verified in range on Node 22.23.4 (2026-11-08, 28/28); do not mark in-range validation as completed.
 
