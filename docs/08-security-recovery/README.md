@@ -990,13 +990,13 @@ Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa co
 
 ### Casa-style service
 
-A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime.
+A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime ([Casa Basic Inheritance](https://support.casa.io/knowledge/basic-inheritance-for-standard-members)).
 
 A service may describe its arrangement as "self-custody". Check what the service can and cannot do for you: if you control a working quorum independently, you retain spending ability; if the provider holds a necessary key or controls the software workflow, your independence is limited.
 
 Providers also offer account monitoring, inheritance handling and succession planning, including an inheritance check that confirms the recipient can still access their key. Casa markets its service for families and businesses seeking security and inheritance, with support for Bitcoin and Ethereum, including selected ERC-20 tokens. Check the supported assets for your own holdings.
 
-Use these figures from the [Casa vault FAQ](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
+Use these figures from the [Casa pricing](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
 
 | Casa plan | Annual price |
 |---|---:|
@@ -1009,15 +1009,15 @@ These are entry bands only. Ask what features, limits and support are included a
 
 #### Inheritance
 
-A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable.
+A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable ([Casa Basic Inheritance](https://support.casa.io/knowledge/basic-inheritance-for-standard-members), [Casa Vault Owner FAQs](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)).
 
-The process may include a six-month inactivity check, a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable.
+The process may include a six-month inactivity check, a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable ([Casa Basic Inheritance](https://support.casa.io/knowledge/basic-inheritance-for-standard-members), [Casa Vault Owner FAQs](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)).
 
 A recipient who has lost their key or cannot be found is a recognised failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
 
 ### Unchained-style service
 
-A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider's key is intended to be inaccessible to staff alone. Inheritance may be offered as a paid extension.
+A typical arrangement uses a [2-of-3 multisig vault](https://www.unchained.com/blog/unchained-capital-coldcard-guide) with optional inheritance. You control two keys and the provider holds one, and the provider can [help arrange signing when a key is unavailable](https://www.unchained.com/blog/replace-key-multisig-wallet). The provider's key is intended to be inaccessible to staff alone. Inheritance may be offered as a paid extension.
 
 Use these figures from [Unchained pricing](https://unchained.com/pricing), re-checked live on **8 November 2026 (UTC)**:
 
@@ -1258,3 +1258,7 @@ Paying does not remove risk: a paid service can reduce dependence on a single de
 - BIP-341 — https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
 - RFC 9591 — https://www.rfc-editor.org/info/rfc9591
 - NIST SP 800-57 Part 1 Rev. 5 — https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final
+- Casa Basic Inheritance — https://support.casa.io/knowledge/basic-inheritance-for-standard-members
+- Casa Vault Owner FAQs — https://support.casa.io/knowledge/inheritance-faqs-vault-owner
+- Unchained multisig vault guide — https://www.unchained.com/blog/unchained-capital-coldcard-guide
+- Unchained key-replacement guide — https://www.unchained.com/blog/replace-key-multisig-wallet
