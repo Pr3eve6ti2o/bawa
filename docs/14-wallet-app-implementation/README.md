@@ -248,7 +248,7 @@ The daemon has fixed derivation paths and no network selector. Its chain labels 
 
 ### 4.2 Signing module
 
-Build the public transaction fields of a coin-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning serialised `SigningOutput` protobuf bytes ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)). Coin-specific field examples include UTXOs, outputs, fee and change for Bitcoin, and chain ID, nonce, gas and data for Ethereum; exact schema details vary by coin and Core version (this repository pins Core 4.8.4).
+Build the public transaction fields of a coin-specific protobuf `SigningInput` from validated app data. `AnySigner` provides one signing entry point, returning serialised `SigningOutput` protobuf bytes ([Trust Wallet Core AnySigner interface](https://github.com/trustwallet/wallet-core/blob/master/include/TrustWalletCore/TWAnySigner.h)). Coin-specific field examples include UTXOs, outputs, fee and change for Bitcoin, and chain ID, nonce, gas and data for Ethereum; exact schema details vary by coin and Core version (this repository pins Core 4.9.3).
 
 The signing coordinator holds no private keys. Only the key module adds signing secrets and invokes `AnySigner`; secret-bearing messages never leave that boundary. The key module must bind approval to the exact input. Check `SigningOutput` errors before accepting bytes.
 
@@ -355,7 +355,7 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 
   This layer has no runnable procedure in this guide yet.
 
-- **Differential tests.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
+- **Differential tests.** Pin Trust Wallet Core to `4.9.3`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and compare public derivation against independently pinned `bip_utils`. Supply `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` through the root `.env` read by `compare.js`, or through the path selected by `NOVA_ENV`. Retain `NOVA_ENV` as a frozen legacy identifier for compatibility with existing seed bundles. Require a code change and a migration note before renaming it.
 
   Use `test/differential_test.py` to independently check these published index-zero fixtures:
 
@@ -422,7 +422,7 @@ Use this nine-step checklist as work to complete, not as evidence of completion.
 
 1. **Establish the security scope.** Keep the app scoped to testnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
 
-2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.8.4`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
+2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.9.3`, matching the repository tools at base commit `754721cd` (the Web draft pins `4.9.2` (WEB-GUIDE pins table; D21 work copy); Android's AAR procedure (C.1) checks out tag `4.9.2`, so the drafts do not uniformly pin `4.8.4`), and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
 
 3. **Prepare public test inputs.** Supply the xpub inputs for `compare.js` through the root `.env` or the path selected by `NOVA_ENV`. Preserve the frozen identifier and use published fixtures, never customer wallet material.
 

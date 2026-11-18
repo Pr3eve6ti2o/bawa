@@ -3,6 +3,7 @@
 This changelog does not claim full conformance to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): the date for [1.1.0] is not evidenced. Adherence to [Semantic Versioning](https://semver.org/) is not established by the available evidence, and there is no declared public API. Entries under [Unreleased] describe changes since the last versioned section; a versioned section is a release only once it is tagged. No release tags exist yet, so [1.1.0] below is the recorded version state, not a tagged release.
 
 ## [Unreleased]
+- Re-pinned Trust Wallet Core from 4.8.4 to 4.9.3 (owner order, 2026-11-18): `tools/hdwallet-gen/package.json` and lockfile, WASM sha256 `13a18a38...77217` (10,422,325 bytes), M05 O3 qualification run passed (npm test, launcher suite 48/48, differential test PASS, fixture addresses match). The TRX 33-byte compressed-pubkey WASM abort persists on 4.9.3; the JS-first decompression in `derive.js` still applies. Docs pin statements updated to 4.9.3; dated 4.8.4 verification records kept as history.
 
 - Added the Trust Wallet Core-backed wallet implementation under tools/.
 - Added a pinned bip_utils independent-reference test layer.

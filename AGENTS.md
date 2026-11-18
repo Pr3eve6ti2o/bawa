@@ -4,7 +4,7 @@
 
 Bawa (`Pr3eve6ti2o/bawa`, `main` branch) is a practical open-source reference for HD-wallet generation, watch-only derivation, recovery, tracking and reconciliation — not a hosted wallet, custody service or exchange. The owner's direction is **mainnet-first**, but that direction is not yet delivered: the current documented workflow is **testnet-only**. Mainnet work is gated behind a separate reviewed change, and real-funds gates remain mandatory; no mainnet execution without separate explicit approval.
 
-Verified snapshot (2026-11-14): main at `16c074e`. The engine is Trust Wallet Core **4.8.4** WASM. The tools suite (`npm --prefix tools/hdwallet-gen test`) records 130 checks, 0 fail. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
+Verified snapshot (2026-11-14): main at `16c074e`. The engine is Trust Wallet Core **4.9.3** WASM (re-pinned from 4.8.4 on owner order, 2026-11-18; qualification run passed). The tools suite (`npm --prefix tools/hdwallet-gen test`) records 130 checks, 0 fail. This is supplied baseline evidence, not a new test run or evidence for untested capabilities.
 
 There is NO signing, broadcast or transaction-construction code on this branch, and send/sign/broadcast has never been exercised on any network. **Do not mark mainnet/production readiness as PASS.** The full AI Wallet Builder — profiles, registry, starters, mainnet tools, TON watch-only derivation — lives on the `feature/ai-wallet-builder` branch, not here.
 
@@ -37,7 +37,7 @@ Do not invent filenames for numbered guides or treat documentation as execution 
 
 ## Fixed policy and hard constraints
 
-- **Engine:** Trust Wallet Core 4.8.4 WASM. Do not silently re-pin or change the engine version.
+- **Engine:** Trust Wallet Core 4.9.3 WASM. Do not silently re-pin or change the engine version.
 - **Derivation:** BTC `m/84'/0'/0'/0/i` (BIP-84, zpub), ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'` generation-only, single deposit address, no xpub. Account 0, receiving branch 0 only. BIP-39 256-bit, 24 words, **empty passphrase**. Do not change paths, the passphrase policy, or the AAD `nova-shop-seed-v1`.
 - **Permissions:** `secrets/` 0700, `seed.enc.json` 0600, `.env` 0600.
 - **Networks:** testnet-only workflow; the owner's mainnet-first direction is not yet delivered. Mainnet work is gated behind a separate reviewed change; real-funds gates remain mandatory; no mainnet execution without separate explicit approval.

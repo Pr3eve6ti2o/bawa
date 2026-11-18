@@ -391,7 +391,7 @@ For the procedures, see **Doc 1 §6 (Node)** and **Doc 1 §7 (Python)**. Install
 
 Match these repo pins:
 - **Node 22.23.4**, within the repo range `>=22 <23` (M05).
-- **Trust Wallet Core 4.8.4** (M05 F11).
+- **Trust Wallet Core 4.9.3** (M05 F11).
 - Python packages **`cryptography==50.0.2`** and **`bip-utils==2.12.3`** (M05).
 
 **Standing environment note:** verification ran on **Node v24.22.2**, outside the repo range. Node v24 is not a supported configuration (M05/M06; verify2 T1 environment failure). Anything installed outside the pins is untested against the repo.
@@ -2812,7 +2812,7 @@ The open-item facts are **gate inputs, not resolutions**. All clearance checks b
 
 #### Core pin agreement — unresolved revision input
 
-**Status: unperformed.** Core is pinned at `4.8.4` but stated as `4.9.2`.
+**Status: resolved 2026-11-18.** Core is pinned at `4.9.3` and the guide now states `4.9.3`; the 4.8.4/4.9.2 mismatch is closed by the re-pin.
 
 - **Observable check:** Reconcile the pinned version, the version stated in the guide and the version proposed for the reviewed route. Do not silently select one side of the mismatch.
 - **Required evidence:** A cited resolution, the corresponding reviewed revision and evidence identifying the version actually checked for that scope.
@@ -3018,7 +3018,7 @@ Version records at the **2026-11-09 baseline**: (M05)
 
 | Component | Recorded pin | Candidate or constraint |
 |---|---|---|
-| Trust Wallet Core | **4.8.4**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** — tag `4.9.1` points to commit `17e3cd4d`; npm tarball SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
+| Trust Wallet Core | **4.9.3**, in `package.json` and the lockfile | **4.9.3**, the latest stable (full release, ~2026-11-11); baseline **4.9.1** — tag `4.9.1` points to commit `17e3cd4d`; npm tarball SHA-1 `18e563fce2111a6fa5ad372cabeb83e6ed0998f0`. **Do not use 4.9.2**: GitHub prerelease. |
 | Node | **22.23.4**; repo range `>=22 <23` | Node **v24** is outside that range. |
 | bip-utils | **2.12.3** (adopted 2026-11-13: differential test PASS, identical BTC/ETH addresses, 14/14 unit tests) | none — 2.12.3 is the current latest stable and the adopted pin |
 
@@ -3098,7 +3098,7 @@ For BIP-32, cite the [verified raw text](https://raw.githubusercontent.com/bitco
 **Wallet-core tally: 36 links — 35 LIVE and 1 DEAD-404 by design.**  
 **Tooling/install tally: 17 links — 14 LIVE, 1 LIVE-via-registry, 1 DEAD-404 template and 1 EXISTS-VM-BLOCKED.** [M31]
 
-Use the **Trust Wallet Core repository and `registry.json` at 4.8.4**, the Bawa repo pin. The release tagged **4.9.2** is an upgrade candidate, **not the pin**; do not use it as evidence for the pinned version’s behaviour. [M31; M28]
+Use the **Trust Wallet Core repository and `registry.json` at 4.9.3**, the Bawa repo pin. The release tagged **4.9.2** is an upgrade candidate, **not the pin**; do not use it as evidence for the pinned version’s behaviour. [M31; M28]
 
 Carry these access and citation qualifications:
 
@@ -3616,11 +3616,11 @@ These groups sum to **91 URLs**, not 103. The remaining **12 URLs are unexplaine
 
 **Status:** OPEN.
 
-**Operational restriction:** Pin exactly `4.8.4` as the repository version, or exactly `4.9.3` as the upgrade candidate only after its own qualification run: EIP-1559 with chain ID `1`, mainnet derivation fixtures and mainnet endpoints. Never use `latest`, `^` or a bare version. Never relabel `4.9.1` or `4.9.2` results as `4.9.3` results.
+**Operational restriction:** Pin exactly `4.9.3` as the repository version (re-pinned 2026-11-18; the M05 O3 qualification run passed and is recorded). Never use `latest`, `^` or a bare version. Never relabel `4.9.1` or `4.9.2` results as `4.9.3` results.
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** The `4.9.3` qualification run specified in M05 O3, with recorded results, or a reviewed decision to stay on repository version `4.8.4`.
+**Clearance condition:** Met 2026-11-18 — the `4.9.3` qualification run specified in M05 O3 passed with recorded results (npm test, launcher suite 48/48, differential test PASS, fixture addresses match; WASM sha256 `13a18a38…77217`).
 
 **Gate/source links:** Re-checked register (2026-11-09), M-21; M05 F2/F3/F7 and O3; M23; M24 K18 / OI-090. Repository context: [Bawa at `56396a20`](https://github.com/Pr3eve6ti2o/bawa/tree/56396a20).
 

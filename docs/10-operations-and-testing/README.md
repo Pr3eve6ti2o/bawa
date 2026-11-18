@@ -69,7 +69,7 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 
 | Component | Scope | Declared value | Required release-verification pin | Status |
 | --- | --- | --- | --- | --- |
-| Trust Wallet Core | `tools/hdwallet-gen` | `4.8.4` | `4.9.3` (latest stable, published ~2026-11-11; `4.9.2` was a GitHub pre-release published 2026-11-06, tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`) | Not yet re-pinned or re-verified; the EIP-1559 construction/signing demonstration was on Core `4.9.2` only (D21, 2026-11-08); in-browser proof, send, sign and broadcast remain open. |
+| Trust Wallet Core | `tools/hdwallet-gen` | `4.9.3` | `4.9.3` (latest stable, published ~2026-11-11; `4.9.2` was a GitHub pre-release published 2026-11-06, tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`) | Re-pinned and re-verified 2026-11-18 (M05 O3 qualification run passed); the EIP-1559 construction/signing demonstration was on Core `4.9.2` only (D21, 2026-11-08); in-browser proof, send, sign and broadcast remain open. |
 | cryptography | Python | `==50.0.2` | `==50.0.2` | Pinned |
 | bip-utils | Python | `==2.12.3` | `==2.12.3` | Pinned |
 | Node | repo | `>=22 <23` | record the full tested version separately | Verified on Node v22.23.4 on the VM (D22, 2026-11-08; official tarball, SHA-256 verified): the full repository suite was re-run with no result changes. Separately, the operator's 2026-11-09 run on Node v24.22.2, outside the declared range, passed `npm run check`, `npm test` (28/28), differential testing and `py_compile`, all with exit 0. |
@@ -975,7 +975,7 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm ci`, a clean, lockfile-based installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
+The tooling package declares `@trustwallet/wallet-core` at `4.9.3`; the procedure below runs `npm ci`, a clean, lockfile-based installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
 Run entry, installation and return as a single gated chain, so a failure stops the sequence before the return:
 

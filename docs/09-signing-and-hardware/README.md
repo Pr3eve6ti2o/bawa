@@ -69,7 +69,7 @@ For systems handling any amount whose loss would be material to the holder, move
 
 ---
 
-The dedicated EIP-1559 construction/signing demonstration was verified on [Core 4.9.2](../../CHANGELOG.md), the demonstrated reference (GitHub pre-release), distinct from the installed 4.8.4 pin ([D21, line 92](../14-wallet-app-implementation/README.md), 2026-11-08; [4.8.4 pin; 4.9.2 demonstrated reference, line 23](../../CHANGELOG.md)), with `txMode: 1` producing a `0x02` envelope ([enum/wire-byte distinction, line 1718](../android-wallet/ANDROID-GUIDE.md)) and Python independently recovering the [published fixture sender, line 65](../14-wallet-app-implementation/README.md). Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
+The dedicated EIP-1559 construction/signing demonstration was verified on [Core 4.9.2](../../CHANGELOG.md), the demonstrated reference (GitHub pre-release), distinct from the installed 4.9.3 pin ([D21, line 92](../14-wallet-app-implementation/README.md), 2026-11-08; [4.8.4 pin; 4.9.2 demonstrated reference, line 23](../../CHANGELOG.md)), with `txMode: 1` producing a `0x02` envelope ([enum/wire-byte distinction, line 1718](../android-wallet/ANDROID-GUIDE.md)) and Python independently recovering the [published fixture sender, line 65](../14-wallet-app-implementation/README.md). Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
 
 ## The fixed derivation policy
 

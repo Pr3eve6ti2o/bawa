@@ -438,7 +438,7 @@ Restrict discovery to receiving-branch addresses in the validation draft. Change
 
 ## F. Send and signing
 
-Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4. The repo’s engine derives public keys and addresses; the app builds unsigned transaction inputs, Core signs them, and the app broadcasts signed bytes. Use this flow for testnet only.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.9.3. The repo’s engine derives public keys and addresses; the app builds unsigned transaction inputs, Core signs them, and the app broadcasts signed bytes. Use this flow for testnet only.
 
 ### QR payment-request scanning — testnet only
 

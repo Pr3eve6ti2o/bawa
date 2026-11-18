@@ -41,7 +41,7 @@ Use a wallet application instead if you need to check balances or construct, sig
 
 ### Implemented on main
 
-- [Generate an encrypted seed file](#launch-bawa) with `tools/make_wallet.py`, an interactive terminal tool using Trust Wallet Core `4.8.4` WASM. It generates a **24-word BIP-39 mnemonic with an empty BIP-39 passphrase** and writes encrypted `seed.enc.json` using AES-256-GCM, AAD `nova-shop-seed-v1` and file mode `0600`.
+- [Generate an encrypted seed file](#launch-bawa) with `tools/make_wallet.py`, an interactive terminal tool using Trust Wallet Core `4.9.3` WASM. It generates a **24-word BIP-39 mnemonic with an empty BIP-39 passphrase** and writes encrypted `seed.enc.json` using AES-256-GCM, AAD `nova-shop-seed-v1` and file mode `0600`.
 - [Derive and compare watch-only addresses](#pinned-derivation-scope) with `derive.js`, `derive_daemon.js` and `compare.js` in `tools/hdwallet-gen`. These tools operate from **public roots only**.
 - [Check decryption](#check-decryption) with `tools/decrypt_seed.py`, which defaults to `secrets/seed.enc.json`. This executable check is **not a completed recovery rehearsal**.
 - [Verify derivation results](#verify-the-tools) with derivation/comparison checks and a limited independent BTC/ETH comparison. The recorded results and scope are below.

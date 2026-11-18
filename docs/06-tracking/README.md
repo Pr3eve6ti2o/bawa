@@ -153,6 +153,37 @@ Use OKLink as a second source when the chain-native provider fails: it is a diff
 3. If every provider for the chain fails, log the outage, keep the last good state, and alert — do not serve stale data as fresh.
 4. After the outage, check why it failed (quota, downtime, or a bad key) before you put the provider back first in the order.
 
+#### Fallback loop (for AI)
+
+The machine-readable form of this section is `providers.json` in this directory: one ordered provider list per chain, with each provider's type, endpoint, key and what it answers, plus the loop rules. An AI agent (or a tracker) runs the loop below. It is quick on purpose: a 5-second timeout per provider, no retry on a hard failure, one full pass over a chain's list in at most 15 seconds.
+
+1. **Input:** the chain and the query (balance, history, token transfers, token metadata).
+2. **Load** the ordered provider list for that chain from `providers.json`.
+3. **For each provider in order:** health-check it (the cheapest query the provider documents for the chain, or a GET to its base URL; 5-second timeout). Alive is any HTTP response within 5 seconds, including `401` (server up, key missing) and `429` (server up, rate-limited). Dead is no response within 5 seconds, a connection error, or a `5xx`.
+4. **First provider that answers wins.** Use it for the query.
+5. **On a `429` or quota-exhausted:** rotate to the next API key for that provider (TronGrid and TronScan each take 1–50 keys) and log the switch. If no keys remain for that provider, move to the next provider.
+6. **On a hard failure** (timeout, connection error, `5xx`): do not retry the same provider. Move to the next provider immediately.
+7. **If every provider for the chain fails:** log the outage, keep the last good state, alert, and do not serve stale data as fresh. Wait 30 seconds and run one more pass; then stop and report the outage.
+8. **Record** which provider answered each request, so a dead provider is visible instead of silent.
+
+**TRON loop, worked:** TronGrid first (`https://api.trongrid.io`, key `trongrid_keys[0]`). If it times out or returns a `5xx`, switch to the TronScan API (`https://apilist.tronscanapi.com`, key `tronscan_keys[0]`) — a different system run by a different team, with its own key. If that fails too, switch to OKLink, a different company and infrastructure. If the TronScan *website* (`https://tronscan.org/`) does not load, that is a browser/UI failure, not an API failure: use the TronScan API or OKLink for the data, and treat the website as down. Never wait on one provider while another that supports the same chain is available.
+
+#### Scanners, APIs and RPCs — what each link is
+
+The 39 links in this section fall into four kinds. A **scanner** is a block explorer UI for humans (browse an address, transaction or token). An **indexer API** is the machine query layer (balances, history, token transfers, metadata). An **RPC** is a node (state, execution, current block) with no universal wallet-history method. An **explorer API** is an explorer's API — the same company as its scanner, a different system from its RPC. Do not confuse a scanner with its API: a scanner that does not load in a browser does not mean its API is down, and an API that is down does not mean the scanner is down.
+
+| Chain | Scanner (human UI) | Indexer / explorer API (machine) | RPC (node) |
+|---|---|---|---|
+| TRON | TronScan — <https://tronscan.org/> | TronGrid API — <https://api.trongrid.io>; TronScan API — <https://apilist.tronscanapi.com> | TronGrid node API (same endpoint as its indexer API) |
+| Ethereum | Etherscan — <https://etherscan.io/> | Etherscan API V2 (one key, 50+ EVM chains); RouteScan Data API — <https://routescan.io/>; Blockscout API — <https://www.blockscout.com/> | — (use Etherscan V2 / RouteScan / Blockscout; a self-hosted Blockscout is Level 6) |
+| Arbitrum | Arbiscan — <https://arbiscan.io/> | Etherscan API V2 (Arbiscan); RouteScan; Blockscout | — |
+| Base | Basescan — <https://basescan.org/> | Etherscan API V2 (Basescan); RouteScan; Blockscout | — |
+| BNB Smart Chain | BscScan — <https://bscscan.com/>; OKLink — <https://www.oklink.com/bsc> | Etherscan API V2 (BscScan); RouteScan; OKLink API | — |
+| Solana | Solscan — <https://solscan.io/> | Helius (RPC + indexed APIs); Solscan API — <https://solscan.io/apis> | Helius; Solana public cluster — <https://api.mainnet.solana.com> (shared, rate-limited, last resort) |
+| Bitcoin | Blockchain.com Explorer — <https://www.blockchain.com/explorer>; OKLink — <https://www.oklink.com/> | Blockchain.com Explorer API; OKLink API | — |
+
+The remaining links in this section are the supporting pages for those providers, not providers themselves: docs (TronGrid <https://www.trongrid.io/documents>, TronScan API keys <https://docs.tronscan.org/en/api/api-keys>, Etherscan <https://docs.etherscan.io/introduction>, RouteScan <https://docs.routescan.io/>, Blockscout <https://docs.blockscout.com/>, Helius <https://www.helius.dev/docs>, OKLink <https://www.oklink.com/docs/en/#developer-tools>), pricing (Etherscan <https://etherscan.io/api/pricing>, RouteScan <https://routescan.io/pricing>, Helius <https://www.helius.dev/pricing>, Solscan <https://solscan.io/apis/pricing>, Blockchain.com <https://www.blockchain.com/explorer/pricing>, Helius billing <https://www.helius.dev/docs/billing/plans>), sign-in and registration (Arbiscan <https://arbiscan.io/login> / <https://arbiscan.io/register>, RouteScan <https://routescan.io/auth/login>, Helius dashboard <https://dashboard.helius.dev/login>), testnets (TronGrid Shasta <https://api.shasta.trongrid.io>, Nile <https://nile.trongrid.io>), and the Blockscout source (<https://github.com/blockscout/blockscout>).
+
 ## 3. RPC is not an indexer
 
 Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode` (which reads contract bytecode, not storage), `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
