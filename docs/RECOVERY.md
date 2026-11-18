@@ -723,6 +723,8 @@ Write down how to respond to each event:
 - **One copy is stolen:** Use the recorded physical access controls and, where used, a BIP-39 passphrase held separately from the mnemonic as defences. Do not confuse that passphrase with Bawa's data key. Treat theft of both the mnemonic and its passphrase as compromise. Without a passphrase, treat mnemonic theft alone as compromise. Treat theft of `seed.enc.json` together with its data key as exposure of the stored secret. Following compromise, move funds to a fresh wallet with new recovery material.
 - **The only copy is lost:** Treat this as the **lost-wallet case**, with no backup recovery route. Check whether a still-working device lets you move funds to a newly backed-up wallet. Without that access or surviving recovery material, Bawa cannot recover the funds.
 
+  A **lost-wallet case** means no usable backup or recovery material remains to restore the wallet, even if a still-working device retains access.
+
 > **Expected result:** A usable fallback after losing one site, a clear compromise response after theft and no promise of recovery when the last usable recovery route is gone.
 
 #### Step 5, leave an inheritance route
