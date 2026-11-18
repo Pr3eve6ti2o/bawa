@@ -52,7 +52,7 @@ Use derivation policy bawa-derivation-policy-v1, with BIP-39 256-bit entropy, a 
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: generation from m/44'/607'/0'; recovery support is unverified. The supplied derivation-path evidence does not establish a generation-only restriction. Apply that qualification only after independently confirming it in the target wallet/version's recovery documentation or implementation; record the supporting source, version, and scope of the restriction.
 
 NFKD-normalise the mnemonic and the BIP-39 passphrase, then derive the 64-byte seed with PBKDF2-HMAC-SHA512, using 2,048 iterations and the salt "mnemonic" plus the normalised passphrase.
 
@@ -151,11 +151,13 @@ Use **bawa-derivation-policy-v1** as the current Bawa reference policy: BIP-39 w
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: generation from m/44'/607'/0'; recovery support is unverified. The supplied derivation-path evidence does not establish a generation-only restriction. Apply that qualification only after independently confirming it in the target wallet/version's recovery documentation or implementation; record the supporting source, version, and scope of the restriction.
 
 For this reference policy, set the BIP-39 passphrase to **zero characters**. Do not enter a space, a word describing the empty policy, the artefact's data key or an application password.
 
 If the original record documents a departure from the current empty policy, reproduce that historical passphrase policy exactly. Do not silently replace it with today's default. Ensure that any non-empty passphrase is itself recoverable; do not rely on a note saying only that one existed.
+
+Store the exact historical passphrase, preserving case, whitespace, and Unicode characters, in a dedicated encrypted password-manager entry. Make an encrypted offline backup separate from the mnemonic backup. In a private recovery inventory, record the vault name, stable entry identifier, backup location, and retrieval/decryption steps—not the plaintext passphrase. Keep the unlock material separately recoverable, without depending on access to the wallet being recovered. Verify recoverability by retrieving the passphrase from the offline backup using only the documented steps and recovery materials, then performing an offline restore or key derivation with the historical mnemonic and passphrase policy. Compare the resulting public address or fingerprint with a previously recorded known-good value. Record the test date and outcome, without recording the secret in the test log.
 
 NFKD-normalise the mnemonic and the BIP-39 passphrase. Then derive the **64-byte seed** with **PBKDF2-HMAC-SHA512**, using **2,048 iterations**, the normalised mnemonic as the password, and the literal string **"mnemonic"** concatenated with the normalised passphrase as the salt.
 
