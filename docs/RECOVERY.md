@@ -744,6 +744,7 @@ Discuss these options with an **estate professional familiar with digital assets
 
 - A sealed envelope of instructions held by a trusted executor.
 - A time-locked multisig arrangement in which a trusted party holds one key. Plan and test this in advance, rather than relying on a note describing it.
+  This option is not implemented in Bawa. No technical documentation or supporting external reference is provided here; do not treat it as a supported Bawa inheritance or recovery method.
 
 Never embed the mnemonic in a legal will, as the will may become public or be widely circulated.
 
@@ -751,16 +752,11 @@ Never embed the mnemonic in a legal will, as the will may become public or be wi
 
 ## Sources
 
-Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [1]-[3] are cited in the compromised-seed playbook.
+Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [2]-[3] are cited in the compromised-seed playbook.
 
 1. [Coin Bureau, Top mistakes to avoid when using hardware wallets](https://coinbureau.com/education/top-mistakes-to-avoid-when-using-hardware-wallets)
 2. [Bitcoin.com, What is a private key?](https://www.bitcoin.com/wallet/what-is-a-private-key/)
 3. [CryptoNakta, Mnemonic exposed](https://cryptonakta.com/seed-phrase-exposed/)
-4. [Self Custody, Seed to key](https://selfcustody.ca/guides/seed-to-key.html)
-5. [Coldcard, Passphrase](https://coldcard.com/docs/passphrase/)
-6. [Blockstream, Fix issues with unexpected wallet balance](https://help.blockstream.com/blockstream-app/troubleshooting/fix-issues-with-unexpected-wallet-balance)
-7. [The Crypto Guide, Mnemonic guide](https://thecryptoguide.org/learn/seed-phrase-guide/)
-8. [BIP39 Phrase, Create a mnemonic](https://bip39-phrase.com/create-a-seed-phrase/)
-9. [Cobo, Bitcoin security best practices](https://www.cobo.com/post/bitcoin-security-best-practices-guide)
-10. [Tangem, How to back up a crypto wallet](https://tangem.com/en/blog/post/how-to-back-up-crypto-wallet/)
+
+
 
