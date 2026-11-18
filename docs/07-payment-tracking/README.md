@@ -281,7 +281,7 @@ Represent the following information in each request. These are conceptual fields
 | asset | The requested asset. |
 | recipient | The intended recipient. |
 | amount | The requested amount **in atomic units**. |
-| memo/tag | The request's memo or tag information, where the chain supports one. |
+| memo/tag | The request's memo or tag information, where the chain supports one (Bitcoin has no XRP/Stellar-style memo/tag field). For matching, an explicit `null` must not be interpreted as requiring a payment to contain a memo/tag equal to `null`. |
 | expiry | The request's expiry. |
 | expected decimal precision | For token payments, record the expected decimal precision, verified under the shared identity policy. |
 
