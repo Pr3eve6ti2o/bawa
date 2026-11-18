@@ -492,3 +492,99 @@ Boundary, stated plainly: the decode check used generated QR PNGs of the exact p
 - QR scanner (`qr-scanner.tsx`) is standalone and unwired until Phase 4. Its decode path was verified with jsqr (see above); its camera/cancel/error contract is unit-tested with mocked `getUserMedia`.
 - The app shell still shows a "TESTNET · ACTIVE" header chip (AppLayout) — Phase 5 UI scope, out of this lane.
 - The temporary live-check test was deleted after its run; the values above are the recorded evidence, not a permanent live test (the suite stays offline-deterministic).
+
+---
+
+## Phase 4 + 5 — Fix Lane 3 (send + web wallet layout page), 2026-11-19
+
+Branch `panel-rebuild/fix-send-ui` (off Fix Lane 2 `fe6fd76`). Local commits only, never pushed. Model `gpt-6.1-sol`, API 1 only, cap 32,000, max reasoning. Node v22.23.4 via nvm (repo enforces >=22 <23; VM default v24.22.2 fails `npm ci` with EBADENGINE).
+
+### Sol calls (this lane — 18 made, 15 landed, 3 failed; every landed call under 500s)
+
+| Call | Words | Result | Duration |
+|---|---|---|---|
+| p1 recipient validation | 117 | landed | 131,765 ms |
+| p2 amount + fee preview | 143 | landed (Sol invented adapter fields; corrected hands-on) | 136,406 ms |
+| p3 review/confirm screen | 136 | landed | 64,788 ms |
+| p4 ETH offline signing | 160 | landed (one real bug: Sol called `key.data()` on bytes already passed raw; fixed hands-on) | 197,439 ms |
+| p5 broadcast stub + result states | 106 | landed | 29,269 ms |
+| p6 transaction-detail | 166 | landed | 352,630 ms |
+| p7 layout header | 153 | FAILED — asked for the file contents, no code (prompt had no JSX pasted) | 42,300 ms |
+| p7b layout header (retry with code pasted) | 149 | landed | 38,307 ms |
+| p8 balance hero | 179 | landed | 367,201 ms |
+| p9 action row | 156 | FAILED — asked for the current ACTIONS code, no code | 57,567 ms |
+| p9b action row (retry with code pasted) | 175 | landed | 21,392 ms |
+| p10b asset list | 130 | landed | 9,066 ms |
+| p11b tabs | 201 | landed (two errors corrected hands-on: `tx.amount` → `tx.amountBaseUnits`, `chainConfig[chain]` → `chainConfig(chain)`) | 445,628 ms |
+| p12b lock screen | 182 | landed | 90,664 ms |
+| p13a passphrase plumbing | 229 | landed | 149,890 ms |
+| p13b passphrase UI | 251 | FAILED — asked for the full contents of all four files, no code; done hands-on | 84,602 ms |
+| p14a indexed-account core | 256 | landed (context part partial — Sol declined the full hunks and flagged the stale-state hazard; wired hands-on) | 192,397 ms |
+| p14b indexed-account UI | 178 | landed (two errors corrected hands-on: `vaultAddresses[id]` is an array, not a string; redundant label map dropped) | 389,360 ms |
+| p15 final evidence + docs | — | done hands-on (assembly of recorded facts; no Sol call) | — |
+
+Lesson, learned three times in this lane (p7, p9, p13b): prompts that do NOT paste the exact current code fail by asking for the file back. Every landed retry pasted the code in. Full per-call log in `lane/RUN-LOG.jsonl`.
+
+### Phase 4 — Send (offline signing, all four chains)
+
+`src/wallet/send.ts` (new): `validateRecipient` (Wallet Core `CoinTypeExt.validate`; TON EQ/UQ workchain-0 regex), `previewSendAmount` (amount parse, balance check, adapter fee; BTC plans against the live UTXO set via `planBtcFee` — `AnySigner.plan` with no key returns the same fee as with the key, probe-proven: 1,410 sat for the 1-in/2-out fixture), `signEthOffline` / `signBtcOffline` / `signTrxOffline` / `signTonOffline`, `broadcastSigned` (always returns disabled) + `markBroadcastUnknown` (unknown outcome stays unresolved; never resend or compose a replacement without independent reconciliation).
+
+Offline signing + verification (§6 item 6), disposable fresh mnemonics, no broadcast. Probes in `/tmp` on muse-vm (`eth-sign-probe.mjs`, `btc-sign-probe.mjs`, `btc-plan-nokey-probe.mjs`, `trx-sign-probe.mjs`, `ton-sign-probe.mjs`):
+- ETH: `AnySigner.sign` error 0, encoded 109 bytes; to/value/nonce/chainId/gas all match the input; sender recovered via `serializeTransaction` + `keccak256` + `recoverAddress` (yParity = v − 35 − 2·chainId) equals `getAddressForCoin` exactly. (Note: `key.data()` is a WASM-memory view — signing must happen before the wallet/key is deleted; the first probe failed with error 15 for exactly this.)
+- BTC: plan error 0, amount 50,000, fee 1,410, change 48,590 (100,000 − 50,000 − 1,410); sign no error, encoded 223 bytes; outputs verified (50,000 to destination script, 48,590 to change script). Outpoint byte-order probe: prevout bytes in the signed tx equal the passed hash verbatim — proto `outPoint.hash` is serialised (internal) order, so a display-order txid from the adapter MUST be reversed first. (txid ≠ double-sha256 of the full encoded tx for segwit — the earlier probe's TXID_MATCHES_DOUBLE_SHA256=false was a bad check, not a signing failure.)
+- TRX: no error, 65-byte signature, 32-byte id; TransferContract with correct owner/to/amount (1,000,000 SUN); sha256 of raw_data_hex equals the output id; signature recovers to the owner address. Block header is fetched read-only from TronGrid at signing time (`getLatestBlockHeader` in `trx.ts`; witness hex → base58check, fails closed on malformed fields). TRON signatures carry recovery id as 0/1, not 27/28.
+- TON: no error, 32-byte hash, BOC magic `b5ee9c72`, 965-byte BOC; mode 3 (PAY_FEES_SEPARATELY | IGNORE_ACTION_PHASE_ERRORS), walletVersion V4R2, expireAt now+600s.
+
+`src/screens/send.tsx` (rewritten): chain → recipient (+ QR scanner wired in, BlueWallet `ScanQRCode` contract: scan once / cancel / error) → amount/fees → review (`send-review.tsx`, real recipient/amount/network fee/total from the adapter) → offline sign → result. Broadcast stays DISABLED: the flow signs offline and stops there, stating "Send signed — not broadcast". The UI never presents send as working. Chain buttons disable when no vault address exists for that chain; locked vault → error + link to `/lock`.
+
+`src/screens/transaction-detail.tsx` (rewritten): live `refreshHistory()` on mount (deduped for Strict Mode), "Checked at <time>", refresh-failed banner, status "as reported by the network", unknown state for missing hashes, explorer link.
+
+### Phase 5 — Layout page (main wallet screen, real state)
+
+- Header (`app.tsx`): Wallet lucide icon, "Mainnet" chip (TESTNET chip gone), account label follows `vaultState`, no chain switcher. Bottom nav letter tiles (H/A/R/S/•••) replaced with lucide icons + text (Home/Assets/Receive/Send/More).
+- Hero (`dashboard.tsx`): ref-cached hero, honest `$0.00` all-zero state, error-with-retry never rendered as zero, loading holds the cached value, known failures also show the no-price-feed line. No price feed exists — fiat total stays "unavailable", never fabricated.
+- Actions: exactly Send/Receive/Activity, `grid-cols-3`; Import removed (belongs in wallet management); no Swap/Buy (no engine/on-ramp).
+- Asset rows: chain symbol in the circle (TRX vs TON distinct), 32px icon + chain badge bottom-right, tap → detail, skeleton loading, dust toggle, real empty state.
+- Tabs: Tokens (existing Assets section) / Activity (real history from the context, newest first, links to transaction detail, "No transactions yet" empty state, per-chain unavailable state with Retry). No NFTs tab (no NFT support — omitted, not faked).
+- Lock: full-screen branded lock screen at `/lock` (password, `unlockVault`, navigate home on success, error + cleared field on failure, no-vault state). No app-wide gate — watch-only stays usable while the vault is locked. Dashboard and send locked-vault notices point to `/lock`. Auto-lock timer designed, NOT implemented (see limitations).
+- Welcome (hands-on rewrite): self-custodial copy, "MAINNET" chip, create/import cards match the real flows, "Mainnet only" aside.
+- Security settings (hands-on rewrite): the stale "What this starter does not do" card is gone; the screen now describes the real vault (AES-GCM-256, PBKDF2 600k), in-memory-only keys, offline signing, broadcast disabled; vault lock card wired to `lockVault` + `/lock` link.
+- Wallet management: per-chain xpub cards with chain-symbol avatars; "starter" copy fixed.
+- Network selection: already mainnet-only (Lane 2); copy verified, no change needed.
+
+### Fix Lane 1 open items — closed
+
+(a) BIP-39 passphrase UI (p13a + p13b): `wallet/passphrase.ts` (`isPassphraseUsed` / `setPassphraseUsed`, localStorage flag `bawa-vault-passphrase-used`, '1'/'0' — the flag is not a secret); `vault.unlock(password, passphrase)` stores the passphrase in a module variable for the session (`getSessionPassphrase()`, cleared on `lock()`); context `unlockVault(password, passphrase?)` throws "This wallet uses a passphrase. Enter it to unlock." when the flag is set and none is given, and derives with the session passphrase. UI fields: create-wallet `vault-passphrase`, import-wallet `import-passphrase` (the preview derives WITH the passphrase, so a passphrase-protected restore no longer silently shows wrong addresses), lock `lock-passphrase` (shown only when the flag is set), send passes `getSessionPassphrase()` to all four offline signers. Verified by the published TREZOR vector: passphrase `TREZOR` derives ETH `0x27Ef5cDBe01777D62438AfFeb695e33fC2335979`; a wrong passphrase derives different addresses.
+
+(b) Indexed accounts (p14a + p14b): `core.ts deriveAddressesAt(mnemonic, passphrase, account, index)` — `pathFor` paths, TON always `m/44'/607'/0'` (one address per wallet), per-chain pubkey form proven first-hand on Wallet Core 4.9.3 (BTC 33-byte compressed, ETH/TRX 65-byte uncompressed, TON Ed25519), every key/pubkey object deleted; account 0 index 0 equals `deriveAddresses()` exactly (tested). Context `vaultAccount {account, index}` + `setVaultAccount(account, index)` (validates like the core function, stores the selection, re-derives with the NEW selection passed explicitly — the stale-state hazard Sol flagged); `refreshVaultAccounts(selection?)` falls back to the current selection and derives with the session passphrase. Wallet-management "Vault account" section (unlocked only): account/index inputs, Apply, the four derived addresses, TON note; invalid input clamps to 0, out-of-range errors surface. TRX index-1 discrepancy, recorded honestly: the HDWallet-path index-1 TRX address does NOT match the published xpub fixture `TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B` (that fixture is the xpub-derived address; see `core.test.ts` `deriveFromXpub`). No test asserts the xpub fixture for the HDWallet path.
+
+### Capability registry updates (chains.ts)
+
+`unsigned-plan` and `local-sign` are now verified for all four chains (send.test.ts + AnySigner probes, no broadcast); `post-sign-verify` verified for btc/eth/trx, still blocked for TON (BOC not re-parsed). `fee-quote` unchanged: verified btc/eth/trx, blocked TON (needs the unsigned message; no fee invented). Dead `capabilitiesForSupported` + `blockedNoTx`/`blockedNoAdapter` helpers removed. `chains.test.ts` updated to the new states (17/17 pass).
+
+### Verification (§6)
+
+- Item 6 — offline signing + verification: see the probe results above (ETH/BTC/TRX/TON). `send.test.ts` covers validate/preview/sign/broadcast-stub per chain; BTC preview test asserts fee `1410`, total `51410` at 10 sat/vB from the live UTXO set.
+- Item 7 — no demo/fake data: `grep -rn` in `apps/web/src` → `demo-fixtures` 0, `$12,480` 0, `Testnet4` 0, `Sepolia` 0, `Nile` 0, `TESTNET` 0 (2026-11-19). Remaining "testnet" mentions are mainnet-only enforcement (testnet addresses rejected as wrong-network; "no testnet adapter exists"). No "TESTNET · ACTIVE" chip anywhere.
+- Item 8 — no secrets in requests/logs/storage: the vault envelope in localStorage (`bawa-vault`) holds only version, KDF parameters (PBKDF2, hash, iterations, saltB64), ivB64, ciphertextB64 and profileIds — no plaintext mnemonic. Other localStorage writes: theme, public xpubs, passphrase-used flag ('1'/'0'). No `console.*` calls in non-test src. Adapters carry no mnemonic/privateKey (one doc comment in `adapters/types.ts` only). No sessionStorage use.
+- Item 9 — build/tests/typecheck (Node v22.23.4, 2026-11-19): `npx tsc --noEmit` exit 0; `npx vitest run` 347/347 pass; `npm run build` exit 0, built in 2.22s (chunk-size warning only, 3,770.40 kB JS).
+- Layout-page correctness (§6 item 5): dashboard test "renders the wallet real state on the layout page, never fixtures" — context balances (1.5 ETH, 0 BTC) render, Send/Receive present, no Swap, no `$12,480`/`Testnet`/`demo` text, Activity tab shows the real 0.25 ETH tx linked to `/transactions/0xabc`. Dashboard 9/9 pass.
+
+### What changed (files)
+
+- New: `src/wallet/send.ts` (+ `send.test.ts`, 25 tests), `src/screens/send-review.tsx`, `src/screens/lock.tsx` (+ `lock.test.tsx`, 4 tests incl. passphrase field), `src/wallet/passphrase.ts` (+ `passphrase.test.ts`), `src/state/wallet-context.test.tsx` (passphrase + account-selection tests), `src/screens/security-settings.test.tsx`, `src/screens/wallet-management.test.tsx`.
+- Rewritten: `src/screens/send.tsx` (+ `send.test.tsx`, 5 tests), `src/screens/transaction-detail.tsx` (+ test, 3 tests), `src/screens/welcome.tsx`, `src/screens/security-settings.tsx`.
+- Edited: `src/wallet/core.ts` (+ `deriveAddressesAt`, tests), `src/state/wallet-context.tsx` (`vaultAccount`/`setVaultAccount`, session passphrase), `src/wallet/vault.ts` (`withMnemonicAsync`, session passphrase), `src/wallet/chains.ts` (+ `chains.test.ts`), `src/wallet/adapters/trx.ts` (`getLatestBlockHeader`), `src/screens/dashboard.tsx` (+ tests: tabs, hero, layout correctness), `src/screens/asset-rows.tsx` (symbol avatar), `src/screens/create-wallet.tsx` (+ test), `src/screens/import-wallet.tsx` (+ test), `src/screens/lock.tsx` (passphrase field), `src/screens/wallet-management.tsx` (symbol avatars, vault account section), `src/app/app.tsx` (header Mainnet chip, icon nav), `src/app/app.test.tsx` (send placeholder → no-wallet state).
+- Deps: `long ^5.3.2` added (explicit — `SigningInput` int64 fields need `Long` values; plain numbers fail tsc). No tronweb, no @ton, no bitcoinjs.
+- Commits on `panel-rebuild/fix-send-ui` (local only): `863e432` send module, `f271cd4` send flow + tx detail, `37ebbd6` header/hero/actions/avatars, `a49dc92` tabs/lock/welcome, `2ef07c0` p13 passphrase, `bbea427` p14a indexed core + copy/nav, `9c61fb2` p14b indexed UI + registry.
+
+### Incomplete / limitations / security notes (honest)
+
+- Auto-lock timer NOT implemented: the lock screen exists as a route (`/lock`); settings `autoLockMinutes` + inactivity timer calling `lockVault()` is designed but not built. Closing the tab drops the in-memory vault key, so the vault starts locked on reload.
+- TON fee-quote stays blocked (send preview for TON reports unavailable; signing still works with a seqno). TON post-sign-verify is partial: no BOC re-parse (no parser vendored); verification is no-error + 32-byte hash + BOC magic.
+- BTC UTXOs are assumed to belong to the from address (P2WPKH) — valid here since the wallet only receives at its own account address; a UTXO at another address would fail signing.
+- No price feed: no fiat totals anywhere. No NFTs tab, no Swap/Buy (no engine/on-ramp) — omitted, not faked.
+- TRX index-1 HDWallet-path vs xpub-fixture discrepancy (see above) — recorded, not claimed.
+- QR decode check used generated PNGs, not the rendered `qrcode.react` SVG (Lane 2 boundary, unchanged).
+- Broadcast is DISABLED in every adapter and in `broadcastSigned`; mainnet broadcasting stays disabled until separately authorised. Send signs offline only and says so.
+- The temporary live-check and probe scripts live in `/tmp` on muse-vm (ephemeral); their outputs above are the recorded evidence, not permanent tests — the suite stays offline-deterministic.

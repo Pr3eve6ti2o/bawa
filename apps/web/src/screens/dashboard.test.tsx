@@ -247,4 +247,68 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('renders the wallet real state on the layout page, never fixtures', async () => {
+    // Layout-page correctness (§6 item 5): the home screen shows the
+    // context's real balances and history — no demo total, no testnet label.
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'available', value: '1500000000000000000' },
+      }),
+      {
+        history: {
+          btc: { status: 'empty', txs: [] },
+          eth: {
+            status: 'loaded',
+            txs: [
+              {
+                hash: '0xabc',
+                chain: 'eth',
+                networkId: 'eip155:1',
+                direction: 'out',
+                amountBaseUnits: '250000000000000000',
+                counterparty: '0xRecipient',
+                timestamp: 1700000000000,
+                status: 'confirmed',
+                explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+              },
+            ],
+          },
+          trx: { status: 'empty', txs: [] },
+          ton: { status: 'empty', txs: [] },
+        },
+        refreshHistory: vi.fn(),
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      // Real balances from the context, formatted from base units.
+      expect(text).toContain('1.5 ETH');
+      expect(text).toContain('0 BTC');
+      // Real actions exist; no Swap/Buy (no engine/on-ramp).
+      expect(text).toContain('Send');
+      expect(text).toContain('Receive');
+      expect(text).not.toContain('Swap');
+      // No fixture or demo content anywhere on the page.
+      expect(text).not.toContain('$12,480');
+      expect(text).not.toContain('Testnet');
+      expect(text).not.toContain('TESTNET');
+      expect(text).not.toContain('demo');
+      // Real history on the Activity tab, linked to the detail page.
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('0.25 ETH');
+      expect(
+        mounted.div.querySelector('a[href="/transactions/0xabc"]'),
+      ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
