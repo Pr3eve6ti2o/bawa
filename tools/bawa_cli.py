@@ -187,8 +187,10 @@ DOCS = {
 }
 
 # F-1250: qualify doc pointers that do not exist in this checkout. DOCS values
-# are display-only; nothing resolves them as paths. Seven values dangle
-# (watch_gui, watch_ton, mainnet_guards, index, samples, builder, pay_schema).
+# are display-only; nothing resolves them as paths. The loop marks any value
+# whose file is absent as '(unavailable in this checkout)'; the dangling
+# pointers (docs/index.md, docs/sample-requests.md, WALLET_BUILDER.md) were
+# removed from DOCS, so nothing is marked in this checkout.
 for key, path in DOCS.items():
     if not (REPO_ROOT / path).exists():
         DOCS[key] = f"{path} (unavailable in this checkout)"

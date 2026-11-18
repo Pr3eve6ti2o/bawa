@@ -98,7 +98,7 @@ test "$(git rev-parse --verify HEAD)" = "754721cd00efdc13852c0124fb727f33f9505a0
 
 The repository root declares no dependencies, so skip root `npm install`. Running it installs nothing and creates an untracked root `package-lock.json`.
 
-Install the wallet-core tooling at its package boundary: run `cd tools/hdwallet-gen && npm install && cd ../..`, so a failed entry or install stops the chain and the return to the repository root happens only on success.
+Install the wallet-core tooling at its package boundary: run `cd tools/hdwallet-gen && npm ci && cd ../..`, so a failed entry or install stops the chain and the return to the repository root happens only on success.
 
 Treat these as unlocked dependency installs, not as evidence of a reproducible dependency graph or passing tests.
 
@@ -975,12 +975,12 @@ npm install
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm install` and does not demonstrate a clean, lockfile-based `npm ci` installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
+The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm ci`, a clean, lockfile-based installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
 Run entry, installation and return as a single gated chain, so a failure stops the sequence before the return:
 
 ```bash
-cd tools/hdwallet-gen && npm install && cd ../..
+cd tools/hdwallet-gen && npm ci && cd ../..
 ```
 
 **Expected result:** if entering `tools/hdwallet-gen` and running `npm install` both succeed, your shell returns to the repository root. If either fails, the return is skipped and the final exit status is nonzero.
@@ -1135,6 +1135,7 @@ In `tools/hdwallet-gen`, validate manifest/lockfile dependency consistency with 
 Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
 These routine checks are a future-state runbook for your own setup, not executable procedures or current Bawa monitoring features. The repository has no monitoring, threshold, indexer or tracking code and no allocation table or allocation database. Requirements to index allocations by network and branch apply only to a future operator-managed allocation store, not an existing Bawa schema. Payment-confirmation rules are documented in MAINNET-GUIDE section 14 (pinned wallet policies reviewed 2026-11-10 under register entry M-38): Bitcoin 6 confirmations (a customary recommendation, not a protocol requirement); Ethereum at least 12 confirmations and canonical finalised inclusion (12 confirmations alone are insufficient); TRON 19 distinct active Super Representatives out of 27 with solidified inclusion via `/walletsolidity/*`, never a block count. Bawa does not document freshness thresholds or recovery procedures. Confirm those with the maintainer.
+
 ### Personal, $0, no server
 
 1. **Daily:** Manually check activity and confirmations for your wallet’s public addresses using an appropriate explorer/indexer or watch-only interface that covers both receiving and change addresses.  
