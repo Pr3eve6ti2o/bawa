@@ -762,7 +762,7 @@ Keep the initial process deliberate:
 
 Plan departure before funding. Check notice periods, withdrawal limits, prerequisites and costs, approval delays, termination charges, what happens to withdrawals in a freeze, failure or insolvency, whether any assets are locked or encumbered, and how statements and other records can be exported in a usable form. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination and that the destination supports the asset.
 
-Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process.
+Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process unless the provider imported keys recoverable from that backup.
 
 ### Keep recovery material private
 
@@ -770,7 +770,7 @@ Using a custodian does not make Bawa recovery work less sensitive. Keep seed wor
 
 Use placeholders in examples and redact diagnostic material. Send vulnerability reports to the repository maintainers through a private reporting route (OPEN ITEM — no route is documented; see §7). Keep exploit-enabling details out of public issues.
 
-**Shift in signing control (not a safety ranking):** self-custody — holder controls signing; into collaborative custody — holder and provider share signing authority; into qualified custody — provider controls signing; holder requests transfers.
+**Shift in signing control (not a safety ranking):** self-custody — holder controls signing; into collaborative custody — holder and provider share signing authority, but a holder controlling two keys in a 2-of-3 arrangement can sign without the provider; into qualified custody — provider controls signing; holder requests transfers.
 ## 18. Paid security: HSM-based signing
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -797,7 +797,7 @@ This reduces opportunities to extract keys from application memory, server disks
 
 - **A malicious request can still get signed.** Compromised software may submit a validly formed transaction that benefits an attacker.
 - **The device cannot infer the holder's intended recipient.** Check the destination, network, asset, amount and fees independently before approval.
-- **Wallet functions remain elsewhere.** Account tracking, HD derivation, transaction construction, policy enforcement and broadcasting still need software and operational controls.
+- **Some wallet functions remain elsewhere.** Account tracking, HD derivation, transaction construction, policy enforcement and broadcasting still need software and operational controls. HD derivation can occur inside a hardware wallet or HSM.
 - **Hardware-backed does not necessarily mean offline.** An HSM can be network-connected; cold storage is a separate operating choice.
 
 ### Establish who controls the signer
@@ -806,7 +806,7 @@ Distinguish these three control models:
 
 - **Full HSM custody:** a provider operates the key infrastructure and releases transactions under its custody agreement. You depend on its authorisation, recovery and withdrawal processes. Holding an account with that provider is not the same as directly controlling a wallet key.
 - **Shared/collaborative control:** for example, in 2-of-2 multisig, the holder and provider each hold a key and both must sign.
-- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted. Check who can change policy, change the quorum/threshold, rotate keys, approve new destinations, recover backups, export recovery material, cause a signature or block access — the product label alone does not settle custody.
+- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted; a hosted arrangement is self-custody only if the host cannot override the holder's control, provider approval is not mandatory and recovery is not provider-controlled. Check who can change policy, change the quorum/threshold, rotate keys, approve new destinations, recover backups, export recovery material, cause a signature or block access — the product label alone does not settle custody.
 
 [Anchorage](https://www.anchorage.com/) describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
 
