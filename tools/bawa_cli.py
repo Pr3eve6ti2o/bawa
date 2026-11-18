@@ -27,6 +27,7 @@ import getpass
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -80,6 +81,13 @@ DOCS = {
     "builder": "WALLET_BUILDER.md",
     "pay_schema": "docs/mainnet/payment-record.schema.json",
 }
+
+# F-1250: qualify doc pointers that do not exist in this checkout. DOCS values
+# are display-only; nothing resolves them as paths. Seven values dangle
+# (watch_gui, watch_ton, mainnet_guards, index, samples, builder, pay_schema).
+for key, path in DOCS.items():
+    if not (REPO_ROOT / path).exists():
+        DOCS[key] = f"{path} (unavailable in this checkout)"
 
 # Application and TON routes precede broader wallet/watch-only phrases.
 # Mainnet fees precedes the generic mainnet route. Detail strings are
@@ -786,7 +794,7 @@ def handle_build_app(choice: str) -> None:
             "Web wallet starter",
             [DOCS["web_guide"], DOCS["impl"]],
             [
-                "Starter: apps/web (npm run dev / build / test).",
+                "Starter unavailable in this checkout: apps/web. Provide the app and npm scripts before running npm run dev / build / test.",
                 "UI approach: clone the UI of top crypto wallets (Phantom, "
                 "MetaMask, Rabby, Exodus) and adjust; see docs/14.",
             ],
@@ -796,7 +804,7 @@ def handle_build_app(choice: str) -> None:
             "Android wallet starter",
             [DOCS["android_guide"], DOCS["impl"]],
             [
-                "Starter: apps/android (./gradlew).",
+                "Starter unavailable in this checkout: apps/android. Provide the project and Gradle wrapper before running ./gradlew.",
                 "UI approach: as for the web starter; see docs/14.",
             ],
         )
@@ -851,7 +859,7 @@ def handle_build_tools(choice: str) -> None:
             [
                 "No standalone payment-tracker executable exists in this "
                 "checkout; this needs AI implementation.",
-                "Payment-record schema: docs/mainnet/payment-record.schema.json.",
+                "AI-guided work; docs/sample-requests.md and docs/mainnet/payment-record.schema.json are unavailable in this checkout.",
             ],
         )
     elif choice == "d":
@@ -937,9 +945,7 @@ def handle_security(choice: str) -> None:
             "Independent derivation verification",
             [DOCS["verify"]],
             [
-                "Compare against test/fixture-oracle.py and "
-                "test/fixture-oracle-vectors.json (published vectors only, "
-                "never real secrets).",
+                "AI-guided work; test/fixture-oracle.py is unavailable in this checkout. Reference data: test/fixture-oracle-vectors.json (when present; not a runnable oracle).",
                 "Run: node test/smoke.test.js.",
             ],
         )
@@ -948,8 +954,7 @@ def handle_security(choice: str) -> None:
             "Custom development request",
             [DOCS["index"], DOCS["samples"], DOCS["builder"]],
             [
-                "Describe the project in one sentence, then follow the routing "
-                "in docs/index.md."
+                "AI-guided work; docs/index.md, docs/sample-requests.md and WALLET_BUILDER.md are unavailable in this checkout."
             ],
         )
     else:
@@ -972,6 +977,45 @@ SUBMENU_CHOICES = {
 }
 
 
+def _route_target_present(command):
+    """True when a route command's target exists in this checkout.
+
+    Checks the script (or npm --prefix directory) rather than the
+    interpreter. Returns True when there is no command, preserving the
+    kind-based label for command-less routes.
+    """
+    if command is None:
+        return True  # Preserve the kind-based label.
+
+    try:
+        argv = shlex.split(command) if isinstance(command, str) else list(command)
+    except (TypeError, ValueError):
+        return False
+
+    if not argv or any(a in {"&&", "||", ";", "|"} for a in argv):
+        return False
+
+    # Direct file, interpreter + file, or node --test + file.
+    launcher = Path(argv[0]).name
+    if launcher in {"node", "python", "python3", "bash", "sh"}:
+        argv = argv[1:]
+        if launcher == "node" and argv[:1] == ["--test"]:
+            argv = argv[1:]
+
+    # npm --prefix <dir> <cmd>: the target is the prefix directory.
+    if launcher == "npm" and argv[1:2] == ["--prefix"]:
+        if len(argv) < 3:
+            return False
+        target = (REPO_ROOT / argv[2]).resolve()
+        return target.is_dir() and REPO_ROOT in target.parents
+
+    if not argv or argv[0].startswith("-"):
+        return False  # Unsupported form: unverified.
+
+    target = (REPO_ROOT / argv[0]).resolve()
+    return target.is_file() and REPO_ROOT in target.parents
+
+
 def print_route(route: dict) -> None:
     print(f"Route: {route['title']}")
     kind = str(route["kind"]).strip().strip("[]").strip().lower()
@@ -981,6 +1025,8 @@ def print_route(route: dict) -> None:
     elif kind in ("ai", "ai guided", "ai guided implementation"):
         label = "[AI-GUIDED IMPLEMENTATION]"
     else:
+        label = "[UNAVAILABLE OR UNVERIFIED]"
+    if not _route_target_present(route.get("command")):
         label = "[UNAVAILABLE OR UNVERIFIED]"
     print(f"Kind: {label}")
     print(f"Details: {route['detail']}")

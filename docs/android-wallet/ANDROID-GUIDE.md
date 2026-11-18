@@ -122,7 +122,7 @@ Limit watch-only providers to public-chain data and broadcasting signed transact
 
 Limit ordinary screens to public data; treat unlock, import and recovery screens as secret-handling components. Keep secrets out of logs, analytics, crash reports, UI state and watch-only requests. WASM alone establishes no security boundary.
 
-Bawa contains no transaction construction or signing implementation; signing exists only in the built apps, via Trust Wallet Core.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 ### A.5 Keep claims within verified bounds
 
@@ -1705,7 +1705,7 @@ Do not feed BTC testnet `vpub` or `tpub` keys to the repo `derive.js` workflow: 
 
 The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
 
-To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`.
+To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5`.
 
 With the same BIP-39 passphrase, a testnet wallet restricted to discovery under `m/84'/1'/…` derives a different account subtree and will not find Bawa's existing addresses or their spending keys there; those remain recoverable from the same seed using Bawa's `m/84'/0'/0'/…` path and testnet address encoding.
 
@@ -4158,7 +4158,7 @@ The derivation policy is unchanged. Apply the guide’s existing account, path, 
 
 ### J-01 — Keep the trust boundary explicit
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2. The EIP-1559 proof rerun against this pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4. The EIP-1559 proof rerun against the 4.9.2 pin remains **APPROVED BUT UNEXECUTED**. Complete the rerun before publication. Blocked pending OI-004.
 
 Keep mnemonic validation, approved key derivation, seed bundle encryption, vault unlocking and signing within trusted local key operations.
 
@@ -4498,7 +4498,7 @@ Use the shared threat table in `docs/15` (the repository guide) alongside this *
 | Android template and native code | **Malicious template code** | Code executing with the wallet’s privileges while you have it unlocked can read secrets or misuse the in-process signing route. Private storage, encrypted storage and restricted interfaces do not defeat that attacker. |
 | Endpoint configuration and transport | **Endpoint substitution** | TLS, response validation, J-12’s per-adapter checks and section G’s frozen-payload review constrain endpoint use. A provider can satisfy identity checks while lying about balances, fees or chain state. These controls do not prevent denial of service or all metadata exposure. |
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation; the guide assigns signing to built apps through the Core pin in J-13. **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation; place signing in the Android wallet you build, through the Core pin in J-13 (the repository tools pin Trust Wallet Core 4.8.4). **OPEN** — No Core AAR, Gradle build, APK or device/emulator run exists. The committed `gradlew` is a launcher note without a wrapper JAR. Build and device verification: Blocked pending OI-005 and OI-035. Live wallet creation, live restore and live testnet spend still need their first runs: Blocked pending OI-031.
 
 TESTNET-only does not mean testnet-tested. Until then, treat this as a testnet guide for a testnet wallet.
 
@@ -4767,7 +4767,7 @@ Replace any `<ANGLE_BRACKETS>` placeholders before running commands. Treat comma
 
    **OPEN** — Android-project publication: Blocked pending OI-069, awaiting the owner’s decision on whether and where to publish the validation draft.
 
-   Bawa contains no transaction construction or signing implementation. Keep signing in the built apps, via Trust Wallet Core 4.9.2.
+   Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 **Warning** — A different, empty or misidentified AAR changes or omits the Core implementation your app needs. Use the section C source pin and compare the resulting artefact with the approved acquisition record; stop if the artefact is missing or the comparison fails.
 
@@ -5195,7 +5195,7 @@ Passing these checks does not authorise mainnet work; any mainnet work requires 
 
 **Cause:** A timeout leaves the outcome unknown; the provider may already have accepted the transaction.
 
-As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Signing belongs only in the built Android wallet, via Trust Wallet Core 4.9.2.
+As of 2026-11-08, Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 **Warning** — The provider may already hold the transaction despite the timeout; retain the exact signed bytes and locally calculated transaction ID, then reconcile that ID before considering any rebroadcast.
 
@@ -5396,7 +5396,7 @@ As of 2026-11-08, the following assessments describe project scope, licences and
 
 | Rank | Project and source | Assessed reference | Licence and maintenance | Compatibility and required adaptation |
 |---|---|---|---|---|
-| 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is not Bawa’s policy; exclude its engine and derivation code. |
+| 1 | **BDK DevKit Wallet `ui-only`** — `thunderbiscuit/devkit-wallet` | Frozen February 2025 `ui-only` snapshot | Apache-2.0; archive date 2025-02-12; 32 stars | BTC only, with early-2025 Compose/Material versions. Limit reuse to non-secret screens and rebuild mnemonic display as a vault-owned ceremony. Its sibling `simple-wallet` uses BIP-84, which is also Bawa’s BTC policy (`m/84'/0'/0'/0/i`); matching BIP-84 does not establish drop-in suitability. Exclude its engine and derivation code. |
 | 2 | **Jetpack Compose Samples** — `android/compose-samples` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-10-28; 23,556 stars | Fallback foundation. It saves no wallet work: implement section H’s wallet screens, states and behaviour yourself. |
 | 3 | **Now in Android** — `android/nowinandroid` | Source check dated 2026-11-08 | Apache-2.0; last push 2026-11-08; 22,056 stars | Architecture reference only. Adapt the structure to your wallet; implement the section H UI yourself. |
 | 4 | **EUDI Wallet UI** — `eu-digital-identity-wallet/eudi-app-android-wallet-ui` | Source check dated 2026-11-08 | EUPL-1.2 copyleft; last push 2026-11-06; 234 stars | Identity wallet, not a crypto wallet. Consider components only; adapt them to section H and meet the licence’s source-sharing obligations. |
@@ -5435,7 +5435,7 @@ As of 2026-11-08, the search found no free Figma Community crypto-wallet kit. Do
 
 ### Decide what to reuse
 
-> **Warning** — As of 2026-11-08, adopting the BDK sibling `simple-wallet` engine would adopt BIP-84, outside Bawa’s derivation policy. Restrict reuse to non-secret `ui-only` screens; check that you copy no engine or derivation code.
+> **Warning** — As of 2026-11-08, the BDK sibling `simple-wallet` uses BIP-84, which is also Bawa’s BTC policy (`m/84'/0'/0'/0/i`); matching BIP-84 does not establish drop-in suitability. Its engine and derivation code remain excluded because its engine is entangled with its own UI rather than UI-only, it is BTC-only, and it uses early-2025 Compose/Material versions. Restrict reuse to non-secret `ui-only` screens; check that you copy no engine or derivation code.
 
 1. **Check the frozen BDK `ui-only` sample for useful non-secret screens.**
 

@@ -296,6 +296,8 @@ tree is still clean.
 cd ../bawa
 ```
 
+> **Archive note (added 2026-11-17):** this check pins the 2026-11-08 snapshot commit `b8298197dd227916ff424dd479508887753e713f`. A reader cloning today will not match main's HEAD — treat the pin as historical, not as a current-state check.
+
 **Expected result — check**
 ```sh
 test "$(git rev-parse HEAD)" = "b8298197dd227916ff424dd479508887753e713f"
@@ -1198,7 +1200,7 @@ Keep `@hdwallet/core` as a research-only reference. An automated check on npm re
 
 ## 17. Security posture
 
-Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2 — the dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08); browser send/sign was not exercised and nothing was broadcast.
+Bawa is a wallet reference project. It is not a hosted wallet, a custodian, an exchange, or a production-ready wallet. Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build (the repository tools pin Trust Wallet Core 4.8.4) — the dedicated EIP-1559 construction/signing demonstration was verified on Core 4.9.2 (D21, 2026-11-08); browser send/sign was not exercised and nothing was broadcast.
 
 What Bawa protects, and what it does not: Bawa's trusted, offline side creates the mnemonic, seed, private material and account-level public roots. The online RPC and indexer receive only the public information needed to watch accounts. Treat that online environment as something an attacker might inspect, collect logs from, repeatedly restart or take over; it must not receive seed material. The generator sends the mnemonic and data-encryption key to its controlling terminal rather than ordinary subprocess stdout/stderr — this reduces incidental logging; it does not defeat a hostile OS or terminal, a debugger, crash dumps, swap or memory snapshots. JavaScript and WebAssembly cannot promise that every secret copy has been securely erased; encrypting saved material also leaves plaintext exposed while a mnemonic is created or recovered.
 

@@ -870,7 +870,7 @@ The fee path remains `/v1/fees/recommended`. It is identical on mainnet; only th
 The **2026-11-09, `muse-vm`** same-time comparison was:
 
 - mempool.space recommended `fastestFee 3 sat/vB`;
-- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97 sat/vB`.
+- blockstream.info `fee-estimates` returned `"1":0.972`, recorded as `BTC/kB` with an annotation of approximately `97,200 sat/vB`.
 
 That disagreement is **unresolved**. The Blockstream unit annotation is not a reconciled conversion to build into the wallet. Keep both sources visible; never quote one alone.
 
@@ -1831,7 +1831,7 @@ The same evidence window contains a sharply different estimator record:
 | Source and check time | Dated estimate as recorded | Status |
 |---|---|---|
 | mempool.space recommended set; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `fastestFee`: **3 sat/vB** | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
-| blockstream.info fee-estimates; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `"1": 0.972 BTC/kB (≈97 sat/vB)`, `"6": 0.685`, `"504": 0.10` | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
+| blockstream.info fee-estimates; m07 F3; **2026-11-09 ~11:54 UTC, muse-vm** | `"1": 0.972 BTC/kB (≈97,200 sat/vB)`, `"6": 0.685`, `"504": 0.10` | **UNVERIFIED-NEEDS-SMALL-AMOUNT-REHEARSAL** |
 
 The Blockstream units and parenthetical conversion above are reproduced **as recorded**, not independently validated. The evidence reports them as sharply higher than the mempool.space recommendation. No reconciliation is established here, and this record is not a validated alternative sending rate.
 
@@ -2432,7 +2432,7 @@ A revocation check on one chain is not a review of authority granted on another.
 
 Use a verified TRON-specific procedure for approval review and revocation. Include account permissions in that review: TRON’s `AccountPermissionUpdateContract` (**ID 46**) changes account permissions, a different control layer from an EVM token allowance.
 
-The reported figure of about **$129 million** relates to one case involving this mechanism; the case date is unverified here. It is a single-case figure, not a TRON-wide loss total.
+The reported figure of about **$129 million** refers to the November 2024 USDT address-poisoning theft, not to account-permission hijacking via `AccountPermissionUpdateContract` (ID 46). The victim made a 100-USDT test transfer first, then sent the large transfer to the poisoned address `THc...bu8` instead of the intended `TMS...bu8`; the attacker voluntarily returned the funds. The separate Q4 2024 ID 46 account-permission hijacking wave involved about 2,130 wallets hijacked, 14,545 at risk, and roughly **$31.5 million exposed**—an exposure figure, not an amount stolen. No single $129M ID 46 case is established; the separate 2026 Arkea/Kraken theft of about $129.6M is a different incident.
 
 If you find an unexpected permission change, follow the verified TRON-specific response procedure. Do not apply EVM allowance instructions to it, or treat a Revoke.cash result as a review of a TRON account.
 
@@ -2575,7 +2575,7 @@ These are the results recorded at the **2026-11-09 evidence baseline**. Separate
 
 | Suite | Date basis | Scope and recorded result |
 |---|---|---|
-| **T1 — repo tools** | 2026-11-09 baseline | **15 PASS**; live generation under a real pty; decrypt round trip **4/4**; `derive.js` **9/9** and `compare.js` **9/9** against independent `bip_utils` re-derivation; daemon protocol, including bad-chain rejection; `npm test` **28/28**; differential test **byte-identical**. |
+| **T1 — repo tools** | 2026-11-09 baseline | **15 PASS**; live generation under a real pty; decrypt round trip **4/4**; `derive.js` **9/9** and `compare.js` **9/9** against independent `bip_utils` re-derivation; daemon protocol, including bad-chain rejection; `npm test` **28/28** at the 2026-11-09 baseline — a live run at a5bc56e on 2026-11-16 returned **130 ok / 0 not ok**, and a re-run in the 3019b02 worktree on 2026-11-17 also returned **130 ok / 0 not ok**; differential test **byte-identical**. |
 | **T2 — Web draft** | 2026-11-09 baseline | Real-browser testing: **19 PASS / 0 FAIL / 3 INFO**; **0 console errors**, **0 page errors**, **0 failed requests**. The **3 INFO remain INFO**, not additional passes. |
 | **T3 — fix spot checks** | 2026-11-09 baseline | **9 MATCH / 0 MISMATCH** in spot checks of the **200-finding fix**. These are spot-check results, not a claim that every finding was independently retested. |
 
@@ -3284,7 +3284,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 ### M-07 — Fee-source disagreement is unresolved
 
-**Question/risk:** mempool.space and blockstream.info disagree sharply at the same instant: the reported fastest-rate comparison was 3 sat/vB versus ≈97 sat/vB. Quoting either source alone risks overpaying or underpaying. The comparison does not settle the underlying unit interpretation.
+**Question/risk:** mempool.space and blockstream.info disagree sharply at the same instant: the reported fastest-rate comparison was 3 sat/vB versus ≈97,200 sat/vB. Quoting either source alone risks overpaying or underpaying. The comparison does not settle the underlying unit interpretation.
 
 **Affected section:** §14.
 
@@ -3360,7 +3360,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Affected section:** §15.
 
-**Evidence or uncertainty:** M15’s TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. It separately records `AccountPermissionUpdateContract`, ID 46, with a reported figure of approximately $129M. The supplied TRON revocation route is TronScan’s account-page **Approval** tab → **Cancel Contract Approval**, pending a live re-check. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20 still requires verification of TRON’s TRC-20 approval, allowance, delegated-transfer mechanics and revocation; EVM or Permit2 wording must not be copied across without that verification.
+**Evidence or uncertainty:** M15’s TRX row describes TRC-20 approvals as mechanically identical to ERC-20, with the same unlimited-approval risk. It separately records `AccountPermissionUpdateContract` (ID 46) in the Q4 2024 account-permission hijacking wave—about 2,130 wallets hijacked, 14,545 at risk, and roughly $31.5M in exposure, not an amount stolen—while the approximately $129M figure refers to the separate November 2024 USDT address-poisoning theft. The supplied TRON revocation route is TronScan’s account-page **Approval** tab → **Cancel Contract Approval**, pending a live re-check. Revocation costs Bandwidth and Energy: keep a TRX buffer without inventing a required amount. M13 F20 still requires verification of TRON’s TRC-20 approval, allowance, delegated-transfer mechanics and revocation; EVM or Permit2 wording must not be copied across without that verification.
 
 **Status:** OPEN.
 
@@ -3498,7 +3498,7 @@ M12 also records gaps G1–G10 with check procedures.
 
 ### M-18 — Etherscan V1 is dead unauthenticated; Etherscan pages are bot-protected
 
-**Question/risk:** The guide’s Etherscan citations at docs/06:287 and docs/06:731 point at a dead endpoint. A reader following them receives an application-level error despite HTTP 200.
+**Question/risk:** The guide’s Etherscan citations at docs/06:366 and docs/06:810 (3019b02) both link to the live Etherscan rate-limits documentation page (`docs.etherscan.io`, HTTP 200), not the deprecated V1 API. Separately, `api.etherscan.io/api?module=proxy&action=eth_blockNumber` returns HTTP 200 with “You are using a deprecated V1 endpoint” (M18 F10, 2026-11-09).
 
 **Affected sections:** §11, §12.
 
@@ -3566,7 +3566,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** Re-checked register (2026-11-09), M-20; M24 K21–K26, covering proposed Doc 3 rows OI-097–OI-102.
 
-### M-21 — 4.9.1 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
+### M-21 — 4.9.3 is the upgrade candidate pending qualification; 4.9.2 was a prerelease; 4.8.4 remains pinned
 
 **Question/risk:** The guide may prescribe `4.9.2` as the default because npm calls it `latest`, treat `4.9.1` and `4.9.2` as interchangeable, or promise an Android AAR that does not exist.
 
@@ -3574,7 +3574,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Evidence:**
 
-- **M05 F2/F3/F7:** `4.9.2` is npm `latest`, but its GitHub release has `prerelease: true` and was published on 2026-11-06. `4.9.1` has `prerelease: false` and is the latest stable release and upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`.
+- **M05 F2/F3/F7:** `4.9.2` was a GitHub prerelease (`prerelease: true`), published on 2026-11-06, and was never the installed reference engine. `4.9.3` is the latest stable full release and replaces `4.9.1` as the upgrade candidate. They share source commit `d40d24a`, but their npm tarballs and SHA-1 hashes differ. Neither carries an Android `.aar`. Keep `tools/hdwallet-gen` pinned to `4.8.4`; the `4.8.4` → `4.9.3` re-pin remains a separate deferred item, and adoption requires a passing qualification run. Never use `latest`; use explicit version pins.
 - **M23:** there is no downloadable AAR, including for `4.9.2`; JitPack is unusable.
 - **M24 K18 / OI-090:** the Core `4.9.2` target is unproven on Android and remains a release blocker.
 
@@ -3677,7 +3677,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 ### M-26 — Terminology and callout work
 
-**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 195 Warning callouts are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
+**Question/risk:** Unqualified secret terminology can make a reader choose the wrong secret: the BIP-39 passphrase rather than the vault unlock passphrase, or vice versa. The 21 Warning callouts in this guide (119 repo-wide) are ungraded. Deleting the 9 instances of “Never use real funds”, rather than replacing them, would leave mainnet prose without its warning.
 
 **Affected sections:** §1, §2 and the whole document; writing-phase work.
 
@@ -3685,12 +3685,12 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 - The “Mainnet” glossary row at `docs/GLOSSARY.md:45` is false for the mainnet guide. The text itself breaks the “wallet” terminology rule at `docs/RECOVERY.md:423`, and two vaults share one glossary row.
 - The terms **BIP-39 passphrase** and **vault unlock passphrase** must be used in full, never reduced to the unqualified final word. Approximately 173 existing uses lack that qualification.
 - The callout taxonomy has three tiers — Never, Stop and Warning — written as `> **NAME**`, without a colon. Every callout must contain its trigger, required action and consequence.
-- All 195 existing `> **Warning**` callouts need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
+- All 21 existing `> **Warning**` callouts in this guide (119 repo-wide) need re-grading. The 9 instances of “Never use real funds” must be replaced for mainnet, not deleted.
 - The 81 testnet-scope sentences require individual review, not bulk deletion. The “four secrets” map is missing.
 
 **Status:** OPEN (writing-phase work).
 
-**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 195 callouts using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
+**Operational restriction:** Apply the taxonomy and the full secret-name rule to every section. Re-grade all 21 callouts in this guide (119 repo-wide) using the C3 test, replace the 9 obsolete mainnet warnings rather than deleting them, and sweep the 81 testnet-scope sentences individually.
 
 **Blocks writing completion:** No — this is the writing work itself, not a precondition for it.
 
@@ -4123,7 +4123,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 | 26. `docs/09` migration details (descriptor examples, placeholders, expected-result text, verified mainnet replacements) | m17 O7 | OPEN — file-and-line audit of `docs/09` first. |
 | 27. 24-word policy enforcement unverified (policy stated, enforcement behaviour not shown) | m02 | OPEN — verify separately. |
 | 28. In-browser fixture reproduction on mainnet endpoints unverified | m29 | OPEN — check derivation, displayed addresses and network selection without funding. |
-| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 195 Warning callouts; unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
+| 29. Terminology and callout work for the writing phase (“four secrets” map missing; re-grade 21 Warning callouts in this guide (119 repo-wide); unqualified secret-term count is a grep count, not an adjudication; “wallet” sweep unbounded) | m30 O2, O3, O4, O6 | OPEN — carried as M-26 (writing-phase work). |
 | 30. UI-appendix placement and §5 proof-staleness | M35 §3 item 30; write-phase plan, 2026-11-09 ~22:41 IST | DECIDED in part — UI-appendix placement decided; §5 proof-staleness remains OPEN, carried as M-33. |
 | 31. F4 §15 / Android questions still unanswered (user decision pending) | m36 item 2, m28-OI-10 | RESOLVED 2026-11-10 — carried as M-34 (worktree treatment applied and pushed). |
 | 32. Landing and re-check of all 36 source slices | M35 §3 item 32; O-M35-1 | CLOSED — all 36 slices landed and were re-checked. |

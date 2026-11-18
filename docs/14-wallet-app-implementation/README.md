@@ -119,7 +119,7 @@ Keep chain and account-origin metadata alongside the xpub. Do not treat address 
 
 Mirror the Wallet Core API sequence in `derive.js`. Apply input bounds and private-version checks before initialising WASM. Keep WASM initialisation behind the module boundary, then select the Bitcoin, Ethereum or Tron `CoinType` and matching full path for the allow-listed chain.
 
-Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. Return a typed error at every failed step instead of an address.
+Obtain the temporary public-key object through `HDWallet.getPublicKeyFromExtended`. Convert it to an address through `CoinTypeExt.deriveAddressFromPublicKey`, then validate the address through `CoinTypeExt.validate`. As a command-line program, `derive.js` reports failures with plain `console.error` and exits with code 2 for read/usage errors or private-key rejection, or code 1 for runtime failures; it does not return typed errors.
 
 Call the temporary public-key object’s `delete` method from a `finally` block, including when address conversion fails.
 
@@ -306,7 +306,7 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft does not state that QR codes are not offered: it specifies testnet-only QR payment-request scanning (Section F) and bundles no QR encoder, and no receive-QR is specified. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
 
 ### 5.2 Confirmation and send flow
 

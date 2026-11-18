@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "chain": "TRX",
+  "oracle": {
+    "implementation": "bip-utils",
+    "revision": "2.12.2",
+    "sourceSha256": "f556e6f6f01fa17ba703c06ce66262af96550d844da65d29e1ed43a3fff7b1d8",
+    "command": "python3 gen-trx-vectors-full.py",
+    "synthetic": true,
+    "independentOfWalletCore": true
+  },
+  "vectors": [
+    {
+      "id": "trx-synthetic-0",
+      "privateScalarHex": "b5a4cea271ff424d7c31dc12a3e43e401df7a40d7412a15750f3f0b6b5449a28",
+      "compressedHex": "03ff21f8e64d3a3c0198edfbb7afdc79be959432e92e2f8a1984bb436a414b8edc",
+      "uncompressedHex": "04ff21f8e64d3a3c0198edfbb7afdc79be959432e92e2f8a1984bb436a414b8edcec0345aad0c1bf7da04fd036dd7f9f617e30669224283d950fab9dd84831dc83",
+      "xyHex": "ff21f8e64d3a3c0198edfbb7afdc79be959432e92e2f8a1984bb436a414b8edcec0345aad0c1bf7da04fd036dd7f9f617e30669224283d950fab9dd84831dc83",
+      "keccak256Hex": "16030ddba3ad8871035229b3c8599111f29c1e1e061265b4af93ea1f274ad78a",
+      "address20Hex": "c8599111f29c1e1e061265b4af93ea1f274ad78a",
+      "payloadHex": "41c8599111f29c1e1e061265b4af93ea1f274ad78a",
+      "sha256FirstHex": "94f9b4236646cff4a05c3d287210b35dc4d1d5e1648930ca727694a7958b7e99",
+      "sha256dHex": "1912f84c4c870b024c10d28086966a39d551cf0a05aa94c81aeb0312d3a4a9f0",
+      "checksumHex": "1912f84c",
+      "addressBytesHex": "41c8599111f29c1e1e061265b4af93ea1f274ad78a1912f84c",
+      "address": "TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH",
+      "path": "m/44'/195'/0'/0/0"
+    },
+    {
+      "id": "trx-synthetic-1",
+      "privateScalarHex": "edb728e259afca2ddcc428459e7681b8414668649aedbc8d25c0872da219b2e6",
+      "compressedHex": "0209b9854ad6e016c5d72aee08f763821bd5e32489c12bcc078a935a14f29dbed6",
+      "uncompressedHex": "0409b9854ad6e016c5d72aee08f763821bd5e32489c12bcc078a935a14f29dbed6e7c7aaba49725e62564697335d58f63b831f43d9d61b8c83771aebc74d62660c",
+      "xyHex": "09b9854ad6e016c5d72aee08f763821bd5e32489c12bcc078a935a14f29dbed6e7c7aaba49725e62564697335d58f63b831f43d9d61b8c83771aebc74d62660c",
+      "keccak256Hex": "0f6ce99de14536b624d6ff74b6e708a39781c96bd399c7657780ff9fe9f052a8",
+      "address20Hex": "b6e708a39781c96bd399c7657780ff9fe9f052a8",
+      "payloadHex": "41b6e708a39781c96bd399c7657780ff9fe9f052a8",
+      "sha256FirstHex": "ebb410e833e84c97bfd057ab0822ae311166f42602d308672c4d2d101406d4bc",
+      "sha256dHex": "2a2da3a6a2e1d7a260d7db54c7f7cb39d3a15f95c01527ea98c5d2c3173527a2",
+      "checksumHex": "2a2da3a6",
+      "addressBytesHex": "41b6e708a39781c96bd399c7657780ff9fe9f052a82a2da3a6",
+      "address": "TSeJkUh4Qv67VNFwY8LaAxERygNdy6NQZK",
+      "path": "m/44'/195'/0'/0/1"
+    },
+    {
+      "id": "trx-synthetic-2",
+      "privateScalarHex": "0e5684898be2d272d54eb2be3fd41a12f720db6358cee02c2d23043eed4bf7a2",
+      "compressedHex": "02f988243bb0c75357d9d269098b08fe8a8f18a470a37e250528c67600272bd06f",
+      "uncompressedHex": "04f988243bb0c75357d9d269098b08fe8a8f18a470a37e250528c67600272bd06f6bfd1b455f1d7430aed14eea9aab3970759144228e67d66a1943680932652090",
+      "xyHex": "f988243bb0c75357d9d269098b08fe8a8f18a470a37e250528c67600272bd06f6bfd1b455f1d7430aed14eea9aab3970759144228e67d66a1943680932652090",
+      "keccak256Hex": "4e92736316f2ab8950c9c20cf4f35fff5ca9ee43aca2c57ded9d9ec66ac42dd0",
+      "address20Hex": "f4f35fff5ca9ee43aca2c57ded9d9ec66ac42dd0",
+      "payloadHex": "41f4f35fff5ca9ee43aca2c57ded9d9ec66ac42dd0",
+      "sha256FirstHex": "b61b5db601ba8102d5a0922073fd1b1773527fd6c73c3f3c0c9bad1d8c6efdbd",
+      "sha256dHex": "5ccdbbc194af461f280d84871c18bea58b3b4d9edaa15cc6c4b417670fd8191c",
+      "checksumHex": "5ccdbbc1",
+      "addressBytesHex": "41f4f35fff5ca9ee43aca2c57ded9d9ec66ac42dd05ccdbbc1",
+      "address": "TYJPRrdB5APNeRs4R7fYZSwW3TcrTKw2gx",
+      "path": "m/44'/195'/0'/0/2"
+    },
+    {
+      "id": "trx-synthetic-3",
+      "privateScalarHex": "5b7bff42fdea332c127c455e5a15d691a562773677de88e8256fc8d19a1b0337",
+      "compressedHex": "0230a9750874bc9d485f9294173459cbb001e9e429cdb02579462578b32cea69e2",
+      "uncompressedHex": "0430a9750874bc9d485f9294173459cbb001e9e429cdb02579462578b32cea69e2860f4cf0c3dea3fadef03bd68a4403324f1ab413252e3aa5f1612fadb89c82cc",
+      "xyHex": "30a9750874bc9d485f9294173459cbb001e9e429cdb02579462578b32cea69e2860f4cf0c3dea3fadef03bd68a4403324f1ab413252e3aa5f1612fadb89c82cc",
+      "keccak256Hex": "c2fe76f0ffa1d68b5c4ebf36ac892261ed306c7c91ff84895811fa2e5e58333d",
+      "address20Hex": "ac892261ed306c7c91ff84895811fa2e5e58333d",
+      "payloadHex": "41ac892261ed306c7c91ff84895811fa2e5e58333d",
+      "sha256FirstHex": "84801e5a38ecace3f5ecd37b6495197d3269674130f0b39096efaa06a033377d",
+      "sha256dHex": "7f67d9735270ea6aba080ebee60f775b7212dd99eb8a8e8b66441c2afa39a8eb",
+      "checksumHex": "7f67d973",
+      "addressBytesHex": "41ac892261ed306c7c91ff84895811fa2e5e58333d7f67d973",
+      "address": "TRhVWK5XEDkQBDevcdCWW7RW51aRncty4W",
+      "path": "m/44'/195'/0'/0/3"
+    },
+    {
+      "id": "trx-synthetic-4",
+      "privateScalarHex": "0463701bb6b397f5d90b68bd64454ebe1b4736e9d0862a9391980f31e3141348",
+      "compressedHex": "020ee5f0589c3850f44e0b7a8b2b724443714f2a0acb4397a213873964410cd155",
+      "uncompressedHex": "040ee5f0589c3850f44e0b7a8b2b724443714f2a0acb4397a213873964410cd1558a72a53c8579eb96036191a170d71dd2d96dc00ebaf1e968d9d53769e543a426",
+      "xyHex": "0ee5f0589c3850f44e0b7a8b2b724443714f2a0acb4397a213873964410cd1558a72a53c8579eb96036191a170d71dd2d96dc00ebaf1e968d9d53769e543a426",
+      "keccak256Hex": "416feb53c75f3f3cb3e7e151bb1a70862e804bfe2885f6c7efc8fdf3f0148b00",
+      "address20Hex": "bb1a70862e804bfe2885f6c7efc8fdf3f0148b00",
+      "payloadHex": "41bb1a70862e804bfe2885f6c7efc8fdf3f0148b00",
+      "sha256FirstHex": "0bd5262282893f5253dc94c73ca696ad27af07c604c2373be79db1899cb8fdda",
+      "sha256dHex": "42c7d6d38fcf508ec5444fffa959a68fe2a47a8024d4b6b19917f9a5ec2cffe7",
+      "checksumHex": "42c7d6d3",
+      "addressBytesHex": "41bb1a70862e804bfe2885f6c7efc8fdf3f0148b0042c7d6d3",
+      "address": "TT2X2yyubp7qpAWYYNE5JQWBtoZ7ikQFsY",
+      "path": "m/44'/195'/0'/0/4"
+    },
+    {
+      "id": "trx-synthetic-5",
+      "privateScalarHex": "b46d74cf377ce98d89d7c9eade68eb863791296122e2b1324057fdc190369cd0",
+      "compressedHex": "0214316120f234f69a7e179f0e6ed55e00e801ce97269b0d03bbd5dcfb890958ce",
+      "uncompressedHex": "0414316120f234f69a7e179f0e6ed55e00e801ce97269b0d03bbd5dcfb890958ce749162244a997f53af668823cc6f120735b7c9ae1cae767a39656aa7312e4864",
+      "xyHex": "14316120f234f69a7e179f0e6ed55e00e801ce97269b0d03bbd5dcfb890958ce749162244a997f53af668823cc6f120735b7c9ae1cae767a39656aa7312e4864",
+      "keccak256Hex": "af69829b38e35ec45b6d871a12383c8eff283aa01d749ef7e45761f1f82762c4",
+      "address20Hex": "12383c8eff283aa01d749ef7e45761f1f82762c4",
+      "payloadHex": "4112383c8eff283aa01d749ef7e45761f1f82762c4",
+      "sha256FirstHex": "4f622cc80bb69d45a4f21a4526be6454404228a788c30ac2e5b1b9d7ac8a5a42",
+      "sha256dHex": "0d8d5334f5bcccb3f00049bee69a58e3ca999198ddc3f5913c607256f201af7c",
+      "checksumHex": "0d8d5334",
+      "addressBytesHex": "4112383c8eff283aa01d749ef7e45761f1f82762c40d8d5334",
+      "address": "TBdYXtwq18cAhi1BA574TrP6tw2G86anu1",
+      "path": "m/44'/195'/0'/0/5"
+    },
+    {
+      "id": "trx-synthetic-6",
+      "privateScalarHex": "c31f67ddcd43cc30860d509639a9de16e1be2d1d6d444e3fb5b269c4b4099b41",
+      "compressedHex": "02cc02fd54d985a4931fa516d1448fd6fa0634d85a1bbe8da6155aa37730bf3247",
+      "uncompressedHex": "04cc02fd54d985a4931fa516d1448fd6fa0634d85a1bbe8da6155aa37730bf32471a0d9fea65fcd56c732cc12fdd706e0af7e3faf8adc29aa962afdf7f39987ae0",
+      "xyHex": "cc02fd54d985a4931fa516d1448fd6fa0634d85a1bbe8da6155aa37730bf32471a0d9fea65fcd56c732cc12fdd706e0af7e3faf8adc29aa962afdf7f39987ae0",
+      "keccak256Hex": "f97edd7f7b81b66eeb5835dea7ced7414adf31fd0b50df3d180c8f1b366c386e",
+      "address20Hex": "a7ced7414adf31fd0b50df3d180c8f1b366c386e",
+      "payloadHex": "41a7ced7414adf31fd0b50df3d180c8f1b366c386e",
+      "sha256FirstHex": "5016798f042d5b0052db894c35ff5518af8a3f0559187e03ea686b896eb43da2",
+      "sha256dHex": "b400e0aa207811128c7e8ac1ec45d006b3ecec5070156ab8c3e93bf93ea2bbae",
+      "checksumHex": "b400e0aa",
+      "addressBytesHex": "41a7ced7414adf31fd0b50df3d180c8f1b366c386eb400e0aa",
+      "address": "TRGVdeYnLm92LodhRyCyTyxYvLqocfffRs",
+      "path": "m/44'/195'/0'/0/6"
+    },
+    {
+      "id": "trx-synthetic-7",
+      "privateScalarHex": "a31c9dd252401743b54302a742c33374ae4b01034996cbfe2e00a30ab5b6adda",
+      "compressedHex": "028a8073931b2a4cd6b57fb2149a502b95933ab5b023341ea44815bde37172cb96",
+      "uncompressedHex": "048a8073931b2a4cd6b57fb2149a502b95933ab5b023341ea44815bde37172cb9629913968091e1b41c75824420a80de4a06cb153711cc2b937364c9e93711bfec",
+      "xyHex": "8a8073931b2a4cd6b57fb2149a502b95933ab5b023341ea44815bde37172cb9629913968091e1b41c75824420a80de4a06cb153711cc2b937364c9e93711bfec",
+      "keccak256Hex": "d3c9d473e7f3e102801c69b83f26d607d2fb386ff3cd8b4016419ce9ffb4c7af",
+      "address20Hex": "3f26d607d2fb386ff3cd8b4016419ce9ffb4c7af",
+      "payloadHex": "413f26d607d2fb386ff3cd8b4016419ce9ffb4c7af",
+      "sha256FirstHex": "6bc3c68ad7c1e28967907f43f6bd4cd4febdf9d8946c066107f40f9b9595df05",
+      "sha256dHex": "9668a1b9d674916a01c621f88ab69f42ef8062f4f228992872b71b35f9c4f873",
+      "checksumHex": "9668a1b9",
+      "addressBytesHex": "413f26d607d2fb386ff3cd8b4016419ce9ffb4c7af9668a1b9",
+      "address": "TFj86XAQYBPvwUknt9yxmbc4k3zwUC7iVW",
+      "path": "m/44'/195'/0'/0/7"
+    },
+    {
+      "id": "trx-point-G",
+      "privateScalarHex": "0000000000000000000000000000000000000000000000000000000000000001",
+      "compressedHex": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "uncompressedHex": "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+      "xyHex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+      "keccak256Hex": "c0a6c424ac7157ae408398df7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "address20Hex": "7e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "payloadHex": "417e5f4552091a69125d5dfcb7b8c2659029395bdf",
+      "sha256FirstHex": "6dd6e72fff3e486ec9c3c606434860a2a02521aa217831fed5542f1f342dd771",
+      "sha256dHex": "b164fb1f395a1dc1bc7c88ab5ad7286f3fd4c54ef2884171d9a4cac48178b4e1",
+      "checksumHex": "b164fb1f",
+      "addressBytesHex": "417e5f4552091a69125d5dfcb7b8c2659029395bdfb164fb1f",
+      "address": "TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC"
+    },
+    {
+      "id": "trx-point-minus-G",
+      "privateScalarHex": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140",
+      "compressedHex": "0379be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "uncompressedHex": "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798b7c52588d95c3b9aa25b0403f1eef75702e84bb7597aabe663b82f6f04ef2777",
+      "xyHex": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798b7c52588d95c3b9aa25b0403f1eef75702e84bb7597aabe663b82f6f04ef2777",
+      "keccak256Hex": "b8e8fc962bf5ccca6c6f73d280c0dbf239224071c59dd8970ab9d542e3414ab2",
+      "address20Hex": "80c0dbf239224071c59dd8970ab9d542e3414ab2",
+      "payloadHex": "4180c0dbf239224071c59dd8970ab9d542e3414ab2",
+      "sha256FirstHex": "33516d848419ebd15da0c03a620ee5d6c5467f5602d999b8cfcfa80ce88e5836",
+      "sha256dHex": "98863e0d35c94abf58d9efef1d09b0b59bc97731e87b3b6522607db75c513c79",
+      "checksumHex": "98863e0d",
+      "addressBytesHex": "4180c0dbf239224071c59dd8970ab9d542e3414ab298863e0d",
+      "address": "TMhzXhj5o7aG14eMHn2htGe7ek39hiriPN"
+    }
+  ],
+  "negativeSmoke": {
+    "scope": {
+      "bawaBase": "3019b02",
+      "walletCore": "4.8.4",
+      "artifact": "WASM",
+      "node": "22.23.4"
+    },
+    "raw33": {
+      "vectorIndex": 0,
+      "inputField": "compressedHex",
+      "keyType": 0,
+      "operation": "direct-tron-without-normalisation",
+      "isolation": "fresh-child-process",
+      "expected": "wasm-abort",
+      "mustReachDeriveCall": true,
+      "exit": "nonzero-or-signal",
+      "mustNotEmitAddress": true
+    },
+    "xOnly32": {
+      "vectorIndex": 0,
+      "inputField": "compressedHex",
+      "transform": "remove-first-byte",
+      "operation": "trx65-only",
+      "expected": "clean-error",
+      "mustNotCallNative": true
+    }
+  },
+  "FIXTURES": {
+    "note": "Extension beyond the Sol schema (whose top level forbids extra properties): the published pairs the existing test_bawa_cli.py TestDeriveTool searches for. Without this key that test skips instead of running.",
+    "btc": {
+      "xpub": "zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9",
+      "0": "bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd"
+    },
+    "trx": {
+      "xpub": "xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF",
+      "0": "TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c",
+      "1": "TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B"
+    },
+    "trx_synthetic_account": {
+      "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "mnemonic_note": "BIP-39 test mnemonic, published test vector, never for funds.",
+      "account_path": "m/44'/195'/0'",
+      "account_xpub": "xpub6D1AabNHCupeiLM65ZR9UStMhJ1vCpyV4XbZdyhMZBiJXALQtmn9p42VTQckoHVn8WNqS7dqnJokZHAHcHGoaQgmv8D45oNUKx6DZMNZBCd"
+    }
+  }
+}

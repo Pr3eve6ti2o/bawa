@@ -745,7 +745,7 @@ Ask the maintainer for the undocumented CI configuration, public fixture locatio
 
 ### Establish trust first
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+Bawa currently has no published maintainer signing key, no tags and no successfully verified commit signatures. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 Do not treat a tag as verified without both trusted-key confirmation and a successful check of that tag’s signature.
 
@@ -1017,7 +1017,7 @@ Run the maintainer-confirmed checks after that install. Once they pass, commit t
 
 Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
-These checks are guidance for your own setup, not Bawa monitoring features. Bawa does not document freshness thresholds, payment-confirmation rules or recovery procedures. Confirm those with the maintainer.
+These checks are guidance for your own setup, not Bawa monitoring features. Payment-confirmation rules are documented in MAINNET-GUIDE section 14 (pinned wallet policies reviewed 2026-11-10 under register entry M-38): Bitcoin 6 confirmations (a customary recommendation, not a protocol requirement); Ethereum at least 12 confirmations and canonical finalised inclusion (12 confirmations alone are insufficient); TRON 19 distinct active Super Representatives out of 27 with solidified inclusion via `/walletsolidity/*`, never a block count. Bawa does not document freshness thresholds or recovery procedures. Confirm those with the maintainer.
 
 ### Personal, $0, no server
 
@@ -1285,7 +1285,7 @@ Coordinate a history purge where possible, using a method confirmed with the mai
 
 ### Verify the tag or commit signature
 
-Bawa currently has no published maintainer signing key, no tags and no signed commits. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+Bawa currently has no published maintainer signing key, no tags and no successfully verified commit signatures. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 For the intended tag:
 

@@ -1,7 +1,7 @@
 # Bawa
 Bawa is an HD-wallet reference and command-line launcher for developers and AI agents to generate encrypted seed files and derive watch-only addresses. [Try it](#try-the-launcher).
 
-Bawa (`Pr3eve6ti2o/bawa`) is a practical open-source reference for HD-wallet workflows and an **AI Wallet Builder**. A human or AI agent starts with one plain request—such as "Create an HD wallet" or "Create a Bitcoin watch-only wallet"—and uses the repository's tools and blueprints to build a real, buildable project.
+On `main`, Bawa (`Pr3eve6ti2o/bawa`) is an HD-wallet reference and command-line launcher for developers and AI agents to generate encrypted seed files and derive watch-only addresses. The one-prompt **AI Wallet Builder** capability exists only as feature-branch work and is not available on `main`.
 
 > **Security first:** Never share mnemonics, private keys or data keys. xpubs/zpubs are privacy-sensitive. Generate secrets in a trusted offline environment; keep online work watch-only. Keep `secrets/` at `0700`, and `seed.enc.json` and `.env` at `0600`.
 
@@ -222,7 +222,7 @@ Treat any mainnet work as a **separate, reviewed change**. The [mainnet guide](d
 
 ## 7. Essential commands
 
-These instructions describe the `main` worktree based on `16c074e` (staging commit `2bb9a98`), not a released version.
+These instructions describe the `main` worktree based on `3019b02` (staging commit `2bb9a98`), not a released version.
 
 Run from the repository root with your virtual environment active, except where noted.
 

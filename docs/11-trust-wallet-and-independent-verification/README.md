@@ -1,6 +1,6 @@
 ---
 title: Trust Wallet Core and Independent Verification
-description: Use Trust Wallet Core 4.9.2 as the reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
+description: Use Trust Wallet Core 4.8.4 as the pinned reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
 last-updated: 2026-11-09
 ---
 
@@ -292,7 +292,7 @@ Do not require a separate Sepolia address fixture, because ETH addresses are net
 
 ## Verification and testing
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 Use this file as verification guidance for public outputs, not as a signing capability.
 
@@ -304,7 +304,7 @@ For the standards and paths covered by Bawa’s differential tests, require Wall
 
 ### Use the reference engine and independent verifier
 
-Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
+Use Trust Wallet Core **4.8.4**, matching the existing `tools/hdwallet-gen` package and lockfile pin, as the reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths, and `bip-utils` as the independent verifier. Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
 
 Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
 
@@ -498,7 +498,7 @@ Restore the baseline between independent cases. Redelivery is normal; duplicate 
 
 ### CI discipline, reproducible checks and build verification
 
-Use Trust Wallet Core **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry response 200) in place of the superseded 4.8.4 pin.
+Use Trust Wallet Core **4.8.4**, as pinned in `tools/hdwallet-gen/package.json` and its lockfile, as the reference engine. **4.9.2** was a GitHub prerelease, never the installed reference engine. **4.9.3** is the latest stable full release and the upgrade candidate; the **4.8.4 → 4.9.3** re-pin remains a separate deferred item requiring a passing qualification run before adoption.
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open. Do not carry that demonstration forward as proof of the in-browser flow.
 
@@ -538,7 +538,7 @@ python3 test/differential_test.py
 
 > **Expected result:** On success, the check prints "bip_utils reference checks: PASS".
 
-Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence**. Do not substitute it for the Wallet Core side of the comparison (now captured, D31, 2026-11-08).
+Retain the complete log and successful exit status, together with the candidate revision and the `bip_utils` version used. Record this result as **differential-testing evidence** (`test/differential_test.py`, bip-utils 2.12.2), not as Wallet Core evidence. Do not substitute it for the Wallet Core side of the comparison; the D31 artefacts were never supplied.
 
 Limit the claim supported by that line to the comparisons the script actually performed. Do not treat it, by itself, as establishing complete BIP-32/BIP-39 vector coverage, chain coverage, offline operation, reproducibility or security review. Do not change any of those records merely because the reference check passed.
 

@@ -40,13 +40,13 @@ Use this guide to build a non-custodial Web wallet for Bitcoin testnet4, Ethereu
 
 ### Pick a starting point
 
-- **New builders:** start at [Section B](#b-prerequisites-and-project-setup).
+- **New builders:** start at [Section B](#b-prerequisites-and-toolchain).
 - **Builders who already have the repo:** start at [Section C](#c-engine-integration).
 - **Builders verifying a build:** start at [Section H](#h-testing).
 
 ### Quick-start routes
 
-**Node.js route.** Pair the repo’s `tools/hdwallet-gen/` JavaScript engine (Trust Wallet Core) with this guide’s [Section B build](#b-prerequisites-and-project-setup). You build the app from that engine reference and the Web-specific instructions. The Web validation draft (`app-web/`) is **local-only, in no repository**: treat it as validation evidence, not a shipped sample. Your build route is the repository engine plus Section B, not a checkout of the draft.
+**Node.js route.** Pair the repo’s `tools/hdwallet-gen/` JavaScript engine (Trust Wallet Core) with this guide’s [Section B build](#b-prerequisites-and-toolchain). You build the app from that engine reference and the Web-specific instructions. The Web validation draft (`app-web/`) is **local-only, in no repository**: treat it as validation evidence, not a shipped sample. Your build route is the repository engine plus Section B, not a checkout of the draft.
 
 **Python route.** Use `tools/make_wallet.py`, `tools/decrypt_seed.py` and `test/differential_test.py` in the same Bawa repo, following repo guide sections **04** and **11**. Refer there for the shared workflow, and use this guide for Web-specific app work. The recorded differential-test PASS is evidence for that test only; it is not a live browser creation or restore result.
 
@@ -251,7 +251,7 @@ A bare run without the virtual environment fails with `ModuleNotFoundError: No m
 
 The repo’s `derive_daemon.js` chain labels (`btc`, `eth`, `trx`) do not establish testnet compatibility—the endpoint does.
 
-Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only. To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `01c252d7b62c638895aa976479d608a14eb9daf3`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08).
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only. To re-encode a `bc1q…` P2WPKH address as `tb1q…`, keep witness version `0` and the identical 20-byte witness program, change the Bech32 HRP from `bc` to `tb` and recompute the checksum. Worked example: Bawa's `m/84'/0'` index-0 address `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (witness program `0c03e507f38033aca9ac5c32b32dce56051d097b`) re-encodes to `tb1qpsp72plnsqe6e2dvtsetxtww2cz36ztmrqny67`; the standards `m/84'/1'` program encodes to `tb1qq8p994ak933c39d2jaj8n4sg598tnkhnyk5sg5` (D31, 2026-11-08).
 
 ### Sources
 

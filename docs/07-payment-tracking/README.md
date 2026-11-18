@@ -68,7 +68,9 @@ observe → identify event/payment uniquely → store/claim atomically → fulfi
 Make the claim atomic and choose a chain-specific uniqueness key:
 
 - UTXO payments: `chain + txid + output`
-- EVM token events: `chain_id + tx_hash + log_index`
+- EVM token events: `chain_id + tx_hash + transaction_event_index`
+
+Derive `transaction_event_index` deterministically within the transaction’s complete event list (docs/06:679); never use a block-wide log index, which can shift across a reorg.
 
 Use the same idempotent finalisation gate for every payment path. Do not let a repeated observation fulfil an order again.
 
@@ -82,7 +84,7 @@ For free/manual tracking, use Mempool.space and Blockstream Esplora. Treat a hos
 
 #### EVM tokens
 
-For an ERC-20 payment, track the network/chain ID, token contract, `Transfer` event, sender, recipient, amount, transaction hash, log index and block number.
+For an ERC-20 payment, track the network/chain ID, token contract, `Transfer` event, sender, recipient, amount, transaction hash, transaction event index and block number.
 
 Use the ERC-20 `Transfer` event as the normal low-level primitive. Fetch logs with Ethereum JSON-RPC's `eth_getLogs`, and use modern block queries to distinguish `latest`, `safe` and `finalized` views.
 
@@ -289,7 +291,7 @@ Put these application policies in place before accepting payments. They are not 
 | A blockchain event observed | Match the event to the request and apply the chain's confirmation policy before idempotent finalisation. Configure that policy per chain before accepting payments. Do not use allocation as a replacement for matching or confirmation. |
 | An event duplicated or a temporary outage occurs | Count each distinct matched event once, not each watcher delivery. Ensure reconciliation does not double-count or lose a payment. Define persistence, replay and recovery mechanics; Bawa does not document these. |
 | The confirmed amount differs from the request | Treat the difference as a discrepancy. Accumulate top-ups only if your application's own policy allows it. |
-| A payment is ready for finalisation | Compare the request terms, distinct accepted events and stored outcome under the chain's confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
+| A payment is ready for finalisation | Compare the request terms, distinct accepted events (identified by the event-identity key: `(chain_id, tx_hash, transaction_event_index)` for EVM token events, `(chain, txid, output)` for UTXO payments) and stored outcome under the chain's confirmation policy. Do not silently overwrite a stored outcome that disagrees with the evidence. |
 ## 10. Observation, confirmation, reconciliation
 
 Do not treat holdings as payments. Require evidence that satisfies a particular request, not merely a balance change.
@@ -573,8 +575,8 @@ Treat a mempool output as an attempted payment, not confirmation. Block inclusio
 
 Use `eth_getLogs` on the intended network, filtering by the expected token contract and ERC-20 `Transfer` signature.
 
-- Use `(<CHAIN_ID>, <TX_HASH>, <LOG_INDEX>)` as the event key.
-- Verify the node's chain ID, emitting contract, event signature, sender, recipient, atomic token amount, transaction hash, log index and block number/hash.
+- Use `(<CHAIN_ID>, <TX_HASH>, <TRANSACTION_EVENT_INDEX>)` as the event key.
+- Verify the node's chain ID, emitting contract, event signature, sender, recipient, atomic token amount, transaction hash, transaction event index and block number/hash.
 - Enforce any sender restriction.
 - Reject non-canonical logs and logs whose `removed` flag is `true`.
 - If an accepted log is subsequently removed, invalidate that observation and reassess the request.
@@ -750,7 +752,7 @@ Treat everything in this section as application policy, not Bawa behaviour.
 
 Expect repeat observations from polling, retries, restarts, duplicated webhooks, rescans, multiple workers and indexer replays.
 
-1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or log index. Identify the actual transfer; do not rely on a callback identifier alone.
+1. Observe the transfer and establish its identity using the network, `<TXID>` and the relevant output or transaction event index. Identify the actual transfer; do not rely on a callback identifier alone.
 2. Persist the event and claim fulfilment atomically in a database transaction. Enforce a unique event constraint on the transfer identity and use a conditional claim on `<REQUEST_ID>`.
 3. Let only the successful claimant fulfil and then record the final state. Make other workers consult the existing state instead of starting another fulfilment.
 
@@ -827,7 +829,7 @@ Before scanning, log the run ID, trigger, input checkpoint and range bounds. Aft
 Retain the linked payment records in causal order:
 
 1. **Request:** `<REQUEST_ID>`, creation/revision history, chain/network, asset identifier, base-unit amount, recipient, required memo/tag, validity limits and policy snapshot.
-2. **Observation:** `<TXID>`, chain/network and native event/output/log identity, cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
+2. **Observation:** `<TXID>`, chain/network and native event/output/transaction-event identity, cursor, block/slot/ledger identity, canonicality status, payer/recipient, asset, amount and memo/tag. Keep transaction/receipt and inclusion/checkpoint evidence supporting chain inclusion and confirmations.
 3. **Match decision:** request–event link, deduplication key, evaluated confirmations, accepted/rejected/pending status and reason, tied to the policy version.
 4. **Reconciliation/finalisation:** accepted event set, total, database before/after values, discrepancy and repair, resulting status and decision reason.
 5. **Credit and settlement:** credit ID, idempotency key, journal amount/asset, reversals or adjustments, and allocation to the retained `<SETTLEMENT_LINE_ID>` record, including fees and net value.
