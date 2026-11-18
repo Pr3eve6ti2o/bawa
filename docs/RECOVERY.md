@@ -194,7 +194,11 @@ BTC BIP-84 uses bech32 SegWit; the published index-0 fixture address is `bc1qpsp
 
 - **TON (theoretical recovery, generation-only policy)**
   - **Derivation path:** Restrict the policy claim to generation from m/44'/607'/0'.
-  - **Expected account-0 address form:** Retain the form recorded for the independent original TON output.
+  - **Recorded configuration:** Contract Wallet V4 R2; wallet ID `698983191` (`0x29A9A317`; the `@ton/ton` V4 default); workchain `0`.
+  - **Expected account-0 address forms:** Retain the forms recorded for the independent original TON output:
+    - **Raw:** `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`.
+    - **User-friendly mainnet presentation:** Non-bounceable `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`; bounceable `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi`.
+    - **User-friendly testnet presentation:** Non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`; bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`.
   - **Verification method:** Compare the generated public output with the pre-existing original using its recorded configuration. Do not describe this generation comparison as evidence of a tested TON recovery procedure.
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
