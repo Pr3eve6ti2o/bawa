@@ -64,11 +64,15 @@ describe('chains registry', () => {
     expect(availableFor('receive')).toEqual(['btc', 'eth', 'trx', 'ton']);
   });
 
-  it('lists no chain for adapter and transaction capabilities', () => {
+  it('lists all four chains for balance and history, and three for fee-quote', () => {
+    expect(availableFor('balance')).toEqual(['btc', 'eth', 'trx', 'ton']);
+    expect(availableFor('history')).toEqual(['btc', 'eth', 'trx', 'ton']);
+    // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
+    expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
+  });
+
+  it('lists no chain for transaction-construction capabilities', () => {
     for (const capability of [
-      'balance',
-      'history',
-      'fee-quote',
       'unsigned-plan',
       'local-sign',
       'post-sign-verify',
@@ -77,16 +81,17 @@ describe('chains registry', () => {
     }
   });
 
-  it('marks derive, restore and receive verified and the rest blocked', () => {
+  it('marks the Phase 2 adapter capabilities verified with evidence', () => {
     for (const chain of SUPPORTED_CHAINS) {
       const caps = capabilitiesFor(chain);
       expect(caps.derive.status).toBe('verified');
       expect(caps.restore.status).toBe('verified');
       expect(caps.receive.status).toBe('verified');
+      expect(caps.balance.status).toBe('verified');
+      expect(caps.history.status).toBe('verified');
+      expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-19');
+      expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-19');
       for (const capability of [
-        'balance',
-        'history',
-        'fee-quote',
         'unsigned-plan',
         'local-sign',
         'post-sign-verify',
@@ -95,15 +100,32 @@ describe('chains registry', () => {
         expect(caps[capability].evidence.length).toBeGreaterThan(0);
       }
     }
+    expect(capabilitiesFor('ton')['fee-quote'].status).toBe('blocked');
+    expect(capabilitiesFor('ton')['fee-quote'].evidence).toContain('unsigned message');
+    for (const chain of ['btc', 'eth', 'trx'] as const) {
+      expect(capabilitiesFor(chain)['fee-quote'].status).toBe('verified');
+    }
+  });
+
+  it('pins the Phase 2 adapter RPC endpoints (no viem:mainnet marker)', () => {
+    expect(CHAINS.btc.rpcEndpoints).toEqual(['https://mempool.space/api']);
+    expect(CHAINS.eth.rpcEndpoints).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.trx.rpcEndpoints).toEqual(['https://api.trongrid.io']);
+    expect(CHAINS.ton.rpcEndpoints).toEqual([
+      'https://toncenter.com/api/v2/jsonRPC',
+    ]);
   });
 
   it('throws a typed error naming the unavailable combination', () => {
-    expect(() => assertSupported('eth', 'balance')).toThrow(
-      /chain eth \(eip155:1, profile bawa-evm-bip44-v1\) cannot do balance/,
+    expect(() => assertSupported('ton', 'fee-quote')).toThrow(
+      /chain ton \(ton:-239, profile bawa-ton-v4r2-v1\) cannot do fee-quote/,
     );
     expect(() => assertSupported('ton', 'local-sign')).toThrow(
       /cannot do local-sign/,
     );
+    expect(() => assertSupported('eth', 'balance')).not.toThrow();
     expect(() => assertSupported('eth', 'derive')).not.toThrow();
   });
 

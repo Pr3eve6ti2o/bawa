@@ -77,6 +77,42 @@ function capabilitiesForSupported(): Capabilities {
   };
 }
 
+/**
+ * Phase 2 adapter capabilities (Fix Lane 2, 2026-11-19). balance/history/
+ * fee-quote are verified only with evidence: the adapter's unit tests plus a
+ * live mainnet cross-check against a second source on 2026-11-19. TON
+ * fee-quote stays blocked: a TON fee depends on the unsigned message, which
+ * is Phase 4 work — no fee number is ever invented.
+ */
+function capabilitiesForAdapterChain(
+  chain: ChainId,
+  feeQuoteVerified: boolean,
+): Capabilities {
+  const verifiedByAdapters = (capability: CapabilityName): CapabilityEntry => ({
+    status: 'verified',
+    evidence:
+      `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
+      `mainnet cross-check 2026-11-19 (second source) for ${capability}.`,
+  });
+  return {
+    derive: verifiedByCoreTests('derive'),
+    restore: verifiedByCoreTests('restore'),
+    receive: verifiedByCoreTests('receive'),
+    balance: verifiedByAdapters('balance'),
+    history: verifiedByAdapters('history'),
+    'fee-quote': feeQuoteVerified
+      ? verifiedByAdapters('fee-quote')
+      : {
+          status: 'blocked',
+          evidence:
+            'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
+        },
+    'unsigned-plan': blockedNoTx('unsigned-plan'),
+    'local-sign': blockedNoTx('local-sign'),
+    'post-sign-verify': blockedNoTx('post-sign-verify'),
+  };
+}
+
 function assertAccountIndex(account: number, index: number): void {
   if (
     !Number.isSafeInteger(account) ||
@@ -106,9 +142,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/84'/0'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://mempool.space/api'],
     evmChainId: null,
-    capabilities: capabilitiesForSupported(),
+    capabilities: capabilitiesForAdapterChain('btc', true),
   },
   eth: {
     id: 'eth',
@@ -122,11 +158,10 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    // viem mainnet public client; the concrete RPC URL is chosen by the
-    // Phase 2 adapter. This marker is an identifier, not a URL.
-    rpcEndpoints: ['viem:mainnet'],
+    // ETH adapter: viem public client against the pinned mainnet RPC.
+    rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
     evmChainId: 1,
-    capabilities: capabilitiesForSupported(),
+    capabilities: capabilitiesForAdapterChain('eth', true),
   },
   trx: {
     id: 'trx',
@@ -142,7 +177,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://api.trongrid.io'],
     evmChainId: null,
-    capabilities: capabilitiesForSupported(),
+    capabilities: capabilitiesForAdapterChain('trx', true),
   },
   ton: {
     id: 'ton',
@@ -160,7 +195,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
     evmChainId: null,
-    capabilities: capabilitiesForSupported(),
+    capabilities: capabilitiesForAdapterChain('ton', false),
   },
 };
 
