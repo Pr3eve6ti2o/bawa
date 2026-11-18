@@ -274,11 +274,13 @@ Identify the seed artefact, represented here by `/path/to/seed.enc.json`, as an 
 
 Keep these three inputs distinct:
 
-- **Nonce:** Keep this per-encryption value, stored with the backup, paired with its ciphertext. It is not secret.
+- **Nonce:** Keep this per-encryption value, stored with the backup, paired with its ciphertext. It is not secret. The bundle stores the nonce in `nonce_b64` as a base64 string alongside the ciphertext; base64-decode it before use.
 - **Ciphertext:** Treat this as the encrypted recovery material. GCM provides authentication as well as encryption, so decryption checks integrity rather than merely producing plaintext.
 - **Associated data (AAD):** Recognise `b"nova-shop-seed-v1"` as the exact AAD used by the tool. These fixed bytes are authenticated but not encrypted. Do not treat them as the data key or enter them at the key prompt.
 
 Use the matching key with the original nonce and ciphertext and that exact AAD. Expect authentication to fail with a wrong key or altered input. Do not edit the backup to try to make it decrypt.
+
+Check the key and AAD for mismatches. Separately, compare the nonce and ciphertext with a trusted copy: differences indicate backup tampering or corruption. Authentication failure alone does not distinguish these causes.
 
 > **Expected result:**
 >
