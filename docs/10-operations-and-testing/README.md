@@ -550,7 +550,7 @@ This layer has no runnable procedure in this guide yet.
 
 ### Standards vectors
 
-Retain the following as verification targets, not demonstrated coverage:
+P085 establishes only limited BTC/ETH index-0 derivation coverage; it does not establish official BIP suite coverage, direct seed/extended-key assertions, or edge-case, negative, or parser tests. Retain the following as verification targets, not demonstrated coverage of the full list:
 
 - BIP-39 mnemonic generation and mnemonic-to-seed vectors;
 - BIP-32 master/child vectors;
@@ -597,11 +597,11 @@ Before calling an HD-wallet implementation “done”, check all of these.
 ### Runtime
 
 ```text
-[ ] runtime receives public material only
+[ ] watch-only runtime receives public material only; signing-wallet signer custody is assessed separately
 [ ] no private key in argv/logging
 [ ] path is allowlisted
 [ ] index range validated
-[ ] malformed input cannot terminate the service
+[ ] malformed-input tests and fuzzing assess service resilience; resource limits are enforced
 [ ] secrets are not echoed in errors
 ```
 
