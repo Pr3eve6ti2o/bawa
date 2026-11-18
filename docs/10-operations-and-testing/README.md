@@ -297,7 +297,7 @@ Note that https://ethereum-sepolia.publicnode.com returns the same chain ID.
 
 Use https://eth-sepolia.blockscout.com/api/v2 for Sepolia indexed history.
 
-Keep the command-based verification record incomplete for 2026-11-08: no indexer verification command or dated example output is supplied here.
+Keep the command-based verification record incomplete for 2026-11-08: no indexer verification command or dated example output is supplied here. A response from Blockscout Sepolia's `/stats` endpoint supports API availability only; it does not verify indexed-history consistency.
 
 **Warning:** Treating Blockscout Sepolia stats `total_blocks` as the current head can give you a stale head reference. The figure can lag the RPC head by hundreds of blocks and sit unchanged for minutes while other fields refresh. Reconcile indexed history against the RPC and never present a `total_blocks` figure as the current head. Check the indexed history against the RPC rather than treating refreshed stats fields as evidence of synchronisation.
 
@@ -431,9 +431,9 @@ An implementation should define confirmation thresholds and reorg rollback rules
 
 The signer remains separate.
 
-## Fully self-hosted
+## Hybrid or fully self-hosted
 
-Add chain nodes and self-hosted indexers where the privacy/independence requirement justifies the operational burden.
+Add chain nodes and self-hosted indexers where the privacy/independence requirement justifies the operational burden. Adding these components creates a hybrid deployment unless all required hosted dependencies are replaced. Self-hosting does not automatically guarantee privacy, independence or lower cost.
 
 ---
 
