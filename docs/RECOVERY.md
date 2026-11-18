@@ -304,7 +304,7 @@ Here, a protected secret-handling mechanism means an access-controlled facility,
 
 > **Expected result:**
 >
-> Expect the key prompt when the variable is unset or empty, and no key prompt when it has a non-empty value. Treat a successful length check as confirmation of the key's size only; authentication establishes whether it matches the backup.
+> Expect the key prompt when the variable is unset or empty and terminal echo can be disabled, and no key prompt when it has a non-empty value. If the variable is unset or empty and terminal echo cannot be disabled, expect refusal with `terminal echo cannot be disabled; refusing to read data key` rather than a key prompt. Treat a successful length check as confirmation of the key's size only; authentication establishes whether it matches the backup.
 
 Choose **one** of the following output modes. Treat steps 3, 4 and 5 as alternatives, not a sequence to run. `--stdout` and `--output` are mutually exclusive.
 
