@@ -66,10 +66,10 @@ Assume you can observe the same event more than once. Account for polling, retri
 Use this finalisation pipeline:
 
 ```text
-observe → identify event/payment uniquely → store/claim atomically → fulfil once → record final state
+observe → identify event/payment uniquely → atomically claim uniqueness → fulfil idempotently → record final state
 ```
 
-Make the claim atomic and choose a chain-specific uniqueness key:
+Make the uniqueness claim atomic using a unique constraint with an insert or an atomic insert-if-absent operation; an atomic write alone is insufficient. Persist pending claim state so recovery can resume unfinished work after a crash. If fulfilment and the final-state write are not one transaction, use a stable downstream idempotency key or reconcile the outcome before retrying; an existing claim alone does not prove fulfilment. Choose a chain-specific uniqueness key:
 
 - UTXO payments: `chain + network + watch_scope + txid + output_index`
 - EVM token events: `chain_id + tx_hash + log_index`
@@ -148,7 +148,7 @@ Use integers for stored monetary state:
 - **XRPL:** drops
 - **Cosmos:** base denominations
 
-Convert to human-readable decimal strings only at the presentation boundary.
+Convert to human-readable decimal strings for display, APIs or interchange as needed, while keeping integer base units as the canonical stored representation.
 ## 3. Reconciliation
 
 A watcher tells you what it currently sees; a reconciler checks whether your database still agrees with the chain. Use both:
@@ -168,7 +168,7 @@ The exact cursor depends on the chain. Do not rely only on wall-clock timestamps
 
 ## 4. Bitcoin descriptors and PSBT
 
-Use an xpub-to-address script for learning, but make output descriptors part of a serious Bitcoin watch-only design. Bitcoin Core descriptors can preserve derivation origin, script policy and ranged public-key derivation — particularly useful for watch-only wallets and external signers.
+Use an xpub-to-address script for learning; well-engineered xpub-based designs can also be suitable for production. Consider output descriptors as a useful option for a Bitcoin watch-only design, not a requirement. Bitcoin Core descriptors can preserve derivation origin, script policy and ranged public-key derivation — particularly useful for watch-only wallets and external signers.
 
 For offline or hardware signing, study [BIP-174 (PSBT format)](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) and [BIP-371 (Taproot-related PSBT fields)](https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki). Use this architecture:
 
