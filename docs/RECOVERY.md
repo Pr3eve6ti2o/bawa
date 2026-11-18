@@ -490,11 +490,11 @@ Treat anyone asking for the phrase as asking for control of the wallet, not proo
 
 ## Part 4: Backup testing, playbooks, separation, disaster and inheritance
 
-### Part 1: Backup-testing routine
+### Part 4.1: Backup-testing routine
 
 Complete the pre-funding check before using a wallet with meaningful funds. Require an actual restore, a comparison with previously recorded addresses and a successful testnet signing check. Do not count a conceptual walkthrough or a 'restore complete' message as a passed recovery.
 
-Keep every exercise below testnet-only. Use disposable test fixtures only, with a tiny testnet amount for transaction checks. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
+Keep every exercise below testnet-only. Use freshly generated, disposable test fixtures only, with at most 0.0001 testnet BTC (10,000 testnet satoshis) per exercise from a testnet faucet for transaction checks. The published mnemonic in docs/11 is a public fixture and must never be funded, even on testnet. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
 
 Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd.
 
