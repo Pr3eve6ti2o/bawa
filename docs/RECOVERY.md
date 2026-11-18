@@ -250,7 +250,7 @@ Where possible, repeat the recovery on a second clean installation, preferably w
 
 Do not clone the first restored wallet directory. Test the backup and configuration record, not state carried over from the first restore.
 
-Treat this repetition as an additional operational check, not a different derivation rule. If you cannot perform it, record that limitation rather than describing the recovery as independently repeated.
+Treat this repetition as an additional operational check, not a different derivation rule. If you cannot perform it, record that limitation rather than describing the recovery as independently repeated. The rehearsal gate is currently **FAIL**; recording this repeat as "not performed" documents the limitation but does not clear the gate.
 
 > **Expected result:** The second clean restore reproduces the same recorded public outputs, or the record explicitly states that this additional check was not performed. A mismatch on either installation remains a blocking failure.
 
@@ -260,7 +260,7 @@ Keep a dated, sanitised verification record containing the software reference, c
 
 Retain the durable recovery backups under appropriate separate custody. After the procedure, remove transient secrets from the machine. Remove unnecessary temporary plaintext files and close secret-bearing terminal sessions. Do not treat file deletion as assured erasure on modern storage, snapshots or backups. Avoid creating persistent plaintext copies in the first place.
 
-**Do not fund a restored wallet until the derived account-0 addresses match the independent comparison targets.** Permit funding only after the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
+**Do not fund a restored wallet until the derived account-0 addresses match the independent comparison targets.** The required comparison set comprises the section 7 minimum plus every additional recorded public output for the wallet. The account-0 lead-in is not a scope limit: the gate applies separately to each chain/account represented in that set, including accounts beyond account 0. Permit funding only after the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
 
 > **Expected result:** A secret-free verification record, retained recovery material under appropriate separate custody, transient secrets removed from the machine and no unresolved comparison failures. Funding remains blocked if any required output has not matched.
 
