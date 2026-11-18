@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Wallet } from 'lucide-react';
 import { BrowserRouter, Link, NavLink, Outlet, Route, Routes } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
@@ -14,7 +15,7 @@ import { TransactionDetailScreen } from '../screens/transaction-detail';
 import { NetworkSelectionScreen } from '../screens/network-selection';
 import { WalletManagementScreen } from '../screens/wallet-management';
 import { SecuritySettingsScreen } from '../screens/security-settings';
-import { WalletProvider } from '../state/wallet-context';
+import { WalletProvider, useWallet } from '../state/wallet-context';
 import { Toaster } from '../ui/components/sonner';
 
 const tabs = [
@@ -37,6 +38,7 @@ const moreLinks = [
 
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const { vaultState } = useWallet();
 
   return (
     <div className="min-h-screen bg-[#f4f6fb] sm:py-6">
@@ -44,7 +46,7 @@ function AppLayout() {
         <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#8b7cff] to-[#4f7cff] text-lg font-bold text-white">
-              B
+              <Wallet className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <h1 className="truncate text-[15px] font-bold leading-tight text-white">
@@ -54,12 +56,12 @@ function AppLayout() {
                 to="/wallets"
                 className="block truncate text-xs leading-tight text-[#aab5d1] hover:text-white"
               >
-                Account 01 &#8250;
+                {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
               </Link>
             </div>
           </div>
           <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-[#224f45] px-3 text-[10px] font-bold text-[#94e1c3]">
-            TESTNET · ACTIVE
+            Mainnet
           </span>
         </header>
 

@@ -1,0 +1,3 @@
+Please paste the existing `<header>...</header>` JSX and imports from `apps/web/src/app/app.tsx`, including the `useWallet` module path if it isn’t already imported.
+
+I don’t have the file contents here, so I can’t preserve the exact Tailwind classes without guessing. With that snippet, I’ll return only the replacement header and required imports—using the Wallet icon, “Mainnet,” and the `vaultState`-dependent account label.
