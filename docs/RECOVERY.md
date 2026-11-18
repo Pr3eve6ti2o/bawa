@@ -402,13 +402,13 @@ Perform this check separately from `tools/decrypt_seed.py`, which does not verif
 
 ### 5. Treat authentication failure as a hard stop
 
-Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure means the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure.
+Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure means the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure. A wrong 32-byte key raises an uncaught `cryptography.exceptions.InvalidTag`, producing a traceback; this is the one refusal that does so.
 
 Do not infer from this failure whether the key is wrong or the artefact has been tampered with. Recheck the intended backup/key pairing through trusted records.
 
 Do not guess further keys, and do not retry with a different tool. Do not bypass authentication or assume that retrying with the same inputs will repair anything.
 
-> **Expected result:** An authentication failure rather than recovered text. The decryption function returns no mnemonic.
+> **Expected result:** An authentication failure rather than recovered text. The decryption function returns no mnemonic. The observable failure mode is an uncaught `cryptography.exceptions.InvalidTag` traceback, not a normal return without a mnemonic.
 
 ### 6. Understand the mnemonic-shape check
 
