@@ -913,7 +913,7 @@ Do not count "we have backup files" as proof that you can still sign; without a 
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An [M-of-N multisig wallet](https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki) needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's [script](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki) or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, [sometimes only when funds are spent](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki); supported chains and transaction costs differ.
 
 ```text
 on-chain multisig [separate complete private keys]
@@ -927,9 +927,9 @@ MPC [key shares across participants]
 
 ### Check the protection and its limits
 
-With a threshold above one and genuinely separate signers, one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
+With a [threshold](https://www.rfc-editor.org/info/rfc9591) above one and genuinely separate signers, one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
 
-A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
+A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — [whoever steals that seed can derive all those keys](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki).
 
 If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids the service dependency but leaves that work with you. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
 
@@ -949,7 +949,7 @@ Before funding:
 - Confirm the exact chain, asset, threshold and key holders.
 - Expect identity checks and, where required, business and authorised-signatory checks.
 - Agree signing delays, transaction limits, recovery responsibilities and exit terms.
-- Generate user-controlled keys independently, keep recovery secrets offline and out of this repository, and start with a small test balance.
+- [Generate user-controlled keys independently, keep recovery secrets offline](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) and out of this repository, and start with a small test balance.
 
 Have each signer verify the payment independently rather than merely approve a notification.
 
@@ -1056,7 +1056,7 @@ Asset-based charges are quoted individually and subject to negotiation. These ba
 
 ### Before you sign
 
-- Count independent signing keys, not seed copies — a single seed used to derive several keys does not give the same protection as independent seeds.
+- [Count independent signing keys, not seed copies](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) — a single seed used to derive several keys does not give the same protection as independent seeds.
 - Check the service's signing threshold, recovery process and fees.
 - Test a withdrawal to a fresh wallet before moving substantial funds.
 - Make sure the designated recipient can reach their key.
@@ -1253,3 +1253,8 @@ Paying does not remove risk: a paid service can reduce dependence on a single de
 - Fireblocks Help Center, Plans, Billing, and Payments — https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments
 - BitGo individual-investors page — https://www.bitgo.com/products/individual-investors/
 - BitGo Foundational Insurance One-Pager (PDF) — https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf
+- BIP-16 — https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
+- BIP-141 — https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+- BIP-341 — https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+- RFC 9591 — https://www.rfc-editor.org/info/rfc9591
+- NIST SP 800-57 Part 1 Rev. 5 — https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final
