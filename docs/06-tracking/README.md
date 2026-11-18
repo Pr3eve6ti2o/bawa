@@ -54,7 +54,7 @@ Choose an indexed wallet API when you need “show every ERC-20 transfer”, “
 
 You pay someone to follow blocks, interpret events, reconcile token formats, fetch metadata and repair records after reorgs.
 
-Check pagination caps, endpoint charges, rate limits, chain coverage and the earliest indexed block. Do not mistake endpoint uptime for index freshness or completeness.
+Check pagination caps, endpoint charges, rate limits, chain coverage and the earliest indexed block (if available). Do not mistake endpoint uptime for index freshness or completeness.
 
 An indexed API is not a drop-in RPC endpoint: check Bawa's reader compatibility.
 
@@ -687,7 +687,7 @@ If fetching or reconciliation remains uncertain, keep the previously committed b
 - **Facts:** uniquely identify output-based activity with the canonical key `(watch, transaction_id, output_index)`. For other event types, use `(watch, transaction_id, event_type, transaction_event_index)` and document how each chain adapter derives a deterministic index within the transaction’s complete event list (all events produced by that transaction in deterministic transaction-local order, before watch or event-type filtering). Do not use a block-wide log index, which can shift across a reorg. Update the same fact on repeated reads; never make confirmation changes or reorgs change its identity. Retain the supporting observation link, available block reference and confirmation/reorg/finality state.
 - **Sync:** keep one record per `(watch, source)`, containing the last attempt, last success, checkpoint, available source anchor and freshness. Record failed attempts without advancing the success timestamp.
 
-Supply chain and network for every fact through its watch reference. Never infer either from an address alone.
+Supply chain and network for every fact through its watch reference. Do not assume either can always be inferred from an address alone; Bitcoin segwit prefixes `bc1` (mainnet) and `tb1` (testnet) encode the network.
 
 Build the data flow as follows:
 
@@ -740,7 +740,7 @@ Follow this ingestion flow:
 retain raw response
   → check progress, ancestry and eligibility
   → reconcile normalised facts
-  → commit facts, totals and checkpoint atomically
+  → commit facts, totals and checkpoint without letting the checkpoint outrun the facts
 ```
 
 Keep raw observations when a derived-state commit fails. Never advance a checkpoint across an incomplete batch (one whose requested range, including all required pages, has not been fully fetched and validated, or whose observations have not all been processed) or a failed commit.
@@ -798,7 +798,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 | **Wrong chain or network** | Compare RPC network identifiers and known block anchors with the watch configuration. Apply these checks to every chain and reject mismatches before ingestion. |
 | **Stale data** | Allow for cached responses. Compare source block progress and time since the last verified update. HTTP success proves neither freshness nor finality. |
 | **Indexer lag** | Compare the advancing chain with the stalled indexed height. Monitor catch-up or use another checked source. |
-| **Duplicates** | Inspect stable-key construction and database uniqueness constraints. Consolidate dashboard facts without deleting observation history. |
+| **Duplicates** | Inspect stable-key construction and any implementation-level uniqueness or deduplication checks. Consolidate dashboard facts without deleting observation history. |
 | **Checkpoint will not advance** | Check whether the eligible boundary has moved. Otherwise, inspect incomplete batches and failed commits. Never force progress across unprocessed data. |
 
 For `429`, refer to [RFC 6585](https://www.rfc-editor.org/info/rfc6585/), section 4, **“429 Too Many Requests”**:
