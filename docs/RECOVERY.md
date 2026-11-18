@@ -452,13 +452,13 @@ Use Bawa's current **empty-passphrase** policy exactly: no characters at all, in
 
 Do not rely on the mnemonic to supply a lost BIP-39 passphrase. For a passphrase-protected wallet, the mnemonic alone is insufficient. Without the exact passphrase, you cannot restore that wallet or spend its funds.
 
-Bawa does not document non-empty passphrase setup or lost-passphrase handling. No check reveals the missing passphrase from the mnemonic.
+No check reveals the missing passphrase from the mnemonic.
 
 > **Expected result:** Restoring the mnemonic with an empty passphrase recovers only the main, empty-passphrase wallet, not the protected wallet. Do not treat access to the main wallet as verification of the protected wallet's recovery.
 
 ### 4. Losing the seed and its backup loses the wallet
 
-Do not expect recovery when the seed and every usable backup are gone. The wallet is lost. No reset, support desk or procedure can recreate the secret.
+Do not expect recovery when the seed and every usable backup are gone. The secret is lost. No reset, support desk or procedure can recreate the secret.
 
 Use a recorded address or xpub only as a comparison target. If you still have the mnemonic, use that reference to test remembered passphrase candidates one by one under the same derivation policy. The reference cannot supply a forgotten passphrase or reconstruct a lost mnemonic.
 
