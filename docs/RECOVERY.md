@@ -586,7 +586,7 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
 Put containment first. Close secret-bearing terminal sessions and escalate the incident to the maintainers before starting recovery or migration. Never paste a real mnemonic or data key anywhere.
 
-No maintainer-escalation route is currently confirmed; `CONTRIBUTING.md:13` contains only the placeholder `<maintainer-confirmed reporting location>`. Obtain a maintainer-confirmed reporting location before submitting an incident report; the placeholder is not a reporting destination.
+Report incidents through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues), the reporting location in `CONTRIBUTING.md:13`.
 
 Treat a leaked seed (mnemonic) as permanently compromised. Anyone with the necessary seed material can derive the wallet's private keys and authorise spending; no account administrator can reset that authority. [2]
 

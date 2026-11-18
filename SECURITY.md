@@ -8,9 +8,7 @@ The `main` branch is the supported line (current HEAD `da82fe3`, snapshot 2026-1
 
 ## Reporting a vulnerability
 
-No private disclosure channel or reporting contact is established yet. Establishing and publishing a private channel remains an open maintainer action (OI-065).
-
-Use GitHub Issues for non-sensitive reports only. Never post exploit details publicly. For private vulnerability reporting, use the repository's GitHub Security tab where that feature is available. If it is unavailable, do not publish sensitive reports in GitHub Issues.
+Report vulnerabilities through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues). There is no separate private disclosure channel: this is a guide repository, and GitHub Issues is the single reporting route (maintainer decision, 2026-11-18; OI-065 closed). Do not post exploit details publicly; describe the issue at a level that lets the maintainer reproduce it without publishing working exploit material.
 
 ## Handling reports
 

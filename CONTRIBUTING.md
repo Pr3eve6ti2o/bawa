@@ -37,7 +37,7 @@ Label issues suitable for a first contribution so contributors can find them. Be
 
 Fork [`Pr3eve6ti2o/bawa`](https://github.com/Pr3eve6ti2o/bawa) on GitHub and create a working branch from `main` in your fork. All work builds from `main`. Existing branches use `feature/<topic>` and `audit-fixes/<lane>` patterns; use these as naming examples. Make your changes, push the branch to your fork, and open a pull request targeting `main` in `Pr3eve6ti2o/bawa`. CI runs on pushes and pull requests.
 
-**Policies still unconfirmed — maintainer confirmation needed:** whether an issue is mandatory for every change or before every pull request, whether using a fork is mandatory, and whether the observed branch-naming patterns are required. The steps above provide the documented route without asserting those repository-specific requirements.
+These are the repository's rules: open an issue before starting work (see "Before starting work" above); contribute through a fork and a pull request targeting `main`; branch names follow the `feature/<topic>` and `audit-fixes/<lane>` patterns.
 
 ## Code style
 
@@ -69,10 +69,8 @@ python3 test/differential_test.py
 
 In your pull request, explain what changed, why it is needed and the results of the checks you ran. Link the relevant issue where applicable.
 
-These review and merge decisions are **unconfirmed** and need maintainer confirmation:
-
-- Reviewer or reviewer-selection route: `<maintainer-confirmed reviewer or reviewer-selection route>`.
-- Approval and merge requirements: `<maintainer-confirmed approval and merge requirements>`.
+- Reviewer: the repository maintainer reviews pull requests.
+- Approval and merge requirements: one maintainer approval, and CI must pass, before merge.
 
 ## Derivation changes and deterministic public fixtures
 
