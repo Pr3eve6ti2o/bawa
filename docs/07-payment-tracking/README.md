@@ -610,8 +610,8 @@ Use [`eth_getLogs`](https://ethereum.org/developers/docs/apis/json-rpc/#eth_getl
 Distinguish the block views and removal signal:
 
 - `latest` follows the current head without guaranteeing finality.
-- Where supported, `safe` denotes a view selected by the [fast-confirmation rule](https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#safe-block) that remains reorganisable in principle.
-- `finalized` reflects acceptance by validators representing [at least two-thirds of total staked ETH](https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization), weighted by stake rather than validator count.
+- Where supported, `safe` denotes a view selected by the [fast-confirmation rule](https://github.com/ethereum/consensus-specs/blob/master/specs/bellatrix/fast-confirmation.md) that remains reorganisable in principle.
+- `finalized` reflects acceptance by validators representing [at least two-thirds of total staked ETH](https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/beacon-chain.md#justification-and-finalization), weighted by stake rather than validator count.
 - A `removed` flag set to `true` reports removal during a reorganisation.
 
 Give each request its own deposit address. A standard token-transfer event contains no invoice reference: a shared recipient and matching amount do not establish unique invoice attribution.
