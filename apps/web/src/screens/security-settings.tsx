@@ -4,7 +4,7 @@ import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
 export function SecuritySettingsScreen() {
-  const { locked, lock, unlock } = useWallet();
+  const { vaultState, lockVault } = useWallet();
 
   return (
     <section className="space-y-6" aria-labelledby="security-heading">
@@ -13,35 +13,36 @@ export function SecuritySettingsScreen() {
       </h1>
 
       <div className="rounded-[20px] border border-white/10 bg-[#243454] p-6 text-white">
-        <h2 className="text-lg font-bold text-white">What this starter does not do</h2>
+        <h2 className="text-lg font-bold text-white">What this wallet does</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[#aab5d1]">
-          <li>No mnemonic generation or storage.</li>
-          <li>No private keys.</li>
-          <li>No signing.</li>
-          <li>No vault.</li>
-          <li>No PIN.</li>
+          <li>Your recovery phrase is generated in this browser and stored encrypted in the vault (AES-GCM-256, PBKDF2 600,000 rounds).</li>
+          <li>Private keys are held in memory only while the vault is unlocked — never in plaintext storage, logs or requests.</li>
+          <li>Signing happens offline on this device, with disposable test keys during development.</li>
+          <li>Broadcast is disabled until separately authorised — signing never sends funds.</li>
         </ul>
       </div>
 
       <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
-          <CardTitle>App lock</CardTitle>
+          <CardTitle>Vault lock</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {locked ? (
+          {vaultState === 'locked' ? (
             <div className="space-y-3">
-              <p role="status">Locked — derived addresses are hidden.</p>
-              <Button type="button" onClick={() => unlock()}>
-                Unlock
+              <p role="status">Vault locked — the recovery phrase and signing keys are not in memory.</p>
+              <Button type="button" asChild>
+                <Link to="/lock">Unlock</Link>
               </Button>
             </div>
-          ) : (
-            <Button type="button" onClick={() => lock()}>
-              Lock app
+          ) : vaultState === 'unlocked' ? (
+            <Button type="button" onClick={() => lockVault()}>
+              Lock vault
             </Button>
+          ) : (
+            <p role="status">No vault yet — create or import a wallet first.</p>
           )}
           <p className="text-sm text-muted-foreground">
-            Locking is a UI state only — it clears derived addresses from memory and is NOT a security boundary.
+            Locking clears the decrypted recovery phrase and signing keys from memory. The vault stays encrypted on this device until you unlock it again.
           </p>
         </CardContent>
       </Card>
@@ -52,7 +53,7 @@ export function SecuritySettingsScreen() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            This watch-only starter does not create or store a recovery phrase.
+            Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach — anyone with the phrase can take the funds.
           </p>
           <Link
             to="/mnemonic-backup"

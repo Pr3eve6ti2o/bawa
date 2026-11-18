@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { Wallet } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpRight,
+  Coins,
+  Ellipsis,
+  Home,
+  Wallet,
+} from 'lucide-react';
 import { BrowserRouter, Link, NavLink, Outlet, Route, Routes } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
@@ -20,10 +27,10 @@ import { WalletProvider, useWallet } from '../state/wallet-context';
 import { Toaster } from '../ui/components/sonner';
 
 const tabs = [
-  { to: '/', label: 'Home', letter: 'H' },
-  { to: '/assets', label: 'Assets', letter: 'A' },
-  { to: '/receive', label: 'Receive', letter: 'R' },
-  { to: '/send', label: 'Send', letter: 'S' },
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/assets', label: 'Assets', icon: Coins },
+  { to: '/receive', label: 'Receive', icon: ArrowDownToLine },
+  { to: '/send', label: 'Send', icon: ArrowUpRight },
 ] as const;
 
 const moreLinks = [
@@ -95,7 +102,7 @@ function AppLayout() {
           className="sticky bottom-0 z-10 border-t border-white/10 bg-[#141d34]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
         >
           <div className="grid grid-cols-5">
-            {tabs.map(({ to, label, letter }) => (
+            {tabs.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -110,11 +117,11 @@ function AppLayout() {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${
+                      className={`flex size-6 items-center justify-center rounded-full ${
                         isActive ? 'bg-[#263451] text-[#b4aaff]' : 'bg-white/5 text-[#aab5d1]'
                       }`}
                     >
-                      {letter}
+                      <Icon className="size-4" aria-hidden="true" />
                     </span>
                     {label}
                   </>
@@ -131,11 +138,11 @@ function AppLayout() {
               }`}
             >
               <span
-                className={`flex size-6 items-center justify-center rounded-full text-xs font-bold ${
+                className={`flex size-6 items-center justify-center rounded-full ${
                   moreOpen ? 'bg-[#263451] text-[#b4aaff]' : 'bg-white/5 text-[#aab5d1]'
                 }`}
               >
-                •••
+                <Ellipsis className="size-4" aria-hidden="true" />
               </span>
               More
             </button>

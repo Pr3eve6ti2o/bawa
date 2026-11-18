@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
+import { deriveAddressesAt } from '../wallet/core';
 import { createVault, lock } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 
@@ -115,6 +116,58 @@ describe('wallet context — passphrase unlock', () => {
       });
       expect(exposed!.vaultState).toBe('unlocked');
       expect(exposed!.vaultAddresses.eth[0]).not.toBe(VECTOR_ETH);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet context — vault account selection', () => {
+  it('derives the selected account/index on setVaultAccount', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        // The vector mnemonic only derives VECTOR_ETH with passphrase TREZOR.
+        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+      });
+      expect(exposed!.vaultAccount).toEqual({ account: 0, index: 0 });
+      expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
+      const tonBefore = exposed!.vaultAddresses.ton[0];
+      await act(async () => {
+        await exposed!.setVaultAccount(0, 1);
+      });
+      expect(exposed!.vaultAccount).toEqual({ account: 0, index: 1 });
+      const expected = await deriveAddressesAt(
+        VECTOR_MNEMONIC,
+        'TREZOR',
+        0,
+        1,
+      );
+      expect(exposed!.vaultAddresses.eth[0]).toBe(expected.eth);
+      expect(exposed!.vaultAddresses.btc[0]).toBe(expected.btc);
+      expect(exposed!.vaultAddresses.trx[0]).toBe(expected.trx);
+      // TON has one address per wallet: account and index do not change it.
+      expect(exposed!.vaultAddresses.ton[0]).toBe(tonBefore);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('rejects out-of-range account/index without changing the selection', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+      });
+      await expect(
+        act(async () => {
+          await exposed!.setVaultAccount(0, 0x80000000);
+        }),
+      ).rejects.toThrow(RangeError);
+      expect(exposed!.vaultAccount).toEqual({ account: 0, index: 0 });
+      expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
     } finally {
       await mounted.cleanup();
     }

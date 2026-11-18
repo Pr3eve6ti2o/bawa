@@ -1,5 +1,6 @@
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
+import { pathFor } from './chains';
 
 export type { ChainId };
 
@@ -210,6 +211,73 @@ export async function deriveAddresses(
         chain,
         wallet.getAddressForCoin(coinForChain(core, chain)),
       );
+
+    return {
+      btc: addressFor('btc'),
+      eth: addressFor('eth'),
+      trx: addressFor('trx'),
+      ton: addressFor('ton'),
+    };
+  } finally {
+    wallet.delete();
+  }
+}
+
+/**
+ * Derive addresses at a non-default account/index.
+ * Paths come from pathFor(chain, account, index) — except TON, which always
+ * uses m/44'/607'/0' and ignores account/index (one address per wallet).
+ * Per-chain pubkey form, proven first-hand on Wallet Core 4.9.3: BTC
+ * getPublicKeySecp256k1(true) (33-byte compressed), ETH and TRX
+ * getPublicKeySecp256k1(false) (65-byte uncompressed), TON
+ * getPublicKeyEd25519(); then CoinTypeExt.deriveAddressFromPublicKey.
+ * At account 0 index 0 the result equals deriveAddresses() exactly.
+ */
+export async function deriveAddressesAt(
+  mnemonic: string,
+  passphrase: string,
+  account: number,
+  index: number,
+): Promise<WalletAddresses> {
+  if (!Number.isSafeInteger(account) || account < 0) {
+    throw new RangeError('account must be a non-negative safe integer');
+  }
+  if (!Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) {
+    throw new RangeError(
+      'index must be a non-negative safe integer below 0x80000000',
+    );
+  }
+
+  const core = await loadCore();
+  assertValidMnemonic(core, mnemonic);
+  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
+
+  try {
+    const addressFor = (chain: ChainId): string => {
+      const coin = coinForChain(core, chain);
+      const path =
+        chain === 'ton' ? "m/44'/607'/0'" : pathFor(chain, account, index);
+      const key = wallet.getKey(coin, path);
+
+      try {
+        const pubkey =
+          chain === 'ton'
+            ? key.getPublicKeyEd25519()
+            : key.getPublicKeySecp256k1(chain === 'btc');
+
+        try {
+          return checkedAddress(
+            core,
+            chain,
+            core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey),
+          );
+        } finally {
+          pubkey.delete();
+        }
+      } finally {
+        key.delete();
+      }
+    };
 
     return {
       btc: addressFor('btc'),

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
+import { chainConfig } from "../wallet/chains";
 import { CHAIN_CHIP_COLORS } from "./asset-rows";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
@@ -35,10 +36,10 @@ export function WalletManagementScreen() {
                   <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
                       <span
-                        className="flex size-10 shrink-0 items-center justify-center rounded-full text-base font-bold text-[#19223a]"
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-[#19223a]"
                         style={{ backgroundColor: chip }}
                       >
-                        {name.slice(0, 1)}
+                        {chainConfig(id).symbol}
                       </span>
                       <div className="min-w-0 space-y-1">
                         <CardTitle>{name}</CardTitle>
@@ -85,7 +86,7 @@ export function WalletManagementScreen() {
       )}
 
       <p className="text-sm text-muted-foreground">
-        Only extended public keys and TON public addresses are stored (in localStorage). No secrets are stored anywhere in this starter.
+        Only extended public keys and TON public addresses are stored (in localStorage). No secrets are stored anywhere in this wallet.
         An extended public key lets its holder track this account&apos;s derivable addresses, balances and
         transaction history. Stored keys stay stored when the wallet is locked; forgetting a key removes it
         from this browser, but cannot revoke a copy someone already took.

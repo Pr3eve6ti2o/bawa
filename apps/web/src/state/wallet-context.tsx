@@ -4,7 +4,7 @@ import {
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
-import { deriveAddresses as deriveVaultAddresses } from '../wallet/core';
+import { deriveAddressesAt as deriveVaultAddressesAt } from '../wallet/core';
 import { availableFor } from '../wallet/chains';
 import { getAdapter } from '../wallet/adapters';
 import type { AdapterTx } from '../wallet/adapters/types';
@@ -61,8 +61,11 @@ interface WalletState {
   errors: PerChain<string | null>;
   locked: boolean;
   // Vault-backed accounts. vaultAddresses are public derived addresses
-  // (account 0, index 0), safe in state. The mnemonic never enters state.
+  // (the selected vaultAccount, default account 0, index 0), safe in state.
+  // The mnemonic never enters state. TON has one address per wallet and
+  // ignores account/index.
   vaultState: VaultState;
+  vaultAccount: { account: number; index: number };
   vaultAddresses: PerChain<string[]>;
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
@@ -79,7 +82,11 @@ export interface WalletContextValue extends WalletState {
   unlock(): Promise<void>;
   unlockVault(password: string, passphrase?: string): Promise<void>;
   lockVault(): void;
-  refreshVaultAccounts(): Promise<void>;
+  setVaultAccount(account: number, index: number): Promise<void>;
+  refreshVaultAccounts(selection?: {
+    account: number;
+    index: number;
+  }): Promise<void>;
   refreshBalances(): Promise<void>;
   refreshHistory(): Promise<void>;
 }
@@ -117,6 +124,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     errors: perChain<string | null>(() => null),
     locked: false,
     vaultState: 'no-vault',
+    vaultAccount: { account: 0, index: 0 },
     vaultAddresses: perChain<string[]>(() => []),
     vaultProfileIds: null,
     balances: initialBalances(),
@@ -292,10 +300,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Vault-backed accounts. An xpub can never be upgraded into signing keys:
   // spending requires vault creation or mnemonic restoration. Watch-only xpubs
   // stay a separate, explicitly labelled account type (see xpubs above).
-  const refreshVaultAccounts = useCallback(async () => {
+  // `selection` is explicit so setVaultAccount never derives with a stale
+  // captured vaultAccount: the caller passes the new selection in the same
+  // call that stores it. Other callers pass nothing and the current
+  // selection from current.current is used.
+  const refreshVaultAccounts = useCallback(async (selection?: {
+    account: number;
+    index: number;
+  }) => {
     const request = ++vaultDerivations.current;
     const vaultState = computeVaultState();
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
+    const selected = selection ?? current.current.vaultAccount;
     if (vaultState !== 'unlocked') {
       update(previous => ({
         ...previous,
@@ -308,7 +324,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     let derived: Record<ChainId, string>;
     try {
       derived = await vault.withMnemonic((mnemonic) =>
-        deriveVaultAddresses(mnemonic, vault.getSessionPassphrase()),
+        deriveVaultAddressesAt(
+          mnemonic,
+          // The passphrase lane (p13a) already landed: derive with the
+          // session passphrase, never '' when one is in use.
+          vault.getSessionPassphrase(),
+          selected.account,
+          selected.index,
+        ),
       );
     } catch (error: unknown) {
       if (request !== vaultDerivations.current) return;
@@ -336,6 +359,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await refreshBalances();
     await refreshHistory();
   }, [update, refreshBalances, refreshHistory]);
+
+  // Switch the derived vault account. Validates like deriveAddressesAt
+  // (which re-validates), stores the selection, then re-derives with the
+  // NEW selection passed explicitly — never with captured state.
+  const setVaultAccount = useCallback(async (account: number, index: number) => {
+    if (!Number.isSafeInteger(account) || account < 0) {
+      throw new RangeError('account must be a non-negative safe integer');
+    }
+    if (!Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) {
+      throw new RangeError(
+        'index must be a non-negative safe integer below 0x80000000',
+      );
+    }
+    const selection = { account, index };
+    update(previous => ({ ...previous, vaultAccount: selection }));
+    await refreshVaultAccounts(selection);
+  }, [update, refreshVaultAccounts]);
 
   const unlockVault = useCallback(async (password: string, passphrase = '') => {
     if (isPassphraseUsed() && !passphrase) {
@@ -452,8 +492,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,
-    unlockVault, lockVault, refreshVaultAccounts, refreshBalances, refreshHistory,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, refreshVaultAccounts, refreshBalances, refreshHistory]);
+    unlockVault, lockVault, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

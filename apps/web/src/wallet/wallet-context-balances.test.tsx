@@ -10,9 +10,15 @@ import type { AdapterResult, AdapterTx, ChainAdapter } from './adapters/types';
 
 // The capability registry is mocked to verified so the adapter path is
 // exercised; the no-adapter gate itself is covered by wallet-context.test.tsx.
-vi.mock('./chains', () => ({
-  availableFor: () => ['btc', 'eth', 'trx', 'ton'],
-}));
+// Only availableFor is overridden — the rest (incl. pathFor, used by
+// deriveAddressesAt) comes from the real module.
+vi.mock('./chains', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./chains')>();
+  return {
+    ...actual,
+    availableFor: () => ['btc', 'eth', 'trx', 'ton'],
+  };
+});
 
 // Standard public BIP-39 test vector — disposable test data, never a real secret.
 const TEST_MNEMONIC =

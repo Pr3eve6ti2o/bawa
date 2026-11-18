@@ -3,6 +3,7 @@ import { loadCore } from '../engine/boundary';
 import {
   createWallet,
   deriveAddresses,
+  deriveAddressesAt,
   deriveFromXpub,
   restoreWallet,
   withSigningKey,
@@ -47,6 +48,57 @@ describe('wallet/core', () => {
   it('derives the published ETH vector address', async () => {
     const addresses = await deriveAddresses(ETH_VECTOR_MNEMONIC, 'TREZOR');
     expect(addresses.eth).toBe(ETH_VECTOR_ADDRESS);
+  });
+
+  it('deriveAddressesAt(0, 0) equals deriveAddresses() exactly', async () => {
+    const mnemonic = await createWallet();
+    const base = await deriveAddresses(mnemonic);
+    const at = await deriveAddressesAt(mnemonic, '', 0, 0);
+    expect(at).toEqual(base);
+  });
+
+  it('deriveAddressesAt honours the passphrase like deriveAddresses()', async () => {
+    const withPassphrase = await deriveAddressesAt(
+      ETH_VECTOR_MNEMONIC,
+      'TREZOR',
+      0,
+      0,
+    );
+    expect(withPassphrase.eth).toBe(ETH_VECTOR_ADDRESS);
+    const without = await deriveAddressesAt(ETH_VECTOR_MNEMONIC, '', 0, 0);
+    expect(without.eth).not.toBe(ETH_VECTOR_ADDRESS);
+  });
+
+  it('deriveAddressesAt changes btc/eth/trx at index 1 but not TON', async () => {
+    const mnemonic = await createWallet();
+    const base = await deriveAddressesAt(mnemonic, '', 0, 0);
+    const next = await deriveAddressesAt(mnemonic, '', 0, 1);
+    expect(next.btc).not.toBe(base.btc);
+    expect(next.eth).not.toBe(base.eth);
+    expect(next.trx).not.toBe(base.trx);
+    expect(next.btc.startsWith('bc1q')).toBe(true);
+    expect(next.eth.startsWith('0x')).toBe(true);
+    expect(next.trx.startsWith('T')).toBe(true);
+    // TON has one address per wallet: account and index do not change it.
+    expect(next.ton).toBe(base.ton);
+    const other = await deriveAddressesAt(mnemonic, '', 2, 3);
+    expect(other.ton).toBe(base.ton);
+  });
+
+  it('deriveAddressesAt rejects out-of-range account/index', async () => {
+    const mnemonic = await createWallet();
+    await expect(deriveAddressesAt(mnemonic, '', -1, 0)).rejects.toThrow(
+      RangeError,
+    );
+    await expect(deriveAddressesAt(mnemonic, '', 0, -1)).rejects.toThrow(
+      RangeError,
+    );
+    await expect(
+      deriveAddressesAt(mnemonic, '', 0, 0x80000000),
+    ).rejects.toThrow(RangeError);
+    await expect(deriveAddressesAt(mnemonic, '', 1.5, 0)).rejects.toThrow(
+      RangeError,
+    );
   });
 
   it('rejects invalid mnemonics', async () => {
