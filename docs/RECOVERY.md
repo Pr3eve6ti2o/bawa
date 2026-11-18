@@ -188,6 +188,10 @@ Use this per-asset checklist for **bawa-derivation-policy-v1**:
   - **Expected account-0 address form:** Retain the form recorded for the independent original TRX address at that index.
   - **Verification method:** Derive the public address from the recovered material using the selected passphrase and recorded settings, then compare it with the pre-existing original.
 
+**Address-form selection:** For BTC, ETH, and TRX, the "independent original" is the corresponding asset's pre-existing record defined in step 1: an original-wallet export or screenshot, a pre-existing watch-only wallet, or receiving-address/payment records. Select each asset's expected address form from its address at the recorded index i in that record.
+
+BTC BIP-84 uses bech32 SegWit; the published index-0 fixture address is `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (`docs/11:195`, `test/smoke.test.js:31`). This fixture illustrates the BTC address form; it does not replace the independent original BTC address used for verification.
+
 - **TON (theoretical recovery, generation-only policy)**
   - **Derivation path:** Restrict the policy claim to generation from m/44'/607'/0'.
   - **Expected account-0 address form:** Retain the form recorded for the independent original TON output.
