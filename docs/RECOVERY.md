@@ -207,13 +207,15 @@ This procedure was demonstrated end to end on a generated test wallet (V1, 8 Nov
 
 ### 6. Restore the TON configuration exactly, where applicable
 
-Where TON is in scope, do not rely on matching mnemonic words alone. Check all five recorded fields:
+Where TON is in scope, do not rely on matching mnemonic words alone. Check all seven required fixture items:
 
+- **Mnemonic scheme.** Reproduce the recorded mnemonic scheme, not merely the mnemonic words.
+- **Exact derivation path.** Reproduce the original method of turning the mnemonic, passphrase or seed into TON key material, including the exact recorded derivation path and any indexing convention. Do not treat another TON application accepting a mnemonic as proof of compatible derivation.
 - **Wallet contract/version.** Use the original contract and version, not whichever version a replacement tool currently recommends, because the wallet address depends on wallet construction as well as key material.
-- **Derivation convention.** Reproduce the original method of turning the mnemonic, passphrase or seed into TON key material, including any path or indexing convention. Do not treat another TON application accepting a mnemonic as proof of compatible derivation.
 - **Workchain.** Restore the exact workchain. Treat it as part of the address identity, not an account label.
-- **Network presentation.** Preserve the original network setting and address representation, including network indicators and presentation flags where applicable. Distinguish raw and user-friendly forms, explain any presentation differences and reproduce the recorded form.
+- **Mainnet/testnet presentation.** Preserve the original mainnet or testnet setting and address representation, including network indicators and presentation flags where applicable. Distinguish raw and user-friendly forms, explain any presentation differences and reproduce the recorded form.
 - **Wallet/subwallet ID.** Restore the original identifier. Do not substitute an address index or assume that another library's default is equivalent.
+- **Bounceable and non-bounceable address forms.** Reproduce and verify both recorded address forms.
 
 Resolve every configuration difference before continuing. Do not waive verification because a difference changes only the address presentation rather than the address itself. If TON is outside this recovery's scope, explicitly record it as not applicable.
 
