@@ -235,9 +235,12 @@ For each comparison, retain a public-only record of:
 - the relevant address policy or TON configuration reference;
 - the recorded original public output;
 - the restored public output;
+- the passphrase policy (without recording the passphrase itself);
+- the tool/software reference, including version;
+- the comparison date/time;
 - whether they match.
 
-Treat any mismatch as a **hard stop**, not a warning to work around. Stop and recheck transcription, passphrase policy, paths, indices, address policy, network settings and TON configuration as applicable. Do not send a small deposit as a diagnostic. Do not substitute a valid checksum, successful decryption or plausible balance for the public-output comparison.
+Treat any mismatch as a **hard stop**, not a warning to work around. Stop and recheck transcription, passphrase policy, paths, indices, address policy, network settings and TON configuration as applicable. Do not send a small deposit as a diagnostic. Do not substitute a valid checksum, successful decryption or plausible balance for the public-output comparison. Where applicable, also recheck that the intended encrypted material and matching data key were used and that decryption completed correctly. Verify that the reference record accurately records the original public output for the intended chain/network, derivation selector and address policy or TON configuration.
 
 > **Expected result:** Every tested public output matches its independent recorded original under the recorded policy. Any unexplained mismatch leaves recovery unverified and funding blocked.
 
