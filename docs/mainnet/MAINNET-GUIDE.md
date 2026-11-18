@@ -1756,7 +1756,7 @@ At `Pr3eve6ti2o/bawa@56396a20`, the repository has **no transaction-building or 
 
 Those capabilities must not be attributed to Bawa until the corresponding code paths have been demonstrated at a named commit.
 
-A named external signer/toolchain is therefore a prerequisite for each chain. **The supplied evidence names no external signing toolchain for any of them.** This is a blocking omission, not an invitation to invent an endorsement. Fee estimators and the node fee-estimation RPC described below do not establish a signing toolchain.
+A named external signer/toolchain is therefore a prerequisite for each chain. **The supplied evidence names no external signing toolchain for any of them.** No external signer toolchain has been identified and tested for any chain; the guide's stated position for each chain is **"no tested route"**. This is a blocking omission, not an invitation to invent an endorsement. Fee estimators and the node fee-estimation RPC described below do not establish a signing toolchain.
 
 | Chain | External signer/toolchain name | Controls required before this guide can document its use |
 |---|---|---|
