@@ -4,6 +4,7 @@ import {
   changePassword,
   createVault,
   deleteVault,
+  getSessionPassphrase,
   hasVault,
   isLocked,
   lock,
@@ -166,5 +167,22 @@ describe('withMnemonicAsync', () => {
     await expect(withMnemonicAsync(async () => 'never')).rejects.toThrow(
       'Vault is locked.',
     );
+  });
+});
+
+describe('session passphrase', () => {
+  it('stores the unlock passphrase for the session and clears it on lock', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(getSessionPassphrase()).toBe('');
+    await unlock(TEST_PASSWORD, 'TREZOR');
+    expect(getSessionPassphrase()).toBe('TREZOR');
+    lock();
+    expect(getSessionPassphrase()).toBe('');
+  });
+
+  it('defaults to an empty session passphrase', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await unlock(TEST_PASSWORD);
+    expect(getSessionPassphrase()).toBe('');
   });
 });

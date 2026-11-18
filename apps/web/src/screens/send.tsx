@@ -24,7 +24,7 @@ import {
 } from '../wallet/send';
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
 import { getAdapter } from '../wallet/adapters';
-import { withMnemonicAsync } from '../wallet/vault';
+import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
@@ -145,7 +145,7 @@ export function SendScreen() {
           const gasPrice = (fee / 21000n).toString();
           const result = await signEthOffline(
             mnemonic,
-            '',
+            getSessionPassphrase(),
             recipient,
             previewOk.amountBaseUnits,
             String(inputs.data.nonce),
@@ -169,7 +169,7 @@ export function SendScreen() {
           if (fee.status !== 'ok') throw new Error(fee.reason);
           const result = await signBtcOffline(
             mnemonic,
-            '',
+            getSessionPassphrase(),
             recipient,
             previewOk.amountBaseUnits,
             inputs.data.utxos,
@@ -189,7 +189,7 @@ export function SendScreen() {
           if (header.status !== 'ok') throw new Error(header.reason);
           const result = await signTrxOffline(
             mnemonic,
-            '',
+            getSessionPassphrase(),
             recipient,
             previewOk.amountBaseUnits,
             header.data,
@@ -209,7 +209,7 @@ export function SendScreen() {
         }
         const result = await signTonOffline(
           mnemonic,
-          '',
+          getSessionPassphrase(),
           recipient,
           previewOk.amountBaseUnits,
           inputs.data.seqno,
@@ -465,10 +465,10 @@ export function SendScreen() {
               </p>
               {vaultState !== 'unlocked' && (
                 <Link
-                  to="/security"
+                  to="/lock"
                   className="inline-block font-medium text-blue-600 underline underline-offset-4 dark:text-blue-400"
                 >
-                  Go to Security settings to unlock
+                  Go to the lock screen to unlock
                 </Link>
               )}
             </div>

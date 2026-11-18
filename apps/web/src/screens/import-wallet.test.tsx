@@ -364,6 +364,30 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
     }
   }, 30_000);
 
+  it('derives the preview with the passphrase when one is entered', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      const passphrase = div.querySelector<HTMLInputElement>(
+        '#import-passphrase',
+      );
+      expect(passphrase).not.toBeNull();
+      await act(async () => {
+        setInputValue(passphrase!, 'TREZOR');
+      });
+      await restorePhrase(div, VALID_MNEMONIC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const withPassphrase = await deriveAddresses(VALID_MNEMONIC, 'TREZOR');
+      const withoutPassphrase = await deriveAddresses(VALID_MNEMONIC);
+      expect(div.textContent).toContain(withPassphrase.eth);
+      expect(div.textContent).not.toContain(withoutPassphrase.eth);
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
   it('saves the restored wallet to the vault', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {

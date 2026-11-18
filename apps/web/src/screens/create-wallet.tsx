@@ -7,6 +7,7 @@ import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
 import { createVault, hasVault } from '../wallet/vault';
+import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
@@ -55,6 +56,9 @@ export function CreateWalletScreen() {
   const [vaultExists, setVaultExists] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // Optional BIP-39 passphrase (25th word): never stored, entered again at
+  // every unlock. Distinct from the vault password.
+  const [passphrase, setPassphrase] = useState('');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [confirmPositions, setConfirmPositions] = useState<number[]>([]);
   const [confirmInputs, setConfirmInputs] = useState<Record<number, string>>({});
@@ -128,7 +132,9 @@ export function CreateWalletScreen() {
       setMnemonic(null);
       setPassword('');
       setConfirmPassword('');
-      await unlockVault(password);
+      setPassphraseUsed(passphrase.length > 0);
+      await unlockVault(password, passphrase);
+      setPassphrase('');
       await refreshVaultAccounts();
       setStep(4);
     } catch {
@@ -255,6 +261,23 @@ export function CreateWalletScreen() {
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vault-passphrase">
+                    Recovery passphrase (optional)
+                  </Label>
+                  <Input
+                    id="vault-passphrase"
+                    type="password"
+                    autoComplete="off"
+                    value={passphrase}
+                    onChange={(event) => setPassphrase(event.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Optional BIP-39 passphrase (25th word). It is never
+                    stored — you must enter it every time you unlock. It is
+                    not your vault password.
+                  </p>
                 </div>
                 <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
                   {isBusy ? 'Generating…' : 'Generate recovery phrase'}

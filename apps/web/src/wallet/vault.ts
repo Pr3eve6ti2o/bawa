@@ -40,6 +40,7 @@ interface VaultEnvelope {
 
 let unlockedKey: CryptoKey | null = null;
 let unlockedMnemonic: string | null = null;
+let unlockedPassphrase: string | null = null;
 
 function getStorage(): Storage {
   return globalThis.localStorage;
@@ -190,7 +191,7 @@ export function isLocked(): boolean {
  * Unlocks the vault. Throws VAULT_WRONG_PASSWORD on a wrong password and
  * VAULT_CORRUPTED on a structurally invalid envelope.
  */
-export async function unlock(password: string): Promise<void> {
+export async function unlock(password: string, passphrase = ''): Promise<void> {
   const envelope = readEnvelope();
   if (envelope === null) {
     throw new Error('No vault exists.');
@@ -220,12 +221,19 @@ export async function unlock(password: string): Promise<void> {
   }
   unlockedKey = key;
   unlockedMnemonic = new TextDecoder().decode(plaintext);
+  unlockedPassphrase = passphrase;
 }
 
 /** Locks the vault, dropping every reference to the key and the mnemonic. */
 export function lock(): void {
   unlockedKey = null;
   unlockedMnemonic = null;
+  unlockedPassphrase = null;
+}
+
+/** The BIP-39 passphrase for the current unlocked session ('' if none). */
+export function getSessionPassphrase(): string {
+  return unlockedPassphrase ?? '';
 }
 
 /**

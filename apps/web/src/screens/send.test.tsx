@@ -83,6 +83,7 @@ vi.mock('../wallet/send', async (importOriginal) => {
 });
 
 vi.mock('../wallet/vault', () => ({
+  getSessionPassphrase: vi.fn(() => ''),
   withMnemonicAsync: vi.fn(
     async (fn: (mnemonic: string) => Promise<unknown>) =>
       fn(
@@ -293,7 +294,7 @@ describe('send screen', () => {
       await waitForText(mounted.div, 'Your vault is locked');
       expect(mounted.div.textContent).toContain('Your vault is locked');
       expect(
-        mounted.div.querySelector('a[href="/security"]'),
+        mounted.div.querySelector('a[href="/lock"]'),
       ).not.toBeNull();
     } finally {
       await mounted.cleanup();

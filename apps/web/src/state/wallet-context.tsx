@@ -9,6 +9,7 @@ import { availableFor } from '../wallet/chains';
 import { getAdapter } from '../wallet/adapters';
 import type { AdapterTx } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
+import { isPassphraseUsed } from '../wallet/passphrase';
 
 const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 // Maximum wallet-label length enforced at the storage boundary (T43
@@ -76,7 +77,7 @@ export interface WalletContextValue extends WalletState {
   setSelectedChain(chain: ChainId): void;
   lock(): void;
   unlock(): Promise<void>;
-  unlockVault(password: string): Promise<void>;
+  unlockVault(password: string, passphrase?: string): Promise<void>;
   lockVault(): void;
   refreshVaultAccounts(): Promise<void>;
   refreshBalances(): Promise<void>;
@@ -306,7 +307,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     let derived: Record<ChainId, string>;
     try {
-      derived = await vault.withMnemonic((mnemonic) => deriveVaultAddresses(mnemonic));
+      derived = await vault.withMnemonic((mnemonic) =>
+        deriveVaultAddresses(mnemonic, vault.getSessionPassphrase()),
+      );
     } catch (error: unknown) {
       if (request !== vaultDerivations.current) return;
       update(previous => ({
@@ -334,8 +337,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await refreshHistory();
   }, [update, refreshBalances, refreshHistory]);
 
-  const unlockVault = useCallback(async (password: string) => {
-    await vault.unlock(password);
+  const unlockVault = useCallback(async (password: string, passphrase = '') => {
+    if (isPassphraseUsed() && !passphrase) {
+      throw new Error('This wallet uses a passphrase. Enter it to unlock.');
+    }
+
+    await vault.unlock(password, passphrase);
     await refreshVaultAccounts();
   }, [refreshVaultAccounts]);
 

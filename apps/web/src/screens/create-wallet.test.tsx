@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import { CreateWalletScreen } from './create-wallet';
 import { createWallet } from '../wallet/core';
 import { createVault, hasVault } from '../wallet/vault';
+import { isPassphraseUsed } from '../wallet/passphrase';
 import { useWallet } from '../state/wallet-context';
 
 vi.mock('../wallet/core', () => ({
@@ -106,6 +107,7 @@ async function generate(div: HTMLDivElement) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   vi.mocked(createWallet).mockResolvedValue(TEST_MNEMONIC);
   vi.mocked(createVault).mockResolvedValue(undefined);
   vi.mocked(hasVault).mockReturnValue(false);
@@ -193,7 +195,7 @@ describe('create wallet screen', () => {
         'bawa-trx-bip44-v1',
         'bawa-ton-v4r2-v1',
       ]);
-      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD);
+      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD, '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // The mnemonic is cleared: no recovery word is shown any more.
       expect(mounted.div.textContent).not.toContain('abandon');
@@ -203,6 +205,44 @@ describe('create wallet screen', () => {
       expect(text.indexOf('Ethereum')).toBeLessThan(text.indexOf('Bitcoin'));
       expect(text.indexOf('Bitcoin')).toBeLessThan(text.indexOf('TRON'));
       expect(text.indexOf('TRON')).toBeLessThan(text.indexOf('TON'));
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('passes a passphrase to unlock and records that one is used', async () => {
+    const mounted = await mountScreen();
+    try {
+      await fillPasswords(mounted.div);
+      const passphrase = mounted.div.querySelector(
+        '#vault-passphrase',
+      ) as HTMLInputElement;
+      expect(passphrase).not.toBeNull();
+      await act(async () => {
+        setInputValue(passphrase, 'TREZOR');
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Generate recovery phrase').click();
+      });
+      await act(async () => {
+        findButton(mounted.div, 'I have written them down').click();
+      });
+      const words = TEST_MNEMONIC.split(' ');
+      const inputs = [...mounted.div.querySelectorAll('input[id^="confirm-word-"]')];
+      await act(async () => {
+        inputs.forEach((input) => {
+          const position = Number(
+            (input as HTMLInputElement).id.replace('confirm-word-', ''),
+          );
+          setInputValue(input as HTMLInputElement, words[position] as string);
+        });
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Confirm and create wallet').click();
+      });
+      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD, 'TREZOR');
+      expect(isPassphraseUsed()).toBe(true);
+      expect(mounted.div.textContent).toContain('Your wallet is ready');
     } finally {
       await mounted.cleanup();
     }

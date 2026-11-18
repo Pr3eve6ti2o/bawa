@@ -16,6 +16,7 @@ import {
   type WalletAddresses,
 } from '../wallet/core';
 import { createVault, hasVault } from '../wallet/vault';
+import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Badge } from '../ui/components/badge';
@@ -79,6 +80,9 @@ export function ImportWalletScreen() {
   const [phraseError, setPhraseError] = useState<string | null>(null);
   const [vaultPassword, setVaultPassword] = useState('');
   const [vaultPasswordConfirm, setVaultPasswordConfirm] = useState('');
+  // Optional BIP-39 passphrase (25th word): never stored, entered again at
+  // every unlock. It also shapes the previewed addresses below.
+  const [passphrase, setPassphrase] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [vaultExists, setVaultExists] = useState(false);
@@ -86,6 +90,7 @@ export function ImportWalletScreen() {
   // Clear the phrase when the screen unmounts.
   useEffect(() => () => {
     setPhrase('');
+    setPassphrase('');
     setNormalizedMnemonic(null);
   }, []);
 
@@ -112,7 +117,7 @@ export function ImportWalletScreen() {
     setIsRestoring(true);
     try {
       const restored = await restoreWallet(normalized);
-      const addresses = await deriveAddresses(restored);
+      const addresses = await deriveAddresses(restored, passphrase);
       setNormalizedMnemonic(restored);
       setDerived(addresses);
       setPhraseStep('preview');
@@ -147,7 +152,9 @@ export function ImportWalletScreen() {
       setNormalizedMnemonic(null);
       setVaultPassword('');
       setVaultPasswordConfirm('');
-      await unlockVault(vaultPassword);
+      setPassphraseUsed(passphrase.length > 0);
+      await unlockVault(vaultPassword, passphrase);
+      setPassphrase('');
       await refreshVaultAccounts();
       setPhraseStep('saved');
     } catch {
@@ -293,6 +300,23 @@ export function ImportWalletScreen() {
                   <p className="text-sm text-muted-foreground">
                     Only enter a recovery phrase on this screen, on this
                     device. Never paste it into any other app or website.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="import-passphrase">
+                    Recovery passphrase (optional)
+                  </Label>
+                  <Input
+                    id="import-passphrase"
+                    type="password"
+                    autoComplete="off"
+                    value={passphrase}
+                    onChange={(event) => setPassphrase(event.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Optional BIP-39 passphrase (25th word). It is never
+                    stored — you must enter it every time you unlock. The
+                    previewed addresses below are derived with it.
                   </p>
                 </div>
                 {phraseError && (
