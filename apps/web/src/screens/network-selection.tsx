@@ -1,10 +1,10 @@
-import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
 const networks = [
-  { id: "btc", testnet: "Bitcoin testnet4 — default", mainnet: "Bitcoin mainnet" },
-  { id: "eth", testnet: "Ethereum Sepolia — default", mainnet: "Ethereum mainnet" },
-  { id: "trx", testnet: "TRON Nile testnet — default", mainnet: "TRON mainnet" },
+  { id: "btc", mainnet: "Bitcoin mainnet" },
+  { id: "eth", mainnet: "Ethereum mainnet" },
+  { id: "trx", mainnet: "TRON mainnet" },
+  { id: "ton", mainnet: "TON mainnet" },
 ] as const;
 
 export function NetworkSelectionScreen() {
@@ -15,22 +15,22 @@ export function NetworkSelectionScreen() {
           Networks
         </h1>
         <p className="text-sm text-muted-foreground">
-          Testnet only, by repository policy.
+          Mainnet only. This wallet never connects to a test network.
         </p>
       </header>
 
       <Card className="rounded-[20px] border-[#d6deed]">
         <CardHeader>
-          <CardTitle>Testnet defaults</CardTitle>
+          <CardTitle>Mainnet</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-3">
-            {networks.map(({ id, testnet }) => (
+            {networks.map(({ id, mainnet }) => (
               <li
                 key={id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-[#d6deed] bg-white p-3"
               >
-                <span>{testnet}</span>
+                <span>{mainnet}</span>
                 <span className="flex h-6 items-center rounded-[12px] bg-[#224f45] px-3 text-[10px] font-bold text-[#94e1c3]">
                   ACTIVE
                 </span>
@@ -40,34 +40,9 @@ export function NetworkSelectionScreen() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
-        <CardHeader>
-          <CardTitle>Mainnet — unavailable</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p id="mainnet-reason" className="text-sm text-muted-foreground">
-            Mainnet is out of scope by default and requires separate approval plus applicable gates.
-          </p>
-          <ul className="space-y-3">
-            {networks.map(({ id, mainnet }) => (
-              <li key={id}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
-                  disabled
-                  aria-describedby="mainnet-reason"
-                >
-                  {mainnet}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
       <p className="text-sm text-muted-foreground">
-        Network selection changes nothing in this starter yet — no provider is connected.
+        Balances and history come from the Phase 2 mainnet adapters; no
+        testnet adapter exists.
       </p>
     </section>
   );

@@ -146,7 +146,8 @@ describe('asset detail screen', () => {
       expect(mounted.div.textContent).toContain('Received');
       expect(mounted.div.textContent).toContain('0xabc');
       expect(mounted.div.textContent).not.toContain('Demo balance');
-      expect(mounted.div.textContent).not.toContain('$12,480');
+      // No fiat amount anywhere: no fabricated portfolio total.
+      expect(mounted.div.textContent).not.toContain('$');
     } finally {
       await mounted.cleanup();
     }

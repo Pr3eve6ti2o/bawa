@@ -13,9 +13,9 @@
 // a test transfer validates only that payment.
 //
 // Limitations, stated plainly:
-// - A TRON address string cannot prove mainnet: Shasta and Nile
-//   testnets share the 0x41 prefix, so the network comes from the
-//   configured endpoint, never the address.
+// - A TRON address string cannot prove mainnet: test networks share
+//   the 0x41 prefix, so the network comes from the configured endpoint,
+//   never the address.
 // - An ETH address string is identical on every EVM chain; chainId
 //   comes from the configured network, never the address.
 // - A BTC address alone cannot distinguish mainnet from signet or
@@ -615,7 +615,7 @@ export const MAINNET_PARAMS: Readonly<
       'https://developers.tron.network/docs/encoding',
     ],
     limitations: [
-      'Address string cannot distinguish mainnet from Shasta/Nile testnets (shared 0x41 prefix); network comes from the configured endpoint',
+      'Address string cannot distinguish mainnet from test networks (shared 0x41 prefix); network comes from the configured endpoint',
     ],
   }),
   ton: freezeParams({

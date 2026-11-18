@@ -91,7 +91,8 @@ describe('asset list screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('Balance unavailable');
-      expect(mounted.div.textContent).not.toContain('$12,480');
+      // No fiat amount anywhere: no fabricated portfolio total.
+      expect(mounted.div.textContent).not.toContain('$');
       expect(mounted.div.textContent).not.toContain('Demo figures');
     } finally {
       await mounted.cleanup();

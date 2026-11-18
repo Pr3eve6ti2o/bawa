@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
-import { DEMO_ASSETS } from "../state/demo-fixtures";
+import { CHAIN_CHIP_COLORS } from "./asset-rows";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
@@ -27,7 +27,7 @@ export function WalletManagementScreen() {
             const wallet = xpubs[id];
             if (!wallet) return null;
             const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
-            const chip = DEMO_ASSETS.find((asset) => asset.id === id)?.chip ?? '#9daeff';
+            const chip = CHAIN_CHIP_COLORS[id] ?? '#9daeff';
 
             return (
               <li key={id}>

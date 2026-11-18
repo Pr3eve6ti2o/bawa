@@ -62,7 +62,7 @@ Both are confirmation policies, not finality guarantees. BTC (6) and ETH
 ## Explicitly NOT in this patch
 
 - No chain-data adapter exists yet (no `reconcileTx`, no
-  `NetworkConfig.kt`, no `TronNileAdapter` / `TonTestnetAdapter`; TON
+  `NetworkConfig.kt`, no testnet adapters; TON
   `txid` is `null` per MAINNET-GUIDE §12). This module evaluates
   observations only; fetching them and wiring the evaluator into a live
   send/receive flow is a separate follow-up (blocker B1).

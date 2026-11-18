@@ -169,7 +169,8 @@ describe('dashboard screen', () => {
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).not.toContain('$12,480');
+      // No fiat amount anywhere: no fabricated portfolio total.
+      expect(mounted.div.textContent).not.toContain('$');
       expect(mounted.div.textContent).toContain('No price feed connected');
     } finally {
       await mounted.cleanup();
