@@ -523,7 +523,7 @@ The TON fixture is V4 R2, wallet ID `698983191`. TON is generation-only: it is a
 >
 > A recognised prefix is not enough to pass these checks. For Bawa BTC mainnet, the expected input is `zpub` (`0x04b24746`). The SLIP-0132 mainnet reference entries also include public `xpub` (`0x0488B21E`) and private `xprv` (`0x0488ADE4`); private extended keys are excluded from the watch-only environment. These reference entries are not an alternative to Bawa’s recorded BIP-84 policy. [M28 §6.1; M28-016; M28-083; M27 §3.1]
 >
-> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: with Core `4.8.4`, both produce no address and exit `1` with an opaque WASM-abort error. [M28-016; M28-083; D31 F8]
+> **Testnet reference only:** `tpub` (`0x043587CF`), `tprv` (`0x04358394`), `vpub` (`0x045f1cf6`) and `upub` (`0x044a5262`). Recognise them, but never use them as mainnet watch-only keys. In particular, **do not feed BTC testnet `vpub` or `tpub` keys to `derive.js`**: at the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`; no address is produced. [M28-016; M28-083; D31 F8]
 >
 > After the input checks, the resulting address must **exactly match the independent offline reference** for the recorded policy; see §9. Otherwise, **STOP**. A valid-looking string, agreement between tool outputs, or exit `0` must not override a stop. [M04; M27; M35]
 
@@ -828,7 +828,7 @@ Apply the complete mapping, not just the first URL that makes a request work.
 - `nileex.io/join/get`
 - `mempool.space/testnet4/faucet`
 
-No mainnet faucet exists. Do not turn either deletion into a guessed mainnet faucet URL.
+Do not replace either deleted testnet URL with a guessed mainnet faucet URL.
 
 The testnet URLs in this inventory were all live at the same time during the dated checks. A responding testnet URL therefore proves nothing about completing the migration. It can return plausible data for the wrong chain: the BTC checks found exactly that behaviour on testnet3. Check the endpoint actually configured, not merely a hostname copied into a terminal.
 
@@ -1091,7 +1091,7 @@ Both implementations must also start from an independently checked public node. 
 
 #### Public-only input and output contract
 
-- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. Those testnet inputs trigger an opaque WASM abort with exit 1; do not feed them in as a network test.
+- **Check the prefix before derivation:** BTC requires `zpub`; ETH and TRX require `xpub`. A prefix alone does not establish the coin or account. Reject anything else, including testnet `vpub` and `tpub`, before invoking the tool. At the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`. No address is produced; do not feed BTC testnet `vpub` or `tpub` keys in as a network test.
 - Supply the public node through **stdin, never argv**. The single-address stdin limit is **200 characters including the trailing newline**, not 200 characters plus a newline.
 - The single-address interface uses exit **2** for usage or read errors, **1** for derivation or validation failure, and **0** for success with a bare address. A zero exit still requires the independent comparison above.
 - For the daemon, wait for its first output line, `{"ready": true}`, before sending requests. Requests are JSONL objects with the fields `chain`, `xpub` and `index`; the `xpub` field carries the BTC `zpub` as well. `index` must be an integer from **0 to 2147483647**, inclusive.
@@ -1759,7 +1759,7 @@ At `Pr3eve6ti2o/bawa@56396a20`, the repository has **no transaction-building or 
 
 Those capabilities must not be attributed to Bawa until the corresponding code paths have been demonstrated at a named commit.
 
-A named external signer/toolchain is therefore a prerequisite for each chain. **The supplied evidence names no external signing toolchain for any of them.** This is a blocking omission, not an invitation to invent an endorsement. Fee estimators and the node fee-estimation RPC described below do not establish a signing toolchain.
+A named external signer/toolchain is therefore a prerequisite for each chain. **The supplied evidence names no external signing toolchain for any of them.** No external signer toolchain has been identified and tested for any chain; the guide's stated position for each chain is **"no tested route"**. This is a blocking omission, not an invitation to invent an endorsement. Fee estimators and the node fee-estimation RPC described below do not establish a signing toolchain.
 
 | Chain | External signer/toolchain name | Controls required before this guide can document its use |
 |---|---|---|

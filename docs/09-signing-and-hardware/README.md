@@ -123,6 +123,7 @@ Using the [published 15-word ripple fixture mnemonic](../11-trust-wallet-and-ind
 Read the descriptor examples in [Output descriptors](#output-descriptors-make-the-watch-target-explicit) and [Testnet receiving and change](#testnet-receiving-and-change) as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
 
 Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins (see the [origin definition](#output-descriptors-make-the-watch-target-explicit)): a Bawa-generated wallet uses the purpose/coin-type prefix `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both; from the repository root, derive with `tools/hdwallet-gen/derive.js` and compare the result against the versioned table; pass only if the path, prefix and origin match the table exactly and the descriptor's fingerprint and origin match those in the signer's export exactly. See [Output descriptors](#output-descriptors-make-the-watch-target-explicit) for the signer export and a descriptor example.
+> A **fingerprint** is the short, eight-hex-character identifier of the master key recorded in a descriptor's origin annotation, used to match an export to its source key (BIP-380).
 
 ## Hardware wallets
 
@@ -130,7 +131,8 @@ Hardware wallets isolate key custody and signing within the device.
 
 ### Trezor
 
-Trezor's firmware repository documents per-coin derivation paths and shows an important concept: paths differ by curve and blockchain family, and blank entries in the tables' public-node column may suggest limits on public-node support, but do not establish that public nodes are impossible.
+Trezor's firmware repository documents per-coin derivation paths and shows an important concept: paths differ by curve and blockchain family, and public nodes are only possible where the derivation semantics support them. blank entries in the tables' public-node column may suggest limits on public-node support, but do not establish that public nodes are impossible.
+> A **public node** is a derivation-path node whose child public keys can be derived from public key material alone through non-hardened derivation (BIP-32).
 
 See:
 

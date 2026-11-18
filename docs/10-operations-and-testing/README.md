@@ -98,7 +98,7 @@ test "$(git rev-parse --verify HEAD)" = "754721cd00efdc13852c0124fb727f33f9505a0
 
 The repository root declares no dependencies, so skip root `npm install`. Running it installs nothing and creates an untracked root `package-lock.json`.
 
-Install the wallet-core tooling at its package boundary: enter it with `cd tools/hdwallet-gen`, run `npm install`, then return to the repository root with `cd ../..`.
+Install the wallet-core tooling at its package boundary: run `cd tools/hdwallet-gen && npm install && cd ../..`, so a failed entry or install stops the chain and the return to the repository root happens only on success.
 
 Treat these as unlocked dependency installs, not as evidence of a reproducible dependency graph or passing tests.
 
@@ -977,18 +977,13 @@ Do not skip this second installation. The root `check` and `test` scripts delega
 
 The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm install` and does not demonstrate a clean, lockfile-based `npm ci` installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
-```bash
-cd tools/hdwallet-gen
-npm install
-```
-
-Only after that installation succeeds, return to the root:
+Run entry, installation and return as a single gated chain, so a failure stops the sequence before the return:
 
 ```bash
-cd ../..
+cd tools/hdwallet-gen && npm install && cd ../..
 ```
 
-**Expected result:** a successful installation in `tools/hdwallet-gen`, followed by your shell returning to the repository root. The directory change succeeding does not cancel an earlier npm failure.
+**Expected result:** if entering `tools/hdwallet-gen` and running `npm install` both succeed, your shell returns to the repository root. If either fails, the return is skipped and the final exit status is nonzero.
 
 #### If either `npm install` command fails
 

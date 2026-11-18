@@ -416,7 +416,7 @@ Treat the install steps as an unexecuted procedure, not a verified path: no debu
 
 Keep the on-device fixture gate marked as never run: no Core AAR has been built and no device run has happened, so the gate has never run.
 
-Live validation so far: wallet creation and recovery were verified end to end in a live run on 8 November 2026 (V1; pushed head at the time: 082f7915): generation under a real pty, decrypt round trip byte-identical, differential test PASS. V1's watch-only checks — derive 9/9, compare 9/9 and smoke 28/28 — ran on the repaired working copy, byte-identical to the phase-1 repair later pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12. The subsequent professional rewrite was pushed as 754721cd. No live testnet spend has been made from this wallet.
+Live validation so far: wallet creation and recovery were verified end to end in a live run on 8 November 2026 (V1; repair commit e3b65fb8): generation under a real pty, decrypt round trip byte-identical, differential test PASS. Verification was not against pushed head 082f7915. V1's watch-only checks — derive 9/9, compare 9/9 and smoke 28/28 — ran on the repaired working copy, byte-identical to the phase-1 repair later pushed as e3b65fb832db287fdc8d54794980dd0b3456cc12. The subsequent professional rewrite was pushed as 754721cd. No live testnet spend has been made from this wallet.
 
 Use this nine-step checklist as work to complete, not as evidence of completion. Do not pass any release gate without its own evidence.
 

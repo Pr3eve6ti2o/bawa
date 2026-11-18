@@ -1442,7 +1442,7 @@ Before using the build in the wallet, complete these confirmations:
 
 Use Trust Wallet Core 4.9.2 behind the application-owned `WalletEngine` interface for the testnet-only Android wallet.
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 Use repository guide doc 09 as architecture guidance.
 
@@ -2762,7 +2762,7 @@ Until then, treat this as a testnet guide for a testnet wallet. TESTNET-only doe
 
 Repository pin: `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Doc 1, section 4, 'Clone and verify the commit').
 
-Bawa contains no transaction construction or signing implementation. Signing exists only in the built apps, via Trust Wallet Core 4.9.2.
+Bawa contains no transaction construction or signing implementation. Place signing in the Android wallet you build; the repository tools pin Trust Wallet Core 4.8.4.
 
 As of 2026-11-08, the Trust Wallet Core 4.9.2 pin is the signing pin for built apps. The live EIP-1559 proof against this pin was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open (OI-004).
 

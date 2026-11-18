@@ -203,7 +203,7 @@ BTC BIP-84 uses bech32 SegWit; the published index-0 fixture address is `bc1qpsp
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
 
-This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is not a test of your backup. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd. Never paste a real mnemonic or data key anywhere.
+This procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, repair commit e3b65fb8); it is not a test of your backup. Verification was not against pushed head 082f7915, whose JavaScript tools failed `node --check` and on which all three checks failed (derive 9/9, compare 9/9, smoke 28/28). The run exercised decryption at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12, which included the symlink-guard hardening. The record establishes no verification run at current head 754721cd and no targeted symlink-guard test. Never paste a real mnemonic or data key anywhere.
 
 ### 6. Restore the TON configuration exactly, where applicable
 
@@ -496,7 +496,7 @@ Complete the pre-funding check before using a wallet with meaningful funds. Requ
 
 Keep every exercise below testnet-only. Use freshly generated, disposable test fixtures only, with at most 0.0001 testnet BTC (10,000 testnet satoshis) per exercise from a testnet faucet for transaction checks. The published mnemonic in docs/11 is a public fixture and must never be funded, even on testnet. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
 
-Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd.
+Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, repair commit e3b65fb8); it is still not a test of your backup, so rehearse your own backup and record it. Verification was not against pushed head 082f7915, whose JavaScript tools failed `node --check` and on which all three checks failed (derive 9/9, compare 9/9, smoke 28/28). The run exercised decryption at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12, which included the symlink-guard hardening. The record establishes no verification run at current head 754721cd and no targeted symlink-guard test.
 
 1. **Start on a fresh machine.**
 

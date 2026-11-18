@@ -13,7 +13,7 @@ How-to guide.
 > **Scope:** repo guide docs/11 against the pinned repo at 754721cd, with previously recorded live link checks retained as historical evidence
 > **Repository commit:** 754721cd
 > **Tool versions:** bip-utils 2.12.2 (captured-run version; `requirements.txt` pins `bip-utils==2.12.3`), cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
-> **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
+> **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, repair commit e3b65fb8; verification was not against pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
 > **Not run:** no live testnet spend.
 > **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
 
@@ -164,7 +164,7 @@ Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/19
 
 Do not count this separate derivation as repository-test coverage.
 
-Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: with the tested Core WASM builds these inputs produce no address, only an opaque WASM-abort error. Changing only the derivation path does not fix this; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
+Do not feed BTC testnet `vpub` or `tpub` keys to this `derive.js` workflow: at the audit baseline, a valid BTC testnet `vpub` is explicitly rejected during pre-validation (since commit `d2f0960`), with exit status `2` and the message `extended key version 045f1cf6 is not allowed for btc`; no address is produced. Changing only the derivation path does not fix this `vpub` rejection; a `zpub` with a testnet-looking path can instead produce a mainnet address. The path's first three levels are the caller's responsibility: Core derives from the key at the trailing change/index levels only.
 
 ### Agreed comparison paths
 

@@ -459,7 +459,7 @@ Choose this over a paid service if you can maintain independent owner backups, r
 
 Keep the map as well as the keys — Bitcoin output descriptors ([BIP 380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki) family) describe the scripts and keys used to construct outputs; for recovery, export them with key-origin fingerprints, complete derivation paths and both receive and change branches; multisig descriptors also record the signing threshold and key ordering or sorting rule; a compatible wallet can then reproduce the addresses rather than guess your configuration. Seed words, restored with the correct BIP-39 passphrase, recreate a key tree; they do not identify the chosen wallet policy or the other cosigners. A public descriptor, the matching seed/passphrase and the network/account record make single-sig recovery reproducible. Multisig needs the complete public policy and enough signing secrets to meet its threshold. Even two seeds for an independent 2-of-3 arrangement cannot recreate the third cosigner's public key.
 
-What this protects against (and does not): a descriptor backup protects against lost wallet configuration, a broken coordinator and a vendor disappearing, provided another implementation supports the descriptor; it cannot authorise spending, replace missing signing secrets, or stop an attacker who holds a signing quorum; a 2-of-3 arrangement tolerates one unavailable signer, not two. Public-key material is still privacy-sensitive: like an xpub, a descriptor can reveal linked addresses, balances and future activity — keep it out of public repositories and support tickets; descriptor syntax can also carry private keys: deliberately select the PUBLIC/watch-only export, not a private export.
+What this protects against (and does not): a descriptor backup protects against lost wallet configuration, a broken coordinator and a vendor disappearing, provided another implementation supports the descriptor; it cannot authorise spending, replace missing signing secrets, or stop an attacker who holds a [signing quorum](../GLOSSARY.md#signing-quorum); a 2-of-3 arrangement tolerates one unavailable signer, not two. Public-key material is still privacy-sensitive: like an xpub, a descriptor can reveal linked addresses, balances and future activity — keep it out of public repositories and support tickets; descriptor syntax can also carry private keys: deliberately select the PUBLIC/watch-only export, not a private export.
 
 Set up and rehearse (5 steps): (1) check compatibility first — choose a free coordinator and compatible signers; confirm that an independent wallet can import the exact descriptor features you use ("supports multisig" is not enough); practise with the published test fixtures in [docs/11](../11-trust-wallet-and-independent-verification/README.md#verification-differential-fixtures) on a test network (their keys are public and must never receive valuable funds). (2) verify the policy — for a 2-of-3 wallet, enrol three independently generated signers; confirm the threshold and fingerprints on trusted signer displays; arrange devices and secret backups so one incident cannot expose or destroy two signing secrets. (3) export both branches — save complete public receive and change descriptors, whether exported separately or together, including their checksums; do not reconstruct them by hand; compare several derived addresses with the original wallet and trusted signer displays; a checksum detects copying errors, not malicious substitution — an attacker's replacement can have a valid checksum and redirect new deposits. (4) make independent copies and import one — put the public export and recovery metadata on two independent offline media; in a clean installation of another compatible wallet, import the descriptors as watch-only; check several recorded receive and change addresses; this check should not require any seed. (5) test discovery and signing separately — rescan from before first use, covering every issued address index on both branches; with the published fixtures, restore enough test signers and complete a test-network spend without the original coordinator, deliberately creating a change output and verifying it against the backed-up change descriptor; check live signing backups through trusted on-device workflows, never by entering seeds into an online coordinator. An empty restored view is not proof that funds have disappeared: check the network, paths, missing change branch, scan start and address range; changing the key-ordering rule can change addresses; a mistaken BIP-39 passphrase produces different valid keys rather than a "wrong password" error.
 
@@ -921,14 +921,14 @@ These are not current quotations; recheck every price and term before purchasing
 
 | Example provider | Indicative figures | Scope and limits |
 |---|---|---|
-| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
-| Fireblocks | Off Exchange add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). Tokenisation add-on: no published price ([Fireblocks pricing](https://www.fireblocks.com/pricing)). | A product-specific listing for the Off Exchange add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
+| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (checked 8 November 2026, UTC). See the [Fireblocks Help Center Plans, Billing, and Payments table](https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments) and [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
+| Fireblocks | Tokenisation add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). | A product-specific listing for the tokenisation add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
 
 Ask which recurring platform/subscription fees, usage charges, minimums/overages and feature/add-on charges apply and which onboarding, support, recovery, extra-user and exit charges are included; confirm who pays network fees and whether they are bundled or passed through.
 
 ### Counterparty failure and a provable exit
 
-A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance may reimburse covered losses, but does not guarantee reimbursement or replace tested recovery — verify the insurer, insured entity, policy period, covered balances and events, exclusions, deductibles, applicable limits, claim eligibility and conditions, payment recipients, the claims process and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
+A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance is not a substitute for recovery — [verify the insurer, insured entity, policy period, covered balances and events, exclusions, deductibles, applicable limits, claim eligibility and conditions, payment recipients, the claims process and whether a limit is shared across customers](https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf); a headline amount does not establish cover for your balance.
 
 Before committing substantial funds, require an exit plan that works under an abrupt shutdown:
 
@@ -942,7 +942,7 @@ Do not count "we have backup files" as proof that you can still sign; without a 
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. A signer may hold its own complete private key, unlike an MPC participant's share, but a multisig key can itself be MPC-operated. Depending on the construction, the multisig rule may be visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An [M-of-N multisig wallet](https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki) needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's [script](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki) or account logic checks that rule. A signer may hold its own complete private key, unlike an MPC participant's share, but a multisig key can itself be MPC-operated. Depending on the construction, the multisig rule may be visible on chain, [sometimes only when funds are spent](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki); supported chains and transaction costs differ.
 
 ```text
 Typical signing paths
@@ -957,9 +957,9 @@ MPC [key shares across participants]
 
 ### Check the protection and its limits
 
-With a threshold above one and genuinely separate signers (each with independent control and authorisation, so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if the remaining keys satisfy the complete spending policy, including required roles. Provider checks may offer another chance to catch a bad payment.
+With a [threshold](https://www.rfc-editor.org/info/rfc9591) above one and genuinely separate signers (each with independent control and authorisation, so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if the remaining keys satisfy the complete spending policy, including required roles. Provider checks may offer another chance to catch a bad payment.
 
-A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
+A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — [whoever steals that seed can derive all those keys](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki).
 
 If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids relying on a service to do that work but leaves it with you; dependencies on hosted coordinators, proprietary formats, software maintenance and hardware vendors may remain. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
 
@@ -979,11 +979,11 @@ Before funding:
 - Confirm the exact chain, asset, threshold and key holders.
 - Identity checks and, where required, business and authorised-signatory checks may apply, depending on the provider, service, customer and jurisdiction.
 - Agree signing delays, transaction limits, recovery responsibilities and exit terms.
-- Generate user-controlled keys independently where supported by the architecture and provider, keep recovery secrets offline and out of this repository, and start with a small test balance.
+- Generate user-controlled keys independently where supported by the architecture and provider, [keep recovery secrets offline](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) and out of this repository, and start with a small test balance.
 
 Have each signer verify the payment independently rather than merely approve a notification.
 
-Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a signing quorum.
+Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a [signing quorum](../GLOSSARY.md#signing-quorum).
 
 ### Check the figures for BitGo
 
@@ -993,8 +993,8 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Item | Indicative figure and checks |
 |---|---|
-| BitGo custody pricing | BitGo currently offers qualified custody with [no custody fees to eligible individual investors](https://www.bitgo.com/products/individual-investors/). No published institutional annual custody rate was verified at this check (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Recheck prices and minimums before committing; request the complete fee schedule and ask whether the quotation includes subscriptions, setup, staking and trading fees, recovery and exit charges, and allow separately for chain fees. |
-| BitGo insurance headline | BitGo Bank & Trust says it maintains [up to US$250 million in digital asset insurance](https://www.bitgo.com/resources/insurance) for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Check who is insured, which losses qualify, exclusions and whether limits are shared. This row duplicates the BitGo insurance row in section 17 (L733), the single maintained source; keep both rows' check dates synchronised with that source. |
+| BitGo custody pricing | BitGo currently offers [qualified custody with no custody fees to eligible individual investors](https://www.bitgo.com/products/individual-investors/). No published institutional annual custody rate was verified at this check (checked 8 November 2026, UTC). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, staking and trading fees, recovery and exit charges, and allow separately for chain fees. |
+| BitGo insurance headline | BitGo Bank & Trust says it maintains [up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys](https://www.bitgo.com/products/individual-investors/), subject to policy terms and exclusions (checked 8 November 2026, UTC). [Check who is insured, which losses qualify, exclusions and whether limits are shared](https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf). This row duplicates the BitGo insurance row in section 17 (L733), the single maintained source; keep both rows' check dates synchronised with that source. |
 
 ### Make the exit real
 
@@ -1020,7 +1020,7 @@ Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa co
 
 ### Casa-style service
 
-A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime. Possessing enough private keys alone does not guarantee that you can spend: you also need the wallet configuration and usable signing or recovery tools.
+A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime ([Casa Basic Inheritance](https://support.casa.io/knowledge/basic-inheritance-for-standard-members)).
 
 A service may describe its arrangement as "self-custody". Check what the service can and cannot do for you: if you control a working quorum independently, you retain spending ability; if the provider holds a necessary key or controls the software workflow, your independence is limited.
 
@@ -1039,7 +1039,7 @@ These are listed annual plan prices. Ask what features, limits and support are i
 
 #### Inheritance
 
-A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable.
+A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable ([Casa Basic Inheritance](https://support.casa.io/knowledge/basic-inheritance-for-standard-members), [Casa Vault Owner FAQs](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)).
 
 The default process includes a six-month waiting period starting when the recipient requests access; it does not verify death or require proof of death, and the owner can reject the request at any time within those six months. Optional Enhanced Verification (Private Client, US residents only) requires a US-issued death certificate validated by Casa and eliminates the six-month wait (see the [Casa inheritance FAQ](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)). The recipient is expected to have enough identity and location information to be reachable.
 
@@ -1047,7 +1047,7 @@ A recipient who has lost their key or cannot be found is a failure mode. Test th
 
 ### Unchained-style service
 
-A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider states that its key is intended to be inaccessible to staff alone. Unchained's [Signature plan](https://unchained.com/pricing) includes inheritance setup and coordination for your heirs.
+A typical arrangement uses a [2-of-3 multisig vault](https://www.unchained.com/blog/unchained-capital-coldcard-guide) with optional inheritance. You control two keys and the provider holds one, and the provider can [help arrange signing when a key is unavailable](https://www.unchained.com/blog/replace-key-multisig-wallet). The provider states that its key is intended to be inaccessible to staff alone. Unchained's [Signature plan](https://unchained.com/pricing) includes inheritance setup and coordination for your heirs.
 
 Use these figures from [Unchained pricing](https://unchained.com/pricing), re-checked live on **8 November 2026 (UTC)**:
 
@@ -1086,7 +1086,7 @@ Asset-based charges are quoted individually and subject to negotiation.
 
 ### Before you sign
 
-- Count independent signing keys, not seed copies — a single seed used to derive several keys does not give the same protection as independent seeds.
+- [Count independent signing keys, not seed copies](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) — a single seed used to derive several keys does not give the same protection as independent seeds.
 - Check the service's signing threshold, recovery process and fees.
 - Test a withdrawal to a fresh wallet before moving substantial funds.
 - Make sure the designated recipient can reach their key.
@@ -1286,3 +1286,15 @@ Check-date policy: for mutable pages, record the check date and the version or c
 - NCSC small organisations guide — https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
 - Incident response guidance — https://oyarr.com/safety/incident-response.html
 - RFC 6585 (HTTP 429) — https://www.rfc-editor.org/info/rfc6585/ (section 4, ‘429 Too Many Requests’)
+- Fireblocks Help Center, Plans, Billing, and Payments — https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments
+- BitGo individual-investors page — https://www.bitgo.com/products/individual-investors/
+- BitGo Foundational Insurance One-Pager (PDF) — https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf
+- BIP-16 — https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
+- BIP-141 — https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki
+- BIP-341 — https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki
+- RFC 9591 — https://www.rfc-editor.org/info/rfc9591
+- NIST SP 800-57 Part 1 Rev. 5 — https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final
+- Casa Basic Inheritance — https://support.casa.io/knowledge/basic-inheritance-for-standard-members
+- Casa Vault Owner FAQs — https://support.casa.io/knowledge/inheritance-faqs-vault-owner
+- Unchained multisig vault guide — https://www.unchained.com/blog/unchained-capital-coldcard-guide
+- Unchained key-replacement guide — https://www.unchained.com/blog/replace-key-multisig-wallet
