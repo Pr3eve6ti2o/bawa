@@ -673,13 +673,13 @@ In a BIP-174 PSBT workflow, signing remains with the signer. Exchanging transact
 
 2. **Inspect the import settings.** Confirm watch-only status, receiving/external and change/internal assignment, watched index ranges and next-address index. The wildcard does not specify how many addresses an importer will watch.
 
-3. **Display the first receiving address on the signer.** Ask the signer to derive and show branch `0`, index `0` on its own trusted screen: `/0/0` in this example. Request the same index from the tracker. A used wallet’s “next unused” address may be further ahead.
+3. **Display the first receiving address on the signer.** Confirm the network and wallet/script policy. Ask the signer to derive and show branch `0`, index `0` on its own trusted screen: `/0/0` in this example, assuming that path matches the specified wallet's derivation convention. Request the same index from the tracker. A used wallet’s “next unused” address may be further ahead.
 
 4. **Compare the complete address.** The signer’s displayed `<TESTNET_ADDRESS>` must match the tracker’s address character for character, not merely at the beginning and end. A companion application window is not a substitute for the signer screen. If the signer cannot display that address, treat this verification as unfinished.
 
-5. **Check change separately.** Where supported, compare the first change address at `/1/0` as well, and confirm that its branch is marked internal.
+5. **Check change separately.** Where supported and consistent with the specified wallet's derivation convention, compare the first change address at `/1/0` as well, and confirm that its branch is marked internal.
 
-A receiving-address match checks that particular derivation and script. It does not prove the origin metadata or the entire watched range.
+A receiving-address match checks that particular derivation and script. It does not prove the origin metadata or the entire watched range. The `internal` marking is import metadata and is not established by address equality.
 
 If anything differs, stop. Check network, policy, account, branch and index against the signer’s records, then re-export and repeat. Do not guess metadata or keep editing paths until something happens to match.
 
