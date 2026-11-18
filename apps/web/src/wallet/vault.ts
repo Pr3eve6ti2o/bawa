@@ -241,6 +241,21 @@ export function withMnemonic<T>(fn: (mnemonic: string) => T): T {
 }
 
 /**
+ * Async form of withMnemonic (Phase 4 send): runs an async callback with
+ * the decrypted mnemonic while the vault is unlocked and awaits it, so the
+ * mnemonic reference is dropped only after the async work finishes.
+ * Throws when locked. Callers must not retain or log it.
+ */
+export async function withMnemonicAsync<T>(
+  fn: (mnemonic: string) => Promise<T>,
+): Promise<T> {
+  if (unlockedMnemonic === null) {
+    throw new Error('Vault is locked.');
+  }
+  return fn(unlockedMnemonic);
+}
+
+/**
  * Re-encrypts the vault under a new password. The stored recovery profileIds
  * are never changed: a restore needing another profile must delete and
  * recreate the vault explicitly.

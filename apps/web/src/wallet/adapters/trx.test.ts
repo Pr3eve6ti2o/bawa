@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTronAdapter } from './trx';
+import { createTronAdapter, getLatestBlockHeader } from './trx';
 import { BROADCAST_DISABLED_MESSAGE } from './types';
 
 const ADDRESS = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
@@ -172,5 +172,64 @@ describe('trx adapter — fee, inputs, broadcast', () => {
     await expect(adapter.broadcast('deadbeef')).rejects.toThrow(
       BROADCAST_DISABLED_MESSAGE,
     );
+  });
+});
+
+describe('trx adapter — latest block header', () => {
+  const FULL_BLOCK = {
+    block_header: {
+      raw_data: {
+        number: 88121800,
+        timestamp: 1795039455000,
+        txTrieRoot:
+          '3465ec46ab35159981a2db5a3607932b155e4e4e27277d1137f48a5734cd272e',
+        parentHash:
+          '000000000540a1c75fa0fcc62e1cd6bf7558e4bb3ef43d1f8fa4169398d34b64',
+        // Known pair: this hex is TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c
+        // (verified by tronAddressToBytes in send.test.ts).
+        witness_address: '4159b2f14f54513afa5b324aabd5c70362e7aa0836',
+      },
+    },
+  };
+
+  it('returns the header with the witness as a base58 T-address', async () => {
+    mockFetchOnce(FULL_BLOCK);
+    const result = await getLatestBlockHeader();
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.number).toBe(88121800);
+      expect(result.data.timestamp).toBe(1795039455000);
+      expect(result.data.txTrieRoot).toBe(
+        '3465ec46ab35159981a2db5a3607932b155e4e4e27277d1137f48a5734cd272e',
+      );
+      expect(result.data.parentHash).toBe(
+        '000000000540a1c75fa0fcc62e1cd6bf7558e4bb3ef43d1f8fa4169398d34b64',
+      );
+      expect(result.data.witnessAddress).toBe(
+        'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c',
+      );
+    }
+  });
+
+  it('fails closed on a malformed header', async () => {
+    mockFetchOnce({ block_header: { raw_data: { number: 1 } } });
+    const result = await getLatestBlockHeader();
+    expect(result.status).toBe('error');
+  });
+
+  it('fails closed on an unrecognised witness address', async () => {
+    mockFetchOnce({
+      block_header: {
+        raw_data: {
+          number: 1,
+          timestamp: 1700000000000,
+          txTrieRoot: '00'.repeat(32),
+          parentHash: '00'.repeat(32),
+          witness_address: 'not-an-address',
+        },
+      },
+    });
+    const result = await getLatestBlockHeader();
+    expect(result.status).toBe('error');
   });
 });

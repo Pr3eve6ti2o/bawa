@@ -14,6 +14,7 @@ import {
   VAULT_WRONG_PASSWORD,
   vaultProfiles,
   withMnemonic,
+  withMnemonicAsync,
 } from './vault';
 
 // Standard public BIP-39 test vector — disposable test data, never a real secret.
@@ -146,5 +147,24 @@ describe('vault', () => {
     expect(vaultProfiles()).toBeNull();
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
     await expect(unlock(TEST_PASSWORD)).rejects.toThrow('No vault exists.');
+  });
+});
+
+describe('withMnemonicAsync', () => {
+  it('awaits an async callback with the mnemonic while unlocked', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await unlock(TEST_PASSWORD);
+    const seen = await withMnemonicAsync(async (mnemonic) => {
+      await Promise.resolve();
+      return mnemonic;
+    });
+    expect(seen).toBe(TEST_MNEMONIC);
+  });
+
+  it('throws when locked', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await expect(withMnemonicAsync(async () => 'never')).rejects.toThrow(
+      'Vault is locked.',
+    );
   });
 });

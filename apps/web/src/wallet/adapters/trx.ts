@@ -1,3 +1,4 @@
+import { hexToBytes, sha256 } from 'viem';
 import {
   BROADCAST_DISABLED_MESSAGE,
   fetchJson,
@@ -29,6 +30,54 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isTronAddress(address: string): boolean {
   if (address.length !== 34 || !address.startsWith('T')) return false;
   return [...address].every((ch) => BASE58_ALPHABET.includes(ch));
+}
+
+/** Latest-block header fields a TRON offline signature needs. */
+export interface TronBlockHeader {
+  /** Unix epoch milliseconds of the latest block. */
+  timestamp: number;
+  /** Block number. */
+  number: number;
+  /** 64 lowercase hex chars (32 bytes). */
+  txTrieRoot: string;
+  /** 64 lowercase hex chars (32 bytes). */
+  parentHash: string;
+  /** Base58 TRON address of the block witness. */
+  witnessAddress: string;
+}
+
+function encodeBase58(bytes: Uint8Array): string {
+  let zeros = 0;
+  while (zeros < bytes.length && bytes[zeros] === 0) zeros += 1;
+  const digits: number[] = [0];
+  for (let i = zeros; i < bytes.length; i += 1) {
+    let carry = bytes[i] as number;
+    for (let j = 0; j < digits.length; j += 1) {
+      carry += (digits[j] as number) * 256;
+      digits[j] = carry % 58;
+      carry = Math.floor(carry / 58);
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = Math.floor(carry / 58);
+    }
+  }
+  return (
+    '1'.repeat(zeros) +
+    digits
+      .reverse()
+      .map((digit) => BASE58_ALPHABET[digit] as string)
+      .join('')
+  );
+}
+
+/** 21 address bytes (0x41 version + 20-byte hash) as a base58check T-address. */
+function tronBytesToBase58(addressBytes: Uint8Array): string {
+  const checksum = hexToBytes(sha256(hexToBytes(sha256(addressBytes))));
+  const payload = new Uint8Array(25);
+  payload.set(addressBytes, 0);
+  payload.set(checksum.subarray(0, 4), 21);
+  return encodeBase58(payload);
 }
 
 export function createTronAdapter(
@@ -240,5 +289,75 @@ export function createTronAdapter(
     estimateFee,
     getTxInputs,
     broadcast,
+  };
+}
+
+/**
+ * Read-only latest-block header from TronGrid (Phase 4 send: TRON signing
+ * needs the block header for ref_block_bytes/ref_block_hash). TronGrid
+ * returns the witness address as 21-byte hex; it is converted to the
+ * canonical base58 T-address here. Fails closed on any malformed field —
+ * a header is never guessed.
+ */
+export async function getLatestBlockHeader(
+  overrides: TronAdapterOverrides = {},
+): Promise<AdapterResult<TronBlockHeader>> {
+  const baseUrl = overrides.baseUrl ?? BASE_URL;
+  let raw: unknown;
+  try {
+    raw = await fetchJson(`${baseUrl}/wallet/getnowblock`);
+  } catch (error: unknown) {
+    return { status: 'error', reason: messageOf(error) };
+  }
+  const data = isRecord(raw) ? raw['block_header'] : undefined;
+  const rawData = isRecord(data) ? data['raw_data'] : undefined;
+  if (!isRecord(rawData)) {
+    return { status: 'error', reason: 'TronGrid did not return a block header.' };
+  }
+  const timestamp = rawData['timestamp'];
+  const number = rawData['number'];
+  const txTrieRoot = rawData['txTrieRoot'];
+  const parentHash = rawData['parentHash'];
+  const witness = rawData['witness_address'];
+  const isHex64 = (value: unknown): value is string =>
+    typeof value === 'string' && /^[0-9a-fA-F]{64}$/.test(value);
+  if (
+    typeof timestamp !== 'number' ||
+    timestamp <= 0 ||
+    typeof number !== 'number' ||
+    number <= 0 ||
+    !isHex64(txTrieRoot) ||
+    !isHex64(parentHash) ||
+    typeof witness !== 'string'
+  ) {
+    return {
+      status: 'error',
+      reason: 'TronGrid returned a malformed block header.',
+    };
+  }
+  let witnessAddress: string;
+  if (/^[0-9a-fA-F]{42}$/.test(witness) && witness.toLowerCase().startsWith('41')) {
+    witnessAddress = tronBytesToBase58(
+      hexToBytes((`0x${witness.toLowerCase()}`) as `0x${string}`),
+    );
+  } else if (isTronAddress(witness)) {
+    witnessAddress = witness;
+  } else {
+    return {
+      status: 'error',
+      reason: 'TronGrid returned an unrecognised witness address.',
+    };
+  }
+  return {
+    status: 'ok',
+    data: {
+      timestamp,
+      number,
+      txTrieRoot: (txTrieRoot as string).toLowerCase(),
+      parentHash: (parentHash as string).toLowerCase(),
+      witnessAddress,
+    },
+    source: SOURCE,
+    fetchedAt: Date.now(),
   };
 }

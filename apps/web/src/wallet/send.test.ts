@@ -159,12 +159,71 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
           'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
       }),
     );
+    registerAdapter({
+      chain: 'btc',
+      networkId: 'test',
+      getBalance: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'btc',
+          address: 'stub',
+          networkId: 'test',
+          valueBaseUnits: '100000',
+          decimals: 8,
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'btc',
+          networkId: 'test',
+          feeBaseUnits: '10',
+          unit: 'sat/vB',
+          note: 'stub rate',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getTxInputs: async () => ({
+        status: 'ok',
+        data: {
+          kind: 'utxo',
+          utxos: [
+            {
+              txid: createHash('sha256')
+                .update('lane3-btc-test-utxo')
+                .digest('hex'),
+              vout: 0,
+              valueBaseUnits: '100000',
+            },
+          ],
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      broadcast: async (): Promise<never> => {
+        throw new Error('disabled');
+      },
+    });
   });
 
   it('previews 0.5 ETH with fee and total', async () => {
     expect(
       await previewSendAmount(
         'eth',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
         '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
         '0.5',
       ),
@@ -177,10 +236,28 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     });
   });
 
+  it('previews 0.0005 BTC with the real planned fee, not the sat/vB rate', async () => {
+    expect(
+      await previewSendAmount(
+        'btc',
+        'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+        'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+        '0.0005',
+      ),
+    ).toEqual({
+      ok: true,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '1410',
+      totalBaseUnits: '51410',
+      feeNote: 'Planned fee at 10 sat/vB from the live UTXO set.',
+    });
+  });
+
   it('rejects an amount above the balance', async () => {
     expect(
       await previewSendAmount(
         'eth',
+        '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
         '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
         '2',
       ),
@@ -193,6 +270,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
         await previewSendAmount(
           'eth',
           '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+          '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
           bad,
         ),
       ).toEqual({ ok: false, reason: 'Enter a valid amount.' });
@@ -203,6 +281,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     expect(
       await previewSendAmount(
         'ton',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
         'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
         '1',
       ),
@@ -216,9 +295,10 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
   it('reports no adapter for an unregistered chain', async () => {
     expect(
       await previewSendAmount(
-        'btc',
-        'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
-        '0.001',
+        'trx',
+        'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c',
+        'TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B',
+        '1',
       ),
     ).toEqual({ ok: false, reason: 'No adapter available for this chain.' });
   });

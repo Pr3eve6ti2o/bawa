@@ -75,9 +75,12 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the sending placeholder', async () => {
+  it('renders the send screen (offline signing; broadcast disabled)', async () => {
     await withRenderedApp('/send', (div) => {
-      expect(div.textContent).toContain('Sending is not implemented');
+      // No vault in the default app state, so the send screen shows its
+      // no-wallet state; the placeholder copy is gone with Phase 4.
+      expect(div.textContent).toContain('No wallet yet');
+      expect(div.textContent).toContain('Create a wallet');
     });
   });
 });

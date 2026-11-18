@@ -32,9 +32,13 @@ type ChainKey = keyof typeof CHAINS;
 
 const emptyHistory: HistoryState = { status: 'empty', txs: [] };
 
-function setWallet(history: Record<ChainKey, HistoryState>): void {
+function setWallet(
+  history: Record<ChainKey, HistoryState>,
+  refreshHistory: () => Promise<void> = () => Promise.resolve(),
+): void {
   vi.mocked(useWallet).mockReturnValue({
     history,
+    refreshHistory,
   } as unknown as ReturnType<typeof useWallet>);
 }
 
@@ -108,7 +112,13 @@ describe('transaction detail screen', () => {
       expect(mounted.div.textContent).toContain('Sent');
       expect(mounted.div.textContent).toContain('0.25 ETH');
       expect(mounted.div.textContent).toContain('0xRecipient');
-      expect(mounted.div.textContent).toContain('https://eth.blockscout.com/tx/0xabc');
+      const explorerLink = mounted.div.querySelector(
+        'a[href="https://eth.blockscout.com/tx/0xabc"]',
+      );
+      expect(explorerLink).not.toBeNull();
+      expect(explorerLink?.textContent).toContain('View on explorer');
+      expect(mounted.div.textContent).toContain('confirmed as reported by the network');
+      expect(mounted.div.textContent).toContain('Checked at');
     } finally {
       await mounted.cleanup();
     }
@@ -125,6 +135,27 @@ describe('transaction detail screen', () => {
     try {
       expect(mounted.div.textContent).toContain('not in the loaded history');
       expect(mounted.div.textContent).toContain('0xmissing');
+      expect(mounted.div.textContent).toContain('Its status is unknown');
+      expect(mounted.div.textContent).toContain('Checked at');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a refresh-failed banner when the network refresh fails', async () => {
+    setWallet(
+      {
+        btc: emptyHistory,
+        eth: emptyHistory,
+        trx: emptyHistory,
+        ton: emptyHistory,
+      },
+      () => Promise.reject(new Error('network down')),
+    );
+    const mounted = await mountScreen('/transactions/0xmissing');
+    try {
+      expect(mounted.div.textContent).toContain('History could not be refreshed');
+      expect(mounted.div.textContent).toContain('Checked at');
     } finally {
       await mounted.cleanup();
     }

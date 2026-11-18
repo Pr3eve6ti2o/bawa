@@ -5,7 +5,10 @@ import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { deriveAddresses, withSigningKey } from './core';
 import { getAdapter } from './adapters';
-import { BROADCAST_DISABLED_MESSAGE } from './adapters/types';
+import {
+  BROADCAST_DISABLED_MESSAGE,
+  type UtxoInput,
+} from './adapters/types';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from './format';
 
 /**
@@ -81,17 +84,92 @@ export type SendPreview =
   | { ok: false; reason: string };
 
 /**
+ * BTC fee plan without any private key (hands-on, probe-proven
+ * 2026-11-19): AnySigner.plan with privateKey: [] returns the same fee
+ * (1410 sat for the 1-in/2-out fixture) as with the key, because planning
+ * only needs UTXOs, addresses and the rate. The preview uses this so the
+ * BTC fee shown is the real planned fee, not the sat/vB rate.
+ */
+async function planBtcFee(
+  fromAddress: string,
+  toAddress: string,
+  amount: string,
+  feeRateSatPerVB: string,
+  utxos: UtxoInput[],
+): Promise<
+  { ok: true; feeBaseUnits: string } | { ok: false; reason: string }
+> {
+  const feeRate = toSafeInt(feeRateSatPerVB);
+  const amountInt = toSafeInt(amount);
+  if (
+    feeRate === null ||
+    amountInt === null ||
+    utxos.some(
+      (u) =>
+        !/^[0-9a-fA-F]{64}$/.test(u.txid) ||
+        !Number.isSafeInteger(u.vout) ||
+        u.vout < 0 ||
+        toSafeInt(u.valueBaseUnits) === null,
+    )
+  ) {
+    return { ok: false, reason: 'Invalid BTC fee-planning inputs.' };
+  }
+  try {
+    const core = await loadCore();
+    const scriptObj = core.BitcoinScript.lockScriptForAddress(
+      fromAddress,
+      core.CoinType.bitcoin,
+    );
+    let encoded: Uint8Array;
+    try {
+      const script = new Uint8Array(scriptObj.data());
+      const input = TW.Bitcoin.Proto.SigningInput.create({
+        hashType: 1,
+        amount: Long.fromNumber(amountInt),
+        byteFee: Long.fromNumber(feeRate),
+        toAddress,
+        changeAddress: fromAddress,
+        privateKey: [],
+        utxo: utxos.map((u) => ({
+          outPoint: {
+            hash: reverseBytes(hexToBytes(u.txid)),
+            index: u.vout,
+          },
+          script,
+          amount: Long.fromNumber(toSafeInt(u.valueBaseUnits) as number),
+        })),
+      });
+      encoded = TW.Bitcoin.Proto.SigningInput.encode(input).finish();
+    } finally {
+      scriptObj.delete();
+    }
+    const plan = TW.Bitcoin.Proto.TransactionPlan.decode(
+      core.AnySigner.plan(encoded, core.CoinType.bitcoin),
+    );
+    if (plan.error !== TW.Common.Proto.SigningError.OK) {
+      return { ok: false, reason: 'Transaction plan failed.' };
+    }
+    return { ok: true, feeBaseUnits: String(plan.fee) };
+  } catch {
+    return { ok: false, reason: 'BTC fee planning failed.' };
+  }
+}
+
+/**
  * Amount + fee preview (Sol p2, landed 2026-11-19 in 136.4s; corrected
  * hands-on: Sol invented adapter fields (.ok / .balanceBaseUnits /
  * .feeBaseUnits / .note). The real contract is the AdapterResult
  * discriminated union in ./adapters/types.ts — {status:'ok', data} or
  * {status:'unavailable'|'error', reason} — and this version uses it.
  * TON fee-quote is blocked upstream, so a TON preview honestly reports
- * that instead of inventing a fee.
+ * that instead of inventing a fee. BTC's fee quote is a sat/vB RATE, so
+ * the BTC preview plans the transaction against the live UTXO set
+ * (planBtcFee, no private key) and reports the real planned fee.
  */
 export async function previewSendAmount(
   chain: ChainId,
   fromAddress: string,
+  toAddress: string,
   amountDecimal: string,
 ): Promise<SendPreview> {
   const amount = decimalToBaseUnits(amountDecimal, CHAIN_DECIMALS[chain]);
@@ -115,6 +193,33 @@ export async function previewSendAmount(
   const fee = await adapter.estimateFee();
   if (fee.status !== 'ok') {
     return { ok: false, reason: fee.reason };
+  }
+
+  if (chain === 'btc') {
+    const inputs = await adapter.getTxInputs(fromAddress);
+    if (inputs.status !== 'ok') {
+      return { ok: false, reason: inputs.reason };
+    }
+    if (inputs.data.kind !== 'utxo') {
+      return { ok: false, reason: 'BTC adapter did not return UTXOs.' };
+    }
+    const planned = await planBtcFee(
+      fromAddress,
+      toAddress,
+      amount,
+      fee.data.feeBaseUnits,
+      inputs.data.utxos,
+    );
+    if (!planned.ok) return planned;
+    return {
+      ok: true,
+      amountBaseUnits: amount,
+      feeBaseUnits: planned.feeBaseUnits,
+      totalBaseUnits: (
+        BigInt(amount) + BigInt(planned.feeBaseUnits)
+      ).toString(),
+      feeNote: `Planned fee at ${fee.data.feeBaseUnits} sat/vB from the live UTXO set.`,
+    };
   }
 
   return {
