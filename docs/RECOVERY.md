@@ -260,7 +260,7 @@ Keep a dated, sanitised verification record containing the software reference, c
 
 Retain the durable recovery backups under appropriate separate custody. After the procedure, remove transient secrets from the machine. Remove unnecessary temporary plaintext files and close secret-bearing terminal sessions. Do not treat file deletion as assured erasure on modern storage, snapshots or backups. Avoid creating persistent plaintext copies in the first place.
 
-**Do not fund a restored wallet until the derived account-0 addresses match the independent comparison targets.** The required comparison set comprises the section 7 minimum plus every additional recorded public output for the wallet. The account-0 lead-in is not a scope limit: the gate applies separately to each chain/account represented in that set, including accounts beyond account 0. Permit funding only after the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
+**Matching the derived account-0 addresses to the independent comparison targets is necessary but does not by itself establish funding-readiness.** The required comparison set comprises the section 7 minimum plus every additional recorded public output for the wallet. The account-0 lead-in is not a scope limit: the gate applies separately to each chain/account represented in that set, including accounts beyond account 0. Before funding, test independent recovery on a clean, trusted machine and ensure that the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
 
 > **Expected result:** A secret-free verification record, retained recovery material under appropriate separate custody, transient secrets removed from the machine and no unresolved comparison failures. Funding remains blocked if any required output has not matched.
 
@@ -418,7 +418,7 @@ Treat this as a word-count check only. It does not verify BIP-39 word-list membe
 
 > **Expected result:** `recovered data does not look like a BIP-39 mnemonic` for a rejected word count. Passing this check alone does not establish that the phrase is the intended wallet backup.
 
-Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A wrong BIP-39 passphrase does not produce an error; it derives a different wallet, so a passphrase mistake looks like an empty wallet.
+Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A wrong BIP-39 passphrase does not produce an error; if its NFKD-normalised form differs from that of the intended passphrase, it derives a different wallet, which may look empty but is not necessarily empty. Distinct raw passphrase spellings that normalise identically under NFKD produce the same seed for the same mnemonic.
 
 ### 7. Decide the destination first, then clean up
 
