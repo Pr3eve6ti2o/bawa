@@ -592,11 +592,11 @@ Treat a leaked seed (mnemonic) as permanently compromised. Anyone with the neces
 
 Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted device from migration to a fresh seed. Do not rely on changing the vault unlock passphrase: it cannot secure an exposed mnemonic. Move the funds to a fresh wallet with an independent seed, not the old wallet with a new password.
 
-1. **Generate a new wallet on a fresh trusted device.**
+1. **Generate a new wallet with a fresh mnemonic on a trusted device.**
 
    Never generate the replacement on a device that may carry malware. Use an independent new seed, back it up, protect the backup and verify its receiving addresses for the relevant networks. Keep the new seed off the suspect device.
 
-   Do not treat another account or address under the old seed as a replacement. Do not treat a PIN change as a replacement either.
+   Do not treat another account or address under the old seed as a replacement. Do not treat a change to the device PIN as a replacement either.
 
    > **Expected result:** A separately backed-up wallet with an independent seed and verified destination addresses. The new seed has never entered the suspect device.
 
