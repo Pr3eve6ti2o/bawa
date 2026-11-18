@@ -16,7 +16,7 @@ Online application
     RPC / node / indexer access → tracking / payment reconciliation.
 ```
 
-The generator does not need an online chain connection to create wallet material. `derive.js` and `derive_daemon.js` contain private-extended-key rejection guards; `compare.js` does not enforce a public-only input boundary.
+The generator does not need an online chain connection to create wallet material. `derive.js` and `derive_daemon.js` contain private-extended-key rejection guards; `compare.js` also enforces a public-only input boundary by validating every input via `validateExtendedKey` before WASM initialisation and rejecting private extended keys.
 
 The generator requires a controlling terminal. If it cannot open `/dev/tty` for writing, it reports FATAL and exits with status 1. Network-independent generation does not imply unattended operation.
 
@@ -26,8 +26,10 @@ The generator requires a controlling terminal. If it cannot open `/dev/tty` for 
 - `tools/hdwallet-gen/generate.js` — Trust Wallet Core generation and public-root export.
 - `tools/hdwallet-gen/derive.js` — one-shot public derivation.
 - `tools/hdwallet-gen/derive_daemon.js` — JSON-line daemon for repeated public derivation.
-- `tools/hdwallet-gen/compare.js` — comparison helper intended for public inputs; it must not be relied on to reject private extended keys.
+- `tools/hdwallet-gen/compare.js` — comparison helper that validates every input via `validateExtendedKey` before WASM initialisation and rejects private extended keys.
 - `tools/decrypt_seed.py` — controlled recovery of the encrypted seed artifact.
+- `tools/bawa_cli.py` — five-option interactive launcher.
+- `test/` — smoke, launcher-unit, wallet-generator and differential tests.
 
 ### Daemon protocol
 
@@ -42,7 +44,7 @@ Failure responses are `{"ok":false,"error":"..."}`.
 
 The line-length limit is 4096 (`MAX_LINE_LENGTH`), the xpub-length limit
 is 200 (`MAX_XPUB_LENGTH`) and the maximum index is 2147483647 (`MAX_INDEX`).
-Blank lines are ignored. On `SIGTERM`, the daemon exits cleanly with code 0.
+Blank lines are rejected with the error response `{"ok":false,"error":"bad json"}`. On `SIGTERM`, the daemon exits cleanly with code 0.
 
 `test/smoke.test.js` §6 exercises the startup line, a BTC derivation
 and an unknown-chain rejection.
@@ -65,7 +67,7 @@ The exported TON address uses contract Wallet V4 R2 with wallet ID / subwallet `
 1. Trust Wallet Core deterministic self-checks.
 2. Official BIP/CIP/TEP vector coverage has not been established; identify applicable fixtures, their provenance and the checks performed before claiming this layer.
 3. Independent `bip_utils` comparisons cover BTC and ETH at index 0 only; TRON and TON are not covered.
-4. `test/smoke.test.js` includes `derive.js` rejection tests for a bad chain, a negative index and an empty xpub; no repository test feeds a private extended key to any tool.
+4. `test/smoke.test.js` includes `derive.js` rejection tests for an unsupported chain (TON), a negative index and an empty xpub; repository tests also feed private extended keys (a real TV1 xprv and a bad-checksum xprv) to the daemon and verify that both are rejected.
 5. Integration and reconciliation testing is an external application responsibility; no such test file is present in this repository.
 
 See [Testing](docs/TESTING.md).
