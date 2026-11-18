@@ -926,13 +926,13 @@ Ask which recurring platform/subscription fees, usage charges, minimums/overages
 
 ### Counterparty failure and a provable exit
 
-A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance is not a substitute for recovery — verify the insured entity, covered events, exclusions, deductibles and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
+A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance may reimburse covered losses, but does not guarantee reimbursement or replace tested recovery — verify the insurer, insured entity, policy period, covered balances and events, exclusions, deductibles, applicable limits, claim eligibility and conditions, payment recipients, the claims process and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
 
 Before committing substantial funds, require an exit plan that works under an abrupt shutdown:
 
 - **Have the recovery materials already:** necessary shares or independent recovery participants (who can take part in recovery without the provider), decryption access, software, documentation, licences. A promise to supply them after a shutdown is weak protection.
-- **Test without the provider:** use a small test balance and a documented fallback. Produce a valid transaction while the provider's signing and authentication services are unavailable; broadcast through independent chain access; record the result without recording secrets.
-- **Know the migration route:** does supported export (export that the recovery tooling can carry out) preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
+- **Test without the provider:** if provider-independent recovery is claimed, run an acceptance test using a small test balance and a documented fallback. Produce a valid transaction while the provider's signing and authentication services are unavailable; broadcast through independent chain access; record the result without recording secrets.
+- **Know the migration route:** does supported export (a documented export of the required key material and wallet data in a format the recovery tooling can import and use to sign without the provider) preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
 - **Repeat the drill after material changes:** share replacement, software upgrades, staff departures can invalidate an earlier test.
 
 Do not count "we have backup files" as proof that you can still sign; without a demonstrated independent quorum (enough signers shown to be able to sign without the provider) and usable recovery tooling, a shutdown may leave you dependent on a recovery agent, an insolvency process — or unable to spend at all.
@@ -940,7 +940,7 @@ Do not count "we have backup files" as proof that you can still sign; without a 
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. A signer may hold its own complete private key, unlike an MPC participant's share, but a multisig key can itself be MPC-operated. Depending on the construction, the multisig rule may be visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
 
 ```text
 Typical signing paths
