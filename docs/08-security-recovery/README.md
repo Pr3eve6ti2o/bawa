@@ -1097,9 +1097,9 @@ These figures are a dated guide, not current quotations. Recheck all pricing, mi
 
 Providers named are examples, NOT Bawa recommendations.
 
-Before you buy or trust a paid service, answer these seven questions privately — do not post the answers in a public issue, forum or support thread. Each question is a test of the service; a service that cannot answer it in writing is not ready for your funds.
+Before you buy or trust a paid service, answer these seven questions privately — do not post the answers in a public issue, forum or support thread. As a screening policy, treat a service that cannot answer these questions in writing as not ready for your funds.
 
-1. Who holds each key, and can you prove it? List every signing key, its holder, its storage location and its backup. A service that cannot name the holders and locations of all keys in the quorum has not given you enough to verify.
+1. Who holds each key, and can you prove it? This is a good opening question, not a complete verification test. List every signing key, its holder at organisation or role level, its storage location and its backup. A service that cannot identify the holders at organisation or role level and provide supporting audit evidence for all keys in the quorum fails this screen.
 
 2. Can you spend without the provider? Using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature, then verify its acceptance or confirmation. Seeing a balance or exporting a file is not by itself proof that you can sign. Repeat the check after any signer change (any key, signer device or signing-role change).
 
@@ -1137,8 +1137,8 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 | Physical theft of insured valuables in transit or storage | Possibly, under specie cover | Insured assets and legal entity, transit routes, storage locations, limits and available cover, deductible, exclusions, whether the policy has lapsed, who receives a payout |
 | Market price fall | No | — |
 | Smart-contract or protocol failure | Generally no | Some policies offer separate cover — check |
-| Wrong address or approved malicious transaction | No | — |
-| Lost seed with no recovery route | No | — |
+| Wrong address or approved malicious transaction | No, unless expressly written fraud/social-engineering cover applies; it can indemnify an authorised transfer | — |
+| Lost seed with no recovery route | No, unless express key-loss cover applies; it can indemnify the loss without recovering the key | — |
 | Loss above the policy limit | No, beyond the limit | Shared limits across clients |
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
