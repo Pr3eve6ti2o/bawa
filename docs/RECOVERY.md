@@ -590,7 +590,7 @@ No maintainer-escalation route is currently confirmed; `CONTRIBUTING.md:13` cont
 
 Treat a leaked seed (mnemonic) as permanently compromised. Anyone with the necessary seed material can derive the wallet's private keys and authorise spending; no account administrator can reset that authority. [2]
 
-Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted device from migration to a fresh seed. Do not rely on changing the vault unlock passphrase: it cannot secure an exposed mnemonic. Move the funds to a fresh wallet with an independent seed, not the old wallet with a new password.
+Follow the principle of replacement, not repair. Distinguish recovery on a trusted device from migration to a fresh seed. Do not rely on changing the vault unlock passphrase: it cannot secure an exposed mnemonic. Move the funds to a fresh wallet with an independent seed, not the old wallet with a new vault unlock passphrase.
 
 1. **Generate a new wallet with a fresh mnemonic on a trusted device.**
 
