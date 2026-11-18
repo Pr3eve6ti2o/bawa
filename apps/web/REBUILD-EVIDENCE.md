@@ -397,3 +397,98 @@ Probe script: ephemeral `/tmp/trx-probe.js` on muse-vm (fresh disposable mnemoni
   reports `unavailable` / `no-adapter` for every chain, honestly.
 - `npm run build` chunk-size warning is pre-existing (3.2 MB JS bundle);
   not addressed in this lane.
+
+## Phase 2 + 3 — Real balances/history + receive/QR (Fix Lane 2, 2026-11-19)
+
+Branch `panel-rebuild/fix-adapters`, worktree `fix-adapters/`, local commits only, never pushed.
+Parent: Fix Lane 1 `panel-rebuild/fix-vault` at `057655b`. Node 22.23.4 via nvm for all runs.
+
+Commits (this lane):
+- `d87139c` — Phase 2 chain adapters (BTC/ETH/TRX/TON) + shared types (P1–P5).
+- `4e607c2` — Dashboard + asset list on real balances (P6).
+- `48bc995` — Adapter-backed balances/history in context + screens (P7).
+- `fbc0b9a` — Receive + QR and standalone QR scanner (P8).
+- `faf68da` — Capability registry + adapter wiring (P9a).
+- `87c4ab2` — Cleanup: demo fixtures deleted, mainnet-only copy (P9b).
+
+### Sol calls (actual durations)
+
+- lane2-1 (p1 adapter types, 299 words): 45 s, FAILED — refusal; the runner session has no filesystem/shell tools, so Sol asked for files to be pasted.
+- lane2-1b (p1b adapter types, 299 words): launched ~02:01 IST 2026-11-19, STILL RUNNING at 02:42 IST (42+ min elapsed, PIDs 614988/614990), no output file. Never killed (lane rule). The hands-on P1 stands as the verified version.
+- No other Sol calls were launched in this lane. P2–P9b were written hands-on from the prompt specs and verified first-hand. Sol tally: 2 calls made, 0 landed as code.
+- Owner 500-second rule (2026-11-19 ~02:41 IST): the p2–p6 prompts were re-split into one-function prompts (lane/p2a–p6b, bodies 77–149 words; index lane/SPLIT-PROMPTS.md). None launched — the work was already complete. Any future rework launches the small prompt, never the original.
+
+### §6 item 5 — Accurate read-only mainnet balances, cross-checked (2026-11-19 ~02:42–02:44 IST)
+
+Live adapter integration test (temporary file `live-check.test.ts`, run once, then deleted): 4/4 passed in 4.31 s. Each adapter was called with its real code and real fetch, and the value compared live against a second source.
+
+| Chain | Address | Adapter (source) | Adapter value | Second source | Second value |
+|---|---|---|---|---|---|
+| BTC | bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd | mempool.space | 0 sats (funded 311775 − spent 311775) | blockstream.info | 0 sats (funded 311775 − spent 311775) |
+| ETH | 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7 | publicnode eth_getBalance | 0 wei (`0x0`) | eth.blockscout.com balance | 0 wei (`"0"`) |
+| TRX | TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c | TronGrid /v1/accounts | 0 SUN (no balance field) | TronGrid /wallet/getaccount (second endpoint) | 0 SUN (no balance field) |
+| TON | UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn | TonCenter getAddressBalance | 0 nanoTON (`"0"`) | tonapi.io | 0 nanoTON (`balance: 0`) |
+
+All four fixture addresses are exact-zero balances — verified as data by two sources each, not failed fetches. A failed fetch shows "unavailable", never zero (adapter tests + context tests cover the mapping).
+Limitation: TRX's independent second source (TronScan API) was rate-limited at check time ("request rate exceeded", suspension 89 s), so the TRX cross-check used TronGrid's second endpoint — same provider, weaker independence. The account demonstrably exists (create_time 2021, recent operation time, TRC20 holdings present), so "no balance field → 0 TRX" is the provider's answer, not a missing account.
+Limitation: no live non-zero mainnet balance was checked (no funded public address was used). Non-zero rendering is covered by unit tests with stubbed adapters (e.g. 1.5 ETH renders "1.5 ETH").
+
+### §6 item 7 — No demo balances or fake transaction data
+
+`grep -rn "demo-fixtures\|\$12,480\|Testnet4\|Sepolia\|Nile" apps/web/src/` → ZERO hits (grep exit 1), 2026-11-19 ~02:39 IST.
+`apps/web/src/state/demo-fixtures.ts` DELETED (commit `87c4ab2`); its last import (wallet-management.tsx) removed.
+Test guards now assert no `$` amount appears at all in the rendered balance screens (dashboard/asset-list/asset-detail tests), so the zero-hit grep is literal, not evaded.
+
+### §6 item 8 — No private keys or mnemonics in requests, logs or plaintext storage
+
+- `grep -rni "mnemonic\|seed\|privateKey\|private.key\|xprv" apps/web/src/wallet/adapters/` → only 2 hits, both a doc comment in `types.ts` stating the policy (adapters "take public addresses only and never see a seed, mnemonic, private key or xpub"). No code hits.
+- Adapters send public addresses only: single `fetchJson` call site (`adapters/types.ts:104`); ETH via viem `client.getBalance({address})` (publicnode); TON via TonCenter `getAddressBalance {address}`; TRX/BTC via `fetchJson` with the address in the URL. No seed, mnemonic, private key or xpub is passed to any provider.
+- localStorage keys in `apps/web/src`: `bawa-vault` (Lane 1 encrypted vault envelope only), `bawa-watch-only-xpubs` (public xpubs + labels, never secrets), theme preference. No plaintext secrets in state, refs, localStorage, logs, telemetry, URLs or crash reports.
+
+### §6 item 9 — Build, tests, typecheck (2026-11-19)
+
+- `npx tsc --noEmit` in `apps/web`: exit 0.
+- `npx vitest run` in `apps/web`: 281/281 passed (22 test files).
+- `npm run build` in `apps/web`: exit 0, "✓ built in 1.49s". Advisory only: vite chunk-size warning (index.js 3,595.96 kB, gzip 500.37 kB — wallet-core WASM + viem in one chunk; code-splitting is Phase 5/out of scope).
+
+### Receive QR correctness
+
+Generated real QR PNGs for the exact payloads the receive screen encodes and decoded them with jsqr 1.4.0 (the version the QrScanner component uses): 5/5 decode byte-exactly (exit 0).
+- ETH vault-derived address `0x27Ef5cDBe01777D62438AfFeb695e33fC2335979` → decodes exactly.
+- BTC payment URI `bitcoin:bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd?amount=0.001` → decodes exactly.
+- ETH payment URI `ethereum:0x27Ef5cDBe01777D62438AfFeb695e33fC2335979?value=500000000000000000` (0.5 ETH in wei) → decodes exactly.
+- TRX plain address `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` → decodes exactly.
+- TON plain address `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` → decodes exactly.
+Chain selector lists only `availableFor('receive')` chains; vault-derived address first, watch-only fallback with the watch-mode alert ("Watch-only account — this address can receive, but this wallet cannot sign or send from it."). The receive screen test asserts the vault address renders and the QR SVG is present.
+Boundary, stated plainly: the decode check used generated QR PNGs of the exact payloads, not the rendered `qrcode.react` SVG from the screen (SVG path data is not decodable by jsQR). The screen's `qrValue` equals the address (or the payment URI when an amount is set) by construction, and the payloads decode exactly.
+
+### Capability updates (chains.ts)
+
+| Chain | balance | history | fee-quote |
+|---|---|---|---|
+| btc | verified (adapter tests + live cross-check 2026-11-19) | verified | verified |
+| eth | verified | verified | verified |
+| trx | verified | verified | verified |
+| ton | verified | verified | blocked — needs the unsigned message (Phase 4); no fee invented |
+
+`unsigned-plan`, `local-sign`, `post-sign-verify` stay blocked for all chains (Phase 4). `derive`/`restore`/`receive` remain verified (Lane 1). `main.tsx` registers all Phase 2 adapters once before render. `rpcEndpoints` pinned: btc `https://mempool.space/api`, eth `https://ethereum-rpc.publicnode.com`, trx `https://api.trongrid.io`, ton `https://toncenter.com/api/v2/jsonRPC` (the `viem:mainnet` marker is gone).
+
+### What changed (files)
+
+- New: `src/wallet/adapters/` (`types.ts`, `index.ts`, `btc.ts`, `eth.ts`, `trx.ts`, `ton.ts` + tests), `src/wallet/format.ts`, `src/wallet/qr-scanner.tsx`, `src/screens/asset-rows.tsx`.
+- Rewritten: `src/screens/dashboard.tsx`, `asset-list.tsx`, `asset-detail.tsx`, `transaction-history.tsx`, `transaction-detail.tsx`, `receive.tsx`, `network-selection.tsx` (mainnet-only).
+- Edited: `src/state/wallet-context.tsx` (history state, adapter-backed refresh, lock clears stale balances), `src/wallet/chains.ts`, `src/main.tsx`, `src/screens/wallet-management.tsx`, `src/engine/destination.ts`, `src/engine/confirmation-policy.md`, `src/app/app.test.tsx` (empty-dashboard wording).
+- Deleted: `src/state/demo-fixtures.ts`.
+- Deps: viem 2.58.0, jsqr 1.4.0 (package.json + package-lock.json).
+
+### Incomplete / limitations / security notes (honest)
+
+- Sol P1b still running at report time (42+ min, no output). Never killed. Hands-on P1 stands.
+- Broadcast is DISABLED in every adapter (throws `BROADCAST_DISABLED_MESSAGE`); `send.tsx` untouched; the UI never presents send as working. Mainnet broadcasting stays disabled until separately authorised.
+- No price feed exists: no fiat totals anywhere; the dashboard states "Portfolio total unavailable — no price feed connected".
+- BTC adapter: JSON-number precision above `Number.MAX_SAFE_INTEGER` is a recorded limitation (comment in `btc.ts`).
+- TRX has no on-chain chain-id; identity rests on the pinned mainnet endpoint (TronGrid `getnowblock` > 0). TronScan is used only as an explorer link, never as a provider.
+- TON fee-quote stays blocked (see capability table).
+- QR scanner (`qr-scanner.tsx`) is standalone and unwired until Phase 4. Its decode path was verified with jsqr (see above); its camera/cancel/error contract is unit-tested with mocked `getUserMedia`.
+- The app shell still shows a "TESTNET · ACTIVE" header chip (AppLayout) — Phase 5 UI scope, out of this lane.
+- The temporary live-check test was deleted after its run; the values above are the recorded evidence, not a permanent live test (the suite stays offline-deterministic).
