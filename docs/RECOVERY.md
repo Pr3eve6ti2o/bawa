@@ -396,7 +396,9 @@ Distinguish these length checks from earlier structural failures. Invalid JSON, 
 
 Check the backup's provenance and transfer integrity. Do not "repair" encrypted bytes by guessing, padding or trimming them.
 
-> **Expected result:** `malformed AES-GCM artifact` for an invalid nonce or ciphertext length, or a parsing, field-access or decoding error for earlier structural problems.
+Perform this check separately from `tools/decrypt_seed.py`, which does not verify provenance. Run `sha256sum /path/to/backup` (macOS: `shasum -a 256 /path/to/backup`) and compare the result with a digest recorded at backup creation and obtained through an independently authenticated channel. If the backup has a detached GPG signature, run `gpg --verify /path/to/backup.asc /path/to/backup` using the producer's independently authenticated signing key. A checksum received only alongside an untrusted backup does not establish provenance.
+
+> **Expected result:** `malformed encrypted artifact` before Base64 decoding for missing or non-string `nonce_b64`/`ciphertext_b64` fields, `nonce_b64` longer than 24 characters, or `ciphertext_b64` longer than 16384 characters; `malformed AES-GCM artifact` only after successful decoding when the nonce is not 12 bytes or the ciphertext is shorter than 16 bytes; or a parsing, field-access or decoding error for other structural problems.
 
 ### 5. Treat authentication failure as a hard stop
 
