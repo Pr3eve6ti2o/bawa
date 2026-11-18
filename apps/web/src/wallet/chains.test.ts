@@ -71,14 +71,11 @@ describe('chains registry', () => {
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
   });
 
-  it('lists no chain for transaction-construction capabilities', () => {
-    for (const capability of [
-      'unsigned-plan',
-      'local-sign',
-      'post-sign-verify',
-    ] as const) {
-      expect(availableFor(capability)).toEqual([]);
-    }
+  it('lists all four chains for unsigned-plan and local-sign (Phase 4), and three for post-sign-verify', () => {
+    expect(availableFor('unsigned-plan')).toEqual(['btc', 'eth', 'trx', 'ton']);
+    expect(availableFor('local-sign')).toEqual(['btc', 'eth', 'trx', 'ton']);
+    // TON post-sign-verify stays blocked: the signed BOC is not re-parsed.
+    expect(availableFor('post-sign-verify')).toEqual(['btc', 'eth', 'trx']);
   });
 
   it('marks the Phase 2 adapter capabilities verified with evidence', () => {
@@ -91,13 +88,16 @@ describe('chains registry', () => {
       expect(caps.history.status).toBe('verified');
       expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-19');
       expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-19');
-      for (const capability of [
-        'unsigned-plan',
-        'local-sign',
-        'post-sign-verify',
-      ] as const) {
-        expect(caps[capability].status).toBe('blocked');
-        expect(caps[capability].evidence.length).toBeGreaterThan(0);
+      for (const capability of ['unsigned-plan', 'local-sign'] as const) {
+        expect(caps[capability].status).toBe('verified');
+        expect(caps[capability].evidence).toContain('send.test.ts');
+      }
+      if (chain === 'ton') {
+        expect(caps['post-sign-verify'].status).toBe('blocked');
+        expect(caps['post-sign-verify'].evidence).toContain('not re-parsed');
+      } else {
+        expect(caps['post-sign-verify'].status).toBe('verified');
+        expect(caps['post-sign-verify'].evidence).toContain('send.test.ts');
       }
     }
     expect(capabilitiesFor('ton')['fee-quote'].status).toBe('blocked');
@@ -122,9 +122,10 @@ describe('chains registry', () => {
     expect(() => assertSupported('ton', 'fee-quote')).toThrow(
       /chain ton \(ton:-239, profile bawa-ton-v4r2-v1\) cannot do fee-quote/,
     );
-    expect(() => assertSupported('ton', 'local-sign')).toThrow(
-      /cannot do local-sign/,
+    expect(() => assertSupported('ton', 'post-sign-verify')).toThrow(
+      /cannot do post-sign-verify/,
     );
+    expect(() => assertSupported('ton', 'local-sign')).not.toThrow();
     expect(() => assertSupported('eth', 'balance')).not.toThrow();
     expect(() => assertSupported('eth', 'derive')).not.toThrow();
   });

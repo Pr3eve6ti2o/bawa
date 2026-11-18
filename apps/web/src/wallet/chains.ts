@@ -48,34 +48,24 @@ export interface ChainConfig {
   capabilities: Capabilities;
 }
 
-const blockedNoAdapter = (capability: CapabilityName): CapabilityEntry => ({
-  status: 'blocked',
-  evidence: `No Phase 2 adapter yet for ${capability} (viem / TronGrid / TonCenter / Electrum-WS).`,
-});
-
-const blockedNoTx = (capability: CapabilityName): CapabilityEntry => ({
-  status: 'blocked',
-  evidence: `No transaction construction in this lane for ${capability} (Phase 4).`,
+/**
+ * Phase 4 (Fix Lane 3, 2026-11-19): offline transaction construction, local
+ * signing and post-sign verification are verified by apps/web/src/wallet/
+ * send.test.ts plus the AnySigner probe runs (disposable keys, no broadcast).
+ * TON post-sign-verify stays blocked: the signed BOC is not re-parsed (no
+ * BOC parser vendored); verification is no-error + 32-byte hash + BOC magic.
+ */
+const verifiedBySendTests = (capability: CapabilityName): CapabilityEntry => ({
+  status: 'verified',
+  evidence:
+    `Verified by apps/web/src/wallet/send.test.ts offline signing checks + ` +
+    `AnySigner probe runs 2026-11-19 for ${capability} (no broadcast).`,
 });
 
 const verifiedByCoreTests = (capability: CapabilityName): CapabilityEntry => ({
   status: 'verified',
   evidence: `Verified by apps/web/src/wallet/core.test.ts ${capability} checks (2026-11-18).`,
 });
-
-function capabilitiesForSupported(): Capabilities {
-  return {
-    derive: verifiedByCoreTests('derive'),
-    restore: verifiedByCoreTests('restore'),
-    receive: verifiedByCoreTests('receive'),
-    balance: blockedNoAdapter('balance'),
-    history: blockedNoAdapter('history'),
-    'fee-quote': blockedNoAdapter('fee-quote'),
-    'unsigned-plan': blockedNoTx('unsigned-plan'),
-    'local-sign': blockedNoTx('local-sign'),
-    'post-sign-verify': blockedNoTx('post-sign-verify'),
-  };
-}
 
 /**
  * Phase 2 adapter capabilities (Fix Lane 2, 2026-11-19). balance/history/
@@ -107,9 +97,16 @@ function capabilitiesForAdapterChain(
           evidence:
             'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
         },
-    'unsigned-plan': blockedNoTx('unsigned-plan'),
-    'local-sign': blockedNoTx('local-sign'),
-    'post-sign-verify': blockedNoTx('post-sign-verify'),
+    'unsigned-plan': verifiedBySendTests('unsigned-plan'),
+    'local-sign': verifiedBySendTests('local-sign'),
+    'post-sign-verify':
+      chain === 'ton'
+        ? {
+            status: 'blocked',
+            evidence:
+              'TON signed BOC is not re-parsed (no BOC parser vendored); verification is no-error + 32-byte hash + BOC magic only.',
+          }
+        : verifiedBySendTests('post-sign-verify'),
   };
 }
 
