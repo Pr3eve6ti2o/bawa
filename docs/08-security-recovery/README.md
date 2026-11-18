@@ -892,7 +892,7 @@ These are not current quotations; recheck every price and term before purchasing
 
 | Example provider | Indicative figures | Scope and limits |
 |---|---|---|
-| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (checked 8 November 2026, UTC). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
+| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (checked 8 November 2026, UTC). See the [Fireblocks Help Center Plans, Billing, and Payments table](https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments) and [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
 | Fireblocks | Tokenisation add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). | A product-specific listing for the tokenisation add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
 
 Ask which onboarding, support, recovery, extra-user and exit charges are included; network fees remain separate unless the contract explicitly covers them.
@@ -1250,3 +1250,4 @@ Paying does not remove risk: a paid service can reduce dependence on a single de
 - NCSC small organisations guide — https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
 - Incident response guidance — https://oyarr.com/safety/incident-response.html
 - RFC 6585 (HTTP 429) — https://www.rfc-editor.org/info/rfc6585/ (section 4, ‘429 Too Many Requests’)
+- Fireblocks Help Center, Plans, Billing, and Payments — https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments
