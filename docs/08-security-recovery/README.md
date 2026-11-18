@@ -17,34 +17,36 @@ Twelve honest limitations. This guide does not promise:
 11. that "audited" means immune to implementation mistakes;
 12. that a wallet is recoverable without preserving its derivation policy.
 
-These limitations are not weaknesses of the guide — they are part of being honest about the engineering problem.
+These engineering limitations are not weaknesses of the guide — they are part of being honest about the engineering problem, not an excuse for preventable documentation omissions.
 
-Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
+Read "audited" as "reviewed against the [ownership contract](../14-wallet-app-implementation/README.md), with the review recorded". For schemas, read "verified" as "[source-verified against the Trust Wallet Core 4.9.2 tag](../14-wallet-app-implementation/README.md)". This is distinct from "tested-with-pinned-tooling" (Core 4.8.4, the exact version in the committed `tools/hdwallet-gen/package-lock.json`); the 4.9.2 tag is not a matching source reference for that 4.8.4 dependency.
 
-Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
+Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was run in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
 
-Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
+Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and [independent Python verification](../09-signing-and-hardware/README.md) recovered the published fixture sender [`0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7`](../14-wallet-app-implementation/README.md). This dedicated 4.9.2 demo re-run was distinct from the EIP-1559 proof and full verification pass, which were run against 4.8.4. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
 
 ## 2. Privacy: xpubs are sensitive public material
 
-An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history, balances and customer relationships when payments are observable.
+An [account-level xpub with non-hardened branches](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki) does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node, revealing account structure, address reuse patterns, payment history and balances when payments are observable; customer relationships are inferences requiring attribution. Combining the xpub with a leaked private key for one of its non-hardened children allows recovery of the parent private key.
 
 - Treat xpubs as sensitive public material. Treat zpubs the same way.
-- Do not paste them into public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages.
-- For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower public node suffices.
-- An xpub or zpub CANNOT recover the wallet: it reproduces only public descendants below the exported account node ([docs/RECOVERY.md](../RECOVERY.md)).
-- Bawa does not document an xpub-only import workflow — check your chosen watch-only tool's documentation.
+- Do not paste them into, for example, public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages; disclose only what is needed, and only where needed.
+- For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower extended public node (with chain code) suffices.
+- An xpub or zpub alone CANNOT recover the wallet's private keys: it reproduces only public descendants reachable by non-hardened derivation below the exported account node, but can recreate a scoped watch-only wallet ([docs/RECOVERY.md](../RECOVERY.md#1-an-xpub-or-zpub-cannot-recover-the-wallet)).
+- Bawa documents an xpub import-and-verify procedure in [docs/05, section 7](../05-watch-only/README.md) (derive.js with a heredoc xpub and address comparison), but does not document a persistent watch-only import workflow — check your chosen watch-only tool's documentation.
 ## 3. Backup and recovery
 
-A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, wallet contract/version and wallet-ID/subwallet configuration can matter.
+A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms can matter.
 
-Recovery record = mnemonic + BIP-39 passphrase policy + exact chain/path policy + account/branch + network + chain-specific configuration.
+Recoverable material = mnemonic (with scheme/passphrase requirements) OR (encrypted seed bundle + matching 32-byte data key). Recovery record = recoverable material + exact derivation/account metadata + network + chain/wallet/address-presentation configuration. See the recovery record in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-record).
 
-Encryption at rest protects a stored artefact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics.
+Definitions: chain derivation policy = the chain's derivation rules; exact chain/path policy = the precise derivation rules and paths used; account selection = the chosen account; account/branch = the chosen account and derivation branch; chain-specific configuration = additional settings required by the chain; offline recovery set = the complete recovery record kept offline; fresh = without existing wallet state; meaningful funds = funds whose loss would matter to you; verified procedure = a procedure successfully used to recreate the same wallet independently. For TON, include the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
+
+Encryption at rest protects a stored artefact; it does not make plaintext secrets immune to OS compromise, debuggers, core dumps or memory forensics, including during generation and recovery. The Bawa artefact boundary: `seed.enc.json` holds the encrypted seed bundle, and its separate 32-byte data key is stored in another location; during generation and recovery the mnemonic and seed are plaintext in process memory (and on the terminal when displayed for recovery). The guide documents no wrapping of the data key.
 
 ### Recovery drill (before funding)
 
-Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Check that, on a fresh machine using clean software, you can recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address and compare it with a previously recorded address.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Check that, in an executed and recorded rehearsal using a clean install on a trusted machine, you restore from the actual backup, recover the mnemonic, apply the exact passphrase, apply the exact derivation policy, derive the expected address, compare it with a previously recorded address and complete a successful testnet signing check.
 
 Do this before trusting the wallet with meaningful funds.
 
@@ -62,7 +64,7 @@ Use the offline recovery set for wallet recreation and a sensitive xpub for watc
 
 Plan for each backup boundary:
 
-- **Fire/flood:** keep 2–3 offline copies in separate places that do not share one fire or flood risk. Bawa does not prescribe backup media or protective storage; choose these for the risks at each location.
+- **Fire/flood:** keep 2–3 offline copies in separate places that do not share one fire or flood risk. Bawa does not prescribe which backup media or protective storage to use; choose these for the risks at each location. For **every copy**, record its medium, custodian, authorised access and physical theft controls.
 - **Theft:** choose and record physical access controls for each copy, including how its storage protects against theft.
 - **Loss:** use separated copies to provide alternatives. Test independent recovery before relying on them.
 
@@ -73,7 +75,7 @@ Plan for each backup boundary:
 - Preserve the BIP-39 mnemonic, or an existing `seed.enc.json` plus its separate 32-byte data key.
 - Preserve the exact BIP-39 passphrase policy: currently an empty passphrase.
 - Preserve the chain derivation paths and address policy, account and network/chain configuration.
-- For TON, preserve the wallet contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID.
+- For TON, preserve the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms.
 - Keep the recorded configuration whichever recovery route you use.
 - Keep xpubs out of the excluded destinations: public issues and untrusted services. Check whether each subsystem can use a narrower public node.
 
@@ -88,23 +90,23 @@ On a trusted machine, run:
 
     python3 tools/decrypt_seed.py /path/to/seed.enc.json
 
-The script is mode 644, not executable. It asks for the data key and displays the mnemonic on the controlling terminal by default. Use `--stdout` only for an explicit, controlled pipeline; use `--output` for an atomic 0600 plaintext file.
+[The script](../../tools/decrypt_seed.py) is mode 644, not executable. It asks for the data key and displays the mnemonic on the controlling terminal by default. Use `--stdout` only for an explicit, controlled pipeline; use `--output` for an atomic 0600 plaintext file.
 
 This encrypted-seed recovery route is for an existing backup, not permission to digitise your offline mnemonic. Separated copies alone do not provide encryption or guarantee survival of a fire or flood.
 
 ### Restore gate (conceptual/testnet only)
 
-1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
+1. Before funding, test independent recovery on a clean trusted machine, as required by [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Verify the mnemonic and exact passphrase policy, derive known public addresses and compare them with the recorded originals. Do NOT fund until the public outputs match. Repeat the drill quarterly with a tiny testnet amount.
 
-2. **Proposed first-address check:** compare the restored first receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account and network.
+2. **Proposed first-address check:** compare the restored receiving address with `[RECORDED_TESTNET_FIRST_ADDRESS]`, using the recorded chain, derivation paths, address policy, account, network, receiving branch and address index (or equivalent).
 
    Bawa's drill stops at `fresh`: seed decryption is documented, but Bawa does not document a complete restore tool/UI workflow or a first-address selection procedure for this drill. Follow your recovery tool's documentation to reproduce the recorded settings. Use a reference address recorded from your original testnet wallet before the restore.
 
-   The first-address comparison is a check, not a standalone restore procedure or a fixed address output; it does not make xpub-only recovery possible.
+   The first-address comparison is a check, not a standalone restore procedure or a fixed address output; it does not demonstrate private-key possession. An xpub alone can reconstruct a watch-only wallet, but cannot recover its private keys or spending capability.
 
 ### Compromise rehearsal (testnet only)
 
-A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md), generate a new wallet on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
+A compromised seed cannot be changed. As required by [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook), generate a new wallet with verified recovery on a fresh trusted device, move every asset/token to it and retire the old wallet permanently. For this testnet rehearsal, apply that rule to every test asset/token.
 
 ### Passphrase and backup checklist
 
@@ -115,9 +117,9 @@ Record the recovery set offline, including the exact BIP-39 passphrase policy.
 | Mnemonic | Record the complete mnemonic in its exact word order. |
 | Passphrase | Record the exact BIP-39 passphrase policy. Under the current policy, leave the BIP-39 passphrase empty and record that it is empty. |
 | Wallet selection | Record the wallet, chain, network, account, derivation paths and address policy. |
-| TON if applicable | Record any applicable TON wallet and chain settings needed to reproduce the same addresses. |
+| TON if applicable | Record the mnemonic scheme, exact derivation path, wallet contract/version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms needed to reproduce the same addresses. |
 
-Use the recorded passphrase policy exactly during recovery. Verify the mnemonic/passphrase before funding. Bawa does not document non-empty passphrase setup or lost-passphrase handling. If you cannot verify the mnemonic and exact passphrase policy, mark recovery incomplete and **do not fund**.
+Use the recorded passphrase policy exactly during recovery. Verify the mnemonic/passphrase before funding. Do not fund the restored wallet until the public outputs match. Bawa does not document non-empty passphrase setup or lost-passphrase handling. If you cannot verify the mnemonic and exact passphrase policy, mark recovery incomplete and **do not fund**.
 
 Keep **2–3 separated offline copies** in places that do not share one fire or flood risk. Choose and record physical access controls. Never digitise the mnemonic or share it with "support".
 
@@ -128,45 +130,45 @@ Before using an existing encrypted backup, complete its decryption-handling chec
 - Document credential custody.
 - Document plaintext/memory handling.
 
-If any of these remain undocumented, recovery is blocked.
+If any of these remain undocumented, recovery is blocked under this guide's additional safety policy.
 
-Bawa's [docs/RECOVERY.md](../RECOVERY.md) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
+Bawa's [docs/RECOVERY.md](../RECOVERY.md#part-2-the-encrypted-seed-decryption-workflow-part-1-the-artefact-the-key-and-the-output-modes) documents an alternative to the mnemonic backup: encrypted `seed.enc.json` plus its separate **32-byte data key**. Keep the exact passphrase policy and applicable wallet/chain configuration too. Follow the recovery procedure in that document; do not substitute this checklist for it.
 
-Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked.
+Bawa does not document memory handling or encrypted-xpub backup handling. Obtain a verified procedure for any applicable handling requirements before decrypting. If those requirements remain unresolved, recovery is blocked under this guide's additional safety policy until a verified procedure is obtained for every applicable handling requirement.
 
 Treat xpubs and zpubs as **sensitive public material**. An encrypted xpub still cannot replace the wallet recovery set.
 
 ### Restore drill (before funding, then quarterly)
 
-Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](../RECOVERY.md). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
+Complete recovery on a clean trusted machine before funding, as required by [docs/RECOVERY.md](../RECOVERY.md#rehearse-before-funding). Verify the mnemonic/passphrase, derive known public addresses and compare them with the recorded originals. Do not fund until the public outputs match.
 
-1. **Record the first-address reference.** Record the unfunded testnet wallet's first-address reference and network/account/derivation context, including address policy and any applicable TON settings. Use a recorded public address from your own wallet, not an example address. Bawa does not document a first-address generation procedure — check the relevant wallet and chain documentation for that procedure before relying on the reference.
+1. **Record the first-address reference.** Record the unfunded testnet wallet's first-address reference and network/account/derivation context, including address policy and any applicable TON settings. Use a recorded public address from your own wallet, not an example address. Bawa does not document a first-address generation procedure — identify the applicable wallet and chain documents and verify that they cover that procedure and the required settings before relying on the reference; record any gaps where no in-repo document covers the procedure or settings.
 
-2. **Restore and compare.** Bawa does not document chain-specific restore steps — obtain a verified, documented restore procedure for the recorded wallet and chain before continuing. Without a verified procedure, the drill is incomplete.
+2. **Restore and compare.** Bawa does not document chain-specific restore steps — identify the applicable wallet and chain documents, verify that they cover the restore steps and required settings, and record any gaps where no in-repo document covers the steps or settings; obtain a verified, documented restore procedure for the recorded wallet and chain before continuing. Without a verified procedure, the drill is incomplete.
 
    Restore on a clean trusted machine using the complete recovery set and the documented restore procedure for your wallet. Use the derivation paths, address policy and network configuration in your recovery record. Verify the mnemonic and exact passphrase policy, then derive the first address in the recorded context and compare it with the reference. Compare any other recorded known public addresses as well. Do not fund until the public outputs match.
 
-3. **Repeat quarterly.** Use a tiny testnet amount only, or keep the drill conceptual. Bawa does not document a signing procedure — use verified signing instructions for the relevant testnet to check spending recovery; otherwise mark spending recovery **untested**. Use no real funds in this drill. A conceptual drill does not replace the required pre-funding recovery check.
+3. **Repeat quarterly.** Use a tiny testnet amount only, or keep the drill conceptual. Bawa documents a [five-step testnet hardware-signing rehearsal workflow](../09-signing-and-hardware/README.md) (docs/09:321-333), but not an executable signing procedure — identify the applicable wallet and chain documents, verify that they cover the signing procedure and required settings, and record any gaps where no in-repo document covers the procedure or settings. Use verified signing instructions for the relevant testnet to check spending recovery; otherwise mark spending recovery **untested**. Use no real funds in this drill. A conceptual drill does not replace the required pre-funding recovery check.
 
 ### Compromised seed (conceptual only)
 
-A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md) requires:
+A seed cannot be "changed". [docs/RECOVERY.md](../RECOVERY.md#part-2-compromised-seed-playbook) requires:
 
-1. **Generate a NEW wallet on a fresh trusted device where migration is needed.** A compromised seed cannot be “changed.” Bawa does not document device-trust checks or wallet-generation procedures — use a verified device-setup process and the wallet’s documented generation procedure.
+1. **Generate a NEW wallet on a fresh trusted device.** Bawa does not document device-trust checks (**UNVERIFIABLE**) — use a verified device-setup process and the wallet-generation procedure documented in [docs/04, sections 3 and 8](../04-wallet-generation/README.md) (`python3 tools/make_wallet.py`).
 
 2. **Make a scoped inventory and migrate identified, transferable assets.** Bawa does not document asset discovery, transfer or confirmation procedures — use the relevant wallet and chain documentation to identify holdings, assess transferability, account for transfer fees, transfer assets that can be migrated and verify receipt. Do not assume every holding can be identified or transferred; some holdings may be inaccessible under the exposed keys. Record the inventory’s scope and known limitations. For some assets, key rotation is an alternative to moving them; consult the relevant documentation rather than assuming transfer is the only remedy.
 
-3. **Retire the compromised seed PERMANENTLY.** Do not reuse it. Migration or asset-specific key rotation does not “change” the seed, and retirement does not establish that every holding has been identified, transferred or recovered.
+3. **Retire the old wallet PERMANENTLY.** Stop ordinary signing and funding under the compromised seed, replace saved addresses, and retain watch-only monitoring where appropriate.
 
 ### Recovery rehearsal procedure
 
-Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
+Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-record). Use the checks below for the rehearsal gate. They define the gate's procedure, **not a claim that it has run**.
 
-**The rehearsal has never been executed.** Show every unexecuted gate as **FAIL**.
+**No executed recovery rehearsal is recorded at this commit.** Show every unexecuted gate as **FAIL**.
 
 | Check | Pass criteria | Status |
 |---|---|---|
-| Clean-install restore | Complete a clean-install restore on a clean trusted machine with disposable test fixtures, using the linked recovery procedure and verified wallet/chain instructions. | **FAIL — unexecuted** |
+| Clean-install restore | Complete a clean-install restore on a clean trusted machine with disposable test fixtures (local gate requirement), using the linked recovery procedure and verified wallet/chain instructions (local gate requirement). | **FAIL — unexecuted** |
 | Expected addresses | Match the derived public addresses against the fixtures' recorded expected addresses, using the recorded network/account/derivation context, address policy and applicable TON settings. | **FAIL — unexecuted** |
 | Testnet signing check | Verify spending recovery with a successful testnet signing check. Use verified instructions for the relevant testnet and a tiny testnet amount only; use no real funds. | **FAIL — unexecuted** |
 | Sanitised record | Keep a sanitised record of the fixture context, address comparisons, signing result and check results. Exclude mnemonics, passphrases, data keys and other credentials. | **FAIL — unexecuted** |
@@ -174,11 +176,11 @@ Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md). Use the che
 Require every check to pass before marking the rehearsal complete.
 ## 4. Dependency and supply-chain discipline
 
-Wallet code is sensitive to dependency drift. Document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
+Wallet code is sensitive to dependency drift. Required practice (not a claim of current implementation): document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
 
-Do not write `"dependency": "^4.8.4"` and assume that means "the code I tested" — a caret range means future compatible versions may be selected. For security-sensitive primitives, pin the tested release in the actual application lockfile and review upgrades deliberately. Trust Wallet Core itself recommends checking the current release/version rather than blindly using an old example ([official Wallet Core repository](https://github.com/trustwallet/wallet-core)).
+Do not write `"dependency": "^4.8.4"` and assume that means "the code I tested" — a caret range means future compatible versions may be selected. For security-sensitive primitives, pin the tested release in the actual application lockfile and review upgrades deliberately. This guide recommends checking the current release/version rather than blindly using an old example ([official Wallet Core repository](https://github.com/trustwallet/wallet-core)).
 
-Keep the reproducibility chain intact: source tag → lockfile → clean build → tests → artefact hash → release. That is far more useful than writing "secure" in the README.
+Establish and verify the reproducibility chain: source tag → lockfile → clean build → tests → artefact hash → release. That is far more useful than writing "secure" in the README.
 
 ### Independent verification and supply-chain discipline
 
@@ -190,11 +192,11 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ### Release blocker
 
-1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
+1. **Lockfile — PARTIALLY RESOLVED at `e3b65fb832db287fdc8d54794980dd0b3456cc12`.** `tools/hdwallet-gen/package-lock.json` is committed (Core 4.8.4 exact, verified 2026-11-08); `npm install --ignore-scripts --no-audit --no-fund` runs inside `tools/hdwallet-gen`. No root lockfile exists, so `npm ci` is not runnable against the repository root and no install reproduces the exact dependency graph for the root. At the former pin `082f7915` no lockfile existed anywhere in the repository.
 
-   `npm ci` requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
+   [`npm ci`](https://docs.npmjs.com/cli/commands/npm-ci) requires a lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile.
 
-   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09 (user decision, recorded in `REPIN-NOTES.md`). This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
+   **NOTE:** At the former pinned commit `082f7915`, no lockfile existed anywhere in the repository. The phase-1 repair adding `tools/hdwallet-gen/package-lock.json` was pushed to `main` as `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-08, and this guide set re-pinned to `e3b65fb832db287fdc8d54794980dd0b3456cc12` on 2026-11-09. This guide was published at commit `754721cd`, whose changes are documentation-only; its code is identical to `e3b65fb832db287fdc8d54794980dd0b3456cc12`. The remaining lockfile gap is the root lockfile only.
 
 ### TARGET — CI design, not existing CI
 
@@ -213,26 +215,28 @@ Do not share the same Bawa adapter logic between the two paths. Before a real-mo
 
 ## 5. Common mistakes
 
-1. **"BIP-39 is the wallet"** — No. BIP-39 gives you a mnemonic and a seed derivation procedure; the downstream HD/key/address policy is another layer.
+1. **"BIP-39 is the wallet"** — No. [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) gives you a mnemonic and a seed derivation procedure; the downstream HD/key/address policy is another layer.
 
-2. **"Every chain uses m/44'."** — No. Bitcoin BIP-84 is a different purpose; Cardano uses its own CIP purpose; TON has wallet-contract semantics; Substrate uses a different URI/crypto model.
+2. **"Every chain uses m/44'."** — No. Bitcoin [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) is a different purpose; Cardano uses [CIP-1852](https://cips.cardano.org/cip/CIP-1852) (purpose 1852'); TON has [wallet-contract semantics](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md); Substrate uses a different [URI/crypto model](../02-chains/README.md).
 
 3. **"The same EVM address means the same network."** — No. The address may be the same while the chain ID, RPC, balances and token contracts are different.
 
-4. **"RPC gives transaction history."** — Sometimes you can build history with RPC calls, but a raw RPC node is not a pre-built wallet index.
+4. **"RPC gives transaction history."** — Sometimes you can build history with [RPC calls](https://ethereum.org/developers/docs/apis/json-rpc/), but a raw RPC node is not a pre-built wallet index.
 
 5. **"The xpub is public so it belongs in .env.example with everything else."** — It can be public in cryptographic terms while still being privacy-sensitive operational data. Treat xpubs as **sensitive public material**.
 
 6. **"If getBalance works, the tracker works."** — No. You still need token events, retries, reorg handling, historical queries, persistence and reconciliation.
 
-7. **"Encrypting the seed means memory is safe."** — No. During generation, plaintext secret material exists in process memory before encryption; JavaScript strings and WebAssembly allocations do not provide a perfect secure-memory primitive.
+7. **"Encrypting the seed means memory is safe."** — No. During generation, [plaintext secret material exists in process memory before encryption](../15-threat-model-and-theft-prevention/README.md); JavaScript strings and WebAssembly allocations do not provide a perfect secure-memory primitive.
 
 8. **"Self-hosted means free."** — Software can be free while the infrastructure is not; a full node may require substantial disk, bandwidth, CPU, RAM, backups and maintenance.
 
-9. **"A random GitHub fork is an official implementation."** — Never assume this. Start from the blockchain's official documentation, the project's canonical repository, standards and maintainers with a visible history.
+9. **"A random GitHub fork is an official implementation."** — Never assume this. Start from the blockchain's official documentation, the project's canonical repository, standards and maintainers with a visible history. Compare the fork's upstream URL and commit history with the canonical repository, review divergent commits, and corroborate claimed maintainer affiliations and releases against that repository's maintainer information, release tags and release notes.
 ## 6. Incident response: what to do when something is compromised
 
-Apply this rule in every scenario: **changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can.** A compromised seed cannot be changed.
+> **Definitions:** *clean signer* — a signing device not suspected of compromise; *fresh trusted device* — a newly prepared device with trusted hardware and software; *signing roles* — the transaction-authorisation permissions assigned to keys on each network; *registered policy* — wallet rules and public-key data checked and accepted by the signer during setup ([BIP-129/BSMS](https://github.com/bitcoin/bips/blob/master/bip-0129.mediawiki) and [BIP-388](https://github.com/bitcoin/bips/blob/master/bip-0388.mediawiki)); *the full policy* — the complete script rules, signing threshold, co-signer public keys and derivation data; *proper separation* — separate locations for recovery keys and policy copies so one fire or theft need not defeat recovery; *official origin* — the publisher-controlled distribution source for the app; *publisher identity* — the verified person or organisation issuing the app; *release signing* — cryptographic signatures authenticating app releases; *key continuity* — use of the previously trusted release-signing key or an authenticated replacement; *finalise* — complete the PSBT's inputs and extract its broadcastable transaction; *dishonest signer* — a signer that may misrepresent what it signs. For *sensitive public material*, see section 2 ("Privacy: xpubs are sensitive public material").
+
+Apply this rule in every scenario: **changing the Web-draft vault password cannot secure an exposed phrase — only a fresh seed and migration can.** A compromised seed cannot be changed.
 
 Complete the migration: generate a new wallet on a fresh trusted device, move every asset and token to it, and retire the old wallet permanently.
 
@@ -242,24 +246,24 @@ Complete the migration: generate a new wallet on a fresh trusted device, move ev
 2. Generate a new wallet on a fresh trusted device, using an independent seed generated on a clean signer.
 3. Move every asset and token to the new wallet, and migrate signing roles across affected networks. Retire the old wallet permanently.
 4. Do not rely on a vault-password change to secure an exposed phrase. Only a fresh seed and migration can. Revocation cannot repair key theft.
-5. Use documented incident-support routes when handling gas top-ups: sweeper bots may steal them.
+5. Use incident-support routes when handling gas top-ups: sweeper bots may steal them.
 6. Revoke exposed service credentials too.
 
 ### Compromised vault
 
 1. Treat the phrase as exposed if the vault was opened on a compromised machine.
-2. Change the vault password **and** migrate to a fresh seed on a fresh trusted device. Generate a new wallet, move every asset and token to it, and retire the old wallet permanently.
+2. Change the Web-draft vault password **and** migrate to a fresh seed on a fresh trusted device. Generate a new wallet, move every asset and token to it, and retire the old wallet permanently.
 3. Do not treat the password change as a remedy for phrase exposure. The password change alone does not secure the phrase; only a fresh seed and migration can.
 
 ### Disclosed phrase
 
 1. Treat the phrase as burned. A compromised seed cannot be changed.
 2. Generate a new wallet with a fresh seed on a fresh trusted device. Move every asset and token to it, and retire the old wallet permanently.
-3. Do not try to repair the exposed wallet by adding a passphrase or changing a password. Changing the vault password cannot secure an exposed phrase — only a fresh seed and migration can. Revocation cannot repair key theft.
+3. Do not try to repair the exposed wallet by adding a passphrase or changing a password. Changing the Web-draft vault password cannot secure an exposed phrase — only a fresh seed and migration can. Revocation cannot repair key theft.
 
 ## 7. Disclosure: no channel exists
 
-**OPEN ITEM — owned by the maintainers.** No vulnerability-disclosure procedure exists, and neither `SECURITY.md` supplies a contact or channel.
+**OPEN ITEM — owned by the maintainers.** No vulnerability-disclosure procedure exists, and neither `SECURITY.md` nor `docs/SECURITY.md` supplies a contact or channel.
 
 **Existing line — OPEN ITEM:**
 
@@ -271,10 +275,10 @@ No private reporting route is documented, so this line does not identify an avai
 
 Carry these as open work and requirements, not claims that controls are implemented:
 
-Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate.
-- **OPEN ITEM — script injection.** Give “defend against script injection” an executable control. It currently has none: no CSP/SRI/inline-script rule.
-PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The OWASP Password Storage Cheat Sheet 2023 is cited as the basis for that draft value, not as evidence of a repository security control.
-- **OPEN ITEMS — vault passphrase and unlock time.** Define the vault-passphrase strength policy and unlock-time target. Keep both marked as open items, not stated policy.
+Phrase clipboard policy — defined in the Web guide. See `docs/web-wallet/WEB-GUIDE.md`, "Keep the phrase off the clipboard": the app must never write the mnemonic to the clipboard. Do not paste it into any other app or field; re-enter the words yourself in the confirmation gate. The paste instruction is user-facing guidance, not an app-side prohibition on accepting pasted input.
+- **OPEN ITEM — script injection.** Give “defend against script injection” a deployed control. The Web guide requires CSP (`script-src 'self'`, or `script-src 'self' 'wasm-unsafe-eval'` if needed), but no CSP is deployed; no SRI rule is defined.
+PBKDF2 scope and basis. The 600,000-iteration value comes from the local-only web-draft vault, which is not in any repository. This repository contains no vault, password hashing or PBKDF2 call. The [OWASP Password Storage Cheat Sheet 2023](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) is cited as the basis for that draft value, not as evidence of a repository security control.
+- **OPEN ITEM — vault passphrase.** Define the vault-passphrase strength policy. Keep it marked as an open item, not stated policy. The Web guide defines a 10-minute auto-lock.
 - **Required — network-identity verification.** Verify network identity for BTC, TRON and TON adapters too, not only ETH (`chainId 11155111`).
 - **Builder duty — genuine-app verification.** Make the genuine app verifiable through its official origin, publisher identity, release signing and key continuity.
 
@@ -290,7 +294,7 @@ Define the scope and execute the review:
 Keep the gate marked **FAIL** until the scope is defined and the review executed.
 ## 8. Air-gapped signing with PSBTs
 
-A PSBT lets an online wallet prepare a payment without holding the keys needed to authorise it. In Bawa, give the watch-only coordinator the account's public derivation root so it can discover coins through RPC or an indexer. Treat xpubs as **sensitive public material**. Keep the mnemonic, seed and private keys on the trusted offline signer.
+A [PSBT](../07-payment-tracking/README.md) lets an online wallet prepare a payment without holding the keys needed to authorise it. Give an external watch-only coordinator the account's public derivation root so it can discover coins through RPC or an indexer. Treat xpubs as **sensitive public material**. Keep the mnemonic, seed and private keys on the trusted offline signer.
 
 **Flow:** online watch-only coordinator prepares payment → unsigned PSBT by QR code or removable media → offline signer verifies details, then signs → signed PSBT by QR code or removable media → online coordinator finalises and broadcasts.
 
@@ -324,7 +328,7 @@ Open firmware makes the signer's firmware source available for independent audit
 
 Do not treat availability as evidence of an audit. Look for a report naming the reviewed version, scope and unresolved findings; even an audit can miss faults.
 
-The software is free; the physical device costs money. Check the maker's own site for current costs, including delivery and taxes.
+The open-firmware signer's software is free; the physical device costs money. Check the maker's own site for current costs, including delivery and taxes.
 
 ### Verify every release before installation
 
@@ -344,28 +348,42 @@ A compromised computer can propose the wrong payment. Read the recipient, amount
 An exposed recovery backup may let someone spend without the device.
 ## 10. Do-it-yourself stateless signers, free software
 
-SeedSigner- and Krux-class projects show the pattern — a commodity board, screen, controls and camera. These names describe an approach, not current device recommendations. Check public advisories for the exact hardware and firmware before choosing a build. An unresolved public seed-generation advisory rules it out. Use hardware with NO Wi-Fi and NO Bluetooth, rather than merely disabling radios. Run with NO persistent key storage: no saved seed files, even encrypted ones. Enter the seed afresh each session, keep it only in RAM, remove power afterwards. Communication with a compatible wallet is QR-only; use a power-only connection, not a data cable. Flow: online watch-only wallet, into unsigned transaction QR, into offline stateless signer, into signed transaction QR, into online wallet broadcasts. Depending on firmware, seed-generation options include dice rolls or camera-derived entropy; follow a documented, reviewed procedure and meet its collection requirements; too few rolls, predictable input or faulty entropy processing can produce guessable seeds; camera entropy is not a reason to photograph your mnemonic. Keep a protected offline recovery backup, such as paper or metal.
+[SeedSigner](https://github.com/SeedSigner/seedsigner)- and [Krux](https://github.com/selfcustody/krux)-class projects show the pattern — a commodity board, screen, controls and camera.
+These names describe an approach, not current device recommendations.
+Check public advisories for the exact hardware and firmware before choosing a build.
+An unresolved public seed-generation advisory rules it out.
+Use hardware with NO Wi-Fi and NO Bluetooth, rather than merely disabling radios.
+Run with NO persistent key storage: no saved seed files, even encrypted ones.
+Enter the seed afresh each session, keep it only in RAM, remove power afterwards.
+Communication with a compatible wallet is QR-only; use a power-only connection, not a data cable.
+Flow: online watch-only wallet, into unsigned PSBT QR, into offline stateless signer, into signed PSBT QR, into online wallet broadcasts.
+Depending on firmware, seed-generation options include dice rolls or camera-derived entropy; follow a documented, reviewed procedure and meet its collection requirements; too few rolls, predictable input or faulty entropy processing can produce guessable seeds; camera entropy is not a reason to photograph your mnemonic.
+Keep a protected offline recovery backup, such as paper or metal.
 
-What it helps against: during signing, the networked wallet need not hold the seed or private keys, reducing direct key theft by malware on that computer; removing radios removes those wireless entry points; not saving keys reduces what a thief can extract from a powered-off device's storage. What it does not cover: malicious firmware, tampered components, memory extraction, QR-parser vulnerabilities, stolen backups, or approving a substituted transaction — check destination, amount and fee on the signer itself; power interruptions, failed storage media, unreadable QR codes can stop a session; losing the only recovery backup can mean losing access altogether. Nor does this repair an earlier leak: Bawa's controlling-terminal route keeps the mnemonic and data key out of ordinary subprocess stdout/stderr capture; it does not isolate them from the host; a hostile OS or terminal, debuggers, crash dumps, swap and memory snapshots can still expose them; loading an exposed seed into another device does not make it secret again.
+- What it helps against: during signing, the networked wallet need not hold the seed or private keys, reducing direct key theft by malware on that computer; removing radios removes those wireless entry points; not saving keys reduces what a thief can extract from a powered-off device's storage.
+- What it does not cover: malicious firmware, tampered components, memory extraction, QR-parser vulnerabilities, stolen backups, or approving a substituted transaction — check destination, amount and fee on the signer itself; power interruptions, failed storage media, unreadable QR codes can stop a session; losing the only recovery backup can mean losing access altogether.
+- Nor does this repair an earlier leak: Bawa's controlling-terminal route keeps the mnemonic and data key out of ordinary subprocess stdout/stderr capture; it does not isolate them from the host; a hostile OS or terminal, debuggers, crash dumps, swap and memory snapshots can still expose them; loading an exposed seed into another device does not make it secret again.
 
-The software is free to use, inspect and modify; parts and replacements cost money; assembly, firmware verification and recovery testing take time. Choose this route over a paid option if you are comfortable taking on that maintenance. A maintained, supported paid signer may suit you better if you want less assembly and troubleshooting; payment alone is no security guarantee.
+The do-it-yourself stateless signer's software is free to use, inspect and modify; parts and replacements cost money; assembly, firmware verification and recovery testing take time. Choose this route over a paid option if you are comfortable taking on that maintenance. A maintained, supported paid signer may suit you better if you want less assembly and troubleshooting; payment alone is no security guarantee.
 ## 11. Free Bitcoin multisig: keep the keys and the policy
 
-Sparrow and Electrum are free open-source coordinators. A 2-of-3 wallet requires signatures from any two of three independent keys; the coordinator can remain watch-only (prepares transactions without holding seeds).
+Sparrow ([Apache-2.0](https://github.com/sparrowwallet/sparrow)) and Electrum ([MIT](https://github.com/spesmilo/electrum)) are free open-source coordinators. A 2-of-3 wallet requires signatures from any two of three independent keys; the coordinator can remain watch-only (prepares transactions without holding seeds).
 
 What it buys: one compromised key cannot spend alone; losing access to one key need not strand funds if two usable keys and the full policy remain; with proper separation, one fire or theft need not remove the entire recovery route. It does not survive permanent loss of two keys, compromise of two keys, or two signers approving a fraudulent payment.
 
 Registered policy lets a signer recognise its own change; it does not prove an external recipient's identity. Check destination and amount on trusted signer displays against independently obtained payment details.
 
+**Definitions:** **full policy registration** — registering the same full policy on every signer; **change validation** — comparing change addresses; **coordinator** — the tool used to import each signer's account public-key export; **Safe-class tools** — tools where your account is a contract on a specific EVM network; **clean compatible installation** — a clean installation able to rebuild the watch-only wallet from the policy backup; **newly verified policy** — a policy checked anew with the replacement key; **official deployment records** — official records used to check the contract implementation; **signer's recovery-check feature** — the signer's feature for checking each seed backup.
+
 ### Set up and prove it (7 steps)
 
 1. **Check compatibility first** — obtain verified releases from the projects' official distribution channels; choose a coordinator and signers supporting your exact policy, full policy registration and change validation; Bitcoin native SegWit multisig, P2WSH, is a common choice; check firmware support; do not assume every device qualifies.
 
-2. **Generate separate keys** — initialise three signers independently; cloning one seed does not create independent keys; make offline seed backups; record seed format and passphrase requirements, including whether the BIP-39 passphrase is empty; keep any required passphrase independently recoverable; Electrum-native seeds are not BIP-39; keep seeds out of the everyday coordinator.
+2. **Generate separate keys** — initialise three signers independently; cloning one seed does not create independent keys; make offline seed backups; record seed format and passphrase requirements, including whether the [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) passphrase is empty; keep any required passphrase independently recoverable; Electrum-native seeds are not BIP-39; keep seeds out of the everyday coordinator.
 
 3. **Assemble the wallet** — select 2-of-3 and the intended Bitcoin network; import each signer's account public-key export; compare the full public keys and their origins against trusted signer exports; names and short fingerprints alone are insufficient.
 
-4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; test receive-address verification and change recognition before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again.
+4. **Register the same full policy on every signer** — confirm the threshold, all cosigner keys, paths and script type through each signer's supported verification flow; compare a receive address with the address shown on each signer's display for the registered policy and check that change is recognised on each signer's display as belonging to that policy before substantial funding; do not use blind signing; after a reset or replacement, seed restoration is not enough — register the policy again or verify it on demand, according to the signer's design.
 
 5. **Back up the public policy** — keep a watch-only wallet export and, where supported, checksummed descriptors for both receive and change branches; record:
    - 2-of-3;
@@ -375,7 +393,7 @@ Registered policy lets a signer recognise its own change; it does not prove an e
    - key ordering or sorting;
    - Bitcoin network.
 
-   Two seeds still need the third cosigner's public information. An individual xpub/zpub is not a multisig recovery package. Test exports: Sparrow and Electrum formats are not automatically interchangeable.
+   Two seeds still need the third cosigner's public information. An individual xpub/zpub is not a multisig recovery package. Test a full-policy export by importing it into the intended recovery software (Sparrow or Electrum); a pass requires the imported threshold, all cosigner keys, paths and script type to match the registered policy and a receive address to match one verified on a signer. Sparrow and Electrum formats are not automatically interchangeable.
 
 6. **Separate the backups** — arrange signers and seed backups so one incident cannot expose two distinct keys; three software signers on one infected computer do not provide that separation; keep multiple offline policy copies in separate locations; a public policy file cannot spend by itself, but it can reveal addresses and transaction history — protect its privacy; the watch-only file is not a seed backup.
 
@@ -389,12 +407,12 @@ After suspected key theft, replace that key in a newly verified policy and move 
 
 ### Cost and when to choose it
 
-The software has no licence or subscription fee; budget for three compatible hardware signers if you use hardware, backup materials and any paid storage; software signers still need genuinely isolated systems; miner fees apply, including rehearsals; multisig spends generally cost more than comparable single-key spends; maintenance and testing also cost time.
+Sparrow and Electrum have no licence or subscription fee; budget for three compatible hardware signers if you use hardware, backup materials and any paid storage; software signers still need genuinely isolated systems; miner fees apply, including rehearsals; multisig spends generally cost more than comparable single-key spends; maintenance and testing also cost time.
 
 Choose this over paid assisted multisig if you can manage separation, policy records and regular recovery tests. Paid help may be worth its fee for setup checks, replacement support or inheritance planning. If a provider holds a key, insist on the full exportable policy and test that your own two keys can recover without that provider.
 ## 12. EVM smart-contract wallets
 
-With Safe-class tools, your account is a contract on a specific EVM network; its owner list and signature threshold live on-chain. A mnemonic restores one owner's key, not the whole account: control still requires whatever the contract currently authorises. This redundancy covers assets controlled by the contract, not balances left in a separate seed-controlled account.
+With Safe-class tools, your account is a contract on a specific EVM network; its owner list and signature threshold live on-chain. A mnemonic can restore keys for one or more registered owners, not the whole account: not every owner is mnemonic-backed, and control still requires whatever the contract currently authorises. This redundancy covers assets controlled by the contract, not balances left in a separate seed-controlled account.
 
 ### What it protects against
 
@@ -416,17 +434,17 @@ Deleting a queued item does not revoke signatures. For normal cancellation, exec
 
 1. **Prepare independent owners.** For example, initialise three separate hardware-wallet signers. Keep each owner's mnemonic backup offline and apart. Record BIP-39 passphrase requirements, the exact derivation path and account/branch. Preserve any required passphrase securely too. Restore each owner separately on trusted spare hardware and compare its address. Erase temporary restored copies afterwards. Never enter these secrets into a multisig website.
 
-2. **Deploy deliberately.** Use the project's verified release or official interface on [network/chain ID]. Select the three checked owner addresses and threshold two. After confirmation, check the contract implementation against official deployment records and inspect its owners and threshold through a separate explorer or RPC. Leave optional modules and guards off initially.
+2. **Deploy deliberately.** Select the network and numeric chain ID and verify both through a separate explorer or RPC. Use the project's verified release or official interface on that network. Select the three checked owner addresses and threshold two. After confirmation, check that the contract's implementation address matches an address listed for its version and the selected numeric chain ID in the [Safe safe-deployments repository](https://github.com/safe-global/safe-deployments) and inspect its owners and threshold through a separate explorer or RPC. Leave optional modules and guards off initially.
 
-3. **Write the recovery inventory.** Preserve [chain ID], [Safe address], deployment transaction, owner addresses, threshold, implementation/version, enabled modules, guards, fallback handler and any recovery or upgrade arrangements. Keep dated offline copies and verify them against current on-chain state before recovery. This record is not a signing secret, but it is privacy-sensitive.
+3. **Write the recovery inventory.** Preserve the selected network and numeric chain ID, [Safe address], deployment transaction, owner addresses, threshold, implementation/version, enabled modules, guards, fallback handler and any recovery or upgrade arrangements. Keep dated offline copies and verify them against current on-chain state before recovery. This record is not a signing secret, but it is privacy-sensitive.
 
-4. **Test with little money.** Send a small test amount to the deployed Safe, then propose a transfer out. Collect approvals separately. Have each signer check the chain, Safe address, nonce, destination, asset, amount and decoded calldata, including every batched call and token approval. Execute and check the receipt and balances. Test that your intended apps support contract accounts.
+4. **Test with little money.** Send a small test amount to the deployed Safe, then propose a transfer out. Collect approvals separately. Have each signer check the chain, Safe address, nonce, destination, asset, amount, outer transaction operation, gas/reimbursement fields and decoded calldata, including every batched call (and its operation) and token approval. Execute and check the receipt and balances. Test that your intended apps support contract accounts.
 
-5. **Practise without a dependency.** Reconnect to the existing address through another compatible client. If proposals are missing, recreate them and obtain fresh signatures. Simulate one owner being unavailable and spend with the remaining quorum. Replace a lost or suspect owner promptly while quorum remains, then update the inventory. Creating another Safe does not recover assets in this one.
+5. **Practise without a dependency.** Reconnect to the existing address through another compatible client. If proposals are missing, try recovering them from the Safe Transaction Service, saved exports or another participant; if recovery fails, recreate them and obtain fresh signatures. Simulate one owner being unavailable and spend with the remaining quorum. Replace a lost or suspect owner promptly while quorum remains, then update the inventory. Creating another Safe does not recover assets in this one.
 
 ### Where it fails
 
-Multisig cannot rescue a compromised quorum or several owners approving the same harmful transaction. Treat enabled modules as separate spending authority: they may execute outside the usual owner threshold. A broken guard can block execution.
+Multisig cannot rescue a compromised quorum or several owners approving the same harmful transaction. Treat enabled modules as separate spending authority: they may execute outside the usual owner threshold. The original Transaction Guard (v1.3.0) covers only the owner execTransaction path, not module calls; Module Guards arrived in v1.5.0. A broken guard can block execution.
 
 Contract bugs and chain failures remain risks. An approved token spender may take tokens without a new Safe vote. Without enough usable owners or a functioning recovery route authorised in advance, access may be permanently lost.
 
@@ -434,25 +452,25 @@ Contract bugs and chain failures remain risks. An approved token spender may tak
 
 For basic self-managed use, deployment gas and transaction gas are the only chain costs; no software subscription is required. Off-chain proposals and signatures cost no gas; on-chain approvals, execution, owner changes and cancellations do. Fees vary with the network and congestion.
 
-Keep the network's gas coin available to the submitting account, or test a sponsorship arrangement. Money inside the Safe does not automatically pay the submitting account's fee. Hardware, hosted services and relayer charges are separate possible expenses.
+Keep the network's gas coin available to the submitting account, or test a sponsorship arrangement. Money inside the Safe does not automatically pay the submitting account's fee; the Safe gas-refund mechanism (gasPrice/refundReceiver/gasToken) is optional. Hardware, hosted services and relayer charges are separate possible expenses.
 
 Choose this over a paid service if you can maintain independent owner backups, review calls and rehearse recovery yourself. Payment can buy coordination, monitoring or assistance; payment alone cannot replace missing signing authority. Before paying, establish whether the provider can spend or block recovery, and whether an independent quorum still works if it disappears.
 ## 13. Free multisig and descriptor backups
 
-Keep the map as well as the keys — Bitcoin output descriptors (BIP 380 family) describe the scripts and keys used to construct outputs; for recovery, export them with key-origin fingerprints, complete derivation paths and both receive and change branches; multisig descriptors also record the signing threshold and key ordering or sorting rule; a compatible wallet can then reproduce the addresses rather than guess your configuration. Seed words, restored with the correct BIP-39 passphrase, recreate a key tree; they do not identify the chosen wallet policy or the other cosigners. A public descriptor, the matching seed/passphrase and the network/account record make single-sig recovery reproducible. Multisig needs the complete public policy and enough signing secrets to meet its threshold. Even two seeds for an independent 2-of-3 arrangement cannot recreate the third cosigner's public key.
+Keep the map as well as the keys — Bitcoin output descriptors ([BIP 380](https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki) family) describe the scripts and keys used to construct outputs; for recovery, export them with key-origin fingerprints, complete derivation paths and both receive and change branches; multisig descriptors also record the signing threshold and key ordering or sorting rule; a compatible wallet can then reproduce the addresses rather than guess your configuration. Seed words, restored with the correct BIP-39 passphrase, recreate a key tree; they do not identify the chosen wallet policy or the other cosigners. A public descriptor, the matching seed/passphrase and the network/account record make single-sig recovery reproducible. Multisig needs the complete public policy and enough signing secrets to meet its threshold. Even two seeds for an independent 2-of-3 arrangement cannot recreate the third cosigner's public key.
 
 What this protects against (and does not): a descriptor backup protects against lost wallet configuration, a broken coordinator and a vendor disappearing, provided another implementation supports the descriptor; it cannot authorise spending, replace missing signing secrets, or stop an attacker who holds a signing quorum; a 2-of-3 arrangement tolerates one unavailable signer, not two. Public-key material is still privacy-sensitive: like an xpub, a descriptor can reveal linked addresses, balances and future activity — keep it out of public repositories and support tickets; descriptor syntax can also carry private keys: deliberately select the PUBLIC/watch-only export, not a private export.
 
-Set up and rehearse (5 steps): (1) check compatibility first — choose a free coordinator and compatible signers; confirm that an independent wallet can import the exact descriptor features you use ("supports multisig" is not enough); practise with published test fixtures on a test network (their keys are public and must never receive valuable funds). (2) verify the policy — for a 2-of-3 wallet, enrol three independently generated signers; confirm the threshold and fingerprints on trusted signer displays; arrange devices and secret backups so one incident cannot expose or destroy two signing secrets. (3) export both branches — save complete public receive and change descriptors, whether exported separately or together, including their checksums; do not reconstruct them by hand; compare several derived addresses with the original wallet and trusted signer displays; a checksum detects copying errors, not malicious substitution — an attacker's replacement can have a valid checksum and redirect new deposits. (4) make independent copies and import one — put the public export and recovery metadata on two independent offline media; in a clean installation of another compatible wallet, import the descriptors as watch-only; check several recorded receive and change addresses; this check should not require any seed. (5) test discovery and signing separately — rescan from before first use, covering every issued address index on both branches; with the published fixtures, restore enough test signers and complete a test-network spend without the original coordinator; check live signing backups through trusted on-device workflows, never by entering seeds into an online coordinator. An empty restored view is not proof that funds have disappeared: check the network, paths, missing change branch, scan start and address range; changing the key-ordering rule can change addresses; a mistaken BIP-39 passphrase produces different valid keys rather than a "wrong password" error.
+Set up and rehearse (5 steps): (1) check compatibility first — choose a free coordinator and compatible signers; confirm that an independent wallet can import the exact descriptor features you use ("supports multisig" is not enough); practise with the published test fixtures in [docs/11](../11-trust-wallet-and-independent-verification/README.md#verification-differential-fixtures) on a test network (their keys are public and must never receive valuable funds). (2) verify the policy — for a 2-of-3 wallet, enrol three independently generated signers; confirm the threshold and fingerprints on trusted signer displays; arrange devices and secret backups so one incident cannot expose or destroy two signing secrets. (3) export both branches — save complete public receive and change descriptors, whether exported separately or together, including their checksums; do not reconstruct them by hand; compare several derived addresses with the original wallet and trusted signer displays; a checksum detects copying errors, not malicious substitution — an attacker's replacement can have a valid checksum and redirect new deposits. (4) make independent copies and import one — put the public export and recovery metadata on two independent offline media; in a clean installation of another compatible wallet, import the descriptors as watch-only; check several recorded receive and change addresses; this check should not require any seed. (5) test discovery and signing separately — rescan from before first use, covering every issued address index on both branches; with the published fixtures, restore enough test signers and complete a test-network spend without the original coordinator, deliberately creating a change output and verifying it against the backed-up change descriptor; check live signing backups through trusted on-device workflows, never by entering seeds into an online coordinator. An empty restored view is not proof that funds have disappeared: check the network, paths, missing change branch, scan start and address range; changing the key-ordering rule can change addresses; a mistaken BIP-39 passphrase produces different valid keys rather than a "wrong password" error.
 
 Cost and when to choose it: the free route has no software licence or subscription charge; hardware signers, durable backup media and separate storage can cost money; setup and periodic recovery rehearsals cost time. Choose it over a paid managed service when you can maintain the records, separate the signing secrets and repeat the recovery test yourself. Paid help can be worthwhile for supported setup or succession planning. Payment does not replace missing keys or an incomplete policy. If a provider co-signs, check how you recover during an outage and how you leave the service.
 
-Multisig backup list: complete public descriptors (receive and change, checksums, script type, threshold, ordering rule, every cosigner's extended public key, origin fingerprint, full paths); Bawa recovery settings (explicit network, account and branch selections, plus any chain-specific configuration; Bitcoin descriptors do not replace other chains' recovery records); independent secret backups (each signer's offline mnemonic backup; whether its BIP-39 passphrase is empty or used; a separately protected way to recover the exact passphrase when used); discovery records (earliest-use date or block height, issued ranges or next indexes for both branches, trusted reference addresses); recovery instructions (tested importer and version, backup locations, steps an authorised successor can follow; export labels and notes separately if you need them — descriptors do not preserve those).
+Multisig backup list: complete public descriptors (receive and change, checksums, script type, threshold, ordering rule, every cosigner's extended public key, origin fingerprint, full paths; record the source, software, version and date for each descriptor); Bawa recovery settings (explicit network, account and branch selections, plus any chain-specific configuration; Bitcoin descriptors do not replace other chains' recovery records); independent secret backups (each signer's offline mnemonic backup; whether its BIP-39 passphrase is empty or used; a separately protected way to recover the exact passphrase when used); discovery records (earliest-use date or block height, issued ranges or next indexes for both branches, trusted reference addresses); recovery instructions (tested importer and version, backup locations, steps an authorised successor can follow; export labels and notes separately if you need them — descriptors do not preserve those).
 ### Shamir sharing with SLIP-39
 
-Shamir sharing with SLIP-39: SLIP-39 divides a compatible wallet's backup secret into word-based shares; with a single 2-of-3 group, any two distinct shares reconstruct it; one reveals nothing about the shared secret (that guarantee depends on correct implementation and sound randomness; format metadata, such as thresholds, is not confidential). These shares use SLIP-39, not BIP-39: an individual share cannot be converted into a BIP-39 mnemonic or restored through a BIP-39-only import screen; cutting an existing mnemonic into sections is NOT Shamir sharing. What it protects: sharing limits the damage from theft of fewer than the required shares, while redundancy allows recovery after some shares are lost or destroyed; a missing envelope need not mean a missing wallet. It does NOT protect against compromised generation or recovery software, exposure of the complete seed, or attackers assembling a qualifying set; any SLIP-39 passphrase remains a separate requirement; this is not multisignature — after recovery, one wallet can sign transactions without consulting the share holders.
+Shamir sharing with [SLIP-39](https://github.com/satoshilabs/slips/blob/master/slip-0039.md): SLIP-39 divides a compatible wallet's backup secret into word-based shares; with a single 2-of-3 group, any two distinct shares reconstruct it; one reveals nothing about the shared secret (subject to the SLIP-39 digest caveat: with T-1 shares, brute-forcing the digest reduces entropy to m-32 bits; that guarantee depends on correct implementation and sound randomness; format metadata, such as thresholds, is not confidential). These shares use SLIP-39, not BIP-39: an individual share cannot be converted into a BIP-39 mnemonic or restored through a BIP-39-only import screen; cutting an existing mnemonic into sections is NOT Shamir sharing. What it protects: sharing limits the damage from theft of fewer than the required shares, while redundancy allows recovery after some shares are lost or destroyed; a missing envelope need not mean a missing wallet. It does NOT protect against compromised generation or recovery software, exposure of the complete seed, or attackers assembling a qualifying set; any SLIP-39 passphrase remains a separate requirement; this is not multisignature — after recovery, one wallet can sign transactions without consulting the share holders.
 
-Set-up and recovery drill (6 steps): (1) check compatibility first — confirm that your chosen wallet and Bawa's recovery path support the required SLIP-39 features, including grouped shares and passphrases; accepting "recovery words" does not establish compatibility; if support is absent, choose another backup method rather than improvising a conversion; use maintained software from verified releases; practise with published SLIP-39 test fixtures, whose wallets must never hold funds. (2) choose and record the thresholds — one 2-of-3 group is easier to manage than a hierarchy and tolerates one unavailable share; grouped sharing has two levels: the GROUP threshold specifies how many groups must qualify; each group's MEMBER threshold specifies how many distinct shares qualify that group; for example require 2 of 3 groups, each needing 2 of 3 shares (two shares from A and two from B work; three from A and one from B do not — the total count alone is insufficient). (3) generate and verify offline — use a trusted device and its supported SLIP-39 backup workflow; enter the recorded thresholds and let the implementation generate the shares; do not invent share words or randomness; transcribe each share onto paper or durable media, then complete its verification checks; label the backup set, group and member; do not mix shares from different sets, photograph them, upload them or enter them into a website. (4) handle the passphrase deliberately — if enabled, preserve its exact text in a separate offline recovery location; shares cannot recover a forgotten passphrase; the wrong one can produce a different, valid-looking wallet rather than an error; a weak passphrase may be guessed after a threshold is stolen; record that a passphrase is required, document the exact derivation policy (network, path, account, address type) and record an expected address for comparison. (5) separate access as well as storage — for the simple 2-of-3 arrangement, use three offline locations that do not share a fire or flood risk; record physical access controls and who can reach each share; do not leave a qualifying set at one site or with one backup custodian; duplicate copies of one share still count as only one share — protect their locations too; continue keeping seed.enc.json, its data key and any complete mnemonic in separate locations, with the mnemonic offline; an intact full-secret backup bypasses the sharing layer. (6) test before funding — on a fresh trusted recovery device with clean, verified software, recover without using the original wallet; use exactly a qualifying threshold, apply the exact passphrase and derivation policy, derive the expected address and compare it with your earlier record; for 2-of-3, test all three pairs; for grouped sharing, test the recovery routes you intend to rely on; passing share checksums is not proof of wallet recovery; reset the test device afterwards and retain no secret-bearing logs.
+Set-up and recovery drill (6 steps): (1) check compatibility first — SLIP-39 is unsupported for Bawa; accepting "recovery words" does not establish compatibility; choose another backup method rather than improvising a conversion; use maintained software from verified releases; practise with published SLIP-39 test fixtures, whose wallets must never hold funds. (2) choose and record the thresholds — one 2-of-3 group is easier to manage than a hierarchy and tolerates one unavailable share; grouped sharing has two levels: the GROUP threshold specifies how many groups must qualify; each group's MEMBER threshold specifies how many distinct shares qualify that group; for example require 2 of 3 groups, each needing 2 of 3 shares (two shares from A and two from B work; three from A and one from B do not — the total count alone is insufficient). (3) generate and verify offline — use a trusted device and its supported SLIP-39 backup workflow; enter the recorded thresholds and let the implementation generate the shares; do not invent share words or randomness; transcribe each share onto paper or durable media, then complete its verification checks; each SLIP-39 share's last three words encode an RS1024 checksum over the share, so a transcription error is detected by the checksum without revealing the secret; label the backup set, group and member; do not mix shares from different sets, photograph them, upload them or enter them into a website. (4) handle the passphrase deliberately — if enabled, preserve its exact text in a separate offline recovery location; shares cannot recover a forgotten passphrase; the wrong one can produce a different, valid-looking wallet rather than an error; a weak passphrase may be guessed after a threshold is stolen; record that a passphrase is required, document the exact derivation policy (network, path, account, address type) and record an expected address for comparison. (5) separate access as well as storage — for the simple 2-of-3 arrangement, use three offline locations that do not share a fire or flood risk; record physical access controls and who can reach each share; do not leave a qualifying set at one site or with one backup custodian; duplicate copies of one share still count as only one share — protect their locations too; continue keeping seed.enc.json, its data key and any complete mnemonic in separate locations, with the mnemonic offline; an intact full-secret backup bypasses the sharing layer. (6) test before funding — on a fresh trusted recovery device with clean, verified software, recover without using the original wallet; use exactly a qualifying threshold, apply the exact passphrase and derivation policy, derive the expected address and compare it with your earlier record; for 2-of-3, test all three pairs; for grouped sharing, test the recovery routes you intend to rely on; passing share checksums is not proof of wallet recovery; reset the test device afterwards and retain no secret-bearing logs.
 
 Cost and when to choose it: free implementations mean no software licence fee or required recovery subscription; paper costs little; hardware, durable media, secure off-site storage and travel may cost money; the continuing expense is your time (maintaining records, checking access, repeating recovery drills). Choose DIY sharing over a paid option when you have genuinely independent locations, can maintain compatible recovery tools, and can arrange recovery if you are unavailable. Paying may be worthwhile for supported hardware, storage or recovery assistance; check whether the provider could assemble a threshold, what help its fee actually buys, and what happens if it closes. Unreadable words, unavailable holders, mixed backup sets and losses beyond the configured tolerance can make recovery impossible. Review arrangements when people move, relationships change or software support ends. Once the complete seed has leaked, new shares cannot make it secret again: set up a new wallet on a fresh, trusted device, transfer every asset and token, and retire the previous wallet for good.
 ### BIP-39 passphrase, a second recovery secret
@@ -477,17 +495,17 @@ It does not protect against theft of both secrets, malware capturing them during
 
 1. **Check compatibility first.** Confirm that your everyday wallet and your intended recovery tools explicitly support BIP-39 passphrases. An application password field is not evidence of support. Check length and character limits. Plain ASCII reduces keyboard and Unicode surprises. Never accept silent truncation.
 
-2. **Generate the passphrase offline.** Use strong randomness rather than inventing a memorable sentence. One practical method is a published 7,776-entry dice-word list: roll a fair die five times, look up that five-digit result, and repeat for at least six independently selected words. Fix the separator, such as one ordinary space, and record the result exactly. Check that the complete string fits every intended recovery tool.
+2. **Generate the passphrase offline.** Use strong randomness rather than inventing a memorable sentence. One practical method is a published [7,776-entry dice-word list](https://www.eff.org/dice): roll a fair die five times, look up that five-digit result, and repeat for at least seven independently selected words. Fix the separator, such as one ordinary space, and record the result exactly. Check that the complete string fits every intended recovery tool.
 
 3. **Back up the secrets separately.** Keep 2–3 offline copies of the mnemonic and 2–3 of the passphrase, without storing the two together. Choose sites that would not all be affected by the same fire or flood. For each copy, choose and record physical controls: the locked container, authorised key-holders and retrieval arrangements.
 
    Preserve separate locations for Bawa's `seed.enc.json`, its data key and the offline mnemonic. The passphrase does not replace that separation.
 
-4. **Record a recovery reference.** Use the wallet's explicit BIP-39 passphrase facility. Record an expected receiving address and the exact derivation policy: coin and network, derivation path, account, receive branch, address index, and script/address type where applicable. Keep this metadata available offline. The words and passphrase do not tell every recovery tool which account layout to search.
+4. **Record a recovery reference.** Use the wallet's explicit BIP-39 passphrase facility. Record an expected receiving address and the exact derivation policy: coin and network, derivation path, account, receive branch, address index, and script/address type where applicable. Keep this recovery-reference metadata available offline; it is not a universally complete wallet-recovery specification. The words and passphrase do not tell every recovery tool which account layout to search.
 
 5. **Rehearse independently before substantial funding.** Use a fresh, trusted machine with clean, verified software. Keep secret entry and address derivation offline. Retrieve a mnemonic backup, enter the exact backed-up passphrase and reproduce the recorded derivation settings. Derive the reference address and compare it with the earlier record.
 
-   Do not depend on the original device, cached secrets or an existing wallet file. Test each intended recovery route independently, including whether it still works when one storage site is unavailable.
+   Do not depend on the original device, cached secrets or an existing wallet file. Test each intended recovery route independently: the mnemonic backup, the mnemonic plus BIP-39 passphrase, the age-encrypted recovery file, and recovery with one storage site unavailable.
 
 If a drill produces an unexpected address, stop: check the passphrase and derivation settings rather than assuming the wallet is empty. If you have lost the passphrase but a working device can still sign, migrate to a new, tested wallet before that access disappears.
 
@@ -508,23 +526,23 @@ Choose it over a paid backup service when your main concern is theft of a mnemon
 Paid durability or recovery assistance may still be worthwhile — those solve different problems. Check what the fee buys and who can access the secrets. Payment does not make a missing BIP-39 passphrase resettable.
 ## 14. Free tools: encrypted offline backups
 
-Use encrypted files as a SECONDARY recovery route, not the main backup. Keep the mnemonic offline on paper or metal. Paper costs little but is vulnerable to fire and water; suitable metal withstands more physical damage, but neither conceals the words from someone who finds it. Maintain two or three offline copies across locations that would not be lost in the same fire or flood.
+Use age-encrypted recovery files as a SECONDARY recovery route, not the main backup; this framing does not apply to Bawa's `seed.enc.json` plus data-key bundle (see [RECOVERY.md](../RECOVERY.md)). Keep the mnemonic offline on paper or metal. Paper costs little but is vulnerable to fire and water; suitable metal withstands more physical damage, but neither conceals the words from someone who finds it. Maintain two or three offline copies across locations that would not be lost in the same fire or flood.
 
 **What encryption protects against:** someone finding or stealing a backup drive without obtaining its strong decryption passphrase.
 
 **What it does NOT protect against:** malware watching creation or recovery, an attacker acquiring both file and passphrase, destroyed media, or forgotten credentials. A weak passphrase can be guessed offline without an account lockout slowing the attacker down.
 
-### Set it up (age workflow)
+### Set it up (age workflow; [age documentation](https://age-encryption.org/))
 
 1. **Plan storage first.** Keep Bawa's `seed.enc.json`, its data key and the offline mnemonic in separate locations. An age-encrypted recovery file does not replace Bawa's data key or change its file format. Record the physical access arrangements for every copy: its safe or locked cabinet, who controls access, and how an authorised person retrieves it. Two drives in one drawer share one disaster risk.
 
 2. **Prepare a clean offline session.** Obtain and verify the encryption software before disconnecting. Use trusted equipment, keep networking disconnected and work away from cameras. Prepare a RAM-backed workspace with swap, hibernation and editor autosave disabled. Ordinary deletion, particularly on an SSD or USB drive, is not dependable removal of plaintext.
 
-3. **Create the recovery record.** In that workspace, make `recovery.txt` containing the mnemonic and the information needed to interpret it: mnemonic scheme, network and complete derivation settings. Do not include the wallet derivation passphrase or Bawa data key. Keep non-secret recovery instructions with the primary copies too. Independently record a known wallet address for the later comparison.
+3. **Create the recovery record.** In that workspace, make `recovery.txt` containing the mnemonic and the information needed to interpret it: mnemonic scheme, network and complete derivation settings. Record a yes/no flag indicating whether a wallet derivation passphrase is required and, if yes, a location reference for retrieving it from its separately protected backup. Do not include the wallet derivation passphrase or Bawa data key. Keep non-secret recovery instructions with the primary copies too. Independently record a known wallet address for the later comparison.
 
-4. **Generate a separate file-encryption passphrase.** Use substantial randomness, not a memorable quotation—for example, seven words independently selected with dice from a 7,776-entry word list. Record the result accurately on paper and store it offline, apart from every ciphertext copy. Do not reuse a wallet derivation passphrase or Bawa data key. Record any wallet derivation passphrase separately from the mnemonic backups.
+4. **Generate a separate file-encryption passphrase.** Use substantial randomness, not a memorable quotation—for example, seven words independently selected with dice from a [7,776-entry word list](https://www.eff.org/dice). Record the result accurately on paper and store it offline, apart from every ciphertext copy. Do not reuse a wallet derivation passphrase or Bawa data key. Record any wallet derivation passphrase separately from the mnemonic backups.
 
-5. **Encrypt locally.** With the working directory on the RAM-backed volume, run:
+5. **Encrypt locally.** With the working directory on the RAM-backed volume, run ([age](https://github.com/FiloSottile/age)):
 
    ```sh
    age -p -o recovery.age recovery.txt
@@ -540,17 +558,17 @@ A maintained GPG release using symmetric encryption is another option. Choose on
 
 The software costs £0. Removable drives are a modest one-off expense, but replacements, secure storage, travel between locations and recovery practice still cost money or time.
 
-Choose this over a paid encryption product when you can manage offline file handling, maintain separated storage and perform the recovery yourself. Paying for durable offline media or competent support may be worthwhile if it reduces handling mistakes; a subscription or expensive package cannot compensate for missing recovery information.
+Choose this over a paid encryption product when you can manage offline file handling, maintain separated storage and perform the recovery yourself. Paying for durable offline media or competent support may be worthwhile if it reduces handling mistakes; a subscription or expensive package cannot compensate for irretrievably lost key material, but may still help where recovery remains possible through a retained recovery key, escrow, another key copy, reconstructable parameters or a weak passphrase. For age scrypt, the parameters are stored in the file header.
 
 ### Failure modes
 
-Flash storage can fail silently—keep independent copies and test them periodically. Encryption may detect damage, but it cannot reconstruct missing bytes. Lost passphrases, truncated files, obsolete software and undocumented derivation settings can all leave intact-looking backups unusable. Rehearse again after changing the recovery procedure.
+Flash storage can fail silently—keep independent copies and test them periodically. age's AEAD authenticated decryption always detects unauthorised modification or truncation, but it cannot reconstruct missing bytes. Lost passphrases, truncated files, obsolete software and undocumented derivation settings can all leave intact-looking backups unusable. Rehearse again after changing the recovery procedure.
 
 Re-encrypting a leaked mnemonic does not make that wallet safe again: create an entirely new wallet on a fresh, trusted device, transfer every asset and token, and stop using the old wallet permanently.
 
-### Recovery drill
+### Recovery drill ([age documentation](https://age-encryption.org/))
 
-Before depositing a meaningful amount, run this drill offline on a fresh, trusted machine running clean, verified software.
+Before depositing any amount, run this drill offline on a fresh, trusted machine running clean software from a verified release obtained through the official distribution channel and checked against the publisher's release signing.
 
 1. Retrieve one encrypted copy and its separately stored file passphrase.
 
@@ -569,11 +587,11 @@ Successful decryption alone proves too little—a wrong derivation passphrase ca
 Repeat independently for every copy, including the primary paper or metal route, without relying on the working wallet.
 ## 15. Free everyday defences: token approval hygiene
 
-Treat an EVM token approval as a standing permission, not a website session. For ERC-20 tokens, an approved spender can move tokens up to the remaining allowance without another signature from you. An NFT operator approval can cover an entire collection. Disconnecting a site leaves those on-chain permissions in place.
+Treat an EVM token approval as a standing permission, not a website session. Use an approval checker such as [Revoke.cash](https://revoke.cash). For ERC-20 tokens, an approved spender can move tokens up to the remaining allowance without another signature from you. An NFT operator approval can cover an entire collection. Disconnecting a site leaves those on-chain permissions in place.
 
 **What this protects against:** Remove unnecessary permissions to reduce exposure to forgotten, malicious or later-compromised spenders. Check empty addresses too — an allowance may still cover tokens you receive later.
 
-Revocation cannot undo a drain, repair a compromised key or prevent you granting another harmful permission. This is not a general audit of native-coin transfers or smart-wallet permissions. A hardware signer can protect the key while correctly signing the malicious approval you confirm — it is not a substitute for understanding the permission.
+Revocation cannot undo a drain, repair a compromised key or prevent you granting another harmful permission. This is not a general audit of native-coin transfers or smart-wallet permissions (session keys, modules and spending policies). A hardware signer can protect the key while correctly signing the malicious approval you confirm — it is not a substitute for understanding the permission.
 
 ### Free-security checklist
 
@@ -628,7 +646,7 @@ Simulation protects against unexpected transfers or permissions that it exposes.
 
 An off-chain simulation uses no network gas. Broadcasting the real transaction can still incur network fees. Some providers charge for extras — use included free checks.
 
-**Free versus paid:** for routine payments, choose these habits before buying a security subscription. A paid product cannot decide whom you meant to pay. Paid phishing alerts or broader simulation may help with frequent, complex signing, but check their documented coverage. Pay only for an identifiable extra capability you need. These tools add warnings, not permission to skip address and source checks. A recovery service's price is not evidence that it can recover anything.
+**Free versus paid:** for routine payments, choose these habits before buying a security subscription. A tool can compare a transaction against an explicitly selected trusted record, but no product can know your unstated intention. Paid phishing alerts or broader simulation may help with frequent, complex signing, but check their documented coverage. Pay only for an identifiable extra capability you need. These tools add warnings, not permission to skip address and source checks. A recovery service's price is not evidence that it can recover anything.
 
 **Free-security checklist:**
 
@@ -642,7 +660,7 @@ An off-chain simulation uses no network gas. Broadcasting the real transaction c
 
 Public source can be inspected; that does not mean it has been audited. An audit has a scope and date, and mistakes can survive it. Install pinned scanners from verified releases; check available checksums or provenance; document exact runtimes, commit lockfiles and pin rule revisions. In CI, fetch full Git history and refs, then run these checks on pull requests and release commits without signing or deployment secrets. Require tests and dependency review too. Block findings and tool errors; exceptions need a reason, owner and expiry. Keep these gates even when paying for an audit.
 
-**Secret scanning:** run `gitleaks git --redact --log-opts="--all" .`, then `gitleaks dir --redact .`; Gitleaks flags recognised credential patterns in history and working files, including files later deleted; it can miss mnemonics, xpubs and custom key formats; it cannot undo exposure; Create `.gitleaks.toml` at the repository root before configuring extensions to the default detectors, testing with published non-live fixtures in a throwaway branch; restrict access to reports. The CLI has no licence fee; full-history scans cost runner time and triage. Choose free for repository gates; paid coverage can help with organisation-wide integrations and staffed response.
+**Secret scanning:** run `gitleaks git --redact --log-opts="--all" .`, then `gitleaks dir --redact .`; Gitleaks flags recognised credential patterns in history and working files, including files later deleted; it can miss mnemonics, xpubs and custom key formats; it cannot undo exposure; A `.gitleaks.toml` file at the repository root is only needed when customising; to extend the default detectors, include `[extend]` with `useDefault = true`, testing with published non-live fixtures in a throwaway branch; restrict access to reports. The CLI has no licence fee; full-history scans cost runner time and triage. Choose free for repository gates; paid coverage can help with organisation-wide integrations and staffed response.
 
 **Package-manager dependency audits:** For npm, run `npm ci --ignore-scripts` followed by `npm audit --audit-level=low` in `tools/hdwallet-gen`, not at the repository root; use your manager's native equivalent elsewhere; review required build scripts before permitting them in a separate build/test job; audit matches versions to published advisories; it cannot rule out unknown flaws or malicious releases, nor establish exploitability; registry failure is not a clean result; update deliberately, commit the new lockfile and rerun tests rather than forcing upgrades blindly. The command has no licence fee, but needs network access and maintenance; registry requests can disclose dependency metadata. Choose free for advisory checks; paid services can help prioritisation and continuous monitoring.
 
@@ -652,26 +670,26 @@ Public source can be inspected; that does not mean it has been audited. An audit
 
 - **Generate offline** (use a verified build from the canonical repository on a clean dedicated device; disable networking and radios, then generate using the wallet's secure randomness; keep it offline; isolation limits remote theft, not malicious software or physical access; encryption does not protect secrets while decrypted in memory).
 - **Separate watching from signing** (keep spending secrets off the tracker; import only public descriptors or account addresses; keep exports private, never in example files; label networks explicitly; verify receive addresses and each transaction's network, destination, amount, fees and contract actions on the trusted signer — an online tracker can lie).
-- **Make 2–3 separated backups** (keep legible offline seed copies in access-controlled places with independent fire, flood and theft risks; check them periodically; each copy adds a theft target; back up required passphrases separately; keep cosigner secrets apart; do not treat photos, cloud notes or password managers as safe seed storage).
-- **Practise recovery before funding** (restore a backup on a clean offline signer using only recorded instructions; compare receiving and change addresses, where applicable, for every intended account/network; confirm signing with an offline, non-spending test where supported; a "restored" screen is insufficient; keep any device that handled the seed offline afterwards).
-- **Back up descriptors or policy** (export public receive/change descriptors with checksums, fingerprints, paths and multisig threshold/key ordering, or the supported policy equivalent; record chain IDs, script types and recovery roles as applicable; protect this privacy-sensitive metadata; it does not replace signing keys).
+- **Make 2–3 separated backups** (keep legible offline seed copies in access-controlled places with independent fire, flood and theft risks; check them periodically; each copy adds a theft target; back up required passphrases separately; keep cosigner secrets apart; do not treat photos, cloud notes or ordinary online/synced password-manager storage (distinct from a deliberately designed offline encrypted store) as safe seed storage).
+- **Practise recovery before funding** (restore a backup on a clean offline signer using only recorded instructions; compare receiving and change addresses, where applicable, for every intended account/network; confirm signing with an offline, non-spending test where supported; a "restored" screen is insufficient; keep any device that handled the seed offline afterwards; return it to online service only after confirming that the seed and any related secrets have been securely erased from it).
+- **Back up descriptors or policy** (export public receive/change descriptors with checksums, fingerprints, paths and multisig threshold/key ordering, or the supported policy equivalent; record descriptor provenance (source, software, version [to be recorded] and date [to be recorded]), chain IDs, script types and recovery roles as applicable; protect this privacy-sensitive metadata; it does not replace signing keys).
 - **Audit approvals** (on every used chain, inspect token allowances, NFT operators and delegated permissions using explorers linked from official chain documentation; verify spenders and revoke unnecessary access; reviewing is free; revocation may require gas; disconnecting a site does not revoke permissions; on-chain checks miss unused signed permits).
-- **Prepare for compromise** (if signing secrets may have leaked, stop using that wallet; generate an independent seed on a clean signer and migrate assets and signing roles across affected networks; revocation cannot repair key theft; sweeper bots may steal gas top-ups — use documented incident-support routes; revoke exposed service credentials too).
+- **Prepare for compromise** (if signing secrets may have leaked, stop using that wallet; generate an independent seed on a clean signer and migrate assets and signing roles across affected networks; revocation cannot repair key theft; sweeper bots may steal gas top-ups — use documented incident-support routes: the incident-response procedure in section 6 of this guide and [RECOVERY.md](../RECOVERY.md); revoke exposed service credentials too).
 ## 17. Paid security: qualified custody
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-Use sections 17–22 as the single costs reference for the whole Bawa professional guide set.
+Use sections 17–22 as the single costs reference for the whole Bawa professional guide set (see [18](#18-paid-security-hsm-based-signing), [19](#19-paid-security-institutional-mpc-platforms), [20](#20-paid-security-consumer-multisig-with-inheritance), [21](#21-paid-security-insurance-backed-custody) and [22](#22-paid-security-cloud-kms-and-hsm-services)). `docs/03` and `docs/06` defer to `docs/08` as the costs reference.
 
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Make any custody agreement with an external provider, not Bawa. Treat all providers named here as examples, not Bawa recommendations.
 
 ### Confirm what “qualified” means
 
-"Qualified" usually covers institutions such as banks, trust companies and registered broker-dealers that undergo examination by state or federal regulators (US). Some registered funds, ETF issuers and fiduciaries may have a legal obligation to appoint a qualified custodian. Have legal advisers confirm the arrangement rather than relying on the label: applicable rules, assets and the contracting entity all matter.
+The US SEC [Custody Rule 206(4)-2(d)(6)](https://www.ecfr.gov/current/title-17/chapter-II/part-275/section-275.206(4)-2) defines "qualified custodian" to include banks, registered broker-dealers, registered futures commission merchants, qualifying foreign financial institutions that customarily hold financial assets and FDIC-insured savings associations. Some registered funds, ETF issuers and fiduciaries may have a legal obligation to appoint a qualified custodian. Have legal advisers confirm the arrangement rather than relying on the label: applicable rules, assets and the contracting entity all matter.
 
-Examples include Anchorage Digital Bank (OCC national trust bank charter, January 2021), and the BitGo and Coinbase Custody state-chartered trust custody businesses (also described as qualified custodians). These are examples, not recommendations. Check the precise legal entity and its regulatory permissions before signing; a familiar group name is not enough.
+Examples include Anchorage Digital Bank (OCC national trust bank charter, January 2021), and the BitGo Trust Company, Inc. (South Dakota state trust company) and Coinbase Custody state-chartered trust custody businesses (also described as qualified custodians). The OCC conditionally approved the conversion of BitGo Trust Company, Inc. to BitGo Bank & Trust, National Association, an uninsured national trust bank (not FDIC-insured), on 12 December 2025 ([OCC News Release 2025-125](https://www.comptrollerofthecurrency.gov/news-issuances/news-releases/2025/nr-occ-2025-125c.pdf)); this is conditional approval, not a granted charter. These are examples, not recommendations. Check the precise legal entity and its regulatory permissions before signing; a familiar group name is not enough.
 
 ### What it protects against
 
@@ -685,12 +703,16 @@ In a conventional custody arrangement, the provider operates the signing system.
 
 Custody does not make the asset itself safer. Price falls, token-issuer problems, blockchain faults and smart-contract failures remain possible; a transfer to the wrong destination may still be irreversible.
 
-Plan for custody-specific failure modes:
+Plan for custody-specific failure modes (non-exhaustive):
 
 - **Compromised access/approvals:** a stolen operator account, colluding approvers or an incorrectly configured policy can produce a withdrawal that appears authorised.
 - **Loss of availability:** maintenance, staff-access problems, withdrawal queues, compliance reviews and legal orders can delay or prevent transfers.
 - **Provider compromise:** signing infrastructure and staff can still be attacked. Professional operation reduces some risks; it does not remove them.
 - **Financial failure:** the provider may become insolvent or enter a lengthy resolution process. Regulation does not guarantee immediate return of assets.
+- **Operational or key-recovery failure:** non-adversarial errors or failures in operations or key recovery can delay or prevent access to assets.
+- **Intentional custodial misuse:** the provider may deliberately misuse client holdings.
+
+Where applicable, require client holdings to be segregated from the provider's own holdings.
 
 This is counterparty risk: your ability to recover or move assets depends partly on another organisation remaining solvent, capable and willing to honour its obligations. Review whether holdings are legally separated from the provider's own property, whether they may be lent or pledged, and what happens if the business fails.
 
@@ -698,17 +720,19 @@ This is counterparty risk: your ability to recover or move assets depends partly
 
 Qualified custody is most relevant to funds, fiduciaries and businesses with regulatory, audit or governance requirements. If you manage a treasury, weigh the value of continuity when staff leave and a formal separation between requesting and approving payments.
 
-If you are an individual with substantial holdings, you may prefer outsourced key recovery. Check eligibility thresholds and administrative overhead: these can make institutional custody unsuitable for an ordinary personal wallet.
+If you are an individual with substantial holdings, you may prefer outsourced key recovery (a paid service that keeps a recovery share or key to help you recover access if you lose yours, without taking custody; see section 20). Check eligibility thresholds and administrative overhead: these can make institutional custody unsuitable for an ordinary personal wallet.
 
 Do not assume a retail exchange account is the same service, even where the same corporate group offers qualified custody.
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-Use sections 17–22 as the single costs reference for the whole Bawa professional guide set. Treat any providers named as examples, NOT Bawa recommendations.
+Treat any providers named as examples, NOT Bawa recommendations.
 
 Bawa is a wallet reference project, not a custodian. Bawa holds no users' keys. Any custody agreement is with an external provider, not Bawa.
 
 ### Figures
+
+The only dated figure in this table is BitGo Bank & Trust's reported insurance programme total of up to US$250 million (checked 8 November 2026, UTC). The fee and threshold rows contain no published figures.
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
@@ -716,9 +740,9 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 |---|---|
 | Institutional fees | Institutional fees are normally negotiated per client, commonly as an annual percentage of assets under custody. |
 | Asset-entry thresholds | No verified generic entry threshold is published. Check each provider's own eligibility and minimum-balance terms; do not rely on a third-party-reported range. |
-| Headline insurance programme totals | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). See [BitGo](https://www.bitgo.com/) for its primary insurance disclosure. Headline programme cover is shared across customers and is not guaranteed cover for each account; check the policy wording for the insured entity, covered events, exclusions and deductibles. |
+| Headline insurance programme totals | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). See [BitGo](https://www.bitgo.com/resources/insurance) for its primary insurance disclosure. Headline programme cover is shared across customers and is not guaranteed cover for each account; check the policy wording for the insured entity, covered events, exclusions and deductibles. |
 
-Obtain a written quote showing the annual rate, any minimum charge and possible onboarding, transaction, network and exit charges. Ask how asset values are measured for billing. Do not infer an annual bill from the entry threshold.
+Obtain a written quote showing the annual rate, any minimum charge and possible onboarding, transaction, network and exit charges. For written-quote guidance, see [section 20, question 6](#20-paid-security-consumer-multisig-with-inheritance). Ask how asset values are measured for billing. Do not infer an annual bill from the entry threshold.
 
 Check the insurance terms as well as the headline total:
 
@@ -727,20 +751,20 @@ Check the insurance terms as well as the headline total:
 - Market losses and protocol failures are generally outside that cover.
 - Check exclusions, deductibles, the insured legal entity and who receives a payout: each matters.
 
-Crypto holdings in these arrangements are generally outside FDIC and SIPC protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
+Crypto holdings in BitGo arrangements are outside [FDIC](https://www.fdic.gov/) and [SIPC](https://www.sipc.org/) protection. Any protection available for eligible fiat balances is separate and depends on how that cash is held.
 
 ### Onboarding and exit
 
 Keep the initial process deliberate:
 
-1. **Check the service and contract.** Confirm the contracting entity, supported assets and networks, reporting, liability terms, asset treatment and withdrawal rights.
+1. **Check the service and contract.** Confirm the contracting entity and its regulatory status, supported assets and networks, any subcustodians, reporting and audit rights, liability terms, insurance cover, asset ownership, segregation and treatment in insolvency, fees, exit terms and withdrawal rights.
 2. **Complete identity checks securely.** Expect identity, beneficial-ownership, authorised-signatory and source-of-funds checks.
 3. **Set operating controls.** Set up strong authentication, separate approval roles, permitted destinations and a recovery process for lost operator access.
-4. **Test before the main transfer.** Agree a small deposit and withdrawal test. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
+4. **Test before the main transfer.** Agree a small deposit and withdrawal test. Include negative authorisation tests, governance/recovery bypass tests, transaction-binding tests and isolation/restoration evidence. An ordinary deposit should move assets to a confirmed address, not require handing over your existing Bawa recovery words.
 
-Plan departure before funding. Check notice periods, withdrawal limits, approval delays, termination charges and how statements can be exported. Make sure every asset can leave on a network supported by your intended destination.
+Plan departure before funding. Check notice periods, withdrawal limits, prerequisites and costs, approval delays, termination charges, what happens to withdrawals in a freeze, failure or insolvency, whether any assets are locked or encumbered, and how statements and other records can be exported in a usable form. For exit checks, see [section 20, question 4](#20-paid-security-consumer-multisig-with-inheritance). Make sure every asset can leave on a network supported by your intended destination and that the destination supports the asset.
 
-Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process.
+Exit will normally mean an on-chain transfer to a fresh self-custody wallet or another custodian, not receiving the provider's private keys. Test that route while the service is operating normally. Once assets sit at provider-controlled addresses, an old Bawa backup cannot bypass the provider's withdrawal process unless the provider imported keys recoverable from that backup.
 
 ### Keep recovery material private
 
@@ -748,7 +772,7 @@ Using a custodian does not make Bawa recovery work less sensitive. Keep seed wor
 
 Use placeholders in examples and redact diagnostic material. Send vulnerability reports to the repository maintainers through a private reporting route (OPEN ITEM — no route is documented; see §7). Keep exploit-enabling details out of public issues.
 
-**Shift in signing control (not a safety ranking):** self-custody — holder controls signing; into collaborative custody — holder and provider share signing authority; into qualified custody — provider controls signing; holder requests transfers.
+**Shift in signing control (not a safety ranking):** self-custody — holder controls signing; into collaborative custody — holder and provider share signing authority, but a holder controlling two keys in a 2-of-3 arrangement can sign without the provider; into qualified custody — provider controls signing; holder requests transfers.
 ## 18. Paid security: HSM-based signing
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -769,25 +793,26 @@ A hardware security module is a tamper-resistant device that can create, retain 
 
 This reduces opportunities to extract keys from application memory, server disks or stolen equipment. It protects key storage and cryptographic operations inside the device — it is not a claim of invulnerability.
 
-FIPS 140-3 Level 3 is a commonly requested validation level. Check the exact module, firmware and operating configuration covered by a validation. A validated component does not certify the complete wallet, approval service or custody arrangement.
+[FIPS 140-3 Level 3](https://csrc.nist.gov/projects/cryptographic-module-validation-program) is a commonly requested validation level. Check the exact module, firmware and operating configuration covered by a validation. A validated component does not certify the complete wallet, approval service or custody arrangement.
 
 ### Keep the limits in view
 
 - **A malicious request can still get signed.** Compromised software may submit a validly formed transaction that benefits an attacker.
 - **The device cannot infer the holder's intended recipient.** Check the destination, network, asset, amount and fees independently before approval.
-- **Wallet functions remain elsewhere.** Account tracking, HD derivation, transaction construction, policy enforcement and broadcasting still need software and operational controls.
+- **Some wallet functions remain elsewhere.** Account tracking, HD derivation, transaction construction, policy enforcement and broadcasting still need software and operational controls. HD derivation can occur inside a hardware wallet or HSM.
 - **Hardware-backed does not necessarily mean offline.** An HSM can be network-connected; cold storage is a separate operating choice.
 
 ### Establish who controls the signer
 
-Distinguish these two control models:
+Distinguish these three control models:
 
 - **Full HSM custody:** a provider operates the key infrastructure and releases transactions under its custody agreement. You depend on its authorisation, recovery and withdrawal processes. Holding an account with that provider is not the same as directly controlling a wallet key.
-- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted. Check who can change policy, recover backups, cause a signature or block access — the product label alone does not settle custody.
+- **Shared/collaborative control:** for example, in 2-of-2 multisig, the holder and provider each hold a key and both must sign.
+- **Self-custody with HSM signing:** the holder retains control of key material, signing authority and recovery, while an HSM performs the cryptographic work. The device may be owned outright or hosted; a hosted arrangement is self-custody only if the host cannot override the holder's control, provider approval is not mandatory and recovery is not provider-controlled. Check who can change policy, change the quorum/threshold, rotate keys, approve new destinations, recover backups, export recovery material, cause a signature or block access — the product label alone does not settle custody.
 
-Anchorage describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
+[Anchorage](https://www.anchorage.com/) describes its custody service as combining HSMs, biometric checks and multi-person approval, with keys retained in hardware. Its Porto offering is described as institutional self-custody, with clients retaining their own key material. Treat these as different control models, not interchangeable names for the same service.
 
-Coinbase Custody-style offerings are described around HSM-backed cold storage, geographically separated vaults, biometric controls and recurring SOC 1 and SOC 2 audits. Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
+[Coinbase Custody](https://www.coinbase.com/custody)-style offerings are described around HSM-backed cold storage, geographically distributed secrets, biometric controls and SOC 1 and SOC 2 audits (Type 1 reports are point-in-time; Type 2 reports cover a period). Require advertised controls to be substantiated for the particular service and contract. Audit reports have a defined scope and are not a promise that every withdrawal will be safe or available.
 
 Treat the named providers as examples, not Bawa recommendations. Bawa endorses neither provider, and naming them does not imply Bawa compatibility.
 
@@ -799,7 +824,7 @@ You can still choose institutional custody as an individual, but recognise that 
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
-This section is part of THE SINGLE COSTS REFERENCE for the whole guide set. Providers named are examples, NOT Bawa recommendations.
+For the costs reference, see [sections 18–22](#18-paid-security-hsm-based-signing). Providers named are examples, NOT Bawa recommendations.
 
 ### Setup and onboarding, in outline
 
@@ -813,11 +838,11 @@ This section is part of THE SINGLE COSTS REFERENCE for the whole guide set. Prov
 
 ### Figures
 
-No vendor publishes these figures as a tariff: institutional custody onboarding, annual custody service minimum, asset-based custody fee and dedicated enterprise network HSM appliance costs are quoted per client. Obtain written quotations from the custody provider or HSM manufacturer for each item; no public price was found for them at this check, and no 30 October 2026 date is carried forward as a check date for them.
+No vendor publishes these figures as a tariff: institutional custody onboarding, annual custody service minimum, asset-based custody fee and dedicated enterprise network HSM appliance costs are quoted per client. Obtain written quotations from the custody provider or HSM manufacturer for each item; no public price was found for them in a search of the providers named in this section — Anchorage, BitGo and Coinbase Custody — on 8 November 2026 (the guide's check date). The earlier 30 October 2026 date is superseded and is not carried forward as a check date for them.
 
-These bands are not market limits. Ask whether an annual minimum offsets asset-based charges or is additional. Redundant equipment, hosted HSM rental, backups, integration, support, staff, external review, withdrawal charges and network fees may be separate.
+Ask whether an annual minimum offsets asset-based charges or is additional. Redundant equipment, hosted HSM rental, backups, integration, support, staff, external review, withdrawal charges and network fees may be separate.
 
-Recheck every price before committing, including taxes, minimum balances and exit fees; do not use these dated allowances as an offer from any provider.
+Recheck every price before committing, including taxes, minimum balances and exit fees; do not use this information as an offer from any provider.
 
 ### Custody exposure
 
@@ -837,17 +862,19 @@ Get withdrawal conditions, fees, timescales and data-export arrangements in writ
 
 Plan to **RE-KEY** when leaving:
 
-1. Establish fresh keys under the new security boundary.
-2. Verify the receiving addresses independently and transfer balances while the old provider and quorum are still available.
-3. Update deposit addresses and watch-only public roots, retain transaction and approval records, then revoke obsolete service access.
+1. Confirm the new security boundary and quorum before proceeding; abort departure if any check fails.
+2. Establish fresh keys under the new security boundary.
+3. Verify the receiving addresses independently and transfer balances while the old provider and quorum are still available.
+4. Update deposit addresses and watch-only public roots; retain transaction and approval records.
+5. Verify that the old keys can no longer move funds, then revoke obsolete service access.
 
 Supported wrapped-key migration may be useful, but reusing a key can preserve dependence on anyone holding an old recovery copy. Fresh keys and an on-chain transfer provide a clearer separation.
 
 ### Required security review and signing flow
 
-An external security review of the complete design is required before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review.
+An external security review of the complete design is recommended by this guide before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review.
 
-Flow: signing request, into quorum approval, into HSM signature, into broadcast.
+Flow: signing request (validate the request and transaction), into quorum approval (bind approvals to the exact signing payload), into HSM signature (verify the returned signature), into broadcast.
 ## 19. Paid security: institutional MPC platforms
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
@@ -856,23 +883,23 @@ Providers named are examples, NOT Bawa recommendations. Bawa provides no custody
 
 Institutional MPC platforms suit teams that need shared control over funds, approval records and spending rules; they can make sense for business treasuries, funds and exchanges; for an individual, the expense and operational work are often difficult to justify against a well-managed hardware wallet and tested backups.
 
-**What MPC buys:** multi-party computation lets several participants produce a signature using separate secret shares; a threshold determines how many must cooperate (a two-of-three arrangement, for example, requires two participants); during routine signing, the complete private key is not reconstructed on a device or server; the resulting signature looks like a conventional single-key signature to the blockchain; there is no on-chain multisig structure to identify, and MPC itself adds no multisig fee overhead; network fees and platform charges still apply. Typical path: signing request, policy check, joint threshold signature, broadcast.
+**What MPC buys:** multi-party computation lets several participants produce a signature using separate secret shares; a threshold determines how many must cooperate (a two-of-three arrangement, for example, requires two participants); during routine signing, the complete private key is not reconstructed on a device or server; the resulting signature looks like a conventional single-key signature to the blockchain; there is no on-chain multisig structure to identify, and MPC itself adds no multisig fee overhead; network fees and platform charges still apply. Typical path: signing request, off-chain policy checks, joint threshold signature, broadcast.
 
 The main benefit is resistance to a single compromised device or dishonest operator — PROVIDED they cannot obtain enough shares to sign; separate shares offer little independence if one administrator, cloud account or recovery credential controls them all. Policy checks are another layer, not part of the blockchain's rules; they can restrict destinations and amounts or require additional approvals; they cannot make an approved malicious transfer safe.
 
-**What it does not solve:** enough share holders colluding or being compromised; approvers accepting a fraudulent payment or harmful contract interaction; an administrator weakening policies or replacing participants; defective signing software, poor randomness during share creation, or a compromised update; lost shares, unreadable backups or unavailable recovery participants; smart-contract faults, chain failures or provider outages.
+**What it does not solve:** enough share holders colluding or being compromised; approvers accepting a fraudulent payment or harmful contract interaction; an administrator weakening policies or replacing participants where the architecture permits this; defective signing software, poor randomness during share creation, signing-nonce failures, or a compromised update; lost shares that leave too few available to meet the threshold, unreadable backups or unavailable recovery participants; smart-contract faults, chain failures or provider outages.
 
 The share-generation ceremony and recovery process deserve as much scrutiny as everyday signing; some recovery designs rebuild a complete private key — that creates a single-key exposure which the normal MPC workflow avoids.
 
-**Platforms, custody and actual control:** Fireblocks advertises MPC signing alongside approval workflows, spending controls, approved-destination lists and transaction simulation — check which controls are available and enforced for your chosen networks and contract. Fireblocks is principally an infrastructure offering; buying that infrastructure does not, by itself, mean appointing a qualified custodian; regulated custody may be supplied through a related entity or an integrated provider — establish exactly which legal entity is responsible.
+**Platforms, custody and actual control:** [Fireblocks](https://www.fireblocks.com/) advertises MPC signing (see [NIST threshold cryptography](https://csrc.nist.gov/projects/threshold-cryptography)) alongside approval workflows, spending controls, approved-destination lists and transaction simulation — check which controls are available and enforced for your chosen networks and contract. Fireblocks is principally an infrastructure offering; buying that infrastructure does not, by itself, mean appointing a qualified custodian; regulated custody may be supplied through a related entity or an integrated provider — establish exactly which legal entity is responsible.
 
-Copper markets MPC custody together with off-exchange settlement; keeping trading collateral away from an exchange may reduce one exposure, but it introduces dependence on the custody and settlement arrangements; it does not eliminate counterparty risk.
+[Copper](https://copper.co/) markets MPC custody together with off-exchange settlement; keeping trading collateral away from an exchange may reduce one exposure, but it introduces dependence on the custody and settlement arrangements; it does not eliminate counterparty risk.
 
 For any platform, obtain a written share-and-control map: who holds each share, including backups and subcontractor-held shares? How many usable shares are required, and who can restore or replace them? Can the provider reach that threshold without your participation? Can you reach it without the provider's servers, login system or support team?
 
-If the provider controls a signing quorum, it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
+If the provider controls a [signing quorum](../GLOSSARY.md#signing-quorum), it can authorise movement without your shares; if it controls less than a quorum, it may still be essential to availability; neither "MPC" nor "non-custodial" proves an independent exit. Legal custody is separate: check asset ownership, segregation, withdrawal restrictions and your insolvency rights.
 
-This section is part of **THE SINGLE COSTS REFERENCE** for the whole guide set. Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
+For the costs reference, see [sections 18–22](#18-paid-security-hsm-based-signing). Treat named providers as examples, **NOT Bawa recommendations**. Bawa provides no custody service and keeps none of your keys.
 
 ### Setup and onboarding
 
@@ -884,7 +911,7 @@ Expect business identity checks, contractual due diligence and a technical revie
 4. Configure payment policies and test both permitted and rejected requests.
 5. Exercise recovery with a small balance before increasing exposure.
 
-A platform's share backup is not necessarily a BIP-39 mnemonic or something Bawa can import — establish compatibility rather than assuming that all wallet backups are interchangeable.
+A platform's share backup is not necessarily a [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic or something Bawa can import (see also [BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)) — establish compatibility rather than assuming that all wallet backups are interchangeable.
 
 ### Figures
 
@@ -894,46 +921,47 @@ These are not current quotations; recheck every price and term before purchasing
 
 | Example provider | Indicative figures | Scope and limits |
 |---|---|---|
-| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (checked 8 November 2026, UTC). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
-| Fireblocks | Tokenisation add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). | A product-specific listing for the tokenisation add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
+| Fireblocks | Fireblocks lists Essentials at US$999 per month for up to six months. Custom pricing for Pro, Enterprise or Enterprise+ plans starts at US$36,000 per year (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). See [Fireblocks pricing](https://www.fireblocks.com/pricing). | The Essentials offer lasts no more than six months, not an indefinite running cost; custom pricing is expressed annually — do not assume monthly cancellation. |
+| Fireblocks | Off Exchange add-on: "From 3-30bps on AUC" (0.03–0.30% of assets under custody). Tokenisation add-on: no published price ([Fireblocks pricing](https://www.fireblocks.com/pricing)). | A product-specific listing for the Off Exchange add-on, not a universal Fireblocks fee; establish the billing period, valuation basis and whether it is additional to the subscription. |
 
-Ask which onboarding, support, recovery, extra-user and exit charges are included; network fees remain separate unless the contract explicitly covers them.
+Ask which recurring platform/subscription fees, usage charges, minimums/overages and feature/add-on charges apply and which onboarding, support, recovery, extra-user and exit charges are included; confirm who pays network fees and whether they are bundled or passed through.
 
 ### Counterparty failure and a provable exit
 
-A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance is not a substitute for recovery — verify the insured entity, covered events, exclusions, deductibles and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
+A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance may reimburse covered losses, but does not guarantee reimbursement or replace tested recovery — verify the insurer, insured entity, policy period, covered balances and events, exclusions, deductibles, applicable limits, claim eligibility and conditions, payment recipients, the claims process and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
 
 Before committing substantial funds, require an exit plan that works under an abrupt shutdown:
 
-- **Have the recovery materials already:** necessary shares or independent recovery participants, decryption access, software, documentation, licences. A promise to supply them after a shutdown is weak protection.
-- **Test without the provider:** use a small test balance and a documented fallback. Produce a valid transaction while the provider's signing and authentication services are unavailable; broadcast through independent chain access; record the result without recording secrets.
-- **Know the migration route:** does supported export preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
+- **Have the recovery materials already:** necessary shares or independent recovery participants (who can take part in recovery without the provider), decryption access, software, documentation, licences. A promise to supply them after a shutdown is weak protection.
+- **Test without the provider:** if provider-independent recovery is claimed, run an acceptance test using a small test balance and a documented fallback. Produce a valid transaction while the provider's signing and authentication services are unavailable; broadcast through independent chain access; record the result without recording secrets.
+- **Know the migration route:** does supported export (a documented export of the required key material and wallet data in a format the recovery tooling can import and use to sign without the provider) preserve existing addresses, or must funds move to a fresh wallet? Check every relevant asset and network, including gas requirements and restrictions on staked or contract-controlled positions.
 - **Repeat the drill after material changes:** share replacement, software upgrades, staff departures can invalidate an earlier test.
 
-Do not count "we have backup files" as proof that you can still sign; without a demonstrated independent quorum and usable recovery tooling, a shutdown may leave you dependent on a recovery agent, an insolvency process — or unable to spend at all.
+Do not count "we have backup files" as proof that you can still sign; without a demonstrated independent quorum (enough signers shown to be able to sign without the provider) and usable recovery tooling, a shutdown may leave you dependent on a recovery agent, an insolvency process — or unable to spend at all.
 ### Multisig-as-a-service
 
 You pay a provider to run signing infrastructure, approval checks and support; this can remove a single point of failure — or move it into someone else's organisation.
 
-An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a signing quorum. The chain's script or account logic checks that rule. Each signer holds its own complete private key, unlike an MPC participant's share. The multisig rule is visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
+An M-of-N multisig wallet needs signatures from at least M of its N independent keys: a [signing quorum](../GLOSSARY.md#signing-quorum). The chain's script or account logic checks that rule. A signer may hold its own complete private key, unlike an MPC participant's share, but a multisig key can itself be MPC-operated. Depending on the construction, the multisig rule may be visible on chain, sometimes only when funds are spent; supported chains and transaction costs differ.
 
 ```text
-on-chain multisig [separate complete private keys]
-  → [M individual signatures]
-  → [chain enforces M-of-N; policy visible]
+Typical signing paths
+on-chain multisig [separate complete private keys; one standard signature per key/message where applicable; policy visibility is mechanism- and spend-dependent]
+  → [M individual signatures where applicable; aggregated signatures and contract approvals need not show M separately visible signatures]
+  → [chain enforces M-of-N wallet authorisation policy; policy visibility is mechanism- and spend-dependent]
 
 MPC [key shares across participants]
-  → [threshold policy enforced off chain]
+  → [signing threshold enforced off chain; distinct from wallet authorisation policy]
   → [one ordinary signature on chain]
 ```
 
 ### Check the protection and its limits
 
-With a threshold above one and genuinely separate signers, one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if enough other keys remain. Provider checks may offer another chance to catch a bad payment.
+With a threshold above one and genuinely separate signers (each with independent control and authorisation, so no single device or employee controls enough keys to spend), one stolen key, compromised device or dishonest employee cannot spend alone. Losing a key need not strand funds if the remaining keys satisfy the complete spending policy, including required roles. Provider checks may offer another chance to catch a bad payment.
 
 A valid quorum can still authorise theft, a mistaken address or a harmful contract interaction. Multisig does not fix chain bugs or investment losses. Different HD paths under one seed are not independent protection — whoever steals that seed can derive all those keys.
 
-If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids the service dependency but leaves that work with you. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
+If you are an individual, check that your holdings and threat model justify the fees and recovery work. Self-managed multisig avoids relying on a service to do that work but leaves it with you; dependencies on hosted coordinators, proprietary formats, software maintenance and hardware vendors may remain. If you run a business, you may value separated staff roles, spending limits and audit records. Either way, do not assume "managed" means maintenance-free.
 
 ### Establish custody: count the keys
 
@@ -949,15 +977,15 @@ Two employee approvals in a portal do not necessarily represent two independentl
 Before funding:
 
 - Confirm the exact chain, asset, threshold and key holders.
-- Expect identity checks and, where required, business and authorised-signatory checks.
+- Identity checks and, where required, business and authorised-signatory checks may apply, depending on the provider, service, customer and jurisdiction.
 - Agree signing delays, transaction limits, recovery responsibilities and exit terms.
-- Generate user-controlled keys independently, keep recovery secrets offline and out of this repository, and start with a small test balance.
+- Generate user-controlled keys independently where supported by the architecture and provider, keep recovery secrets offline and out of this repository, and start with a small test balance.
 
 Have each signer verify the payment independently rather than merely approve a notification.
 
 Provider outages, compliance freezes, insolvency and changed terms can interrupt service. With custody, contractual withdrawal rights are not equivalent to possessing a signing quorum.
 
-### Check the figures for the particular service
+### Check the figures for BitGo
 
 **BitGo is a commercial example, not a Bawa recommendation.** It markets multisig and MPC wallets, qualified-custody services, and products for settlement and staking. Check the agreement for the particular service — these are not interchangeable arrangements.
 
@@ -965,61 +993,61 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Item | Indicative figure and checks |
 |---|---|
-| BitGo custody pricing | BitGo currently offers qualified custody with no custody fees to eligible individual investors. No published institutional annual custody rate was verified at this check (checked 8 November 2026, UTC). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, recovery and exit charges, and allow separately for chain fees. |
-| BitGo insurance headline | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). Check who is insured, which losses qualify, exclusions and whether limits are shared. |
+| BitGo custody pricing | BitGo currently offers qualified custody with [no custody fees to eligible individual investors](https://www.bitgo.com/products/individual-investors/). No published institutional annual custody rate was verified at this check (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Recheck prices and minimums before committing; request the complete fee schedule and ask whether the quotation includes subscriptions, setup, staking and trading fees, recovery and exit charges, and allow separately for chain fees. |
+| BitGo insurance headline | BitGo Bank & Trust says it maintains [up to US$250 million in digital asset insurance](https://www.bitgo.com/resources/insurance) for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (guide's check date: 8 November 2026, UTC; no saved page capture is retained in this repository). Check who is insured, which losses qualify, exclusions and whether limits are shared. This row duplicates the BitGo insurance row in section 17 (L733), the single maintained source; keep both rows' check dates synchronised with that source. |
 
 ### Make the exit real
 
-Retain the wallet descriptor or equivalent configuration, including the threshold, all co-signers' public keys or extended public keys, derivation paths, script or account settings, and network. Protect this metadata: it can reveal addresses and balances. It does not replace secret-key backups.
+Retain the complete wallet descriptors or equivalent configuration, including the threshold, all co-signers' public keys or extended public keys, key-origin fingerprints, derivation paths and rules, the exact script or policy and its wrappers, key order or sorting rules, receive and change branches, account settings, checksums, discovery settings, and network. Protect this metadata: it can reveal addresses and balances. It does not replace secret-key backups.
 
-For a provider-independent arrangement, rehearse recovery before depositing substantial funds: using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer changes.
+For a provider-independent arrangement, rehearse recovery before depositing substantial funds (an amount whose loss would matter to the holder, judged before funding): using independent tooling and your own quorum, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign; repeat the check after signer, threshold, script, contract, tooling, backup-format, encryption-credential, device, permission or provider-dependency changes.
 
-If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change. Budget for the relevant network fees. If you use a custodial service, test withdrawals while the service is operating — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
+If the provider shuts down, an independent quorum can move funds to a replacement wallet or authorise a supported policy change (a permitted change to the rules for authorising spending) only if it has the signing authority required for that action and can carry it out using the complete wallet descriptors or equivalent configuration without relying on the provider's participation, approval or systems. Budget for the relevant network fees, any applicable withdrawal, closure, co-signer or recovery charges, and replacement-wallet set-up costs. If you use a custodial service, test withdrawals while the service is operating, but a successful test shows only that the tested withdrawal worked at that time; it does not establish independent signing authority or guarantee future access — without an independent quorum, shutdown may leave funds inaccessible or tied up in insolvency proceedings.
 
-Watch for lost recovery keys, stale configurations, incompatible recovery software, shared cloud backups and departing staff. A recovery promise is not a substitute for a rehearsal.
+Watch for lost recovery keys, missing secrets, missing wallet-policy metadata, stale configurations, incompatible recovery software, corrupt or inaccessible backups, shared cloud backups whose common dependency can fail or expose every copy at once, departing staff and provider-dependent recovery. A recovery promise is not a substitute for a rehearsal.
 ## 20. Paid security: consumer multisig with inheritance
 
-These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
+The Casa and Unchained figures in this section, checked on 8 November 2026, are a dated guide, not current quotations. The Fireblocks tokenisation row in section 19 is undated. Recheck all pricing, minimums and insurance terms before relying on them.
 
 Household holdings and inheritance planning sit beyond Bawa's own scope: Bawa covers generation, derivation, comparison and recovery for a reference wallet; it does not provide inheritance, estate administration or managed multisig services. This section describes paid options and the questions to ask before buying them; the named providers are examples, not Bawa recommendations.
 
 ### Why consider them
 
 - With a single-signature wallet, one lost or stolen seed can cost the funds or lock them away permanently.
-- A managed 2-of-3 arrangement lets you retain signing ability if one key is lost while still making a single stolen key insufficient on its own.
+- A managed 2-of-3 arrangement with a genuine cryptographic threshold can let you retain signing ability if one key is lost while still making a single stolen key insufficient on its own, but recovery may still depend on a co-operative co-signer or the custodian's procedures.
 - Inheritance features address a different risk from everyday theft — what happens if the holder dies, loses capacity or becomes unreachable.
 - A trusted family member or adviser should be able to recover funds, not merely learn that a wallet existed.
 
 ### Casa-style service
 
-A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime.
+A typical arrangement uses a 2-of-3 multisig wallet plus a separate inheritance key held by a designated recipient. In normal use, you hold two keys — for example, a mobile key and a hardware key — and the provider holds one. The recipient's key remains inactive during your lifetime. Possessing enough private keys alone does not guarantee that you can spend: you also need the wallet configuration and usable signing or recovery tools.
 
 A service may describe its arrangement as "self-custody". Check what the service can and cannot do for you: if you control a working quorum independently, you retain spending ability; if the provider holds a necessary key or controls the software workflow, your independence is limited.
 
 Providers also offer account monitoring, inheritance handling and succession planning, including an inheritance check that confirms the recipient can still access their key. Casa markets its service for families and businesses seeking security and inheritance, with support for Bitcoin and Ethereum, including selected ERC-20 tokens. Check the supported assets for your own holdings.
 
-Use these figures from the [Casa vault FAQ](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
+Use these figures from the [Casa pricing](https://casa.io/pricing), re-checked live on **8 November 2026 (UTC)**:
 
 | Casa plan | Annual price |
 |---|---:|
-| Standard 3-key vault, 2-of-3 | $250 per year |
-| Premium 5-key vault, 3-of-5 | $2,100 per year |
-| Private Client 6-key vault | $7,500 per year |
+| Standard 3-key vault | $250 per year |
+| Premium 5-key vault | $2,100 per year |
+| Private Client 5-key or 6-key vault | $7,500 per year |
 | Business plans | $2,750 per year |
 
-These are entry bands only. Ask what features, limits and support are included at each level and whether additional keys, users or assisted recovery cost extra.
+These are listed annual plan prices. Ask what features, limits and support are included at each level and whether additional keys, users or assisted recovery cost extra.
 
 #### Inheritance
 
 A nominated recipient can request access once the holder has died, usually through a supported procedure, not simply by possessing a key. At that point, the inactive recipient key becomes usable.
 
-The process may include a six-month inactivity check, a waiting period and confirmation that the holder is actually deceased. The recipient is expected to have enough identity and location information to be reachable.
+The default process includes a six-month waiting period starting when the recipient requests access; it does not verify death or require proof of death, and the owner can reject the request at any time within those six months. Optional Enhanced Verification (Private Client, US residents only) requires a US-issued death certificate validated by Casa and eliminates the six-month wait (see the [Casa inheritance FAQ](https://support.casa.io/knowledge/inheritance-faqs-vault-owner)). The recipient is expected to have enough identity and location information to be reachable.
 
-A recipient who has lost their key or cannot be found is a recognised failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
+A recipient who has lost their key or cannot be found is a failure mode. Test the handover while the holder is alive — use a small balance on a separate wallet to rehearse the full route.
 
 ### Unchained-style service
 
-A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider's key is intended to be inaccessible to staff alone. Inheritance may be offered as a paid extension.
+A typical arrangement uses a 2-of-3 multisig vault with optional inheritance. You control two keys and the provider holds one, and the provider can help arrange signing when a key is unavailable. The provider states that its key is intended to be inaccessible to staff alone. Unchained's [Signature plan](https://unchained.com/pricing) includes inheritance setup and coordination for your heirs.
 
 Use these figures from [Unchained pricing](https://unchained.com/pricing), re-checked live on **8 November 2026 (UTC)**:
 
@@ -1030,13 +1058,13 @@ Use these figures from [Unchained pricing](https://unchained.com/pricing), re-ch
 | Signature | US$6,000 for the first year, renewing at US$4,500 a year |
 | IRA | $250 per IRA account per year (checked 8 November 2026) |
 
-Pricing and availability are US-focused: check whether the service supports your residence, local regulations and time zones before relying on it.
+Unchained's [IRA offering](https://unchained.com/pricing) is available in the US only: check whether the service supports your residence, local regulations and time zones before relying on it.
 
 ### Assisted multisig with inheritance
 
-In this arrangement, a named provider operates a signing service, helps set up a multisig wallet, offers supported hardware options and manages an inheritance process. It may include an inheritance key or a time-locked mechanism, with defined steps for the successor.
+In this arrangement, a named provider operates a signing service, helps set up a multisig wallet, offers supported hardware options and manages an inheritance process. It may include an inheritance key, such as Casa's [recipient key / Casa Recovery Key](https://support.casa.io/knowledge/inheritance-faqs-vault-owner), with defined steps for the successor.
 
-No generic assisted-multisig band is published. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals. Unchained IRA costs $250 per IRA account per year (checked 8 November 2026).
+No generic assisted-multisig band is published in this guide. For named plans, see [Casa pricing](https://casa.io/pricing) (Standard $250/yr, Premium $2,100/yr, Private Client $7,500/yr, Business $2,750/yr) and [Unchained pricing](https://unchained.com/pricing) (Signature $6,000 for the first year, renewing at $4,500 a year; Inheritance Boot Camp $4,000 per client, renewing at $4,500 a year), all checked 8 November 2026 (UTC). Confirm inheritance inclusion per plan and distinguish first-year charges from renewals. Unchained IRA costs $250 per IRA account per year (checked 8 November 2026).
 
 Higher-touch packages may include trustee arrangements and estate-planning support.
 
@@ -1052,9 +1080,9 @@ Before choosing, work out which questions you need answered in writing:
 
 A legal estate wrapper uses a trust, company or will structure to hold or direct wallet assets. It may use one or more of a letter of instruction, a will, a trust deed or a company record, and typically involves a named trustee, executor or attorney.
 
-No generic estate-wrapper figures are published. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; and asset-based charges. Confirm the jurisdiction, the scope of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
+No generic estate-wrapper figures are published in this guide. Obtain jurisdiction-specific written quotations before budgeting, covering: legal setup; recurring support; trustee or company administration; asset-based charges; and amendment, probate, distribution, transfer and winding-up costs. Confirm the jurisdiction, the scope, charging frequency, currency, taxes, minimums, caps, escalation, fee percentage and valuation basis of each charge, and whether government filing fees, legal advice for specific jurisdictions, or dispute-resolution costs are included.
 
-Asset-based charges are quoted individually and subject to negotiation. These bands do not include government filing fees, legal advice for specific jurisdictions, or the cost of resolving disputes.
+Asset-based charges are quoted individually and subject to negotiation.
 
 ### Before you sign
 
@@ -1064,30 +1092,30 @@ Asset-based charges are quoted individually and subject to negotiation. These ba
 - Make sure the designated recipient can reach their key.
 - Test the inheritance handover while the holder is alive.
 - Write down what happens if the provider ceases trading.
-- Remember that paying for a service does not remove the risk of seed compromise — the remedy remains the same: a new wallet, move everything, retire the old wallet.
+- Remember that paying for a service does not remove the risk of seed compromise — for single-signature wallets, the remedy remains the same: a new wallet, move everything, retire the old wallet. For multisig, count compromised signing positions, not seeds; for a partial compromise, replace only the compromised signer and migrate the funds to a new wallet because the existing script cannot change the compromised key's role.
 ### The seven private test questions
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
 
 Providers named are examples, NOT Bawa recommendations.
 
-Before you buy or trust a paid service, answer these seven questions privately — do not post the answers in a public issue, forum or support thread. Each question is a test of the service; a service that cannot answer it in writing is not ready for your funds.
+Before you buy or trust a paid service, answer these seven questions privately — do not post the answers in a public issue, forum or support thread. As a screening policy, treat a service that cannot answer these questions in writing as not ready for your funds.
 
-1. Who holds each key, and can you prove it? List every signing key, its holder, its storage location and its backup. A service that cannot name the holders and locations of all keys in the quorum has not given you enough to verify.
+1. Who holds each key, and can you prove it? This is a good opening question, not a complete verification test. List every signing key, its holder at organisation or role level, its storage location and its backup. A service that cannot identify the holders at organisation or role level and provide supporting audit evidence for all keys in the quorum fails this screen.
 
-2. Can you spend without the provider? Using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof that you can sign. Repeat the check after any signer change.
+2. Can you spend without the provider? Using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature, then verify its acceptance or confirmation. Seeing a balance or exporting a file is not by itself proof that you can sign. Repeat the check after any signer change (any key, signer device or signing-role change).
 
-3. Can the recipient actually recover the funds? Rehearse the inheritance route with a small balance on a separate wallet while the holder is alive: the recipient must be able to reach their key, complete the provider's procedure, and move funds to a fresh wallet. A recipient who has lost their key or cannot be found is a recognised failure mode.
+3. Can the recipient actually recover the funds? Rehearse the inheritance route with a small balance on a separate wallet while the holder is alive: where applicable and possible to rehearse, check whether the recipient can reach their key, complete the provider's procedure, and move funds to a fresh wallet. A death-triggered procedure cannot genuinely be rehearsed while the holder is alive. A recipient who has lost their key or cannot be found is a failure mode.
 
-4. What happens if the provider ceases trading? Get the exit terms in writing: notice periods, withdrawal limits, approval delays, termination charges, data export. Know whether funds must move on-chain to a fresh wallet, and test that route while the service is operating normally.
+4. What happens if the provider ceases trading? Get the exit terms in writing: notice periods, withdrawal limits, approval delays, termination charges, data export, arrangements for signing and recovery after termination, and whether backups and records are returned, exported, retained, deleted or remain accessible. Know whether funds must move on-chain to a fresh wallet, and test that route while the service is operating normally.
 
-5. What does the insurance actually cover? Check the insured entity, covered events, exclusions, deductibles and whether a limit is shared across customers. A headline amount does not establish cover for your balance. Market losses and protocol failures are generally outside that cover.
+5. What does the insurance actually cover? Check the insured entity, payout recipient, insured property and environment, covered events, exclusions, deductibles, claims process and whether a limit is shared across customers. A headline amount does not establish cover for your balance. Market losses and protocol failures are generally outside that cover.
 
-6. What are the total costs, including exit? Get a written quote showing the annual rate, any minimum charge, onboarding, transaction, network and exit charges. Ask how asset values are measured for billing. Do not infer an annual bill from an entry threshold.
+6. What are the total costs, including exit? Get a written quote showing the annual rate, any minimum charge, onboarding, transaction, network and exit charges, any separately charged insurance premiums, any per-user or per-seat charges and the contract term, with first-year and renewal costs shown separately. Ask whether billing uses a stated valuation basis. Do not infer an annual bill from an entry threshold.
 
 7. What happens if your seed is compromised? Paying for a service does not remove the risk of seed compromise. The remedy remains the same: a new wallet, move everything, retire the old wallet. If the service cannot explain how that remedy works under its arrangement, do not fund it.
 
-Seed-free letter of instruction: keep the letter of instruction separate from the will — the will is a public document in many jurisdictions once probate begins, and it must never contain seed words, private keys, vault unlock passphrases or data keys. The letter should name the wallet, the location of the recovery material, the person who can use it, and the steps to reach the funds, without recording the secrets themselves.
+Seed-free letter of instruction: keep the letter of instruction separate from the will — the will may become a public document when lodged or filed, or following a grant of probate, depending on local law, and it must never contain seed words, private keys, vault unlock passphrases or data keys. The seed-free letter must remain confidential and be kept with access-controlled recovery material. The letter should name the wallet, the location of the recovery material, the person who can use it, and the steps to reach the funds, without recording the secrets themselves.
 ## 21. Paid security: insurance-backed custody
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -1096,9 +1124,9 @@ Providers named are examples, NOT Bawa recommendations.
 
 Insurance does not make a wallet safe; it may pay for some losses after the fact, under defined terms. Read the policy before funding, not after a loss. Bawa is a wallet reference project; it holds no users' keys and sells no insurance.
 
-What insurance can cover: crime and specie cover (theft of physical assets, including precious metals and, in some policies, digital assets held in specified custody); a policy may cover losses from external compromise of a specified cold-storage system, employee dishonesty, and physical theft during transit or storage. Coincover-style offerings are described as protecting against specified theft and loss events for wallets and exchanges, with recovery services attached — check the policy wording for the particular product, not the marketing summary.
+What insurance can cover: crime cover (including, in some policies, theft of expressly insured digital assets held in specified custody) and specie cover (theft of physical valuables, including precious metals); a policy may cover losses from external compromise of a specified cold-storage system, employee dishonesty, and physical theft during transit or storage. Coincover-style offerings are described as protecting against specified theft and loss events for wallets and exchanges, with recovery services attached — check the policy wording for the particular product, not the marketing summary.
 
-What it does not cover: market losses; protocol failures and smart-contract faults; losses from your own mistake (wrong address, approved malicious transaction, lost seed with no recovery route); losses outside the insured entity, insured location or insured system; losses above the policy limit; losses after the policy has lapsed. A headline amount does not establish cover for your balance: limits are usually shared across clients; other claims may reduce the available cover; exclusions, deductibles, the insured legal entity and who receives a payout matter.
+What standard custody crime/specie insurance typically does not cover: market losses; protocol failures and smart-contract faults; losses from your own mistake (wrong address, approved malicious transaction, lost seed with no recovery route); losses outside the insured entity, insured location or insured system; losses above the policy limit; losses after the policy has lapsed. A headline amount does not establish cover for your balance: limits are often shared across clients; other claims may reduce the available cover; exclusions, deductibles, the insured legal entity and who receives a payout matter.
 
 Covered-or-not table (illustrative — check the actual policy wording):
 
@@ -1106,24 +1134,24 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Event | Typically covered? | Check |
 |---|---|---|
-| Theft of cold-storage keys by an external attacker | Possibly, if the policy names that event and system | Insured entity, system, limit, deductible |
+| Theft of insured digital assets from cold storage through private-key compromise | Possibly, if the policy names that event and system | Insured assets, event, legal entity, system, location, limit and available cover, deductible, exclusions, whether the policy has lapsed, who receives a payout |
 | Employee dishonesty | Possibly, under a crime policy | Who counts as an employee; sub-limits |
-| Physical theft in transit or storage | Possibly, under specie cover | Transit routes, storage locations, limits |
+| Physical theft of insured valuables in transit or storage | Possibly, under specie cover | Insured assets and legal entity, transit routes, storage locations, limits and available cover, deductible, exclusions, whether the policy has lapsed, who receives a payout |
 | Market price fall | No | — |
 | Smart-contract or protocol failure | Generally no | Some policies offer separate cover — check |
-| Wrong address or approved malicious transaction | No | — |
-| Lost seed with no recovery route | No | — |
+| Wrong address or approved malicious transaction | No, unless expressly written fraud/social-engineering cover applies; it can indemnify an authorised transfer | — |
+| Lost seed with no recovery route | No, unless express key-loss cover applies; it can indemnify the loss without recovering the key | — |
 | Loss above the policy limit | No, beyond the limit | Shared limits across clients |
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-No published custody-insurance or protected-wallet price was verified at this check. Coincover publishes no prices — B2B only, "get in touch" — so obtain pricing and the applicable protection/insurance terms in writing via [Coincover](https://www.coincover.com/) for the specific assets, systems and limits. These are budgeting ranges, not quotes; obtain a written quotation for the specific assets, systems and limits.
+No published custody-insurance or protected-wallet price was verified at this check. Coincover publishes no prices — B2B only, "get in touch" — so obtain pricing and the applicable protection/insurance terms in writing via [Coincover](https://www.coincover.com/) (checked 8 November 2026; homepage only) for the specific assets, systems and limits.
 
-Cost worksheet: [LOW]–[HIGH] annual total — add custody fees, insurance premiums, onboarding, transaction and exit charges, and network fees; do not count an insurance limit as an asset; a policy limit is a maximum payout, not money held for you.
+Cost worksheet: [LOW]–[HIGH] annual total (unfilled template placeholders) — add custody fees, insurance premiums, onboarding, transaction and exit charges, and network fees; do not count an insurance limit as an asset; a policy limit is a maximum payout, not money held for you.
 
 On-chain mutual cover: some mutual or decentralised cover products let members pool funds to pay claims for specified events (for example a smart-contract failure); pricing is quoted as [LOW]–[HIGH]% of the covered amount for [TERM] — fill in the actual figures from the product's current terms before relying on them; check what events are covered, how claims are decided, how long payouts take, and whether cover can be withdrawn or repriced. Mutual cover is not a substitute for a tested recovery drill, independent signing keys, or a provable exit.
 
-Before you buy: get the policy wording, not a summary; confirm the insured entity is the entity holding your assets; confirm the covered systems are the systems actually used; check exclusions for insider action, social engineering, and software faults; check the claims process and its timescales; check whether the limit is shared; and remember that paying for cover does not remove the risk of seed compromise — the remedy remains the same (a new wallet, move everything, retire the old wallet).
+Before you buy: get the policy wording, not a summary; confirm which legal entities and property interests are insured, whether the actual custody arrangement falls within coverage, who may claim, and who may receive a payout; confirm the covered systems are the systems actually used; check exclusions for insider action, social engineering, and software faults; check the claims process and its timescales; check what the policy covers; check deductibles or retentions; check coverage dates and continuity; check the insurer's identity and financial strength; check per-event and aggregate limits, any sublimits, and whether the limit is shared; and remember that paying for cover does not remove the risk of seed compromise — the remedy remains the same (a new wallet, move everything, retire the old wallet).
 ## 22. Paid security: cloud KMS and HSM services
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -1132,15 +1160,15 @@ Providers named are examples, NOT Bawa recommendations.
 
 A cloud key management service can hold and use keys without exposing them to your application servers; it cannot make a compromised application trustworthy or turn a mistaken payment into a safe one. Bawa is reference software, not a custody service; the project does not take possession of users' keys.
 
-**What a cloud KMS buys:** keys are created and used inside the provider's managed hardware boundary; the application receives signatures or decrypted data, not readable key material; access policies can restrict which identities and services may use a key, and when; usage is logged, which helps audit and incident response. Check the exact module, firmware and operating configuration covered by any validation claim; a validated component does not certify the complete wallet, approval service or custody arrangement.
+**What a cloud KMS buys:** keys may be created and used inside the provider's managed hardware boundary, depending on the service, protection level, key origin and operations; imported and externally managed keys are not created inside that boundary; for resident KMS keys, the application receives signatures or decrypted data, not readable key material; data-key APIs such as GenerateDataKey and GenerateDataKeyPair intentionally return readable key material; access policies can restrict which identities and services may use a key, and when; KMS services support audit logging; enable and verify the required key-use events, destinations, retention and access controls. Check the exact module, firmware and operating configuration covered by any validation claim; a validated component does not certify the complete wallet, approval service or custody arrangement.
 
 **Limits:** a malicious request can still get signed (compromised software may submit a validly formed transaction that benefits an attacker); the service cannot infer the holder's intended recipient (destination, network, asset, amount and fees need independent checking before approval); the provider is a dependency — outages, account suspension, legal orders or insolvency can interrupt signing; keys managed by a cloud provider are not the same as keys you hold yourself; check who can change policy, recover backups, cause a signature or block access.
 
-**Who controls the key:** with a cloud KMS, the provider operates the key infrastructure; you retain contractual rights and give instructions, but you cannot necessarily sign without its cooperation. That differs from self-custody with your own HSM, where you retain control of key material, signing authority and recovery. Check whether keys are exportable, how backups are protected, and whether an encrypted backup will work with another vendor — do not assume a cloud KMS key can become a mnemonic or move to a different provider.
+**Who controls the key:** with a cloud KMS, the provider operates the key infrastructure, though external-key arrangements may place it outside provider operation; you retain contractual rights and give instructions, but you cannot necessarily sign without its cooperation. That differs from self-custody with your own HSM, where you retain control of key material, signing authority and recovery; owning an HSM does not automatically guarantee recoverability or exportability. Check whether keys are exportable, how backups are protected, and whether an encrypted backup will work with another vendor — do not assume a cloud KMS key can become a mnemonic or move to a different provider.
 
-Generic price and fee bands are not provided here. For AWS KMS charges, consult [the official AWS KMS pricing page](https://aws.amazon.com/kms/pricing/). For other KMS, HSM, audit, monitoring and Sherlock charges, consult the relevant provider's current official pricing or obtain a current written quote. Any specific figure included here must identify its source and check date.
+Generic price and fee bands are not provided in this section. For AWS KMS charges, consult [the official AWS KMS pricing page](https://aws.amazon.com/kms/pricing/). For other KMS, HSM, audit, monitoring and Sherlock (a smart-contract audit contest platform) charges, consult the relevant provider's current official pricing or obtain a current written quote. Any specific figure included here must identify its source and check date, or be marked as an unsourced estimate.
 
-**First-quarter acceptance gate:** before relying on a cloud KMS or HSM service for production signing, complete a first-quarter acceptance gate — (1) a small-value signing test through the full approval path; (2) a recovery test using only the documented backup route, without the provider's support team; (3) a test of the exit route (fresh keys under a new boundary, verified receiving addresses, on-chain transfer); (4) a review of the policy wording, access controls and audit logs. If any step fails, do not increase exposure until it passes.
+**Pre-production acceptance gate:** before relying on a cloud KMS or HSM service for production signing, complete a pre-production acceptance gate — (1) run a small-value signing test through the full approval path; pass if signing succeeds after all required approvals, otherwise fail; evidence: the approval record and signed output; (2) run a recovery test using only the documented backup route, without the provider's support team; pass if recovery succeeds using only that route and without provider support, otherwise fail; evidence: a record of the recovery steps and result; (3) test the exit route by creating fresh keys under a new boundary, verifying receiving addresses and making an on-chain transfer to those addresses; pass if all three steps succeed, otherwise fail; evidence: records of key creation under the new boundary, address verification and the on-chain transfer; (4) review the policy wording, access controls and audit logs for consistency; pass if the controls and logs are consistent with the policy wording, otherwise fail; evidence: the review findings and the policy wording, access-control settings and audit logs reviewed. If any step fails, do not increase exposure until it passes.
 
 **On-premises HSM:** buying an appliance keeps the hardware under your control, but you take on firmware updates, physical security, backups, redundancy and staff access. A single appliance is a single point of failure; budget for a redundant pair and for tested recovery. An appliance does not remove the need for an external security review of the complete design before treating a Bawa-based deployment as production custody infrastructure.
 
@@ -1148,15 +1176,15 @@ Providers named are examples, NOT Bawa recommendations.
 
 ### Paid audits
 
-An external security review of the complete design is required before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review. A paid audit examines the code, configuration and procedures in scope at a stated revision; it is not a promise that the system is safe.
+An external security review of the complete design is required by this guide's gate in section 7 before treating a Bawa-based deployment as production custody infrastructure; buying certified hardware does not replace that review. A paid audit examines the code, configuration and procedures in scope at a stated revision; it is not a promise that the system is safe.
 
-Define the scope before commissioning: seed handling, derivation paths, signing, recovery, dependencies; name the components and the revision reviewed; record exclusions; and commission a follow-up review of the fixes — an audit report that lists findings without verified fixes is unfinished work.
+Define the scope before commissioning: seed handling, derivation paths, signing, recovery, dependencies; name the components and the revision reviewed; record exclusions; and commission a follow-up review of the fixes — an audit report that lists findings may be complete as a report, but remediation remains unfinished until the fixes are verified.
 
 ### Audit contests
 
-A contest pays many independent researchers to find vulnerabilities in a fixed window; the sponsor sets the prize pool and the rules.
+A contest pays independent researchers for accepted, reward-eligible vulnerability findings made in a fixed window under published terms; the sponsor sets or agrees the prize pool and scope, while platform terms govern eligibility, judging and payment.
 
-Check what the premium buys, what events are covered, how claims are decided, and whether cover can be withdrawn or repriced.
+Check the prize pool, scope, severity scale, eligibility, judging and payment.
 
 ### Bug bounties
 
@@ -1164,22 +1192,22 @@ A bounty programme pays researchers who report vulnerabilities responsibly throu
 
 INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MARKED. RECHECK BEFORE PURCHASE.
 
-| Bounty item | Dated figure |
+| Bounty item | Figure |
 |---|---|
-| Top critical awards | Were roughly 5–10% of realistically exposed funds |
-| Bounty pot | Was typically 2–3 times that award |
-| Ceilings | Ranged from thousands to more than US$10 million |
-| Platform fee | Was roughly another tenth of the rewards paid |
+| Top critical awards | Were roughly 5–10% of realistically exposed funds (unsourced estimate) |
+| Bounty pot | Unsourced estimate |
+| Ceilings | Ranged from thousands to more than US$10 million (unsourced estimate) |
+| Platform fee | Was roughly another tenth of the rewards paid (unsourced estimate) |
 
 Set the scope, the severity scale, the payout rules and the response times before launch; a bounty without a working disclosure route is not a programme (see §7 — no reporting route is documented; that is an open item owned by the maintainers).
 
 ### Transaction monitoring and simulation
 
-Monitoring watches on-chain activity and alerts on unusual transfers, new approvals or unexpected destinations; simulation previews a transaction's effects before signing. Neither can make an approved malicious transaction safe — they give you a chance to catch it before you approve.
+Monitoring watches on-chain activity and alerts on unusual transfers, new approvals or unexpected destinations, usually after the activity; simulation previews a transaction's effects before signing and can feed an enforcing policy that refuses signing. Neither guarantees prevention.
 
 Check what is actually monitored (which chains, which events), how alerts are delivered, and what happens when the monitoring service is down.
 
-Buy in this order: hardware signing and offline backups first; then alerts and pre-signing checks; then bespoke feeds and automated response. Monitoring is never a substitute for a tested recovery drill, independent signing keys, or a provable exit — and paying for any of these services does not remove the risk of seed compromise: the remedy remains the same (a new wallet, move everything, retire the old wallet).
+By default, buy in this order: hardware signing and tested offline backups first; then alerts and pre-signing checks; then bespoke feeds (customised streams of monitoring data) and automated response (actions triggered automatically by alerts). Monitoring is never a substitute for a tested recovery drill, independent signing keys, or a provable exit — and paying for any of these services does not remove the risk of seed compromise: the remedy remains the same (a new wallet, move everything, retire the old wallet).
 ## 23. Paid security: choosing by threat, by budget, and the exit checks
 
 These figures are a dated guide, not current quotations. Recheck all pricing, minimums and insurance terms before relying on them.
@@ -1193,10 +1221,10 @@ Choose by threat — match the control to the risk, not to the price tag:
 | Lost seed or device | Offline backups, tested recovery drill | Managed multisig with inheritance |
 | Single stolen key | Hardware signing, separate approval roles | Multisig or MPC with independent signers |
 | Mistaken or malicious payment | Independent transaction verification, allow-lists, spending limits | Approval workflows, transaction simulation |
-| Provider failure or freeze | Independent quorum, provable exit, tested recovery | Only if the exit is genuinely independent |
+| Provider failure or freeze | Independent quorum, provable exit, tested recovery | Paid managed multisig or threshold-MPC service with an independent quorum and a genuinely independent, provable exit |
 | Insider or colluding approvers | Separate signers, audit records, quorum above one | Independent signers, external review |
 | Smart-contract or protocol failure | Keep exposure small, check contract risk separately | Insurance may cover some events — check wording |
-| Inheritance or incapacity | Letter of instruction, named recipient, tested handover | Assisted multisig with inheritance, estate wrapper |
+| Inheritance or incapacity | Letter of instruction, named recipient, tested handover | Assisted multisig with inheritance, [estate wrapper](#20-paid-security-consumer-multisig-with-inheritance) |
 | Regulatory or audit requirements | Documented procedures, audit records | Qualified custody, external review |
 
 Choose by budget and skill — indicative scale (indicative cost guidance — check dates apply only to the figures explicitly marked; recheck before purchase):
@@ -1206,46 +1234,52 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 | Approach | Indicative annual cost | Who it suits |
 |---|---|---|
 | Free controls only (hardware wallet, offline backups, tested drill) | £0 plus hardware | Most individuals |
-| Collaborative custody (Casa-style, Unchained-style) | $250–$7,500 per year | Families, higher-value individuals |
-| Institutional MPC entry | Approximately $999 per month to $36,000+ per year enterprise | Business treasuries, funds |
+| Collaborative custody (Casa-style, Unchained-style) | Casa: $250–$7,500 per year; Unchained: Signature $6,000 first year, renewing at $4,500/yr; Inheritance Boot Camp $4,000/client, renewing at $4,500/yr; Personal Vaults $250/vault/yr; IRA $250/IRA account/yr (US only). No-fee arrangements: no service/subscription fee. Hardware and incidental costs extra (source: [Casa and Unchained entries, section 20](#20-paid-security-consumer-multisig-with-inheritance); checked 8 November 2026) | Families, higher-value individuals |
+| Institutional MPC entry | Fireblocks Essentials US$999/month for up to six months; custom Pro/Enterprise/Enterprise+ pricing from US$36,000/year (source: [Fireblocks entry, section 19](#19-paid-security-institutional-mpc-platforms); checked 8 November 2026) | Business treasuries, funds |
 | Qualified custody | Negotiated percentage of assets | Funds, fiduciaries, regulated businesses |
-| External security audits | $8,000–$300,000+ per engagement | Any production deployment |
-| Bug bounty ceilings | Thousands to $10 million+ | Projects with public exposure |
-| Cloud KMS | From approximately $1 per key per month | Teams needing managed signing |
-| Dedicated HSMs | From cluster or pool-hour billing | Institutions with strict key-control needs |
+| External security audits | $8,000–$300,000+ per engagement (unsourced estimate; no check date recorded in the guide) | Any production deployment |
+| Bug bounty ceilings | Thousands to $10 million+ (unsourced estimate; no check date recorded in the guide) | Projects with public exposure |
+| Cloud KMS | AWS: from approximately $1 per key per month (base key charge), plus request and applicable rotation charges (unsourced estimate; no check date recorded in the guide) | Teams needing managed signing |
+| Dedicated HSMs | Vendor quote required | Institutions with strict key-control needs |
 
 Exit checks — complete these seven checks BEFORE signing with any paid provider:
 
-1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a signing quorum without you? Can you reach one without the provider?
+1. Map control: who holds each key or share, including backups and subcontractor-held material? Can the provider reach a [signing quorum](../GLOSSARY.md#signing-quorum) without you? Can you reach one without the provider?
 2. Prove independent recovery: using only your own keys and independent tooling, restore access and broadcast a small spend without the provider's interface, API or signature. Seeing a balance or exporting a file is not proof.
 3. Write down exit terms: notice periods, withdrawal limits, approval delays, termination charges, data export. Get them in writing before funding.
 4. Test a withdrawal: move a small amount out while the service is operating normally, to a fresh wallet you control. Record the time it took and the fees charged.
-5. Record what cancellation changes: does cancelling stop signing, monitoring, recovery support, or all three? What happens to backups and records?
-6. Rehearse provider shutdown: with the provider's signing and authentication services unavailable, produce a valid transaction using the documented fallback and broadcast through independent chain access.
+5. Record what cancellation changes: does cancelling stop signing, monitoring, recovery support or authentication/API access? Can you export keys or shares, recover the wallet and spend independently afterwards? What happens to pending transactions, fees, backups and records, including retention and deletion?
+6. Open item — rehearse provider shutdown once a fallback procedure is documented: with the provider's signing and authentication services unavailable, test whether you can produce a valid transaction using that procedure and broadcast through independent chain access.
 7. Rehearse seed compromise: a new wallet, move everything, retire the old wallet. If the service cannot explain how that remedy works under its arrangement, do not fund it.
 
-Paying does not remove risk: a paid service can reduce dependence on a single device, a household backup or one employee's knowledge; it cannot remove market risk, protocol risk, or the risk of a mistaken approval. A compromised seed still means a new wallet, moving everything, and retiring the old wallet — whatever you paid for.
+Paying does not automatically remove risk: a paid service can reduce dependence on a single device, a household backup or one employee's knowledge; it may reduce or transfer particular exposures, but payment alone does not guarantee the elimination of market risk, protocol risk, or the risk of a mistaken approval. A compromised seed still means a new wallet, moving everything, and retiring the old wallet — whatever you paid for.
 ## 24. Sources
 
-- BIP-39 — https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
-- BIP-32 — https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
-- BIP-44 — https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
-- BIP-49 — https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki
-- BIP-84 — https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
-- BIP-86 — https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki
-- BIP-174 (PSBT) — https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
-- BIP-371 (Taproot PSBT) — https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki
-- BIP-380 (descriptors) — https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki
-- SLIP-39 — https://github.com/satoshilabs/slips/blob/master/slip-0039.md
-- SLIP-0044 — https://github.com/satoshilabs/slips/blob/master/slip-0044.md
-- SLIP-0010 — https://github.com/satoshilabs/slips/blob/master/slip-0010.md
+Check-date policy: for mutable pages, record the check date and the version or commit consulted. For immutable specifications, cite the fixed version or identifier; any check date records link availability only.
+
+- [EIP-155](https://eips.ethereum.org/EIPS/eip-155)
+- [TEP-74 (Jettons)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons.md)
+- [Bitcoin Developer Guide](https://developer.bitcoin.org/devguide/)
+
+- BIP-39 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0039.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+- BIP-32 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0032.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
+- BIP-44 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0044.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+- BIP-49 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0049.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0049.mediawiki)
+- BIP-84 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0084.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
+- BIP-86 — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0086.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki)
+- BIP-174 (PSBT) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0174.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
+- BIP-371 (Taproot PSBT) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0371.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0371.mediawiki)
+- BIP-380 (descriptors) — https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0380.mediawiki (pinned 17 November 2026; latest version: https://github.com/bitcoin/bips/blob/master/bip-0380.mediawiki)
+- SLIP-39 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0039.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0039.md)
+- SLIP-0044 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0044.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0044.md)
+- SLIP-0010 — https://github.com/satoshilabs/slips/blob/7a2abdd1e823f5180e0997434250eda88b57cb75/slip-0010.md (pinned 17 November 2026; latest version: https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
 - OWASP Password Storage Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html (checked 8 November 2026; contains the 600,000-iteration PBKDF2-HMAC-SHA-256 basis cited in §7 for the local-only web-draft vault)
 - age encryption tool — https://github.com/FiloSottile/age
 - Gitleaks — https://github.com/gitleaks/gitleaks
 - Semgrep — https://semgrep.dev/ (checked 8 November 2026; 403 to automated check, existence confirmed — keep with this dated note)
 - Keycard Shell — https://github.com/keycard-tech/keycard-shell (checked 8 November 2026)
 - Keycard (status-keycard) — https://github.com/keycard-tech/status-keycard (checked 8 November 2026)
-- Keycard product page (rate-limited to automated checks on 8 November 2026; linked from the live homepage)
+- Keycard product page (rate-limited to automated checks on 8 November 2026; [homepage](https://keycard.tech/))
 - Trust Wallet Core repository — https://github.com/trustwallet/wallet-core
 - SIM-swapping protection — https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/ (government guidance)
 - BitBox multisig — https://support.bitbox.swiss/en_US/blog-content/how-nearly-all-personal-hardware-wallet-multisig-setups-are-insecure (checked 8 November 2026)
