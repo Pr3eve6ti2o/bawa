@@ -474,7 +474,7 @@ The checksum does not test the passphrase, derivation path, account selection or
 
 ### 6. Changing local access does not repair an exposed seed
 
-Do not treat changes to a device PIN or app password, or an app reinstall, as a remedy for an exposed seed. Changing the vault unlock passphrase cannot secure an exposed mnemonic. These actions affect local access only; they do not revoke the seed or affect copies of the words held elsewhere.
+Do not treat changes to a device PIN or app password, or an app reinstall, as a remedy for an exposed seed. If a vault is used, changing its unlock passphrase cannot secure an exposed mnemonic. These actions affect local access only; they do not revoke the seed or affect copies of the words held elsewhere.
 
 With Bawa's empty-passphrase policy, anyone holding the words can rebuild the wallet on their own device. Treat an exposed seed as compromised. Move remaining funds to a wallet with a newly generated mnemonic and verified recovery, not merely another account under the exposed seed. Retire the old wallet.
 
@@ -482,7 +482,7 @@ With Bawa's empty-passphrase policy, anyone holding the words can rebuild the wa
 
 ### 7. "Support" and "recovery services" are not a recovery route
 
-Reject any offer to recover a lost mnemonic or passphrase for a fee. Such an offer is a scam. Neither a support contact nor a paid recovery service can bypass these missing-secret limits.
+Reject any paid offer that claims to bypass these missing-secret limits to recover a lost mnemonic or passphrase. Such an offer is a scam. Paid testing of plausible candidates within those limits can be legitimate. Neither a support contact nor a paid recovery service can bypass these missing-secret limits.
 
 Treat anyone asking for the phrase as asking for control of the wallet, not proof of ownership. Never type the phrase into a website or share it with anyone. Stop any interaction that requires either. If you have already disclosed it, treat the seed as exposed and follow point 6.
 
