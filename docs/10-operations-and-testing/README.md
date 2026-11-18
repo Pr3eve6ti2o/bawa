@@ -144,11 +144,11 @@ Do not claim Semantic Versioning adherence until you declare the public API (the
 
 ### Tagging
 
-At the 8 November 2026 check, the Bawa repository had zero tags: `git tag` was empty. Tag refs are mutable (movable or deletable); annotation alone does not enforce immutability, and a commit hash does not pin the state of mutable tag refs.
+At the 8 November 2026 check, the local Bawa repository had zero tags: `git tag` was empty. This does not prove that no tags had ever existed; tags may have been deleted or not fetched locally. Tag refs are mutable (movable or deletable); annotation alone does not enforce immutability, and a commit hash does not pin the state of mutable tag refs.
 
-Before tagging, document which release artefacts are built from the tag and where their checksums are recorded. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
+Before tagging, document which release artefacts are built from the tag, where their checksums are recorded, and the release acceptance criteria, including artefact verification. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
 
-After resolving those details and clearing the release blockers, create an annotated tag in the format `vX.Y.Z`. Build the documented release artefacts from that tagged tree and record their checksums at the documented location.
+After resolving those details, use a distinct initial source tag if one is needed for candidate builds and testing; that tag does not declare a final release. Verify the candidate artefacts against the documented acceptance criteria and clear the release blockers before creating the final annotated release tag `vX.Y.Z` for the same source commit used for the verified candidate artefacts. Build the documented release artefacts from the final tagged tree, verify them against those criteria, and record their checksums at the documented location before publication.
 
 ## Troubleshoot symptoms
 
@@ -1291,7 +1291,7 @@ A policy record does not replace access to a required passphrase.
 
 ### 2. Keep secrets out of plain text and git
 
-Do not store mnemonics, seeds, private keys, passphrases, passwords or encryption/data keys in plain-text backups. That includes secret-bearing configuration, notes, screenshots and logs.
+Do not store mnemonics, seeds, private keys, passphrases, passwords or encryption/data keys in plain-text digital backups. That includes secret-bearing configuration, notes, screenshots and logs. Physically secured offline mnemonic recovery copies on paper or metal are appropriate, as prescribed in docs/08.
 
 Keep wallet recovery material out of git, including encrypted artefacts; a private repository is not a secret store. Store the encryption-key backup separately from the seed artefact, not bundled into the same backup set. Confirm the protection and storage arrangement with the maintainer.
 
