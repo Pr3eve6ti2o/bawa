@@ -899,7 +899,7 @@ Ask which onboarding, support, recovery, extra-user and exit charges are include
 
 ### Counterparty failure and a provable exit
 
-A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance is not a substitute for recovery — verify the insured entity, covered events, exclusions, deductibles and whether a limit is shared across customers; a headline amount does not establish cover for your balance.
+A provider can fail financially, suspend an account or lose a critical service without anyone stealing a share. Insurance is not a substitute for recovery — [verify the insured entity, covered events, exclusions, deductibles and whether a limit is shared across customers](https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf); a headline amount does not establish cover for your balance.
 
 Before committing substantial funds, require an exit plan that works under an abrupt shutdown:
 
@@ -963,8 +963,8 @@ INDICATIVE COST GUIDANCE — CHECK DATES APPLY ONLY TO THE FIGURES EXPLICITLY MA
 
 | Item | Indicative figure and checks |
 |---|---|
-| BitGo custody pricing | BitGo currently offers qualified custody with no custody fees to eligible individual investors. No published institutional annual custody rate was verified at this check (checked 8 November 2026, UTC). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, recovery and exit charges, and allow separately for chain fees. |
-| BitGo insurance headline | BitGo Bank & Trust says it maintains up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys, subject to policy terms and exclusions (checked 8 November 2026, UTC). Check who is insured, which losses qualify, exclusions and whether limits are shared. |
+| BitGo custody pricing | BitGo currently offers [qualified custody with no custody fees to eligible individual investors](https://www.bitgo.com/products/individual-investors/). No published institutional annual custody rate was verified at this check (checked 8 November 2026, UTC). Recheck prices and minimums before committing; ask whether the quotation includes subscriptions, setup, recovery and exit charges, and allow separately for chain fees. |
+| BitGo insurance headline | BitGo Bank & Trust says it maintains [up to US$250 million in digital asset insurance for specified losses involving assets for which it holds all keys](https://www.bitgo.com/products/individual-investors/), subject to policy terms and exclusions (checked 8 November 2026, UTC). [Check who is insured, which losses qualify, exclusions and whether limits are shared](https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf). |
 
 ### Make the exit real
 
@@ -1251,3 +1251,5 @@ Paying does not remove risk: a paid service can reduce dependence on a single de
 - Incident response guidance — https://oyarr.com/safety/incident-response.html
 - RFC 6585 (HTTP 429) — https://www.rfc-editor.org/info/rfc6585/ (section 4, ‘429 Too Many Requests’)
 - Fireblocks Help Center, Plans, Billing, and Payments — https://support.fireblocks.io/hc/en-us/articles/27232014108572-Plans-Billing-and-Payments
+- BitGo individual-investors page — https://www.bitgo.com/products/individual-investors/
+- BitGo Foundational Insurance One-Pager (PDF) — https://landing.bitgo.com/rs/552-OGK-141/images/BitGo_Foundational_Insurance_OnePager.pdf
