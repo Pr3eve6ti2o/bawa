@@ -1,13 +1,15 @@
-// Demo portfolio fixtures for the Bawa Balanced preview.
-//
-// Figures are the demo numbers from the UI catalogue's Direction 04
-// (Bawa Balanced) mock — docs/UI-UX-CATALOGUE.md, supplied as
-// BAWA_UI_UX_CATALOGUE_REPO_PACKAGE.zip. They are TESTNET FIXTURES for
-// presentation only: the starter fetches no live balances, prices or
-// history, and these numbers must never be presented as a real balance.
+// TODO (Phase 0.4 — BLOCKS THIS PHASE): demo fixtures EMPTIED, not deleted.
+// The fake portfolio total and per-asset values were removed on 2026-11-19:
+// no balance in this file is real, so none is shown. The file still exists
+// only because dashboard.tsx, asset-list.tsx, asset-detail.tsx and
+// wallet-management.tsx (Phase 2/5 screens, out of this lane's scope) import
+// it; deleting it mid-migration would break the build. The Phase 2/5 lanes
+// must delete this file and remove those imports, wiring the screens to the
+// real adapter-backed balances instead. Until then, §6 item 7 is PARTIAL:
+// the fake values are gone, but the import path still exists.
 export const DEMO_PORTFOLIO = {
-  total: '$12,480.62',
-  change: '+2.4% this week',
+  total: 'Unavailable',
+  change: '',
 } as const;
 
 export interface DemoAsset {
@@ -20,32 +22,4 @@ export interface DemoAsset {
   chip: string;
 }
 
-export const DEMO_ASSETS: DemoAsset[] = [
-  {
-    id: 'btc',
-    name: 'Bitcoin',
-    symbol: 'BTC',
-    network: 'Testnet4',
-    amount: '0.084 BTC',
-    value: '$5,180',
-    chip: '#f4aa3d',
-  },
-  {
-    id: 'eth',
-    name: 'Ethereum',
-    symbol: 'ETH',
-    network: 'Sepolia',
-    amount: '1.42 ETH',
-    value: '$4,240',
-    chip: '#9daeff',
-  },
-  {
-    id: 'trx',
-    name: 'TRON',
-    symbol: 'TRX',
-    network: 'Nile',
-    amount: '1,200 TRX',
-    value: '$2,060',
-    chip: '#ed777c',
-  },
-];
+export const DEMO_ASSETS: DemoAsset[] = [];

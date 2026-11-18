@@ -1,0 +1,2 @@
+FAILED: Error: TOOL error: AgentRouter /responses (transport) [upstream-transient]: AgentRouter /responses: stream ended without a completed response
+stderr tail: (empty)

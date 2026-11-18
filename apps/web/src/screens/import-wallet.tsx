@@ -1,11 +1,32 @@
-import { useState, type FormEvent } from 'react';
+// Two import modes. Mode A (recovery phrase) restores a vault wallet: the
+// phrase lives in this screen's local state only until it is validated and
+// derived, then the input is cleared immediately, and on unmount. It is never
+// stored, logged or passed to the watch-only path. Mode B (watch-only public
+// key) keeps the existing behaviour exactly: a mnemonic, seed or private key
+// must never be pasted there — secret-like input is rejected and cleared at
+// once. Watch-only accounts can never sign.
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { WatchOnlyWallet } from '@bawa/contracts';
 import { validateWatchOnlyImport, type ChainId } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
+import {
+  deriveAddresses,
+  restoreWallet,
+  type WalletAddresses,
+} from '../wallet/core';
+import { createVault, hasVault } from '../wallet/vault';
+import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { toast } from '../ui/components/toast';
@@ -24,16 +45,120 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   ton: { label: 'TON public address', placeholder: 'UQ… or 0:…' },
 };
 
+const MIN_PASSWORD_LENGTH = 8;
+const DISPLAY_ORDER = ['eth', 'btc', 'trx', 'ton'] as const;
+const CHAIN_LABELS: Record<string, string> = {
+  eth: 'Ethereum',
+  btc: 'Bitcoin',
+  trx: 'TRON',
+  ton: 'TON',
+};
+
+type ImportMode = 'phrase' | 'watch-only';
+type PhraseStep = 'enter' | 'preview' | 'saved';
+
 export function ImportWalletScreen() {
-  const { xpubs, addXpub } = useWallet();
+  const { xpubs, addXpub, unlockVault, refreshVaultAccounts } = useWallet();
   const imported = chains
     .map((id) => xpubs[id])
     .filter((wallet): wallet is WatchOnlyWallet => wallet !== null);
+  const [mode, setMode] = useState<ImportMode>('watch-only');
+
+  // Mode B (watch-only) state — existing behaviour, unchanged.
   const [chain, setChain] = useState<ChainId>('btc');
   const [xpub, setXpub] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+
+  // Mode A (recovery phrase) state.
+  const [phrase, setPhrase] = useState('');
+  const [phraseStep, setPhraseStep] = useState<PhraseStep>('enter');
+  const [normalizedMnemonic, setNormalizedMnemonic] = useState<string | null>(null);
+  const [derived, setDerived] = useState<WalletAddresses | null>(null);
+  const [phraseError, setPhraseError] = useState<string | null>(null);
+  const [vaultPassword, setVaultPassword] = useState('');
+  const [vaultPasswordConfirm, setVaultPasswordConfirm] = useState('');
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [vaultExists, setVaultExists] = useState(false);
+
+  // Clear the phrase when the screen unmounts.
+  useEffect(() => () => {
+    setPhrase('');
+    setNormalizedMnemonic(null);
+  }, []);
+
+  useEffect(() => {
+    setVaultExists(hasVault());
+  }, [mode]);
+
+  async function handlePhraseSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isRestoring) return;
+    setPhraseError(null);
+    if (hasVault()) {
+      setVaultExists(true);
+      return;
+    }
+    const normalized = phrase.trim().split(/\s+/u).join(' ');
+    const wordCount = normalized === '' ? 0 : normalized.split(' ').length;
+    // Clear the input immediately: a rejected phrase must not linger.
+    setPhrase('');
+    if (wordCount !== 12 && wordCount !== 24) {
+      setPhraseError('Enter a 12-word or 24-word recovery phrase.');
+      return;
+    }
+    setIsRestoring(true);
+    try {
+      const restored = await restoreWallet(normalized);
+      const addresses = await deriveAddresses(restored);
+      setNormalizedMnemonic(restored);
+      setDerived(addresses);
+      setPhraseStep('preview');
+    } catch {
+      setNormalizedMnemonic(null);
+      setDerived(null);
+      setPhraseError(
+        'That recovery phrase is not valid. Check every word and try again.',
+      );
+    } finally {
+      setIsRestoring(false);
+    }
+  }
+
+  async function handleSaveSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSaving || normalizedMnemonic === null) return;
+    setPhraseError(null);
+    if (vaultPassword.length < MIN_PASSWORD_LENGTH) {
+      setPhraseError(`Vault password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+    if (vaultPassword !== vaultPasswordConfirm) {
+      setPhraseError('Passwords do not match.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const profileIds = SUPPORTED_CHAINS.map((chainId) => profileFor(chainId));
+      const mnemonic = normalizedMnemonic;
+      await createVault(mnemonic, vaultPassword, profileIds);
+      setNormalizedMnemonic(null);
+      setVaultPassword('');
+      setVaultPasswordConfirm('');
+      await unlockVault(vaultPassword);
+      await refreshVaultAccounts();
+      setPhraseStep('saved');
+    } catch {
+      setNormalizedMnemonic(null);
+      setPhraseError(
+        'The wallet could not be saved. If a vault was created, unlock it from Security; otherwise try again.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,117 +202,304 @@ export function ImportWalletScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[20px] border border-white/10 bg-[#243454] p-5 text-white sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-white">Import a watch-only wallet</h1>
-          <span className="flex h-6 items-center rounded-full bg-[#243454] px-3 text-[10px] font-bold text-[#94e1c3]">
-            PUBLIC KEYS ONLY
-          </span>
-        </div>
-        <p id="watch-only-notice" className="mt-2 text-sm leading-relaxed text-[#aab5d1]">
-          Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
-          are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
-          Never paste a mnemonic, seed or private key here.
-          An extended public key lets its holder track this account&apos;s
-          derivable addresses, balances and transaction history. Imported
-          keys are stored in this browser (localStorage) and stay stored
-          when the wallet is locked; they are readable by this site&apos;s
-          scripts and by extensions with access to this site.
-        </p>
-      </div>
-
-      <form
-        className="space-y-4"
-        noValidate
-        aria-busy={isAdding}
-        onSubmit={(event) => void handleSubmit(event)}
-      >
-        <fieldset disabled={isAdding} className="space-y-2">
-          <legend className="text-sm font-medium">Chain</legend>
-          <div className="flex gap-2">
-            {chains.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={chain === option}
-                onClick={() => setChain(option)}
-                className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff] ${
-                  chain === option
-                    ? 'bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] text-white'
-                    : 'border border-white/10 bg-[#263451] text-[#aab5d1] hover:text-white'
-                }`}
-              >
-                {option.toUpperCase()}
-              </button>
-            ))}
+      <Card className="rounded-[20px] border-[#d6deed]">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Import a wallet</CardTitle>
+            <Badge variant="secondary">WATCH-ONLY LABELLED BELOW</Badge>
           </div>
-        </fieldset>
+          <CardDescription>
+            Restore a wallet from its recovery phrase, or track a wallet
+            watch-only from its public key. A watch-only account can never
+            sign or spend.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2" role="tablist" aria-label="Import mode">
+            <Button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'phrase'}
+              variant={mode === 'phrase' ? 'default' : 'outline'}
+              onClick={() => setMode('phrase')}
+            >
+              Recovery phrase
+            </Button>
+            <Button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'watch-only'}
+              variant={mode === 'watch-only' ? 'default' : 'outline'}
+              onClick={() => setMode('watch-only')}
+            >
+              Watch-only public key
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-2">
-          <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
-          <Input
-            id="wallet-xpub" name="xpub" type="text"
-            className="font-mono"
-            value={xpub}
-            onChange={(event) => {
-              setXpub(event.target.value);
-              setError(null);
-            }}
-            autoComplete="off" autoCapitalize="none" spellCheck={false}
-            placeholder={inputConfigByChain[chain].placeholder} required disabled={isAdding}
-            aria-invalid={error !== null}
-            aria-describedby={error ? 'watch-only-notice import-error' : 'watch-only-notice'}
-          />
-          {chain === 'ton' && (
-            <p className="text-sm text-muted-foreground">
-              Single public address. No child addresses are derived: the TON path is fully hardened.
-              Watch-only only — this starter cannot send or withdraw TON.
+      {mode === 'phrase' && vaultExists && (
+        <Card className="rounded-[20px] border-[#d6deed]">
+          <CardHeader>
+            <CardTitle>A wallet already exists</CardTitle>
+            <CardDescription>
+              This browser already has an encrypted vault. Importing a
+              recovery phrase would replace it.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-relaxed">
+              To restore a different wallet, delete the existing vault from
+              security settings first. Make sure you have its recovery phrase
+              written down — deleting a vault without its phrase loses the
+              wallet.
             </p>
-          )}
-        </div>
+            <Button asChild className="h-auto whitespace-normal py-3 text-center">
+              <Link to="/security">Go to security settings</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-        <div className="space-y-2">
-          <Label htmlFor="wallet-label">Label (optional)</Label>
-          <Input
-            id="wallet-label" name="label" type="text"
-            value={label}
-            onChange={(event) => setLabel(event.target.value)}
-            placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
-            maxLength={40}
-          />
-          <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
-        </div>
-
-        {error && (
-          <Alert id="import-error" variant="destructive" role="alert">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <Button type="submit" disabled={isAdding}>
-          {isAdding ? 'Adding…' : 'Add'}
-        </Button>
-      </form>
-
-      <section aria-labelledby="imported-wallets" className="space-y-3">
-        <h2 id="imported-wallets" className="text-lg font-semibold">Imported wallets</h2>
-        {imported.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No wallets imported yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {imported.map((wallet) => (
-              <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-[15px] border border-[#d6deed] bg-white p-4 text-[#1b2742]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
-                  <span>{wallet.label || 'Unlabelled wallet'}</span>
+      {mode === 'phrase' && !vaultExists && phraseStep === 'enter' && (
+        <Card className="rounded-[20px] border-[#d6deed]">
+          <CardHeader>
+            <CardTitle>Restore from a recovery phrase</CardTitle>
+            <CardDescription>
+              Enter the 12 or 24 words of the wallet you want to restore.
+              They are used once to derive your addresses, then cleared.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" noValidate onSubmit={(event) => void handlePhraseSubmit(event)}>
+              <fieldset disabled={isRestoring} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recovery-phrase">Recovery phrase</Label>
+                  <Input
+                    id="recovery-phrase"
+                    type="text"
+                    className="font-mono"
+                    value={phrase}
+                    onChange={(event) => {
+                      setPhrase(event.target.value);
+                      setPhraseError(null);
+                    }}
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="12 or 24 words, separated by spaces"
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Only enter a recovery phrase on this screen, on this
+                    device. Never paste it into any other app or website.
+                  </p>
                 </div>
-                <code className="block break-all text-sm">
-                  {`${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`}
-                </code>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                {phraseError && (
+                  <Alert variant="destructive" role="alert">
+                    <AlertDescription>{phraseError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" disabled={isRestoring}>
+                  {isRestoring ? 'Restoring…' : 'Restore wallet'}
+                </Button>
+              </fieldset>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === 'phrase' && !vaultExists && phraseStep === 'preview' && derived !== null && (
+        <Card className="rounded-[20px] border-[#d6deed]">
+          <CardHeader>
+            <CardTitle>Check the restored addresses</CardTitle>
+            <CardDescription>
+              These are the account addresses derived from your recovery
+              phrase, Ethereum first. If they are not the addresses you
+              expect, stop — the phrase or the recovery profile is wrong.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-3">
+              {DISPLAY_ORDER.map((chainId) => (
+                <li key={chainId} className="space-y-1">
+                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                    {derived[chainId]}
+                  </code>
+                </li>
+              ))}
+            </ul>
+            <form className="space-y-4" noValidate onSubmit={(event) => void handleSaveSubmit(event)}>
+              <fieldset disabled={isSaving} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="import-vault-password">Vault password</Label>
+                  <Input
+                    id="import-vault-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={vaultPassword}
+                    onChange={(event) => setVaultPassword(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="import-vault-password-confirm">Repeat vault password</Label>
+                  <Input
+                    id="import-vault-password-confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    value={vaultPasswordConfirm}
+                    onChange={(event) => setVaultPasswordConfirm(event.target.value)}
+                  />
+                </div>
+                {phraseError && (
+                  <Alert variant="destructive" role="alert">
+                    <AlertDescription>{phraseError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
+                  {isSaving ? 'Saving…' : 'Save to vault'}
+                </Button>
+              </fieldset>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === 'phrase' && !vaultExists && phraseStep === 'saved' && derived !== null && (
+        <Card className="rounded-[20px] border-[#d6deed]">
+          <CardHeader>
+            <CardTitle>Wallet restored</CardTitle>
+            <CardDescription>
+              Your recovery phrase is stored encrypted in this browser&apos;s
+              vault. Your phrase was cleared from this screen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-3">
+              {DISPLAY_ORDER.map((chainId) => (
+                <li key={chainId} className="space-y-1">
+                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                    {derived[chainId]}
+                  </code>
+                </li>
+              ))}
+            </ul>
+            <Button asChild className="h-auto whitespace-normal py-3 text-center">
+              <Link to="/mnemonic-backup">Review your backup checklist</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === 'watch-only' && (
+        <>
+          <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
+            Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
+            are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
+            Never paste a mnemonic, seed or private key here.
+            An extended public key lets its holder track this account&apos;s
+            derivable addresses, balances and transaction history. Imported
+            keys are stored in this browser (localStorage) and stay stored
+            when the wallet is locked; they are readable by this site&apos;s
+            scripts and by extensions with access to this site.
+          </p>
+
+          <form
+            className="space-y-4"
+            noValidate
+            aria-busy={isAdding}
+            onSubmit={(event) => void handleSubmit(event)}
+          >
+            <fieldset disabled={isAdding} className="space-y-2">
+              <legend className="text-sm font-medium">Chain</legend>
+              <div className="flex gap-2">
+                {chains.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={chain === option}
+                    onClick={() => setChain(option)}
+                    className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff] ${
+                      chain === option
+                        ? 'bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] text-white'
+                        : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {option.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
+              <Input
+                id="wallet-xpub" name="xpub" type="text"
+                className="font-mono"
+                value={xpub}
+                onChange={(event) => {
+                  setXpub(event.target.value);
+                  setError(null);
+                }}
+                autoComplete="off" autoCapitalize="none" spellCheck={false}
+                placeholder={inputConfigByChain[chain].placeholder} required disabled={isAdding}
+                aria-invalid={error !== null}
+                aria-describedby={error ? 'watch-only-notice import-error' : 'watch-only-notice'}
+              />
+              {chain === 'ton' && (
+                <p className="text-sm text-muted-foreground">
+                  Single public address. No child addresses are derived: the TON path is fully hardened.
+                  Watch-only only — this starter cannot send or withdraw TON.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet-label">Label (optional)</Label>
+              <Input
+                id="wallet-label" name="label" type="text"
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
+                maxLength={40}
+              />
+              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
+            </div>
+
+            {error && (
+              <Alert id="import-error" variant="destructive" role="alert">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <Button type="submit" disabled={isAdding}>
+              {isAdding ? 'Adding…' : 'Add'}
+            </Button>
+          </form>
+
+          <section aria-labelledby="imported-wallets" className="space-y-3">
+            <h2 id="imported-wallets" className="text-lg font-semibold">Imported wallets</h2>
+            {imported.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No wallets imported yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {imported.map((wallet) => (
+                  <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-[15px] border border-[#d6deed] bg-white p-4 text-[#1b2742]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
+                      <span>{wallet.label || 'Unlabelled wallet'}</span>
+                    </div>
+                    <code className="block break-all text-sm">
+                      {`${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`}
+                    </code>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
 
       <Link to="/" className="inline-block text-sm underline underline-offset-4">
         Back to wallet

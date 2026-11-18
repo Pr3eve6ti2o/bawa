@@ -1,0 +1,254 @@
+import type { ChainId } from '../engine/boundary';
+
+export type { ChainId };
+
+export type CapabilityName =
+  | 'derive'
+  | 'restore'
+  | 'receive'
+  | 'balance'
+  | 'history'
+  | 'fee-quote'
+  | 'unsigned-plan'
+  | 'local-sign'
+  | 'post-sign-verify';
+
+export type CapabilityStatus =
+  | 'verified'
+  | 'blocked'
+  | 'unsupported'
+  | 'candidate';
+
+export interface CapabilityEntry {
+  status: CapabilityStatus;
+  /** Short evidence reference. A capability with no evidence is never verified. */
+  evidence: string;
+}
+
+export type Capabilities = Record<CapabilityName, CapabilityEntry>;
+
+export interface ChainConfig {
+  id: ChainId;
+  displayName: string;
+  symbol: string;
+  /** Wallet Core CoinType property name. */
+  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton';
+  /** CAIP-2 network identifier (mainnet only). */
+  networkId: string;
+  /** CAIP-19 native asset identifier (slip44 namespace). */
+  assetId: string;
+  /** Pinned recovery profile. A path change changes recovered addresses. */
+  profileId: string;
+  /** Derivation path builder. TON ignores index: fully hardened, one address. */
+  pathFor: (account: number, index: number) => string;
+  /** Mainnet RPC endpoints. Empty means no endpoint configured yet. */
+  rpcEndpoints: string[];
+  /** EVM chain ID, or null for non-EVM chains. */
+  evmChainId: number | null;
+  capabilities: Capabilities;
+}
+
+const blockedNoAdapter = (capability: CapabilityName): CapabilityEntry => ({
+  status: 'blocked',
+  evidence: `No Phase 2 adapter yet for ${capability} (viem / TronGrid / TonCenter / Electrum-WS).`,
+});
+
+const blockedNoTx = (capability: CapabilityName): CapabilityEntry => ({
+  status: 'blocked',
+  evidence: `No transaction construction in this lane for ${capability} (Phase 4).`,
+});
+
+const verifiedByCoreTests = (capability: CapabilityName): CapabilityEntry => ({
+  status: 'verified',
+  evidence: `Verified by apps/web/src/wallet/core.test.ts ${capability} checks (2026-11-18).`,
+});
+
+function capabilitiesForSupported(): Capabilities {
+  return {
+    derive: verifiedByCoreTests('derive'),
+    restore: verifiedByCoreTests('restore'),
+    receive: verifiedByCoreTests('receive'),
+    balance: blockedNoAdapter('balance'),
+    history: blockedNoAdapter('history'),
+    'fee-quote': blockedNoAdapter('fee-quote'),
+    'unsigned-plan': blockedNoTx('unsigned-plan'),
+    'local-sign': blockedNoTx('local-sign'),
+    'post-sign-verify': blockedNoTx('post-sign-verify'),
+  };
+}
+
+function assertAccountIndex(account: number, index: number): void {
+  if (
+    !Number.isSafeInteger(account) ||
+    account < 0 ||
+    !Number.isSafeInteger(index) ||
+    index < 0
+  ) {
+    throw new Error('Account and index must be non-negative integers.');
+  }
+}
+
+/**
+ * Capability registry, not a chain list: listing a chain never implies it can
+ * do an operation. A chain is available for an operation only when
+ * availableFor(capability) returns it (status verified).
+ */
+export const CHAINS: Record<ChainId, ChainConfig> = {
+  btc: {
+    id: 'btc',
+    displayName: 'Bitcoin',
+    symbol: 'BTC',
+    coinTypeName: 'bitcoin',
+    networkId: 'bip122:000000000019d6689c085ae165831e93',
+    assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
+    profileId: 'bawa-btc-bip84-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/84'/0'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: null,
+    capabilities: capabilitiesForSupported(),
+  },
+  eth: {
+    id: 'eth',
+    displayName: 'Ethereum',
+    symbol: 'ETH',
+    coinTypeName: 'ethereum',
+    networkId: 'eip155:1',
+    assetId: 'eip155:1/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    // viem mainnet public client; the concrete RPC URL is chosen by the
+    // Phase 2 adapter. This marker is an identifier, not a URL.
+    rpcEndpoints: ['viem:mainnet'],
+    evmChainId: 1,
+    capabilities: capabilitiesForSupported(),
+  },
+  trx: {
+    id: 'trx',
+    displayName: 'TRON',
+    symbol: 'TRX',
+    coinTypeName: 'tron',
+    networkId: 'tron:0x2b6653dc',
+    assetId: 'tron:0x2b6653dc/slip44:195',
+    profileId: 'bawa-trx-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/195'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://api.trongrid.io'],
+    evmChainId: null,
+    capabilities: capabilitiesForSupported(),
+  },
+  ton: {
+    id: 'ton',
+    displayName: 'TON',
+    symbol: 'TON',
+    coinTypeName: 'ton',
+    networkId: 'ton:-239',
+    assetId: 'ton:-239/slip44:607',
+    profileId: 'bawa-ton-v4r2-v1',
+    pathFor: (account) => {
+      assertAccountIndex(account, 0);
+      // Fully hardened: one address per wallet, no index suffix.
+      // Wallet V4 R2, workchain 0, wallet ID 698983191.
+      return "m/44'/607'/0'";
+    },
+    rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
+    evmChainId: null,
+    capabilities: capabilitiesForSupported(),
+  },
+};
+
+export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+
+/**
+ * Solana profiles, named as UNSUPPORTED. No code path uses them and no Solana
+ * support is added in this lane. The two profiles are distinct derivations
+ * even at index 0 — never hard-code a single Solana path.
+ */
+export interface UnsupportedProfile {
+  profileId: string;
+  path: string;
+  networkId: string;
+  status: 'unsupported';
+  note: string;
+}
+
+export const SOLANA_PROFILES: Readonly<Record<string, UnsupportedProfile>> = {
+  'walletcore-solana-default-v1': {
+    profileId: 'walletcore-solana-default-v1',
+    path: "m/44'/501'/0'",
+    networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+    status: 'unsupported',
+    note: 'Wallet Core Solana default profile. Unsupported in this lane.',
+  },
+  'solana-phantom-bip44change-v1': {
+    profileId: 'solana-phantom-bip44change-v1',
+    path: "m/44'/501'/{i}'/0'",
+    networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+    status: 'unsupported',
+    note: 'OKX / Phantom bip44Change profile. Unsupported in this lane.',
+  },
+};
+
+export function chainConfig(chain: ChainId): ChainConfig {
+  const config = CHAINS[chain];
+  if (!config) {
+    throw new Error(`Unsupported chain: ${chain}.`);
+  }
+  return config;
+}
+
+export function profileFor(chain: ChainId): string {
+  return chainConfig(chain).profileId;
+}
+
+export function pathFor(chain: ChainId, account: number, index: number): string {
+  return chainConfig(chain).pathFor(account, index);
+}
+
+export function capabilitiesFor(chain: ChainId): Capabilities {
+  return chainConfig(chain).capabilities;
+}
+
+/** Chains whose status for the capability is verified. */
+export function availableFor(capability: CapabilityName): ChainId[] {
+  return SUPPORTED_CHAINS.filter(
+    (chain) => CHAINS[chain].capabilities[capability].status === 'verified',
+  );
+}
+
+/** Throws a typed error naming the exact unavailable combination. */
+export function assertSupported(chain: ChainId, capability: CapabilityName): void {
+  const config = chainConfig(chain);
+  const entry = config.capabilities[capability];
+  if (entry.status !== 'verified') {
+    throw new Error(
+      `Unsupported operation: chain ${chain} (${config.networkId}, profile ${config.profileId}) ` +
+        `cannot do ${capability} — status ${entry.status}: ${entry.evidence}`,
+    );
+  }
+}
+
+const MAINNET_NETWORK_IDS: Readonly<Set<string>> = new Set(
+  SUPPORTED_CHAINS.map((chain) => CHAINS[chain].networkId),
+);
+
+/** Looks a chain up by CAIP-2 network ID. Anything else throws, including non-mainnet IDs. */
+export function chainConfigForNetwork(networkId: string): ChainConfig {
+  if (!MAINNET_NETWORK_IDS.has(networkId)) {
+    throw new Error(`Unsupported network: ${networkId}.`);
+  }
+  const found = SUPPORTED_CHAINS.find(
+    (chain) => CHAINS[chain].networkId === networkId,
+  );
+  if (!found) {
+    throw new Error(`Unsupported network: ${networkId}.`);
+  }
+  return CHAINS[found];
+}

@@ -71,7 +71,7 @@ describe.sequential('App', () => {
 
   it('renders the watch-only wallet import page', async () => {
     await withRenderedApp('/import-wallet', (div) => {
-      expect(div.textContent).toContain('Import a watch-only wallet');
+      expect(div.textContent).toContain('Import a wallet');
     });
   });
 

@@ -4,6 +4,10 @@ import {
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
+import { deriveAddresses as deriveVaultAddresses } from '../wallet/core';
+import { capabilitiesFor } from '../wallet/chains';
+import { getBalanceProvider } from '../wallet/providers';
+import * as vault from '../wallet/vault';
 
 const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 // Maximum wallet-label length enforced at the storage boundary (T43
@@ -22,15 +26,36 @@ const perChain = <T,>(make: () => T): PerChain<T> => ({
   btc: make(), eth: make(), trx: make(), ton: make(),
 });
 
+export type VaultState = 'no-vault' | 'locked' | 'unlocked';
+
+export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
+
+export interface BalanceState {
+  status: BalanceStatus;
+  /** Raw native balance as a decimal string, when a provider returned one. */
+  value?: string;
+  /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
+  reason?: string;
+}
+
+const initialBalances = (): PerChain<BalanceState> =>
+  perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-adapter' }));
+
 interface WalletState {
   xpubs: PerChain<WatchOnlyWallet | null>;
   addresses: PerChain<DerivedAddress[]>;
   uiState: PerChain<UiState>;
   errors: PerChain<string | null>;
   locked: boolean;
+  // Vault-backed accounts. vaultAddresses are public derived addresses
+  // (account 0, index 0), safe in state. The mnemonic never enters state.
+  vaultState: VaultState;
+  vaultAddresses: PerChain<string[]>;
+  vaultProfileIds: string[] | null;
+  balances: PerChain<BalanceState>;
 }
 
-interface WalletContextValue extends WalletState {
+export interface WalletContextValue extends WalletState {
   selectedChain: ChainId;
   addXpub(chain: ChainId, xpub: string, label: string): Promise<void>;
   removeXpub(chain: ChainId): void;
@@ -38,6 +63,10 @@ interface WalletContextValue extends WalletState {
   setSelectedChain(chain: ChainId): void;
   lock(): void;
   unlock(): Promise<void>;
+  unlockVault(password: string): Promise<void>;
+  lockVault(): void;
+  refreshVaultAccounts(): Promise<void>;
+  refreshBalances(): Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
@@ -57,15 +86,25 @@ const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message :
     isRecord(error) && typeof error.message === 'string' ? error.message : String(error);
 
+function computeVaultState(): VaultState {
+  if (!vault.hasVault()) return 'no-vault';
+  return vault.isLocked() ? 'locked' : 'unlocked';
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   // No state or refs may hold a mnemonic, seed, private key, private extended key,
   // vault key or data key. Only validated public watch-only wallets enter state.
+  // vaultAddresses are public addresses derived from the vault; they are safe here.
   const [state, setState] = useState<WalletState>(() => ({
     xpubs: perChain<WatchOnlyWallet | null>(() => null),
     addresses: perChain<DerivedAddress[]>(() => []),
     uiState: perChain<UiState>(() => 'empty'),
     errors: perChain<string | null>(() => null),
     locked: false,
+    vaultState: 'no-vault',
+    vaultAddresses: perChain<string[]>(() => []),
+    vaultProfileIds: null,
+    balances: initialBalances(),
   }));
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
@@ -73,6 +112,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const additions = useRef(perChain(() => 0));
   const changed = useRef(perChain(() => false));
   const derivations = useRef(perChain(() => 0));
+  const vaultDerivations = useRef(0);
+  const balanceRequests = useRef(perChain(() => 0));
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -141,16 +182,124 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void putWallet(chain, null);
   }, [putWallet]);
 
+  // Vault-backed accounts. An xpub can never be upgraded into signing keys:
+  // spending requires vault creation or mnemonic restoration. Watch-only xpubs
+  // stay a separate, explicitly labelled account type (see xpubs above).
+  const refreshVaultAccounts = useCallback(async () => {
+    const request = ++vaultDerivations.current;
+    const vaultState = computeVaultState();
+    const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
+    if (vaultState !== 'unlocked') {
+      update(previous => ({
+        ...previous,
+        vaultState,
+        vaultProfileIds: profileIds,
+        vaultAddresses: perChain<string[]>(() => []),
+      }));
+      return;
+    }
+    let derived: Record<ChainId, string>;
+    try {
+      derived = await vault.withMnemonic((mnemonic) => deriveVaultAddresses(mnemonic));
+    } catch (error: unknown) {
+      if (request !== vaultDerivations.current) return;
+      update(previous => ({
+        ...previous,
+        vaultState,
+        vaultProfileIds: profileIds,
+        vaultAddresses: perChain<string[]>(() => []),
+      }));
+      throw error;
+    }
+    if (request !== vaultDerivations.current) return;
+    update(previous => ({
+      ...previous,
+      vaultState,
+      vaultProfileIds: profileIds,
+      vaultAddresses: {
+        btc: [derived.btc],
+        eth: [derived.eth],
+        trx: [derived.trx],
+        ton: [derived.ton],
+      },
+    }));
+  }, [update]);
+
+  const unlockVault = useCallback(async (password: string) => {
+    await vault.unlock(password);
+    await refreshVaultAccounts();
+  }, [refreshVaultAccounts]);
+
+  const lockVault = useCallback(() => {
+    ++vaultDerivations.current;
+    vault.lock();
+    update(previous => ({
+      ...previous,
+      vaultState: computeVaultState(),
+      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+      vaultAddresses: perChain<string[]>(() => []),
+    }));
+  }, [update]);
+
+  const refreshBalances = useCallback(async () => {
+    await Promise.all(CHAINS.map(async (chain) => {
+      const request = ++balanceRequests.current[chain];
+      const capability = capabilitiesFor(chain).balance;
+      const setBalance = (balance: BalanceState) => {
+        if (request !== balanceRequests.current[chain]) return;
+        update(previous => ({
+          ...previous,
+          balances: { ...previous.balances, [chain]: balance },
+        }));
+      };
+      if (capability.status !== 'verified') {
+        setBalance({ status: 'unavailable', reason: 'no-adapter' });
+        return;
+      }
+      const provider = getBalanceProvider(chain);
+      if (!provider) {
+        setBalance({ status: 'unavailable', reason: 'no-adapter' });
+        return;
+      }
+      const address =
+        current.current.vaultAddresses[chain][0] ??
+        current.current.addresses[chain][0]?.address;
+      if (!address) {
+        setBalance({ status: 'unavailable', reason: 'no-address' });
+        return;
+      }
+      setBalance({ status: 'loading' });
+      try {
+        const result = await provider.getBalance(chain, address);
+        if (request !== balanceRequests.current[chain]) return;
+        const value = result.value;
+        setBalance(
+          value === '0'
+            ? { status: 'zero', value }
+            : { status: 'available', value },
+        );
+      } catch (error: unknown) {
+        setBalance({ status: 'error', reason: messageOf(error) });
+      }
+    }));
+  }, [update]);
+
   // Locking only clears in-memory derived addresses; it is NOT a security boundary.
   // Public xpubs remain in state and storage. Unlocking re-derives their addresses.
+  // Locking also locks the vault and clears vault-derived addresses.
   const lock = useCallback(() => {
     CHAINS.forEach(chain => { ++derivations.current[chain]; });
+    ++vaultDerivations.current;
+    vault.lock();
     update(previous => ({
       ...previous,
       locked: true,
       addresses: perChain<DerivedAddress[]>(() => []),
       uiState: perChain<UiState>(() => 'empty'),
       errors: perChain<string | null>(() => null),
+      vaultState: computeVaultState(),
+      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+      vaultAddresses: perChain<string[]>(() => []),
     }));
   }, [update]);
 
@@ -204,6 +353,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [putWallet]);
 
+  // Vault state is read from storage on mount (no vault -> 'no-vault').
+  // Addresses are derived only after an explicit unlockVault(password).
+  useEffect(() => {
+    update(previous => ({
+      ...previous,
+      vaultState: computeVaultState(),
+      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+    }));
+  }, [update]);
+
   useEffect(() => {
     if (!hydrated || typeof window === 'undefined') return;
     try {
@@ -215,7 +374,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock]);
+    unlockVault, lockVault, refreshVaultAccounts, refreshBalances,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, refreshVaultAccounts, refreshBalances]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

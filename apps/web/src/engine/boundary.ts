@@ -44,7 +44,7 @@ type WalletCore = Awaited<ReturnType<typeof initWasm>>;
 let wasmPromise: Promise<WalletCore> | undefined;
 let engineReady = false;
 
-function loadCore(): Promise<WalletCore> {
+export function loadCore(): Promise<WalletCore> {
   if (wasmPromise === undefined) {
     // F-40: a rejected initialisation must not poison the cache for the
     // page lifetime. Clear the cached promise on rejection (only if it
