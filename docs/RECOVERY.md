@@ -422,11 +422,13 @@ Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A 
 
 ### 7. Decide the destination first, then clean up
 
-Before decrypting, not after plaintext appears, choose either the default terminal display or file output with `--output /path/to/recovered-mnemonic.txt`.
+Before decrypting, not after plaintext appears, choose one of these output routes: the default terminal display, standard output with `--stdout`, or file output with `--output /path/to/recovered-mnemonic.txt`.
 
 Invoke the tool with `python3 tools/decrypt_seed.py`. The file has mode `644`, so it is not executable.
 
 When cleaning up afterwards, investigate unexpected temporary entries rather than deleting them blindly, and keep the safeguards in place.
+
+The tool neither deletes plaintext output files nor records their deletion. After manually deleting a known plaintext output file and checking that it is no longer present, append a record to `~/.local/state/recovery/deletions.jsonl` using one JSON object per line: `{"deleted_at":"<UTC ISO 8601 timestamp>","path":"<absolute deleted-file path>","method":"<deletion command or procedure>"}`. Create the parent directory with mode `0700` and the log with mode `0600` before writing, and do not include the mnemonic or other decrypted content.
 
 ## Part 3: What recovery cannot do
 
