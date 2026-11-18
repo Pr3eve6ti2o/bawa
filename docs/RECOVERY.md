@@ -646,6 +646,8 @@ Create the Part 2 incident record as a dated Markdown file (`incident-YYYY-MM-DD
 
 Treat device loss and seed compromise as different incidents. Remember that a lost device is not a lost wallet if the mnemonic and passphrase survive. Assess possible seed exposure or signing-key extraction before restoring.
 
+Signing-key extraction means obtaining usable private signing keys from a wallet device or software, for example from its memory or storage. An attacker can use those keys to sign transactions without the original device, even if the mnemonic and passphrase remain secret.
+
 1. **Classify the loss before restoring.**
 
    Use the restore path below only if the mnemonic backup and passphrase remain available and you have no reason to suspect seed exposure or signing-key extraction. If the seed may have been seen, copied or taken, or its signing keys may have been extracted, follow Part 2 instead.
