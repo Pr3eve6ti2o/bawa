@@ -69,7 +69,7 @@ For systems handling any amount whose loss would be material to the holder, move
 
 ---
 
-The dedicated EIP-1559 construction/signing demonstration was verified on [Core 4.9.2](../../CHANGELOG.md) ([D21, line 92](../14-wallet-app-implementation/README.md), 2026-11-08; [4.8.4 pin; 4.9.2 demonstrated reference, line 23](../../CHANGELOG.md)), with `txMode: 1` producing a `0x02` envelope ([enum/wire-byte distinction, line 1718](../android-wallet/ANDROID-GUIDE.md)) and Python independently recovering the [published fixture sender, line 65](../14-wallet-app-implementation/README.md). Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
+The dedicated EIP-1559 construction/signing demonstration was verified on [Core 4.9.2](../../CHANGELOG.md), the demonstrated reference (GitHub pre-release), distinct from the installed 4.8.4 pin ([D21, line 92](../14-wallet-app-implementation/README.md), 2026-11-08; [4.8.4 pin; 4.9.2 demonstrated reference, line 23](../../CHANGELOG.md)), with `txMode: 1` producing a `0x02` envelope ([enum/wire-byte distinction, line 1718](../android-wallet/ANDROID-GUIDE.md)) and Python independently recovering the [published fixture sender, line 65](../14-wallet-app-implementation/README.md). Verification was limited to Node v24; browser send/sign was not exercised and nothing was broadcast.
 
 ## The fixed derivation policy
 
@@ -86,11 +86,11 @@ Identify this policy as `bawa-derivation-policy-v1` (see [fixed generation paths
 
 Changing these values can produce different addresses. Do not add alternative paths, and never change this policy in a wallet built from this guide. Check every derivation setting and compare the wallet's derived addresses and descriptor fields against this versioned table, including for an already-generated wallet (derive the addresses with `tools/hdwallet-gen/derive.js` and compare).
 
-### Why each choice, and what breaks if you change it
+### Why each choice was made, and what can change if you change it
 
-Different paths, a changed mnemonic or a non-empty BIP-39 passphrase produce different addresses. The wallet can look empty: the funds are not lost, but are unreachable from this policy. Keep the policy fixed and check the original derivation inputs when investigating a mismatch.
+Keeping these choices fixed supports consistent address derivation and discovery. In normal operation with valid inputs, different paths, a changed mnemonic or a non-empty BIP-39 passphrase generally produce different addresses. Notation variants may denote the same path; this is not a collision-free guarantee, and invalid inputs are rejected. The wallet can look empty: the funds are not lost, but may not be found using the current derivation inputs and discovery scope. Keep the policy fixed and check the original derivation inputs when investigating a mismatch.
 
-**BTC.** A different BTC path changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep native SegWit receiving addresses on the fixed BIP-84 account and branch. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `0` and the complete path against the table.
+**BTC.** A different valid BTC path normally changes the receiving addresses. Use `m/84'/0'/0'/0/i` to keep the BIP-84 account and branch fixed. Native SegWit receiving addresses come from the BIP-84 P2WPKH construction, not the path alone. For this policy's testnet4 scope, see [Derivation policy versus the standards](#derivation-policy-versus-the-standards). Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `0` and the complete path against the table.
 
 **ETH.** A different ETH path changes the addresses. Use `m/44'/60'/0'/0/i` so generation and recovery select the same BIP-44 ETH account. Derive with `tools/hdwallet-gen/derive.js` and compare account `0`, receiving branch `0`, coin type `60` and the complete path against the table.
 
