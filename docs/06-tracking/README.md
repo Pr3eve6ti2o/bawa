@@ -72,7 +72,7 @@ Plan a separate index and backfill: an RPC node does not automatically supply an
 
 Your endpoint has no provider-imposed quota, but CPU, disk and sync lag still limit throughput. Own the reliability work: upgrades, alerts, backups, reorg handling and tested resynchronisation. If nobody owns that work, stay hosted.
 
-As you climb, control, privacy and reliability rise—and so do complexity and cost.
+As you climb, control and privacy rise—and so do complexity and cost—while reliability may improve.
 
 ### Provider fallback: if one fails, try the next
 
@@ -185,7 +185,7 @@ Build indexed records around the wallet, contract, asset type, chain, block, tra
 
 - **[ERC-20](https://eips.ethereum.org/EIPS/eip-20):** Retain `Transfer` movements and exact integer amounts, plus token decimals and metadata when available. Use decimals to scale display values; names, symbols and decimals are optional metadata under the standard.
 - **ERC-721 ([EIP-721](https://eips.ethereum.org/EIPS/eip-721)):** Record ownership per token ID and retain transfer history, including mint and burn transitions. Reconcile transfer-derived holdings with `ownerOf`.
-- **ERC-1155 ([EIP-1155](https://eips.ethereum.org/EIPS/eip-1155)):** Record balances as quantities per holder and token ID, not a single owner. Transfers are often batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index.
+- **ERC-1155 ([EIP-1155](https://eips.ethereum.org/EIPS/eip-1155)):** Record balances as quantities per holder and token ID, not a single owner. Transfers can be batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index in the tracker.
 
 Treat metadata as untrusted presentation data. Check a price provider's chain-and-contract mapping rather than matching ticker text. Mark unmatched holdings as unpriced, not worthless.
 
@@ -246,7 +246,7 @@ For each collection cycle, fetch, preserve raw chain facts with their chain/netw
 
 Bawa names SQLite as a common choice for personal local storage and proposes a logical schema in section 10, but does not document reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
 
-SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity: a canonical key for the underlying fact, independent of which observation reports it. For a transaction output, the identity is `(transaction id, output index)`, and the watch-scoped key is `(watch, transaction id, output index)`. Observations with the same normalized transaction ID and output index for the same watch resolve to the same fact. Raw-observation record IDs, block references and confirmation/reorg/finality state are not part of the identity.
+SQLite is one option for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity: a canonical key for the underlying fact, independent of which observation reports it. For a transaction output, the identity is `(transaction id, output index)`, and the watch-scoped key is `(watch, transaction id, output index)`. Observations with the same normalized transaction ID and output index for the same watch resolve to the same fact. Raw-observation record IDs, block references and confirmation/reorg/finality state are not part of the identity.
 
 Configure a finality rule per chain, for example a chosen number of Bitcoin confirmations. Mark facts settled only once they meet it. Until a finality rule is configured, keep freshness and finality as `UNKNOWN`.
 
