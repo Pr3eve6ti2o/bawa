@@ -109,7 +109,8 @@ Using the published 15-word ripple fixture mnemonic for wallet creation violates
 
 Read the descriptor examples in this file as descriptions of an external hardware signer's export. They use `m/84'/1'/0'` because coin type `1` is the testnet convention. This is **not a Bawa-generated wallet**.
 
-Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins (see the origin definition at L530): a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
+Using the external signer's testnet origin to derive a Bawa wallet selects a different account. Never mix origins (see the origin definition at L532): a Bawa-generated wallet uses `m/84'/0'`, while an external signer export uses the signer's own origin. Record the fingerprint and origin from the signer's own export, and check that the descriptor preserves both.
+> A **fingerprint** is the short, eight-hex-character identifier of the master key recorded in a descriptor's origin annotation, used to match an export to its source key (BIP-380).
 
 ## Hardware wallets
 
@@ -118,6 +119,7 @@ Hardware wallets make the security boundary physical rather than merely architec
 ### Trezor
 
 Trezor's firmware repository documents per-coin derivation paths and shows an important concept: paths differ by curve and blockchain family, and public nodes are only possible where the derivation semantics support them.
+> A **public node** is a derivation-path node whose child public keys can be derived from public key material alone through non-hardened derivation (BIP-32).
 
 See:
 
