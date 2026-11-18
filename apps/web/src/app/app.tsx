@@ -13,6 +13,7 @@ import { SendScreen } from '../screens/send';
 import { TransactionHistoryScreen } from '../screens/transaction-history';
 import { TransactionDetailScreen } from '../screens/transaction-detail';
 import { NetworkSelectionScreen } from '../screens/network-selection';
+import { LockScreen } from '../screens/lock';
 import { WalletManagementScreen } from '../screens/wallet-management';
 import { SecuritySettingsScreen } from '../screens/security-settings';
 import { WalletProvider, useWallet } from '../state/wallet-context';
@@ -177,6 +178,7 @@ export function App() {
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
+            <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

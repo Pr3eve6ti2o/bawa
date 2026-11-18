@@ -176,4 +176,75 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('shows real activity on the Activity tab', async () => {
+    setWallet(balancesFor({}), {
+      history: {
+        btc: { status: 'empty', txs: [] },
+        eth: {
+          status: 'loaded',
+          txs: [
+            {
+              hash: '0xabc',
+              chain: 'eth',
+              networkId: 'eip155:1',
+              direction: 'out',
+              amountBaseUnits: '250000000000000000',
+              counterparty: '0xRecipient',
+              timestamp: 1700000000000,
+              status: 'confirmed',
+              explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+            },
+          ],
+        },
+        trx: { status: 'empty', txs: [] },
+        ton: { status: 'empty', txs: [] },
+      },
+      refreshHistory: vi.fn(),
+    });
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      expect(tab).not.toBeUndefined();
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('Recent activity');
+      expect(mounted.div.textContent).toContain('Sent');
+      expect(mounted.div.textContent).toContain('0.25 ETH');
+      expect(
+        mounted.div.querySelector('a[href="/transactions/0xabc"]'),
+      ).not.toBeNull();
+      // No NFTs tab: no NFT support exists.
+      expect(mounted.div.textContent).not.toContain('NFT');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the empty activity state when there is no history', async () => {
+    setWallet(balancesFor({}), {
+      history: {
+        btc: { status: 'empty', txs: [] },
+        eth: { status: 'empty', txs: [] },
+        trx: { status: 'empty', txs: [] },
+        ton: { status: 'empty', txs: [] },
+      },
+      refreshHistory: vi.fn(),
+    });
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('No transactions yet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
