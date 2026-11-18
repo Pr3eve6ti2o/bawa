@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
-import { DEMO_ASSETS } from '../state/demo-fixtures';
+import type { ChainId } from '../engine/boundary';
+import { chainConfig } from '../wallet/chains';
+import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
+import { CHAIN_CHIP_COLORS } from './asset-rows';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
@@ -15,7 +18,18 @@ const DERIVATION_PATHS = {
 
 export function AssetDetailScreen() {
   const { chain } = useParams<{ chain: string }>();
-  const { xpubs, addresses, uiState, errors, refreshChain, setSelectedChain } = useWallet();
+  const {
+    xpubs,
+    addresses,
+    uiState,
+    errors,
+    balances,
+    history,
+    refreshChain,
+    refreshBalances,
+    refreshHistory,
+    setSelectedChain,
+  } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
 
   if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
@@ -26,9 +40,14 @@ export function AssetDetailScreen() {
     );
   }
 
+  const config = chainConfig(chain);
   const xpub = xpubs[chain]?.xpub;
   const state = uiState[chain];
-  const demo = DEMO_ASSETS.find((asset) => asset.id === chain);
+  const balance = balances[chain];
+  const chainHistory = history[chain];
+  const recentTxs = [...chainHistory.txs]
+    .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+    .slice(0, 5);
 
   async function copyAddress(address: string) {
     setCopyStatus('');
@@ -40,24 +59,30 @@ export function AssetDetailScreen() {
     }
   }
 
+  function refreshAll() {
+    void refreshChain(chain as ChainId);
+    void refreshBalances();
+    void refreshHistory();
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
           <span
             className="flex size-10 items-center justify-center rounded-full text-base font-bold text-[#19223a]"
-            style={{ backgroundColor: demo?.chip ?? '#9daeff' }}
+            style={{ backgroundColor: CHAIN_CHIP_COLORS[chain] ?? '#9daeff' }}
           >
-            {(demo?.name ?? chain).slice(0, 1)}
+            {config.displayName.slice(0, 1)}
           </span>
-          {demo?.name ?? chain.toUpperCase()}
+          {config.displayName}
         </h1>
         <div className="flex gap-2">
           <Button
             type="button"
             variant="outline"
             disabled={state === 'loading'}
-            onClick={() => void refreshChain(chain)}
+            onClick={refreshAll}
           >
             Refresh
           </Button>
@@ -69,15 +94,116 @@ export function AssetDetailScreen() {
         </div>
       </header>
 
-      {demo && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-white/10 bg-[#243454] px-5 py-4 text-white">
-          <div>
-            <p className="text-xs text-[#aab5d1]">Demo balance · {demo.network}</p>
-            <p className="text-2xl font-bold">{demo.value}</p>
+      <Card className="rounded-[20px] border-[#d6deed]">
+        <CardContent className="space-y-2 pt-6">
+          <p className="text-sm text-muted-foreground">
+            Balance · {config.displayName} mainnet
+          </p>
+          {balance.status === 'loading' ? (
+            <div role="status">
+              <Skeleton className="h-8 w-48" />
+              <span className="sr-only">Loading balance…</span>
+            </div>
+          ) : balance.status === 'zero' ? (
+            <>
+              <p className="text-2xl font-bold">
+                0 {config.symbol}
+              </p>
+              <p className="text-sm text-muted-foreground">Zero balance</p>
+            </>
+          ) : balance.status === 'available' ? (
+            <p className="text-2xl font-bold">
+              {formatNativeWithSymbol(
+                balance.value ?? '0',
+                CHAIN_DECIMALS[chain as ChainId],
+                config.symbol,
+              )}
+            </p>
+          ) : (
+            <>
+              <p className="text-lg font-semibold">Balance unavailable</p>
+              <p className="text-sm text-muted-foreground">
+                {balance.status === 'error'
+                  ? 'Could not load the balance.'
+                  : 'No balance adapter is available for this chain.'}
+                {balance.reason ? ` (${balance.reason})` : ''}
+              </p>
+              <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
+                Retry
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <section aria-labelledby="recent-transactions-heading" className="space-y-3">
+        <h2 id="recent-transactions-heading" className="text-lg font-semibold">
+          Recent transactions
+        </h2>
+        {chainHistory.status === 'loading' ? (
+          <div role="status">
+            <Skeleton className="h-24 w-full" />
+            <span className="sr-only">Loading transactions…</span>
           </div>
-          <p className="text-sm font-semibold text-[#eff2fc]">{demo.amount}</p>
-        </div>
-      )}
+        ) : chainHistory.status === 'loaded' ? (
+          <ul className="space-y-3">
+            {recentTxs.map((tx) => (
+              <li key={tx.hash} className="rounded-lg border p-3">
+                <Link
+                  to={`/transactions/${tx.hash}`}
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
+                >
+                  <span className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {tx.direction === 'in'
+                        ? 'Received'
+                        : tx.direction === 'out'
+                          ? 'Sent'
+                          : 'Self transfer'}
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {formatNativeWithSymbol(
+                        tx.amountBaseUnits,
+                        CHAIN_DECIMALS[chain as ChainId],
+                        config.symbol,
+                      )}
+                    </span>
+                  </span>
+                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                    {tx.hash}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {tx.timestamp === null
+                      ? 'Pending'
+                      : new Date(tx.timestamp).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                    {tx.status === 'failed' ? ' · Failed' : tx.status === 'pending' ? ' · Pending' : ''}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : chainHistory.status === 'empty' ? (
+          <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+            No transactions yet for this chain.
+          </p>
+        ) : (
+          <div className="space-y-2 rounded-lg border p-4">
+            <p className="text-sm">
+              {chainHistory.status === 'error'
+                ? 'Could not load transactions.'
+                : 'Transaction history is unavailable for this chain.'}
+              {chainHistory.reason ? ` (${chainHistory.reason})` : ''}
+            </p>
+            <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
+              Retry
+            </Button>
+          </div>
+        )}
+      </section>
 
       <Card className="rounded-[20px] border-[#d6deed]">
         <CardContent className="pt-6">

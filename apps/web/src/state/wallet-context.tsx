@@ -5,8 +5,9 @@ import {
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
 import { deriveAddresses as deriveVaultAddresses } from '../wallet/core';
-import { capabilitiesFor } from '../wallet/chains';
-import { getBalanceProvider } from '../wallet/providers';
+import { availableFor } from '../wallet/chains';
+import { getAdapter } from '../wallet/adapters';
+import type { AdapterTx } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 
 const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
@@ -38,8 +39,19 @@ export interface BalanceState {
   reason?: string;
 }
 
+export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
+
+export interface HistoryState {
+  status: HistoryStatus;
+  txs: AdapterTx[];
+  reason?: string;
+}
+
 const initialBalances = (): PerChain<BalanceState> =>
   perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-adapter' }));
+
+const initialHistory = (): PerChain<HistoryState> =>
+  perChain<HistoryState>(() => ({ status: 'unavailable', reason: 'no-adapter', txs: [] }));
 
 interface WalletState {
   xpubs: PerChain<WatchOnlyWallet | null>;
@@ -53,6 +65,7 @@ interface WalletState {
   vaultAddresses: PerChain<string[]>;
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
+  history: PerChain<HistoryState>;
 }
 
 export interface WalletContextValue extends WalletState {
@@ -67,6 +80,7 @@ export interface WalletContextValue extends WalletState {
   lockVault(): void;
   refreshVaultAccounts(): Promise<void>;
   refreshBalances(): Promise<void>;
+  refreshHistory(): Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
@@ -105,6 +119,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     vaultAddresses: perChain<string[]>(() => []),
     vaultProfileIds: null,
     balances: initialBalances(),
+    history: initialHistory(),
   }));
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
@@ -114,6 +129,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const derivations = useRef(perChain(() => 0));
   const vaultDerivations = useRef(0);
   const balanceRequests = useRef(perChain(() => 0));
+  const historyRequests = useRef(perChain(() => 0));
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -182,6 +198,96 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void putWallet(chain, null);
   }, [putWallet]);
 
+  // Balances and history come from the Phase 2 adapters, gated on the
+  // capability registry: a chain is readable only when its balance/history
+  // capability is verified (availableFor). A failed fetch is reported as
+  // unavailable/error, never as zero.
+  const refreshBalances = useCallback(async () => {
+    await Promise.all(CHAINS.map(async (chain) => {
+      const request = ++balanceRequests.current[chain];
+      const setBalance = (balance: BalanceState) => {
+        if (request !== balanceRequests.current[chain]) return;
+        update(previous => ({
+          ...previous,
+          balances: { ...previous.balances, [chain]: balance },
+        }));
+      };
+      if (!availableFor('balance').includes(chain)) {
+        setBalance({ status: 'unavailable', reason: 'no-adapter' });
+        return;
+      }
+      const adapter = getAdapter(chain);
+      if (!adapter) {
+        setBalance({ status: 'unavailable', reason: 'no-adapter' });
+        return;
+      }
+      const address =
+        current.current.vaultAddresses[chain][0] ??
+        current.current.addresses[chain][0]?.address;
+      if (!address) {
+        setBalance({ status: 'unavailable', reason: 'no-address' });
+        return;
+      }
+      setBalance({ status: 'loading' });
+      const result = await adapter.getBalance(address);
+      if (request !== balanceRequests.current[chain]) return;
+      if (result.status === 'ok') {
+        setBalance(
+          result.data.valueBaseUnits === '0'
+            ? { status: 'zero', value: '0' }
+            : { status: 'available', value: result.data.valueBaseUnits },
+        );
+      } else if (result.status === 'unavailable') {
+        setBalance({ status: 'unavailable', reason: result.reason });
+      } else {
+        setBalance({ status: 'error', reason: result.reason });
+      }
+    }));
+  }, [update]);
+
+  const refreshHistory = useCallback(async () => {
+    await Promise.all(CHAINS.map(async (chain) => {
+      const request = ++historyRequests.current[chain];
+      const setHistory = (history: HistoryState) => {
+        if (request !== historyRequests.current[chain]) return;
+        update(previous => ({
+          ...previous,
+          history: { ...previous.history, [chain]: history },
+        }));
+      };
+      if (!availableFor('history').includes(chain)) {
+        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
+        return;
+      }
+      const adapter = getAdapter(chain);
+      if (!adapter) {
+        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
+        return;
+      }
+      const address =
+        current.current.vaultAddresses[chain][0] ??
+        current.current.addresses[chain][0]?.address;
+      if (!address) {
+        setHistory({ status: 'unavailable', reason: 'no-address', txs: [] });
+        return;
+      }
+      setHistory({ status: 'loading', txs: [] });
+      const result = await adapter.getHistory(address, 25);
+      if (request !== historyRequests.current[chain]) return;
+      if (result.status === 'ok') {
+        setHistory(
+          result.data.length === 0
+            ? { status: 'empty', txs: [] }
+            : { status: 'loaded', txs: result.data },
+        );
+      } else if (result.status === 'unavailable') {
+        setHistory({ status: 'unavailable', reason: result.reason, txs: [] });
+      } else {
+        setHistory({ status: 'error', reason: result.reason, txs: [] });
+      }
+    }));
+  }, [update]);
+
   // Vault-backed accounts. An xpub can never be upgraded into signing keys:
   // spending requires vault creation or mnemonic restoration. Watch-only xpubs
   // stay a separate, explicitly labelled account type (see xpubs above).
@@ -223,7 +329,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ton: [derived.ton],
       },
     }));
-  }, [update]);
+    // New vault addresses: refresh the adapter-backed balances + history.
+    await refreshBalances();
+    await refreshHistory();
+  }, [update, refreshBalances, refreshHistory]);
 
   const unlockVault = useCallback(async (password: string) => {
     await vault.unlock(password);
@@ -238,49 +347,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultState: computeVaultState(),
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
-    }));
-  }, [update]);
-
-  const refreshBalances = useCallback(async () => {
-    await Promise.all(CHAINS.map(async (chain) => {
-      const request = ++balanceRequests.current[chain];
-      const capability = capabilitiesFor(chain).balance;
-      const setBalance = (balance: BalanceState) => {
-        if (request !== balanceRequests.current[chain]) return;
-        update(previous => ({
-          ...previous,
-          balances: { ...previous.balances, [chain]: balance },
-        }));
-      };
-      if (capability.status !== 'verified') {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
-      }
-      const provider = getBalanceProvider(chain);
-      if (!provider) {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
-      }
-      const address =
-        current.current.vaultAddresses[chain][0] ??
-        current.current.addresses[chain][0]?.address;
-      if (!address) {
-        setBalance({ status: 'unavailable', reason: 'no-address' });
-        return;
-      }
-      setBalance({ status: 'loading' });
-      try {
-        const result = await provider.getBalance(chain, address);
-        if (request !== balanceRequests.current[chain]) return;
-        const value = result.value;
-        setBalance(
-          value === '0'
-            ? { status: 'zero', value }
-            : { status: 'available', value },
-        );
-      } catch (error: unknown) {
-        setBalance({ status: 'error', reason: messageOf(error) });
-      }
+      // Vault addresses are hidden: drop their balances/history too.
+      balances: initialBalances(),
+      history: initialHistory(),
     }));
   }, [update]);
 
@@ -300,6 +369,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultState: computeVaultState(),
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
+      balances: initialBalances(),
+      history: initialHistory(),
     }));
   }, [update]);
 
@@ -374,8 +445,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,
-    unlockVault, lockVault, refreshVaultAccounts, refreshBalances,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, refreshVaultAccounts, refreshBalances]);
+    unlockVault, lockVault, refreshVaultAccounts, refreshBalances, refreshHistory,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, refreshVaultAccounts, refreshBalances, refreshHistory]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
