@@ -362,7 +362,7 @@ python3 tools/decrypt_seed.py /path/to/seed.enc.json
 
 If the positional path is omitted, the tool uses `secrets/seed.enc.json`.
 
-The tool checks whether the path is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid.
+The tool checks whether the final pathname component is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid. `O_NOFOLLOW` does not reject symbolic links in parent directories.
 
 If you find an unexpected link, establish which file you intended to recover before trying again. Do not blindly follow the link.
 
@@ -384,7 +384,7 @@ Investigate unexpected temporary entries rather than deleting them blindly or di
 
 Check that the artefact's `alg` value is exactly `AES-256-GCM`. A different value or a missing algorithm label is not accepted. There is no fallback to another encryption scheme.
 
-Do not edit the label to force acceptance. Changing metadata does not convert the encrypted payload. Check that you have a compatible backup.
+Setting `alg` to `AES-256-GCM` passes the label check, but does not guarantee successful decryption. Changing metadata does not convert the encrypted payload. Check that you have a compatible backup.
 
 > **Expected result:** `unsupported encryption algorithm`, with no decryption attempted for that artefact.
 
@@ -402,7 +402,7 @@ Perform this check separately from `tools/decrypt_seed.py`, which does not verif
 
 ### 5. Treat authentication failure as a hard stop
 
-Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure means the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure. A wrong 32-byte key raises an uncaught `cryptography.exceptions.InvalidTag`, producing a traceback; this is the one refusal that does so.
+Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure does not necessarily mean the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure. An AAD mismatch can occur even with a correct key and an unchanged artefact. A wrong 32-byte key raises an uncaught `cryptography.exceptions.InvalidTag`, producing a traceback; this is the one refusal that does so.
 
 Do not infer from this failure whether the key is wrong or the artefact has been tampered with. Recheck the intended backup/key pairing through trusted records.
 
