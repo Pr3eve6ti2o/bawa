@@ -5,7 +5,7 @@
 Start with the cheapest chain-native setup:
 
 - **BTC:** Use Blockstream's public Esplora API for address state, UTXOs, confirmed and mempool history, and transaction details. Follow the [Esplora API reference](https://github.com/Blockstream/esplora/blob/master/API.md).
-- **EVM:** Call JSON-RPC directly: `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`. Follow the [Ethereum JSON-RPC specification](https://ethereum.org/developers/docs/apis/json-rpc/).
+- **EVM:** Call JSON-RPC directly: `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`. Follow the [Ethereum JSON-RPC documentation](https://ethereum.org/developers/docs/apis/json-rpc/).
 - **Solana:** Use the public cluster RPC endpoint for your network:
   - Mainnet: <https://api.mainnet.solana.com>
   - Devnet: <https://api.devnet.solana.com>
@@ -15,7 +15,7 @@ Start with the cheapest chain-native setup:
 - **TON:** Use the TON-native SDK/HTTP ecosystem, not an Ethereum RPC abstraction.
 - **Cosmos:** Use chain-specific RPC/LCD/gRPC, plus the Cosmos Chain Registry for chain metadata.
 
-Treat $0 as a target, not a promise of a free tier. Free public endpoints have provider quotas and no uptime guarantee. Check your chosen provider's current limits.
+Treat $0 as a target, not a promise of a free tier. Free public endpoints have provider quotas; no stated uptime SLA was found. Check your chosen provider's current limits.
 
 ## 2. The ladder: manual to self-hosted
 
@@ -54,7 +54,7 @@ Choose an indexed wallet API when you need “show every ERC-20 transfer”, “
 
 You pay someone to follow blocks, interpret events, reconcile token formats, fetch metadata and repair records after reorgs.
 
-Check pagination caps, endpoint charges, rate limits, chain coverage and the earliest indexed block. Do not mistake endpoint uptime for index freshness or completeness.
+Check pagination caps, endpoint charges, rate limits, chain coverage and the earliest indexed block (if available). Do not mistake endpoint uptime for index freshness or completeness.
 
 An indexed API is not a drop-in RPC endpoint: check Bawa's reader compatibility.
 
@@ -72,7 +72,7 @@ Plan a separate index and backfill: an RPC node does not automatically supply an
 
 Your endpoint has no provider-imposed quota, but CPU, disk and sync lag still limit throughput. Own the reliability work: upgrades, alerts, backups, reorg handling and tested resynchronisation. If nobody owns that work, stay hosted.
 
-As you climb, control, privacy and reliability rise—and so do complexity and cost.
+As you climb, control and privacy rise—and so do complexity and cost—while reliability may improve.
 
 ### Provider fallback: if one fails, try the next
 
@@ -155,7 +155,7 @@ Use OKLink as a second source when the chain-native provider fails: it is a diff
 
 ## 3. RPC is not an indexer
 
-Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode`, `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
+Use normal RPC to answer questions about state and execution. On EVM chains, examples include `eth_blockNumber`, `eth_getBalance`, `eth_getCode` (which reads contract bytecode, not storage), `eth_call`, `eth_getLogs`, `eth_getTransactionByHash` and `eth_getTransactionReceipt`.
 
 Use an indexer for wallet history, all token transfers, NFT ownership, token metadata, historical prices, wallet net worth, contract interactions and swaps. An indexer builds those answers through this pipeline:
 
@@ -166,10 +166,10 @@ Apply this rule: **a standard RPC has no universal wallet-history method**. For 
 ## 4. UTXO tracking vs account tracking
 
 - **BTC:** Track which outputs belong to the wallet, which are unspent or spent, and which transaction created or spent each output. Keep the state UTXO-oriented. Treat xpubs as **sensitive public material**: they can reveal derived addresses and link their activity.
-- **EVM:** Track native balance, nonce, contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership. An address's native balance is easy to query; “everything that happened to this wallet” is not.
+- **EVM:** Track native balance, nonce, contract bytecode (`eth_getCode`), contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership. An address's native balance is easy to query; “everything that happened to this wallet” is not.
 - **Solana:** Account for accounts and program-owned/token accounts: SOL balance, SPL token accounts, token mint metadata, program interactions, transactions/instructions and NFT state.
-- **TON:** Reason in messages, contract state and token contracts, not EVM-style transaction receipts.
-- **Cosmos:** Model modules and IBC packet/channel relationships.
+- **TON:** Reason in messages, contract state and token contracts, not EVM-style transaction receipts. Smart contracts store code and persistent data and communicate via messages; jetton tokens use master and owner-specific wallet contracts. General reference: [TON documentation](https://docs.ton.org/).
+- **Cosmos:** Model modules and IBC packet/channel relationships. Cosmos SDK applications compose modules that manage state and process messages; IBC packets identify source and destination ports and channels, linking packet activity to channels. General reference: [Cosmos SDK documentation](https://docs.cosmos.network/).
 
 **Store the raw chain-native facts first; normalise into your own common schema second.**
 ## 5. EVM token and NFT tracking
@@ -179,13 +179,13 @@ Do not trust symbols alone. Anyone can reuse symbols such as USDC, USDT and WETH
 Always store `chain_id` and `contract_address`, plus `token_id` when applicable. Treat the symbol as metadata. Give every EVM asset an unambiguous key:
 
 - Use `(chain_id, contract_address)` for ERC-20 assets and NFT collections.
-- Add `token_id` for individual ERC-721 and ERC-1155 items: `(chain_id, contract_address, token_id)`.
+- Add `token_id` for individual ERC-721 items and ERC-1155 items: `(chain_id, contract_address, token_id)`. An ERC-1155 `_id` identifies a token or a token type, so this tuple does not necessarily distinguish an individual unit.
 
 Build indexed records around the wallet, contract, asset type, chain, block, transaction, log index, token ID/amount, decimals and metadata.
 
 - **[ERC-20](https://eips.ethereum.org/EIPS/eip-20):** Retain `Transfer` movements and exact integer amounts, plus token decimals and metadata when available. Use decimals to scale display values; names, symbols and decimals are optional metadata under the standard.
-- **ERC-721 (EIP-721):** Record ownership per token ID and retain transfer history, including mint and burn transitions. Reconcile transfer-derived holdings with `ownerOf`.
-- **ERC-1155 (EIP-1155):** Record balances as quantities per holder and token ID, not a single owner. Transfers are often batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index.
+- **ERC-721 ([EIP-721](https://eips.ethereum.org/EIPS/eip-721)):** Record ownership per token ID and retain transfer history, including mint and burn transitions. Reconcile transfer-derived holdings with `ownerOf`.
+- **ERC-1155 ([EIP-1155](https://eips.ethereum.org/EIPS/eip-1155)):** Record balances as quantities per holder and token ID, not a single owner. Transfers can be batched: handle `TransferSingle` and expand `TransferBatch`, preserving each batch item's position alongside the log index in the tracker.
 
 Treat metadata as untrusted presentation data. Check a price provider's chain-and-contract mapping rather than matching ticker text. Mark unmatched holdings as unpriced, not worthless.
 
@@ -202,8 +202,8 @@ Distinguish seen, included, confirmed, finalised and economically final. Their e
 Apply the chain's own rules:
 
 - **Bitcoin:** Count inclusion as 1 confirmation; each following block adds another. Nodes follow the valid chain with the greatest accumulated work, so depth reduces reversal risk without creating a protocol-finalised state. Treat six confirmations as a customary acceptance threshold, not a network requirement.
-- **Ethereum:** Casper FFG justifies checkpoints using votes representing at least two-thirds of staked ETH. A supermajority link from a justified checkpoint to its immediate successor finalises the earlier checkpoint and its ancestors. Finalisation normally takes around two epochs; follow the node's finalised view rather than trusting a timer. Under the protocol's assumptions, conflicting finality makes at least one-third of stake slashable.
-- **Solana:** Choose the commitment explicitly. `processed` reflects a node's processed block, potentially on a fork that will be discarded. `confirmed` has supermajority voting support. `finalized` has reached maximum vote lockout.
+- **Ethereum:** Casper FFG justifies checkpoints using votes representing at least two-thirds of staked ETH. A supermajority link from a justified checkpoint to its immediate successor finalises the earlier checkpoint and its ancestors. Follow the node's finalised view rather than trusting a timer. Under the protocol's assumptions, conflicting finality makes at least one-third of stake slashable.
+- **Solana:** Choose the commitment explicitly rather than relying on defaults. If a method or subscription accepts commitment and it is omitted, the default is typically `finalized`. `processed` reflects a node's processed block, potentially on a fork that will be discarded. `confirmed` has supermajority voting support. `finalized` has reached maximum vote lockout.
 
 Treat an API provider's required confirmation count as its acceptance policy, not a new consensus rule. Do not mark an order "paid forever" on one RPC result.
 
@@ -213,7 +213,7 @@ At minimum, store `first_seen_at`, block/slot, transaction hash/signature, confi
 
 Keep address derivation separate from wallet discovery. If an account has addresses 0–5 and you have only ever received at 5, a discovery process with a small gap limit can stop after a few unused addresses and miss the receiving address.
 
-Read docs/05 §9 for the full gap-limit treatment. [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) uses gap limit 20: its external-chain scan stops after 20 consecutive addresses with no transaction history. Count an emptied address as used. Other wallets may use different windows. If indices 0–19 have no history, a default scan can stop before a payment at 20.
+Read docs/05 §9 for the full gap-limit treatment. [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) uses gap limit 20: its external-chain scan stops after 20 consecutive addresses with no transaction history. Count an emptied address as used. Other wallets may use different windows. If indices 0–19 have no history, a BIP-44-default scan can stop before a payment at 20.
 
 For a payment system, store the indexes you allocate; do not force the tracker to rediscover your own order database from the chain. Durably record the wallet/account, derivation scheme, branch, index, address and order reference **before issuing the address**.
 
@@ -221,7 +221,7 @@ Back up this allocation ledger and track its entries directly, including address
 
 ## 8. Privacy: xpubs are sensitive public material
 
-Treat xpubs as sensitive public material. An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node. When payments are observable, this can reveal account structure, address reuse patterns, payment history, balances and customer relationships.
+Treat xpubs as sensitive public material. An xpub does not normally let an attacker spend, but its holder can derive many receiving and change addresses below that public node. When payments are observable, this can reveal account structure, address reuse patterns, payment history and balances. Observers who link that activity to known customer identities may also infer customer relationships; an xpub alone does not identify customers.
 
 A BIP-44 account node covers receiving and change branches; hardened boundaries prevent public derivation beyond them. In a multi-account application, decide whether each subsystem really needs the account-level xpub or whether a narrower public node suffices. Give each subsystem individual addresses or a narrower public branch where sufficient.
 
@@ -244,9 +244,9 @@ For each collection cycle, fetch, preserve raw chain facts with their chain/netw
 | Poller | Schedule reads; handle indexer lag, RPC outages, retries, duplicates and reorgs. |
 | Dashboard | Present the stored view locally, including chain/network, freshness and reorg/finality state. |
 
-Bawa does not document a database engine or schema, reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
+Bawa names SQLite as a common choice for personal local storage and proposes a logical schema in section 10, but does not document reader code, polling interval, retry policy, duplicate-identification rules, reorg handling rules or finality thresholds. Choose and record these for your build, and write the reader code.
 
-SQLite is a common choice for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity such as `(watch, transaction id, output index)`.
+SQLite is one option for personal local storage. Set a polling interval, use bounded retries with backoff and choose a stable fact identity: a canonical key for the underlying fact, independent of which observation reports it. For a transaction output, the identity is `(transaction id, output index)`, and the watch-scoped key is `(watch, transaction id, output index)`. Observations with the same normalized transaction ID and output index for the same watch resolve to the same fact. Raw-observation record IDs, block references and confirmation/reorg/finality state are not part of the identity.
 
 Configure a finality rule per chain, for example a chosen number of Bitcoin confirmations. Mark facts settled only once they meet it. Until a finality rule is configured, keep freshness and finality as `UNKNOWN`.
 
@@ -265,7 +265,7 @@ Use these Esplora reads against the Blockstream endpoint. The paths include `/ap
 
 Use the [Esplora API documentation](https://github.com/Blockstream/esplora/blob/master/API.md) for response schemas, history pagination and the chain/mempool variants.
 
-For EVM reads, use `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`.
+For EVM reads, use `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt`, `eth_getLogs` and `eth_call`.
 
 ### Run the read probe
 
@@ -277,7 +277,7 @@ Run the sourced read probe after making that replacement:
 curl https://blockstream.info/api/address/bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd
 ```
 
-Expect address-state data from Esplora. Bawa does not document the exact JSON fields; use the Esplora reference.
+Expect address-state data from Esplora. Bawa documents the `chain_stats` JSON fields in MAINNET-GUIDE:1145-1160; use that passage.
 
 ### Complete the setup
 
@@ -298,7 +298,7 @@ Keep these logical records:
 
 - **watches**: ID; unique `(chain, network, address)`.
 - **observations**: ID; watch; source; read time; raw payload if available; request outcome.
-- **facts**: unique `(watch, fact identity)`; raw-observation link; block reference if available; confirmation/reorg/finality state.
+- **facts**: unique `(watch, fact identity)` so equivalent observations resolve to one fact; raw-observation links; block reference if available; confirmation/reorg/finality state. Reconciliation/reorgs update links, block references and state without changing the existing fact's identity; a different transaction or output is a different fact.
 - **sync**: `(watch, source)`; last attempt/success; checkpoint; source anchor if available; freshness.
 
 Keep raw observations unchanged so you can rebuild dashboard facts. Use each fact's watch reference to keep chain and network explicit.
@@ -322,6 +322,8 @@ Model overlapping data. Update or insert using the same stable fact identity.
 **(3) Lag, then outage**
 
 Compare the source's progress with a current chain view where available; otherwise, leave freshness unknown. Retain the last good view. Retry with bounded back-off.
+
+This guide's retry policy—not a sourced standard—is exponential back-off with a 1-second base delay, a 30-second cap and a maximum of 6 retries after the initial attempt (7 attempts total) per polling cycle. Retry delays are 1, 2, 4, 8, 16 and 30 seconds. On exhaustion, stop this retry cycle and wait for the next scheduled poll.
 
 **Expected:** attempts recorded separately from successful polls; stale or unknown values labelled, not treated as zero balances. A successful request alone is not a freshness check.
 
@@ -435,7 +437,7 @@ For fuller EVM history, scan blocks and logs, use tracing where supported, or us
 
 For a small watchlist, try shared public access before paying for dedicated infrastructure. Cache results, stagger polls and honour throttling. Do not treat free access as reserved capacity.
 
-Use a common tracking flow: address and network → chain-specific read → native result plus observation context → Bawa display fields. Treat HTTP and JSON as transport choices, not evidence that two chains share an account or transaction model.
+Use a common tracking flow: address and network → chain-specific read → native result plus observation context → Bawa display fields. Treat HTTP as a protocol and JSON as an encoding, not as evidence that two chains share an account or transaction model.
 
 ### Solana
 
@@ -445,23 +447,29 @@ Use `getBalance` to read native SOL as an integer number of lamports, alongside 
 
 Use `getTokenAccountsByOwner` to read token accounts matching an owner plus a mint or token-program filter. Decode the amounts and mint identities, then use each mint's decimals for display. Include Token-2022 where relevant: querying the original Token Program does not enumerate both programmes. Do not treat an empty result under one filter as proof that there are no other holdings. Neither read reconstructs transfers or proves that the observer can spend the funds.
 
+Use `getGenesisHash` to identify the network served by an RPC endpoint. It takes no parameters and returns the base58-encoded genesis hash; compare this with the expected cluster's hash before interpreting balances or transaction statuses.
+
+Use `getSlot` with an explicit `commitment` (`processed`, `confirmed`, or `finalized`) to query the node's current slot at that confirmation level. The result is an integer slot number, not a timestamp or proof that a particular transaction is confirmed.
+
+Use `getSignatureStatuses` to check confirmation and execution status for transaction signatures. The returned `value` entries match the input order; inspect `confirmationStatus` for the confirmation level and `err` for an execution error (`null` means no execution error in a returned status). The method does not accept a commitment parameter; compare the reported level with the level you require. By default it searches the recent status cache; set `searchTransactionHistory: true` to search the node's available transaction history. A `null` entry means no status was found, not proof that the transaction never occurred.
+
 ### TON
 
 Use a shared service such as TON Center (https://toncenter.com/) to avoid running a node. Check its public-access terms, authentication rules and allowances; installing an SDK does not grant extra capacity. Historical coverage depends on the service and its archival support.
 
-Use the v2 API's `getAddressInformation` for the native balance in nanotons, account state and last-transaction reference. Use `getTransactions` to read transactions and their incoming and outgoing messages.
+Use the v2 API's `getAddressInformation` for the native balance in nanotons (1 TON = 1,000,000,000 nanotons; see the [TON Center v2 API reference](https://toncenter.com/api/v2/)), account state and last-transaction reference. Use `getTransactions` to read transactions and their incoming and outgoing messages.
 
 Do not label a payment complete merely because its first transaction exists. An outgoing message can cause another account's transaction later. Inspect the relevant recipient-side execution and any bounce. Avoid an Ethereum receipt adapter here: it would obscure the distinction between one transaction and the wider message flow.
 
-For Jettons, make separate contract reads (https://docs.ton.org/contracts/standard/tokens/jettons/overview). Use a trusted master's `get_wallet_address` to derive the owner's token-wallet address. Call that wallet's `get_wallet_data` for its token balance, owner and master. Verify those identities rather than trusting a symbol. Keep these holdings separate from the native TON balance, which excludes them.
+For Jettons, make separate contract reads (https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md). Use a trusted master's [`get_wallet_address`](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md) to derive the owner's token-wallet address. Call that wallet's [`get_wallet_data`](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md) for its token balance, owner and master. Verify those identities rather than trusting a symbol. Keep these holdings separate from the native TON balance, which excludes them.
 
 ### Cosmos
 
 Pick the chain first. Use the Cosmos Chain Registry for chain IDs, address prefixes, endpoints and asset metadata, not as an availability guarantee. Try a listed public service, but verify its network and latest height. Shared services may lag, restrict queries or discard historical state.
 
-Use that chain's REST/LCD or gRPC application queries for balances. Use its CometBFT RPC for blocks and consensus information (https://docs.cosmos.network/cometbft/latest/docs/README). Do not treat these interfaces as interchangeable URLs.
+Use that chain's REST/LCD or gRPC application queries for balances. Use its CometBFT RPC for blocks and consensus information (https://docs.cosmos.network/cometbft/latest/api-reference/rpc). Do not treat these interfaces as interchangeable URLs.
 
-Use the bank module's `AllBalances` query for one address on one chain. It returns a paginated list of denominations and integer amounts, so read every page. Apply asset metadata for display units and resolve IBC denomination traces rather than guessing from a ticker.
+Use the bank module's `AllBalances` query for one address on one chain (see the [Cosmos SDK bank module documentation](https://docs.cosmos.network/sdk/v0.53/build/modules/bank/README)). It returns a paginated list of denominations and integer amounts, so read every page. This query is scoped to the address's bank-module balances; staked or unbonding positions and unclaimed staking rewards require separate module queries. Apply asset metadata for display units and, for IBC hash denominations, resolve denomination traces when available rather than guessing from a ticker.
 
 Bank balances exclude delegated stake, unbonding positions, unclaimed rewards and separate contract-token balances. Locked vesting coins may still appear, so do not treat the total as necessarily spendable.
 
@@ -498,7 +506,7 @@ Use a standard node RPC to answer specific questions about chain state and execu
 
 Do not rely on logs alone: they miss native-coin movements. Reconstructing value moved inside contract calls may require execution traces; check client and provider support before relying on them. Identify the token contract before calling `balanceOf`. Do not assume access to old state automatically solves asset discovery.
 
-Use an indexer to turn these scattered facts into address activity, token-transfer histories and NFT holdings. Match balances to the correct asset price data before calculating net worth: balances alone cannot establish value. Use price data from the relevant time for historical valuations. Distinguish endpoints by the processing behind them, not their request format; providers sometimes expose indexed methods through JSON-RPC themselves.
+Use an indexer to turn these scattered facts into address activity, token-transfer histories and NFT holdings. Match balances to the correct asset price data before calculating net worth: balances alone cannot establish value. Use price data from the relevant time for historical valuations. Distinguish endpoints by the processing behind them, not their request format.
 
 ### Build the ingestion pipeline
 
@@ -541,7 +549,7 @@ Distinguish HD derivation from discovery. HD derivation calculates an address at
 
 Account for [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)’s external-chain scan: it stops after **20 consecutive addresses with no transaction history**. Count an emptied address as used, and allow for other wallets to use different windows. If indices **0–19** have no history, a default scan can stop before a payment at **20**.
 
-Durably record the wallet/account, derivation scheme, branch, index, address and order reference **before issuing the address**. Back up this allocation ledger and track its entries directly, including expired invoices. Do not rely on a seed to recover those records: it regenerates keys, not your allocation history. When importing without those records, extend discovery deliberately rather than assuming the default scan found everything.
+See the allocation-ledger paragraph in section 7.
 
 ### Protect the watch-only view
 
@@ -570,7 +578,7 @@ watch list (chain, network, public address)
 ### Local contracts
 
 - **Address list:** Assign a watch identity to each `(chain, network, address)`. Never infer the network from the address text alone.
-- **Reader:** Restrict calls to an allowlist of read routes and methods. Return the provider payload with retrieval time and source identity. Leave presentation calculations for later.
+- **Reader:** Restrict calls to an allowlist of read routes and methods (explicitly approved provider route/method pairs that do not mutate provider state; deny all unlisted pairs). Return the provider payload with retrieval time and source identity. Leave presentation calculations for later.
 - **Database:** Save raw observations before deriving balances and activity. Retain chain/network, available block hashes and heights, and confirmation state so you can correct records later.
 - **Poller:** Keep scheduling, timeouts and bounded retries with backoff in the poller. Expect indexer lag, outages, repeated records and reorgs. Do not let retries multiply records.
 - **Dashboard:** Read the database, not a wallet. Show chain/network, last successful collection and freshness/finality labels. Never turn a failed fetch into a zero balance.
@@ -623,12 +631,12 @@ Follow this persistence order:
 
 1. Poll and commit each raw observation before decoding or deriving anything.
 2. Normalise and reconcile the batch.
-3. Only for a complete, validated batch, commit the reconciled facts, success time and checkpoint together in a separate transaction.
+3. Only for a complete, validated batch (all expected pages retrieved, all payloads parsed and schema-checked, and block hashes verified as consistent with the captured source tip), commit the reconciled facts, success time and checkpoint together in a separate transaction.
 4. Refresh the dashboard from the committed facts.
 
-If parsing fails, a page is missing or the fact transaction aborts, keep the observations but roll back derived changes. Leave both the checkpoint and last-success time unchanged. Record the failure in attempt and error metadata without advancing either.
+If parsing fails, a page is missing or the fact transaction aborts, keep the observations but roll back derived changes. Leave both the checkpoint and last-success time unchanged. Record the failure in attempt and error metadata (the schema's request outcome, recording request success or failure and any failure details) without advancing either.
 
-Capture the source tip with each batch and compare block hashes, not just heights. Do not assume separate HTTP reads form a consistent snapshot. On a reorg, replay from a verified common ancestor and revise the affected facts and checkpoint together. Leave earlier observations untouched.
+Capture the source tip with each batch and compare block hashes, not just heights. Do not assume separate HTTP reads form a consistent snapshot. On a reorg, replay from a verified common ancestor (a block whose hash has been confirmed in both the stored pre-reorg chain and the current chain ending at the captured source tip) and revise the affected facts and checkpoint together. Leave earlier observations untouched.
 
 If you cannot establish a consistent anchor, retain the previous view and report uncertainty. Use bounded retries with backoff and prevent overlapping polls.
 
@@ -647,7 +655,7 @@ Keep finality separate from freshness:
 
 ### Finish the local installation
 
-Bawa does not document endpoint/network mapping, dependency installation, database creation, ingestion code, cron configuration, dashboard setup or reliability tests. Finish these parts locally:
+Bawa documents endpoint/network mapping, but does not document tracking-specific dependency installation, database creation, ingestion code, cron configuration, dashboard setup or reliability tests. Finish these parts locally:
 
 - Record your network-to-URL choices.
 - Install dependencies and create the database.
@@ -660,11 +668,11 @@ Bawa does not document endpoint/network mapping, dependency installation, databa
 
 Keep tracking read-only. Aim for $0 running costs, but check the provider’s current quotas and prices. Do not assume guaranteed uptime or lasting free access.
 
-For a polling-only setup, try one cycle per network every 60 seconds. Treat this as a starting point, not a quota guarantee. Avoid overlapping cycles, count every request they make and lengthen the interval to fit your allowance. Use the same approach for Esplora services without subscriptions.
+For a polling-only setup, try one cycle per network every 60 seconds. This interval is this guide's starting-point policy, not a sourced requirement or a quota guarantee. Avoid overlapping cycles, count every request they make and lengthen the interval to fit your allowance. Applying the same approach to Esplora services without subscriptions is also this guide's starting-point policy, not a sourced requirement.
 
 On HTTP 429, pause that provider’s queue. Use capped exponential backoff with jitter, but never wait less than `Retry-After` specifies. Try a limit of three retries per cycle; once exhausted, defer further work. Make scheduled polls respect the same cooldown rather than resetting it.
 
-On EVM networks, prefer WebSocket `eth_subscribe` streams for `newHeads` and relevant `logs` where supported. Reserve `eth_blockNumber` checks for times when subscriptions cannot be used. Treat events as best-effort notifications, not durable history. After every reconnect, verify the stored chain view, fetch missed ranges and reconcile before marking the dashboard current.
+For geth-backed connections, prefer WebSocket `eth_subscribe` streams for `newHeads` and relevant `logs` where supported. Reserve `eth_blockNumber` checks for times when subscriptions cannot be used. Treat events as best-effort notifications, not durable history. After every reconnect, verify the stored chain view, fetch missed ranges and reconcile before marking the dashboard current.
 
 For `eth_getLogs`, use short block windows and the relevant contract-address filter. If a window is rejected for size, split it instead of repeating a broad scan.
 
@@ -676,10 +684,10 @@ If fetching or reconciliation remains uncertain, keep the previously committed b
 
 - **Watches:** assign an ID and enforce uniqueness on `(chain, network, address)`.
 - **Observations:** assign an ID and retain the watch reference, source, read timestamp, request outcome and any available raw response. Preserve the raw response unchanged so you can rebuild derived facts.
-- **Facts:** key output-based activity uniquely by `(watch, transaction_id, output_index)`. For other event types, use `(watch, transaction_id, event_type, transaction_event_index)` and document how each chain adapter derives a deterministic index within the transaction’s complete event list. Do not use a block-wide log index, which can shift across a reorg. Update the same fact on repeated reads; never make confirmation changes or reorgs change its identity. Retain the supporting observation link, available block reference and confirmation/reorg/finality state.
+- **Facts:** uniquely identify output-based activity with the canonical key `(watch, transaction_id, output_index)`. For other event types, use `(watch, transaction_id, event_type, transaction_event_index)` and document how each chain adapter derives a deterministic index within the transaction’s complete event list (all events produced by that transaction in deterministic transaction-local order, before watch or event-type filtering). Do not use a block-wide log index, which can shift across a reorg. Update the same fact on repeated reads; never make confirmation changes or reorgs change its identity. Retain the supporting observation link, available block reference and confirmation/reorg/finality state.
 - **Sync:** keep one record per `(watch, source)`, containing the last attempt, last success, checkpoint, available source anchor and freshness. Record failed attempts without advancing the success timestamp.
 
-Supply chain and network for every fact through its watch reference. Never infer either from an address alone.
+Supply chain and network for every fact through its watch reference. Do not assume either can always be inferred from an address alone; Bitcoin segwit prefixes `bc1` (mainnet) and `tb1` (testnet) encode the network.
 
 Build the data flow as follows:
 
@@ -713,18 +721,18 @@ Treat request success, freshness and finality as separate states. A successful r
 
 Implement database and replay operations for your storage engine before scheduling polls: Bawa does not document database or replay commands. Keep freshness and finality `UNKNOWN` until you have implemented and checked block/checkpoint mappings, progress comparisons and a per-chain finality rule.
 
-Verify network identity for **every chain**, not only ETH. Check each source’s chain-id or network identifier **plus known block anchors** against the watch configuration. Reject mismatches before ingestion.
+Verify network identity for **every chain**, not only ETH. Check each source’s chain-id or network identifier **plus known block anchors** (trusted block hashes at specified heights for the expected network) against the watch configuration. Reject mismatches before ingestion.
 
 Configure an eligible processing boundary:
 
-- **Bitcoin:** choose `C >= 1` confirmations. A canonical block at height `h`, with verified tip `H`, has `H-h+1` confirmations. Eligibility ends at `H-C+1`.
+- **Bitcoin:** choose `C >= 1` confirmations. A canonical block (one on the verified chain with the greatest cumulative proof of work) at height `h`, with verified tip `H`, has `H-h+1` confirmations. Eligibility ends at `H-C+1`.
 - **Ethereum:** use a checked `finalized` block as the boundary where supported. Verify provider support before relying on it.
 
 Record your choice. Treat a confirmation threshold as a risk policy, not protection against every reorg.
 
 Store checkpoint height and hash. Process bounded batches from `checkpoint+1` to the eligible boundary, plus a configured overlap scan. Run the overlap scan even when the boundary has not advanced.
 
-Enforce output-level uniqueness using `(chain, network, watch, txid, output_index)`. Use the watch ID for `watch`, map `txid` to the stored `transaction_id`, and obtain chain and network from the watch reference.
+Enforce output-level uniqueness using the canonical key `(watch, transaction_id, output_index)`. Use the watch ID for `watch` and the stored `transaction_id` as the transaction identifier; obtain chain and network from the watch reference rather than including them in the key.
 
 Follow this ingestion flow:
 
@@ -732,14 +740,16 @@ Follow this ingestion flow:
 retain raw response
   → check progress, ancestry and eligibility
   → reconcile normalised facts
-  → commit facts, totals and checkpoint atomically
+  → commit facts, totals and checkpoint without letting the checkpoint outrun the facts
 ```
 
-Keep raw observations when a derived-state commit fails. Never advance a checkpoint across an incomplete batch or a failed commit.
+Keep raw observations when a derived-state commit fails. Never advance a checkpoint across an incomplete batch (one whose requested range, including all required pages, has not been fully fetched and validated, or whose observations have not all been processed) or a failed commit.
 
 ### Run local acceptance checks
 
 Use this local fixture:
+
+The fixture’s block numbers and one-block lag limit are test policy only, not general rules. Use a retry budget of three retries per cycle for this fixture.
 
 - `C=3` — test policy only.
 - Verified tip: `102`.
@@ -755,7 +765,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
    Reset the fixture and fail a write. Keep derived state unchanged and the checkpoint at `99`; do not leave partially updated facts or totals.
 
-   Without the required verification, a complete response still cannot establish finality.
+   Without the required verification (confirmation against independent node data that the relevant blocks are canonical and satisfy the configured finality rule), a complete response still cannot establish finality.
 
 2. **Repeat poll**
 
@@ -765,7 +775,7 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
 3. **Lag, then outage**
 
-   With a one-block lag limit, move the independently checked tip to `104` while the source remains at `102`. Then fail requests.
+   With this fixture’s one-block lag limit, move the independently checked tip to `104` while the source remains at `102`. Then fail requests.
 
    Keep the last good value labelled stale, not zero. Retry with bounded back-off and retain separate attempt and success timestamps. Do not advance the success timestamp on failed requests.
 
@@ -773,9 +783,9 @@ Run these checks against **your implementation**. Bawa does not document a test 
 
 4. **Possible reorg**
 
-   Report `BLOCK_B` at height `100`, omitting `FACT_A`. Treat missing history alone as inconclusive: check canonical ancestry against a current node view.
+   Report `BLOCK_B` at height `100`, omitting `FACT_A`. Treat missing history alone as inconclusive: check canonical ancestry against a current node view (the canonical head and block-hash ancestry returned by a fresh query to an authoritative node).
 
-   For a verified replacement branch without that fact, mark old-branch facts inactive and roll back to the last verified common checkpoint — `99` here — then replay. Apply the changes to facts, totals and checkpoint atomically, and retain the raw observations.
+   For a verified replacement branch (one confirmed as canonical by checking its block hashes and parent links against the current node view) without that fact, mark old-branch facts inactive and roll back to the last verified common checkpoint (the latest stored checkpoint at a common ancestor whose block hash is confirmed in both branches’ ancestry) — `99` here — then replay. Apply the changes to facts, totals and checkpoint atomically, and retain the raw observations.
 
    Remove `FACT_A` from totals. Keep unresolved differences flagged; do not give them settled status.
 
@@ -784,11 +794,11 @@ Run these checks against **your implementation**. Bawa does not document a test 
 | Symptom | Check and recover |
 |---|---|
 | **RPC down** | Check endpoint reachability, DNS/TLS errors and provider status. Preserve stored state and retry only within your budget. |
-| **Rate-limited (`429`)** | A rate or usage limit was reached. Honour `Retry-After` when present, reduce request pressure and cap retries. |
+| **Rate-limited (`429`)** | A rate or usage limit was reached. Honour `Retry-After` when present, reduce request pressure and cap retries at three per cycle. |
 | **Wrong chain or network** | Compare RPC network identifiers and known block anchors with the watch configuration. Apply these checks to every chain and reject mismatches before ingestion. |
 | **Stale data** | Allow for cached responses. Compare source block progress and time since the last verified update. HTTP success proves neither freshness nor finality. |
 | **Indexer lag** | Compare the advancing chain with the stalled indexed height. Monitor catch-up or use another checked source. |
-| **Duplicates** | Inspect stable-key construction and database uniqueness constraints. Consolidate dashboard facts without deleting observation history. |
+| **Duplicates** | Inspect stable-key construction and any implementation-level uniqueness or deduplication checks. Consolidate dashboard facts without deleting observation history. |
 | **Checkpoint will not advance** | Check whether the eligible boundary has moved. Otherwise, inspect incomplete batches and failed commits. Never force progress across unprocessed data. |
 
 For `429`, refer to [RFC 6585](https://www.rfc-editor.org/info/rfc6585/), section 4, **“429 Too Many Requests”**:
@@ -810,9 +820,14 @@ Use primary sources only:
 - [Etherscan rate limits](https://docs.etherscan.io/rate-limits).
 - [RFC 6585](https://www.rfc-editor.org/info/rfc6585/), especially section 4, “429 Too Many Requests”.
 - [CometBFT documentation home](https://docs.cosmos.network/cometbft/latest/docs/README).
+- [TEP-74: Jettons standard](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md).
 - [TON Jettons standard overview](https://docs.ton.org/contracts/standard/tokens/jettons/overview).
-- Solana documentation from version-controlled source files in `solana-foundation/solana-com`, not rendered pages:
+- Solana documentation from version-controlled source files in `solana-foundation/solana-com` under `apps/docs/content/docs/en/rpc/http/`, not rendered pages:
+  - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getgenesishash.mdx).
+  - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getslot.mdx).
+  - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getsignaturestatuses.mdx).
   - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getgenesishash.mdx).
   - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getslot.mdx).
+- [Wallet Core repository](https://github.com/trustwallet/wallet-core).
   - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getsignaturestatuses.mdx).
 - Trust Wallet: [documentation home](https://developer.trustwallet.com/) and [Wallet Core repository](https://github.com/trustwallet/wallet-core).

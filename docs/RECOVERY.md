@@ -1,7 +1,7 @@
 ---
 title: Recovery Procedure
 description: Recover a Bawa wallet from the mnemonic or the encrypted seed bundle, test the recovery before funding, and handle compromised seeds, device loss, backup separation, disaster and inheritance; testnet only, with disposable test fixtures.
-last-updated: 2026-11-08
+last-updated: 2026-11-09
 ---
 
 # Recovery procedure
@@ -41,9 +41,9 @@ In either case, preserve:
 - the network/chain configuration;
 - the TON wallet configuration, where applicable.
 
-For TON, preserve the wallet contract/version, derivation convention, workchain, network presentation and wallet/subwallet ID used by the original system.
+For TON, preserve the wallet contract/version, mnemonic scheme, exact derivation path, workchain, network presentation, wallet/subwallet ID and both bounceable and non-bounceable address forms used by the original system.
 
-Do not rely on an xpub or zpub to recover the wallet. It can reproduce only public descendants below the exported account node.
+Do not rely on an xpub or zpub to recover the wallet. It can reproduce only public descendants below the exported account node ([BIP-32](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#public-parent-key--public-child-key)).
 
 ### Derivation policy and seed construction
 
@@ -52,7 +52,7 @@ Use derivation policy bawa-derivation-policy-v1, with BIP-39 256-bit entropy, a 
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: generation from m/44'/607'/0'; recovery support is unverified. The supplied derivation-path evidence does not establish a generation-only restriction. Apply that qualification only after independently confirming it in the target wallet/version's recovery documentation or implementation; record the supporting source, version, and scope of the restriction.
 
 NFKD-normalise the mnemonic and the BIP-39 passphrase, then derive the 64-byte seed with PBKDF2-HMAC-SHA512, using 2,048 iterations and the salt "mnemonic" plus the normalised passphrase.
 
@@ -86,11 +86,21 @@ Record the rehearsal and the result of comparing the restored public outputs wit
 
 ### Procedure
 
+Follow the numbered steps below for a pre-funding rehearsal or a later recovery.
+
 ### 1. Establish the backup and independent comparison targets
 
 For a pre-funding rehearsal, complete the written or encrypted backup first. Record public addresses from the original wallet, together with the configuration and derivation selectors needed to reproduce each address.
 
 For a later recovery, use those pre-existing originals. Do not populate an expected-address field with an address produced by the restore being tested.
+
+Acquire and preserve independent originals as follows:
+
+1. For a rehearsal, export or capture public addresses directly from the original wallet before running the restore test. Include the configuration and derivation selectors for each address, and save the reference separately from the restored wallet.
+2. For a later recovery, retrieve records created before the recovery: an original-wallet address export or screenshot, a pre-existing watch-only wallet populated from the original wallet, or receiving-address/payment records independently tied to the original wallet. A transaction or explorer entry is acceptable only if separate evidence establishes which address belongs to that wallet.
+3. Record each reference's source, original date if known, when and how it was captured or retrieved, and the evidence linking it to the original wallet. Preserve an unchanged copy, together with the configuration and derivation selectors needed to reproduce each expected address.
+
+A list generated solely from the recovered secrets is not independent evidence, even if saved in a separate file or imported into a watch-only wallet.
 
 Identify the secret-recovery route to test. Do not treat a successful recovery from the written mnemonic as a test of the encrypted file and its saved data key.
 
@@ -102,11 +112,15 @@ If no independent original public output is available, recover that evidence bef
 
 Use a clean operating system from trusted installation media, together with a Bawa checkout and dependencies you have checked. Do not treat restoration of an old wallet directory or an entire old home directory as a clean recovery test.
 
+“Dependencies you have checked” means completing the **locked-dependency integrity check**: verify the checkout revision and its lockfile against an independently trusted release reference; install the lockfile's exact direct and transitive dependencies in a new isolated environment with artifact-hash verification enabled; compare the installed package list and versions with the lockfile; and run the checkout's documented tests. Keep a secret-free local record of the revision, lockfile digest, installed versions, hash-check results and test exit status. If a complete, trusted pin-and-hash set is unavailable, or any check fails, stop before introducing secret material.
+
 Complete software installation before introducing secret material. Where the tooling permits, perform secret recovery and public-address derivation offline.
 
 Use a private local terminal without session recording or shell tracing. Keep recovery work out of synchronised folders, screenshots, shared logs and support tickets. Avoid clipboard history and other facilities that retain secret input. Never paste a real mnemonic or data key anywhere.
 
 Start with fresh wallet state. Ensure that no previously loaded mnemonic, seed or extended public key can supply the addresses used in the test.
+
+For this test, start Bawa under a disposable OS account or VM with its own newly created, empty wallet-data directory, configuration, cache and credential store. Do not restore old state or attach an existing wallet store. Before recovery, confirm that no wallet or keys are loaded and that address derivation fails specifically for lack of key material; an automatically generated seed also fails this check. Recover only the intended material into that store. To establish address provenance, derive a verification address directly from the recovered mnemonic or seed in a second empty instance, without importing an extended public key or cached addresses. Use the recorded network, derivation path and index, and require a match with both the recovered wallet's address and a trusted, independently retained pre-loss address for those same derivation settings. Record only the public address, derivation settings and pass/fail result. A failed isolation or comparison check invalidates the test.
 
 > **Expected result:** A known software environment with fresh wallet state and no recording or synchronisation configured to capture secret input or terminal output.
 
@@ -137,11 +151,13 @@ Use **bawa-derivation-policy-v1** as the current Bawa reference policy: BIP-39 w
 - BTC: m/84'/0'/0'/0/i
 - ETH: m/44'/60'/0'/0/i
 - TRX: m/44'/195'/0'/0/i
-- TON: generation-only from m/44'/607'/0'
+- TON: generation from m/44'/607'/0'; recovery support is unverified. The supplied derivation-path evidence does not establish a generation-only restriction. Apply that qualification only after independently confirming it in the target wallet/version's recovery documentation or implementation; record the supporting source, version, and scope of the restriction.
 
 For this reference policy, set the BIP-39 passphrase to **zero characters**. Do not enter a space, a word describing the empty policy, the artefact's data key or an application password.
 
 If the original record documents a departure from the current empty policy, reproduce that historical passphrase policy exactly. Do not silently replace it with today's default. Ensure that any non-empty passphrase is itself recoverable; do not rely on a note saying only that one existed.
+
+Store the exact historical passphrase, preserving case, whitespace, and Unicode characters, in a dedicated encrypted password-manager entry. Make an encrypted offline backup separate from the mnemonic backup. In a private recovery inventory, record the vault name, stable entry identifier, backup location, and retrieval/decryption steps—not the plaintext passphrase. Keep the unlock material separately recoverable, without depending on access to the wallet being recovered. Verify recoverability by retrieving the passphrase from the offline backup using only the documented steps and recovery materials, then performing an offline restore or key derivation with the historical mnemonic and passphrase policy. Compare the resulting public address or fingerprint with a previously recorded known-good value. Record the test date and outcome, without recording the secret in the test log.
 
 NFKD-normalise the mnemonic and the BIP-39 passphrase. Then derive the **64-byte seed** with **PBKDF2-HMAC-SHA512**, using **2,048 iterations**, the normalised mnemonic as the password, and the literal string **"mnemonic"** concatenated with the normalised passphrase as the salt.
 
@@ -172,9 +188,17 @@ Use this per-asset checklist for **bawa-derivation-policy-v1**:
   - **Expected account-0 address form:** Retain the form recorded for the independent original TRX address at that index.
   - **Verification method:** Derive the public address from the recovered material using the selected passphrase and recorded settings, then compare it with the pre-existing original.
 
+**Address-form selection:** For BTC, ETH, and TRX, the "independent original" is the corresponding asset's pre-existing record defined in step 1: an original-wallet export or screenshot, a pre-existing watch-only wallet, or receiving-address/payment records. Select each asset's expected address form from its address at the recorded index i in that record.
+
+BTC BIP-84 uses bech32 SegWit; the published index-0 fixture address is `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` (`docs/11:195`, `test/smoke.test.js:31`). This fixture illustrates the BTC address form; it does not replace the independent original BTC address used for verification.
+
 - **TON (theoretical recovery, generation-only policy)**
   - **Derivation path:** Restrict the policy claim to generation from m/44'/607'/0'.
-  - **Expected account-0 address form:** Retain the form recorded for the independent original TON output.
+  - **Recorded configuration:** Contract Wallet V4 R2; wallet ID `698983191` (`0x29A9A317`; the `@ton/ton` V4 default); workchain `0`.
+  - **Expected account-0 address forms:** Retain the forms recorded for the independent original TON output:
+    - **Raw:** `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`.
+    - **User-friendly mainnet presentation:** Non-bounceable `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`; bounceable `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi`.
+    - **User-friendly testnet presentation:** Non-bounceable `0QC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD8dt`; bounceable `kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo`.
   - **Verification method:** Compare the generated public output with the pre-existing original using its recorded configuration. Do not describe this generation comparison as evidence of a tested TON recovery procedure.
 
 > **Expected result:** Explicit chain, derivation and address settings tied to independent original account-0 outputs, with verification claims limited to recorded evidence. Keep missing address-form information or an incomplete comparison unresolved; do not treat either as a successful recovery.
@@ -183,13 +207,15 @@ This procedure was demonstrated end to end on a generated test wallet (V1, 8 Nov
 
 ### 6. Restore the TON configuration exactly, where applicable
 
-Where TON is in scope, do not rely on matching mnemonic words alone. Check all five recorded fields:
+Where TON is in scope, do not rely on matching mnemonic words alone. Check all seven required fixture items:
 
+- **Mnemonic scheme.** Reproduce the recorded mnemonic scheme, not merely the mnemonic words.
+- **Exact derivation path.** Reproduce the original method of turning the mnemonic, passphrase or seed into TON key material, including the exact recorded derivation path and any indexing convention. Do not treat another TON application accepting a mnemonic as proof of compatible derivation.
 - **Wallet contract/version.** Use the original contract and version, not whichever version a replacement tool currently recommends, because the wallet address depends on wallet construction as well as key material.
-- **Derivation convention.** Reproduce the original method of turning the mnemonic, passphrase or seed into TON key material, including any path or indexing convention. Do not treat another TON application accepting a mnemonic as proof of compatible derivation.
 - **Workchain.** Restore the exact workchain. Treat it as part of the address identity, not an account label.
-- **Network presentation.** Preserve the original network setting and address representation, including network indicators and presentation flags where applicable. Distinguish raw and user-friendly forms, explain any presentation differences and reproduce the recorded form.
+- **Mainnet/testnet presentation.** Preserve the original mainnet or testnet setting and address representation, including network indicators and presentation flags where applicable. Distinguish raw and user-friendly forms, explain any presentation differences and reproduce the recorded form.
 - **Wallet/subwallet ID.** Restore the original identifier. Do not substitute an address index or assume that another library's default is equivalent.
+- **Bounceable and non-bounceable address forms.** Reproduce and verify both recorded address forms.
 
 Resolve every configuration difference before continuing. Do not waive verification because a difference changes only the address presentation rather than the address itself. If TON is outside this recovery's scope, explicitly record it as not applicable.
 
@@ -209,9 +235,12 @@ For each comparison, retain a public-only record of:
 - the relevant address policy or TON configuration reference;
 - the recorded original public output;
 - the restored public output;
+- the passphrase policy (without recording the passphrase itself);
+- the tool/software reference, including version;
+- the comparison date/time;
 - whether they match.
 
-Treat any mismatch as a **hard stop**, not a warning to work around. Stop and recheck transcription, passphrase policy, paths, indices, address policy, network settings and TON configuration as applicable. Do not send a small deposit as a diagnostic. Do not substitute a valid checksum, successful decryption or plausible balance for the public-output comparison.
+Treat any mismatch as a **hard stop**, not a warning to work around. Stop and recheck transcription, passphrase policy, paths, indices, address policy, network settings and TON configuration as applicable. Do not send a small deposit as a diagnostic. Do not substitute a valid checksum, successful decryption or plausible balance for the public-output comparison. Where applicable, also recheck that the intended encrypted material and matching data key were used and that decryption completed correctly. Verify that the reference record accurately records the original public output for the intended chain/network, derivation selector and address policy or TON configuration.
 
 > **Expected result:** Every tested public output matches its independent recorded original under the recorded policy. Any unexplained mismatch leaves recovery unverified and funding blocked.
 
@@ -221,7 +250,7 @@ Where possible, repeat the recovery on a second clean installation, preferably w
 
 Do not clone the first restored wallet directory. Test the backup and configuration record, not state carried over from the first restore.
 
-Treat this repetition as an additional operational check, not a different derivation rule. If you cannot perform it, record that limitation rather than describing the recovery as independently repeated.
+Treat this repetition as an additional operational check, not a different derivation rule. If you cannot perform it, record that limitation rather than describing the recovery as independently repeated. The rehearsal gate is currently **FAIL**; recording this repeat as "not performed" documents the limitation but does not clear the gate.
 
 > **Expected result:** The second clean restore reproduces the same recorded public outputs, or the record explicitly states that this additional check was not performed. A mismatch on either installation remains a blocking failure.
 
@@ -231,7 +260,7 @@ Keep a dated, sanitised verification record containing the software reference, c
 
 Retain the durable recovery backups under appropriate separate custody. After the procedure, remove transient secrets from the machine. Remove unnecessary temporary plaintext files and close secret-bearing terminal sessions. Do not treat file deletion as assured erasure on modern storage, snapshots or backups. Avoid creating persistent plaintext copies in the first place.
 
-**Do not fund a restored wallet until the derived account-0 addresses match the independent comparison targets.** Permit funding only after the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
+**Matching the derived account-0 addresses to the independent comparison targets is necessary but does not by itself establish funding-readiness.** The required comparison set comprises the section 7 minimum plus every additional recorded public output for the wallet. The account-0 lead-in is not a scope limit: the gate applies separately to each chain/account represented in that set, including accounts beyond account 0. Before funding, test independent recovery on a clean, trusted machine and ensure that the required public-output comparisons succeed, with no unresolved mismatches. For an existing wallet, apply the same rule before sending further funds to the restored wallet.
 
 > **Expected result:** A secret-free verification record, retained recovery material under appropriate separate custody, transient secrets removed from the machine and no unresolved comparison failures. Funding remains blocked if any required output has not matched.
 
@@ -245,11 +274,13 @@ Identify the seed artefact, represented here by `/path/to/seed.enc.json`, as an 
 
 Keep these three inputs distinct:
 
-- **Nonce:** Keep this per-encryption value, stored with the backup, paired with its ciphertext. It is not secret.
+- **Nonce:** Keep this per-encryption value, stored with the backup, paired with its ciphertext. It is not secret. The bundle stores the nonce in `nonce_b64` as a base64 string alongside the ciphertext; base64-decode it before use.
 - **Ciphertext:** Treat this as the encrypted recovery material. GCM provides authentication as well as encryption, so decryption checks integrity rather than merely producing plaintext.
 - **Associated data (AAD):** Recognise `b"nova-shop-seed-v1"` as the exact AAD used by the tool. These fixed bytes are authenticated but not encrypted. Do not treat them as the data key or enter them at the key prompt.
 
 Use the matching key with the original nonce and ciphertext and that exact AAD. Expect authentication to fail with a wrong key or altered input. Do not edit the backup to try to make it decrypt.
+
+Check the key and AAD for mismatches. Separately, compare the nonce and ciphertext with a trusted copy: differences indicate backup tampering or corruption. Authentication failure alone does not distinguish these causes.
 
 > **Expected result:**
 >
@@ -261,6 +292,7 @@ Expect the tool to look for `BAWA_DATA_KEY` first:
 
 - A **non-empty** value is used as the hexadecimal key.
 - If the variable is **unset or empty**, the tool asks interactively with `Bawa data key (hex): `. The prompt does not echo the key.
+  If terminal echo cannot be disabled, `getpass.GetPassWarning` is treated as an error and the tool raises `ValueError("terminal echo cannot be disabled; refusing to read data key")` instead of accepting echoed input.
 
 For either route, supply 64 hexadecimal digits, represented here by `<YOUR-32-BYTE-HEX-KEY>`. Both routes strip surrounding whitespace and then decode hexadecimal. The decoded result must be **exactly 32 bytes**. Supply a data-encryption key, not a password, mnemonic or wallet private key.
 
@@ -268,9 +300,11 @@ Expect invalid hexadecimal to be rejected. A decoded value of any other length r
 
 For manual recovery, prefer the prompt. For automation, inject the environment variable through a protected secret-handling mechanism. Do not place the real key in a shell command that may enter history, in a script or in a job log.
 
+Here, a protected secret-handling mechanism means an access-controlled facility, such as a secret manager or CI secret store, configured to supply the key directly to the tool's environment at runtime without exposing its value in shell commands, history, scripts or logs.
+
 > **Expected result:**
 >
-> Expect the key prompt when the variable is unset or empty, and no key prompt when it has a non-empty value. Treat a successful length check as confirmation of the key's size only; authentication establishes whether it matches the backup.
+> Expect the key prompt when the variable is unset or empty and terminal echo can be disabled, and no key prompt when it has a non-empty value. If the variable is unset or empty and terminal echo cannot be disabled, expect refusal with `terminal echo cannot be disabled; refusing to read data key` rather than a key prompt. Treat a successful length check as confirmation of the key's size only; authentication establishes whether it matches the backup.
 
 Choose **one** of the following output modes. Treat steps 3, 4 and 5 as alternatives, not a sequence to run. `--stdout` and `--output` are mutually exclusive.
 
@@ -328,19 +362,19 @@ python3 tools/decrypt_seed.py /path/to/seed.enc.json
 
 If the positional path is omitted, the tool uses `secrets/seed.enc.json`.
 
-The tool checks whether the path is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid.
+The tool checks whether the final pathname component is a symbolic link before loading its JSON and refuses a linked artefact even if its target appears valid. `O_NOFOLLOW` does not reject symbolic links in parent directories.
 
 If you find an unexpected link, establish which file you intended to recover before trying again. Do not blindly follow the link.
 
-> **Expected result:** a Python traceback ending with `ValueError: refusing symlinked encrypted artifact`, with exit status `1`, for a symlinked input.
+> **Expected result:** an error line on stderr containing `refusing symlinked encrypted artifact`, with exit status `1` and no traceback, for a symlinked input.
 
-The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifact` are also raised as uncaught `ValueError`s, producing Python tracebacks and exit status `1`. By contrast, a symlinked `--output` path, including a dangling symlink, is rejected with `refusing symlinked output path` and exit status `1` without a traceback. Without a controlling terminal and with neither `--stdout` nor `--output`, the tool reports `no controlling terminal; use --stdout or --output explicitly` and exits with status `1` without a traceback.
+The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifact` are also raised as `ValueError`s, but are caught and reported as error lines on stderr with exit status `1` and no traceback. Similarly, a symlinked `--output` path, including a dangling symlink, is rejected with `refusing symlinked output path` and exit status `1` without a traceback. Without a controlling terminal and with neither `--stdout` nor `--output`, the tool reports `no controlling terminal; use --stdout or --output explicitly` and exits with status `1` without a traceback.
 
 ### 2. Check the output and temporary paths
 
 With `--output`, choose a destination you control, such as `/path/to/recovered-mnemonic.txt`. An output path that is a symlink is rejected with `refusing symlinked output path`, including a dangling symlink whose target does not exist.
 
-Expect the temporary output path to be protected too. A symlink there is refused. The temporary file is created with `O_EXCL` and permissions `0600`. If creation raises FileExistsError, the tool refuses a symlink at the temporary path; otherwise it unlinks that path and retries creation. A pre-existing non-symlink temporary file can therefore be silently removed and recreated. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
+Expect the temporary output path to be protected too. The tool uses `tempfile.mkstemp` to create a randomly named temporary file in the output directory with `O_EXCL` and permissions `0600`. If a candidate path already exists, including a symlink, `mkstemp` retries internally with a new random name without unlinking the existing path. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
 
 Investigate unexpected temporary entries rather than deleting them blindly or disabling these safeguards.
 
@@ -350,7 +384,7 @@ Investigate unexpected temporary entries rather than deleting them blindly or di
 
 Check that the artefact's `alg` value is exactly `AES-256-GCM`. A different value or a missing algorithm label is not accepted. There is no fallback to another encryption scheme.
 
-Do not edit the label to force acceptance. Changing metadata does not convert the encrypted payload. Check that you have a compatible backup.
+Setting `alg` to `AES-256-GCM` passes the label check, but does not guarantee successful decryption. Changing metadata does not convert the encrypted payload. Check that you have a compatible backup.
 
 > **Expected result:** `unsupported encryption algorithm`, with no decryption attempted for that artefact.
 
@@ -362,17 +396,19 @@ Distinguish these length checks from earlier structural failures. Invalid JSON, 
 
 Check the backup's provenance and transfer integrity. Do not "repair" encrypted bytes by guessing, padding or trimming them.
 
-> **Expected result:** `malformed AES-GCM artifact` for an invalid nonce or ciphertext length, or a parsing, field-access or decoding error for earlier structural problems.
+Perform this check separately from `tools/decrypt_seed.py`, which does not verify provenance. Run `sha256sum /path/to/backup` (macOS: `shasum -a 256 /path/to/backup`) and compare the result with a digest recorded at backup creation and obtained through an independently authenticated channel. If the backup has a detached GPG signature, run `gpg --verify /path/to/backup.asc /path/to/backup` using the producer's independently authenticated signing key. A checksum received only alongside an untrusted backup does not establish provenance.
+
+> **Expected result:** `malformed encrypted artifact` before Base64 decoding for missing or non-string `nonce_b64`/`ciphertext_b64` fields, `nonce_b64` longer than 24 characters, or `ciphertext_b64` longer than 16384 characters; `malformed AES-GCM artifact` only after successful decoding when the nonce is not 12 bytes or the ciphertext is shorter than 16 bytes; or a parsing, field-access or decoding error for other structural problems.
 
 ### 5. Treat authentication failure as a hard stop
 
-Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure means the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure.
+Stop if the structural checks pass but AES-GCM authentication fails. Authentication failure does not necessarily mean the data key is wrong or the artefact is damaged. A correctly formed but wrong key, altered encrypted data or a mismatch in the additional authenticated data (`AAD`) can cause this failure. An AAD mismatch can occur even with a correct key and an unchanged artefact. A wrong 32-byte key raises an uncaught `cryptography.exceptions.InvalidTag`, producing a traceback; this is the one refusal that does so.
 
 Do not infer from this failure whether the key is wrong or the artefact has been tampered with. Recheck the intended backup/key pairing through trusted records.
 
 Do not guess further keys, and do not retry with a different tool. Do not bypass authentication or assume that retrying with the same inputs will repair anything.
 
-> **Expected result:** An authentication failure rather than recovered text. The decryption function returns no mnemonic.
+> **Expected result:** An authentication failure rather than recovered text. The decryption function returns no mnemonic. The observable failure mode is an uncaught `cryptography.exceptions.InvalidTag` traceback, not a normal return without a mnemonic.
 
 ### 6. Understand the mnemonic-shape check
 
@@ -382,15 +418,17 @@ Treat this as a word-count check only. It does not verify BIP-39 word-list membe
 
 > **Expected result:** `recovered data does not look like a BIP-39 mnemonic` for a rejected word count. Passing this check alone does not establish that the phrase is the intended wallet backup.
 
-Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A wrong BIP-39 passphrase does not produce an error; it derives a different wallet, so a passphrase mistake looks like an empty wallet.
+Distinguish a BIP-39 passphrase mistake from data-key authentication failure. A wrong BIP-39 passphrase does not produce an error; if its NFKD-normalised form differs from that of the intended passphrase, it derives a different wallet, which may look empty but is not necessarily empty. Distinct raw passphrase spellings that normalise identically under NFKD produce the same seed for the same mnemonic.
 
 ### 7. Decide the destination first, then clean up
 
-Before decrypting, not after plaintext appears, choose either the default terminal display or file output with `--output /path/to/recovered-mnemonic.txt`.
+Before decrypting, not after plaintext appears, choose one of these output routes: the default terminal display, standard output with `--stdout`, or file output with `--output /path/to/recovered-mnemonic.txt`.
 
 Invoke the tool with `python3 tools/decrypt_seed.py`. The file has mode `644`, so it is not executable.
 
 When cleaning up afterwards, investigate unexpected temporary entries rather than deleting them blindly, and keep the safeguards in place.
+
+The tool neither deletes plaintext output files nor records their deletion. After manually deleting a known plaintext output file and checking that it is no longer present, append a record to `~/.local/state/recovery/deletions.jsonl` using one JSON object per line: `{"deleted_at":"<UTC ISO 8601 timestamp>","path":"<absolute deleted-file path>","method":"<deletion command or procedure>"}`. Create the parent directory with mode `0700` and the log with mode `0600` before writing, and do not include the mnemonic or other decrypted content.
 
 ## Part 3: What recovery cannot do
 
@@ -414,13 +452,13 @@ Use Bawa's current **empty-passphrase** policy exactly: no characters at all, in
 
 Do not rely on the mnemonic to supply a lost BIP-39 passphrase. For a passphrase-protected wallet, the mnemonic alone is insufficient. Without the exact passphrase, you cannot restore that wallet or spend its funds.
 
-Bawa does not document non-empty passphrase setup or lost-passphrase handling. No check reveals the missing passphrase from the mnemonic.
+No check reveals the missing passphrase from the mnemonic.
 
 > **Expected result:** Restoring the mnemonic with an empty passphrase recovers only the main, empty-passphrase wallet, not the protected wallet. Do not treat access to the main wallet as verification of the protected wallet's recovery.
 
 ### 4. Losing the seed and its backup loses the wallet
 
-Do not expect recovery when the seed and every usable backup are gone. The wallet is lost. No reset, support desk or procedure can recreate the secret.
+Do not expect recovery when the seed and every usable backup are gone. The secret is lost. No reset, support desk or procedure can recreate the secret.
 
 Use a recorded address or xpub only as a comparison target. If you still have the mnemonic, use that reference to test remembered passphrase candidates one by one under the same derivation policy. The reference cannot supply a forgotten passphrase or reconstruct a lost mnemonic.
 
@@ -436,7 +474,7 @@ The checksum does not test the passphrase, derivation path, account selection or
 
 ### 6. Changing local access does not repair an exposed seed
 
-Do not treat changes to a device PIN or app password, or an app reinstall, as a remedy for an exposed seed. Changing the vault unlock passphrase cannot secure an exposed mnemonic. These actions affect local access only; they do not revoke the seed or affect copies of the words held elsewhere.
+Do not treat changes to a device PIN or app password, or an app reinstall, as a remedy for an exposed seed. If a vault is used, changing its unlock passphrase cannot secure an exposed mnemonic. These actions affect local access only; they do not revoke the seed or affect copies of the words held elsewhere.
 
 With Bawa's empty-passphrase policy, anyone holding the words can rebuild the wallet on their own device. Treat an exposed seed as compromised. Move remaining funds to a wallet with a newly generated mnemonic and verified recovery, not merely another account under the exposed seed. Retire the old wallet.
 
@@ -444,7 +482,7 @@ With Bawa's empty-passphrase policy, anyone holding the words can rebuild the wa
 
 ### 7. "Support" and "recovery services" are not a recovery route
 
-Reject any offer to recover a lost mnemonic or passphrase for a fee. Such an offer is a scam. Neither a support contact nor a paid recovery service can bypass these missing-secret limits.
+Reject any paid offer that claims to bypass these missing-secret limits to recover a lost mnemonic or passphrase. Such an offer is a scam. Paid testing of plausible candidates within those limits can be legitimate. Neither a support contact nor a paid recovery service can bypass these missing-secret limits.
 
 Treat anyone asking for the phrase as asking for control of the wallet, not proof of ownership. Never type the phrase into a website or share it with anyone. Stop any interaction that requires either. If you have already disclosed it, treat the seed as exposed and follow point 6.
 
@@ -452,11 +490,11 @@ Treat anyone asking for the phrase as asking for control of the wallet, not proo
 
 ## Part 4: Backup testing, playbooks, separation, disaster and inheritance
 
-### Part 1: Backup-testing routine
+### Part 4.1: Backup-testing routine
 
 Complete the pre-funding check before using a wallet with meaningful funds. Require an actual restore, a comparison with previously recorded addresses and a successful testnet signing check. Do not count a conceptual walkthrough or a 'restore complete' message as a passed recovery.
 
-Keep every exercise below testnet-only. Use disposable test fixtures only, with a tiny testnet amount for transaction checks. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
+Keep every exercise below testnet-only. Use freshly generated, disposable test fixtures only, with at most 0.0001 testnet BTC (10,000 testnet satoshis) per exercise from a testnet faucet for transaction checks. The published mnemonic in docs/11 is a public fixture and must never be funded, even on testnet. Never use real funds for a rehearsal. Never paste a real mnemonic or data key anywhere.
 
 Note that the rehearsal procedure was demonstrated end to end on a generated test wallet (V1, 8 November 2026, pushed head 082f7915); it is still not a test of your backup, so rehearse your own backup and record it. V1 records verification at 082f7915. That run does not establish verification of the later symlink-guard changes or of the decryption code at pinned head e3b65fb832db287fdc8d54794980dd0b3456cc12 or current head 754721cd.
 
@@ -508,9 +546,13 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
    > **Expected result:** A confirmed testnet receipt and a confirmed outgoing transaction signed by the recovered wallet, not merely a transaction prepared by the interface.
 
+   For both transactions in step 8, apply the [MAINNET-GUIDE confirmation policy](../mainnet/MAINNET-GUIDE.md#L2639-L2640): **confirmed** means at least 6 confirmations on Bitcoin testnet (a customary recommendation, not a protocol requirement), or at least 12 confirmations **and** inclusion in a canonical finalised block on Ethereum testnet. For Ethereum, 12 confirmations alone are insufficient.
+
 9. **Record the result and repeat the routine.**
 
    Keep a sanitised record containing the date, procedure version, **PASS** or **FAIL**, software and firmware versions, network, policy reference, compared addresses and testnet transaction references. Record failures too. Show **FAIL** for any unexecuted gate. Keep mnemonics, passphrases, private keys and data keys out of the record.
+
+   **Procedure version** identifies the revision of this recovery procedure followed, distinct from software and firmware versions. Use the scheme `RECOVERY-v<major>.<minor>`, incrementing `major` when required steps or PASS/FAIL gates change and `minor` for clarifications that leave them unchanged. This revision's procedure version is `RECOVERY-v1.0`; record that value when following this revision.
 
    Repeat the full routine quarterly, using only a tiny testnet amount. Repeat it after firmware updates, using the updated firmware, before resuming normal use.
 
@@ -542,23 +584,25 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
 ### Part 2: Compromised-seed playbook
 
-Put containment first. Revoke sessions and escalate the incident to the maintainers before starting recovery or migration. Never paste a real mnemonic or data key anywhere.
+Put containment first. Close secret-bearing terminal sessions and escalate the incident to the maintainers before starting recovery or migration. Never paste a real mnemonic or data key anywhere.
+
+No maintainer-escalation route is currently confirmed; `CONTRIBUTING.md:13` contains only the placeholder `<maintainer-confirmed reporting location>`. Obtain a maintainer-confirmed reporting location before submitting an incident report; the placeholder is not a reporting destination.
 
 Treat a leaked seed (mnemonic) as permanently compromised. Anyone with the necessary seed material can derive the wallet's private keys and authorise spending; no account administrator can reset that authority. [2]
 
-Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted device from migration to a fresh seed. Do not rely on changing the vault unlock passphrase: it cannot secure an exposed mnemonic. Move the funds to a fresh wallet with an independent seed, not the old wallet with a new password.
+Follow the principle of replacement, not repair. Distinguish recovery on a trusted device from migration to a fresh seed. Do not rely on changing the vault unlock passphrase: it cannot secure an exposed mnemonic. Move the funds to a fresh wallet with an independent seed, not the old wallet with a new vault unlock passphrase.
 
-1. **Generate a new wallet on a fresh trusted device.**
+1. **Generate a new wallet with a fresh mnemonic on a trusted device.**
 
    Never generate the replacement on a device that may carry malware. Use an independent new seed, back it up, protect the backup and verify its receiving addresses for the relevant networks. Keep the new seed off the suspect device.
 
-   Do not treat another account or address under the old seed as a replacement. Do not treat a PIN change as a replacement either.
+   Do not treat another account or address under the old seed as a replacement. Do not treat a change to the device PIN as a replacement either.
 
    > **Expected result:** A separately backed-up wallet with an independent seed and verified destination addresses. The new seed has never entered the suspect device.
 
 2. **Move every asset and token, then verify every receipt.**
 
-   Work from a clean signing environment. Inventory every account and network used by the old wallet, including tokens and NFTs that its default balance screen may omit. Prioritise the highest-value non-native assets rather than emptying convenient accounts first.
+   Work from a clean signing environment. Inventory every account and network used by the old wallet, including tokens and NFTs that its default balance screen may omit. Prioritise the highest-value, freely-transferable non-native assets rather than emptying convenient accounts first. [3]
 
    On each network, retain enough native gas coin for outgoing token transfers. Move the remaining spendable native gas coin last, allowing for the final transaction's own fee, especially where a sweeper bot may be watching.
 
@@ -571,6 +615,8 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 3. **Revoke old token approvals where useful and without risking further funds.**
 
    After evacuation, revoke outstanding approvals only where doing so serves a useful purpose and does not put further funds at risk. Do not replenish a compromised address merely to tidy up permissions.
+
+   Use only revocation instructions verified for the affected chain. Revoke.cash is reference-only, not an independently verified live workflow for this guide; verify its entry point, live workflow, and current chain support before relying on it for EVM approvals. Do not use Revoke.cash or EVM allowance instructions for TRON. Follow a separately verified TRON-specific response procedure instead. No verified TRON revocation route is documented here; if none is available, record TRON revocation as unresolved rather than treating this step as chain-complete.
 
    Do not mistake revocation for a repair. A holder of the leaked seed can sign new transactions and re-approve allowances. Never use revocation as a reason to keep using the wallet.
 
@@ -588,15 +634,19 @@ Follow Bawa's rule of replacement, not repair. Distinguish recovery on a trusted
 
 #### If funds are already gone
 
-**Trace, notify and report.** Treat on-chain transfers as irreversible. For funds already taken, follow the only remaining steps: trace the transactions, notify any identifiable receiving exchange through its official channels and report the theft to the relevant authorities.
+**Trace, notify and report.** Treat on-chain transfers as irreversible ([Bitcoin.org’s guidance on irreversible payments](https://bitcoin.org/en/you-need-to-know#bitcoin-payments-are-irreversible)). For funds already taken, follow the remaining steps: trace the transactions, notify any identifiable receiving exchange through its official channels and report the theft to the relevant authorities.
 
 Preserve transaction references, addresses and timestamps, not secrets. An exchange may be able to act on assets it still controls, but do not mistake that possibility for an on-chain reversal or a promise of recovery. Never pay a 'recovery service'. [3]
+
+Create the Part 2 incident record as a dated Markdown file (`incident-YYYY-MM-DD.md`) containing a UTC timeline, transaction references, public addresses and any exchange or reporting case numbers. Store it in an encrypted, access-restricted local `incidents/` folder, separate from wallet files and seed backups. Retain it while any related case is open and for at least 12 months after the final case closes; if no case was opened, retain it for at least 12 months after the last update. Follow any longer legally required retention period.
 
 > **Expected result:** An evidence record and any available exchange or reporting reference numbers, not a claimed reversal or a supposedly repaired seed.
 
 ### Part 3: Device-loss playbook
 
 Treat device loss and seed compromise as different incidents. Remember that a lost device is not a lost wallet if the mnemonic and passphrase survive. Assess possible seed exposure or signing-key extraction before restoring.
+
+Signing-key extraction means obtaining usable private signing keys from a wallet device or software, for example from its memory or storage. An attacker can use those keys to sign transactions without the original device, even if the mnemonic and passphrase remain secret.
 
 1. **Classify the loss before restoring.**
 
@@ -644,12 +694,12 @@ Preserve this separation when making additional copies. Never put the artefact, 
 
 #### Step 2, choose media and record access controls
 
-Choose backup media and protective storage for the risks at each location. Bawa does not prescribe either.
+Choose backup media and protective storage for the risks at each location. Bawa prescribes paper or metal for offline mnemonic backups, but leaves the choice between them open.
 
 - **Paper:** Allow for degradation, fire and water damage. Use protective packaging with the understanding that it helps but does not remove these failure modes.
 - **Metal:** Do not mistake resistance to fire and water for secrecy. Treat a stolen metal seed backup as giving full spending access unless a separately held BIP-39 passphrase is required.
 
-For **every copy**, record its medium, custodian, authorised access and physical theft controls, such as locked storage and procedures for releasing it. Keep this inventory restricted and free of recovery secrets.
+For **every copy**, choose and record physical access controls.
 
 **Never digitise the mnemonic.** Do not photograph it or put it in cloud storage, email, notes apps or password managers. Remember that a photo can sync automatically, and that a compromised master password can expose the seed alongside everything else in the same vault.
 
@@ -661,7 +711,7 @@ Inspect every copy periodically for readability and damage, without photographin
 
 Test independent recovery before relying on a backup. Use a trusted recovery setup without erasing the only working wallet. Confirm that recovery produces the **expected wallet**, not merely that an import completes.
 
-Re-test **annually and after firmware updates**, including any separately held BIP-39 passphrase required by the recovery route. Record the date and outcome, not the secrets. Schedule the next annual test, and treat an untested backup as **unproven**.
+Re-test **quarterly and after firmware updates to the external hardware recovery setup**, including any separately held BIP-39 passphrase required by the recovery route. Record the date and outcome, not the secrets. Schedule the next quarterly test, and treat an untested backup as **unproven**.
 
 > **Expected result:** A dated, non-secret record of readability checks and successful independent recovery tests, with the next annual test scheduled.
 
@@ -672,6 +722,8 @@ Write down how to respond to each event:
 - **Fire or flood destroys one location:** Recover using a separated copy. Do not make recovery depend on retrieving anything from the damaged site. Once you have restored access, replace the lost backup capacity without undoing the separation.
 - **One copy is stolen:** Use the recorded physical access controls and, where used, a BIP-39 passphrase held separately from the mnemonic as defences. Do not confuse that passphrase with Bawa's data key. Treat theft of both the mnemonic and its passphrase as compromise. Without a passphrase, treat mnemonic theft alone as compromise. Treat theft of `seed.enc.json` together with its data key as exposure of the stored secret. Following compromise, move funds to a fresh wallet with new recovery material.
 - **The only copy is lost:** Treat this as the **lost-wallet case**, with no backup recovery route. Check whether a still-working device lets you move funds to a newly backed-up wallet. Without that access or surviving recovery material, Bawa cannot recover the funds.
+
+  A **lost-wallet case** means no usable backup or recovery material remains to restore the wallet, even if a still-working device retains access.
 
 > **Expected result:** A usable fallback after losing one site, a clear compromise response after theft and no promise of recovery when the last usable recovery route is gone.
 
@@ -692,6 +744,7 @@ Discuss these options with an **estate professional familiar with digital assets
 
 - A sealed envelope of instructions held by a trusted executor.
 - A time-locked multisig arrangement in which a trusted party holds one key. Plan and test this in advance, rather than relying on a note describing it.
+  This option is not implemented in Bawa. No technical documentation or supporting external reference is provided here; do not treat it as a supported Bawa inheritance or recovery method.
 
 Never embed the mnemonic in a legal will, as the will may become public or be widely circulated.
 
@@ -699,16 +752,11 @@ Never embed the mnemonic in a legal will, as the will may become public or be wi
 
 ## Sources
 
-Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [1]-[3] are cited in the compromised-seed playbook.
+Community reading on mnemonic backups and recovery testing, not specifications for Bawa derivation or TON configuration. Numbered [2]-[3] are cited in the compromised-seed playbook.
 
 1. [Coin Bureau, Top mistakes to avoid when using hardware wallets](https://coinbureau.com/education/top-mistakes-to-avoid-when-using-hardware-wallets)
 2. [Bitcoin.com, What is a private key?](https://www.bitcoin.com/wallet/what-is-a-private-key/)
 3. [CryptoNakta, Mnemonic exposed](https://cryptonakta.com/seed-phrase-exposed/)
-4. [Self Custody, Seed to key](https://selfcustody.ca/guides/seed-to-key.html)
-5. [Coldcard, Passphrase](https://coldcard.com/docs/passphrase/)
-6. [Blockstream, Fix issues with unexpected wallet balance](https://help.blockstream.com/blockstream-app/troubleshooting/fix-issues-with-unexpected-wallet-balance)
-7. [The Crypto Guide, Mnemonic guide](https://thecryptoguide.org/learn/seed-phrase-guide/)
-8. [BIP39 Phrase, Create a mnemonic](https://bip39-phrase.com/create-a-seed-phrase/)
-9. [Cobo, Bitcoin security best practices](https://www.cobo.com/post/bitcoin-security-best-practices-guide)
-10. [Tangem, How to back up a crypto wallet](https://tangem.com/en/blog/post/how-to-back-up-crypto-wallet/)
+
+
 

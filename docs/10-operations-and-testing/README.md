@@ -54,12 +54,12 @@ Keep the local repair result separate from checkout results: “The phase-1 repa
 
 Prepare the reference environment before installing dependencies:
 
-- Prefer a Unix-like environment for the interactive `/dev/tty` generation flow.
+- Use a compatible Unix-like environment with an accessible interactive TTY (`/dev/tty`) for generation.
 - Use Node.js matching the repository engine requirement, `>=22 <23`.
 - Provide npm, but resolve its version pin before any npm-based release validation.
 - Use Python 3.11+ and a Python virtual environment for local tooling.
 - Reserve enough disk space for dependencies and recovery backups.
-- Use an offline or trusted machine for actual wallet generation.
+- Use a trusted host, preferably offline, for actual wallet generation.
 
 > **Warning:** Generating a real wallet on an untrusted shell or CI runner risks exposing its secrets. Use an offline or trusted machine for actual wallet generation. Confirm that the generation environment meets this requirement before proceeding.
 
@@ -76,6 +76,8 @@ Distinguish declared dependency values and compatibility ranges from the pins an
 | Python | repo | `>=3.11` | Unresolved (tested 3.12.3; CI uses 3.13) | Range, not a pin |
 | npm | repo | no version specified | Unresolved | Unresolved required pin; resolve before any npm-based release validation |
 
+Release tested-version record: Python `3.12.3`. The declared `>=3.11` range is not an exact tested version, and CI's Python `3.13` is separate from this release-tested record. The exact tested npm version is **not recorded**; record the exact output of `npm --version` from the release-validation environment before any npm-based release validation.
+
 ## Clone and install
 
 Use these steps to prepare an inspection checkout, not to certify a release.
@@ -84,7 +86,13 @@ Use these steps to prepare an inspection checkout, not to certify a release.
 
 Run `git clone https://github.com/Pr3eve6ti2o/bawa.git`, then enter the checkout with `cd bawa`.
 
-Verify the intended commit or tag before installing dependencies. For this reference, select and verify commit `754721cd`; do not assume that the default cloned head matches it.
+Verify the intended commit or tag before installing dependencies. This installation reference was written against the earlier commit `754721cd` (full SHA `754721cd00efdc13852c0124fb727f33f9505a0f`), which is an ancestor of the audited commit `a5bc56e`, not the audited head. Select and verify that earlier commit explicitly; do not assume that the default cloned head matches it.
+
+```sh
+git checkout --detach 754721cd00efdc13852c0124fb727f33f9505a0f
+git rev-parse --verify HEAD
+test "$(git rev-parse --verify HEAD)" = "754721cd00efdc13852c0124fb727f33f9505a0f"
+```
 
 ### Node dependencies
 
@@ -120,9 +128,9 @@ Read the configured steps in this order:
 
 Distinguish this configured sequence from successful execution at the pinned head.
 
-Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags, no Dependabot, and a single job. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
+Record the operator correction plainly: the earlier research note claiming that CI runs only the syntax check is wrong. The file plainly includes the check, smoke tests and differential test. Remaining CI gaps (D23, 2026-11-08): no live generation (TTY-gated), no decrypt round trip, the differential test covers BTC/ETH index 0 only, floating `ubuntu-latest` and `@v4`/`@v5` action tags. The workflow has a single job, which is not inherently a defect. CI run 28 at e3b65fb832db287fdc8d54794980dd0b3456cc12 completed with success on 8 November 2026 (D09, GitHub Actions API, 11:36 UTC): syntax check, smoke test 28/28, differential test, py_compile. The earlier research note that no GitHub run could be verified is superseded; the Actions API returned 504 from the research VM, but a later check confirmed run 28.
 
-Record the genuine omissions as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install.
+Record the genuine omissions from the CI workflow as dependency scanning, secret scanning, SHA-pinned actions, a fixed runner label and a lockfile-based install. Verify repository-level services, including Dependabot and secret scanning, before asserting their absence.
 
 ## Release metadata
 
@@ -136,11 +144,11 @@ Do not claim Semantic Versioning adherence until you declare the public API (the
 
 ### Tagging
 
-As of 8 November 2026, the Bawa repository has zero tags: `git tag` is empty. A tag is the immutable record of a release.
+At the 8 November 2026 check, the local Bawa repository had zero tags: `git tag` was empty. This does not prove that no tags had ever existed; tags may have been deleted or not fetched locally. Tag refs are mutable (movable or deletable); annotation alone does not enforce immutability, and a commit hash does not pin the state of mutable tag refs.
 
-Before tagging, document which release artefacts are built from the tag and where their checksums are recorded. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
+Before tagging, document which release artefacts are built from the tag, where their checksums are recorded, and the release acceptance criteria, including artefact verification. Neither the artefact set nor the checksum-record location is established by the available evidence; resolve and document both rather than assuming a build output or path.
 
-After resolving those details and clearing the release blockers, create an annotated tag in the format `vX.Y.Z`. Build the documented release artefacts from that tagged tree and record their checksums at the documented location.
+After resolving those details, use a distinct initial source tag if one is needed for candidate builds and testing; that tag does not declare a final release. Verify the candidate artefacts against the documented acceptance criteria and clear the release blockers before creating the final annotated release tag `vX.Y.Z` for the same source commit used for the verified candidate artefacts. Build the documented release artefacts from the final tagged tree, verify them against those criteria, and record their checksums at the documented location before publication.
 
 ## Troubleshoot symptoms
 
@@ -148,16 +156,18 @@ After resolving those details and clearing the release blockers, create an annot
 
 **Cause:** Treat the cause as unconfirmed until you have checked the installed Node.js and npm versions and the exact package/version selected by the lockfile.
 
-**Fix:** Run:
+**Diagnose:** Preserve the exact error output and copies of the original manifest (`package.json`) and lockfile before making changes or retrying `npm install`. Then run:
 
 ```bash
 node --version
 npm --version
 ```
 
-Inspect the exact package/version selected by the lockfile and address the specific failure identified.
+Inspect the exact package/version selected by the original lockfile.
 
-**Warning:** Replacing the dependency set before identifying the failure can change what you are diagnosing. Do not immediately delete every dependency or install arbitrary ‘latest’ versions. Check the selected package/version against the lockfile before retrying installation.
+**Fix:** Address the specific failure identified by the error and diagnostic checks.
+
+**Warning:** Replacing the dependency set before identifying the failure can change what you are diagnosing. Do not immediately delete every dependency or install arbitrary ‘latest’ versions. Check the selected package/version against the lockfile before retrying installation. `npm install` can update the lockfile.
 
 **Check:** Run `npm install` again after correcting the identified problem.
 
@@ -169,7 +179,7 @@ Inspect the exact package/version selected by the lockfile and address the speci
 
 **Fix:** Run generation from an actual interactive terminal on the trusted generation machine.
 
-**Warning:** Piping fake input defeats the TTY check rather than providing the required interactive terminal. Use the actual interactive terminal without fake piped input. Check the result when starting generation there.
+**Warning:** Piping fake input ordinarily fails a genuine TTY check rather than bypassing it, and piped stdin does not supply input to `/dev/tty`. Use the actual interactive terminal without fake piped input. Check the result when starting generation there.
 
 > **Expected result:** Confirm that generation no longer refuses to run because there is no TTY.
 
@@ -212,11 +222,11 @@ Then match the applicable chain-specific settings:
 
 ### Why does the EVM address match while its balance is zero?
 
-**Cause:** Consider whether you are connected to a different EVM chain. Recognise that the same address can legitimately exist on multiple EVM networks.
+**Cause:** Consider whether you are connected to a different EVM chain. Recognise that the same address can legitimately exist on multiple EVM networks. For externally owned accounts (EOAs), the same public key yields the same address because address derivation does not include the chain ID. This public-key derivation rationale does not generally apply to contract accounts.
 
-**Fix:** Check the chain ID, RPC endpoint, network name, native currency and explorer. Select the intended EVM network and its RPC endpoint.
+**Fix:** Check the chain ID by calling `eth_chainId` on the actual RPC endpoint used for the balance query and verifying that the returned value matches the intended network's chain ID; do not rely on displayed network metadata. Also check the RPC endpoint, network name, native currency and explorer. Select the intended EVM network and its RPC endpoint.
 
-**Check:** Confirm all five network details before checking the balance again.
+**Check:** Confirm all five network details, verifying the intended chain ID against the selected RPC endpoint's `eth_chainId` response, before checking the balance again.
 
 > **Expected result:** Confirm that the balance query concerns the matched address on the intended chain, not merely the same address on another EVM network.
 
@@ -224,21 +234,16 @@ Then match the applicable chain-specific settings:
 
 **Cause:** Look for an address-allocation problem, a chain or indexer-state problem, an RPC error, or a network or token-contract mismatch.
 
-**Fix:** Check the following in order:
+**Fix:** Configuration names and recovery commands are implementation-dependent. Use the tracker implementation’s supported configuration and recovery operations for these checks and repairs:
 
-1. Address index.
-2. Index allocation database.
-3. Gap window.
-4. Branch.
-5. Indexer lag.
-6. RPC errors.
-7. Reorgs.
-8. Token contract.
-9. Network.
+1. **Network, RPC and indexer state.** Confirm that the tracker, indexer and RPC use the intended network. Resolve RPC errors and compare the indexer’s height and block hashes with the RPC’s canonical chain. If a reorg invalidated indexed history, use the supported rollback or resynchronization procedure.
+2. **Address derivation and allocation.** Compare the recorded address, index and branch in the address allocation table with the tracker configuration and index allocation database. Re-derive the address using the configured wallet/key source and full derivation path, including branch and index, and compare it with the payment recipient. Correct configuration mismatches, recover missing allocation state using supported operations, and ensure the gap window includes the allocated index on the correct branch.
+3. **Transaction inclusion and success.** Locate the payment through the RPC and verify inclusion in a canonical block. Check that it contains the expected output or transfer to the recorded address. Where execution status is available, verify successful execution; for token payments, verify the intended token contract and matching transfer event or record. A transaction hash or successful contract call alone does not prove that the intended payment occurred.
+4. **Confirmation policy.** Check the configured confirmation count or finality requirement against the payment’s canonical inclusion block and current chain state. Wait if the payment is not yet eligible, or correct an unintended policy mismatch. Do not treat pending, failed or orphaned transactions as confirmed payments.
+5. **Scan start height and filters.** Inspect the scan start height or saved checkpoint and the address, branch, transaction/event and token-contract filters. For a known payment transaction, start the recovery scan at or before its canonical inclusion height. Otherwise, use a known-safe height preceding the first possible payment, or genesis if no safe bound is known. Include any implementation-required reorg/look-back overlap and correct filters that exclude the payment.
+6. **Rescan and reconcile.** After correcting the identified problems, run the supported rescan or reindex operation over the affected range with the corrected allocation state and filters. Let the indexer and tracker catch up to the height required by their confirmation/finality policy, then reconcile indexed history against the RPC before relying on the tracker.
 
-Use the address allocation table to check the recorded address, index and branch against the tracker configuration and index allocation database. Correct identified configuration mismatches and reconcile indexed history against the RPC before relying on the tracker.
-
-**Check:** Compare the tracker’s result with the reconciled history for the recorded address, index, branch, network and, where applicable, token contract.
+**Check:** Compare the tracker’s result with the reconciled history for the recorded address, index, branch, network and, where applicable, token contract. Confirm that the successfully included canonical payment is reported once it meets the configured confirmation/finality policy.
 
 > **Expected result:** Confirm that the tracker agrees with the checked chain history for the incoming payment.
 
@@ -246,9 +251,9 @@ Use the address allocation table to check the recorded address, index and branch
 
 Start with a local stage where the chain supports it, then proceed to public testnet.
 
-Use Bitcoin Core regtest for the Bitcoin local stage. Work on a private chain, create blocks on demand and generate 101 blocks in under a second. Refer to https://developer.bitcoin.org/examples/testing.html (verified live 2026-11-08) for this regtest stage.
+Use Bitcoin Core regtest for the Bitcoin local stage. Work on a private chain, create blocks on demand and generate 101 blocks. Refer to https://developer.bitcoin.org/examples/testing.html (verified live 2026-11-08) for this regtest stage. The `generate` RPC shown in the linked example is legacy.
 
-**Warning:** Deleting the wrong directory can remove mainnet wallet data. Always back up mainnet wallets before dangerous operations such as deleting. Check that the backup is in place and that the deletion target is only the `regtest` subdirectory, then delete that subdirectory to restart regtest.
+**Warning:** Deleting the wrong directory can remove mainnet wallet data. Always back up mainnet wallets before dangerous operations such as deleting. Before deletion, stop Bitcoin Core and resolve the actual configured `regtest` directory. Check that the backup is in place and that the deletion target is only the `regtest` subdirectory, then delete that subdirectory to restart regtest.
 
 Treat local Ethereum, TRON and TON testing as excluded from this documented sequence. Do not treat the Bitcoin regtest stage as establishing local testing for those chains.
 
@@ -292,7 +297,7 @@ Note that https://ethereum-sepolia.publicnode.com returns the same chain ID.
 
 Use https://eth-sepolia.blockscout.com/api/v2 for Sepolia indexed history.
 
-Keep the command-based verification record incomplete for 2026-11-08: no indexer verification command or dated example output is supplied here.
+Keep the command-based verification record incomplete for 2026-11-08: no indexer verification command or dated example output is supplied here. A response from Blockscout Sepolia's `/stats` endpoint supports API availability only; it does not verify indexed-history consistency.
 
 **Warning:** Treating Blockscout Sepolia stats `total_blocks` as the current head can give you a stale head reference. The figure can lag the RPC head by hundreds of blocks and sit unchanged for minutes while other fields refresh. Reconcile indexed history against the RPC and never present a `total_blocks` figure as the current head. Check the indexed history against the RPC rather than treating refreshed stats fields as evidence of synchronisation.
 
@@ -327,8 +332,11 @@ curl -sS "https://testnet.toncenter.com/api/v2/getMasterchainInfo"
 ### Sources
 
 - Node.js CLI: https://nodejs.org/api/cli.html
-- npm lockfile reference: https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json
+- npm lockfile reference (npm CLI v10-specific): https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json
 - Ethereum JSON-RPC: https://ethereum.org/developers/docs/apis/json-rpc/
+- TRON API reference: https://developers.tron.network/reference
+- TON documentation: https://docs.ton.org/
+- TON Center API reference (v2): https://toncenter.com/api/v2/
 
 ## A sensible architecture for different sizes of project
 
@@ -344,9 +352,11 @@ explorer / free RPC
 manual checks
 ```
 
-No server needed.
+No user-managed backend is needed; explorer and RPC services still run on external servers. The $0 estimate assumes existing equipment and connectivity and usage within free-service limits.
 
-## Personal automated tracker, still $0
+## Personal automated tracker, still $0 under the same assumptions
+
+This is a viable local-automation sketch; cron execution and SQLite persistence are not implemented here.
 
 ```text
 public addresses
@@ -360,9 +370,11 @@ SQLite
 local dashboard
 ```
 
-Great for learning.
+Great for learning. An implementation should include durable scan checkpoints, retries and backfill for failed or missed ranges, explicit confirmation thresholds and rollback/rescan handling for reorgs, and backups with tested restores.
 
 ## Small application
+
+This is a small-application architecture sketch; no PostgreSQL implementation is provided here.
 
 ```text
 wallet generation machine
@@ -385,6 +397,8 @@ wallet generation machine
 ```
 
 Use a free hosted RPC tier initially and upgrade when the metrics justify it.
+
+An implementation should define confirmation thresholds and reorg rollback rules, make reconciliation idempotent, include address-to-account correctness tests, and validate database restores from backups.
 
 ## Serious application
 
@@ -417,9 +431,9 @@ Use a free hosted RPC tier initially and upgrade when the metrics justify it.
 
 The signer remains separate.
 
-## Fully self-hosted
+## Hybrid or fully self-hosted
 
-Add chain nodes and self-hosted indexers where the privacy/independence requirement justifies the operational burden.
+Add chain nodes and self-hosted indexers where the privacy/independence requirement justifies the operational burden. Adding these components creates a hybrid deployment unless all required hosted dependencies are replaced. Self-hosting does not automatically guarantee privacy, independence or lower cost.
 
 ---
 
@@ -431,43 +445,61 @@ For every test layer, require the exact command, the file it runs and the expect
 
 ### Reproduce the published-vector reference check
 
-Create a fresh clone at the pin, then run the environment setup and `test/differential_test.py` from the repository root:
+Create a fresh clone, then add a separate detached worktree at the repair pin `e3b65fb` and run the environment setup and `test/differential_test.py` from that worktree's repository root. `082f7915` is the reported verification commit, and `a5bc56e` is the audited main commit; execution at the recipe's `e3b65fb` pin has not been verified:
 
 ```
-git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git checkout --detach e3b65fb832db287fdc8d54794980dd0b3456cc12 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
+git clone https://github.com/Pr3eve6ti2o/bawa.git && cd bawa && git worktree add --detach ../bawa-f4 e3b65fb832db287fdc8d54794980dd0b3456cc12 && cd ../bawa-f4 ; python3 -m venv .venv && source .venv/bin/activate ; python -m pip install --upgrade pip && python -m pip install -r requirements.txt ; python3 test/differential_test.py
+# Note: This semicolon-separated pre-merge command chain is not fail-fast; each command's exit status must be checked before proceeding.
 ```
 
 > **Expected result:**
 >
 > "bip_utils reference checks: PASS", exit 0.
 >
-> **Captured run:** the bip-utils side was captured on 2026-11-08 on muse-vm with bip-utils 2.12.2 and cryptography 50.0.2 from the documented venv procedure, output "bip_utils reference checks: PASS", BTC bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd, ETH 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7, exit 0.
+> **Captured run:** the bip-utils side was captured on 2026-11-08 on muse-vm with bip-utils 2.12.2 and cryptography 50.0.2 from the documented venv procedure, output "bip_utils reference checks: PASS", BTC bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd, ETH 0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7, exit 0. This capture is evidence for bip-utils==2.12.2, not the bip-utils==2.12.3 pinned in `requirements.txt`, so it is not a reproduction against the current pins.
 >
 > At 082f7915, the reported published-vector reference check passed against bip-utils==2.12.2 for BTC BIP-84 index 0 and ETH BIP-44 index 0 only; no repository test covers TRX or indices 1-2.
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-Version pins are not a lockfile; until a lockfile generated from a clean install is committed, no install reproduces the exact dependency graph that was tested.
+Version pins are not a lockfile; without a committed lockfile, reproducing the exact dependency graph that was tested is not guaranteed, although a matching resolution is possible. A newly generated lockfile, even from a clean install, need not match the tested graph.
 
 ### Capture the Wallet Core side
 
 Wallet Core results were captured in V1 (2026-11-08). Generation ran under a real pty via `script -qec`, exited 0 and passed all README §8 checks. The decrypt round trip was byte-identical; derivation passed 9/9; comparison against an independent `bip_utils` re-derivation passed 9/9; the daemon BTC index-5 value matched exactly; and `npm test` passed 28/28. Generation requires a controlling terminal. No root `.env` is included in the repository; V1 built it from the published xpubs in docs/11, supplying `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` for `compare.js`.
 
+The nine cases counted for each of the derivation and independent `bip_utils` comparison results are not identified here; the 9/9 figures therefore do not establish coverage.
+
+The daemon (`tools/hdwallet-gen/derive_daemon.js`) accepts JSONL requests of the form `{"chain":"btc","xpub":"...","index":5}`. `chain` must be `btc`, `eth` or `trx`; `xpub` must be a non-empty string with length at most 200 (`MAX_XPUB_LENGTH`); and `index` must be an integer from 0 through 2147483647. The line-length limit is 4096 (`MAX_LINE_LENGTH`); longer lines return `{"ok":false,"error":"request too large"}`. An empty line or invalid JSON fails with `bad json`. An unsupported `chain`, a non-string, empty or overlength `xpub`, or a non-integer or out-of-range `index` fails with `bad request`.
+
+After the request checks, the daemon validates `xpub` as an extended public key. It must be a non-empty Base58 string decoding to exactly 82 bytes, and its Base58Check checksum must verify. Private extended keys are rejected; public key data must begin with `0x02` or `0x03` and represent a valid secp256k1 point. Depth-0 keys must have zero fingerprint and child number, and the extended-key version must be allowed for the requested chain. Validation failures return `{"ok":false,"error":"<message>"}` with the validator's message, such as `extended key must decode to exactly 82 bytes` or `extended key checksum verification failed`.
+
 At the repository root, use a controlling terminal (TTY) to run the self-checks in `generate.js`:
 
 ```
-node generate.js
+node tools/hdwallet-gen/generate.js
 ```
 
 > **Expected result:**
 >
 > Require successful self-checks on the TTY and capture their actual output. Treat this as an acceptance requirement, not an observed result; the Wallet Core self-check result was captured in V1 (2026-11-08): live generation exited 0 and all README §8 checks passed.
 
-Build the root `.env` from the published xpubs in `docs/11`, using `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. Then run `node compare.js` from `tools/hdwallet-gen/` (the helper reads the `.env` from the repository root regardless of where it runs):
+Build the root `.env` from the published xpub fixtures in `docs/11`, using `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX`. Replace the placeholders below with the corresponding fixture values:
 
 ```
+XPUB_BTC=<published BTC xpub>
+XPUB_ETH=<published ETH xpub>
+XPUB_TRX=<published TRX xpub>
+```
+
+Then, starting at the repository root, change to `tools/hdwallet-gen/` and run `node compare.js`:
+
+```
+cd tools/hdwallet-gen/
 node compare.js
 ```
+
+This recipe expects the helper to load the repository-root `.env`; the complete environment-loading procedure has not been verified here.
 
 > **Expected result:**
 >
@@ -483,7 +515,7 @@ Read each result with its provenance, environment and coverage limits. Do not co
 
 > At `754721cd`, the operator's 2026-11-09 run of `npm test` on Node v24.22.2 passed 28/28 with exit 0.
 >
-> The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
+> The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range. Because `requirements.txt` pins bip-utils==2.12.3, the 28/28 result is not a reproduction against the current pins.
 
 Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet-gen test`, which runs `node ../../test/smoke.test.js`. The smoke test file has been committed since `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
 
@@ -495,17 +527,17 @@ Run `npm test` from the repository root; it invokes `npm --prefix tools/hdwallet
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-This layer has no runnable procedure in this guide yet.
+The Web layer has no runnable procedure in this guide yet. At commit `3019b02`, `apps/` contains zero files.
 
 ### Android
 
 > 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
 >
-> **Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
+> **Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, a subset of the 55, not additional coverage); the on-device gate has never run.
 >
 > The reported verification used Python 3.12.3 with cryptography==50.0.2 and bip-utils==2.12.2, and Node v24.22.2 on the VM or v24.22.1 locally, outside the repository's declared Node >=22 <23 range.
 
-Preserve the historical command record for `jvmtests/PureModuleTests.kt`, in the order shown below. Note that the placeholders are the author's recorded form, not resolved paths, and that the harness needs kotlinc 2.1.0 and JDK 21.
+Preserve the historical command record for `jvmtests/PureModuleTests.kt`, in the order shown below. Note that the placeholders are the author's recorded form, not resolved paths, and that kotlinc 2.1.0 and JDK 21 are the recorded versions, not established requirements.
 
 ```
 kotlinc <core sources except CoreWalletEngine/EthSendComposer> app/.../storage/VaultEnvelope.kt jvmtests/PureModuleTests.kt
@@ -518,7 +550,7 @@ This layer has no runnable procedure in this guide yet.
 
 ### Standards vectors
 
-Retain the following as verification targets, not demonstrated coverage:
+P085 establishes only limited BTC/ETH index-0 derivation coverage; it does not establish official BIP suite coverage, direct seed/extended-key assertions, or edge-case, negative, or parser tests. Retain the following as verification targets, not demonstrated coverage of the full list:
 
 - BIP-39 mnemonic generation and mnemonic-to-seed vectors;
 - BIP-32 master/child vectors;
@@ -565,11 +597,11 @@ Before calling an HD-wallet implementation “done”, check all of these.
 ### Runtime
 
 ```text
-[ ] runtime receives public material only
+[ ] watch-only runtime receives public material only; signing-wallet signer custody is assessed separately
 [ ] no private key in argv/logging
 [ ] path is allowlisted
 [ ] index range validated
-[ ] malformed input cannot terminate the service
+[ ] malformed-input tests and fuzzing assess service resilience; resource limits are enforced
 [ ] secrets are not echoed in errors
 ```
 
@@ -611,6 +643,16 @@ Before calling an HD-wallet implementation “done”, check all of these.
 [ ] security policy published
 ```
 
+### Threat model, custody, recovery, and provenance
+
+```text
+[ ] threat model documented and reviewed
+[ ] signer/seed custody controls documented and verified
+[ ] xpub exposure and privacy implications reviewed
+[ ] recovery discovery and gap limits documented and tested
+[ ] signed build provenance published and verified
+```
+
 ---
 
 ## How to adapt this repository to another chain
@@ -624,7 +666,7 @@ change coin type
 hope
 ```
 
-The professional way is to answer these questions first:
+The following questions form a useful initial checklist, not an exhaustive review or an established standard:
 
 1. What curve is used?
 2. What mnemonic/seed specification is used?
@@ -641,10 +683,22 @@ The professional way is to answer these questions first:
 13. What test vectors exist?
 14. What official wallet must you interoperate with?
 15. What repository is considered canonical by the chain ecosystem?
+16. Which signature scheme and signature encoding are required?
+17. What are the exact signing preimage, hashing, and serialization rules?
+18. How is replay protection applied across chains and networks?
+19. Which account and contract versions are supported, and how do they affect addresses and signing?
+20. What recovery and address-discovery procedures are required?
+21. What fee/gas rules and estimation procedures apply?
+22. How are transaction nonces allocated and tracked?
+23. For UTXO-based chains, how are UTXOs selected and change outputs and addresses handled?
 
 Then write a chain-specific test fixture.
 
-Only after that should the chain enter your generic registry.
+Only after that should the chain be added to the upstream root `registry.json`. Pin the upstream version to an exact release version or full commit SHA and record that pin with the fixture.
+
+Map the verified derivation paths and their names, defaults and supported alternatives, curve, `publicKeyType`, address prefixes/HRPs, hashing rules, and extended-key parameters (including public/private version bytes) to the registry schema at that pin.
+
+Keep `coinId`, the registry's coin identifier, distinct from protocol chain IDs and network IDs. Record those identifiers separately; do not substitute `coinId` for identifiers required by network selection or replay protection.
 
 ---
 
@@ -660,7 +714,7 @@ References:
 - [Trust Wallet Assets](https://github.com/trustwallet/assets)
 ## Release gates and CI
 
-Treat this section as a specification to implement, not as an existing release process. Record the current baseline: zero tags exist, and no release process has ever run. Keep every gate without its required procedure and evidence **blocked (unverified)**.
+Treat this section as a specification to implement, not as an existing release process. Record the observation date alongside the baseline for audited commit `3019b02`: at the 8 November 2026 check, zero tags were observed, and no release-process run was found in the evidence audited for that commit; zero tags do not establish lifetime release-process history. Keep every gate without its required procedure and evidence **blocked (unverified)**.
 
 ### Establish the release sequence
 
@@ -684,23 +738,39 @@ Implement the following requirements:
 
 - Define the `tests`, `dependency-scan`, `secret-scan`, `build`, `reproduce` and `release-gate` jobs. Place Node testing in `tests`, move Python differential testing into a separate test job, and record that job’s identifier.
 - Add dependency-scan and secret-scan steps in their corresponding jobs. Obtain and record the names of both scanners, who runs each scanner and where each redacted report is retained. Do not treat a job name as identification of its scanner.
-- Pin the runner to a fixed Ubuntu label and record the runner image identity with the run evidence.
+- Name the separate Python differential-test job `differential-test`. Configure `runs-on: ubuntu-22.04`, `timeout-minutes: 15` and `permissions: {contents: read}`. Give it its own checkout and required runtime/dependency installation steps, preserving the current Node/Python versions, working directory and differential-test invocation. Move that invocation out of `tests`; keep Node testing in `tests`. A nonzero differential-test exit must fail `differential-test`, without `continue-on-error`.
+- Make `tests`, `differential-test`, `dependency-scan` and `secret-scan` independent entry jobs. Set `build.needs` to `[tests, differential-test, dependency-scan, secret-scan]`, `reproduce.needs` to `[build]` and `release-gate.needs` to `[tests, differential-test, dependency-scan, secret-scan, build, reproduce]`. Run `release-gate` with `if: always()` and fail it unless every listed prerequisite has result `success`; failure, cancellation or skipping must not permit release.
+- In `dependency-scan`, install checksum-verified **Trivy 0.58.2**. Run `trivy fs` at the repository root with `--scanners vuln --include-dev-deps --severity HIGH,CRITICAL --ignore-unfixed=false --exit-code 1 --format json --output "$RUNNER_TEMP/dependency-scan.raw.json"`. Scope the scan to all repository Node and Python dependency manifests and lockfiles, including development and resolved transitive dependencies; verify that required inputs are supported and not silently omitted. Use no vulnerability suppressions or scan exclusions. Refresh the vulnerability database for each run and record its timestamp. Any HIGH or CRITICAL vulnerability, including an unfixed one, fails the job; scanner, database-update or input-coverage errors also fail it.
+- In `secret-scan`, install checksum-verified **Gitleaks 8.21.2**. Check out with `fetch-depth: 0` and run `gitleaks git --config .gitleaks.toml --log-opts="--all" --redact=100 --exit-code 1 --report-format json --report-path "$RUNNER_TEMP/secret-scan.raw.json" .`. Commit `.gitleaks.toml` with `[extend]` and `useDefault = true`, retaining that version’s default detection rules and adding no repository-specific allowlists or `.gitleaksignore` entries. Scan all fetched branch/tag history, including the checked-out commit. One detected secret fails the job; checkout, configuration and scanner errors also fail it.
+- GitHub Actions runs both scanners on every existing CI trigger, using read-only `contents: read` permissions. Repository maintainers own scanner/version/configuration changes and finding triage. Record the scanner name, version, operator, configuration digest, scope, threshold and result in each report.
+- Sanitize reports before retention: remove credentials and authenticated registry URLs from dependency output; retain only safe finding metadata such as rule ID, file, line and commit for secrets, never secret values, matched text or source snippets. Do not print or upload raw reports. Retain `reports/dependency-scan.redacted.json` and `reports/secret-scan.redacted.json` as GitHub Actions artifacts named `dependency-scan-report` and `secret-scan-report`, respectively, with `retention-days: 30`. Use `if: always()` for sanitization and upload steps so reports survive scan failures; emit a sanitized error summary if scanning produces no report. Preserve scanner failures, and also fail the corresponding job if sanitization or report upload fails.
+- Pin the runner to a fixed Ubuntu release label; this label still receives image updates. Record the actual runner image identity, including its release/version, with the run evidence.
 - Pin Node to a complete, validated Node 22 version, and pin npm and Python to exact versions. Record the selected versions.
-- Pin every action to a full-length commit SHA verified in that action’s own repository. Do not rely on action tags, which can be moved or deleted. Configure Dependabot for GitHub Actions updates in `.github/dependabot.yml`.
-- Generate, validate and commit `package-lock.json` first. Only then switch CI installation to `npm ci --ignore-scripts --no-audit --no-fund`.
+- Pin every repository-based action to a full-length commit SHA verified in that action’s own repository, and pin every `docker://` action to an image digest. Do not rely on action tags, which can be moved or deleted. Configure Dependabot for GitHub Actions updates in `.github/dependabot.yml`.
+- The lockfile prerequisite is already met: `package-lock.json` is committed. Switch CI installation to `npm ci --ignore-scripts --no-audit --no-fund`.
 - Make both test jobs check out the same revision. Require each job to fail on empty or skipped tests. Retain a successful differential run for that exact SHA before making any claim of repaired-tree CI coverage.
-- Set `permissions.contents` to `read` and all other permissions to `none`. Document and justify any exception.
+- The permissions requirement is already met: `permissions.contents` is `read`, and unspecified permissions are `none`. Document and justify any exception.
 - Make `release-gate` require success and retained evidence from every preceding job, including both test jobs, `dependency-scan`, `secret-scan`, `build` and `reproduce`. Keep it blocked whenever a required job or gate lacks evidence.
 
 ### Record gate-specific evidence
 
-Maintain a public **TESTING** record linking the revision, public fixture sources, expected results backed by those sources, observed results and each gate’s status. Treat this as a proposed evidence record, not as confirmation that any gate has passed.
+The existing 113-line `docs/TESTING.md` records testing strategy and current coverage, not the per-revision expected and observed results and gate attestations required by the claim-5 evidence-record specification. Extend it into a public **TESTING** evidence record linking each revision, public fixture sources, expected results backed by those sources, observed results and each gate’s status and attestation. Treat this as a proposed extension to the existing document, not as confirmation that any gate has passed.
 
 For each gate, supply or link to:
 
 - the actual workflow file path, its recorded job mapping and the relevant revision-specific job evidence;
 - the scanner record naming both scanners, identifying who runs them and locating their retained redacted reports;
 - the reproducible-build procedure specified in the companion section, together with the relevant `build` and `reproduce` evidence.
+  - For `build`, record the checked-out SHA, workflow path and job/run link, lockfile digest, pinned environment, exact build commands, declared output paths and public source/fixture links supporting the expected outputs. Link the retained deliverables, hash manifest and observed output-validation results.
+  - For `reproduce`, record the same revision and environment details, the independent rebuild commands, retained rebuilt deliverables and their manifest. Link the first build’s comparison baseline and the retained per-file comparison report, showing expected and observed hashes and the comparison outcome.
+  - Record each gate’s status separately. A successful job badge without retained payloads, manifests and comparison evidence is insufficient; missing or expired required evidence must keep `release-gate` blocked.
+
+### Specify substantive build and reproduction procedures
+
+1. Declare the actual production build commands and exact deliverable paths in the workflow and **TESTING** record before enabling these gates. Require nonempty, usable distribution outputs, such as compiled or bundled runtime code and required assets, as applicable to the project. An echo-only command, logs, a source-checkout archive or a checksum manifest without a built payload does not satisfy `build`. If no substantive build target exists, keep the gate blocked.
+2. Run `build` from a clean checkout of the required SHA using the committed `package-lock.json` and `npm ci --ignore-scripts --no-audit --no-fund`. Pin and record the runtime, package manager, build-tool versions, platform and any container image digest. Validate that all declared substantive deliverables exist and are nonempty. Retain them with a manifest listing every output file’s relative path, byte size and SHA-256 hash, sorted by relative path.
+3. Run `reproduce` in a separate clean workspace from the same SHA and lockfile, with a fresh dependency installation and the same pinned toolchain, platform and build commands. Do not reuse the first job’s workspace, generated outputs or build-output caches. Document deterministic inputs, including timestamp, path, locale and timezone settings where relevant, before either run and apply them identically. Download the first build’s artifacts only for comparison, never as rebuild inputs.
+4. Independently generate the second manifest, then recompute hashes from both retained payload sets and verify them against their manifests. Require identical relative-path sets, byte sizes and SHA-256 hashes for every declared output file. Fail `reproduce` on missing or extra files, empty substantive outputs, manifest inconsistencies, unavailable comparison inputs or any hash mismatch. Fix comparison scope in advance; do not omit differing deliverables or normalize away mismatches after the fact. Retain the complete comparison report on failure as well as success. Hash equality establishes reproducibility of these outputs, not correctness or repaired-tree test coverage.
 
 Obtain any missing workflow path, scanner names, runner responsibilities or report locations from the maintainer. Until the required implementation, references, procedures and evidence exist, keep the gates worded as unverified requirements and never mark them passed.
 
@@ -717,9 +787,9 @@ Keep separate statuses for:
 
 Retain separate integration-test and recovery-drill evidence as well. Do not infer the completion of external security review from build, test or scanning results.
 
-Keep these three release gates **blocked (unverified)** and not passable today:
+Keep these three release gates **blocked (failed or unverified)** and not passable today:
 
-- **Full test plan green in CI:** require the documented full test plan and successful evidence for the recorded SHA, including both test jobs. Do not substitute a few passing fixtures for full published-vector coverage.
+- **Full test plan green in CI:** **blocked (known failure)**. Root README section 18 marks full published-vector coverage **FAIL**, and the reported `compare.js` xprv acceptance is a known failure, not merely missing evidence. Require the documented full test plan and successful evidence for the recorded SHA, including both test jobs. Do not substitute a few passing fixtures for full published-vector coverage.
 - **Dependency and secret scanning clean:** require both named scanner runs, their recorded operators and retained redacted reports. Keep the dependency-scanning and secret-scanning statuses separate.
 - **Reproducible builds verified:** require evidence from `build` and `reproduce` showing execution of the companion procedure, with the artefact and checksum record.
 
@@ -732,6 +802,7 @@ Use public fixtures only. Use published test vectors or clearly marked placehold
 Before running each test, define and record its expected outcome. Confirm undocumented expected behaviour with the maintainer before running the test, then compare the actual result with the recorded expectation.
 
 Include negative tests covering malformed input, rejection of private-key material at the public-only boundary, refusal of symlinked paths and invalid checksums.
+Add an explicit `compare.js` regression test with `xprv` input that asserts rejection, no address output and a non-zero exit status. This guards against the reported probe that accepted `xprv` input, printed three identical addresses and exited 0.
 
 Run `test/differential_test.py` as Bawa’s independent check of public vectors using `bip_utils`.
 
@@ -745,7 +816,7 @@ Ask the maintainer for the undocumented CI configuration, public fixture locatio
 
 ### Establish trust first
 
-Bawa currently has no published maintainer signing key, no tags and no successfully verified commit signatures. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+As of the audit of commit `3019b02`, no published maintainer signing key, tags or successfully verified commit signatures were identified in the repository material reviewed for that revision. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 Do not treat a tag as verified without both trusted-key confirmation and a successful check of that tag’s signature.
 
@@ -753,60 +824,82 @@ Do not treat a tag as verified without both trusted-key confirmation and a succe
 
 Confirm the project-specific build requirements and exact commands with the maintainer. Agree which unsigned Android artefacts and web outputs to compare, then record the following before either builder starts:
 
-- Source SHA and all applicable submodule SHAs.
-- Dependency locks, dependency checksums and hashes of other build inputs.
-- Toolchain and image identities, tool versions and architecture.
+- Agreed exact build commands.
+- Source SHA and all applicable submodule SHAs; record `none` for submodules only after confirming that the source tree at that SHA contains no gitlinks.
+- Dependency locks, immutable dependency identities (commit SHAs or content hashes), dependency checksums and hashes of other build inputs.
+- Immutable toolchain, build-tool and image identities (content hashes or digests rather than mutable names or tags), tool versions and architecture.
 - Build flags and public configuration.
 - Locale, timezone and timestamp policy.
+- Other output-affecting environment variables and settings, initial cache state and permitted cache use, and network-access and dependency-fetch policies.
 
-Arrange for two independent builders to check out the same source SHA and recorded submodule SHAs in separate clean environments. Require each builder to verify the input hashes against the agreed record and build with the recorded inputs and settings, without sharing outputs.
+Arrange for two independent builders to check out the same source SHA and recorded submodule SHAs in separate clean environments. Require each builder to verify the input hashes against the agreed record and build with the recorded inputs and settings, without sharing outputs or using shared build-output caches.
 
 ### Reproduce Android release outputs
 
-Record the wrapper properties, wrapper-JAR hash, `distributionSha256Sum`, dependency locks and fixed plug-in versions. Include the JDK identity and version, SDK platform and build-tools pins, and NDK and CMake pins.
+Record and enforce the agreed wrapper properties, trusted wrapper-JAR SHA-256 and `distributionSha256Sum`; verify the wrapper JAR and distribution bytes against those hashes before use, including cached copies. Require fixed plug-in versions and complete, checked-in dependency locks in strict mode for every dependency-bearing resolvable project and buildscript configuration. Enforce checksum verification of all resolved dependency and plug-in artefacts and metadata, including transitive dependencies, against reviewed, checked-in verification metadata. Fail on missing locks or verification entries and on any pin, lock or checksum mismatch; do not regenerate locks or verification metadata during the comparison. Pin, check and record the exact vendor and full build/version of each JDK used and the package IDs and exact revisions of all SDK packages used, including platforms, build-tools, NDK and CMake.
 
-Use only the checked-in `./gradlew` for Gradle invocations, and capture the output of `./gradlew --version`. Confirm the exact release-variant task names with the maintainer, and name them in the agreed build procedure and command record for each APK or AAB. Do not substitute assumed task names.
+Use only the checked-in `./gradlew` for Gradle invocations, and capture the output of `./gradlew --version`. Confirm the exact release-variant task names with the maintainer, and name them in the agreed build procedure and command record for each APK or AAB. Do not substitute assumed task names. Use an agreed, recorded configuration that disables signing for each release variant on both builders, and verify each output is unsigned; a release task can produce signed output.
 
-Compare the whole-file SHA-256 hashes of every agreed unsigned APK or AAB from the two independent builds.
+Before hashing or signing, align each unsigned APK with the pinned build-tools `zipalign`, using identical, recorded options on both builders, and verify alignment with `zipalign -c`. Do not zipalign AABs. Compare the whole-file SHA-256 hashes of every agreed unsigned APK (after alignment) or AAB from the two independent builds.
 
 > **Expected result:** Matching whole-file SHA-256 hashes from both builders for each agreed unsigned APK or AAB.
 
-After a successful comparison, sign the artefacts in a protected step. Record the signing tool and version, certificate fingerprint, and SHA-256 hashes of both the unsigned and signed artefacts. Never record private keys.
+Preserve the exact compared unsigned files from both builders unchanged, with their hashes, source revisions and any local changes, builder identities, enforced-input and verification records, build variants/configurations, and build/alignment commands and logs.
+
+After a successful comparison, sign copies of those exact inputs in a protected step: use `apksigner` for APKs and JAR signing with `jarsigner` for AABs. Do not realign APKs after signing. Record the signing tool and version, all non-secret signing configuration (key alias/identifier, signature schemes, signature/digest algorithms and applicable SDK-range or timestamping options), each signing certificate's SHA-256 fingerprint, and whole-file SHA-256 hashes of each unsigned input and corresponding signed output. Verify the signed artefacts with `apksigner verify` for APKs and `jarsigner -verify` for AABs, requiring present, valid signatures and signer certificates matching the agreed SHA-256 fingerprints; retain the verification commands and results. Never record private keys.
 
 Claim unsigned reproducibility only, unless independently produced signed outputs also match by whole-file SHA-256.
 
 ### Reproduce web outputs
 
-For each independent web build, produce a manifest covering every output file. Record each file’s relative path and SHA-256 hash, and sort the manifest by relative path.
+For each independent web build, use the build configuration’s final web distribution directory as the output root, and record its location separately from the manifest. Establish the same complete, nonempty expected artifact inventory for both builders from the build’s declared deliverables, covering all web files under that root and every output archive, including archives stored elsewhere. Require at least one web output file and one corresponding archive pair. Missing or empty roots, empty inventories or archive sets, missing expected artifacts, and unlisted outputs are failures, even if both builders have the same omissions.
 
-Compare the sorted manifests and the whole-archive SHA-256 hashes of corresponding output archives. Do not use matching file manifests as a substitute for comparing the archives.
+Produce a manifest covering every regular file recursively under the output root, including hidden files, without exclusions. Reject a symlink output root, any symlink beneath it (including directory and dangling symlinks), and any entry that is neither a directory nor a regular file; do not follow or silently omit such entries. Verify the collected files and output archives against the expected inventory.
+
+Record each file’s relative path and SHA-256 hash of its exact bytes. Paths must be valid UTF-8, use `/` between components, have no leading separator or `.`/`..` components, and preserve case and Unicode code points without normalization. Reject duplicate relative paths. Write one canonical JSON (RFC 8785) record containing only `path` and lowercase-hex `sha256` per LF-terminated line, encoded as UTF-8 without a BOM. Sort records lexicographically by the unsigned UTF-8 bytes of the unescaped relative path, with shorter prefixes first, not by locale.
+
+Keep the evidence manifests and expected inventory outside both output roots and every output archive; they must not be included in the hashed outputs.
+
+Compare the sorted manifests and the whole-archive SHA-256 hashes of corresponding output archives. Do not use matching file manifests as a substitute for comparing the archives. Compare every inventoried file and archive pair; an empty or incomplete comparison must not pass.
 
 Record signing as `none` where applicable.
 
-> **Expected result:** Identical sorted relative-path/SHA-256 manifests and matching whole-archive SHA-256 hashes from both builders.
+> **Expected result:** Identical, complete, nonempty sorted relative-path/SHA-256 manifests and matching whole-archive SHA-256 hashes for every expected archive from both builders, with no missing outputs.
 
 ### Retain build and test evidence
 
-Retain `ci-evidence.json`, logs and reports for both independent builds, and record their storage location. Keep the evidence attributable to each builder and include:
+Retain `ci-evidence.json`, logs and reports for both independent builds, and record their storage location. Keep the evidence attributable to each builder.
 
-- Source SHA and workflow SHA.
-- Run id and attempt, build id and runner image.
-- Tool versions and input hashes.
-- Artefact SHA-256 hashes and comparison results.
-- Commands, exit codes and test results.
-- Applicable signing records.
+Use a versioned JSON Schema committed as `ci-evidence.schema.json` alongside the workflow. Version 1 defines a JSON object with these required fields:
 
-For each Android artefact, also record the variant, `applicationId`, `versionCode` and `versionName`.
+- `schemaVersion`: integer `1`; `sourceSha` and `workflowSha`: full commit-SHA strings; `runId`: string; `runAttempt`: positive integer; `status`: `success`, `failed` or `cancelled`.
+- `completedAt` and `retentionUntil`: UTC ISO 8601 timestamp strings; `evidenceUri`: the credential-free storage URI of the manifest.
+- `builds`: an array of records with a unique `buildId`, a `builderId`, `status`, `runnerImageId`, `toolVersions` (tool-name/version string map), `inputHashes` (input-name/SHA-256 string map), `commands` (records containing a sanitized `command` string and integer `exitCode`), `testResults` (records containing a `name`, a `result` of `passed`, `failed` or `skipped`, and an optional `reportUri`), and `logUris` and `reportUris` (arrays of credential-free storage URIs).
+- `artefacts`: an array of records with a unique `artefactId`, a `buildId` referencing its producing build, a `storageUri`, a `sha256`, and `signingRecords` (records containing a public signing-record URI and verification result, or an empty array when signing is not applicable).
+- `comparisons`: an array of records containing `leftArtefactId`, `rightArtefactId`, and a `result` of `match`, `mismatch` or `not-run`; `not-run` also requires a `reason`.
+- `missingEvidence`: a field-path/reason string map, empty for complete evidence. Failed or cancelled runs may use `null` for unavailable measurements or empty arrays for unproduced outputs only when the missing evidence is explained here.
 
-Keep private keys out of `ci-evidence.json`, logs and reports.
+IDs, URIs and signing verification results are strings. All SHA-256 values must be 64 lowercase hexadecimal characters. Every artefact and comparison must resolve to the exact producing build and builder through its references.
+
+Identify each runner image using a container image digest or an immutable provider VM-image ID/version. A mutable label such as `ubuntu-latest` is not sufficient; retain it only as supplementary metadata. If immutable identification cannot be obtained, record the limitation as missing evidence rather than claiming complete evidence.
+
+For each Android artefact, also record the variant, `applicationId`, `versionCode` and `versionName`. Require `variant`, `applicationId` and `versionName` as strings and `versionCode` as a positive integer in that artefact’s record.
+
+Validate against the committed schema and check uniqueness, reference resolution and completeness before accepting the evidence. Reject unknown schema versions, malformed hashes and missing or ill-typed required fields. Successful runs must contain complete evidence for both independent builders and their comparison results.
+
+Capture evidence incrementally and generate, validate and upload it in an unconditional finalisation step (`always()` or equivalent), including after build, test or comparison failure. Preserve the original failure status. Upload sanitized partial evidence and validation errors as diagnostics even when validation fails; do not mark them complete. Missing uploads or invalid evidence must fail the evidence check.
+
+Retain the manifest, logs, reports and referenced signing records for at least 90 days after run completion. For released artefacts, retain them for the release’s supported lifetime if longer. Record `retentionUntil`, configure storage to enforce it, and extend it when support is extended rather than relying on default CI expiry.
+
+Keep private keys, credentials, tokens and signing passwords out of `ci-evidence.json`, logs and reports. Prevent or redact secret values before writing evidence, including command arguments and storage URLs. Signing records must contain only public signing and verification material.
 
 ### Complete the scanning checklist
 
-Record the current scanning status explicitly: no scan has ever been recorded, and no tool is named yet. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
+Record the scanning status explicitly: as of audited commit `3019b02`, no scan record was found in the audited documentation, and no tool was named there. Confirm scanner configuration with the maintainer, because Bawa does not document an established configuration. Name dependency and secret scanners only after the maintainer has validated them.
 
-Treat a lockfile as a record of the tested dependency graph, not as evidence of dependency safety.
+Treat a lockfile as a record of the resolved and pinned dependency graph, not as evidence of testing or dependency safety. Testing requires separate run evidence.
 
-- [ ] **Enable repository security features.** Ask a repository administrator to enable GitHub’s dependency graph, Dependabot alerts and Dependabot security updates. **Owner:** record the responsible administrator’s name. **Record:** retain the date enabled for each feature.
+- [ ] **Verify and enable repository security features.** Ask a repository administrator to check GitHub settings for the dependency graph, Dependabot alerts and Dependabot security updates, then enable any that are disabled; the dependency graph may already be enabled for public repositories. **Owner:** record the responsible administrator’s name. **Record:** retain the date enabled for each feature.
 
 - [ ] **Validate and name both scanners.** Obtain maintainer validation before naming the dependency scanner and secret scanner. Confirm dependency inputs, tool setup, cadence and blocking criteria. **Owner:** record the maintainer responsible for validation. **Record:** retain the validated name and version of each scanner, together with the agreed configuration and criteria.
 
@@ -822,7 +915,7 @@ Treat an SBOM as an inventory of components, not as certification of security. C
 
 ### Re-check external links
 
-Re-check every external link before each release. Make requests sequentially, with delays between requests. Avoid checking five links at a time, which caused false 429 rate-limit responses in the 8 November 2026 audit.
+Re-check every external link before each release. Make requests sequentially, with delays between requests. The 8 November 2026 audit encountered 429 rate-limit responses during link checks.
 
 Record the check date beside any link that blocks automated checks. Record any link section that cannot be re-checked as a finding, not as a footnote.
 
@@ -845,11 +938,11 @@ Both the root package and `tools/hdwallet-gen` declare version `1.1.0`. Their in
 - **npm**. Bawa does not specify an npm version.
 - **Python 3.11 or newer**, matching `>=3.11`, with virtual-environment support.
 - Enough free storage for dependencies and later recovery backups.
-- Preferably a Unix-like environment: the interactive generation flow uses `/dev/tty`.
+- A compatible Unix-like environment and an accessible interactive TTY are required: the interactive generation flow uses `/dev/tty`.
 
 Bawa does not document OS-specific prerequisite installation commands or a disk-space figure. Confirm the supported toolchain, tested npm version and storage requirements with the maintainer rather than guessing a bootstrap recipe.
 
-For actual wallet generation, use an offline or trusted machine, not on an untrusted shell or CI runner. If the installation machine must remain offline, first confirm the dependency-transfer and verification process with the maintainer; Bawa does not document an offline installation procedure.
+For actual wallet generation, use a trusted host, preferably offline, not on an untrusted shell or CI runner. If the installation machine must remain offline, first confirm the dependency-transfer and verification process with the maintainer; Bawa does not document an offline installation procedure.
 
 **Expected result:** Git and npm available, Node within `>=22 <23`, and Python at least `3.11` with virtual-environment support.
 
@@ -868,7 +961,7 @@ Bawa does not document a revision-authentication procedure or trusted signing id
 
 **Expected result:** a checkout containing `package.json`, `requirements.txt` and `tools/hdwallet-gen/`, with its revision confirmed by the agreed verification method. A successful clone alone is not that verification.
 
-### 3. Install the root Node dependencies
+### 3. Run `npm install` at the repository root
 
 From the repository root:
 
@@ -876,13 +969,13 @@ From the repository root:
 npm install
 ```
 
-**Expected result:** the root installation completing without an error. This is not yet evidence that the wallet tooling is ready.
+**Expected result:** the root `npm install` command completing without an error. The root package declares no dependencies, so this installs nothing; only the `tools/hdwallet-gen` installation installs dependencies. This is not yet evidence that the wallet tooling is ready.
 
 ### 4. Install the wallet-core tooling dependencies
 
 Do not skip this second installation. The root `check` and `test` scripts delegate to `tools/hdwallet-gen`; success at the root does not, by itself, demonstrate that dependencies at that package boundary are installed.
 
-The tooling package declares `@trustwallet/wallet-core` at `4.8.4`, which `npm ci` installs; `4.9.2` was the required release-verification pin in the Version pins table above (D21 construction/signing demonstration only, not the installed pin). With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
+The tooling package declares `@trustwallet/wallet-core` at `4.8.4`; the procedure below runs `npm install` and does not demonstrate a clean, lockfile-based `npm ci` installation. The Version pins table above identifies `4.9.2` as a GitHub pre-release used only for the D21 construction/signing demonstration, not as a required release-verification pin or the installed pin. With `4.9.3` now the latest stable, the release-verification target must be re-confirmed before any re-pin.
 
 ```bash
 cd tools/hdwallet-gen
@@ -897,7 +990,7 @@ cd ../..
 
 **Expected result:** a successful installation in `tools/hdwallet-gen`, followed by your shell returning to the repository root. The directory change succeeding does not cancel an earlier npm failure.
 
-#### If either npm installation fails
+#### If either `npm install` command fails
 
 Stop before moving on to Python setup or repository checks.
 
@@ -906,13 +999,22 @@ Stop before moving on to Python setup or repository checks.
 - Record the failing command, package directory, OS, tool versions and sanitised error details. Use placeholders for sensitive fields and machine-specific paths; never send credentials or wallet material.
 - Do not change dependency pins or force an installation merely to suppress the error.
 
-Bawa does not document an npm failure-recovery procedure. Confirm the supported npm version, any platform prerequisites and the appropriate remedy for your selected revision with the maintainer before retrying.
+This section provides initial npm failure-recovery guidance. Maintainer confirmation is not required before retrying after correcting a clearly identified environmental cause. Consult the maintainer when npm-version or platform requirements for your selected revision are unclear, the failure persists, or a remedy would require dependency changes.
+
+1. Inspect the error output and local npm debug log to identify the cause. Check the selected revision's manifests and setup documentation for npm-version requirements, alongside the Node requirement above.
+2. Address the identified cause:
+   - For network, registry or proxy errors, restore connectivity or correct the authorised configuration. Do not disable TLS verification.
+   - For permissions or disk-space errors, restore normal user access to the package directory and npm cache, or free space. Do not rerun the installation with `sudo`.
+   - For cache-integrity errors, run `npm cache verify` and inspect the result.
+   - For missing build prerequisites, follow the selected revision's documented platform setup. If the required prerequisites are unclear, ask the maintainer rather than guessing.
+3. Once the cause has been addressed, rerun the originally failing `npm install` command from the same package directory. Do not delete lockfiles or bypass dependency checks to make the retry pass.
+4. If the retry fails or no clear remedy is available, stop and share the sanitised diagnostics recorded above with the maintainer. Confirm the appropriate remedy before retrying again.
 
 **Expected result:** the previously failing installation completing successfully after its cause has been addressed. Until then, treat setup as incomplete.
 
 ### 5. Create and activate the Python environment
 
-Back at the repository root, create a local environment and activate it:
+Back at the repository root, `python3` must resolve to Python 3.11 or newer, and its `venv` module must be available. Create a local environment and activate it:
 
 ```bash
 python3 -m venv .venv
@@ -927,7 +1029,14 @@ For Windows PowerShell, the documented activation command replaces the `source` 
 
 That activation command does not establish a complete Windows setup for the `/dev/tty` generation flow. Bawa does not document that workflow on Windows; confirm platform support and any additional setup with the maintainer.
 
-**Expected result:** a `.venv` directory, successful activation, and `python` referring to the environment’s interpreter. Do not install the Python dependencies into the system interpreter by mistake.
+After activation, verify the Python version and interpreter path:
+
+```bash
+python --version
+python -c "import sys; print(sys.executable)"
+```
+
+**Expected result:** a `.venv` directory, successful activation, `python --version` reporting Python 3.11 or newer, and `sys.executable` pointing to the interpreter inside `.venv`. Do not install the Python dependencies into the system interpreter by mistake.
 
 ### 6. Install the Python requirements
 
@@ -958,7 +1067,7 @@ python3 -m py_compile tools/make_wallet.py tools/decrypt_seed.py
 python3 test/differential_test.py
 ```
 
-The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
+The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js`, `compare.js` and `extended-key.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
 
 **Expected result:** all four commands completing successfully. At the pinned commit e3b65fb832db287fdc8d54794980dd0b3456cc12 they do: `npm run check` exits 0 and `npm test` passes 28/28 (verified 2026-11-08; all nine CI steps replayed exit 0, D23). At the former pin 082f7915, `npm run check` failed on three files and `npm test` could not run. Bawa does not document a fixed success transcript; if the outcome is unclear, confirm the expected behaviour for your revision with the maintainer. Passing these checks does not certify the machine as safe for real wallet generation.
 
@@ -966,7 +1075,13 @@ Keep recovery material out of the checkout and installation reports. `CONTRIBUTI
 
 ### Sources
 
-- Bawa installation guidance and repository files: `package.json`, `tools/hdwallet-gen/package.json`, `requirements.txt` and `CONTRIBUTING.md`, https://github.com/Pr3eve6ti2o/bawa.git
+All sources below are pinned to revision `e3b65fb832db287fdc8d54794980dd0b3456cc12`.
+
+- Installation guide: [`docs/10-operations-and-testing/README.md`, “Installing Bawa from a clean machine”](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/10-operations-and-testing/README.md#installing-bawa-from-a-clean-machine).
+- Dependency and contributor guidance: [`package.json`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/package.json#L1), [`tools/hdwallet-gen/package.json`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/tools/hdwallet-gen/package.json#L1), [`requirements.txt`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/requirements.txt#L1) and [`CONTRIBUTING.md`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/CONTRIBUTING.md#L1).
+- Smoke and differential-test sources: [`test/smoke.test.js`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/test/smoke.test.js#L1) and [`test/differential_test.py`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/test/differential_test.py#L1).
+- CI workflow: [`.github/workflows/ci.yml`](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/.github/workflows/ci.yml#L1).
+- D23 execution evidence: this guide’s [“Dependency lockfile discipline” section](https://github.com/Pr3eve6ti2o/bawa/blob/e3b65fb832db287fdc8d54794980dd0b3456cc12/docs/10-operations-and-testing/README.md#dependency-lockfile-discipline) records that CI runs `npm install`, not `npm ci`.
 
 ## Dependency lockfile discipline
 
@@ -978,7 +1093,14 @@ CI in `.github/workflows/ci.yml` currently runs `npm install --ignore-scripts --
 
 ### Generate, review and test
 
-Bawa does not document a lockfile-specific validation procedure. Confirm the Node.js/npm versions and required checks with the maintainer before proceeding.
+Confirm the Node.js/npm versions and required checks with the maintainer before proceeding.
+
+Use the following lockfile validation procedure:
+
+1. From `tools/hdwallet-gen`, record `node --version` and `npm --version`. Review `package.json` and the committed `package-lock.json`, including dependency versions, resolved URLs and integrity entries. Review `git diff HEAD -- package.json package-lock.json` and note any intentional changes before installing.
+2. Run `npm ci --ignore-scripts`, retaining any other existing CI flags. This checks manifest/lockfile dependency consistency and installs the locked dependency graph without regenerating the lockfile. If installation fails, stop and investigate; do not regenerate the lockfile merely to make validation pass.
+3. Run `npm ls --all` to check for missing or invalid dependencies. Compare `git diff HEAD -- package.json package-lock.json` with the pre-install diff and confirm that installation introduced no manifest or lockfile changes.
+4. Run the package checks named below and record the commands and results before committing.
 
 1. **Generate from a clean install.** Use a fresh checkout of the revision to be tested, with no existing `node_modules` in `tools/hdwallet-gen`. From the repository root, use CI’s current install options:
 
@@ -987,7 +1109,7 @@ Bawa does not document a lockfile-specific validation procedure. Confirm the Nod
    npm install --ignore-scripts --no-audit --no-fund
    ```
 
-   **Expected result:** a new `tools/hdwallet-gen/package-lock.json`. If it does not appear, stop and confirm the npm configuration with the maintainer.
+   **Expected result:** the existing, committed `tools/hdwallet-gen/package-lock.json` passes review and validation with `npm ci --ignore-scripts` without being rewritten. Do not regenerate it or expect a new file. If validation fails, stop and resolve the error with the maintainer.
 
 2. **Review the changes.** Stay in that directory. A new, untracked file will not appear in an ordinary Git diff, so stage it for review:
 
@@ -1007,22 +1129,21 @@ Bawa does not document a lockfile-specific validation procedure. Confirm the Nod
 
    `npm ci` uses the lockfile without rewriting it and fails if it disagrees with `package.json`. By contrast, `npm install` may update the lockfile.
 
-Run the maintainer-confirmed checks after that install. Once they pass, commit the lockfile with the tested code, any intentional manifest changes and the CI change to `npm ci`, retaining the existing flags and working directory. This ties the reviewed dependency graph to the revision that was actually tested.
+In `tools/hdwallet-gen`, validate manifest/lockfile dependency consistency with `npm ci --ignore-scripts`, retaining any other existing CI flags. `--ignore-scripts` suppresses installation lifecycle hooks, so review and explicitly perform any required hook-based setup before subsequent checks. Run `npm ls --all` to check the dependency tree. List available scripts with `npm run`, then run the declared test, lint and build checks using `npm test`, `npm run lint` and `npm run build`, respectively, only where those scripts exist; do not count an absent script as a passing check. Review `git diff HEAD -- package.json package-lock.json` against the pre-install diff to confirm there are no installation-induced changes. Once all required checks pass, commit the tested code, any intentional manifest and lockfile changes and the CI change to `npm ci`, retaining the existing flags and working directory. An unchanged committed lockfile needs no new lockfile commit. This ties the reviewed dependency graph to the revision that was actually tested.
 
 ### Sources
 
 - npm lockfile behaviour: https://backpack.ns.nl/guides/tooling/working-with-npm.html
 
-## Daily and weekly rhythm by size
+## Daily and weekly rhythm by size (future-state runbook)
 
 Keep Trust Wallet Core generation on a trusted interactive machine, with mnemonics and seeds retained there. Send only account-level public roots (xpub/zpub) or public addresses to online tracking services. Those services derive addresses from public roots and use RPC, node or indexer data for tracking and reconciliation. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools.
 
-These checks are guidance for your own setup, not Bawa monitoring features. Payment-confirmation rules are documented in MAINNET-GUIDE section 14 (pinned wallet policies reviewed 2026-11-10 under register entry M-38): Bitcoin 6 confirmations (a customary recommendation, not a protocol requirement); Ethereum at least 12 confirmations and canonical finalised inclusion (12 confirmations alone are insufficient); TRON 19 distinct active Super Representatives out of 27 with solidified inclusion via `/walletsolidity/*`, never a block count. Bawa does not document freshness thresholds or recovery procedures. Confirm those with the maintainer.
-
+These routine checks are a future-state runbook for your own setup, not executable procedures or current Bawa monitoring features. The repository has no monitoring, threshold, indexer or tracking code and no allocation table or allocation database. Requirements to index allocations by network and branch apply only to a future operator-managed allocation store, not an existing Bawa schema. Payment-confirmation rules are documented in MAINNET-GUIDE section 14 (pinned wallet policies reviewed 2026-11-10 under register entry M-38): Bitcoin 6 confirmations (a customary recommendation, not a protocol requirement); Ethereum at least 12 confirmations and canonical finalised inclusion (12 confirmations alone are insufficient); TRON 19 distinct active Super Representatives out of 27 with solidified inclusion via `/walletsolidity/*`, never a block count. Bawa does not document freshness thresholds or recovery procedures. Confirm those with the maintainer.
 ### Personal, $0, no server
 
-1. **Daily:** Manually check activity and confirmations for your wallet’s public addresses using an explorer or free RPC.  
-   **Expected result:** a history you can account for, including no change when idle.
+1. **Daily:** Manually check activity and confirmations for your wallet’s public addresses using an appropriate explorer/indexer or watch-only interface that covers both receiving and change addresses.  
+   **Expected result:** a history you can account for; when idle, “no new transfers” means no new transfer-history entries, while existing transfers’ confirmation counts or status may still change.
 
 2. **Weekly:** Review the addresses you follow and cross-check a sample against a second source.  
    **Expected result:** matching history, allowing for differences in update timing.
@@ -1063,11 +1184,12 @@ These checks are guidance for your own setup, not Bawa monitoring features. Paym
 
 - Trust Wallet Core: https://github.com/trustwallet/wallet-core
 - BIP 32, public derivation: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+- SLIP-132, zpub serialization: https://github.com/satoshilabs/slips/blob/master/slip-0132.md
 - Esplora API: https://github.com/Blockstream/esplora/blob/master/API.md
 
-## Monitoring signals, alerts and investigating a missed payment
+## Monitoring signals, alerts and investigating a missed payment (future-state runbook)
 
-These checks belong to your monitoring setup, not Bawa monitoring features. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
+These checks are a future-state runbook for your own monitoring setup, not executable procedures or current Bawa monitoring features. The repository has no monitoring, threshold, indexer or tracking code and no allocation table or allocation database. Allocation-first triage below applies only after your setup implements allocation recording and lookup; indexing allocations by network and branch is a requirement for that future store, not an existing Bawa capability. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
 
 Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
 
@@ -1109,9 +1231,9 @@ Verify reconciliation or escalate
 
 ### When a payment is missing
 
-Use the allocation table as your reference; keep this order.
+Use the allocation table as your reference; scope every step to the payment's network and derivation context (branch or full derivation path), and keep this order.
 
-1. **Address index:** compare the recipient with the address for its allocated index.  
+1. **Address index:** compare the recipient with the address for its allocated index within that same network and derivation context.  
    **Expected result:** the same public address.
 
 2. **Allocation database:** inspect the saved allocation.  
@@ -1129,8 +1251,8 @@ Use the allocation table as your reference; keep this order.
 6. **RPC error:** inspect failures, timeouts and retry history.  
    **Expected result:** successful reads or a recorded fault.
 
-7. **Reorg:** check canonical inclusion and finality.  
-   **Expected result:** current status rather than stale inclusion.
+7. **Reorg:** check canonical inclusion and apply the [per-chain confirmation rules](../mainnet/MAINNET-GUIDE.md#12-wallet-tracking-and-payment-monitoring) to reassess finality; consult the [checkpoint rewind/replay concept](../06-tracking/README.md#L722) for recovery planning.  
+   **Expected result:** current inclusion and finality status under the applicable confirmation rules rather than stale inclusion.
 
 8. **Token contract mismatch:** compare EVM contract addresses, not symbols.  
    **Expected result:** the expected contract.
@@ -1138,16 +1260,18 @@ Use the allocation table as your reference; keep this order.
 9. **Network:** compare allocation, transaction and provider networks.  
    **Expected result:** matching chain/network identifiers.
 
-Bawa does not document replay or gap-expansion procedures. Any recovery action needs confirmation from the maintainer before tracking is changed.
+Bawa documents checkpoint rewind and replay conceptually in [tracking](../06-tracking/README.md#L722), but executable database-specific rewind/replay commands and gap-expansion procedures are not documented. Any recovery action needs confirmation from the maintainer before tracking is changed.
 
 ### Sources
 
+- [Tracking documentation, checkpoint rewind and replay concepts](../06-tracking/README.md#L722)
+- [Mainnet guide, per-chain confirmation rules](../mainnet/MAINNET-GUIDE.md#12-wallet-tracking-and-payment-monitoring)
 - BIP 32, public derivation: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
 - BIP 44, branches and gap discovery: https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki
 
 ## What to back up and how to rotate it
 
-Back up the complete recovery set, not only the wallet’s working files. Bawa does not document backup file locations, export or encryption procedures, restore checks or retention counts. Confirm these with the maintainer before relying on your backups.
+Back up the complete recovery set, not only the wallet’s working files. Bawa documents keeping backup components in separate locations and 2–3 offline copies in separate places, provides AES-GCM tooling (`tools/decrypt_seed.py`) and documents the section 3 recovery drill required before funding. The storage guidance does not specify exact filesystem paths, and the redundant-copy recommendation is not a retention count. Confirm any unspecified backup paths, export/encryption procedures and retention requirements with the maintainer before relying on your backups.
 
 ### 1. Keep a complete recovery set
 
@@ -1166,7 +1290,7 @@ A policy record does not replace access to a required passphrase.
 
 ### 2. Keep secrets out of plain text and git
 
-Do not store mnemonics, seeds, private keys, passphrases, passwords or encryption/data keys in plain-text backups. That includes secret-bearing configuration, notes, screenshots and logs.
+Do not store mnemonics, seeds, private keys, passphrases, passwords or encryption/data keys in plain-text digital backups. That includes secret-bearing configuration, notes, screenshots and logs. Physically secured offline mnemonic recovery copies on paper or metal are appropriate, as prescribed in docs/08.
 
 Keep wallet recovery material out of git, including encrypted artefacts; a private repository is not a secret store. Store the encryption-key backup separately from the seed artefact, not bundled into the same backup set. Confirm the protection and storage arrangement with the maintainer.
 
@@ -1203,13 +1327,13 @@ A compromised seed requires a new wallet, not a restored backup. See **Incident 
 ### Sources
 
 - CISA, *Data Backup Options*: https://www.cisa.gov/sites/default/files/publications/data_backup_options.pdf (checked 8 November 2026; the site returns HTTP 403 to automated checks)
-- NCSC, *Backing up your data*: https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
+- NCSC, *Small organisations guide to cyber security* (collection): https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security
 
 ## Restore drills and what changes the recovery picture
 
 Keep funding on hold until the encrypted backup has passed a restore check. Repeat after every backup change and regularly between changes.
 
-1. **Confirm the supported route.** The command syntax and output behaviour of `tools/decrypt_seed.py` are documented in docs/08 §3, including the invocation `python3 tools/decrypt_seed.py /path/to/seed.enc.json`. The full restore sequence and drill frequency remain undocumented. Confirm these with the maintainer, together with suitable public fixtures and controlled-environment requirements. If those details cannot be confirmed, stop rather than improvise.  
+1. **Confirm the supported route.** The command syntax and output behaviour of `tools/decrypt_seed.py` are documented in docs/08 §3, including the invocation `python3 tools/decrypt_seed.py /path/to/seed.enc.json`. The set-up and six-step recovery drill are also documented in docs/08 §3; follow those instructions. Seek maintainer clarification only where details such as drill frequency, suitable public fixtures or controlled-environment requirements remain unspecified. If those details cannot be confirmed, stop rather than improvise.  
    **Expected result:** agreed instructions and known public reference checks.
 
 2. **Practise without funds.** Only run `tools/decrypt_seed.py` under the agreed isolated, offline conditions. Practise with `<PUBLIC_FIXTURE>` and its public test inputs in a fresh `<SCRATCH_DIRECTORY>`, away from live wallet files and synchronised storage. Use no real funds. Keep decrypted material out of logs, screenshots and support messages.  
@@ -1218,7 +1342,7 @@ Keep funding on hold until the encrypted backup has passed a restore check. Repe
 3. **Test the backup itself.** A fixture pass does not validate your wallet backup. Under the same controlled conditions, use the confirmed recovery method to restore a copy of `<ENCRYPTED_BACKUP>` from its intended storage into a fresh scratch location. Preserve the original. Verify the restored wallet using the public identity check agreed with the maintainer; do not use a funds transfer as the test.  
    **Expected result:** the expected public identity matches; successful decryption alone is insufficient.
 
-4. **If anything fails, stop.** A missing file, decryption error or verification mismatch means the drill has not passed. Pause new funding, preserve existing copies and keep any working wallet intact. Ask the maintainer to investigate using non-secret diagnostics only. Test another independent copy if available, then repeat the complete drill after any correction. Bawa does not document repair steps; confirm them rather than guessing.  
+4. **If anything fails, stop.** A missing file, decryption error or verification mismatch means the drill has not passed. Pause new funding, preserve existing copies and keep any working wallet intact. Ask the maintainer to investigate using non-secret diagnostics only. Test another independent copy if available, then repeat the complete drill after any correction. Bawa does not document repair steps in the checked `docs/08` material; confirm them rather than guessing.  
    **Expected result:** recovery recorded as unverified until a complete repeat passes.
 
 5. **Close and schedule.** Record the backup revision, date and outcome without secrets. Follow the confirmed cleanup method for scratch data. Set the next drill date; repeat sooner whenever the backup, its encryption or its storage changes.  
@@ -1228,7 +1352,7 @@ Keep funding on hold until the encrypted backup has passed a restore check. Repe
 
 - **Backup failure:** that copy offers no demonstrated recovery. An independent copy may still work, but must pass its own drill. Bawa does not document replacement from a working wallet; confirm whether and how that route is supported.
 - **Media loss:** recovery now depends on an accessible, tested independent copy or another supported route. Two copies on the missing device do not help. Confirm any alternative route with the maintainer.
-- **Lost passphrase:** if decryption requires the missing passphrase, extra copies do not solve the problem. Bawa does not document a bypass; confirm whether an independent recovery route exists with the maintainer. Without one, recovery may be impossible.
+- **Lost passphrase:** if decryption requires the missing passphrase, extra copies requiring the same missing passphrase do not solve the problem. Bawa does not document a bypass; confirm whether an independent recovery route exists with the maintainer. Without one, recovery may be impossible.
 
 For suspected or confirmed seed compromise, see **Incident response**. A backup is not a substitute for a new wallet.
 
@@ -1240,7 +1364,7 @@ For suspected or confirmed seed compromise, see **Incident response**. A backup 
 
 Secret scanning belongs in everyday development as well as release preparation.
 
-Bawa does not document a scanner configuration, a reproducibility procedure, review acceptance criteria or passing reports for its release gates. It also does not publish a signing key in the repository. **Keep every gate without its own evidence marked BLOCKED.** Installation success or the differential test alone must never pass a gate.
+Bawa does not document a scanner configuration, a reproducibility procedure, review acceptance criteria or passing reports for its release gates. It also does not publish a public verification key in the repository. **Keep every gate without its own evidence marked BLOCKED.** Installation success or the differential test alone may pass only its corresponding explicitly scoped gate, not unrelated release gates.
 
 Confirm the missing procedures, criteria and gate-specific evidence with the maintainer, including where public verification material can be obtained and authenticated. Never request private signing material.
 
@@ -1257,11 +1381,45 @@ Agree the following routine with the maintainer. Confirm the chosen scanner, ver
 
 Local hooks are useful, but they can be bypassed. Keep the independent CI check.
 
+#### Scanning runbook
+
+1. **Scope and cadence:** scan staged content before every commit. Scan the proposed commit and complete history for all agreed branches and tags on every pull request, push and release candidate. Run a full-history baseline before enabling the gate, repeat weekly, and repeat after imports, history rewrites or scanner/rule changes. Before CI scanning, fetch and verify the candidate commit and expected refs; `--all` covers only refs present locally.
+
+2. **Execute:** install the agreed, pinned scanner version and use maintainer-approved configuration, ignore rules and baseline policy, not unreviewed pull-request changes. For a Gitleaks version documenting these flags, run this example from the repository root with `GITLEAKS_CONFIG` pointing to the approved rules file. Use the staged invocation in the hook and the history invocation in CI and scheduled scans. Verify redaction with synthetic fixtures first.
+
+   ```sh
+   set -eu
+   umask 077
+   : "${GITLEAKS_CONFIG:?Set the absolute path to the approved rules file}"
+   reports="$(mktemp -d)"
+   printf 'Private scan reports: %s\n' "$reports"
+
+   gitleaks git --pre-commit --staged --config "$GITLEAKS_CONFIG" \
+     --redact=100 --report-format=json --report-path="$reports/staged.json" \
+     . >"$reports/staged.log" 2>&1
+
+   test "$(git rev-parse --is-shallow-repository)" = false
+   gitleaks git --config "$GITLEAKS_CONFIG" \
+     --log-opts="--all --full-history -m" --redact=100 \
+     --report-format=json --report-path="$reports/history.json" \
+     . >"$reports/history.log" 2>&1
+
+   rm -rf "$reports"
+   ```
+
+3. **Pass criteria:** every required scan must complete successfully with verified scope and no unresolved findings. Any non-zero exit, missing ref, shallow history, scanner error or coverage gap blocks the commit/check/release. Document narrowly scoped, maintainer-approved false positives without secret values; never hide an unresolved leak in a baseline or broad allowlist.
+
+4. **Contain findings immediately:** stop the affected commit or release and notify the maintainer through a restricted channel. Keep failed-run reports private; do not paste credentials or matched source lines into logs, tickets or chat. Share only verified-redacted summaries, rule IDs, paths and commit IDs. For confirmed or credible credential exposure, promptly disable/revoke the old credentials, issue replacements and update authorised consumers—do not wait for exposure assessment or history cleanup. Wallet private keys and seeds cannot be revoked: move assets to a fresh, independently generated wallet and retire the compromised wallet.
+
+5. **Assess and remediate:** establish when and where exposure occurred, including affected refs, clones/forks, logs, artifacts and external destinations. Review credential permissions and access/audit records for misuse. Remove secrets from source and configuration, use an appropriate secret store, and sanitise affected logs/artifacts. Coordinate any necessary history rewrite and downstream cleanup; rewriting history does not erase other people's copies.
+
+6. **Rescan and close:** rescan amended changes and the complete agreed history after remediation. Verify revocation or wallet migration and replacement configuration before resuming releases. Close the finding only when the pass criteria hold; record scanner/rule versions, scanned refs, redacted disposition and the next scheduled scan. Delete private failure reports when authorised triage no longer needs them.
+
 ### Triage: verify, fix, re-scan, record
 
-1. **Verify the finding.** Identify the scanner rule, file, commit and responsible owner without reproducing the value. Use only a placeholder such as `<SECRET_PLACEHOLDER>` in discussion. Establish whether the match represents an exposed secret or a false positive; do not test it by signing in or submitting it to another service. Ask the maintainer what evidence is required before accepting a narrow exception.
+1. **Verify the finding.** Identify the scanner rule, file, commit and responsible owner without reproducing the value. Use only a placeholder such as `<SECRET_PLACEHOLDER>` in discussion. Establish whether the match represents an exposed operational secret, an intentionally public test fixture or a false positive; do not test it by signing in or submitting it to another service. The repository's published test-vector mnemonic, also shipped in `tools/hdwallet-gen/generate.js` and `test/differential_test.py`, is an intentionally public fixture, not a leaked operational credential. `test/smoke.test.js` contains only public material derived from that vector and no mnemonic, seed or private key. Ask the maintainer what evidence is required before accepting a narrow exception.
 
-2. **Fix the exposure.** For a confirmed leaked credential, have its owner revoke it and rotate its replacement through an authorised process. Remove it from current files and keep replacement secrets outside the repository. Deletion alone is not remediation. Wallet keys and mnemonics may not have a revocation mechanism: confirm safe replacement and asset-migration steps with the maintainer rather than assuming rotation invalidates the old wallet.
+2. **Fix the exposure.** For a confirmed leaked credential, have its owner revoke it and rotate its replacement through an authorised process. Remove it from current files and keep replacement secrets outside the repository. Deletion alone is not remediation. Wallet keys and mnemonics may not have a revocation mechanism: confirm safe replacement and asset-migration steps with the maintainer rather than assuming rotation invalidates the old wallet. Wallets derived from the public mnemonic fixture must never be funded, and the mnemonic must never be reused for operational purposes, even with an approved narrow exception.
 
 3. **Re-scan.** Repeat the affected-file scan and the agreed history scan after remediation. Check that the scanner completed and covered the intended refs. Any remaining match needs investigation; do not hide it with a broad exclusion.
 
@@ -1285,7 +1443,7 @@ Coordinate a history purge where possible, using a method confirmed with the mai
 
 ### Verify the tag or commit signature
 
-Bawa currently has no published maintainer signing key, no tags and no successfully verified commit signatures. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
+As of the audit of commit `3019b02`, no published maintainer signing key, tags or successfully verified commit signatures were identified in the repository material reviewed for that revision. The required signature-verification gate is blocked. Do not install dependencies under this gate until the maintainer provides a signed tag or commit for the intended revision, you authenticate the corresponding public signing key through a separate trusted channel and the signature check succeeds.
 
 For the intended tag:
 
@@ -1343,9 +1501,10 @@ Bawa does not document a reproducibility procedure, external-review acceptance c
 | Integration tests | Recorded integration run | BLOCKED, no report. |
 | Recovery drill | Recorded recovery exercise | BLOCKED, no report. |
 | Artefacts/checksums | Recorded release artefacts and checksum evidence | BLOCKED, checksum files absent. |
-| Security policy | Confirmed publication | BLOCKED, publication unconfirmed. |
+| Security policy publication | Confirmed publication | MET, `SECURITY.md` is published in the repository. |
+| Security policy readiness | Actionable policy | BLOCKED, missing disclosure procedure, private contact and report-handling procedure. |
 
-On success, `test/differential_test.py` prints “bip_utils reference checks: PASS”. This is differential-testing evidence only. Neither it nor a green installation job clears other gates.
+On success, `test/differential_test.py` prints “bip_utils reference checks: PASS”. The PASS covers only BTC/ETH index-0 comparisons; prefer a scoped PASS/PARTIAL assessment backed by execution evidence, since the printed PASS alone is not proof of execution. A verified run provides differential-testing evidence only. Neither it nor a green installation job clears other gates.
 
 Checksum files, signed checksums and build provenance, such as SLSA-style attestations, are future options, not present in this tree. Confirm any future publication and verification scheme with the maintainer.
 
@@ -1380,33 +1539,33 @@ Tagged release
 
 OI-065 — Operational/security ownership and a vulnerability-disclosure procedure are not established by the supplied evidence. Obtain maintainer-approved responsibilities, a reporting channel, and handling/escalation instructions, and publish them here. No reporting channel or response commitment is claimed meanwhile. Owner: W2 (documentation closure).
 
-The guides give no incident-response playbook today beyond this section. Use the playbook created here in docs/10 for the operations-side response, and cross-reference [docs/15](../15-threat-model-and-theft-prevention/README.md) for the holder-side playbook. Do not treat these instructions as evidence that any incident has been rehearsed or any response tested.
+The guides already include an incident-response playbook in docs/15, but operational/security ownership and approved vulnerability-disclosure and incident-handling procedures are not established. Use the playbook created here in docs/10 for the operations-side response, and cross-reference [docs/15](../15-threat-model-and-theft-prevention/README.md) for the holder-side playbook. Do not treat these instructions as evidence that any incident has been rehearsed or any response tested.
 
-Follow each scenario in order: contain first, choose trusted-device recovery or fresh-seed migration, revoke approvals and sessions, then escalate and review before resuming. Preserve devices and incident records throughout.
+For each scenario, begin containment immediately; perform urgent approval/session revocation and escalation in parallel when delay could allow further harm, rather than waiting for recovery or migration to finish. Use a trusted device for revocation. Escalate immediately for unauthorized transfers, key/seed or sensitive-data exposure, suspected vulnerability exploitation, impact beyond a single holder, or failed containment. Contact the affected holder and the relevant wallet/provider security team or official support channel using independently verified contact details; because operational/security ownership is not established, identify and record a response lead and escalation contacts. Choose trusted-device recovery or fresh-seed migration as appropriate. Resume only after containment is verified, affected approvals and sessions are revoked or otherwise invalidated, recovery or migration is complete on a trusted device, and the holder and response lead have reviewed the incident and accepted any residual risk. Preserve devices and incident records throughout.
 
-> **Warning:** Changing the vault password cannot secure an exposed phrase. A compromised seed is not a password you can reset; only a fresh seed and migration can secure your holdings. Generate a new wallet with a fresh seed on a fresh trusted device, move every asset and token into it, and retire the old wallet permanently. Check that every asset and token has moved before treating migration as complete.
+> **Warning:** Changing the vault password cannot secure an exposed phrase. A compromised seed is not a password you can reset; for ordinary seed-controlled wallets, only a fresh seed and migration can secure transferable holdings. Generate a new wallet with a fresh seed on a fresh trusted device, move every transferable asset, token, and NFT into it, and migrate or unwind positions where supported. Locked or nontransferable holdings and positions may not be migratable: check the protocol's withdrawal or recovery options, and treat anything still controlled by the compromised seed as at risk. Plan for gas fees on each relevant network; funds added to the compromised wallet for gas can also be stolen. Check that every intended transfer, position migration, and withdrawal has the appropriate network confirmations and verify receipt in the new wallet before treating migration of those holdings as complete. Never reuse the old wallet for new holdings; retire it permanently once recovery is finished.
 
 > **Warning:** Reusing suspect software or disclosing your seed during recovery can expose signing secrets. Use a separate, trusted device, not another browser profile on the suspect machine, without carrying over the suspect installation, dependencies or `.env`. Keep your seed out of recovery websites and reject anyone claiming to be support who asks for it. Authorise transfers without returning to the suspect device or following unsolicited recovery links. Check that recovery and transfers use the clean environment without disclosing signing secrets.
 
 ### Lost or stolen device
 
-1. **Contain.** Stop signing transactions and interacting with any suspected service. Stop using the affected device if you still have access to it. Keep devices and incident records intact rather than wiping devices or deleting records.
+1. **Contain.** Stop signing transactions on affected devices or through suspected services, and stop interacting with those services. Use a known-clean device and verified, trusted tools for necessary rescue transactions. Stop using the affected device if you still have access to it. Consider remotely locking the device and revoking affected sessions from a known-clean device to limit further access. Keep incident records intact and preserve devices rather than wiping them where safe. If ongoing risk to funds or sensitive data cannot be contained otherwise, consider wiping an affected device, preserving relevant evidence first where feasible.
 
 2. **Move to a clean device.** Use a separate, trusted device for recovery and apply the clean-environment requirements above.
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only while there is no reason to suspect signing-secret exposure. If exposure is suspected or established, generate a replacement wallet with a fresh seed instead.
 
-4. **Move assets.** For migration, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets and continuing with other holdings as they can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For migration, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings and continuing with other holdings as they can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
-5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface.
+5. **Revoke approvals.** From the clean environment, use a trusted interface to inventory token allowances, NFT/operator approvals, and supported permit-based permissions for every affected account on each network it used. For suspicious permissions, verify the network, account, and spender/operator before signing the appropriate zero-allowance, approval-removal, or supported permit-revocation transaction. Confirm transaction finality and independently recheck on-chain state to verify zero allowances and cleared NFT/operator or permit permissions, as applicable; record transaction references and any failed, unsupported, or unverified revocations. Do not delay required fresh-seed migration to attempt or verify revocation: an attacker retaining the signing key can reapprove.
 
 6. **Rotate related access.** Confirm session-revocation support with the relevant account or service issuers, revoke affected sessions where supported, and record any unsupported or unverified revocation. Replace exposed account credentials and service keys through their issuers.
 
 7. **Preserve evidence.** Retain relevant logs and incident records separately from the clean installation. Escalate unresolved account or session exposure through the relevant issuers. Prepare a redacted record of maintainer-dependent questions under the escalation requirements below.
 
-8. **Review before resuming.** Establish what the device loss exposed and close the original access path. Keep any wallet with exposed signing secrets permanently retired, and leave unresolved recovery or revocation checks open.
+8. **Review before resuming.** Establish what the device loss exposed and close the original access path. If migration is required, independently verify the intended networks and fresh-seed destination addresses, and confirm finalized receipt of all transferable holdings before treating migration as complete. Document immovable holdings and failed or unverified transfers or revocations as exceptions, including reasons, residual access/exposure, mitigations applied, and required follow-up; apply and verify available mitigations for residual access. Keep any wallet with exposed signing secrets permanently retired, and leave unresolved recovery or revocation checks open. Unverified required transfers or unresolved affected account/session access block resumption and a recovery pass; documenting an exception does not clear these blockers.
 
-> **Expected result:** Confirm either trusted-device recovery with no reason to suspect signing-secret exposure, or complete fresh-seed migration with the old wallet permanently retired. Resolve affected account and session access before recording a recovery pass.
+> **Expected result:** Do not record a recovery pass until either trusted-device recovery is verified with no reason to suspect signing-secret exposure, or fresh-seed migration is complete with the old wallet permanently retired. In either case, all affected account and session access must be resolved. An incomplete or unverified applicable recovery path or unresolved affected access blocks a pass; leaving checks open does not satisfy this gate.
 
 ### Suspected vault compromise
 
@@ -1416,7 +1575,7 @@ Follow each scenario in order: contain first, choose trusted-device recovery or 
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only after establishing that there is no reason to suspect signing-secret exposure. Otherwise, generate a replacement wallet with a fresh seed. Apply the fresh-seed migration requirement rather than relying on a vault-password change.
 
-4. **Move assets.** For migration, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets before continuing with other holdings that can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For migration, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings before continuing with other holdings that can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
 5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface. Keep approval revocation separate from the migration required for signing-secret exposure.
 
@@ -1456,27 +1615,27 @@ Follow each scenario in order: contain first, choose trusted-device recovery or 
 
 3. **Create a new wallet with a new seed.** Choose trusted-device recovery of the existing wallet only while there is no reason to suspect signing-secret exposure. A genuinely approval-only incident does not automatically require wallet replacement. If signing secrets were exposed, or malicious code could have read them, generate a replacement wallet with a fresh seed and take the migration route.
 
-4. **Move assets.** For the migration route, move every asset and token to the replacement wallet, prioritising the highest-value liquid assets before continuing with other holdings that can safely be moved. Retire the old wallet permanently.
+4. **Move assets.** For the migration route, the replacement wallet must use a fresh seed independent of the old wallet's seed. Move every asset and token that can safely be transferred to that wallet, prioritising the highest-value safely recoverable holdings before continuing with other holdings that can safely be moved. Document any stranded assets, including holdings that are locked, nontransferable, or unsafe to move. Retire the old wallet permanently.
 
-5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted interface. For an incident established as approval-only, make this the principal containment action once the scope is known.
+5. **Revoke approvals.** Remove suspicious permissions from the clean environment using a trusted external interface such as [Revoke.cash](https://revoke.cash/) on supported chains; this repository provides no revocation procedure. For each affected chain and owner account, identify the relevant token contracts and suspicious spender/operator addresses, submit the corresponding allowance or NFT-approval revocations, and wait for confirmed successful transactions. Independently verify the resulting on-chain state for each scoped chain, account, token contract and spender/operator using a trusted explorer or RPC (allowance `0`, token-specific approval cleared or operator approval `false`, as applicable). Disconnecting the dApp does not revoke on-chain approvals. For an incident established as approval-only, make this the principal containment action once the scope is known.
 
 6. **Rotate related access.** Confirm session-revocation support with the relevant account or service issuers, revoke affected sessions where supported, and record any unsupported or unverified revocation. Replace exposed account credentials and service keys through their issuers.
 
 7. **Preserve evidence.** Save transaction hashes, recipient addresses, phishing communications and relevant logs. Escalate affected account or service access through its issuer. Record any maintainer-dependent transaction-reconciliation or dependency questions under the requirements below.
 
-8. **Review before resuming.** Establish whether the incident involved suspicious permission, signing-secret exposure or a tracker fault, and close the original access path. Apply the missed-payment or malicious-dependency acceptance requirements below where relevant.
+8. **Review before resuming.** Establish all applicable incident types—suspicious permissions, signing-secret exposure, malicious direct transfer and tracker fault—and close all relevant access paths. A malicious direct transfer need not involve either approval or signing-secret exposure; causes can coexist. Apply the missed-payment or malicious-dependency acceptance requirements below where relevant.
 
-> **Expected result:** Confirm removal of suspicious permissions for an approval-only incident, or complete fresh-seed migration and permanent retirement for signing-secret exposure. For a tracker fault, confirm transaction status independently and keep recovery open until the required reconciliation expectations are agreed and met.
+> **Expected result:** Confirm on-chain removal of all scoped suspicious permissions wherever present, and complete fresh-seed migration and permanent retirement whenever signing-secret exposure is established. For a malicious direct transfer, independently confirm its transaction status and close the initiating access path; do not infer approval or signing-secret exposure from the transfer alone. Apply all relevant requirements when causes coexist. For a tracker fault, confirm transaction status independently and keep recovery open until the required reconciliation expectations are agreed and met.
 
 ### Escalation and acceptance requirements
 
-Keep maintainer-dependent escalation pending while no vulnerability-disclosure procedure, contact or channel exists. Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
+Keep maintainer-dependent disclosure work pending while no vulnerability-disclosure procedure or private reporting contact is currently provided in this repository; do not delay independent containment. Retain the redacted incident record and track the required maintainer decisions alongside the maintainer-owned disclosure open item. Do not treat an assumed private disclosure path as available. Use the relevant issuers for affected account and service access, and confirm session-revocation support and results rather than assuming a Bawa-specific revocation procedure.
 
 > **Warning:** Sharing incident records containing secrets can extend the exposure. Keep incident material separate from the clean installation and redact secrets from anything shared with a maintainer. Never send a seed, private key, data key or unredacted `.env`. Check each item for secrets before sharing it.
 
 Apply these additional operational acceptance requirements where relevant:
 
-- **Leaked data key:** Bawa does not document an exact recovery response. Require maintainer confirmation of what the key controls, whether and how replacement is supported, what happens to existing data, and which result demonstrates recovery. Keep those questions open until confirmation is available, and record no pass until the expectations are agreed and met.
+- **Leaked data key:** `docs/08` does not document an exact recovery response. Require maintainer confirmation of what the key controls, whether and how replacement is supported, whether access using the old key can be invalidated, how existing ciphertext is affected, and which result demonstrates recovery. Keep those questions open until confirmation is available, and record no pass until the expectations are agreed and met.
 - **Missed payment:** Bawa does not document an exact missed-payment recovery response. Independently check transaction status on the intended chain. Require maintainer confirmation of safe reconciliation, duplicate-prevention behaviour and the expected tracker record before treating recovery as a pass.
 - **Malicious dependency:** Bawa does not document a definitive clean-state check or expected recovery output. Require maintainer confirmation of trusted dependency versions, restoration steps and acceptance checks before running Bawa again.
 
