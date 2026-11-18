@@ -374,7 +374,7 @@ The refusals `data key must be exactly 32 bytes` and `malformed encrypted artifa
 
 With `--output`, choose a destination you control, such as `/path/to/recovered-mnemonic.txt`. An output path that is a symlink is rejected with `refusing symlinked output path`, including a dangling symlink whose target does not exist.
 
-Expect the temporary output path to be protected too. A symlink there is refused. The temporary file is created with `O_EXCL` and permissions `0600`. If creation raises FileExistsError, the tool refuses a symlink at the temporary path; otherwise it unlinks that path and retries creation. A pre-existing non-symlink temporary file can therefore be silently removed and recreated. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
+Expect the temporary output path to be protected too. The tool uses `tempfile.mkstemp` to create a randomly named temporary file in the output directory with `O_EXCL` and permissions `0600`. If a candidate path already exists, including a symlink, `mkstemp` retries internally with a new random name without unlinking the existing path. Successful writing places the final file atomically and explicitly sets its permissions to `0600`, owner read and write only.
 
 Investigate unexpected temporary entries rather than deleting them blindly or disabling these safeguards.
 
