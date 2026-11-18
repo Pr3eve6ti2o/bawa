@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatNativeAmount, formatNativeWithSymbol } from './format';
+import { decimalToBaseUnits, formatNativeAmount, formatNativeWithSymbol } from './format';
 
 describe('formatNativeAmount', () => {
   it('formats zero', () => {
@@ -40,5 +40,21 @@ describe('formatNativeAmount', () => {
 
   it('appends the symbol', () => {
     expect(formatNativeWithSymbol('150000000', 8, 'BTC')).toBe('1.5 BTC');
+  });
+});
+
+describe('decimalToBaseUnits', () => {
+  it('converts exact decimal amounts without floats', () => {
+    expect(decimalToBaseUnits('1.5', 18)).toBe('1500000000000000000');
+    expect(decimalToBaseUnits('0.00000001', 8)).toBe('1');
+    expect(decimalToBaseUnits('0', 6)).toBe('0');
+    expect(decimalToBaseUnits('12', 6)).toBe('12000000');
+  });
+
+  it('returns null for invalid or over-precise amounts', () => {
+    expect(decimalToBaseUnits('abc', 18)).toBeNull();
+    expect(decimalToBaseUnits('-1', 18)).toBeNull();
+    expect(decimalToBaseUnits('1.234567891', 8)).toBeNull();
+    expect(decimalToBaseUnits('', 18)).toBeNull();
   });
 });

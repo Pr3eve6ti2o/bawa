@@ -38,3 +38,17 @@ export function formatNativeWithSymbol(
 ): string {
   return `${formatNativeAmount(valueBaseUnits, decimals)} ${symbol}`;
 }
+
+/**
+ * Convert a human decimal amount (e.g. "1.5") into smallest units
+ * ("1500000000000000000" at 18 decimals). Returns null for an invalid
+ * amount or one with more fraction digits than the chain supports.
+ */
+export function decimalToBaseUnits(amount: string, decimals: number): string | null {
+  const trimmed = amount.trim();
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
+  const [whole, fraction = ''] = trimmed.split('.');
+  if (fraction.length > decimals) return null;
+  const combined = (whole + fraction.padEnd(decimals, '0')).replace(/^0+(?=\d)/, '');
+  return combined === '' ? '0' : combined;
+}
