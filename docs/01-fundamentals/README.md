@@ -12,7 +12,7 @@ The exact construction is:
 
 > Seed = PBKDF2-HMAC-SHA512(mnemonic in UTF-8 NFKD, salt "mnemonic" + passphrase in UTF-8 NFKD, 2048 iterations, 64-byte output). With Bawa's empty passphrase the salt is the literal string "mnemonic".
 
-**Empty passphrase.** BIP-39 defines the empty string as the default when you do not supply a passphrase. Bawa’s policy is empty-only: if you supply any non-empty passphrase input, Bawa rejects it, never silently replacing or trimming it. That rejection is Bawa’s rule, not a BIP-39 requirement.
+**Empty passphrase.** BIP-39 defines the empty string as the default when you do not supply a passphrase. Bawa’s policy is empty-only, not a BIP-39 requirement. The repository tools expose no passphrase input; `generate.js` always uses the empty string.
 
 **Word counts.** BIP-39 supports entropy lengths from 128 to 256 bits in 32-bit steps, giving 12, 15, 18, 21 or 24 words. ENT is the entropy length, CS is the checksum length and MS is the mnemonic word count.
 
@@ -149,9 +149,9 @@ This is a convention, not a universal law. Use accounts to separate logical wall
 
 Branch `0` is external/receiving; branch `1` is internal/change. Ethereum tooling commonly keeps branch `0` and increments the final index.
 
-Store the index in your application; never reconstruct it by guessing from a few addresses. Persist the last-used and next index per account and branch. Record allocations before payment arrives: an unpaid address can look unused.
+Store the index in your application; never reconstruct it by guessing from a few addresses. Persist the last-used and next index per account and branch. Record allocations before payment arrives: an unpaid address can look unused. BIP-44 discovery scans only the external (receiving) chain and stops after 20 consecutive unused addresses, so keep per-branch allocation high-water marks and use them to extend restoration scans, because an issued-but-unused address can contribute to a gap that hides later activity from default discovery.
 
-**Why the path and passphrase are fixed.** The fixed path and empty BIP-39 passphrase are what make the same mnemonic reproduce the same addresses. A different path or a non-empty passphrase gives you different addresses and an apparently empty wallet. The funds are not lost, but they are unreachable from this policy. Do not add any alternative-path or passphrase option.
+**Why the path and passphrase are fixed.** The fixed derivation path and empty BIP-39 passphrase are Bawa policy, not BIP requirements. Keeping both fixed makes the same mnemonic reproduce the same addresses. The tools expose no passphrase input and always use the empty passphrase. A different path or a non-empty passphrase used elsewhere gives you different addresses and can make the wallet appear empty. Funds at addresses derived outside Bawa’s policy are not lost, but they are unreachable with these tools. Do not add any alternative-path or passphrase option.
 
 ## 5. Mnemonic, seed, private key, extended public key: what each is
 
@@ -164,9 +164,9 @@ Keep these distinct:
 
 Your mnemonic reproduces the intended seed only with the same BIP-39 passphrase. A bare private key lacks the chain code needed for HD derivation. An account extended private key, or xprv, recovers only its subtree; the seed or master xprv is root-level material.
 
-**What an xpub exposes.** An extended public key, or xpub, includes the chain code needed for non-hardened public-child derivation. Anyone holding an account xpub can derive every receiving and change address below that account, including unissued ones, and link their on-chain activity.
+**What an xpub exposes.** An extended public key, or xpub, includes the chain code needed for non-hardened public-child derivation. Anyone holding an account xpub can derive every receiving and change address on entirely non-hardened paths below that account, including unissued ones, and link their on-chain activity.
 
-On its own, an xpub cannot recover hardened private ancestors or authorise a spend. Treat it as sensitive public material. Keep it out of public logs and unrestricted exports.
+On its own, an xpub cannot recover private keys or authorise a spend. Paired with a descendant private key whose path from the xpub is entirely non-hardened, however, it reveals the corresponding extended private key and hence every descendant key. A hardened edge on that path blocks this recovery. Treat an xpub as sensitive public material. Keep it out of public logs and unrestricted exports.
 
 ## 6. Hardened derivation and watch-only design
 
@@ -174,7 +174,7 @@ Keep your address server on the public side. For `m/44'/60'/0'/0/i`, the purpose
 
 Export the account xpub at `m/44'/60'/0'`. Your server derives `/0/0`, `/0/1`, `/0/2`… for deposit addresses without signing authority.
 
-This design is unsafe if any private key on the non-hardened branch reaches someone holding the account xpub: one leaked address private key recovers the account private key. BIP-44 hardens account levels to contain the damage. An account compromise cannot be reversed through the hardened account edge to the coin-type parent or sibling accounts.
+This design is unsafe if someone holding the account xpub obtains any descendant private key whose entire path from the account is non-hardened: one leaked address private key on such a path recovers the account extended private key and hence every descendant key. A hardened edge on that path blocks this recovery. BIP-44 hardens account levels to contain the damage. An account compromise cannot be reversed through the hardened account edge to the coin-type parent or sibling accounts.
 
 **SLIP-0010 curves.** [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) uses these master HMAC keys:
 
@@ -188,7 +188,7 @@ This design is unsafe if any private key on the non-hardened branch reaches some
 For ed25519 and curve25519, you must derive children through a hardened step from a private parent. There is no non-hardened derivation, so you cannot derive a watch-only sequence of new addresses from a public node.
 ## 7. Paths, accounts, change and indexes
 
-An account separates your logical wallets within one seed; it does not create separate backups. The same seed recovers both. Branch `0` is external/receiving; branch `1` is internal/change. Record address allocations before payment arrives: an unpaid address can look unused. Persist the last-used and next index per account and branch. Never reconstruct an index by guessing from a few addresses.
+An account separates your logical wallets within one seed; it does not create separate backups. The same seed recovers both. Branch `0` is external/receiving; branch `1` is internal/change. Record address allocations before payment arrives: an unpaid address can look unused. Persist the last-used and next index per account and branch. Never reconstruct an index by guessing from a few addresses. BIP-44 account discovery scans only the external (receiving) chain and stops its address scan after 20 consecutive unused addresses (the gap limit).
 
 The fixed path and the empty [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) passphrase are what make the same mnemonic reproduce the same addresses. If you use a different path or a non-empty passphrase, you get different addresses and an apparently empty wallet. The funds are not lost, but they are unreachable from this policy. Do not add any alternative-path or passphrase option.
 
@@ -246,7 +246,7 @@ For 24 words, 256 entropy bits plus 8 checksum bits make 264 bits. The last word
 | Output | 64 bytes: the seed |
 | Bawa’s empty passphrase | `""`, so the salt is the literal string `"mnemonic"` |
 
-**Leak rule (§3):** if you expose a parent extended public key and one descendant private key on an all-non-hardened path, you reveal the parent private key.
+**Leak rule (§3):** if you expose a parent extended public key and one descendant private key reached from that parent through an entirely non-hardened path, you reveal the parent extended private key and hence every descendant key. A hardened edge on that path blocks this recovery.
 
 **Address server (§6):** the account xpub at `m/44'/60'/0'` lets you derive deposit addresses without signing authority.
 
@@ -278,17 +278,17 @@ Recording rules:
 
 3. **Setting a BIP-39 passphrase, then forgetting it or expecting a reset.** Do not confuse it with your vault unlock passphrase. Record the exact BIP-39 passphrase offline, separately from your mnemonic, and practise recovery with disposable testnet data. If you lose it but a device can still sign, migrate while access remains.
 
-4. **Using one address for everything, or publishing an account `xpub`.** Use a fresh receiving address per payment and one account per purpose. Give the `xpub` only to the specific service needing that account's visibility. Never give descendant private keys to an `xpub` recipient.
+4. **Using one address for everything, or publishing an account `xpub`.** Use a fresh receiving address per payment and one account per purpose. Give the `xpub` only to the specific service needing that account's visibility. Never give descendant private keys to an `xpub` recipient. Record issued receiving-address indices: issuing many addresses that remain unused can create a gap of 20 consecutive unused addresses, so default BIP-44 discovery may miss activity at higher indices.
 
 5. **Giving an address server an `xprv`, or importing a child private key alongside a shared `xpub`.** Keep the server watch-only. The hardened purpose, coin and account levels block key recovery into higher ancestors; they do not protect the rest of the compromised account.
 
-6. **Restoring with the wrong path, coin type or wordlist language, then treating an empty view as proof of loss.** Check your words, language, BIP-39 passphrase, network, `coin_type`, account path, receiving/change branch and index range. Do not translate the mnemonic. The testnet legacy BIP-44 example `m/44'/1'/0'/0/0` is account 0's first receiving address. Match the script/address type: `xpub` and `zpub` are not interchangeable. Scan the recorded range before concluding that funds are missing.
+6. **Restoring with the wrong path, coin type or wordlist language, then treating an empty view as proof of loss.** Check your words, language, BIP-39 passphrase, network, `coin_type`, account path, receiving/change branch and index range. Do not translate the mnemonic. The testnet legacy BIP-44 example `m/44'/1'/0'/0/0` is account 0's first receiving address. Match the script/address type: `xpub` and `zpub` are not interchangeable. Scan the recorded range before concluding that funds are missing. Scanning the recorded range means manually checking the full recorded receiving and change index ranges without stopping at unused-address gaps; default BIP-44 discovery scans only the receiving chain and stops after 20 consecutive unused addresses.
 
 7. **Treating the mnemonic, seed, master key and account private key as equivalent backups.** An account `xprv` recovers only its subtree; the 64-byte BIP-39 seed or a master `xprv` is root-level. Your mnemonic reproduces the intended seed only with the same BIP-39 passphrase. A complete mnemonic backup needs ordered words, wordlist language, the exact passphrase or an explicit empty-passphrase decision, plus network/coin type, all account paths, script types and per-branch index records. A bare private key lacks the chain code for HD derivation.
 
 8. **Sending real bitcoin to check derivation.** Rehearse with disposable testnet secrets, or compare derivations without transactions. Published test-vector secrets are public: compare outputs, never send coins to their addresses. Do not reuse rehearsal keys for a real wallet.
 
-**Unfunded testnet recovery check:** use a disposable testnet wallet and leave it unfunded. Record its first receiving address. Restore with the same words and the exact BIP-39 passphrase, then repeat with a deliberately altered passphrase. Keep the path, index and address type unchanged. The exact restore reproduces the recorded address; the altered passphrase gives a different address, although both wallets look empty. Compare addresses, not balances. Keep recovery records offline and publish no account `xpub`.
+**Unfunded testnet recovery check:** use a disposable testnet wallet and leave it unfunded. Record its first receiving address. Restore with the same words and the exact BIP-39 passphrase, then repeat with a deliberately altered passphrase. Keep the path, index and address type unchanged. The exact restore reproduces the recorded address; the altered passphrase gives a different address, although both wallets look empty. Compare addresses, not balances. Keep recovery records offline and publish no account `xpub`. BIP-44 account discovery scans only the external (receiving) chain and stops its address scan after 20 consecutive unused addresses (the gap limit).
 
 ## 12. From scratch, without Bawa code
 
@@ -302,7 +302,7 @@ Recording rules:
 
 5. **Derive the account.** Use the documented testnet account path for your intended address type. Derive the master `xprv`, then the account key and a receiving address with the intended script type. Give address-only applications only the account `xpub`.
 
-6. **Record path and index state.** Record the network, coin type, account path and script convention. Keep separate last-used indices for receiving and change, plus the highest allocated index. Mark untouched branches as “none issued”. A written ledger works for rehearsal, but a payment application must persist allocations atomically before presenting addresses.
+6. **Record path and index state.** Record the network, coin type, account path and script convention. Keep separate last-used indices for receiving and change, plus the highest allocated index. Mark untouched branches as “none issued”. A written ledger works for rehearsal, but a payment application must persist allocations atomically before presenting addresses. BIP-44 discovery scans only the external (receiving) chain and stops after 20 consecutive unused addresses; include per-branch allocation high-water marks in recovery records and scan each branch through those marks during restoration, because issued-but-unused addresses can form a gap that hides later activity from default discovery.
 
 7. **Check published test vectors before real use.** In a separate disposable session, reproduce published BIP-39/BIP-32 cases with their stated inputs and settings. Compare mnemonic, seed and extended-key outputs. Treat public test inputs as test data, never as receiving wallets. Then rehearse restoring the testnet wallet you generated separately and confirm that the expected addresses reappear.
 

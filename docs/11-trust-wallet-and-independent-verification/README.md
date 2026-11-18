@@ -12,7 +12,7 @@ How-to guide.
 > **Verification status:** Partially verified  
 > **Scope:** repo guide docs/11 against the pinned repo at 754721cd, with previously recorded live link checks retained as historical evidence
 > **Repository commit:** 754721cd
-> **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
+> **Tool versions:** bip-utils 2.12.2 (captured-run version; `requirements.txt` pins `bip-utils==2.12.3`), cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
 > **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
 > **Not run:** no live testnet spend.
 > **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
@@ -35,6 +35,8 @@ Mark the checks listed as not run above `blocked-unverified`.
 - [Integration testing](#integration-testing)
 - [CI discipline, reproducible checks and build verification](#ci-discipline-reproducible-checks-and-build-verification)
 - [Compare release bytes as well as test results](#compare-release-bytes-as-well-as-test-results)
+- [Give every release gate its own record](#give-every-release-gate-its-own-record)
+- [Record Bawa's differential check accurately](#record-bawas-differential-check-accurately)
 - [Reader checklist](#reader-checklist)
 
 ## Trust Wallet Core
@@ -85,21 +87,23 @@ Use public deterministic fixtures:
 - BIP-44 Ethereum addresses;
 - any additional chain where both implementations explicitly document the same rule.
 
-Never place a real production mnemonic, seed, xprv, hardware seed, or wallet backup in CI.
+Never place a real production mnemonic, seed, xprv, xpub, zpub, hardware seed, or wallet backup in CI. The commit prohibition alone does not establish safeguards for CI inputs, logs, or artifacts.
 
 ## Trust Wallet registry
 
-Wallet Core publishes [`registry.json`](https://github.com/trustwallet/wallet-core/blob/master/registry.json) and [registry-field documentation](https://github.com/trustwallet/wallet-core/blob/master/docs/registry-fields.md).
+Wallet Core publishes [`registry.json`](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/registry.json) and [registry-field documentation](https://github.com/trustwallet/wallet-core/blob/17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3/docs/registry-fields.md).
 
-The registry is useful for implementation metadata such as:
+At Wallet Core tag `4.9.2`, the registry provides per-entry implementation metadata, with optional fields and coverage that varies by entry. Depending on the entry, it may include:
 
-- coin IDs and optional SLIP-44 values;
+- Wallet Core coin identifiers (`coinId`) and optional SLIP-44 coin-type values (`slip44`, present in 12 of 168 entries);
 - derivation paths and alternate derivations;
 - xpub/xprv serialisation variants;
 - curves and public-key types;
 - address prefixes and HRPs;
-- chain IDs;
+- network chain IDs (`chainId`), distinct from `coinId` and `slip44`;
 - explorer/documentation metadata.
+
+Registry inclusion and populated metadata do not constitute a security assurance.
 
 Use the registry to understand implementation compatibility. Do not treat it as a replacement for the protocol specification.
 
@@ -142,7 +146,7 @@ Use an **empty BIP-39 passphrase** and record the entropy as `ba5821e8c356c05ba5
 
 Do not copy the passphrase `TREZOR` from Core’s own test table. It gives a different seed and different addresses; Bawa uses the empty passphrase.
 
-Keep this word-count rule explicit: the fixture phrase is 15 words because it is a published test vector; real wallets created by this guide are 24 words. The word count changes the seed; never mix a 15-word test phrase into a 24-word wallet flow.
+Keep this word-count rule explicit: the fixture retains the published test vector's 15-word mnemonic; 15 words is a valid BIP-39 mnemonic length. This guide uses 24 words as its production default, not as a BIP-39 validity requirement. The seed depends on the complete normalised mnemonic and normalised passphrase; word count is not a separate parameter. Never mix a 15-word test phrase into a 24-word wallet flow.
 
 ### Provisional public nodes and TRX anchor
 
@@ -154,9 +158,9 @@ Use these ripple-fixture account-0 public nodes, derived with **bip-utils 2.12.2
 | ETH xpub | `m/44'/60'/0'` | `xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc` | Core-confirmed (D31, 2026-11-08) |
 | TRX xpub | `m/44'/195'/0'` | `xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF` | Core-confirmed (D31, 2026-11-08) |
 
-Treat this derivation as confirmation of reproducibility, not independence: bip-utils is the same library used by `test/differential_test.py`. Every public node was confirmed against Core’s `getExtendedPublicKeyAccount` in a recorded **4.9.2** run using the ripple mnemonic and empty passphrase (D31, 2026-11-08); treat them as canonical.
+Treat this derivation as confirmation of reproducibility, not independence: bip-utils is the same library used by `test/differential_test.py`. The recorded Core **4.9.2** run using the ripple mnemonic and empty passphrase (D31, 2026-11-08) shows address agreement, but address agreement alone does not establish derivation provenance. These public nodes remain provisional.
 
-Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/195'/0'/0/0` as the TRX anchor. It was derived with bip-utils **2.12.2** and confirmed by Trust Wallet Core 4.8.4 (V3 live verification, 8 November 2026: `getAddressForCoin(tron)` returns this address) and re-confirmed on Core 4.9.2 (D31, 2026-11-08).
+Use the ripple TRX address **`TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c`** at `m/44'/195'/0'/0/0` as the TRX anchor. It was derived with bip-utils **2.12.2** and confirmed by Trust Wallet Core 4.8.4 (V3 live verification, 8 November 2026: `getAddressForCoin(tron)` returns this address) and re-confirmed on Core 4.9.2 (D31, 2026-11-08). The ripple TRX index-1 address at `m/44'/195'/0'/0/1` is **`TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B`**.
 
 Do not count this separate derivation as repository-test coverage.
 
@@ -170,11 +174,11 @@ Use the paths verified first-hand in the actual `tools/hdwallet-gen/compare.js` 
 - **ETH:** `m/44'/60'/0'/0/i`.
 - **TRX:** `m/44'/195'/0'/0/i`.
 
-Remove the stale path-difference blocker: the BTC and ETH paths agree with the repository reference checks at `i = 0`.
+The path-difference blocker is retired: the BTC and ETH paths agree with the repository reference checks at `i = 0`.
 
 The xpub-to-vector mapping is supplied by the values above and is Core-confirmed (D31, 2026-11-08: recorded `getExtendedPublicKeyAccount` run). The TRX address anchor is separately Core-confirmed (see above). Continue to require both implementations’ support references and confirmed shared settings.
 
-### Captured evidence and pending Core run
+### Captured evidence and recorded Wallet Core run
 
 Preserve the captured reference run with the following record:
 
@@ -188,7 +192,7 @@ Preserve the captured reference run with the following record:
 | Reported output | `bip_utils reference checks: PASS` |
 | Exit code | **0** |
 
-Retain the captured addresses against their published expectations. The Wallet Core column is now recorded (D31, 2026-11-08).
+Retain the captured addresses against their published expectations. The Wallet Core run is recorded (D31, 2026-11-08); see the **Wallet Core 4.9.2 observed** column in the table below for the captured Core outputs.
 
 | Chain and reference path | Published expected address | Wallet Core 4.9.2 observed | bip-utils 2.12.2 observed |
 |---|---|---|---|
@@ -213,7 +217,7 @@ Keep the fixtures **ineligible** until both sides are captured and diffed under 
 
 Use these published fixtures only as test vectors, never for funds. Keep each mnemonic, passphrase, path, address (or extended key) and source together. Never pair one fixture's words with another fixture's address.
 
-Treat the three fixture mnemonics as deliberate anchors for different published standards (BIP-84, Hardhat and Core), not as three phrases used by the wallet. For the Core anchor, retain the complete mnemonic, passphrase, path and address recorded in the preceding ripple-fixture section, with the repo's own fixture and Trust Wallet Core's published test vector as its source.
+Treat the three fixture mnemonics as deliberate anchors drawn from the published BIP-84 standard and the published test vectors of the Hardhat and Trust Wallet Core implementations, not as three phrases used by the wallet. Ripple-based regenerated outputs must not be presented as the original BIP-84 or Hardhat test vectors. For the Core anchor, retain the complete mnemonic, passphrase, path and address recorded in the preceding ripple-fixture section, with the repo's own fixture and Trust Wallet Core's published test vector as its sources.
 
 Prefer unifying repo fixtures on the ripple mnemonic as the single canonical set of words, because it is both the repo's own fixture and Trust Wallet Core's published test vector. Treat this as a recommendation, not a requirement. Preserve the original inputs and outputs of the independently published BIP-84 and Hardhat anchors below.
 
@@ -245,23 +249,23 @@ Use the mnemonic `test test test test test test test test test test test junk`, 
 
 ### Published negative test vectors
 
-Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` does not reject the first two vectors. Neither tool's output distinguishes bad-checksum from wrong-version rejection.
+Use the BIP-84 account-0 zprv vector, BIP-32 test-vector-1 root xprv, BIP-32 test-vector-5 bad-checksum xprv and BIP-32 test-vector-5 version-mismatch xpub. At the repository's Trust Wallet Core 4.8.4 pin, use `derive.js` to verify explicit private extended-key rejection; `compare.js` also rejects the first two vectors with a `FATAL` rejection before WASM initialization. The validator reports bad-checksum and wrong-version defects distinctly; only the alleged WASM-abort output would not distinguish them.
 
 - **BIP-84 account-0 zprv (test vector, never for funds).** Use the abandon mnemonic above, an empty passphrase and the account path `m/84'/0'/0'`. Exercise rejection of private extended-key input with `zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. `compare.js` also rejects private extended keys: it validates all inputs with `validateExtendedKey` before WASM initialization and exits 1 with `FATAL: btc: extended public key required (private extended keys are rejected)` (reproduced 2026-11-16).
 
 - **BIP-32 test vector 1 root xprv (test vector, never for funds).** Retain its seed-based provenance: seed `000102030405060708090a0b0c0d0e0f`, root path `m`. Exercise rejection of private extended-key input with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi`.
 
-  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `usage: extended public key required (private extended keys are rejected)`. This expectation is not met by `compare.js`, which prints the same BTC address for indices 0, 1 and 2 and exits 0 without an error or warning.
+  > Expected result with `derive.js` at the repository's Trust Wallet Core 4.8.4 pin: reject with exit 2 and `extended public key required (private extended keys are rejected)`. The shared private-key guard covers this BIP-32 test-vector-1 root `xprv`; `compare.js` validates all inputs with `validateExtendedKey` before WASM initialization, so the code-supported expectation is rejection with exit 1 and `FATAL: btc: extended public key required (private extended keys are rejected)`.
 
 - **BIP-32 test vector 5 invalid-checksum xprv (test vector, never for funds).** Exercise the bad-checksum defect with `xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 bad-checksum xprv identifies the checksum defect; the tool output does not distinguish it from a wrong-version failure.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4 after the `e3b65fb8` repair: no address, exit 2, and an explicit rejection before WASM. `compare.js` exits 1 with a `FATAL` rejection, also before WASM. For the published BIP-32 test-vector-5 bad-checksum xprv, the validator explicitly reports `extended key checksum verification failed`. No WASM abort occurs on this path. The alleged opaque-abort behaviour was not reproduced; the claim that output does not distinguish checksum and version defects applies only to that alleged abort, not to daemon validation.
 
 - **BIP-32 test vector 5 version-mismatch xpub (test vector, never for funds).** Exercise the wrong-version defect with `xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm`.
 
-  > Expected result with `derive.js` at Trust Wallet Core 4.8.4: no address, exit 1 and an opaque WASM abort. `compare.js` also exits 1 with the same abort. The published BIP-32 test-vector-5 version-mismatch xpub identifies the version defect; the tool output does not distinguish it from a bad-checksum failure.
+  > Expected result with `derive.js` at Trust Wallet Core 4.8.4 after the `e3b65fb8` repair: no address, exit 2, and an explicit rejection before WASM. `compare.js` exits 1 with a `FATAL` rejection, also before WASM. For the published BIP-32 test-vector-5 version-mismatch xpub, the validator reports a version rejection, distinguishing it from a bad-checksum failure. No WASM abort occurs on this path. The alleged opaque-abort behaviour was not reproduced; the claim that output does not distinguish version and checksum defects applies only to that alleged abort, not to daemon validation.
 
 ### Fixture and parity gaps
 
@@ -312,7 +316,7 @@ Do not expect Wallet Core to communicate with blockchain nodes, fetch balances o
 
 Keep the independent verifier pinned to [bip-utils](https://pypi.org/project/bip-utils/) 2.12.3. Consult its documentation for coverage of its separate implementations of HD-wallet standards and chain-specific key and address schemes. Use it only for standards and paths supported by both implementations.
 
-Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failure to investigate, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
+Keep bip-utils in the test layer to challenge the reference engine on fixed fixtures. Do not import it into runtime wallet-generation code or make it a production alternative or fallback. Treat a disagreement as a failed check requiring investigation, not a reason to switch engines. Retain one production engine to keep live wallet behaviour separate from the verification machinery.
 
 ### Keep the comparison boundary public
 
@@ -320,7 +324,7 @@ Use this order:
 
 1. **Choose published test material.** Use the vectors linked by [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) or those included in [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki). Record the fixture, chain, network and derivation path explicitly. Follow the specifications that define the standards; do not substitute library agreement for them.
 2. **Derive and capture independently.** Give each implementation the same published fixture inputs and declared parameters. Require each to perform its own derivation. Do not pass computed intermediates from one engine to the other. Capture each result separately, retaining only public outputs such as receiving addresses and public keys.
-3. **Compare only after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failure to investigate.
+3. **Compare only after both captures are complete.** Never fill either result from the other, or copy one engine’s answer into an expected-result file. Where a published vector defines an expected public value, check both implementations against it as well. Treat any disagreement as a failed check requiring investigation.
 
 Exclude mnemonics, seeds, private keys and data keys from comparison artefacts, even when they come from published fixtures. Never use real-wallet secrets or backups in tests, including xprvs and hardware-wallet secrets.
 
@@ -376,7 +380,7 @@ These gates remain open:
 
 2. **Chain-specific fixtures.** Every supported chain needs published expectations for its claimed configurations, with documented overlap between the generator and an independent verifier. Generic BIP support does not establish chain coverage.
 
-3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account. The TON fixture in "Fixture and parity gaps" records all of these fields.
+3. **TON fixtures.** Each fixture must specify the mnemonic scheme, exact derivation path, wallet contract and version, workchain, mainnet or testnet presentation, wallet/subwallet ID, and both bounceable and non-bounceable address forms. Do not infer TON mnemonic compatibility from BIP-39 support. A parser accepting a TON address, or accepting its checksum, proves only a formatting property; it does not establish that the intended derivation and wallet parameters produced that account. The TON fixture in "Fixture and parity gaps" records the listed fields except the mnemonic scheme, which it does not explicitly specify.
 
 #### Adding one eligible chain fixture
 
@@ -406,7 +410,7 @@ If no compatible independent implementation is documented, describe any publishe
 
 ### Negative and security testing
 
-Work in a disposable directory, away from live wallets. Use published [BIP-32 vectors](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#test-vectors), [BIP-39 reference tests](https://github.com/trezor/python-mnemonic/tree/master/tests) and [NIST AES-GCM vectors](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes#GCMVS), plus published recovery fixtures in the supported format. Use published invalid vectors where available; otherwise corrupt disposable copies without generating new secrets. Obtain replacement credentials only from published vectors. Never print secret fields.
+Work in a disposable directory, away from live wallets. Use published [BIP-32 test vectors](https://github.com/bitcoin/bips/blob/e373a69b96c03329cbf4196cb236a2dec4353154/bip-0032.mediawiki#test-vectors), [BIP-39 reference tests](https://github.com/trezor/python-mnemonic/tree/master/tests) and [NIST AES-GCM vectors](https://csrc.nist.gov/projects/cryptographic-algorithm-validation-program/cavp-testing-block-cipher-modes#GCMVS) as recovery fixtures, in the formats those publications use. Use published invalid vectors where available; otherwise corrupt disposable copies without generating new secrets. Obtain replacement credentials only from published vectors. Never print secret fields.
 
 Cipher vectors alone do not verify recovery-file handling. Mark cases without compatible published fixtures **not run**.
 
@@ -420,17 +424,17 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Invalid chain names:** Use names outside the documented accepted set. Expect an unsupported-chain error, never selection of a default chain.
 
-- **Inherited-property inputs:** Try `constructor`, `toString` and `__proto__` as lookup names. At object-taking APIs, supply required fields only through a prototype. Expect rejection, no inherited configuration values and unchanged prototypes.
+- **Inherited-property inputs:** Try `constructor`, `toString` and `__proto__` as lookup names. At object-taking APIs, supply required fields only through a prototype. Build `__proto__` fixtures with `Object.create(null)` for own-key payloads or a fresh object literal whose prototype is set only in the fixture literal; never mutate an existing object's prototype in the test harness. After fixture construction and before the API call, snapshot `Object.prototype` and the target object's own prototype (identity and own property descriptors). Expect rejection, no inherited configuration values and no changes to either prototype.
 
 - **Negative indexes:** Submit `-1` to each index input. Expect a range error before derivation, without unsigned conversion or clamping.
 
 - **Indexes at or above 2³¹:** Test `2147483648` and larger integers wherever public or unhardened child indexes are required. Expect range rejection, not wrapping or silent hardened derivation.
 
-- **Oversized JSON lines:** Record the enforced byte limit first. Test just above it and substantially larger, with and without a final newline. Expect bounded-memory rejection within the recorded timeout, without processing the offending record. No enforced limit means this check fails.
+- **Oversized JSON lines:** Record the enforced per-line byte limit, encoding, whether newline bytes count, a per-case timeout and a numeric peak-memory ceiling for the implementation under test (measurement metric and baseline, if any). Use otherwise valid single-line JSON records; record the encoded payload-byte count, newline-byte count and effective byte count compared with the limit. Test `limit + 1` counted bytes and a recorded substantially larger counted size (e.g. `10 × limit`), each with and without a final newline. Use a spy at the record-processing entry point and record-specific output/state checks as the processing oracle. Pass only if every case is rejected within the recorded timeout, measured peak memory stays at or below the same ceiling, and the offending record triggers zero processing calls and no record-derived output or state changes. No enforced limit means this check fails.
 
 - **Invalid Base58:** Put a forbidden character, such as `0`, into a copied public-key encoding. Expect decoding failure, not character stripping or fallback interpretation.
 
-- **Invalid mnemonic checksum:** Use a published checksum-invalid fixture with an otherwise valid word count and vocabulary. Expect rejection before seed derivation. Do not substitute a spelling-error test.
+- **Invalid mnemonic checksum:** Use the checksum-invalid fixture `abandon` repeated 12 times with the BIP-39 English wordlist (`bitcoin/bips`, `bip-0039/english.txt`). This fixture is derived from the published 128-bit zero-entropy English vector in `trezor/python-mnemonic`’s `vectors.json` by replacing its final `about` with `abandon`; word count and vocabulary remain valid. Under this guide’s strict checksum-validation policy, expect rejection before the seed KDF. BIP-39 calls for checksum checking and a warning on invalid checksums, but does not universally mandate rejection before its seed KDF. Do not substitute a spelling-error test.
 
 - **Wrong passphrase:** BIP-39 does not identify an unintended passphrase: it derives another valid wallet. Record that expectation and compare public output with the intended wallet’s reference output; they should differ. For passphrase-protected authenticated recovery, expect authentication failure and no plaintext.
 
@@ -438,15 +442,15 @@ Unless noted below, rejection means a non-zero CLI exit or explicit library erro
 
 - **Missing files:** Remove each required input independently. Expect a file-not-found error, without creating a replacement input, empty wallet or recovery output.
 
-- **Symlinked paths:** Test input files, output destinations and parent directories linked to disposable protected targets. Expect refusal before following links; links and targets must remain unchanged. Static checks do not prove protection against path-swap races.
+- **Symlinked paths:** Under this guide’s no-symlink hardening policy—not a universal correctness requirement—test links at each input-file or output-destination leaf and at every ancestor directory below a declared trusted root (including the immediate parent, but excluding the root and ancestors above it). The trusted root is the recorded, prevalidated non-symlink directory anchoring the fixture paths; its integrity and that of its ancestors are setup assumptions. Use separate cases with links to disposable protected targets. Expect refusal before following the tested link; links and targets must remain unchanged. Static checks do not prove protection against path-swap races.
 
 - **Malformed JSON:** Test incomplete objects, invalid quoting and trailing non-whitespace data. Expect a parse error, with no partial record processing or interpretation as another format.
 
 - **Corrupted AES-GCM ciphertext:** Flip a ciphertext bit while retaining the original nonce and tag. Expect authentication failure and no released plaintext.
 
-- **Wrong data keys:** Supply a different published key of the required length. Expect authentication failure, not fallback to another key or acceptance of unauthenticated bytes.
+- **Wrong data keys:** Supply a different published key of the required length whose decoded bytes differ from the correct key's decoded bytes. Expect authentication failure, not fallback to another key or acceptance of unauthenticated bytes.
 
-- **Truncated recovery artefacts:** Test empty artefacts and cuts within headers, nonces, payloads and tags, where present. Expect structural or authentication errors, never best-effort or partial recovery.
+- **Truncated recovery artefacts:** Test empty artefacts and cuts within headers, nonces, payloads and tags, where present. These cases must produce structural or authentication errors, never best-effort or partial recovery. Cuts that produce a complete, still-valid prefix are not required to fail.
 
 - **Unexpected existing outputs:** Place existing files and directories at output locations. With overwrite disabled, expect refusal before modification. Existing contents and directory entries must remain unchanged, without truncation, merging or replacement.
 
@@ -554,7 +558,7 @@ Where a project publishes a signed checksum file:
 2. Verify the checksum file’s signature with that key.
 3. Only then trust its sums when checking the downloaded artefact.
 
-An unsigned checksum can detect an accidental transfer error, but it cannot authenticate a release. Someone who replaces the binary can replace the unsigned checksum file as well.
+An unsigned checksum fetched over an unauthenticated channel can detect an accidental transfer error but cannot authenticate a release; one obtained through an independently authenticated channel can authenticate the release bytes. Someone who replaces the binary can replace the unsigned checksum file as well.
 
 When comparing projects, explicitly record **“no documented reproducible-build procedure”** where that is the case. A source repository, installation guide or lockfile is not a substitute for a documented rebuild-and-compare process.
 

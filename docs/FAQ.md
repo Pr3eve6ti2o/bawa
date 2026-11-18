@@ -1,7 +1,7 @@
 ---
 title: Frequently asked questions
 description: Short answers to the questions readers ask most often about Bawa, derivation, tracking, signing, security and recovery; testnet only.
-last-updated: 2026-11-08
+last-updated: 2026-11-17
 ---
 
 # Frequently asked questions
@@ -30,13 +30,13 @@ Reference. Each answer is short; the linked section carries the detail.
 
 Start with [Fundamentals](01-fundamentals/README.md), then read [Chain Guides](02-chains/README.md) and the [Tool & Repository Map](03-tools-and-repositories/README.md) before moving on to [Wallet Generation](04-wallet-generation/README.md). Choose only the READMEs you need, each is organised around a job.
 
-**Work with testnet wallets only. Mainnet is absent from this guide set.**
+**For guides 01–16, work with testnet wallets only. Mainnet is documented separately in `docs/mainnet/MAINNET-GUIDE.md`.**
 
-Use Bawa as an HD-wallet reference to generate wallet material on a trusted machine, derive public addresses without the seed (the 64-byte BIP-39 derived value), verify with an independent implementation and recover encrypted seed material from a seed bundle (the encrypted seed.enc.json file).
+Use Bawa as an HD-wallet reference to generate wallet material on a trusted machine, derive public addresses without the seed (the 64-byte BIP-39 derived value), verify with an independent implementation and use `decrypt_seed.py` to recover the mnemonic from the encrypted seed bundle (`seed.enc.json`), not the 64-byte seed directly.
 
 ### Can an xpub recover my wallet?
 
-**No. An xpub is sensitive public material and cannot spend, sign or recover your wallet.** Use it only to derive and watch addresses below its account. Treat zpubs as sensitive public material too.
+**No. An xpub is sensitive public material: it cannot spend or sign, and it cannot recover your private keys or restore spending capability.** It can reconstruct a watch-only view; use it only to derive and watch addresses below its account. Treat zpubs as sensitive public material too.
 
 Restore your wallet only with the mnemonic and its BIP-39 passphrase. Keep the BIP-39 passphrase empty, as required by this guide's policy. Do not confuse it with the vault unlock passphrase, which unlocks the vault (the encrypted store).
 
@@ -60,7 +60,7 @@ Before relying on your backups:
 
 1. Write them offline.
 2. Keep **2 to 3 separated copies**. Never digitise them or share them with support.
-3. Test a restore with a tiny testnet amount.
+3. Test the restore on testnet with a fresh test wallet (never fund the published fixtures).
 
 See [Chain Guides](02-chains/README.md) and [Operations & Testing](10-operations-and-testing/README.md).
 
@@ -101,7 +101,6 @@ Confirm:
 
 - Chain ID.
 - RPC endpoint.
-- Network name.
 - Native currency.
 - Explorer.
 
@@ -109,7 +108,7 @@ See [Tracking](06-tracking/README.md).
 
 ### How does payment tracking differ from wallet tracking?
 
-Distinguish **wallet tracking, which asks what an address owns**, from **payment tracking, which asks whether an observed chain event satisfies a particular payment request**.
+Distinguish **wallet tracking, which covers native balance, nonce, contract storage and calls, transaction history, logs and events, token balances, token transfers and NFT ownership**, from **payment tracking, which asks whether an observed chain event satisfies a particular payment request**.
 
 For payment tracking, use the request's:
 
@@ -117,10 +116,10 @@ For payment tracking, use the request's:
 - Asset.
 - Recipient.
 - Amount **in atomic units**.
-- Memo or tag.
+- Memo or tag when required.
 - Expiry.
 
-Follow **allocation → observation → confirmation → reconciliation**, and handle duplicates, retries and temporary outages throughout.
+Follow **request → allocation → observation → confirmation → reconciliation**, and handle duplicates, retries and temporary outages throughout.
 
 See [Payment tracking](07-payment-tracking/README.md) and [Operations & testing](10-operations-and-testing/README.md).
 
@@ -130,15 +129,17 @@ Keep the tracker watch-only, holding only an xpub or addresses. Treat these as s
 
 Keep those roles separate in the conceptual PSBT flow:
 
-1. Build a PSBT watch-only.
-2. Verify the recipient and amount on the signing device, then sign separately.
-3. Finalise and broadcast.
+1. The watch-only coordinator normally performs the Creator role by assembling the transaction and the Updater role by attaching the data needed to spend its inputs.
+2. Only the separate signer performs the Signer role: verify the recipient and amount on the signing device, then sign the PSBT.
+3. The coordinator performs the Combiner role to combine returned signed PSBTs as needed, then the Finalizer role to finalise the PSBT and the Extractor role to extract the final transaction.
+4. Before broadcast, verify the finalised transaction's recipient, amount, change and fee against the independent record of the intended payment.
+5. The coordinator requests broadcast of the verified transaction from a node.
 
 See [Signing & hardware](09-signing-and-hardware/README.md).
 
 ### Can I build a wallet app from Bawa?
 
-Use Bawa as a development reference, not a ready-to-use wallet app. Use its examples to generate a wallet on a trusted computer, derive public addresses without the seed and check results against an independent implementation.
+Use Bawa as a development reference, not a ready-to-use wallet app. Use Bawa's wallet-generation examples for BTC, ETH, TRX and TON to generate wallets on a trusted computer. Use the watch-only address-derivation examples for BTC, ETH and TRX to derive public addresses without the seed; TON is generation-only. Check the derived BTC and ETH addresses against an independent implementation.
 
 Rely on Wallet Core for derivation and signing, not for connections to blockchain networks. Provide access to your own node or an external provider, code for balances and past transactions, transaction construction, an interface, backup procedures and a security review.
 
@@ -146,7 +147,7 @@ Keep the tracker watch-only and use a dedicated signer or hardware wallet for si
 
 ### Which tools does Bawa use?
 
-Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.8.4) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Trust Wallet Core 4.9.2 is the recommended upgrade pin in README section 5, not the version currently pinned by the tools. Do not attribute authorship of the guide's procedures to any other model or tool.
+Use Bawa's Node tools in `tools/hdwallet-gen` (Trust Wallet Core 4.8.4) and its Python tools `tools/make_wallet.py` and `tools/decrypt_seed.py`. Do not attribute authorship of this FAQ entry's procedures to any other model or tool.
 
 ### Free or paid security, what am I actually buying?
 
@@ -172,13 +173,13 @@ For Bitcoin on testnet4, recognise Bawa's use of `m/84'/0'/0'/0/i`, the mainnet 
 
 Treat mainnet as out of scope: it is absent from this guide set, and passing the gates does not authorise mainnet use.
 
-Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the network of the destination address, RPC endpoint and explorer. For EVM networks, also verify the chain ID, network name and native currency, since the same address can appear on several networks.
+Never send mainnet funds to an address intended for a testnet exercise. Before funding anything, confirm the intended destination network and that the RPC endpoint and explorer match it. For EVM networks, also verify that the chain ID, network name and native currency match the intended network; an EVM address alone does not identify a unique network.
 
-When checking a backup restore, use a tiny testnet amount, not real funds.
+When checking a backup restore, use testnet coins, not real funds.
 
 ### Why do two wallets show different addresses for the same seed?
 
-Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana and Cardano are reference-only and are not supported by Bawa; their notes below describe comparisons with other wallets, not Bawa capabilities.
+Bawa supports watch-only derivation for BTC, ETH and TRX. TON support is generation-only, not watch-only. Solana and Cardano are reference-only and are not supported by Bawa.
 
 Start by comparing settings rather than assuming a faulty wallet. Check the mnemonic words, then check the BIP-39 passphrase, including whether one was used.
 

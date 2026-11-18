@@ -59,8 +59,8 @@ Treat “free” as a description of the tooling and the absence of a service me
 
 Keep responsibility for the remaining work:
 
-- **Set-up and checking.** Configure the arrangement and verify it independently. Do not treat a successful installation as proof that generation, derivation and signing work as intended.
-- **Backups and recovery tests.** Make backups, rehearse recovery and work through the loss of one backup. Include instructions your heirs can use without relying on your memory.
+- **Set-up and checking.** Configure the arrangement and verify it independently. Seeds must not be exposed to an online coordinator. The independent checks must cover wallet metadata, any seed passphrase and key-loss scenarios for each signing threshold. Do not treat a successful installation as proof that generation, derivation and signing work as intended.
+- **Backups and recovery tests.** Make backups, rehearse recovery and work through the loss of one backup. Rehearse the loss of one key at each signing threshold, checking whether signing and recovery remain possible. Include instructions your heirs can use without relying on your memory.
 - **Theft and shared failures.** Check what an attacker could do with one stolen seed or device. Consider a compromised computer separately from a firmware flaw affecting one vendor’s devices. Do not count several devices as independent protection merely because they are separate devices.
 - **Phishing.** Keep checking the transaction you are being asked to approve, even when the request looks familiar or urgent.
 
@@ -70,7 +70,7 @@ Do not expect any free tool to make approving a malicious transaction safe. Use 
 
 Pay for clearly specified assistance with work you would otherwise manage yourself. Confirm which set-up, checking, backup, recovery rehearsal and instructions-for-heirs tasks the service helps with, and which remain yours. Do not assume that a membership covers all of them or removes the need to check each transaction.
 
-Use these figures from the [Casa vault FAQ](https://casa.io/vault), re-checked live on **8 November 2026**, as a dated reference:
+Use these figures from the [Casa vault FAQ](https://casa.io/vault), re-checked live on **17 November 2026**, as a dated reference:
 
 | Casa plan | Annual price |
 | --- | --- |
@@ -153,7 +153,7 @@ If another person must be able to take over when you cannot act, write an explic
 
 ## Apply the wallet and recovery rules
 
-- **Multisig:** Keep the extended public key from **every** co-signer, together with the signing threshold, script type and derivation path, to reconstruct the wallet. Do not treat possession of enough signing keys to spend as a substitute for those records. To alter the threshold, create a new wallet and transfer the testnet funds into it. Mix device makers to limit exposure to a flaw in one vendor’s firmware.
+- **Multisig:** Keep the complete wallet policy/descriptors and configuration—not merely an underspecified xpub list—including the extended public key from **every** co-signer, the signing threshold, script type, key ordering, receive/change branches, each co-signer’s derivation path and key-origin information, and the wallet’s network information, as required recovery records to reconstruct the wallet. Do not treat possession of enough signing keys to spend as a substitute for those records. Generate each co-signer’s keys independently, store different keys’ backups in separate physical locations, and verify every metal-backup transcription against the original recovery data before relying on it. To alter the threshold, create a new wallet and transfer funds into it; that transfer still requires the old wallet’s existing signing quorum. Tiny initial test funding is permitted before proving recovery and exit, but do not commit substantial funds until both have been demonstrated for the intended wallet and network. Testnet success does not establish production/mainnet recoverability. Mix device makers to limit exposure to a flaw in one vendor’s firmware.
 - **MPC:** Establish who holds enough shares to meet the threshold before deciding who has custody. Do not infer custody from the product label. If every signature requires the provider’s share, recognise that the provider can block your spending. Check that the exit route works before depositing testnet funds. Do not rely on MPC to prevent you from authorising a malicious transaction.
 - **Recovery testing:** Before committing testnet funds, prove that you can recover from the backup through a successful rehearsal on a clean install, and record the result. Use no more than a tiny testnet amount for the rehearsal. Repeat the clean-install rehearsal and record its result whenever the device, threshold or provider changes.
 

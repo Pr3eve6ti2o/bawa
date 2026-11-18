@@ -20,9 +20,9 @@ Reference comparison table:
 | Solana | Reference-only | 501 | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. |
 | Cardano | Reference-only | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` |
 
-Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO (CIP-1852); TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
+Curves and models: BTC secp256k1, UTXO; ETH/EVM secp256k1, account; TRX secp256k1, account; SOL Ed25519, account; ADA Ed25519, extended-UTXO; TON Ed25519, smart-contract wallet accounts — one mnemonic can map to more than one account by contract plus wallet ID. CIP-1852 documents Cardano HD derivation (purpose 1852', paths, and roles). A path string alone does not establish the curve, encoder, address format, wallet compatibility, or cross-chain compatibility.
 
-Why this, and what breaks if you change it: the derivation policy per chain is fixed because each chain's address format, curve, and account model differ. Substituting another chain's path or coin type produces addresses on the wrong ledger or in the wrong format, and a restore that scans only the substituted path shows an empty wallet. Do not add alternative paths.
+Why this, and what breaks if you change it: the derivation policy per chain is fixed because each chain's address format, curve, and account model differ. Substituting another chain's path or coin type selects different keys, and a restore that scans only the substituted path may fail to discover previously used addresses. Do not add alternative paths.
 
 Reuse and configuration boundaries: reuse the mnemonic, seed, and secp256k1 key where the chain's standard says they are reusable. Configuration that belongs to the chain — network, chain ID, RPC endpoint, contract version, wallet ID, address format — is per-chain and never inherited from another chain.
 ## 3. Bitcoin
@@ -160,12 +160,12 @@ In a conceptual testnet example:
 - You spend the whole 40,000-sat output: 30,000 sats go to the payment, 9,000 sats return as change and 1,000 sats pay the fee.
 - Afterwards, you have 34,000 sats: 25,000 untouched + 9,000 change.
 
-UTXO totals are before fees.
+UTXO totals are before fees not yet paid; fees already paid are reflected in the balance.
 
 Use the [Esplora API reference](https://github.com/Blockstream/esplora/blob/master/API.md) for these endpoints:
 
 - `/address/:address/txs` — address transaction history.
-- `/address/:address/txs/chain/:last_seen_txid` — pagination through confirmed history.
+- `/address/:address/txs/chain[/:last_seen_txid]` — pagination through confirmed history.
 - `/address/:address/utxo` — unspent outputs.
 - `/tx/:txid` — transaction details.
 - `/tx/:txid/outspends` — output spending status.
@@ -185,7 +185,7 @@ Record the index tip. Re-query after notifications or when polling, and keep con
 | Native SegWit | `bc1q…` | `tb1q…` |
 | Taproot | `bc1p…` | `tb1p…` |
 
-Signet shares the testnet encoding ([BIP-325](https://github.com/bitcoin/bips/blob/master/bip-0325.mediawiki)). Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
+Signet uses testnet-style address encoding, including Bech32 HRP `tb` ([Bitcoin Core chainparams](https://github.com/bitcoin/bitcoin/blob/master/src/kernel/chainparams.cpp)). Regtest uses coin-type-`1'` paths with HRP `bcrt` ([SLIP-0173](https://github.com/satoshilabs/slips/blob/master/slip-0173.md)): `bcrt1q…` for [BIP-84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) and `bcrt1p…` for [BIP-86](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki).
 
 [SLIP-0132](https://github.com/satoshilabs/slips/blob/master/slip-0132.md) lists these testnet extended-public-key versions:
 
@@ -288,12 +288,12 @@ Do not stop at prefix plus length.
 
 For a dedicated TRON app, prefer a maintained TRON SDK or Wallet Core’s TRON functionality. Keep transaction construction and RPC TRON-specific.
 
-**Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, you produce an address that belongs to nobody.
+**Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, the resulting address string is malformed and fails validation.
 ## 6. TON
 
 TON is generation-only in Bawa: you get one deposit address per wallet, with no xpub exported and no TON xpub watch-only flow. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive_daemon.js` support `btc`, `eth` and `trx` only.
 
-[TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. Use the full compatibility model:
+[TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. The ordered compatibility model below is this guide’s synthesis, not an algorithm quoted from TEP-3:
 
 ```text
 mnemonic (the wallet's scheme)
@@ -304,6 +304,8 @@ mnemonic (the wallet's scheme)
   → workchain/network presentation
   → TON address
 ```
+
+The final presented TON address depends on the workchain and network presentation, so the same wallet can present different address strings.
 
 BIP-32’s secp256k1 extended-key machinery is not a drop-in interface for TON’s Ed25519 keys. Do not relabel a TON public key as a “TON xpub”.
 
@@ -394,7 +396,7 @@ BIP32-Ed25519 derivation (CIP-0003 wallet key generation); extended-UTXO (eUTXO)
 
 CIP-1854 covers multisig HD wallets with a separate layout; do not treat CIP-1852 as covering every Cardano wallet design. Changing an Ethereum BIP-32 implementation's coin type to `1815` cannot supply Cardano's rules. Use Cardano-native tooling.
 
-Sources: [CIP-1852](https://cips.cardano.org/cip/CIP-1852), CIP-0003, CIP-1854 (cips.cardano.org), [Cardano eUTXO explainer](https://docs.cardano.org/learn/eutxo-explainer/).
+Sources: [CIP-1852](https://cips.cardano.org/cip/CIP-1852), CIP-0003, CIP-1854 (cips.cardano.org), [Cardano eUTXO explainer](https://docs.cardano.org/about-cardano/learn/eutxo-explainer/).
 
 ## 10. Polkadot/Substrate
 
@@ -424,7 +426,7 @@ Use the actual network's documentation and test vectors before assuming a Bitcoi
 | SOL | Reference-only | 501 | Ed25519 | Account | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. | Base58-encoded public key (no fixed textual prefix) | No derivation, generation, or signing |
 | ADA | Reference-only | 1815 | Ed25519 with Cardano's extended-key scheme | Extended-UTXO | Payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` (CIP-1852) | Shelley Bech32 `addr1…` mainnet / `addr_test1…` testnet; reward `stake1…` / `stake_test1…` (CIP-19) | No derivation, generation, or signing |
 
-The BTC/ETH/TRX entries are the derive tools' COMPLETE chain and path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `x'` is a hardened account index.
+The `derive.js` allowlist establishes the derive tools' BTC/ETH/TRX chain set; it does not establish an exhaustive path set. An ETH-shaped address does not establish support for another EVM network. `i` is a non-hardened address index; in SOL references, `a'` is a hardened account index.
 
 ### Derivation and network policy
 
@@ -446,7 +448,7 @@ For the full SLIP-0132 table (mainnet and testnet rows), see docs/01.
 
 **TON naming.** Core 4.9.2 `registry.json` records symbol `GRAM`; SLIP-0044 records coin 607 as TON; Bawa uses TON. The registry entry is `ton`, coin ID 607.
 
-**Chain IDs.** Sepolia's chain ID is `11155111`; the registry's Ethereum `chainId` value `1` is a mainnet reference value and must not be substituted for it. TRON has no chain/network-id field in the registry — that absence is not an ID of zero.
+**Chain IDs.** Sepolia's chain ID is `11155111`; the registry's Ethereum `chainId` value `1` is a mainnet reference value and must not be substituted for it. TRON's `chainId` field is present in the registry with value `null` — `null` is neither field absence nor an ID of zero.
 
 **Registry interpretation.** The registry's explorer URLs are mainnet defaults; use the guides' verified testnet endpoints (Web guide, Section E) for testnet work. The field reference warns that the chain ID "might not be always latest in registry. In transaction building current value has to be supplied each time." For registry-field interpretation and the addition procedure, see docs/12.
 
@@ -467,7 +469,7 @@ Decide in this order: chain and network → curve and HD scheme → path and per
 
 ## 16. Canonical sources
 
-One primary source per chain family: Bitcoin — BIP-32/39/43/44/49/84/86 and SLIP-0010/0044/0132 (canonical <https://github.com/bitcoin/bips/blob/master/bip-XXXX.mediawiki> and <https://github.com/satoshilabs/slips/blob/master/slip-XXXX.md> forms); EVM — Ethereum JSON-RPC <https://ethereum.org/developers/docs/apis/json-rpc/> and ethers <https://docs.ethers.org/v6/>; TRON — the TRON developer documentation; TON — TEP-3 <https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md>; Solana — the version-controlled docs sources in <https://github.com/solana-foundation/solana-com>; Cosmos — the Chain Registry <https://github.com/cosmos/chain-registry>; Cardano — CIP-1852 <https://cips.cardano.org/cip/CIP-1852>; Trust Wallet Core — the registry <https://github.com/trustwallet/wallet-core/blob/master/registry.json> and the developer documentation home <https://developer.trustwallet.com/> (do NOT link the Wallet Core Usage Guide deep links — they land on the marketing homepage); Bitcoin Core descriptors — <https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md>; Esplora API reference — <https://github.com/Blockstream/esplora/blob/master/API.md>.
+One primary source per chain family: Bitcoin — BIP-32/39/43/44/49/84/86 and SLIP-0010/0044/0132 (canonical `https://github.com/bitcoin/bips/blob/master/bip-XXXX.mediawiki` and `https://github.com/satoshilabs/slips/blob/master/slip-XXXX.md` forms); EVM — Ethereum JSON-RPC <https://ethereum.org/developers/docs/apis/json-rpc/> and ethers <https://docs.ethers.org/v6/>; TRON — the TRON developer documentation <https://developers.tron.network/>; TON — TEP-3 <https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md>; Solana — the version-controlled docs sources in <https://github.com/solana-foundation/solana-com>; Cosmos — the Chain Registry <https://github.com/cosmos/chain-registry>; Cardano — CIP-1852 <https://cips.cardano.org/cip/CIP-1852>; Trust Wallet Core — the registry <https://github.com/trustwallet/wallet-core/blob/master/registry.json> and the Wallet Core repository <https://github.com/trustwallet/wallet-core> (do NOT link the Wallet Core Usage Guide deep links — they land on the marketing homepage); Bitcoin Core descriptors — <https://github.com/bitcoin/bitcoin/blob/master/doc/descriptors.md>; Esplora API reference — <https://github.com/Blockstream/esplora/blob/master/API.md>.
 
 Regtest and signet appear in §3 as network encodings. The local-to-public testing sequence (local stage first, where a chain supports it) belongs in the Web and Android guides and in the repo testing taxonomy (docs/10) — not here.
 

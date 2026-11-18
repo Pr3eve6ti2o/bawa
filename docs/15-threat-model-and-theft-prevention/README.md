@@ -33,7 +33,19 @@ Treat mnemonic phishing, fake wallet apps and browser extensions, social enginee
 
 ### Maintain the trust boundary
 
-> **Warning:** Whoever holds your mnemonic or private key controls the wallet. Never hand either over to a service, support agent or wallet maker; no legitimate service asks you to do so. If either has been disclosed, treat it as permanently compromised and follow the exposure response below.
+> **Warning:** Whoever holds your mnemonic and any required BIP-39 passphrase can derive the corresponding private keys. A single child private key need not control the whole wallet, and multisig spending requires the configured threshold of valid signatures. Never hand your mnemonic, passphrase or private keys over to a service, support agent or wallet maker; no legitimate service asks you to do so. If any has been disclosed, treat it as permanently compromised and follow the exposure response below.
+
+The trusted side consists of recovery storage you control and a verified wallet on a trusted device. External people, services, software sources, phone-number accounts and transaction data are outside that boundary. An identity claim or software installation alone does not establish trust; a suspected compromised device is not a trusted recovery or signing environment.
+
+| Adversary and capability | Trust crossing | Required handling |
+| --- | --- | --- |
+| Phisher or social engineer: can impersonate support, a service or a wallet maker and fabricate recovery requests. | Mnemonic/private key moves from owner-controlled storage to an external person, site or service. | Refuse disclosure. Enter recovery material only for recovery you initiated in a verified wallet on a trusted device. |
+| Malicious wallet/extension publisher or malware operator: can capture secrets or alter transactions through installed code. | External installation/update code gains access to the recovery or signing environment. | Verify software provenance and release authenticity before installation or update; do not restore or sign on a suspected compromised device. |
+| SIM-swap attacker: can intercept SMS codes and take over phone-based account recovery, but does not thereby obtain wallet keys. | Phone-number or account control is mistaken for owner identity or authority over wallet recovery. | Do not rely on SMS or account access alone to authenticate recovery requests, authorize signing or disclose secrets. |
+| Address poisoner or clipboard hijacker: can plant look-alike addresses or replace copied destinations. | Untrusted transaction-history or clipboard data becomes the recipient of a signed payment. | Independently confirm the intended address, then check the full destination and amount on a trusted signing display before approval. |
+| Fake security responder or report interceptor: can impersonate project recipients or obtain exposed reports. | Nonpublic vulnerability details leave the reporter for an external recipient. | Require an authenticated, private reporting channel as specified below; a claimed support identity is not sufficient. |
+
+**Vulnerability disclosure:** The reporting channel must be **authenticated** (the reporter can verify the intended project recipient) and **private** (report access is restricted to the reporter and authorized responders). No vulnerability-disclosure channel is published in this repository yet; see the incident-response playbook’s open item **OI-065** for this unresolved gap. Do not post sensitive vulnerability details publicly or send reports to unverified contacts. Never include a mnemonic, private key or usable recovery backup in a report.
 
 Keep mnemonics, private keys, all private extended keys, recovery data keys, production `.env` files, wallet backups, credentials and API secrets out of anything public.
 
@@ -135,7 +147,7 @@ Account for tampered dependencies, malicious updates and fake releases as threat
 
 > **Warning:** A hidden implant can capture the mnemonic displayed during setup, as described in public reports of physically tampered hardware wallets bought through a reseller rather than directly from the maker. [2](https://www.bitgo.com/research/fool-me-twice-ledger-tokenized-repo-and-finks-worldview/) Buy hardware directly from the maker and verify the device using the maker’s guidance. Check seals and casing for alterations, but do not assume hidden tampering will leave an obvious sign. Do not treat a successful genuine-check alone as proof that a device was never opened.
 
-Do not treat a version range as evidence of a tested dependency graph. Keep Trust Wallet Core pinned to Bawa’s exact, tested package version. Keep bip_utils pinned and use it only for independent verification. Before a production release, commit the lockfile produced by a clean install. Run dependency and secret scanning in CI and release workflows. Prefer signed or tagged upstream releases, and record release checksums and provenance where practical.
+Do not treat version ranges, exact pins or a clean-install lockfile as evidence, on their own, that a dependency graph has been tested. Keep Trust Wallet Core pinned to Bawa’s exact, tested package version. Keep bip_utils pinned and use it only for independent verification. Before a production release, generate a lockfile from a clean install, test the exact resolved dependency graph it records, and commit that lockfile. Run dependency and secret scanning in CI and release workflows. Prefer signed upstream releases and verify their signatures against trusted upstream signing keys; a tag alone does not authenticate a release. Record release checksums and provenance where practical.
 
 Check for unexplained dependency changes and signature or checksum failures. Stop affected releases, quarantine suspect devices or packages, and notify affected holders. Rebuild from independently verified inputs. Treat mnemonics handled by compromised software or hardware as exposed, and use a separate, trusted environment to generate fresh wallets and move remaining funds.
 
@@ -184,10 +196,10 @@ Use Bawa’s dedicated directory for wallet secrets. Note that Bawa applies rest
 
 ### Malicious transaction approval and blind signing
 
-- **Risk and impact:** Treat token approvals as authorisation for a spender to use tokens later. Account for an unlimited allowance exposing the relevant token balance, including later deposits. Treat hurried or unclear requests as higher risk: signing a transaction you have not read on a trusted screen can authorise unwanted transfers even while your seed remains secret. Revocation cannot undo confirmed transfers.
-- **Prevention:** Limit allowances to the amount needed. Read the action, recipient or spender, asset and amount on a trusted signing-device screen, not only the website. Do not sign if those details cannot be shown clearly.
-- **Check:** Look for unknown spenders, unexpected unlimited allowances, requests for blind signing and unexplained token transfers.
-- **Recovery:** Revoke suspect approvals through an independently verified tool and move at-risk funds if necessary. If keys have also leaked, migrate to a wallet with a newly generated seed.
+- **Risk and impact:** Treat token allowances, signature-based authorisations such as Permit/Permit2, and NFT operator approvals as permission for a spender or operator to move assets later. Unlimited allowances can expose the relevant token balance, including later deposits; collection-wide NFT operator approvals can expose current and future holdings in that collection. Treat hurried or unclear requests as higher risk: signing a transaction or message you have not read on a trusted screen can authorise unwanted transfers even while your seed remains secret. Revocation cannot undo confirmed transfers and may lose a race to malicious spending.
+- **Prevention:** Limit allowances and approval scope to what is needed. Read the action, recipient, spender or operator, asset, amount or NFT scope, and any expiry on a trusted signing-device screen, not only the website. Do not sign if those details cannot be shown clearly.
+- **Check:** Look for unknown spenders or operators, unexpected unlimited allowances or collection-wide NFT approvals, unclear Permit/Permit2 requests, requests for blind signing and unexplained token or NFT transfers.
+- **Recovery:** Use an independently verified tool to revoke suspect allowances and NFT operator approvals and, where supported, invalidate unused Permit/Permit2 signatures. Do not assume allowance revocation alone cancels unused signatures; move at-risk funds if necessary. If keys have also leaked, migrate to a wallet with a newly generated seed.
 
 ## What a holder should NOT buy or do
 
@@ -204,7 +216,7 @@ Use **signing and hardware** for signer setup and **security and recovery** for 
 
 Combine device and account controls, offline recovery records, signing controls and transaction checks. Add equipment or services only after reviewing their requirements and limits; do not substitute a purchase for the other layers.
 
-Include the mnemonic, the exact BIP-39 passphrase policy, chain derivation paths and address policy, account, network and chain configuration, and TON wallet configuration where applicable in the recovery record. Record any passphrase value separately.
+Include the mnemonic, the exact BIP-39 passphrase policy (state whether the BIP-39 seed-derivation passphrase is empty or non-empty; it is distinct from a device PIN or application password), chain derivation paths and address policy, account, network and chain configuration, and TON wallet configuration (wallet contract version/revision, subwallet ID and workchain ID) where applicable in the recovery record. Record any BIP-39 passphrase value separately.
 
 ### Free fixes
 
@@ -212,7 +224,7 @@ Use these measures without a security-product purchase. Account for possible net
 
 | Fix and threats addressed | Limit, action and check |
 | --- | --- |
-| **[Offline paper backup](https://strike.me/gb/en/learn/how-do-i-protect-my-private-keys/)**, device loss, disaster and online backup leakage. | Paper remains vulnerable to damage and copying. Make Bawa’s required 2 to 3 offline copies in places without a shared fire or flood risk, and record physical access controls for each. Check each copy for completeness and legibility. |
+| **[Offline paper backup](https://strike.me/gb/en/learn/how-do-i-protect-my-private-keys/)**, device loss, disaster and online backup leakage. | Paper remains vulnerable to damage and copying. Consider making 2 to 3 offline copies in places without a shared fire or flood risk. Additional copies increase theft exposure, so enforce and record physical access controls for each copy. Check each copy for completeness and legibility. |
 | **Test recovery before funding**, incomplete records, wrong passphrase or derivation settings. | A successful rehearsal does not prevent later theft or deterioration. Rehearse recovery on a clean install on your own trusted offline device. Compare the intended accounts and addresses, and record the outcome before describing recovery as tested. |
 | **[Device and software hygiene](https://www.cryptocurrencyhongkong.com/en/news/safeguarding-your-assets-33-practical-measures)**, malware, malicious downloads and known vulnerabilities. | An updated device can still be compromised. Verify download provenance, update supported operating systems, applications and firmware, and remove unused software. Follow the containment playbook below if you suspect compromise. |
 | **Separate browser profile with minimal extensions**, extension snooping and session cross-contamination. | A browser profile does not isolate you from device malware. Dedicate a profile to tracking and service accounts, and remove non-essential extensions. Check that only necessary extensions remain. |
@@ -233,7 +245,7 @@ Check current vendor pricing and ongoing fees for equipment or services. Account
 | **Metal seed backup**, fire, water and paper deterioration. | Durability varies, and metal does not prevent reading or copying. Retain physical access controls for the backup. Check the recorded words and legibility. |
 | **Second signing device**, signer loss or failure. | Duplicating the same key provides availability, not multisignature protection; either copy can expose the wallet. Recover the spare and keep it separately under physical access controls. Execute and record a clean-install recovery rehearsal before treating recovery as tested. |
 | ****Passphrase kept separate from the seed****, theft of a mnemonic backup alone. | Weak BIP-39 passphrases can be guessed, and losing the correct value can strand funds. Record the exact BIP-39 policy and keep the passphrase value apart from every mnemonic backup. Execute and record a clean-install recovery rehearsal using that policy. ([Trezor — What is a passphrase?](https://trezor.io/guides/backups-recovery/advanced-wallets/what-is-a-passphrase)) |
-| **Multisignature across devices from different makers**, compromise of one key, device or maker. | Shared custody or common compromised software can defeat separation. Check chain support, use independent keys and separated backups, and record the threshold, cosigner public keys and recovery procedure. Verify the recovery record through an executed, recorded clean-install rehearsal. |
+| **Multisignature across devices from different makers**, compromise of one key, device or maker. | Shared custody or common compromised software can defeat separation. Check chain support and use independent keys with separated backups. Require a signing threshold greater than one, and distribute keys, devices and backups so that no single maker or custodian can control enough keys to meet the threshold. Record the threshold, cosigner public keys and recovery procedure. Verify the recovery record through an executed, recorded clean-install rehearsal. |
 | **For businesses: external security review and dependency and secret scanning in release workflows**, design errors, vulnerable dependencies and leaked credentials. | Reviews are snapshots, and scanners miss flaws. Commission a boundary review and automate dependency and secret scans in release workflows. Check and resolve findings before release without treating the review or scans as certification. |
 
 ### Paid help
@@ -273,14 +285,14 @@ Prices change; check the vendor's current pricing before choosing.
 
 The levels are cumulative. The small-holder baseline is mandatory, regardless of balance.
 
-A compromised seed has no reset mechanism. Create a replacement wallet on a fresh, trusted device, test its recovery before funding it, transfer every asset and token, and stop using the original wallet permanently.
+A compromised seed has no reset mechanism. Create a replacement wallet on a fresh, trusted device, test its recovery before funding it, transfer every asset and token except locked or non-transferable assets and unsolicited scam tokens, and stop using the original wallet permanently.
 
 ### Small holder, mandatory minimum
 
 - [ ] Make a legible offline mnemonic backup and protect it from unauthorised access. Record the passphrase policy and derivation policy needed for recovery.
 - [ ] Keep no digital seed copy: no photographs, screenshots, cloud files, messages or password-manager entries.
 - [ ] Before funding, recover the mnemonic from your backup on a clean, trusted machine. Follow the passphrase policy and derivation policy exactly, then compare the derived address with the address recorded earlier. Funding must wait until the public outputs agree.
-- [ ] Do not count an `xpub` or `zpub` import as a recovery test. Neither can restore the wallet: each can reproduce only the public descendants beneath its exported account node.
+- [ ] Do not count an `xpub` or `zpub` import as a signing-key recovery test. Either can restore watch-only capability, but neither can restore signing keys; each can derive public descendants only along non-hardened paths below the exported node, which need not be account-level.
 - [ ] Use a security key or authenticator for crypto and email accounts. Remove SMS two-factor authentication, including SMS fallback methods.
 - [ ] Confirm payment addresses through a separate, trusted channel. Compare the entire destination address before authorising a transfer, not only its opening and closing characters.
 
@@ -317,8 +329,9 @@ Begin containment before attempting wallet recovery or migration.
 
 1. Stop using any device you suspect is compromised for signing, wallet recovery and service accounts. Carry out account containment from a trusted device.
 2. Revoke active sessions on affected email, exchange and other service accounts. Review their authentication and recovery options, remove SMS fallbacks where possible, and keep recovery codes offline.
-3. Review withdrawal allow-lists and alerts where offered, and respond to unexpected activity.
-4. Review token permissions separately from service-account sessions. Revoke unnecessary permissions using verified tools, check network fees before signing, and review the remaining permissions.
+3. Rotate compromised passwords and API keys from a trusted device: set new, unique passwords, revoke compromised API keys, and issue replacement keys only where needed. Update dependent services to use the replacement keys.
+4. Review withdrawal allow-lists and alerts where offered, and respond to unexpected activity.
+5. Review token permissions separately from service-account sessions. Revoke unnecessary permissions using verified tools, check network fees before signing, and review the remaining permissions.
 
 ### Choose trusted-device recovery or fresh-seed migration
 
@@ -330,7 +343,7 @@ Begin containment before attempting wallet recovery or migration.
 
 ### Escalate to the maintainers
 
-No vulnerability-disclosure channel is published in the repository (OI-065). Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Once such a channel is available and containment is under way, report suspected compromise through it.
+No vulnerability-disclosure channel is published in the repository. The label OI-065 is a singleton reference occurring nowhere else in the repository. Continue containment; reporting to the maintainers remains an open item until a suitable private channel is published. Do not publish exploit details, including in public issues, discussions or social media. Once such a channel is available and containment is under way, report suspected compromise through it, including affected components or accounts, a timeline, observed impact, containment actions taken and redacted supporting evidence; do not include passwords, API keys, recovery codes or wallet recovery phrases. Maintainers must handle reports and supporting evidence privately: acknowledge receipt, triage severity and scope, coordinate investigation and remediation, record the outcome, and communicate status updates and the final disposition to the reporter through the same private channel.
 
 > **Warning:** Sharing wallet or account secrets can expose funds or accounts. Keep mnemonics, passphrase values and recovery codes out of the report. Check the report for those secrets before sending it.
 
@@ -350,7 +363,7 @@ Keep the residual limits in view rather than treating the combined setup as comp
 3. <https://lune.fi/blog/crypto-wallet-security-checklist-2026>
 4. <https://coinscapture.medium.com/sim-swap-attacks-on-crypto-accounts-how-they-work-and-how-to-prevent-one-245b4c2d3f00>, checked 8 November 2026: automated checks returned HTTP 403, but a web search confirmed that the article exists.
 5. <https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/>, New Zealand government guidance, verified live 8 November 2026.
-6. <https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20>
+6. <https://cryptowatchdog.net/blog/sim-swap-scams-the-phone-based-threat-that-can-empty-your-crypto-wallet-2026-05-20>, verified live 17 November 2026; covers SIM-swap mechanics and defences.
 7. <https://coinspaid.com/knowledge-base/hot-wallet-hacks-and-risks/>, checked 8 November 2026: automated checks returned HTTP 403, but a web search confirmed that the article exists.
 8. <https://www.bitgo.com/research/fool-me-twice-ledger-tokenized-repo-and-finks-worldview/>
 9. <https://dev.to/etairos/ledger-finds-lte-seed-stealing-implant-in-wallets-sold-by-cryptobilis-86m-drained-2jd2>
@@ -363,4 +376,6 @@ Keep the residual limits in view rather than treating the combined setup as comp
 16. <https://www.spark.money/research/payment-agnostic-security-crypto-fiat>, verified live 9 November 2026; covers address poisoning and clipboard hijacking.
 
 Source check (2026-11-08): the Vajra1 article and site home returned HTTP 500, as did the tested URL and browser User-Agent variants, WordPress REST API and feed; both citations have been replaced with Trezor's passphrase guide, verified live that day.
+
+Source check (2026-11-17): all three sources were re-verified by live content inspection that day. The inline Coinspaid malware article now loads (previously HTTP 403 on 2026-11-08; updated 2026-11-16) and supports the malware claim: keyloggers, clipboard hijackers and remote access tools, with cracked software and counterfeit browser extensions as infection routes. The inline BitGo supply-chain article supports the implant claim: a covert implant inside devices sold by a single reseller captured recovery phrases during setup, and Ledger's Genuine Check cannot detect an added implant. Source [3], lune.fi, now loads (connection failure on 2026-11-16; crawled 2026-11-17) and covers seed phrases, blind signing, clipboard hijacking and address poisoning, SIM swap, multisig and approvals.
 

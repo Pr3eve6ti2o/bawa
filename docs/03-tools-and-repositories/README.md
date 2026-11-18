@@ -2,7 +2,7 @@
 
 ## 1. What this document decides
 
-Choose one owner per job. “Recommended” means a sensible place to start for this specific job, not the only valid choice.
+Choose one owner per job. “Recommended” means a sensible place to start for this specific job, not the only valid choice. The paired entries are alternatives, not joint owners: choose either viem or ethers for the EVM application layer, and either Trezor or Ledger for the hardware signer.
 
 Use this document to select repositories and tools, with their responsibilities and limits. Use `docs/12` for the registry, `docs/11` for Wallet Core and `docs/02` for chain guidance.
 
@@ -47,7 +47,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 | Hardware signer | Trezor | Hardware-rooted signing workflow | Do not use as merely a software crypto library | Hardware plus open-source components |
 | Hardware signer | Ledger | Secure signing plus device UX | Device-app development has its own SDK/review model | Hardware plus developer stack |
 | Local EVM development | Foundry/Anvil | Local EVM chains and testing | Not mainnet infrastructure | Open source |
-| Public blockchain data | Official explorer/RPC | Quick manual verification | Privacy- and rate-limit-sensitive | Usually free for modest manual use |
+| Public blockchain data | Explorer/RPC role (e.g., [Solana Explorer](https://explorer.solana.com/) and [Solana public mainnet RPC](https://solana.com/docs/references/clusters) at `https://api.mainnet.solana.com`) | Quick manual verification | Privacy- and rate-limit-sensitive | Provider-dependent; verify current pricing and usage limits in the selected service's documentation |
 
 ## 4. One-sentence decision rule
 
@@ -63,7 +63,7 @@ Learn the standards first: [BIP-32](https://github.com/bitcoin/bips/blob/master/
 
 **Version-record runbook**
 
-For each audit pin, expand step 3 into these checks and keep a record. Work from the pinned release, not a different release or the default branch.
+For each audit pin, expand step 3 into these checks and keep a record. Work from the pinned release, not a different release or the default branch. The mutable `master`/`main` links in §2 (including `bitcoin/bips` and `solana-com`) are discovery links, not audit-pin evidence; use immutable, commit-specific source permalinks that support verification of the pinned release in the audit record.
 
 1. **Check releases.** Match the exact version you intend to pin to the release it came from. Record both the version and the release identifier.
 2. **Check tests.** Find the tests and reference vectors covering the behaviour you need at that release. Run the relevant tests and record their names, commands and results. Note coverage gaps. If you cannot run a test, record that rather than treating it as passed.
@@ -79,7 +79,7 @@ Release:
 Tests covering this pin:
 Test commands and results:
 Coverage gaps:
-Dependencies and resolved versions:
+Dependencies (for each: declared constraint/allowed version range; separately, exact resolved version with lockfile or other resolution evidence, or "not determined"):
 Maintenance state and basis:
 ```
 
@@ -133,7 +133,7 @@ One owner per job; do not treat any tool as a complete wallet backend. These bou
 
 Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 0044, 0132 are the sources of truth. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond the bip_utils list; review the relevant standards and tests before relying on additional coverage.
 
-**Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.8.4; `requirements.txt` lists `bip_utils` 2.12.3. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
+**Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.8.4; `requirements.txt` lists `bip-utils` 2.12.3. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
 
 1. Trace each proposed invocation to a table row, including the data crossing its boundary — an identified owner, call site, and data category, or a clear record of what still needs tracing; do not mark isolation as verified without code evidence.
 2. Review boundary enforcement at the call sites — evidence that metadata, network, and application-record calls receive no secret material under this policy, or a recorded violation or unresolved review item; do not assume the boundary is enforced.
@@ -141,11 +141,11 @@ Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 004
 
 **Version pins:** the "Version pins" table lives in the README (§5 shared contracts); this document cross-references it. Core 4.8.4 (source: `tools/hdwallet-gen/package.json`) and bip-utils 2.12.3 (source: `requirements.txt`).
 
-**Lockfile blocker:** the missing root lockfile is a numbered release blocker (README §18). It is a prerequisite for any "reproducible install" claim for the repository root. `tools/hdwallet-gen/package-lock.json` is committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen` (verified exit 0, D22). Exact commands: run `npm install` from a clean tree, commit `package.json` and `package-lock.json` together, then use `npm ci` for every later install. `npm ci` requires an existing lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile. Until the root lockfile is committed, `npm ci` cannot run against the repo root.
+**Lockfile blocker:** the missing root lockfile is listed among the six release gates (README §18). It is a prerequisite for any "reproducible install" claim for the repository root. `tools/hdwallet-gen/package-lock.json` is committed at `e3b65fb832db287fdc8d54794980dd0b3456cc12` (Core 4.8.4 exact, verified 2026-11-08); `npm ci` runs inside `tools/hdwallet-gen` (verified exit 0, D22). Exact commands: run `npm install` from a clean tree, commit `package.json` and `package-lock.json` together, then use `npm ci` for every later install. `npm ci` requires an existing lockfile, exits with an error on mismatch, deletes `node_modules` first, and never writes to `package.json` or the lockfile. Until the root lockfile is committed, `npm ci` cannot run against the repo root.
 
 ## 10. Canonical pricing note
 
-Prices appear in exactly ONE place in this guide set: the costs reference in `docs/08-security-recovery`, labelled as an indicative snapshot dated 30 October 2026, recheck-required, not current quotations, with the recheck warning kept verbatim. No price figure is copied anywhere else in the guide set. No pricing page is cited anywhere. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check. `docs/06` and `docs/16` point here, not at figures.
+The costs reference in `docs/08-security-recovery` contains an indicative, recheck-required snapshot of priced figures labelled “checked 8 November 2026, UTC”, not current quotations. Casa annual price figures also appear in `docs/16` and `ANDROID-GUIDE`. `docs/08` cites Fireblocks, Casa and Unchained pricing pages and also cites BitGo. `docs/06` also points to `docs/08` as the single costs reference; `docs/16` has no pointer to this note and carries its own Casa price table. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check.
 
 ## 11. Sources
 

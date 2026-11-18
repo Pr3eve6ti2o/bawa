@@ -1,6 +1,6 @@
 # Watch-only derivation
 
-> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. See the README §1 status warning. The interfaces below describe their behaviour.
+> **STATUS (verified 2026-11-08):** `derive.js`, `derive_daemon.js` and `compare.js` **pass `node --check` at `e3b65fb832db287fdc8d54794980dd0b3456cc12`**, so the commands in this document run at the pin. At the former pin `082f7915` they failed `node --check` and could not run. The interfaces below describe their behaviour.
 
 ## 1. What watch-only derivation is
 
@@ -50,12 +50,13 @@ The intended exit statuses are:
 | Status | Meaning |
 | --- | --- |
 | `2` | Usage or read error |
-| `1` | Derivation or validation failure |
+| `2` | Extended-key validation failure (`validateExtendedKey`) |
+| `1` | Derivation or post-derivation address-validation failure |
 | `0` | Success: bare address on stdout, without JSON |
 
 For stdin, the 200-character limit counts all characters read, including any trailing newline. Accumulated input exceeding that total is rejected while reading, before derivation.
 
-Testnet-format extended public keys (`vpub`/`tpub`) are not supported by this workflow. A valid-checksum `vpub` can cause `derive.js` to abort with exit 1 and no address, emitting only an opaque WASM-abort message. See the testnet-format key limitation in docs/11.
+Testnet-format extended public keys (`vpub`/`tpub`) are not supported by this workflow. Since the pre-validation added in `d2f0960`, a valid-checksum `vpub` is rejected by `validateExtendedKey`: `derive.js` exits `2` with the error `extended key version 045f1cf6 is not allowed for btc` and no address on stdout. See the testnet-format key limitation in docs/11.
 
 The approved receiving paths are:
 
@@ -106,7 +107,7 @@ All three fields are required, with no defaults:
 | Field | Validation |
 | --- | --- |
 | `chain` | Exactly `"btc"`, `"eth"` or `"trx"`, case-sensitive. |
-| `xpub` | A string, non-empty after trimming, with an original length of at most `200` characters. Whitespace counts towards that limit but is removed before private-key detection and derivation. |
+| `xpub` | A string, non-empty after trimming, with an original length of at most `200` characters. Whitespace counts towards that limit but is removed before private-key detection and derivation. **Warning:** `compare.js` silently discards env lines over `1024` characters and values over `200` characters; affected entries are treated as missing, with no error. |
 | `index` | A JSON number that is an integer from `0` to `2147483647` inclusive. Numeric strings are rejected. |
 
 Path selection is fixed, not caller-configurable:
@@ -133,7 +134,7 @@ Do not assume every wallet or chain uses this ETH policy. Check the exporting wa
 
 Receiving addresses follow `/0/i` after the account node: `/0/0`, `/0/1`, `/0/2`….
 
-For recovery scans of external wallets, scan both receiving and change branches where they are used. Under BIP-44, `/1/i` is change where a change branch exists. See the [Trust Wallet developer documentation](https://developer.trustwallet.com/) for platform details.
+For recovery scans of external wallets, scan both receiving and change branches where they are used. Under BIP-44, `/1/i` is change where a change branch exists. See Trust Wallet's [Wallet Core repository](https://github.com/trustwallet/wallet-core) for platform details.
 
 Bawa’s tools derive receiving branch `0` only; they do not derive change addresses. A tracker restricted to `/0/i` misses change outputs sent to `/1/i` by a wallet using that branch.
 
@@ -191,7 +192,7 @@ An account export normally exposes both receiving and change branches. Calling a
 
 A parent extended public key plus any one matching non-hardened child private key can expose the parent extended private key. This is the BIP-32 leak warning: recovery can propagate upwards along an entirely non-hardened path. A hardened edge stops upward recovery, but it does not protect ordinary receiving and change children beneath the compromised account.
 
-Never put a child private key in the same storage as an xpub. Never send one to a watch-only system, even for testing, recovery or a temporary signing task.
+Never put a non-hardened descendant private key in the same storage as the corresponding parent xpub: together they allow recovery of the parent extended private key and derivation of every descendant key. Never send a non-hardened descendant private key to a watch-only system holding that xpub, even for testing, recovery or a temporary signing task.
 
 ### Exposure has no revocation switch
 
@@ -204,7 +205,7 @@ If an xpub is exposed:
 - Retire the exposed branch for receipts and change.
 - Keep monitoring it for late payments, but stop issuing its addresses.
 
-Historical activity remains visible, and migration transactions may link old funds to the new account. If a child private key leaked too, treat it as a spending-key compromise, not merely a privacy incident.
+Historical activity remains visible, and migration transactions may link old funds to the new account. If a non-hardened descendant private key leaked too, treat it as a spending-key compromise, not merely a privacy incident: together with the parent xpub, it allows recovery of the parent extended private key and derivation of every descendant key.
 ## 7. The watch-only model
 
 Your receiving server should not need spending authority to tell someone where to pay. An xpub contains a public key plus chain code. You can use it to derive non-hardened child public keys for receiving addresses, but not to derive private keys, recover your spending wallet, recreate its seed or sign a spend. Rebuilding an address list is not restoring spending access.
@@ -217,7 +218,7 @@ Export after the hardened boundary. A root xpub cannot traverse `44'/60'/0'`. Th
 
 1. Confirm the originating wallet’s chain and receiving policy. Use `m/44'/60'/0'/0/i` only where that is the intended ETH policy.
 2. Obtain the **public** export for `m/44'/60'/0'`. Keep your mnemonic, seed and all private extended keys outside the receiving service.
-3. Record the chain, account origin and permitted `/0/i` suffix alongside your service configuration. An xpub does not encode its complete ancestry or uniquely identify the application chain; its prefix is not proof of either.
+3. Record the chain, account origin and permitted `/0/i` suffix alongside your service configuration; this record is the guard against cross-chain xpub misuse. Separate per-chain roots are a policy, not a technical restriction, and the tools do not enforce it. BTC, ETH and TRX xpubs share version `0x0488b21e`; an xpub carries no chain tag and does not encode its complete ancestry, so its prefix is not proof of chain or account origin. Cross-chain misuse can derive silently: a BTC `zpub` supplied as `eth` derives an ETH address from BTC key material without a version error.
 
 **Procedure 2 — run one derivation**
 
@@ -245,7 +246,7 @@ For Bitcoin mainnet, single-signature accounts:
 
 | Public format | Encoding and address policy | Address prefix | Public version |
 | --- | --- | --- | --- |
-| `xpub` | BIP-32 encoding; BIP-44 legacy P2PKH | `1` | `0x0488b21e` |
+| `xpub` | BIP-32 encoding; P2PKH or P2SH (SLIP-0132) | `1` or `3` | `0x0488b21e` |
 | `ypub` | BIP-49 wrapped SegWit P2SH-P2WPKH | `3` | `0x049d7cb2` |
 | `zpub` | BIP-84 native SegWit P2WPKH | `bc1q` | `0x04b24746` |
 
@@ -258,6 +259,14 @@ Before using the import, compare receiving addresses at several identical indice
 Treat extended public keys as **sensitive public material**. Export the least you need. For an account export, use `m/<purpose>'/<coin_type>'/<account>'`, after the hardened boundary. Record the chain, network, account, full origin path and script policy from the signer’s export details; the prefix cannot establish these.
 
 Your invoice service may need only a receiving-branch key where the wallet supports it. That export cannot monitor change, so do not label its total as the whole account balance.
+
+### BitBoxApp: display and export an account key
+
+1. In the BitBoxApp, select the account, open **Account info**, and choose **View account details**.
+2. Check the account name and **Script type**. Native SegWit and Taproot have separate keypaths and exports; use **View Taproot** / **View Native Segwit** to display the one you intend to import.
+3. Where an **Extended public key** field and a **Verify on device** button are shown, choose **Verify on device**. Compare the entire key on the BitBox with the app’s field. Confirm on the device only if the full key matches.
+4. Prefer the complete **Descriptor** when the receiving software supports it. Taproot offers a descriptor only, with no separate **Extended public key** field.
+5. Copy the chosen value with its copy icon (or scan its QR code), then paste the whole value into the receiving software’s import field.
 
 ## 9. Gap limits, branches and address-mismatch diagnosis
 
@@ -318,7 +327,7 @@ Keep your requests within these limits:
 
 ### Private-key rejection
 
-The daemon trims your `xpub`, Base58-decodes it and separates the final four decoded bytes as the checksum. It hashes the preceding payload twice with SHA-256. The checksum bytes must equal the first four bytes of the second hash before a listed private version triggers rejection.
+The daemon trims your `xpub`, Base58-decodes it and separates the final four decoded bytes as the checksum. It hashes the preceding payload twice with SHA-256. The checksum bytes must equal the first four bytes of the second hash before either a listed private version or `decoded[45] === 0x00` (the private-payload marker) triggers rejection. The marker triggers private-key rejection independently of membership in the eight-version list.
 
 The eight recognised private version prefixes—the first four decoded bytes, in hex—are:
 
@@ -331,13 +340,13 @@ The eight recognised private version prefixes—the first four decoded bytes, in
 - `044a4e28`
 - `045f18bc`
 
-With a matching checksum, a listed version gives you:
+With a matching checksum, a listed private version or the private-payload marker gives you:
 
 ```json
-{"ok":false,"error":"extended public key required"}
+{"ok":false,"error":"extended public key required (private extended keys are rejected)"}
 ```
 
-This is neither a prefix-only check nor a complete public-key format check. Do not assume that passing it means you have a usable extended public key. A checksum mismatch returns `false` from this test; it does not approve the value as a public key.
+This is neither a prefix-only check nor a complete public-key format check. Do not assume that passing it means you have a usable extended public key. A checksum mismatch causes the daemon to return `{"ok":false,"error":"extended key checksum verification failed"}`; it does not approve the value as a public key.
 
 ### Error redaction
 
@@ -352,9 +361,13 @@ The prefixes are case-sensitive. Redaction does not verify checksums. Do not tre
 
 Keep each input line to at most 4096 characters, measured as JavaScript string length: UTF-16 code units, not bytes.
 
-The length check runs after `readline` delivers the completed line, **before** whitespace handling or JSON parsing. It is not a streaming input-buffer limit.
+The completed-line length check runs after `readline` delivers the line, **before** whitespace handling or JSON parsing. This completed-line check is not a streaming input-buffer limit.
 
-If you send an empty or whitespace-only line of at most 4096 characters, the daemon ignores it without a response. Any longer line returns the following, even if it contains only whitespace:
+A separate streaming guard, `cappedInput`, sits between `stdin` and `readline` and counts bytes in the current unterminated line. If that count exceeds 4096 bytes, the daemon returns `{"ok":false,"error":"request too large"}` and destroys `stdin`.
+
+Base58 extended-key input longer than 112 characters is rejected; the decoded extended key must be exactly 82 bytes.
+
+An empty or whitespace-only line within both input-line limits returns `{"ok":false,"error":"bad json"}`. Any line exceeding either input-line limit returns the following, even if it contains only whitespace:
 
 ```json
 {"ok":false,"error":"request too large"}
@@ -423,15 +436,15 @@ Run `compare.js` from the repository root:
 node tools/hdwallet-gen/compare.js
 ```
 
-It reads the repository-root `.env`, or the file named by `NOVA_ENV`. Ensure the selected env file exists before running `compare.js`. If `NOVA_ENV` points to a nonexistent file, the script exits 1 with an uncaught `ENOENT` stack trace. This is separate from the documented missing-chain-xpub error. `NOVA_ENV` is a legacy name retained as a code identifier.
+It reads the repository-root `.env`, or the file named by `NOVA_ENV`. Ensure the selected env file exists before running `compare.js`. If `NOVA_ENV` points to a nonexistent file, the script catches the `ENOENT` error, logs it as a single `FATAL:` line, and exits 1. This is separate from the documented missing-chain-xpub error. `NOVA_ENV` is a legacy name retained as a code identifier.
 
-`tools/make_wallet.py` writes public configuration to `BAWA_ENV_FILE`, defaulting to `<repo>/.env`. `compare.js` selects its input independently through `NOVA_ENV`, also defaulting to `<repo>/.env`. If generation used a custom `BAWA_ENV_FILE`, set `NOVA_ENV` to that same file when running `compare.js`. The launcher's other path overrides are `NOVA_SECRETS_DIR` (default `<repo>/secrets`) and `BAWA_BACKUP_DIR` (default `<repo>/seed-backup`). The launcher refuses a symlinked secrets directory, `.env` file or backup directory.
+`tools/make_wallet.py` writes public configuration to `BAWA_ENV_FILE`, defaulting to `<repo>/.env`. `compare.js` selects its input independently through `NOVA_ENV`, also defaulting to `<repo>/.env`. If generation used a custom `BAWA_ENV_FILE`, set `NOVA_ENV` to that same file when running `compare.js`. The other path overrides for `tools/make_wallet.py` are `NOVA_SECRETS_DIR` (default `<repo>/secrets`) and `BAWA_BACKUP_DIR` (default `<repo>/seed-backup`). `tools/make_wallet.py` refuses a symlinked secrets directory, `.env` file or backup directory.
 
 The script takes `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` and prints the first three receiving addresses per chain, at indexes `0`, `1` and `2`. Output is public-only: a chain label plus three addresses, not xpubs or private material.
 
-A missing chain xpub throws, and the top-level handler exits with status `1`. Check the exit status even when the output looks plausible: earlier chains may already have printed before a later chain fails. Use this for a spot-check, not as an allocation mechanism.
+A missing chain xpub throws, and the top-level handler exits with status `1`. All validation precedes derivation, and all results are collected before any addresses are printed, so a failure prints zero addresses. Check the exit status. Use this for a spot-check, not as an allocation mechanism.
 
-`compare.js` does not perform the private-extended-key rejection used by `derive.js` and `derive_daemon.js`. Supply public extended keys only in the chain xpub settings. An `xprv` can be accepted and produce addresses successfully, so successful output does not prove that the input is public.
+`compare.js` performs the same private-extended-key rejection as `derive.js` and `derive_daemon.js`, using `validateExtendedKey` before WASM initialization. Supply public extended keys only in the chain xpub settings. An `xprv` is rejected with exit status `1`, and zero addresses are printed.
 
 **Reader pattern — not a Bawa file**
 
