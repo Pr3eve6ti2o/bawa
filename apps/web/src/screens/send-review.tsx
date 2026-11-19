@@ -39,29 +39,29 @@ export function SendReview({
         <h1 id="send-review-heading" className="text-2xl font-semibold">
           Review send
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {chainName} · {symbol}
         </p>
       </header>
 
-      <div className="rounded-xl border border-slate-200 p-4">
-        <dl className="divide-y divide-slate-200">
+      <div className="rounded-xl border border-border p-4">
+        <dl className="divide-y divide-border">
           <div className="flex items-start justify-between gap-4 pb-4">
-            <dt className="shrink-0 text-sm text-slate-500">Recipient</dt>
+            <dt className="shrink-0 text-sm text-muted-foreground">Recipient</dt>
             <dd className="min-w-0 break-all text-right text-sm">
               {recipient}
             </dd>
           </div>
 
           <div className="flex items-start justify-between gap-4 py-4">
-            <dt className="shrink-0 text-sm text-slate-500">Amount</dt>
+            <dt className="shrink-0 text-sm text-muted-foreground">Amount</dt>
             <dd className="min-w-0 break-words text-right text-sm tabular-nums">
               {amount}
             </dd>
           </div>
 
           <div className="flex items-start justify-between gap-4 py-4">
-            <dt className="shrink-0 text-sm text-slate-500">Network fee</dt>
+            <dt className="shrink-0 text-sm text-muted-foreground">Estimated fee</dt>
             <dd className="min-w-0 break-words text-right text-sm tabular-nums">
               {fee}
             </dd>
@@ -76,11 +76,11 @@ export function SendReview({
         </dl>
       </div>
 
-      <small className="block text-sm text-slate-500">{feeNote}</small>
+      <small className="block text-sm text-muted-foreground">{feeNote}</small>
 
       <div
         role="alert"
-        className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950"
+        className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-4 text-warning-text"
       >
         <p className="font-semibold">Broadcast is disabled</p>
         <p className="break-words text-sm">{disabledReason}</p>
@@ -97,3 +97,4 @@ export function SendReview({
     </section>
   );
 }
+

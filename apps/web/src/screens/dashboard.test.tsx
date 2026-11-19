@@ -117,15 +117,21 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('0 BTC');
+      expect(mounted.div.textContent).toContain('Zero balance');
       expect(mounted.div.textContent).toContain('1.5 ETH');
-      const toggle = mounted.div.querySelector(
-        'input[type="checkbox"]',
-      ) as HTMLInputElement;
+      const toggle = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Hide zero balances',
+      ) as HTMLButtonElement;
+      expect(toggle).not.toBeUndefined();
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
       await act(async () => {
         toggle.click();
       });
-      expect(mounted.div.textContent).not.toContain('0 BTC');
+      const toggleAfter = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Hide zero balances',
+      ) as HTMLButtonElement;
+      expect(toggleAfter.getAttribute('aria-pressed')).toBe('true');
+      expect(mounted.div.textContent).not.toContain('Zero balance');
       expect(mounted.div.textContent).toContain('1.5 ETH');
     } finally {
       await mounted.cleanup();
@@ -154,12 +160,15 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows the onboarding card when there is no vault', async () => {
+  it('shows no onboarding banner when there is no vault', async () => {
+    // Lane C (spec §5): the locked/no-vault banners were removed from the
+    // dashboard — onboarding lives on the Welcome screen now.
     setWallet(balancesFor({}), { vaultState: 'no-vault' });
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No wallet yet');
-      expect(mounted.div.textContent).toContain('Create wallet');
+      expect(mounted.div.textContent).not.toContain('No wallet yet');
+      expect(mounted.div.textContent).not.toContain('Create wallet');
+      expect(mounted.div.textContent).not.toContain('Vault locked');
     } finally {
       await mounted.cleanup();
     }
@@ -242,7 +251,7 @@ describe('dashboard screen', () => {
       await act(async () => {
         (tab as HTMLButtonElement).click();
       });
-      expect(mounted.div.textContent).toContain('No transactions yet');
+      expect(mounted.div.textContent).toContain('No activity yet');
     } finally {
       await mounted.cleanup();
     }
@@ -286,7 +295,7 @@ describe('dashboard screen', () => {
       const text = mounted.div.textContent ?? '';
       // Real balances from the context, formatted from base units.
       expect(text).toContain('1.5 ETH');
-      expect(text).toContain('0 BTC');
+      expect(text).toContain('Zero balance');
       // Real actions exist; no Swap/Buy (no engine/on-ramp).
       expect(text).toContain('Send');
       expect(text).toContain('Receive');

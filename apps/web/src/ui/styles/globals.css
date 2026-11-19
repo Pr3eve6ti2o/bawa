@@ -164,6 +164,32 @@
   --sidebar-accent-foreground: rgb(243 245 255);
   --sidebar-border: rgb(42 54 81);
   --sidebar-ring: rgb(139 124 255);
+
+  /* Panel — ONE dark token set for the 430px wallet shell (UI-UX spec §1.1).
+     Values taken from the shell's own existing code, not invented. The
+     shell stays dark in both themes, so these live in :root, not .dark.
+     --panel-shell-from/to and the hover/active extras are the same method
+     applied to the shell gradient and dark hover states (§10: no hex left
+     in any screen). Chain colours stay data in asset-rows.tsx. */
+  --panel-surface: #0b1326;
+  --panel-surface-raised: #243454;
+  --panel-border: #263454;
+  --panel-text: #eff2fc;
+  --panel-text-muted: #aab5d1;
+  --panel-text-soft: #c8d0e8;
+  --panel-accent: #b4aaff;
+  --panel-accent-from: #8b7cff;
+  --panel-accent-to: #4f7cff;
+  --panel-success-pill-bg: #224f45;
+  --panel-success-pill-text: #94e1c3;
+  --panel-icon-tile: #263451;
+  --panel-shell-from: #11172b;
+  --panel-shell-to: #18264a;
+  --panel-hover: #14213b;
+  --panel-active: #1a2948;
+  --panel-active-hover: #223658;
+  --panel-border-strong: #334767;
+  --panel-action-hover: #2a3651;
 }
 
 /* Bawa panel: dark-first wallet shell. Muted text and primary are lifted
@@ -176,6 +202,16 @@
 .bawa-panel .bg-card {
   --muted-foreground: rgb(100 113 140);
   --primary: rgb(98 88 217);
+}
+
+/* Dark mode: cards inside the panel are dark (#18264a), so the light-mode
+   override above would render dark muted text (#64718c) on a dark card —
+   3.03:1. On dark cards the muted text and primary return to their light
+   dark-theme values: #aab5d1 on #18264a is 7.24:1, #8b7cff on #18264a is
+   4.54:1. Light mode is unchanged: #64718c on white is 4.90:1. */
+.dark .bawa-panel .bg-card {
+  --muted-foreground: rgb(170 181 209);
+  --primary: rgb(139 124 255);
 }
 
 .dark {
@@ -360,6 +396,28 @@
   --color-surface-glass-elevated: var(--surface-glass-elevated);
   --color-surface-glass-modal: var(--surface-glass-modal);
   --color-dark-surface: var(--dark-surface);
+
+  /* Colors — panel tokens (§1.1): bg-panel-surface, text-panel-text-muted,
+     border-panel-border, from-panel-accent-from, etc. */
+  --color-panel-surface: var(--panel-surface);
+  --color-panel-surface-raised: var(--panel-surface-raised);
+  --color-panel-border: var(--panel-border);
+  --color-panel-text: var(--panel-text);
+  --color-panel-text-muted: var(--panel-text-muted);
+  --color-panel-text-soft: var(--panel-text-soft);
+  --color-panel-accent: var(--panel-accent);
+  --color-panel-accent-from: var(--panel-accent-from);
+  --color-panel-accent-to: var(--panel-accent-to);
+  --color-panel-success-pill-bg: var(--panel-success-pill-bg);
+  --color-panel-success-pill-text: var(--panel-success-pill-text);
+  --color-panel-icon-tile: var(--panel-icon-tile);
+  --color-panel-shell-from: var(--panel-shell-from);
+  --color-panel-shell-to: var(--panel-shell-to);
+  --color-panel-hover: var(--panel-hover);
+  --color-panel-active: var(--panel-active);
+  --color-panel-active-hover: var(--panel-active-hover);
+  --color-panel-border-strong: var(--panel-border-strong);
+  --color-panel-action-hover: var(--panel-action-hover);
 
   /* Colors — prototype surfaces */
   --color-surface-page: var(--surface-page);

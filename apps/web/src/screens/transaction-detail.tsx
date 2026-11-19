@@ -18,9 +18,9 @@ import {
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 const STATUS_CLASSES = {
-  pending: 'text-amber-700 dark:text-amber-300',
-  confirmed: 'text-emerald-700 dark:text-emerald-300',
-  failed: 'text-red-700 dark:text-red-300',
+  pending: 'text-warning-text',
+  confirmed: 'text-success-text',
+  failed: 'text-destructive',
 } as const;
 
 type HistoryCheck = {
@@ -84,7 +84,7 @@ function DetailRow({
 }) {
   return (
     <div className="grid gap-2 px-5 py-4 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
+      <dt className="text-sm font-medium text-muted-foreground">
         {label}
       </dt>
       <dd className="min-w-0 break-words text-sm">{children}</dd>
@@ -138,11 +138,11 @@ export function TransactionDetailScreen() {
   })();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 text-slate-900 dark:text-slate-100">
+    <main className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground">
       <header className="mb-6">
         <Link
           to="/transactions"
-          className="text-sm font-medium text-blue-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+          className="text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
         >
           ← Transactions
         </Link>
@@ -152,7 +152,7 @@ export function TransactionDetailScreen() {
       {check?.refreshFailed && (
         <p
           role="alert"
-          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+          className="mb-4 rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
         >
           History could not be refreshed. The information below is from the
           loaded history; the check time marks the refresh attempt.
@@ -160,7 +160,7 @@ export function TransactionDetailScreen() {
       )}
 
       {found ? (
-        <dl className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+        <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           <DetailRow label="Chain">
             {chainConfig(found.chain).displayName} mainnet
           </DetailRow>
@@ -198,7 +198,7 @@ export function TransactionDetailScreen() {
               >
                 {found.tx.status} as reported by the network.
               </p>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-xs text-muted-foreground">
                 <CheckedAt check={check} />
               </p>
             </div>
@@ -214,7 +214,7 @@ export function TransactionDetailScreen() {
                 href={found.tx.explorerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-blue-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+                className="font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
               >
                 View on explorer
               </a>
@@ -222,25 +222,25 @@ export function TransactionDetailScreen() {
           )}
         </dl>
       ) : (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <section className="rounded-2xl border border-border bg-card p-5">
           <p>
             This transaction is not in the loaded history. Its status is
             unknown.
           </p>
           <dl className="mt-3 space-y-1">
-            <dt className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            <dt className="text-sm font-medium text-muted-foreground">
               Requested ID
             </dt>
             <dd className="break-all">
               <code className="text-sm">{id ?? 'No ID supplied'}</code>
             </dd>
           </dl>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-xs text-muted-foreground">
             <CheckedAt check={check} />
           </p>
           <Link
             to="/transactions"
-            className="mt-5 inline-block text-sm font-medium text-blue-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 dark:text-blue-400"
+            className="mt-5 inline-block text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
           >
             Back to transactions
           </Link>

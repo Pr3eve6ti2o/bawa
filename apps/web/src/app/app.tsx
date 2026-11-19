@@ -55,26 +55,26 @@ function AppLayout() {
   const { vaultState } = useWallet();
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] sm:py-6">
-      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-[#11172b] to-[#18264a] text-white sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-[#d6deed] sm:shadow-[0_8px_20px_rgba(11,16,32,0.22)]">
+    <div className="min-h-screen bg-background sm:py-6">
+      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)]">
         <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#8b7cff] to-[#4f7cff] text-lg font-bold text-white">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-lg font-bold text-primary-foreground">
               <Wallet className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-bold leading-tight text-white">
+              <h1 className="truncate text-[15px] font-bold leading-tight text-panel-text">
                 Bawa Web Wallet
               </h1>
               <Link
                 to="/wallets"
-                className="block truncate text-xs leading-tight text-[#aab5d1] hover:text-white"
+                className="block truncate text-xs leading-tight text-panel-text-muted hover:text-panel-text"
               >
                 {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
               </Link>
             </div>
           </div>
-          <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-[#224f45] px-3 text-[10px] font-bold text-[#94e1c3]">
+          <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
             Mainnet
           </span>
         </header>
@@ -87,7 +87,7 @@ function AppLayout() {
           <div
             role="menu"
             aria-label="More"
-            className="mx-4 mb-2 rounded-[20px] border border-white/10 bg-[#243454] p-2"
+            className="mx-4 mb-2 rounded-[20px] border border-panel-border bg-panel-surface-raised p-2"
           >
             {moreLinks.map(({ to, label }) => (
               <Link
@@ -95,7 +95,7 @@ function AppLayout() {
                 to={to}
                 role="menuitem"
                 onClick={() => setMoreOpen(false)}
-                className="block rounded-[12px] px-3 py-2.5 text-sm font-medium text-[#eff2fc] hover:bg-white/10"
+                className="block rounded-[12px] px-3 py-2.5 text-sm font-medium text-panel-text hover:bg-panel-hover"
               >
                 {label}
               </Link>
@@ -105,7 +105,7 @@ function AppLayout() {
 
         <nav
           aria-label="Main navigation"
-          className="sticky bottom-0 z-10 border-t border-white/10 bg-[#141d34]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+          className="sticky bottom-0 z-10 border-t border-panel-border bg-panel-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
         >
           <div className="grid grid-cols-5">
             {tabs.map(({ to, label, icon: Icon }) => (
@@ -116,7 +116,7 @@ function AppLayout() {
                 onClick={() => setMoreOpen(false)}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                    isActive ? 'text-white' : 'text-[#aab5d1] hover:text-white'
+                    isActive ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
                   }`
                 }
               >
@@ -124,7 +124,7 @@ function AppLayout() {
                   <>
                     <span
                       className={`flex size-6 items-center justify-center rounded-full ${
-                        isActive ? 'bg-[#263451] text-[#b4aaff]' : 'bg-white/5 text-[#aab5d1]'
+                        isActive ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
                       }`}
                     >
                       <Icon className="size-4" aria-hidden="true" />
@@ -140,12 +140,12 @@ function AppLayout() {
               aria-label="More"
               onClick={() => setMoreOpen((open) => !open)}
               className={`flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                moreOpen ? 'text-white' : 'text-[#aab5d1] hover:text-white'
+                moreOpen ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
               }`}
             >
               <span
                 className={`flex size-6 items-center justify-center rounded-full ${
-                  moreOpen ? 'bg-[#263451] text-[#b4aaff]' : 'bg-white/5 text-[#aab5d1]'
+                  moreOpen ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
                 }`}
               >
                 <Ellipsis className="size-4" aria-hidden="true" />
@@ -163,8 +163,8 @@ function AppLayout() {
 function NotFound() {
   return (
     <section className="space-y-3">
-      <h2 className="text-2xl font-semibold text-white">Page not found</h2>
-      <Link to="/" className="text-[#b4aaff] underline underline-offset-4">
+      <h2 className="text-2xl font-semibold text-panel-text">Page not found</h2>
+      <Link to="/" className="text-panel-accent underline underline-offset-4">
         Back to dashboard
       </Link>
     </section>

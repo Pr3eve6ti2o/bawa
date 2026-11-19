@@ -42,28 +42,28 @@ export function TransactionHistoryScreen() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight text-white">Transactions</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-panel-text">Transactions</h1>
 
       {chains.length === 0 ? (
-        <div className="space-y-3 rounded-[20px] border border-white/10 bg-[#243454] p-6 text-white">
-          <h2 className="text-lg font-bold text-white">No transactions yet</h2>
-          <p className="text-sm leading-relaxed text-[#aab5d1]">
+        <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
+          <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
+          <p className="text-sm leading-relaxed text-panel-text-muted">
             No transaction history — no history adapter is verified yet.
           </p>
-          <p className="text-sm leading-relaxed text-[#aab5d1]">
+          <p className="text-sm leading-relaxed text-panel-text-muted">
             Import a watch-only wallet to see its derived addresses, or open
             Receive to share an address.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Link
               to="/receive"
-              className="inline-block rounded-full bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] px-4 py-2 text-sm font-semibold text-white"
+              className="inline-block rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               Receive
             </Link>
             <Link
               to="/import-wallet"
-              className="inline-block rounded-full border border-white/10 bg-[#263451] px-4 py-2 text-sm font-semibold text-[#eff2fc]"
+              className="inline-block rounded-full border border-panel-border bg-panel-icon-tile px-4 py-2 text-sm font-semibold text-panel-text"
             >
               Import wallet
             </Link>
@@ -107,7 +107,7 @@ export function TransactionHistoryScreen() {
                 <li key={`${tx.chain}:${tx.hash}`} className="rounded-lg border p-3">
                   <Link
                     to={`/transactions/${tx.hash}`}
-                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
+                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
                   >
                     <span className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm font-medium">

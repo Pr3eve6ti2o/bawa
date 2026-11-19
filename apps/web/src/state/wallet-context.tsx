@@ -30,6 +30,42 @@ const perChain = <T,>(make: () => T): PerChain<T> => ({
 
 export type VaultState = 'no-vault' | 'locked' | 'unlocked';
 
+// Auto-lock (UI-UX spec §9; Phantom Immediately–1 day range, Rabby minutes
+// preference + activity reset + restart-persisted deadline). 0 = Immediately:
+// lock when the page is hidden. Minutes > 0: lock after that long without
+// activity. The preference and the deadline persist in localStorage; the
+// deadline is re-armed on unlock, on activity, and when the preference
+// changes. Locking only clears in-memory vault access (same as lockVault);
+// watch-only stays usable.
+export const AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 60, 1440] as const;
+export const AUTO_LOCK_DEFAULT_MINUTES = 5;
+const AUTO_LOCK_MINUTES_KEY = 'bawa-auto-lock-minutes';
+const AUTO_LOCK_DEADLINE_KEY = 'bawa-auto-lock-deadline';
+
+function readAutoLockMinutes(): number {
+  try {
+    if (typeof window === 'undefined') return AUTO_LOCK_DEFAULT_MINUTES;
+    const raw = window.localStorage.getItem(AUTO_LOCK_MINUTES_KEY);
+    const minutes = raw === null ? NaN : Number(raw);
+    return (AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)
+      ? minutes
+      : AUTO_LOCK_DEFAULT_MINUTES;
+  } catch {
+    return AUTO_LOCK_DEFAULT_MINUTES;
+  }
+}
+
+function readAutoLockDeadline(): number | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(AUTO_LOCK_DEADLINE_KEY);
+    const deadline = raw === null ? NaN : Number(raw);
+    return Number.isFinite(deadline) ? deadline : null;
+  } catch {
+    return null;
+  }
+}
+
 export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
 
 export interface BalanceState {
@@ -82,6 +118,8 @@ export interface WalletContextValue extends WalletState {
   unlock(): Promise<void>;
   unlockVault(password: string, passphrase?: string): Promise<void>;
   lockVault(): void;
+  autoLockMinutes: number;
+  setAutoLockMinutes(minutes: number): void;
   setVaultAccount(account: number, index: number): Promise<void>;
   refreshVaultAccounts(selection?: {
     account: number;
@@ -132,6 +170,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }));
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
+  const [autoLockMinutes, setAutoLockMinutesState] = useState<number>(() => readAutoLockMinutes());
+  const autoLockTimer = useRef<number | null>(null);
+  const prevAutoLockMinutes = useRef<number>(autoLockMinutes);
   const current = useRef(state);
   const additions = useRef(perChain(() => 0));
   const changed = useRef(perChain(() => false));
@@ -400,6 +441,102 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }));
   }, [update]);
 
+  const clearAutoLockTimer = useCallback(() => {
+    if (autoLockTimer.current !== null) {
+      window.clearTimeout(autoLockTimer.current);
+      autoLockTimer.current = null;
+    }
+  }, []);
+
+  const setAutoLockMinutes = useCallback((minutes: number) => {
+    if (!(AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)) return;
+    try {
+      window.localStorage.setItem(AUTO_LOCK_MINUTES_KEY, String(minutes));
+    } catch {
+      // Storage may be unavailable; keep the preference in memory.
+    }
+    setAutoLockMinutesState(minutes);
+  }, []);
+
+  // Auto-lock arming (spec §9). Runs only when the vault is unlocked or the
+  // preference changes. A stored deadline that already passed (e.g. the
+  // page was closed and reopened) locks immediately instead of re-arming.
+  // Changing the preference re-arms from now; otherwise the stored
+  // (activity-extended) deadline is honoured so a restart resumes the
+  // remaining time. Activity resets the deadline; "Immediately" (0) locks
+  // when the page is hidden instead of using a timer.
+  useEffect(() => {
+    if (state.vaultState !== 'unlocked') {
+      clearAutoLockTimer();
+      try {
+        window.localStorage.removeItem(AUTO_LOCK_DEADLINE_KEY);
+      } catch {
+        // Storage may be unavailable; nothing to clear.
+      }
+      return;
+    }
+    if (autoLockMinutes === 0) {
+      try {
+        window.localStorage.removeItem(AUTO_LOCK_DEADLINE_KEY);
+      } catch {
+        // Storage may be unavailable; nothing to clear.
+      }
+      const onHidden = () => {
+        if (document.visibilityState === 'hidden') lockVault();
+      };
+      const onPageHide = () => lockVault();
+      document.addEventListener('visibilitychange', onHidden);
+      window.addEventListener('pagehide', onPageHide);
+      return () => {
+        document.removeEventListener('visibilitychange', onHidden);
+        window.removeEventListener('pagehide', onPageHide);
+      };
+    }
+    const now = Date.now();
+    const stored = readAutoLockDeadline();
+    if (stored !== null && stored <= now) {
+      lockVault();
+      return;
+    }
+    const minutesChanged = prevAutoLockMinutes.current !== autoLockMinutes;
+    prevAutoLockMinutes.current = autoLockMinutes;
+    const deadline =
+      minutesChanged || stored === null
+        ? now + autoLockMinutes * 60_000
+        : stored;
+    try {
+      window.localStorage.setItem(AUTO_LOCK_DEADLINE_KEY, String(deadline));
+    } catch {
+      // Storage may be unavailable; the in-memory timer still applies.
+    }
+    clearAutoLockTimer();
+    autoLockTimer.current = window.setTimeout(() => {
+      lockVault();
+    }, deadline - now);
+    const resetDeadline = () => {
+      const next = Date.now() + autoLockMinutes * 60_000;
+      try {
+        window.localStorage.setItem(AUTO_LOCK_DEADLINE_KEY, String(next));
+      } catch {
+        // Storage may be unavailable; the in-memory timer still applies.
+      }
+      clearAutoLockTimer();
+      autoLockTimer.current = window.setTimeout(() => {
+        lockVault();
+      }, autoLockMinutes * 60_000);
+    };
+    const activityEvents = ['pointerdown', 'keydown', 'wheel'] as const;
+    activityEvents.forEach((event) =>
+      window.addEventListener(event, resetDeadline, { passive: true }),
+    );
+    return () => {
+      activityEvents.forEach((event) =>
+        window.removeEventListener(event, resetDeadline),
+      );
+      clearAutoLockTimer();
+    };
+  }, [state.vaultState, autoLockMinutes, lockVault, clearAutoLockTimer]);
+
   // Locking only clears in-memory derived addresses; it is NOT a security boundary.
   // Public xpubs remain in state and storage. Unlocking re-derives their addresses.
   // Locking also locks the vault and clears vault-derived addresses.
@@ -492,8 +629,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,
-    unlockVault, lockVault, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
+    unlockVault, lockVault, autoLockMinutes, setAutoLockMinutes, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, autoLockMinutes, setAutoLockMinutes, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -19,6 +19,7 @@ import { createVault, hasVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
+import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
 import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
 import {
@@ -63,7 +64,7 @@ export function ImportWalletScreen() {
   const imported = chains
     .map((id) => xpubs[id])
     .filter((wallet): wallet is WatchOnlyWallet => wallet !== null);
-  const [mode, setMode] = useState<ImportMode>('watch-only');
+  const [mode, setMode] = useState<ImportMode>('phrase');
 
   // Mode B (watch-only) state — existing behaviour, unchanged.
   const [chain, setChain] = useState<ChainId>('btc');
@@ -111,7 +112,7 @@ export function ImportWalletScreen() {
     // Clear the input immediately: a rejected phrase must not linger.
     setPhrase('');
     if (wordCount !== 12 && wordCount !== 24) {
-      setPhraseError('Enter a 12-word or 24-word recovery phrase.');
+      setPhraseError('Enter a 12- or 24-word recovery phrase.');
       return;
     }
     setIsRestoring(true);
@@ -209,7 +210,7 @@ export function ImportWalletScreen() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
@@ -222,31 +223,17 @@ export function ImportWalletScreen() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2" role="tablist" aria-label="Import mode">
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'phrase'}
-              variant={mode === 'phrase' ? 'default' : 'outline'}
-              onClick={() => setMode('phrase')}
-            >
-              Recovery phrase
-            </Button>
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'watch-only'}
-              variant={mode === 'watch-only' ? 'default' : 'outline'}
-              onClick={() => setMode('watch-only')}
-            >
-              Watch-only public key
-            </Button>
-          </div>
+           <Tabs value={mode} onValueChange={(value) => setMode(value as ImportMode)}>
+             <TabsList aria-label="Import mode">
+               <TabsTrigger value="phrase">Restore full wallet</TabsTrigger>
+               <TabsTrigger value="watch-only">Watch-only</TabsTrigger>
+             </TabsList>
+           </Tabs>
         </CardContent>
       </Card>
 
       {mode === 'phrase' && vaultExists && (
-        <Card className="rounded-[20px] border-[#d6deed]">
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>A wallet already exists</CardTitle>
             <CardDescription>
@@ -269,7 +256,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'enter' && (
-        <Card className="rounded-[20px] border-[#d6deed]">
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
@@ -334,7 +321,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'preview' && derived !== null && (
-        <Card className="rounded-[20px] border-[#d6deed]">
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Check the restored addresses</CardTitle>
             <CardDescription>
@@ -353,8 +340,19 @@ export function ImportWalletScreen() {
                   </code>
                 </li>
               ))}
-            </ul>
-            <form className="space-y-4" noValidate onSubmit={(event) => void handleSaveSubmit(event)}>
+             </ul>
+             <Button
+               type="button"
+               variant="outline"
+               onClick={() => {
+                 setPhraseStep('enter');
+                 setDerived(null);
+                 setNormalizedMnemonic(null);
+               }}
+             >
+               Edit recovery phrase
+             </Button>
+             <form className="space-y-4" noValidate onSubmit={(event) => void handleSaveSubmit(event)}>
               <fieldset disabled={isSaving} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="import-vault-password">Vault password</Label>
@@ -391,7 +389,7 @@ export function ImportWalletScreen() {
       )}
 
       {mode === 'phrase' && !vaultExists && phraseStep === 'saved' && derived !== null && (
-        <Card className="rounded-[20px] border-[#d6deed]">
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Wallet restored</CardTitle>
             <CardDescription>
@@ -419,7 +417,12 @@ export function ImportWalletScreen() {
 
       {mode === 'watch-only' && (
         <>
-          <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
+             <Alert>
+     <AlertDescription>
+       Watch-only accounts cannot sign transactions. Import one chain at a time.
+     </AlertDescription>
+   </Alert>
+   <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
             Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
             are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
             Never paste a mnemonic, seed or private key here.
@@ -445,11 +448,11 @@ export function ImportWalletScreen() {
                     type="button"
                     aria-pressed={chain === option}
                     onClick={() => setChain(option)}
-                    className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff] ${
-                      chain === option
-                        ? 'bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] text-white'
-                        : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                    }`}
+                       className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                         chain === option
+                           ? 'bg-primary text-primary-foreground'
+                           : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+                       }`}
                   >
                     {option.toUpperCase()}
                   </button>
@@ -509,7 +512,7 @@ export function ImportWalletScreen() {
             ) : (
               <ul className="space-y-2">
                 {imported.map((wallet) => (
-                  <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-[15px] border border-[#d6deed] bg-white p-4 text-[#1b2742]">
+                  <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-xl border bg-card p-4 text-foreground">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
                       <span>{wallet.label || 'Unlabelled wallet'}</span>

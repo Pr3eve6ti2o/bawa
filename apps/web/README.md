@@ -88,11 +88,20 @@ Derivation policy, where `i` is the address index:
 Paths are relative to `apps/web/` unless marked otherwise.
 
 - `src/ui/` — vendored `consenlabs/token-ui`, commit `6380d5d4`, MIT; see [`NOTICE.md`](src/ui/NOTICE.md).
+- `src/assets/chains/` — native chain logos; see [Chain logos](#chain-logos).
 - `src/engine/` — public-key validation boundary and browser wallet-core WASM address derivation.
 - `src/state/` — wallet context, xpub persistence, in-memory addresses and UI lock state.
 - `src/screens/` — the 14 screens and their available, mock or unavailable states.
 - `src/app/` — application shell and routing.
 - [`packages/contracts/`](../../packages/contracts/) (repository root) — shared types, imported as `@bawa/contracts` via a `file:` dependency.
+
+### Chain logos
+
+The native chain logos in `src/assets/chains/` (Bitcoin, Ethereum, TRON, TON)
+are copied from [`trustwallet/assets`](https://github.com/trustwallet/assets),
+`blockchains/<chain>/info/logo.png`, MIT licence,
+Copyright (c) 2019-2023 Trust Wallet. They are rendered by the `ChainLogo`
+component (`src/screens/asset-rows.tsx`) in place of ticker-letter chips.
 
 ## Evidence
 
