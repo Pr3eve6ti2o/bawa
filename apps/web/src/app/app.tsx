@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -10,19 +10,55 @@ import {
 import { BrowserRouter, Link, NavLink, Outlet, Route, Routes } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
-import { CreateWalletScreen } from '../screens/create-wallet';
-import { ImportWalletScreen } from '../screens/import-wallet';
-import { MnemonicBackupScreen } from '../screens/mnemonic-backup';
-import { AssetListScreen } from '../screens/asset-list';
-import { AssetDetailScreen } from '../screens/asset-detail';
-import { ReceiveScreen } from '../screens/receive';
-import { SendScreen } from '../screens/send';
-import { TransactionHistoryScreen } from '../screens/transaction-history';
-import { TransactionDetailScreen } from '../screens/transaction-detail';
-import { NetworkSelectionScreen } from '../screens/network-selection';
-import { LockScreen } from '../screens/lock';
-import { WalletManagementScreen } from '../screens/wallet-management';
-import { SecuritySettingsScreen } from '../screens/security-settings';
+const CreateWalletScreen = lazy(() =>
+  import('../screens/create-wallet').then((m) => ({ default: m.CreateWalletScreen })),
+);
+const ImportWalletScreen = lazy(() =>
+  import('../screens/import-wallet').then((m) => ({ default: m.ImportWalletScreen })),
+);
+const MnemonicBackupScreen = lazy(() =>
+  import('../screens/mnemonic-backup').then((m) => ({ default: m.MnemonicBackupScreen })),
+);
+const AssetListScreen = lazy(() =>
+  import('../screens/asset-list').then((m) => ({ default: m.AssetListScreen })),
+);
+const AssetDetailScreen = lazy(() =>
+  import('../screens/asset-detail').then((m) => ({ default: m.AssetDetailScreen })),
+);
+const ReceiveScreen = lazy(() =>
+  import('../screens/receive').then((m) => ({ default: m.ReceiveScreen })),
+);
+const SendScreen = lazy(() =>
+  import('../screens/send').then((m) => ({ default: m.SendScreen })),
+);
+const TransactionHistoryScreen = lazy(() =>
+  import('../screens/transaction-history').then((m) => ({
+    default: m.TransactionHistoryScreen,
+  })),
+);
+const TransactionDetailScreen = lazy(() =>
+  import('../screens/transaction-detail').then((m) => ({
+    default: m.TransactionDetailScreen,
+  })),
+);
+const NetworkSelectionScreen = lazy(() =>
+  import('../screens/network-selection').then((m) => ({
+    default: m.NetworkSelectionScreen,
+  })),
+);
+const LockScreen = lazy(() =>
+  import('../screens/lock').then((m) => ({ default: m.LockScreen })),
+);
+const WalletManagementScreen = lazy(() =>
+  import('../screens/wallet-management').then((m) => ({
+    default: m.WalletManagementScreen,
+  })),
+);
+const SecuritySettingsScreen = lazy(() =>
+  import('../screens/security-settings').then((m) => ({
+    default: m.SecuritySettingsScreen,
+  })),
+);
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { Toaster } from '../ui/components/sonner';
 
@@ -175,7 +211,8 @@ export function App() {
   return (
     <BrowserRouter>
       <WalletProvider>
-        <Routes>
+        <Suspense fallback={<p>Loading…</p>}>
+          <Routes>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<HomeScreen />} />
             <Route path="welcome" element={<WelcomeScreen />} />
@@ -194,7 +231,8 @@ export function App() {
             <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-        </Routes>
+          </Routes>
+        </Suspense>
       </WalletProvider>
     </BrowserRouter>
   );

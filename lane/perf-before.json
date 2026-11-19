@@ -1,0 +1,303 @@
+{
+  "base": "http://localhost:8931",
+  "startedAt": "2026-11-19T10:07:01.968Z",
+  "steps": {
+    "initialLoad": {
+      "wallMs": 462,
+      "domContentLoaded": 317,
+      "load": 319,
+      "paints": {
+        "first-paint": 80,
+        "first-contentful-paint": 396
+      },
+      "resources": [
+        {
+          "name": "index-C4uJUQGJ.js",
+          "kb": 540,
+          "ms": 90,
+          "encodedKb": 540
+        },
+        {
+          "name": "index-CFGvNKeI.css",
+          "kb": 164,
+          "ms": 41,
+          "encodedKb": 164
+        },
+        {
+          "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+          "kb": 24,
+          "ms": 45,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-400-normal-C38fXH4l.woff2",
+          "kb": 23,
+          "ms": 46,
+          "encodedKb": 23
+        },
+        {
+          "name": "inter-latin-600-normal-LgqL8muc.woff2",
+          "kb": 24,
+          "ms": 47,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-500-normal-Cerq10X2.woff2",
+          "kb": 24,
+          "ms": 48,
+          "encodedKb": 24
+        }
+      ]
+    },
+    "timeToInteractiveMs": 475,
+    "generateMs": 201,
+    "wasmResource": {
+      "transferKb": 10178,
+      "durationMs": 39
+    },
+    "confirmToReadyMs": 847,
+    "step4AddressBlocks": 4,
+    "dashboardAfterCreate": {
+      "ms": 80,
+      "settled": 6,
+      "loading": 0
+    },
+    "reloadToLockedBoxMs": 186,
+    "unlockToDashboardMs": 335,
+    "dashboardAfterUnlock": {
+      "ms": 2,
+      "settled": 6,
+      "loading": 0
+    },
+    "throttledSlow4G": {
+      "wallMs": 4677,
+      "paints": {
+        "first-paint": 2032,
+        "first-contentful-paint": 4224
+      },
+      "timeToInteractiveMs": 4682,
+      "generateMs": 53092,
+      "wasmResource": {
+        "transferKb": 10178,
+        "durationMs": 52423
+      }
+    }
+  },
+  "requests": [
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 200,
+      "ms": 6
+    },
+    {
+      "url": "http://localhost:8931/assets/index-C4uJUQGJ.js",
+      "status": 200,
+      "ms": 110
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/index-C4uJUQGJ.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 200,
+      "ms": 177
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 182
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 212
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 31
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 34
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TUBy4u7oZ2q6iht1vbtFqEn3SBjH9pkiJx",
+      "status": 200,
+      "ms": 104
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 343
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55/txs",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 18
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 33
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0x9DcB906975AAb20702169A291e89e4cc31c33909&page=1&of",
+      "status": 200,
+      "ms": 78
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TUBy4u7oZ2q6iht1vbtFqEn3SBjH9pkiJx/transactions?limit=25&order_by=block_timestamp,de",
+      "status": 200,
+      "ms": 113
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55",
+      "status": 200,
+      "ms": 0
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TUBy4u7oZ2q6iht1vbtFqEn3SBjH9pkiJx",
+      "status": 429,
+      "ms": 5
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 16
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 19
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 17
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55/txs",
+      "status": 200,
+      "ms": 0
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TUBy4u7oZ2q6iht1vbtFqEn3SBjH9pkiJx/transactions?limit=25&order_by=block_timestamp,de",
+      "status": 429,
+      "ms": 8
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 20
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 23
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0x9DcB906975AAb20702169A291e89e4cc31c33909&page=1&of",
+      "status": 200,
+      "ms": 36
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 0
+    },
+    {
+      "url": "http://localhost:8931/assets/index-C4uJUQGJ.js",
+      "status": 200,
+      "ms": 102
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 6
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 6
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 13
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 23
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 20
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q2swnvldf2v2qnv64zmj42g23v9jwj2xz0g8l55/txs",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 4
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 22
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 27
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0x9DcB906975AAb20702169A291e89e4cc31c33909&page=1&of",
+      "status": 429,
+      "ms": 34
+    }
+  ],
+  "pbkdf2Ms": [
+    87,
+    80,
+    85
+  ]
+}

@@ -3,13 +3,44 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { deriveAddresses, validateWatchOnlyImport } from '../engine/boundary';
-import { deriveAddressesAt as deriveVaultAddressesAt } from '../wallet/core';
 import { availableFor } from '../wallet/chains';
-import { getAdapter } from '../wallet/adapters';
 import type { AdapterTx } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
+
+let vaultCorePromise: Promise<typeof import('../wallet/core')> | undefined;
+
+function loadVaultCore(): Promise<typeof import('../wallet/core')> {
+  if (!vaultCorePromise) {
+    vaultCorePromise = import('../wallet/core').catch((error: unknown) => {
+      vaultCorePromise = undefined;
+      throw error;
+    });
+  }
+  return vaultCorePromise;
+}
+
+
+let adaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
+
+// Lazy adapter loading: the adapter chunk (viem + adapters, ~3 MB) must not
+// load before first paint. First caller imports it and registers the
+// adapters once; concurrent callers share the promise. A rejected import
+// clears the cache so a later call retries. Exported for the send screen,
+// which also reads adapters but loads after the wallet context.
+export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
+  if (adaptersPromise) return adaptersPromise;
+  const promise = import('../wallet/adapters').then((adapters) => {
+    adapters.registerAllAdapters();
+    return adapters;
+  });
+  adaptersPromise = promise;
+  void promise.catch(() => {
+    if (adaptersPromise === promise) adaptersPromise = null;
+  });
+  return promise;
+}
+
 
 const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 // Maximum wallet-label length enforced at the storage boundary (T43
@@ -168,6 +199,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     setChain(chain, 'loading');
     try {
+      const { deriveAddresses } = await import('../engine/boundary');
       const addresses = await deriveAddresses(chain, wallet.xpub, wallet.derivedCount);
       if (request !== derivations.current[chain]) return;
       setChain(chain, 'ready', addresses.map((address, index) => ({ chain, index, address })));
@@ -187,6 +219,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const request = ++additions.current[chain];
     const epoch = lifetime.current;
     const publicKey = xpub.trim();
+    const { validateWatchOnlyImport } = await import('../engine/boundary');
     const validation = await validateWatchOnlyImport(chain, publicKey);
     if (!validation.ok) throw new Error(validation.message);
     if (epoch !== lifetime.current || request !== additions.current[chain]) return;
@@ -212,6 +245,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // capability is verified (availableFor). A failed fetch is reported as
   // unavailable/error, never as zero.
   const refreshBalances = useCallback(async () => {
+    const { getAdapter } = await ensureAdapters();
     await Promise.all(CHAINS.map(async (chain) => {
       const request = ++balanceRequests.current[chain];
       const setBalance = (balance: BalanceState) => {
@@ -255,6 +289,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   const refreshHistory = useCallback(async () => {
+    const { getAdapter } = await ensureAdapters();
     await Promise.all(CHAINS.map(async (chain) => {
       const request = ++historyRequests.current[chain];
       const setHistory = (history: HistoryState) => {
@@ -323,6 +358,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     let derived: Record<ChainId, string>;
     try {
+      const { deriveAddressesAt: deriveVaultAddressesAt } = await loadVaultCore();
       derived = await vault.withMnemonic((mnemonic) =>
         deriveVaultAddressesAt(
           mnemonic,
@@ -355,9 +391,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ton: [derived.ton],
       },
     }));
-    // New vault addresses: refresh the adapter-backed balances + history.
-    await refreshBalances();
-    await refreshHistory();
+    // Balances/history load in the background: this function returns as
+    // soon as the derived addresses are in state, so the wallet shows
+    // immediately. A failed background refresh leaves the per-chain
+    // error/unavailable state (or the previous state) and the dashboard
+    // Retry button re-runs it; it never throws here.
+    void refreshBalances().catch(() => {});
+    void refreshHistory().catch(() => {});
   }, [update, refreshBalances, refreshHistory]);
 
   // Switch the derived vault account. Validates like deriveAddressesAt
@@ -440,6 +480,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const rawLabel = typeof entry.label === 'string' ? entry.label.trim() : '';
       const label = rawLabel.length > LABEL_MAX_LENGTH ? '' : rawLabel;
       try {
+        const { validateWatchOnlyImport } = await import('../engine/boundary');
         const validation = await validateWatchOnlyImport(chain, publicKey);
         if (!cancelled && !changed.current[chain]) {
           if (validation.ok) {

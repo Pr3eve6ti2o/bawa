@@ -25,10 +25,19 @@ export function registeredChains(): ChainId[] {
 /**
  * Registers the Phase 2 mainnet adapters. Filled in as the adapters land
  * (P2 eth done; P3 trx, P4 ton, P5 btc to come). Call once at startup.
+ * First registration wins: never clobber an adapter registered earlier
+ * (e.g. a test stub, or an adapter registered before lazy loading ran).
  */
 export function registerAllAdapters(): void {
-  registerAdapter(createEthAdapter());
-  registerAdapter(createTronAdapter());
-  registerAdapter(createTonAdapter());
-  registerAdapter(createBtcAdapter());
+  for (const create of [
+    createEthAdapter,
+    createTronAdapter,
+    createTonAdapter,
+    createBtcAdapter,
+  ]) {
+    const adapter = create();
+    if (!adapters.has(adapter.chain)) {
+      registerAdapter(adapter);
+    }
+  }
 }

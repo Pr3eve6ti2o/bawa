@@ -42,6 +42,14 @@ async function withRenderedApp(
       root.render(<App />);
     });
 
+    // Route screens are lazy-loaded: wait for the Suspense fallback to
+    // clear before asserting on the screen's content.
+    await act(async () => {
+      for (let i = 0; i < 40 && div.textContent?.includes('Loading…'); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    });
+
     assertions(div);
   } finally {
     try {

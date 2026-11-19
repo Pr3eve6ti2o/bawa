@@ -5,7 +5,8 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { CreateWalletScreen } from './create-wallet';
 import { createWallet } from '../wallet/core';
-import { createVault, hasVault, isLocked } from '../wallet/vault';
+import { loadCore } from '../engine/boundary';
+import { createVault, hasVault } from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import { useWallet } from '../state/wallet-context';
 
@@ -16,10 +17,12 @@ vi.mock('../wallet/core', () => ({
 vi.mock('../wallet/vault', () => ({
   createVault: vi.fn(),
   hasVault: vi.fn(),
-  isLocked: vi.fn(),
 }));
 
-const mockUnlockVault = vi.fn();
+vi.mock('../engine/boundary', () => ({
+  loadCore: vi.fn(),
+}));
+
 const mockRefreshVaultAccounts = vi.fn();
 
 vi.mock('../state/wallet-context', () => ({
@@ -56,6 +59,14 @@ function findButton(div: HTMLDivElement, text: string): HTMLButtonElement {
   );
   expect(button).not.toBeUndefined();
   return button as HTMLButtonElement;
+}
+
+// handleGenerate/handleConfirm yield to the event loop between stages
+// (yieldFrame); act() does not flush those timers, so let them run.
+async function settle(ms = 200): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  });
 }
 
 async function mountScreen() {
@@ -104,6 +115,7 @@ async function generate(div: HTMLDivElement) {
   await act(async () => {
     findButton(div, 'Generate recovery phrase').click();
   });
+  await settle();
 }
 
 beforeEach(() => {
@@ -112,12 +124,10 @@ beforeEach(() => {
   vi.mocked(createWallet).mockResolvedValue(TEST_MNEMONIC);
   vi.mocked(createVault).mockResolvedValue(undefined);
   vi.mocked(hasVault).mockReturnValue(false);
-  vi.mocked(isLocked).mockReturnValue(false);
-  mockUnlockVault.mockResolvedValue(undefined);
+  vi.mocked(loadCore).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof loadCore>>);
   mockRefreshVaultAccounts.mockResolvedValue(undefined);
   vi.mocked(useWallet).mockReturnValue({
     vaultAddresses: TEST_ADDRESSES,
-    unlockVault: mockUnlockVault,
     refreshVaultAccounts: mockRefreshVaultAccounts,
   } as unknown as ReturnType<typeof useWallet>);
 });
@@ -137,6 +147,7 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Generate recovery phrase').click();
       });
+      await settle();
       expect(createWallet).not.toHaveBeenCalled();
       expect(mounted.div.textContent).toContain('Passwords do not match.');
     } finally {
@@ -162,6 +173,7 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
+      await settle();
       expect(createVault).not.toHaveBeenCalled();
       expect(mounted.div.textContent).toContain('do not match the recovery phrase');
     } finally {
@@ -190,14 +202,14 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
+      await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
       expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, [
         'bawa-btc-bip84-v1',
         'bawa-evm-bip44-v1',
         'bawa-trx-bip44-v1',
         'bawa-ton-v4r2-v1',
-      ]);
-      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD, '');
+      ], '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // The mnemonic is cleared: no recovery word is shown any more.
       expect(mounted.div.textContent).not.toContain('abandon');
@@ -220,7 +232,7 @@ describe('create wallet screen', () => {
     }
   });
 
-  it('advances to step 4 with addresses when the post-unlock refresh fails', async () => {
+  it('stays on step 3 when address derivation fails', async () => {
     const mounted = await mountScreen();
     try {
       await generate(mounted.div);
@@ -242,25 +254,21 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
+      await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
-      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD, '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       const stepCards = mounted.div.querySelectorAll('[data-slot="step-card"]');
       expect(stepCards.length).toBe(4);
-      expect(stepCards[3]?.getAttribute('data-state')).toBe('completed');
+      expect(stepCards[3]?.getAttribute('data-state')).toBe('pending');
       const text = mounted.div.textContent as string;
-      expect(text).toContain('Your wallet is ready');
-      expect(text).toContain(TEST_ADDRESSES.btc[0]);
-      expect(text).toContain(TEST_ADDRESSES.eth[0]);
-      expect(text).toContain(TEST_ADDRESSES.trx[0]);
-      expect(text).toContain(TEST_ADDRESSES.ton[0]);
-      expect(text).not.toContain('could not be saved');
+      expect(text).toContain('could not be saved');
+      expect(text).not.toContain('Your wallet is ready');
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('stays on step 3 when the unlock itself fails', async () => {
+  it('stays on step 3 when vault creation fails', async () => {
     const mounted = await mountScreen();
     try {
       await generate(mounted.div);
@@ -278,11 +286,11 @@ describe('create wallet screen', () => {
           setInputValue(input as HTMLInputElement, words[position] as string);
         });
       });
-      mockUnlockVault.mockRejectedValueOnce(new Error('unlock failed'));
-      vi.mocked(isLocked).mockReturnValue(true);
+      vi.mocked(createVault).mockRejectedValueOnce(new Error('save failed'));
       await act(async () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
+      await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
       expect(mockRefreshVaultAccounts).not.toHaveBeenCalled();
       const stepCards = mounted.div.querySelectorAll('[data-slot="step-card"]');
@@ -296,7 +304,7 @@ describe('create wallet screen', () => {
     }
   });
 
-  it('passes a passphrase to unlock and records that one is used', async () => {
+  it('passes a passphrase to the vault and records that one is used', async () => {
     const mounted = await mountScreen();
     try {
       await fillPasswords(mounted.div);
@@ -310,6 +318,7 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Generate recovery phrase').click();
       });
+      await settle();
       await act(async () => {
         findButton(mounted.div, 'I have written them down').click();
       });
@@ -326,7 +335,13 @@ describe('create wallet screen', () => {
       await act(async () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
-      expect(mockUnlockVault).toHaveBeenCalledWith(TEST_PASSWORD, 'TREZOR');
+      await settle();
+      expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, [
+        'bawa-btc-bip84-v1',
+        'bawa-evm-bip44-v1',
+        'bawa-trx-bip44-v1',
+        'bawa-ton-v4r2-v1',
+      ], 'TREZOR');
       expect(isPassphraseUsed()).toBe(true);
       expect(mounted.div.textContent).toContain('Your wallet is ready');
     } finally {

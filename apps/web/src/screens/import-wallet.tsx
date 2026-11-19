@@ -59,7 +59,7 @@ type ImportMode = 'phrase' | 'watch-only';
 type PhraseStep = 'enter' | 'preview' | 'saved';
 
 export function ImportWalletScreen() {
-  const { xpubs, addXpub, unlockVault, refreshVaultAccounts } = useWallet();
+  const { xpubs, addXpub, refreshVaultAccounts } = useWallet();
   const imported = chains
     .map((id) => xpubs[id])
     .filter((wallet): wallet is WatchOnlyWallet => wallet !== null);
@@ -148,12 +148,11 @@ export function ImportWalletScreen() {
     try {
       const profileIds = SUPPORTED_CHAINS.map((chainId) => profileFor(chainId));
       const mnemonic = normalizedMnemonic;
-      await createVault(mnemonic, vaultPassword, profileIds);
+      await createVault(mnemonic, vaultPassword, profileIds, passphrase);
       setNormalizedMnemonic(null);
       setVaultPassword('');
       setVaultPasswordConfirm('');
       setPassphraseUsed(passphrase.length > 0);
-      await unlockVault(vaultPassword, passphrase);
       setPassphrase('');
       await refreshVaultAccounts();
       setPhraseStep('saved');
