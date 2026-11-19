@@ -41,6 +41,11 @@ const TransactionDetailScreen = lazy(() =>
     default: m.TransactionDetailScreen,
   })),
 );
+const TrackTransactionScreen = lazy(() =>
+  import('../screens/track-transaction').then((m) => ({
+    default: m.TrackTransactionScreen,
+  })),
+);
 const NetworkSelectionScreen = lazy(() =>
   import('../screens/network-selection').then((m) => ({
     default: m.NetworkSelectionScreen,
@@ -72,6 +77,7 @@ const tabs = [
 const moreLinks = [
   { to: '/wallets', label: 'Wallets' },
   { to: '/transactions', label: 'Transactions' },
+  { to: '/track', label: 'Track a transaction' },
   { to: '/import-wallet', label: 'Import wallet' },
   { to: '/create-wallet', label: 'Create wallet' },
   { to: '/security', label: 'Security' },
@@ -225,6 +231,7 @@ export function App() {
             <Route path="send" element={<SendScreen />} />
             <Route path="transactions" element={<TransactionHistoryScreen />} />
             <Route path="transactions/:id" element={<TransactionDetailScreen />} />
+            <Route path="track" element={<TrackTransactionScreen />} />
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />

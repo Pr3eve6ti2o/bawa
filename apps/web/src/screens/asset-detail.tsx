@@ -172,9 +172,17 @@ export function AssetDetailScreen() {
       </Card>
 
       <section aria-labelledby="recent-transactions-heading" className="space-y-3">
-        <h2 id="recent-transactions-heading" className="text-lg font-semibold">
-          Recent transactions
-        </h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="recent-transactions-heading" className="text-lg font-semibold">
+            Recent transactions
+          </h2>
+          <Link
+            to={`/track?chain=${chain}`}
+            className="text-sm text-panel-accent underline underline-offset-4"
+          >
+            Track a transaction
+          </Link>
+        </div>
         {chainHistory.status === 'loading' ? (
           <div role="status">
             <Skeleton className="h-24 w-full" />
