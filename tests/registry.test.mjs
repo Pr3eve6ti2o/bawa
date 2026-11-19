@@ -91,8 +91,9 @@ test('the real registry validates with the expected counts', async () => {
 
   assert.deepEqual(errors, []);
   assert.equal(counts.files, 4);
-  // 32 since E02 (2026-11-13): the trust-wallet-core-4-9-3 engine entry.
-  assert.equal(counts.entries, 32);
+  // 33 since the multichain-extended-wallet profile (2026-11-20); 32 since
+  // E02 (2026-11-13): the trust-wallet-core-4-9-3 engine entry.
+  assert.equal(counts.entries, 33);
 });
 
 test('a profile missing its required status is rejected', async (t) => {
@@ -221,7 +222,7 @@ test('T44-F9: a profile with empty chains is rejected', async (t) => {
 
 test('every profile contains all required profile schema fields', () => {
   const { entries: profiles } = readRegistry(registryDir, 'profiles');
-  assert.equal(profiles.length, 7);
+  assert.equal(profiles.length, 8);
 
   for (const profile of profiles) {
     for (const field of profileFields) {
@@ -299,6 +300,7 @@ const PROFILE_IDS = [
   'web-wallet',
   'android-wallet',
   'watch-only-wallet',
+  'multichain-extended-wallet',
 ];
 
 function promptFile(id) {

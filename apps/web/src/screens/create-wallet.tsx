@@ -156,7 +156,7 @@ export function CreateWalletScreen() {
     try {
       setProgress('Encrypting vault…');
       await yieldFrame();
-      const profileIds = SUPPORTED_CHAINS.map((chain) => profileFor(chain));
+      const profileIds = [...new Set(SUPPORTED_CHAINS.map((chain) => profileFor(chain)))];
       await createVault(mnemonic, password, profileIds, passphrase);
       setMnemonic(null);
       setPassword('');

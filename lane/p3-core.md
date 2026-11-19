@@ -1,0 +1,19 @@
+You are writing TypeScript for the Bawa wallet repo (Wallet Core 4.9.3, strict TS, noUncheckedIndexedAccess). File: apps/web/src/wallet/core.ts. Do NOT change BTC/ETH/TRX/TON behaviour. Emit ONLY new/changed code blocks, each in its own fenced typescript block with a one-line anchor comment stating where it goes.
+
+Context (verified first-hand with Wallet Core 4.9.3 on the public BIP-39 test-vector mnemonic): new chains derive as follows. EVM chains (bsc, matic, arb, op, base, avax) use the ethereum coin family at m/44'/60'/0'/0/i with uncompressed secp256k1 pubkeys, same address as ETH. LTC uses the litecoin coin at m/84'/2'/0'/0/i with compressed secp256k1 pubkeys. DOGE uses the dogecoin coin at m/44'/3'/0'/0/i with compressed secp256k1 pubkeys. SOL uses the solana coin, Ed25519 pubkeys, fully hardened path m/44'/501'/0' (one address, like TON). Wallet Core CoinType names: smartChain, polygon, arbitrum, optimism, base, avalancheCChain, litecoin, dogecoin, solana. ChainId now includes 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' (boundary.ts already extended).
+
+Current code you must match (2-space indent, single quotes):
+- DEFAULT_PATHS is Readonly<Record<ChainId, string>> with btc "m/84'/0'/0'/0/0", eth "m/44'/60'/0'/0/0", trx "m/44'/195'/0'/0/0", ton "m/44'/607'/0'".
+- coinForChain switches on chain returning core.CoinType.bitcoin/ethereum/tron/ton, default throws 'Unsupported chain.'.
+- deriveAddresses builds `return { btc: addressFor('btc'), eth: addressFor('eth'), trx: addressFor('trx'), ton: addressFor('ton') };` where addressFor uses wallet.getAddressForCoin(coinForChain(core, chain)) then checkedAddress.
+- deriveAddressesAt has `const path = chain === 'ton' ? "m/44'/607'/0'" : pathFor(chain, account, index);` and `const pubkey = chain === 'ton' ? key.getPublicKeyEd25519() : key.getPublicKeySecp256k1(chain === 'btc');` and returns the same 4-key object as deriveAddresses. Its doc comment says per-chain pubkey form is BTC compressed, ETH/TRX uncompressed, TON Ed25519.
+- deriveFromXpub starts with `if (chain === 'ton') { throw new Error('TON uses fully hardened Ed25519 derivation and cannot derive children from an xpub.'); }` then validates index, then uses DEFAULT_PATHS[chain].replace(/\/0$/, `/${index}`).
+
+Changes:
+1. DEFAULT_PATHS: add sol "m/44'/501'/0'", bsc/matic/arb/op/base/avax "m/44'/60'/0'/0/0", ltc "m/84'/2'/0'/0/0", doge "m/44'/3'/0'/0/0". Keep the four existing entries byte-identical.
+2. coinForChain: add case 'sol' returning core.CoinType.solana, 'bsc' smartChain, 'matic' polygon, 'arb' arbitrum, 'op' optimism, 'base' base, 'avax' avalancheCChain, 'ltc' litecoin, 'doge' dogecoin. Keep the four existing cases byte-identical.
+3. deriveAddresses: return all 13 chains in this order: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge. No other change to that function.
+4. deriveAddressesAt: change the pubkey line to Ed25519 for ton or sol, compressed secp256k1 for btc, ltc or doge, uncompressed otherwise. The path line needs no change (pathFor handles sol like ton). Return all 13 chains in the same order as (3). Update the doc comment's pubkey-form sentence to add: SOL Ed25519 like TON; LTC and DOGE compressed like BTC; the six EVM chains uncompressed like ETH.
+5. deriveFromXpub: add a sol rejection right after the ton rejection, mirroring its message: 'SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.'. No other change (DEFAULT_PATHS covers the new xpub chains; their paths all end in /0 so the existing replace works).
+
+Acceptance: strict TS compiles; deriveAddresses and deriveAddressesAt return identical results at account 0 index 0 for every chain; the 4 original chains behave exactly as before. Output only the code blocks plus anchors, no other prose.

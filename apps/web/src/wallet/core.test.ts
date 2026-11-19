@@ -17,6 +17,15 @@ const ethXpub =
 const btcZpub =
   'zpub6rNUNtxSa9Gxvm4Bdxf1MPMwrvkzwDx6vP96Hkzw3jiQKdg3fhXBStxjn12YixQB8h88B3RMSRscRstf9AEVaYr3MAqVBEWBDuEJU4PGaT9';
 
+// Wallet Core 4.9.3 probe fixtures (2026-11-20, BIP-39 test-vector
+// mnemonic, empty passphrase, no funds): the Ltub/dgub extended keys and
+// the addresses they derive at index 0.
+const TEST_VECTOR_MNEMONIC = 'abandon '.repeat(11) + 'about';
+const ltcLtub =
+  'Ltub2ZANw57Fi4JfMGenngwfZMqDrsccTf2m3qEjvLuk8faGXB973sSqGttAdKBvGSCLG9DXh2yxaUB9qpwQUe2zCCtrZPhjxGuMAWqL6F7Xrpd';
+const dogeDgub =
+  'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs';
+
 // Published wallet-core HDWallet.test.ts vector (public test data, test-only,
 // never for funds): the TREZOR BIP-39 vector with passphrase "TREZOR".
 const ETH_VECTOR_MNEMONIC =
@@ -31,7 +40,7 @@ describe('wallet/core', () => {
     expect(core.Mnemonic.isValid(mnemonic)).toBe(true);
   });
 
-  it('restores with identical derived addresses on all four chains', async () => {
+  it('restores with identical derived addresses on all thirteen chains', async () => {
     const mnemonic = await createWallet();
     const first = await deriveAddresses(mnemonic);
     const restored = await restoreWallet(mnemonic);
@@ -43,11 +52,37 @@ describe('wallet/core', () => {
     expect(first.trx.startsWith('T')).toBe(true);
     expect(first.ton.startsWith('UQ')).toBe(true);
     expect(first.ton).toHaveLength(48);
+    expect(first.sol).toHaveLength(44);
+    expect(first.bsc.startsWith('0x')).toBe(true);
+    expect(first.matic.startsWith('0x')).toBe(true);
+    expect(first.arb.startsWith('0x')).toBe(true);
+    expect(first.op.startsWith('0x')).toBe(true);
+    expect(first.base.startsWith('0x')).toBe(true);
+    expect(first.avax.startsWith('0x')).toBe(true);
+    expect(first.ltc.startsWith('ltc1')).toBe(true);
+    expect(first.doge.startsWith('D')).toBe(true);
   });
 
   it('derives the published ETH vector address', async () => {
     const addresses = await deriveAddresses(ETH_VECTOR_MNEMONIC, 'TREZOR');
     expect(addresses.eth).toBe(ETH_VECTOR_ADDRESS);
+  });
+
+  it('derives the Wallet Core probe test-vector addresses on all thirteen chains', async () => {
+    const addresses = await deriveAddresses(TEST_VECTOR_MNEMONIC);
+    expect(addresses.btc).toBe('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
+    expect(addresses.eth).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.trx).toBe('TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH');
+    expect(addresses.ton).toBe('UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY');
+    expect(addresses.sol).toBe('GjJyeC1r2RgkuoCWMyPYkCWSGSGLcz266EaAkLA27AhL');
+    expect(addresses.bsc).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.matic).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.arb).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.op).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.base).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.avax).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.ltc).toBe('ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh');
+    expect(addresses.doge).toBe('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC');
   });
 
   it('deriveAddressesAt(0, 0) equals deriveAddresses() exactly', async () => {
@@ -69,20 +104,27 @@ describe('wallet/core', () => {
     expect(without.eth).not.toBe(ETH_VECTOR_ADDRESS);
   });
 
-  it('deriveAddressesAt changes btc/eth/trx at index 1 but not TON', async () => {
+  it('deriveAddressesAt changes btc/eth/trx/ltc/doge at index 1 but not TON or SOL', async () => {
     const mnemonic = await createWallet();
     const base = await deriveAddressesAt(mnemonic, '', 0, 0);
     const next = await deriveAddressesAt(mnemonic, '', 0, 1);
     expect(next.btc).not.toBe(base.btc);
     expect(next.eth).not.toBe(base.eth);
     expect(next.trx).not.toBe(base.trx);
+    expect(next.ltc).not.toBe(base.ltc);
+    expect(next.doge).not.toBe(base.doge);
     expect(next.btc.startsWith('bc1q')).toBe(true);
     expect(next.eth.startsWith('0x')).toBe(true);
     expect(next.trx.startsWith('T')).toBe(true);
+    expect(next.ltc.startsWith('ltc1')).toBe(true);
+    expect(next.doge.startsWith('D')).toBe(true);
     // TON has one address per wallet: account and index do not change it.
     expect(next.ton).toBe(base.ton);
+    // SOL, like TON, has one address per wallet.
+    expect(next.sol).toBe(base.sol);
     const other = await deriveAddressesAt(mnemonic, '', 2, 3);
     expect(other.ton).toBe(base.ton);
+    expect(other.sol).toBe(base.sol);
   });
 
   it('deriveAddressesAt rejects out-of-range account/index', async () => {
@@ -131,8 +173,27 @@ describe('wallet/core', () => {
     );
   });
 
+  it('derives the LTC and DOGE xpub fixtures', async () => {
+    expect(await deriveFromXpub('ltc', ltcLtub, 0)).toBe(
+      'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
+    );
+    expect(await deriveFromXpub('doge', dogeDgub, 0)).toBe(
+      'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
+    );
+    expect(await deriveFromXpub('ltc', ltcLtub, 1)).not.toBe(
+      'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
+    );
+    expect(await deriveFromXpub('doge', dogeDgub, 1)).not.toBe(
+      'DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC',
+    );
+  });
+
   it('rejects TON derivation from an xpub', async () => {
     await expect(deriveFromXpub('ton', trxXpub, 0)).rejects.toThrow();
+  });
+
+  it('rejects SOL derivation from an xpub', async () => {
+    await expect(deriveFromXpub('sol', trxXpub, 0)).rejects.toThrow();
   });
 
   it('proves the TRX 33-byte abort and the 65-byte rule on raw WASM', async () => {

@@ -25,6 +25,15 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   trx: { displayName: 'TRON', symbol: 'TRX' },
   ton: { displayName: 'TON', symbol: 'TON' },
+  sol: { displayName: 'Solana', symbol: 'SOL' },
+  bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  matic: { displayName: 'Polygon', symbol: 'POL' },
+  arb: { displayName: 'Arbitrum One', symbol: 'ETH' },
+  op: { displayName: 'OP Mainnet', symbol: 'ETH' },
+  base: { displayName: 'Base', symbol: 'ETH' },
+  avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  ltc: { displayName: 'Litecoin', symbol: 'LTC' },
+  doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;

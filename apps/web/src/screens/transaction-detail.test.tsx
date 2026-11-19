@@ -26,6 +26,15 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   trx: { displayName: 'TRON', symbol: 'TRX' },
   ton: { displayName: 'TON', symbol: 'TON' },
+  sol: { displayName: 'Solana', symbol: 'SOL' },
+  bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  matic: { displayName: 'Polygon', symbol: 'POL' },
+  arb: { displayName: 'Arbitrum One', symbol: 'ETH' },
+  op: { displayName: 'OP Mainnet', symbol: 'ETH' },
+  base: { displayName: 'Base', symbol: 'ETH' },
+  avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  ltc: { displayName: 'Litecoin', symbol: 'LTC' },
+  doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -105,6 +114,15 @@ describe('transaction detail screen', () => {
       },
       trx: emptyHistory,
       ton: emptyHistory,
+      sol: { status: 'empty', txs: [] },
+      bsc: { status: 'empty', txs: [] },
+      matic: { status: 'empty', txs: [] },
+      arb: { status: 'empty', txs: [] },
+      op: { status: 'empty', txs: [] },
+      base: { status: 'empty', txs: [] },
+      avax: { status: 'empty', txs: [] },
+      ltc: { status: 'empty', txs: [] },
+      doge: { status: 'empty', txs: [] },
     });
     const mounted = await mountScreen('/transactions/0xabc');
     try {
@@ -130,6 +148,15 @@ describe('transaction detail screen', () => {
       eth: emptyHistory,
       trx: emptyHistory,
       ton: emptyHistory,
+      sol: emptyHistory,
+      bsc: emptyHistory,
+      matic: emptyHistory,
+      arb: emptyHistory,
+      op: emptyHistory,
+      base: emptyHistory,
+      avax: emptyHistory,
+      ltc: emptyHistory,
+      doge: emptyHistory,
     });
     const mounted = await mountScreen('/transactions/0xmissing');
     try {
@@ -149,6 +176,15 @@ describe('transaction detail screen', () => {
         eth: emptyHistory,
         trx: emptyHistory,
         ton: emptyHistory,
+        sol: emptyHistory,
+        bsc: emptyHistory,
+        matic: emptyHistory,
+        arb: emptyHistory,
+        op: emptyHistory,
+        base: emptyHistory,
+        avax: emptyHistory,
+        ltc: emptyHistory,
+        doge: emptyHistory,
       },
       () => Promise.reject(new Error('network down')),
     );

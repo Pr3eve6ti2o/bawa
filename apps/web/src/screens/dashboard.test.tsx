@@ -26,6 +26,15 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   trx: { displayName: 'TRON', symbol: 'TRX' },
   ton: { displayName: 'TON', symbol: 'TON' },
+  sol: { displayName: 'Solana', symbol: 'SOL' },
+  bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  matic: { displayName: 'Polygon', symbol: 'POL' },
+  arb: { displayName: 'Arbitrum One', symbol: 'ETH' },
+  op: { displayName: 'OP Mainnet', symbol: 'ETH' },
+  base: { displayName: 'Base', symbol: 'ETH' },
+  avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  ltc: { displayName: 'Litecoin', symbol: 'LTC' },
+  doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -38,6 +47,15 @@ function balancesFor(
     eth: { status: 'unavailable', reason: 'no-adapter' },
     trx: { status: 'unavailable', reason: 'no-adapter' },
     ton: { status: 'unavailable', reason: 'no-adapter' },
+    sol: { status: 'unavailable', reason: 'no-adapter' },
+    bsc: { status: 'unavailable', reason: 'no-adapter' },
+    matic: { status: 'unavailable', reason: 'no-adapter' },
+    arb: { status: 'unavailable', reason: 'no-adapter' },
+    op: { status: 'unavailable', reason: 'no-adapter' },
+    base: { status: 'unavailable', reason: 'no-adapter' },
+    avax: { status: 'unavailable', reason: 'no-adapter' },
+    ltc: { status: 'unavailable', reason: 'no-adapter' },
+    doge: { status: 'unavailable', reason: 'no-adapter' },
   };
   return { ...base, ...overrides };
 }

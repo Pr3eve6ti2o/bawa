@@ -16,6 +16,15 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
   eth: "m/44'/60'/0'/0/0",
   trx: "m/44'/195'/0'/0/0",
   ton: "m/44'/607'/0'",
+  sol: "m/44'/501'/0'",
+  bsc: "m/44'/60'/0'/0/0",
+  matic: "m/44'/60'/0'/0/0",
+  arb: "m/44'/60'/0'/0/0",
+  op: "m/44'/60'/0'/0/0",
+  base: "m/44'/60'/0'/0/0",
+  avax: "m/44'/60'/0'/0/0",
+  ltc: "m/84'/2'/0'/0/0",
+  doge: "m/44'/3'/0'/0/0",
 });
 
 function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
@@ -28,6 +37,24 @@ function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
       return core.CoinType.tron;
     case 'ton':
       return core.CoinType.ton;
+    case 'sol':
+      return core.CoinType.solana;
+    case 'bsc':
+      return core.CoinType.smartChain;
+    case 'matic':
+      return core.CoinType.polygon;
+    case 'arb':
+      return core.CoinType.arbitrum;
+    case 'op':
+      return core.CoinType.optimism;
+    case 'base':
+      return core.CoinType.base;
+    case 'avax':
+      return core.CoinType.avalancheCChain;
+    case 'ltc':
+      return core.CoinType.litecoin;
+    case 'doge':
+      return core.CoinType.dogecoin;
     default:
       throw new Error('Unsupported chain.');
   }
@@ -217,6 +244,15 @@ export async function deriveAddresses(
       eth: addressFor('eth'),
       trx: addressFor('trx'),
       ton: addressFor('ton'),
+      sol: addressFor('sol'),
+      bsc: addressFor('bsc'),
+      matic: addressFor('matic'),
+      arb: addressFor('arb'),
+      op: addressFor('op'),
+      base: addressFor('base'),
+      avax: addressFor('avax'),
+      ltc: addressFor('ltc'),
+      doge: addressFor('doge'),
     };
   } finally {
     wallet.delete();
@@ -231,6 +267,8 @@ export async function deriveAddresses(
  * getPublicKeySecp256k1(true) (33-byte compressed), ETH and TRX
  * getPublicKeySecp256k1(false) (65-byte uncompressed), TON
  * getPublicKeyEd25519(); then CoinTypeExt.deriveAddressFromPublicKey.
+ * SOL Ed25519 like TON; LTC/DOGE compressed like BTC;
+ * BSC/MATIC/ARB/OP/BASE/AVAX uncompressed like ETH.
  * At account 0 index 0 the result equals deriveAddresses() exactly.
  */
 export async function deriveAddressesAt(
@@ -261,9 +299,9 @@ export async function deriveAddressesAt(
 
       try {
         const pubkey =
-          chain === 'ton'
+          chain === 'ton' || chain === 'sol'
             ? key.getPublicKeyEd25519()
-            : key.getPublicKeySecp256k1(chain === 'btc');
+            : key.getPublicKeySecp256k1(chain === 'btc' || chain === 'ltc' || chain === 'doge');
 
         try {
           return checkedAddress(
@@ -284,6 +322,15 @@ export async function deriveAddressesAt(
       eth: addressFor('eth'),
       trx: addressFor('trx'),
       ton: addressFor('ton'),
+      sol: addressFor('sol'),
+      bsc: addressFor('bsc'),
+      matic: addressFor('matic'),
+      arb: addressFor('arb'),
+      op: addressFor('op'),
+      base: addressFor('base'),
+      avax: addressFor('avax'),
+      ltc: addressFor('ltc'),
+      doge: addressFor('doge'),
     };
   } finally {
     wallet.delete();
@@ -300,6 +347,9 @@ export async function deriveFromXpub(
     throw new Error(
       'TON uses fully hardened Ed25519 derivation and cannot derive children from an xpub.',
     );
+  }
+  if (chain === 'sol') {
+    throw new Error('SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.');
   }
 
   if (

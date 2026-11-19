@@ -32,7 +32,7 @@ export interface ChainConfig {
   displayName: string;
   symbol: string;
   /** Wallet Core CoinType property name. */
-  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton';
+  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton' | 'solana' | 'smartChain' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'avalancheCChain' | 'litecoin' | 'dogecoin';
   /** CAIP-2 network identifier (mainnet only). */
   networkId: string;
   /** CAIP-19 native asset identifier (slip44 namespace). */
@@ -107,6 +107,47 @@ function capabilitiesForAdapterChain(
               'TON signed BOC is not re-parsed (no BOC parser vendored); verification is no-error + 32-byte hash + BOC magic only.',
           }
         : verifiedBySendTests('post-sign-verify'),
+  };
+}
+
+function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
+  return {
+    derive: {
+      status: 'verified',
+      evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for derive.',
+    },
+    restore: {
+      status: 'verified',
+      evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for restore.',
+    },
+    receive: {
+      status: 'verified',
+      evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for receive.',
+    },
+    balance: {
+      status: 'blocked',
+      evidence: `No ${chain} adapter in this lane; balance is blocked, never faked.`,
+    },
+    history: {
+      status: 'blocked',
+      evidence: `No ${chain} adapter in this lane; history is blocked, never faked.`,
+    },
+    'fee-quote': {
+      status: 'blocked',
+      evidence: `No ${chain} adapter in this lane; fee-quote is blocked, never faked.`,
+    },
+    'unsigned-plan': {
+      status: 'blocked',
+      evidence: `No ${chain} send builder in this lane; unsigned-plan is blocked, never faked.`,
+    },
+    'local-sign': {
+      status: 'blocked',
+      evidence: `No ${chain} send builder in this lane; local-sign is blocked, never faked.`,
+    },
+    'post-sign-verify': {
+      status: 'blocked',
+      evidence: `No ${chain} send builder in this lane; post-sign-verify is blocked, never faked.`,
+    },
   };
 }
 
@@ -194,15 +235,155 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     evmChainId: null,
     capabilities: capabilitiesForAdapterChain('ton', false),
   },
+  sol: {
+    id: 'sol',
+    displayName: 'Solana',
+    symbol: 'SOL',
+    coinTypeName: 'solana',
+    networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+    assetId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501',
+    profileId: 'bawa-sol-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return "m/44'/501'/0'";
+    },
+    rpcEndpoints: [],
+    evmChainId: null,
+    capabilities: capabilitiesForExtendedChain('sol'),
+  },
+  bsc: {
+    id: 'bsc',
+    displayName: 'BNB Smart Chain',
+    symbol: 'BNB',
+    coinTypeName: 'smartChain',
+    networkId: 'eip155:56',
+    assetId: 'eip155:56/slip44:714',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 56,
+    capabilities: capabilitiesForExtendedChain('bsc'),
+  },
+  matic: {
+    id: 'matic',
+    displayName: 'Polygon',
+    symbol: 'POL',
+    coinTypeName: 'polygon',
+    networkId: 'eip155:137',
+    assetId: 'eip155:137/slip44:966',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 137,
+    capabilities: capabilitiesForExtendedChain('matic'),
+  },
+  arb: {
+    id: 'arb',
+    displayName: 'Arbitrum One',
+    symbol: 'ETH',
+    coinTypeName: 'arbitrum',
+    networkId: 'eip155:42161',
+    assetId: 'eip155:42161/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 42161,
+    capabilities: capabilitiesForExtendedChain('arb'),
+  },
+  op: {
+    id: 'op',
+    displayName: 'OP Mainnet',
+    symbol: 'ETH',
+    coinTypeName: 'optimism',
+    networkId: 'eip155:10',
+    assetId: 'eip155:10/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 10,
+    capabilities: capabilitiesForExtendedChain('op'),
+  },
+  base: {
+    id: 'base',
+    displayName: 'Base',
+    symbol: 'ETH',
+    coinTypeName: 'base',
+    networkId: 'eip155:8453',
+    assetId: 'eip155:8453/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 8453,
+    capabilities: capabilitiesForExtendedChain('base'),
+  },
+  avax: {
+    id: 'avax',
+    displayName: 'Avalanche C-Chain',
+    symbol: 'AVAX',
+    coinTypeName: 'avalancheCChain',
+    networkId: 'eip155:43114',
+    assetId: 'eip155:43114/slip44:9000',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: 43114,
+    capabilities: capabilitiesForExtendedChain('avax'),
+  },
+  ltc: {
+    id: 'ltc',
+    displayName: 'Litecoin',
+    symbol: 'LTC',
+    coinTypeName: 'litecoin',
+    networkId: 'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2',
+    assetId: 'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/slip44:2',
+    profileId: 'bawa-ltc-bip84-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/84'/2'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: null,
+    capabilities: capabilitiesForExtendedChain('ltc'),
+  },
+  doge: {
+    id: 'doge',
+    displayName: 'Dogecoin',
+    symbol: 'DOGE',
+    coinTypeName: 'dogecoin',
+    networkId: 'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691',
+    assetId: 'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691/slip44:3',
+    profileId: 'bawa-doge-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/3'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: [],
+    evmChainId: null,
+    capabilities: capabilitiesForExtendedChain('doge'),
+  },
 };
 
-export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'];
 
-/**
- * Solana profiles, named as UNSUPPORTED. No code path uses them and no Solana
- * support is added in this lane. The two profiles are distinct derivations
- * even at index 0 — never hard-code a single Solana path.
- */
+// The Wallet Core default Solana profile is now supported as bawa-sol-bip44-v1; only the Phantom bip44Change profile stays unsupported.
 export interface UnsupportedProfile {
   profileId: string;
   path: string;
@@ -212,13 +393,6 @@ export interface UnsupportedProfile {
 }
 
 export const SOLANA_PROFILES: Readonly<Record<string, UnsupportedProfile>> = {
-  'walletcore-solana-default-v1': {
-    profileId: 'walletcore-solana-default-v1',
-    path: "m/44'/501'/0'",
-    networkId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-    status: 'unsupported',
-    note: 'Wallet Core Solana default profile. Unsupported in this lane.',
-  },
   'solana-phantom-bip44change-v1': {
     profileId: 'solana-phantom-bip44change-v1',
     path: "m/44'/501'/{i}'/0'",

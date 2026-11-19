@@ -48,7 +48,7 @@ type SignState =
 
 export function SendScreen() {
   const { vaultState, vaultAddresses, balances, selectedChain } = useWallet();
-  const chainsWithWallet = CHAINS.filter(
+  const chainsWithWallet: ChainId[] = CHAINS.filter(
     (chain) => vaultAddresses[chain].length > 0,
   );
   const [chain, setChain] = useState<ChainId>(
