@@ -1,1 +1,0 @@
-<li>Signing happens offline on this device.</li>
