@@ -13,6 +13,9 @@ import { WelcomeScreen } from '../screens/welcome';
 const CreateWalletScreen = lazy(() =>
   import('../screens/create-wallet').then((m) => ({ default: m.CreateWalletScreen })),
 );
+const CreateScreen = lazy(() =>
+  import('../screens/create').then((m) => ({ default: m.CreateScreen })),
+);
 const ImportWalletScreen = lazy(() =>
   import('../screens/import-wallet').then((m) => ({ default: m.ImportWalletScreen })),
 );
@@ -74,6 +77,7 @@ const moreLinks = [
   { to: '/transactions', label: 'Transactions' },
   { to: '/import-wallet', label: 'Import wallet' },
   { to: '/create-wallet', label: 'Create wallet' },
+  { to: '/create', label: 'Create' },
   { to: '/security', label: 'Security' },
   { to: '/networks', label: 'Networks' },
   { to: '/mnemonic-backup', label: 'Mnemonic backup' },
@@ -217,6 +221,7 @@ export function App() {
             <Route index element={<HomeScreen />} />
             <Route path="welcome" element={<WelcomeScreen />} />
             <Route path="create-wallet" element={<CreateWalletScreen />} />
+            <Route path="create" element={<CreateScreen />} />
             <Route path="import-wallet" element={<ImportWalletScreen />} />
             <Route path="mnemonic-backup" element={<MnemonicBackupScreen />} />
             <Route path="assets" element={<AssetListScreen />} />
