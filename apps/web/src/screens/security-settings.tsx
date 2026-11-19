@@ -17,7 +17,7 @@ export function SecuritySettingsScreen() {
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[#aab5d1]">
           <li>Your recovery phrase is generated in this browser and stored encrypted in the vault (AES-GCM-256, PBKDF2 600,000 rounds).</li>
           <li>Private keys are held in memory only while the vault is unlocked — never in plaintext storage, logs or requests.</li>
-          <li>Signing happens offline on this device, with disposable test keys during development.</li>
+          <li>Signing happens offline on this device.</li>
           <li>Broadcast is disabled until separately authorised — signing never sends funds.</li>
         </ul>
       </div>

@@ -70,7 +70,7 @@ export function WelcomeScreen() {
         </Card>
       </div>
 
-      <aside className="space-y-2 rounded-[20px] border border-[#d6deed] bg-white p-4 text-sm text-muted-foreground">
+      <aside className="space-y-2 rounded-[20px] border border-[#d6deed] bg-card p-4 text-sm text-muted-foreground">
         <p>Mainnet only — this wallet never connects to a test network.</p>
         <p>
           Balances and history come from the mainnet adapters. Sending signs
