@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Activity, ArrowDownToLine, Send } from 'lucide-react';
 import { useWallet } from '../state/wallet-context';
+import { portfolioTotal, usePrices, PRICE_ATTRIBUTION_TEXT } from '../wallet/prices';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
 import { Button } from '../ui/components/button';
@@ -16,9 +17,10 @@ const ACTIONS = [
 ] as const;
 
 /**
- * Panel home — real balances only. There is no price feed in this lane, so
- * no fiat portfolio total is shown (and none is fabricated): the hero states
- * that plainly. Asset rows come from the verified balance adapters.
+ * Panel home — real balances plus the live CoinGecko price feed. The hero
+ * total includes ONLY fresh-quoted balances and reads Partial when incomplete.
+ * Missing, expired, or failed prices are shown as unavailable or an error,
+ * never as $0.00 and never as fabricated prices.
  */
 export function DashboardScreen() {
   const {
@@ -31,16 +33,25 @@ export function DashboardScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
 
-  // Balance hero (Phase 5, Sol p8, landed 2026-11-19 in 367.2s). The hero
-  // holds its last settled text in a ref while a refresh is loading, so it
-  // never flashes Unavailable mid-refresh. No price feed exists, so the
-  // only fiat figure ever shown is the honest $0.00 of zero holdings; an
-  // error is never rendered as zero. Sol's JSX used new slate classes;
-  // assembly keeps the existing dark-navy hero markup instead.
-  const lastHeroRef = useRef({
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const pricesLoading = pricesState.status === 'loading';
+
+  // Hold the last settled hero text while balances refresh so it never flashes
+  // Unavailable mid-refresh. Missing, expired, or failed prices are never $0.00.
+  const lastHeroRef = useRef<{
+    text: string;
+    noPriceFeed: boolean;
+    retry: boolean;
+    partialNote: boolean;
+    showAttribution: boolean;
+    priceError: 'rate-limited' | 'network' | 'provider' | 'timeout' | null;
+  }>({
     text: 'Unavailable',
     noPriceFeed: false,
     retry: false,
+    partialNote: false,
+    showAttribution: false,
+    priceError: null,
   });
 
   const heroBalances = Object.values(balances);
@@ -48,26 +59,71 @@ export function DashboardScreen() {
   const heroFailed = heroBalances.some(
     (b) => b?.status === 'unavailable' || b?.status === 'error',
   );
-  const heroAllZero =
-    heroBalances.length === 4 &&
-    heroBalances.every(
-      (b) =>
-        b?.status === 'zero' ||
-        (b?.status === 'available' && b.value === '0'),
-    );
 
-  // Known failures override a cached $0.00, even during a partial refresh.
-  // The no-price-feed line still shows: the feed is missing as well as the
-  // balances, and the hero must keep explaining why no fiat total exists.
-  const nextHero = heroFailed
-    ? { text: 'Unavailable', noPriceFeed: true, retry: true }
+  const priceEntries = Object.values(pricesState.entries);
+  const priceErrorReasons = priceEntries.flatMap(
+    (entry) => (entry?.status === 'error' ? [entry.reason] : []),
+  );
+  const sharedPriceError =
+    priceEntries.length === 4 &&
+    priceErrorReasons.length === 4 &&
+    priceErrorReasons.every((reason) => reason === priceErrorReasons[0])
+      ? (priceErrorReasons[0] ?? null)
+      : null;
+
+  const nextHero: typeof lastHeroRef.current | null = heroFailed
+    ? {
+        text: 'Unavailable',
+        noPriceFeed: true,
+        retry: true,
+        partialNote: false,
+        showAttribution: false,
+        priceError: null,
+      }
     : heroLoading
       ? null
-      : {
-          text: heroAllZero ? '$0.00' : 'Unavailable',
-          noPriceFeed: !heroAllZero,
-          retry: false,
-        };
+      : (() => {
+          const total = portfolioTotal(balances, pricesState.entries, Date.now());
+
+          switch (total.status) {
+            case 'zero':
+              return {
+                text: '$0.00',
+                noPriceFeed: false,
+                retry: false,
+                partialNote: false,
+                showAttribution: false,
+                priceError: null,
+              };
+            case 'total':
+              return {
+                text: total.text,
+                noPriceFeed: false,
+                retry: false,
+                partialNote: false,
+                showAttribution: true,
+                priceError: null,
+              };
+            case 'partial':
+              return {
+                text: `${total.text} (Partial)`,
+                noPriceFeed: false,
+                retry: false,
+                partialNote: true,
+                showAttribution: true,
+                priceError: null,
+              };
+            case 'unavailable':
+              return {
+                text: 'Unavailable',
+                noPriceFeed: true,
+                retry: false,
+                partialNote: false,
+                showAttribution: false,
+                priceError: sharedPriceError,
+              };
+          }
+        })();
 
   const hero = nextHero ?? lastHeroRef.current;
 
@@ -84,10 +140,28 @@ export function DashboardScreen() {
       <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
         <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
         <p className="text-display-lg font-bold tracking-tight text-panel-text">{hero.text}</p>
+        {hero.showAttribution && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
+        )}
+        {hero.partialNote && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total — only balances with a fresh price are included.</p>
+        )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
-            No price feed connected — portfolio total unavailable. Balances below
-            are exact native amounts from the mainnet adapters.
+            {pricesState.status === 'idle'
+              ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are exact native amounts from the mainnet adapters.'
+              : 'No fresh prices — portfolio total unavailable. Balances below are exact native amounts from the mainnet adapters.'}
+          </p>
+        )}
+        {hero.priceError !== null && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">
+            {hero.priceError === 'rate-limited'
+              ? 'Price feed rate-limited — try again shortly.'
+              : hero.priceError === 'network'
+                ? 'Could not reach the price feed — check your connection and retry.'
+                : hero.priceError === 'timeout'
+                  ? 'Price feed timed out — retry.'
+                  : 'Price feed error — retry.'}
           </p>
         )}
         {vaultState === 'locked' && (
@@ -103,8 +177,8 @@ export function DashboardScreen() {
         >
           {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
         </Button>
+        <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
-
       <div className="grid grid-cols-3 gap-2">
         {ACTIONS.map(({ to, icon: Icon, label }) => (
           <Link
@@ -189,7 +263,7 @@ export function DashboardScreen() {
               </Button>
             </div>
             <Card className="mt-4">
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} />
             </Card>
           </section>
         ) : (
