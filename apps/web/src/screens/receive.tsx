@@ -184,20 +184,17 @@ export function ReceiveScreen() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Mainnet only — this is a {config.displayName} mainnet address. Funds
-        sent on another network cannot be recovered.
+        Mainnet only — this address is for the {config.displayName} mainnet. Funds sent on another network cannot be recovered.
       </p>
 
       {chain === 'ton' && (
         <p className="text-sm text-muted-foreground">
-          This address can only receive. Withdrawing TON needs an external GUI wallet or
-          the @ton/ton expert-assisted route — see docs/05-watch-only/GUI-WATCH-ONLY-WORKFLOW.md.
+          This address can only receive TON. To send or withdraw TON, you need an external wallet.
         </p>
       )}
 
       <p className="text-sm text-muted-foreground">
-        Only share this address to receive funds. Verify the address matches the one your
-        repo tools derive before accepting funds.
+        Only share this address to receive funds. Check the address carefully before accepting funds.
       </p>
     </div>
   );
