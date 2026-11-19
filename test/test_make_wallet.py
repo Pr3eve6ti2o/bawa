@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from make_wallet import _parse_seed_bundle, assertBundleVerified
+from make_wallet import _parse_seed_bundle, assertBundleVerified, assert_bundle_decrypts
 
 
 def _good_bundle():
@@ -138,6 +138,86 @@ class TestParseSeedBundle(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(SystemExit):
                 _parse_seed_bundle(self._write(b, tmp))
+
+
+class TestAssertBundleDecrypts(unittest.TestCase):
+    def _write_bundle(self, plaintext, key, tmp):
+        import json
+
+        nonce = os.urandom(12)
+        ct = AESGCM(key).encrypt(nonce, plaintext, b"nova-shop-seed-v1")
+        bundle = {
+            "alg": "AES-256-GCM",
+            "nonce_b64": base64.b64encode(nonce).decode(),
+            "ciphertext_b64": base64.b64encode(ct).decode(),
+        }
+        path = os.path.join(tmp, "seed.enc.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(bundle, f)
+        return path
+
+    def test_valid_mnemonic_passes(self):
+        import tempfile
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["art"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
+            assert_bundle_decrypts(path, key)
+
+    def test_tampered_checksum_word_rejected(self):
+        import tempfile
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["zoo"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
+            with self.assertRaises(SystemExit):
+                assert_bundle_decrypts(path, key)
+
+    def test_missing_mnemonic_package_rejected(self):
+        import builtins
+        import tempfile
+        from unittest.mock import patch
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["art"])
+        real_import = builtins.__import__
+
+        def block_mnemonic_import(name, *args, **kwargs):
+            if name == "mnemonic" or name.startswith("mnemonic."):
+                raise ImportError("simulated missing mnemonic package")
+            return real_import(name, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
+            with patch("builtins.__import__", new=block_mnemonic_import):
+                with self.assertRaisesRegex(
+                    SystemExit,
+                    "seed bundle independent verification failed: "
+                    "mnemonic package is not installed",
+                ):
+                    assert_bundle_decrypts(path, key)
+
+
+class TestTrezorMnemonicLibrary(unittest.TestCase):
+    def test_generate_256_bit_mnemonic(self):
+        from mnemonic import Mnemonic
+
+        m = Mnemonic("english")
+        words = m.generate(strength=256)
+        self.assertEqual(len(words.split()), 24)
+        self.assertIs(m.check(words), True)
+        self.assertEqual(len(m.to_entropy(words)), 32)
+
+    def test_seed_matches_bip_utils(self):
+        from bip_utils import Bip39SeedGenerator
+        from mnemonic import Mnemonic
+
+        words = " ".join(["abandon"] * 23 + ["art"])
+        seed = Mnemonic("english").to_seed(words, passphrase="")
+        self.assertEqual(len(seed), 64)
+        self.assertEqual(seed, Bip39SeedGenerator(words).Generate())
 
 
 if __name__ == "__main__":

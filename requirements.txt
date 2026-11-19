@@ -1,2 +1,4 @@
 cryptography==50.0.2
 bip-utils==2.12.3
+# trezor/python-mnemonic (MIT licence).
+mnemonic==0.21

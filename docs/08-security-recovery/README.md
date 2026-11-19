@@ -174,6 +174,42 @@ Follow the recovery procedure in [docs/RECOVERY.md](../RECOVERY.md#the-recovery-
 | Sanitised record | Keep a sanitised record of the fixture context, address comparisons, signing result and check results. Exclude mnemonics, passphrases, data keys and other credentials. | **FAIL — unexecuted** |
 
 Require every check to pass before marking the rehearsal complete.
+
+### Legitimate recovery techniques adopted from external tools
+
+Legitimate recovery has a fixed boundary. It is own-wallet only, for a partial phrase where most of the secret is already known, with a known target address and either a known derivation path or a bounded search over the catalogue's known paths, run fully offline on a clean air-gapped machine, checksum-pruning candidates before any expensive work. Refuse above 2–3 missing words: the search space past that point is not recovery, it is guessing. Scanning random phrases for balances is theft scanning, not recovery, and is never legitimate. No code from any tool below is vendored into Bawa, and Bawa adds no wallet-cracking feature.
+
+#### FinderOuter recovery rules
+
+[FinderOuter](https://github.com/Coding-Enthusiast/FinderOuter) is an MIT-licensed C#/.NET desktop recovery tool for Bitcoin only. It is a guide reference only.
+
+- For mnemonic recovery, supply a known child key or address and that child's exact derivation path. Run locally under the offline, clean, air-gapped boundary above.
+- Check candidate mnemonics for a valid checksum before expensive key derivation. Passing the checksum does not prove that a candidate is the right wallet.
+- FinderOuter is multi-threaded across CPU cores.
+- From a mnemonic or extended key, FinderOuter can also search for a missing BIP-32 derivation path against a list of popular paths. This is a limited search, not a promise of recovery.
+
+#### Finding funds across derivation paths
+
+The same mnemonic can produce different addresses in different wallets. [indy](https://github.com/esneider/indy) is an MIT-licensed Python CLI whose path list comes from the [walletsrecovery.org derivation-path catalogue](https://walletsrecovery.org/).
+
+1. Try the catalogue's known derivation paths and address types one combination at a time, checking each for funds.
+2. Scan receiving-chain addresses in order. Stop only after 20 consecutive unused addresses—the BIP-44 default address gap limit. indy defaults to an address gap of 20 and an account gap of 0.
+3. If funds were received beyond a gap, raise the gap and scan deeper.
+
+Do NOT adopt indy itself: it queries Electrum servers and can build and broadcast sweep transactions. Bawa adopts only the path-matrix and gap-limit checklist as guidance and keeps no broadcast path.
+
+#### BTCRecover recovery techniques
+
+[BTCRecover](https://github.com/3rdIteration/btcrecover) is a GPL-2.0 recovery tool. The guide references these techniques:
+
+- **Tokenlists:** list remembered password or seed fragments for the tool to combine. This helps only if most of the secret is already remembered.
+- **Typo simulation:** try small variations of a remembered password or seed, such as adjacent-character swaps or caps-lock reversal.
+- **Multi-derivation-path search:** the `pathlist` option searches several derivation paths at once.
+- **Autosave and resume:** save progress and resume the recovery search.
+- **Offline mode:** extract scripts provide only the necessary recovery data; in that workflow, the tool never sees wallet addresses or private keys.
+
+**Do NOT vendor BTCRecover code into Bawa: its GPL-2.0 copyleft would apply. This is a guide reference only; Bawa itself must not run recovery against a live wallet.**
+
 ## 4. Dependency and supply-chain discipline
 
 Wallet code is sensitive to dependency drift. Required practice (not a claim of current implementation): document runtime versions exactly; commit lockfiles; verify release tags; run CI tests; add secret scanning and dependency review; publish release checksums/provenance where appropriate.
@@ -1281,6 +1317,10 @@ Check-date policy: for mutable pages, record the check date and the version or c
 - Keycard (status-keycard) — https://github.com/keycard-tech/status-keycard (checked 8 November 2026)
 - Keycard product page (rate-limited to automated checks on 8 November 2026; [homepage](https://keycard.tech/))
 - Trust Wallet Core repository — https://github.com/trustwallet/wallet-core
+- FinderOuter (MIT licence) — https://github.com/Coding-Enthusiast/FinderOuter (checked 19 November 2026)
+- indy (MIT licence) — https://github.com/esneider/indy (checked 19 November 2026)
+- BTCRecover (GPL-2.0) — https://github.com/3rdIteration/btcrecover (checked 19 November 2026)
+- walletsrecovery.org derivation-path catalogue — https://walletsrecovery.org/ (checked 19 November 2026)
 - SIM-swapping protection — https://www.ownyouronline.govt.nz/personal/get-protected/guides/protect-yourself-against-sim-swapping/ (government guidance)
 - BitBox multisig — https://support.bitbox.swiss/en_US/blog-content/how-nearly-all-personal-hardware-wallet-multisig-setups-are-insecure (checked 8 November 2026)
 - NCSC small organisations guide — https://www.ncsc.gov.uk/collection/small-organisations-guide-to-cyber-security

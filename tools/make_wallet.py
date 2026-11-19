@@ -126,6 +126,75 @@ def assertBundleVerified(data) -> None:
         raise SystemExit("seed bundle verification missing: generator did not report bundle_verified")
 
 
+def assert_bundle_decrypts(bundle_path, data_key) -> str:
+    """Independently decrypt the final bundle with the wrapper-held key.
+
+    The generator's bundle_verified flag is status, not proof: this check
+    authenticates the written bundle in the wrapper and validates the
+    plaintext as a valid 24-word BIP-39 mnemonic (wordlist + checksum).
+    Returns the validated mnemonic text (never logged) so the caller can
+    cross-check it against the reported public roots. Never returns or
+    logs the plaintext or the key.
+
+    The trezor/python-mnemonic second check is the independent verification.
+    Acceptance: (a) AESGCM with AAD b"nova-shop-seed-v1"; (b) bip_utils
+    rejects non-24-word or bad-checksum plaintext; (c) missing mnemonic
+    fails closed with "mnemonic package is not installed"; (d) trezor
+    check must be True and entropy must be 32 bytes; (e) plain is wiped
+    in finally; (f) returns the validated mnemonic text.
+    """
+    from bip_utils import Bip39Languages, Bip39MnemonicValidator
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce, ciphertext, _mode = _parse_seed_bundle(bundle_path)
+    try:
+        plain = bytearray(
+            AESGCM(bytes(data_key)).decrypt(nonce, ciphertext, b"nova-shop-seed-v1")
+        )
+    except Exception:
+        raise SystemExit(
+            "seed bundle independent verification failed: decrypt failed"
+        ) from None
+    try:
+        text = bytes(plain).decode("utf-8")
+        if len(text.split()) != 24 or not Bip39MnemonicValidator(
+            Bip39Languages.ENGLISH
+        ).IsValid(text):
+            raise SystemExit(
+                "seed bundle independent verification failed: plaintext is "
+                "not a valid 24-word BIP-39 mnemonic"
+            )
+        try:
+            from mnemonic import Mnemonic
+        except ImportError:
+            raise SystemExit(
+                "seed bundle independent verification failed: "
+                "mnemonic package is not installed"
+            ) from None
+        try:
+            m = Mnemonic("english")
+            if m.check(text) is not True or len(m.to_entropy(text)) != 32:
+                raise SystemExit(
+                    "seed bundle independent verification failed: "
+                    "trezor mnemonic validation failed"
+                ) from None
+        except Exception:
+            raise SystemExit(
+                "seed bundle independent verification failed: "
+                "trezor mnemonic validation failed"
+            ) from None
+    except UnicodeDecodeError:
+        raise SystemExit(
+            "seed bundle independent verification failed: plaintext is not UTF-8"
+        ) from None
+    finally:
+        # Best-effort wipe of the plaintext copy (the decoded str cannot
+        # be zeroed: immutable, same caveat as the generator's strings).
+        for i in range(len(plain)):
+            plain[i] = 0
+    return text
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
     raw_secrets = os.path.expanduser(
