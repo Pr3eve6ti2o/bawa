@@ -169,105 +169,108 @@ export function TrackTransactionScreen() {
   }
 
   return (
-    <div className='space-y-6'>
-      <header className='space-y-2'>
+    <div className='space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]'>
+      <header className='space-y-2 lg:col-span-2'>
         <h1 className='text-2xl font-semibold'>Track a transaction</h1>
         <p className='text-sm text-muted-foreground'>
           Look up any transaction by its hash, or see recent activity for an address. Results come from public indexers and may lag behind the chain.
         </p>
       </header>
 
-      <div role='group' aria-label='Chain' className='flex flex-wrap gap-2'>
-        {SUPPORTED_CHAINS.map((id) => (
-          <Button
-            key={id}
-            type='button'
-            variant={chain === id ? 'default' : 'outline'}
-            aria-pressed={chain === id}
-            onClick={() => changeChain(id)}
-          >
-            {chainConfig(id).displayName}
-          </Button>
-        ))}
-      </div>
-
-      <form
-        className='space-y-4'
-        onSubmit={(event) => {
-          event.preventDefault();
-          void runLookup();
-        }}
-      >
-        <div className='space-y-2'>
-          <Label htmlFor='transaction-hash'>Transaction hash</Label>
-          <Input
-            id='transaction-hash'
-            placeholder='Paste a transaction hash'
-            value={hash}
-            onChange={(event) => setHash(event.target.value)}
-            required
-          />
+      <div className='space-y-6'>
+        <div role='group' aria-label='Chain' className='flex flex-wrap gap-2'>
+          {SUPPORTED_CHAINS.map((id) => (
+            <Button
+              key={id}
+              type='button'
+              variant={chain === id ? 'default' : 'outline'}
+              aria-pressed={chain === id}
+              onClick={() => changeChain(id)}
+            >
+              {chainConfig(id).displayName}
+            </Button>
+          ))}
         </div>
-        {chain === 'ton' && (
+
+        <form
+          className='space-y-4'
+          onSubmit={(event) => {
+            event.preventDefault();
+            void runLookup();
+          }}
+        >
           <div className='space-y-2'>
-            <Label htmlFor='ton-account-address'>Account address (required for TON)</Label>
+            <Label htmlFor='transaction-hash'>Transaction hash</Label>
             <Input
-              id='ton-account-address'
-              placeholder='EQ… or UQ… address'
-              value={tonAddress}
-              onChange={(event) => setTonAddress(event.target.value)}
-              aria-describedby='ton-address-note'
+              id='transaction-hash'
+              placeholder='Paste a transaction hash'
+              value={hash}
+              onChange={(event) => setHash(event.target.value)}
+              required
             />
-            <p id='ton-address-note' className='text-sm text-muted-foreground'>
-              TonCenter identifies a transaction by account, lt and hash, so a TON lookup needs the account address as well as the hash.
-            </p>
+          </div>
+          {chain === 'ton' && (
+            <div className='space-y-2'>
+              <Label htmlFor='ton-account-address'>Account address (required for TON)</Label>
+              <Input
+                id='ton-account-address'
+                placeholder='EQ… or UQ… address'
+                value={tonAddress}
+                onChange={(event) => setTonAddress(event.target.value)}
+                aria-describedby='ton-address-note'
+              />
+              <p id='ton-address-note' className='text-sm text-muted-foreground'>
+                TonCenter identifies a transaction by account, lt and hash, so a TON lookup needs the account address as well as the hash.
+              </p>
+            </div>
+          )}
+          <Button type='submit' disabled={lookup.kind === 'loading'}>
+            Look up
+          </Button>
+        </form>
+
+        {lookup.kind === 'loading' && (
+          <div role='status' className='space-y-2'>
+            <Skeleton className='h-32 w-full' />
+            <p className='text-sm'>Looking up…</p>
           </div>
         )}
-        <Button type='submit' disabled={lookup.kind === 'loading'}>
-          Look up
-        </Button>
-      </form>
+        {lookup.kind === 'result' && lookup.result.status === 'ok' && (
+          <TransactionDetails
+            data={lookup.result.data}
+            chain={chain}
+            checkedAt={new Date(lookup.result.data.fetchedAt).toLocaleTimeString('en-GB')}
+          />
+        )}
+        {lookup.kind === 'result' && lookup.result.status === 'not-found' && (
+          <Alert className='border-amber-500/50 bg-amber-500/10'>
+            <AlertDescription className='space-y-2'>
+              <p>Transaction not found.</p>
+              {lookup.result.note && <p>{lookup.result.note}</p>}
+              <p>Check the hash and chain, or try again later — indexers can lag.</p>
+            </AlertDescription>
+          </Alert>
+        )}
+        {lookup.kind === 'result' && lookup.result.status === 'unsupported' && (
+          <Alert className='border-sky-500/50 bg-sky-500/10'>
+            <AlertDescription>{lookup.result.reason}</AlertDescription>
+          </Alert>
+        )}
+        {lookup.kind === 'result' && lookup.result.status === 'error' && (
+          <Alert className='border-red-500/50 bg-red-500/10'>
+            <AlertDescription className='space-y-2'>
+              <p>Could not look up this transaction.</p>
+              <p>{lookup.result.reason}</p>
+              <Button type='button' variant='outline' disabled={!canLookup} onClick={() => void runLookup()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
-      {lookup.kind === 'loading' && (
-        <div role='status' className='space-y-2'>
-          <Skeleton className='h-32 w-full' />
-          <p className='text-sm'>Looking up…</p>
-        </div>
-      )}
-      {lookup.kind === 'result' && lookup.result.status === 'ok' && (
-        <TransactionDetails
-          data={lookup.result.data}
-          chain={chain}
-          checkedAt={new Date(lookup.result.data.fetchedAt).toLocaleTimeString('en-GB')}
-        />
-      )}
-      {lookup.kind === 'result' && lookup.result.status === 'not-found' && (
-        <Alert className='border-amber-500/50 bg-amber-500/10'>
-          <AlertDescription className='space-y-2'>
-            <p>Transaction not found.</p>
-            {lookup.result.note && <p>{lookup.result.note}</p>}
-            <p>Check the hash and chain, or try again later — indexers can lag.</p>
-          </AlertDescription>
-        </Alert>
-      )}
-      {lookup.kind === 'result' && lookup.result.status === 'unsupported' && (
-        <Alert className='border-sky-500/50 bg-sky-500/10'>
-          <AlertDescription>{lookup.result.reason}</AlertDescription>
-        </Alert>
-      )}
-      {lookup.kind === 'result' && lookup.result.status === 'error' && (
-        <Alert className='border-red-500/50 bg-red-500/10'>
-          <AlertDescription className='space-y-2'>
-            <p>Could not look up this transaction.</p>
-            <p>{lookup.result.reason}</p>
-            <Button type='button' variant='outline' disabled={!canLookup} onClick={() => void runLookup()}>
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+      </div>
 
-      <section aria-labelledby='recent-activity-heading' className='space-y-4 border-t pt-6'>
+      <section aria-labelledby='recent-activity-heading' className='space-y-4 border-t pt-6 lg:border-t-0 lg:pt-0'>
         <h2 id='recent-activity-heading' className='text-xl font-semibold'>
           Recent activity for an address
         </h2>

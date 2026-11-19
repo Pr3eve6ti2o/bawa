@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import bitcoinLogo from '../assets/chains/bitcoin.png';
-import ethereumLogo from '../assets/chains/ethereum.png';
-import tronLogo from '../assets/chains/tron.png';
-import tonLogo from '../assets/chains/ton.png';
-import usdcLogo from '../assets/tokens/usdc.png';
-import usdtLogo from '../assets/tokens/usdt.png';
-import daiLogo from '../assets/tokens/dai.png';
-import linkLogo from '../assets/tokens/link.png';
-import uniLogo from '../assets/tokens/uni.png';
-import wbtcLogo from '../assets/tokens/wbtc.png';
+import bitcoinLogo from '../assets/chains/bitcoin.webp';
+import ethereumLogo from '../assets/chains/ethereum.webp';
+import tronLogo from '../assets/chains/tron.webp';
+import tonLogo from '../assets/chains/ton.webp';
+import usdcLogo from '../assets/tokens/usdc.webp';
+import usdtLogo from '../assets/tokens/usdt.webp';
+import daiLogo from '../assets/tokens/dai.webp';
+import linkLogo from '../assets/tokens/link.webp';
+import uniLogo from '../assets/tokens/uni.webp';
+import wbtcLogo from '../assets/tokens/wbtc.webp';
 
 // Token logos: Trust Wallet asset registry (trustwallet/assets, MIT,
 // Copyright (c) 2019-2023 Trust Wallet). Native logos are
 // blockchains/<chain>/info/logo.png (same files as the chain logos);
 // ERC-20 logos are blockchains/ethereum/assets/<contract>/logo.png.
 // Full licence note: apps/web/README.md "Chain logos" and "Token logos".
+// Served as WebP (Lane F, 2026-11-20): the same Trust Wallet images,
+// resized to 96px and re-encoded at quality 85 — 23,378 bytes total vs
+// 167,628 bytes for the PNGs (-86%). The original PNGs stay in
+// src/assets/chains and src/assets/tokens as the canonical sources.
 export const TOKEN_LOGOS: Record<string, string> = {
   BTC: bitcoinLogo,
   ETH: ethereumLogo,
@@ -57,6 +61,7 @@ export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
         alt={`${symbol} logo`}
         width={size}
         height={size}
+        decoding="async"
         className="size-10 shrink-0 rounded-full"
         style={style}
         onError={() => setFailed(true)}

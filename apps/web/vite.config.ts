@@ -37,6 +37,15 @@ export default defineConfig({
       'Referrer-Policy': 'no-referrer',
     },
   },
+  build: {
+    // Lane F (2026-11-20): never inline images as base64 data URIs. The
+    // 10 chain/token logos are WebP, 1.2–3.5 KB each — under Vite's 4 KB
+    // default, so they were inlined into the first-paint JS chunk
+    // (+32.5 KB, including 6 ERC-20 logos no screen displays yet).
+    // As separate files they are fetched on demand, only when an asset
+    // row renders them; the first-paint chunk stays logo-free.
+    assetsInlineLimit: 0,
+  },
   preview: {
     headers: SECURITY_HEADERS,
   },

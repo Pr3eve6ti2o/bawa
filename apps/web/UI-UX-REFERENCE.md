@@ -97,7 +97,10 @@ That is the mock look: not one bad screen, but no shared surface. **The
 fix, before any screen is rebuilt:** Lane C first adds ONE dark token
 set to `globals.css` (below), then re-skins every screen to tokens,
 then deletes every inline hex value. No section below invents a colour;
-each names tokens only. The shell stays a dark 430px panel; the light
+each names tokens only. The shell stays dark; since Lane F (2026-11-20,
+desktop layout) it is a responsive shell, not a 430px panel — 430px cap
+below lg, 224px sidebar + centred content frame (1024px at lg, 1152px
+at xl) at lg and above. The light
 tokens stay for the light theme.
 
 ### 1.1 Dark tokens to add (values taken from OUR OWN existing shell code, not invented)
@@ -153,9 +156,13 @@ Current screens — keep unless a section says REMOVE:
 - Action circles 56px, icons 24px, labels 11px semibold (dashboard).
 - QR 192px on a white rounded-20 card with p-4 (receive).
 - Asset avatar 40px circle; skeleton row 68px high (asset-rows).
-- Shell: 430px max width, main px-5 pb-6, header px-5 pt-5 pb-4,
-  header icon tile 36px rounded-xl, title 15px bold, Mainnet pill h-6
-  px-3 10px bold.
+- Shell (Lane F, 2026-11-20, responsive — see `src/app/app.tsx`):
+  below lg a 430px max-width panel, main px-5 pb-6, header px-5 pt-5
+  pb-4, bottom tab bar; at lg+ a 1440px app frame with a 224px sidebar
+  (72px brand area) and a 72px workspace header, content frame
+  max-width 1024px (lg) / 1152px (xl), narrow task screens capped at
+  480px. Header icon tile 36px rounded-xl, title 15px bold, Mainnet
+  pill h-6 px-3 10px bold (unchanged).
 
 ### 1.3 Screen map — primary pattern per screen
 
@@ -397,7 +404,10 @@ no-vault banners sit on the home screen instead of being separate
 screens; the hide-zero control is a bare checkbox; no per-chain
 breakdown; colours are hardcoded hex values.
 
-**Layout, top-to-bottom (retain the 430px shell and existing header):**
+**Layout, top-to-bottom (Lane F responsive shell: phone stacks as
+before; at lg+ hero + actions share the top row 7:5, tabs span both
+columns, and in the Tokens view the asset list sits left with recent
+activity right 7:5 — 2:1 at xl):**
 
 1. sr-only "Portfolio" heading.
 2. Dark hero (`--panel-surface-raised`, radius 16px, padding 20px —

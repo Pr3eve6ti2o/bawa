@@ -3,11 +3,11 @@ import { Link } from 'react-router';
 import { Activity, ArrowDownToLine, Send } from 'lucide-react';
 import { useWallet } from '../state/wallet-context';
 import { portfolioTotal, usePrices, PRICE_ATTRIBUTION_TEXT } from '../wallet/prices';
-import { availableFor, chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
+import { availableFor } from '../wallet/chains';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import { AssetRows } from './asset-rows';
+import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 
 const ACTIONS = [
@@ -25,9 +25,7 @@ const ACTIONS = [
 export function DashboardScreen() {
   const {
     balances,
-    history,
     refreshBalances,
-    refreshHistory,
     vaultState,
   } = useWallet();
   const [hideZero, setHideZero] = useState(false);
@@ -137,7 +135,7 @@ export function DashboardScreen() {
   }, [nextHero]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
       <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
@@ -182,7 +180,7 @@ export function DashboardScreen() {
         </Button>
         <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 lg:self-center">
         {ACTIONS.map(({ to, icon: Icon, label }) => (
           <Link
             key={to}
@@ -207,7 +205,7 @@ export function DashboardScreen() {
       <div
         role="tablist"
         aria-label="Wallet views"
-        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1"
+        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1 lg:col-span-2"
       >
         {(['tokens', 'activity'] as const).map((tab) => (
           <button
@@ -250,8 +248,10 @@ export function DashboardScreen() {
         id="dashboard-assets-panel"
         role="tabpanel"
         aria-labelledby={`dashboard-assets-${assetsTab}-tab`}
+        className="lg:col-span-2"
       >
         {assetsTab === 'tokens' ? (
+          <div className="lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 xl:grid-cols-[2fr_1fr]">
           <section aria-label="Assets">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-panel-text">Assets</h2>
@@ -269,125 +269,12 @@ export function DashboardScreen() {
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} />
             </Card>
           </section>
+            <div className="hidden lg:block">
+              <RecentActivity />
+            </div>
+          </div>
         ) : (
-          <section aria-label="Activity" className="space-y-3">
-            <h2 className="text-lg font-semibold text-panel-text">Recent activity</h2>
-
-            {(() => {
-              const chains = availableFor('history');
-
-              const timestampMs = (timestamp: number | string | null | undefined) => {
-                if (timestamp == null) return null;
-
-                const value =
-                  typeof timestamp === 'number' && timestamp < 1_000_000_000_000
-                    ? timestamp * 1000
-                    : timestamp;
-                const time = new Date(value).getTime();
-
-                return Number.isFinite(time) ? time : null;
-              };
-
-              const rows = chains
-                .flatMap((chain) =>
-                  (history[chain]?.txs ?? []).map((tx) => ({ chain, tx })),
-                )
-                .sort(
-                  (a, b) =>
-                    (timestampMs(b.tx.timestamp) ?? 0) -
-                    (timestampMs(a.tx.timestamp) ?? 0),
-                );
-
-              const loading = chains.some(
-                (chain) => history[chain]?.status === 'loading',
-              );
-
-              const unavailableChains = chains.filter(
-                (chain) =>
-                  history[chain]?.status === 'unavailable' ||
-                  history[chain]?.status === 'error',
-              );
-
-              return (
-                <>
-                  {rows.length > 0 ? (
-                    <ul className="divide-y divide-panel-border overflow-hidden rounded-xl border border-panel-border bg-panel-surface">
-                      {rows.map(({ chain, tx }) => {
-                        const config = chainConfig(chain);
-                        const time = timestampMs(tx.timestamp);
-                        const direction =
-                          tx.direction === 'in'
-                            ? 'Received'
-                            : tx.direction === 'out'
-                              ? 'Sent'
-                              : 'Self transfer';
-
-                        return (
-                          <li key={`${chain}:${tx.hash}`}>
-                            <Link
-                              to={`/transactions/${tx.hash}`}
-                              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-panel-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-panel-accent"
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-panel-text">
-                                  {direction}
-                                  <span className="font-normal text-panel-text-soft">
-                                    {' · '}{config.symbol}
-                                  </span>
-                                </span>
-                                <span className="mt-1 block text-xs text-panel-text-muted">
-                                  {time == null
-                                    ? 'Pending'
-                                    : new Date(time).toLocaleDateString('en-GB', {
-                                        dateStyle: 'short',
-                                      })}
-                                  {tx.status === 'failed'
-                                    ? ' · Failed'
-                                    : tx.status === 'pending'
-                                      ? ' · Pending'
-                                      : ''}
-                                </span>
-                              </span>
-                              <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
-                                {formatNativeWithSymbol(
-                                  tx.amountBaseUnits,
-                                  CHAIN_DECIMALS[chain],
-                                  config.symbol,
-                                )}
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : loading ? (
-                    <Skeleton className="h-20 w-full rounded-xl" />
-                  ) : (
-                    <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
-                  )}
-
-                  {unavailableChains.map((chain) => (
-                    <div
-                      key={`history-unavailable:${chain}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
-                    >
-                      <p className="text-sm text-panel-text-soft">
-                        {chainConfig(chain).displayName} history unavailable
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void refreshHistory()}
-                        className="h-11 shrink-0"
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
-          </section>
+          <RecentActivity />
         )}
       </div>
 

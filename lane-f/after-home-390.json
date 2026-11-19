@@ -1,0 +1,161 @@
+{
+  "url": "http://127.0.0.1:8087/",
+  "width": 390,
+  "height": 844,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nNo wallet ›\nMainnet\n\nBAWA\n\nWelcome to Bawa Web Wallet\n\nA self-custodial multi-chain wallet. Create a wallet in the browser — your recovery phrase is encrypted on this device with your ",
+  "innerWidth": 390,
+  "innerHeight": 844,
+  "scrollWidth": 390,
+  "scrollHeight": 1597,
+  "hOverflow": false,
+  "sidebar": {
+    "visible": false,
+    "width": 0
+  },
+  "bottomNav": {
+    "visible": true
+  },
+  "hasText": {
+    "portfolio": false,
+    "createTitle": false,
+    "trackTitle": false,
+    "recentActivity": false
+  },
+  "domContentLoaded": 53,
+  "loadEvent": 65,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 68,
+    "first-contentful-paint": 236
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 37
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 9
+    },
+    {
+      "name": "index-oWtvFz6u.css",
+      "kb": 416,
+      "ms": 9
+    },
+    {
+      "name": "index-Dc8VolR7.js",
+      "kb": 331,
+      "ms": 10
+    },
+    {
+      "name": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "kb": 45,
+      "ms": 8
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 6
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 7
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 7
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 7
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 8
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 3,
+      "ms": 8
+    },
+    {
+      "name": "rolldown-runtime-COiEfhsA.js",
+      "kb": 1,
+      "ms": 7
+    }
+  ],
+  "networkRequests": 13,
+  "totalNetworkKB": 13915,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-oWtvFz6u.css",
+      "status": 200,
+      "kb": 416
+    },
+    {
+      "url": "index-Dc8VolR7.js",
+      "status": 200,
+      "kb": 331
+    },
+    {
+      "url": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    },
+    {
+      "url": "vault-DuAhvQgY.js",
+      "status": 200,
+      "kb": 3
+    },
+    {
+      "url": "",
+      "status": 200,
+      "kb": 1
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "after-home-390.png"
+}

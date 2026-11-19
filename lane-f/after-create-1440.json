@@ -1,0 +1,164 @@
+{
+  "url": "http://127.0.0.1:8087/create",
+  "width": 1440,
+  "height": 900,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nHome\nAssets\nReceive\nSend\nWallets\nTransactions\nTrack a transaction\nImport wallet\nCreate wallet\nCreate\nSecurity\nNetworks\nMnemonic backup\nWelcome\nNo wallet ›\nMainnet\nCreate\n\nChoose what t",
+  "innerWidth": 1440,
+  "innerHeight": 900,
+  "scrollWidth": 1425,
+  "scrollHeight": 1896,
+  "hOverflow": false,
+  "sidebar": {
+    "visible": true,
+    "width": 224
+  },
+  "sidebarNav": {
+    "visible": true
+  },
+  "bottomNav": {
+    "visible": false
+  },
+  "hasText": {
+    "portfolio": false,
+    "createTitle": true,
+    "trackTitle": true,
+    "recentActivity": false
+  },
+  "domContentLoaded": 45,
+  "loadEvent": 57,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 80,
+    "first-contentful-paint": 80
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 37
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 12
+    },
+    {
+      "name": "index-BIkPY78m.css",
+      "kb": 417,
+      "ms": 9
+    },
+    {
+      "name": "index-Gh5wZ3zf.js",
+      "kb": 332,
+      "ms": 9
+    },
+    {
+      "name": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "kb": 45,
+      "ms": 6
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 4
+    },
+    {
+      "name": "create-DxD0yrSZ.js",
+      "kb": 9,
+      "ms": 4
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 7
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 3,
+      "ms": 7
+    }
+  ],
+  "networkRequests": 15,
+  "totalNetworkKB": 13927,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-BIkPY78m.css",
+      "status": 200,
+      "kb": 417
+    },
+    {
+      "url": "index-Gh5wZ3zf.js",
+      "status": 200,
+      "kb": 332
+    },
+    {
+      "url": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "create-DxD0yrSZ.js",
+      "status": 200,
+      "kb": 9
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    },
+    {
+      "url": "vault-DuAhvQgY.js",
+      "status": 200,
+      "kb": 3
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "after-create-1440.png"
+}

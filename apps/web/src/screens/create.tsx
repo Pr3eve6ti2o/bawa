@@ -268,9 +268,9 @@ function ToolContents({ tool }: { tool: Tool }) {
 function ToolCard({ tool }: { tool: Tool }) {
   if (tool.status === 'working') {
     return (
-      <div className="min-w-0 space-y-4 rounded-xl border border-panel-border bg-panel-surface-raised p-4">
+      <div className="flex h-full min-w-0 flex-col space-y-4 rounded-xl border border-panel-border bg-panel-surface-raised p-4">
         <ToolContents tool={tool} />
-        <Button asChild className="h-auto w-full whitespace-normal py-3 text-center">
+        <Button asChild className="mt-auto h-auto w-full whitespace-normal py-3 text-center">
           <Link to={tool.href} aria-label={`Open ${tool.name} creation`}>
             Open {tool.name} creation
           </Link>
@@ -282,7 +282,7 @@ function ToolCard({ tool }: { tool: Tool }) {
   return (
     <article
       aria-label={`${tool.name} build brief`}
-      className="min-w-0 rounded-xl border border-panel-border bg-panel-surface-raised p-4"
+      className="h-full min-w-0 rounded-xl border border-panel-border bg-panel-surface-raised p-4"
     >
       <ToolContents tool={tool} />
     </article>
@@ -302,7 +302,7 @@ export function CreateScreen() {
         Choose what to create. Two tools work today; the rest are build briefs,
         not working features.
       </p>
-      <ul className="space-y-4">
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tools.map((tool) => (
           <li key={tool.name} className="min-w-0">
             <ToolCard tool={tool} />

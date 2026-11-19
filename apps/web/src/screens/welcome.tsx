@@ -10,7 +10,7 @@ import {
 
 export function WelcomeScreen() {
   return (
-    <section aria-labelledby="welcome-title" className="space-y-6">
+    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6">
       <div className="rounded-[30px] border border-panel-border bg-panel-surface-raised p-7 text-panel-text sm:p-8">
         <p className="text-sm font-bold tracking-widest text-panel-accent">
           BAWA
@@ -71,7 +71,7 @@ export function WelcomeScreen() {
         </ol>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Card className="flex flex-col rounded-xl bg-card text-foreground">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>

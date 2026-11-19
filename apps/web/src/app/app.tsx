@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -7,7 +7,7 @@ import {
   Home,
   Wallet,
 } from 'lucide-react';
-import { BrowserRouter, Link, NavLink, Outlet, Route, Routes } from 'react-router';
+import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
 const CreateWalletScreen = lazy(() =>
@@ -69,25 +69,13 @@ const SecuritySettingsScreen = lazy(() =>
 );
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { Toaster } from '../ui/components/sonner';
+import { MORE_LINKS, SidebarNav } from './sidebar-nav';
 
 const tabs = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/assets', label: 'Assets', icon: Coins },
   { to: '/receive', label: 'Receive', icon: ArrowDownToLine },
   { to: '/send', label: 'Send', icon: ArrowUpRight },
-] as const;
-
-const moreLinks = [
-  { to: '/wallets', label: 'Wallets' },
-  { to: '/transactions', label: 'Transactions' },
-  { to: '/track', label: 'Track a transaction' },
-  { to: '/import-wallet', label: 'Import wallet' },
-  { to: '/create-wallet', label: 'Create wallet' },
-  { to: '/create', label: 'Create' },
-  { to: '/security', label: 'Security' },
-  { to: '/networks', label: 'Networks' },
-  { to: '/mnemonic-backup', label: 'Mnemonic backup' },
-  { to: '/welcome', label: 'Welcome' },
 ] as const;
 
 function HomeScreen() {
@@ -99,48 +87,100 @@ function HomeScreen() {
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { vaultState } = useWallet();
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  // Escape closes the More menu and returns focus to its trigger.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMoreOpen(false);
+        moreButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [moreOpen]);
+  const pathname = useLocation().pathname;
+  // Narrow task screens get a local 480px cap inside the content frame;
+  // /assets itself stays full-width, only /assets/<chain> is narrow.
+  // Welcome self-caps in welcome.tsx (it also renders on the home route).
+  const isNarrow =
+    [
+      '/send',
+      '/receive',
+      '/security',
+      '/lock',
+      '/import-wallet',
+      '/create-wallet',
+      '/mnemonic-backup',
+    ].includes(pathname) || pathname.startsWith('/assets/');
 
   return (
-    <div className="min-h-screen bg-background sm:py-6">
-      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)]">
-        <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-lg font-bold text-primary-foreground">
-              <Wallet className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-bold leading-tight text-panel-text">
-                Bawa Web Wallet
-              </h1>
-              <Link
-                to="/wallets"
-                className="block truncate text-xs leading-tight text-panel-text-muted hover:text-panel-text"
-              >
-                {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
-              </Link>
-            </div>
+    <div className="min-h-screen bg-background sm:py-6 lg:py-0">
+      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none">
+        <aside className="hidden shrink-0 lg:block lg:w-[224px] lg:border-r lg:border-panel-border lg:bg-panel-surface">
+          <div className="sticky top-0 flex max-h-screen flex-col overflow-y-auto">
+            <SidebarNav />
           </div>
-          <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
-            Mainnet
-          </span>
-        </header>
+        </aside>
 
-        <main className="flex-1 px-5 pb-6">
-          <Outlet />
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b border-panel-border px-6 lg:flex xl:px-8">
+            <Link
+              to="/wallets"
+              className="truncate text-sm font-medium text-panel-text-muted hover:text-panel-text"
+            >
+              {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+            </Link>
+            <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+              Mainnet
+            </span>
+          </header>
 
-        {moreOpen && (
-          <div
-            role="menu"
-            aria-label="More"
-            className="mx-4 mb-2 rounded-[20px] border border-panel-border bg-panel-surface-raised p-2"
-          >
-            {moreLinks.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                role="menuitem"
-                onClick={() => setMoreOpen(false)}
+          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-lg font-bold text-primary-foreground">
+                <Wallet className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate text-[15px] font-bold leading-tight text-panel-text">
+                  Bawa Web Wallet
+                </h1>
+                <Link
+                  to="/wallets"
+                  className="block truncate text-xs leading-tight text-panel-text-muted hover:text-panel-text"
+                >
+                  {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+                </Link>
+              </div>
+            </div>
+            <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+              Mainnet
+            </span>
+          </header>
+
+          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-6 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
+            {isNarrow ? (
+              <div className="mx-auto w-full max-w-[480px]">
+                <Outlet />
+              </div>
+            ) : (
+              <Outlet />
+            )}
+          </main>
+
+          {moreOpen && (
+            <div
+              role="menu"
+              aria-label="More"
+              className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-2 max-lg:fixed max-lg:bottom-[76px] max-lg:left-1/2 max-lg:z-20 max-lg:max-h-[60vh] max-lg:w-[calc(100%-2rem)] max-lg:max-w-[398px] max-lg:-translate-x-1/2 max-lg:overflow-y-auto lg:hidden"
+            >
+              {MORE_LINKS.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  role="menuitem"
+                  onClick={() => setMoreOpen(false)}
                 className="block rounded-[12px] px-3 py-2.5 text-sm font-medium text-panel-text hover:bg-panel-hover"
               >
                 {label}
@@ -149,58 +189,60 @@ function AppLayout() {
           </div>
         )}
 
-        <nav
-          aria-label="Main navigation"
-          className="sticky bottom-0 z-10 border-t border-panel-border bg-panel-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
-        >
-          <div className="grid grid-cols-5">
-            {tabs.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                onClick={() => setMoreOpen(false)}
-                className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                    isActive ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={`flex size-6 items-center justify-center rounded-full ${
-                        isActive ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
-                      }`}
-                    >
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    {label}
-                  </>
-                )}
-              </NavLink>
-            ))}
-            <button
-              type="button"
-              aria-expanded={moreOpen}
-              aria-label="More"
-              onClick={() => setMoreOpen((open) => !open)}
-              className={`flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                moreOpen ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
-              }`}
-            >
-              <span
-                className={`flex size-6 items-center justify-center rounded-full ${
-                  moreOpen ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
+          <nav
+            aria-label="Main navigation"
+            className="sticky bottom-0 z-10 border-t border-panel-border bg-panel-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+          >
+            <div className="grid grid-cols-5">
+              {tabs.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={() => setMoreOpen(false)}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
+                      isActive ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={`flex size-6 items-center justify-center rounded-full ${
+                          isActive ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
+                        }`}
+                      >
+                        <Icon className="size-4" aria-hidden="true" />
+                      </span>
+                      {label}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+              <button
+                type="button"
+                ref={moreButtonRef}
+                aria-expanded={moreOpen}
+                aria-label="More"
+                onClick={() => setMoreOpen((open) => !open)}
+                className={`flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
+                  moreOpen ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
                 }`}
               >
-                <Ellipsis className="size-4" aria-hidden="true" />
-              </span>
-              More
-            </button>
-          </div>
-        </nav>
-        <Toaster />
+                <span
+                  className={`flex size-6 items-center justify-center rounded-full ${
+                    moreOpen ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
+                  }`}
+                >
+                  <Ellipsis className="size-4" aria-hidden="true" />
+                </span>
+                More
+              </button>
+            </div>
+          </nav>
+          <Toaster />
+        </div>
       </div>
     </div>
   );
