@@ -173,7 +173,7 @@ Require every check to pass before marking the rehearsal complete.
 
 ### Legitimate recovery techniques adopted from external tools
 
-Legitimate recovery has a fixed boundary. It is own-wallet only, for a partial phrase where most of the secret is already known, with a known target address and derivation path, run fully offline on a clean air-gapped machine, checksum-pruning candidates before any expensive work. Refuse above 2–3 missing words: the search space past that point is not recovery, it is guessing. Scanning random phrases for balances is theft scanning, not recovery, and is never legitimate. No code from any tool below is vendored into Bawa, and Bawa adds no wallet-cracking feature.
+Legitimate recovery has a fixed boundary. It is own-wallet only, for a partial phrase where most of the secret is already known, with a known target address and either a known derivation path or a bounded search over the catalogue's known paths, run fully offline on a clean air-gapped machine, checksum-pruning candidates before any expensive work. Refuse above 2–3 missing words: the search space past that point is not recovery, it is guessing. Scanning random phrases for balances is theft scanning, not recovery, and is never legitimate. No code from any tool below is vendored into Bawa, and Bawa adds no wallet-cracking feature.
 
 #### FinderOuter recovery rules
 

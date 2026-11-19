@@ -263,3 +263,27 @@ describe('sumFiatUSD', () => {
     ).toThrow(/minorUnitsList.*array/);
   });
 });
+
+describe('formatFeePreview display-decimal bound', () => {
+  it('preserves 0/3/6, default precision, and half-up rounding', () => {
+    const valueBaseUnits = '1234566500000000000';
+
+    expect(formatFeePreview(valueBaseUnits, 18, 'ETH', 0)).toBe('1 ETH');
+    expect(formatFeePreview(valueBaseUnits, 18, 'ETH', 3)).toBe('1.235 ETH');
+    expect(formatFeePreview(valueBaseUnits, 18, 'ETH', 6)).toBe('1.234567 ETH');
+    expect(formatFeePreview(valueBaseUnits, 18, 'ETH')).toBe('1.234567 ETH');
+  });
+
+  it('accepts the display-decimal bound', () => {
+    expect(formatFeePreview('1', 0, 'ETH', 100)).toBe('1 ETH');
+  });
+
+  it('rejects excessive display precision', () => {
+    const message =
+      'displayDecimals must be a safe non-negative integer at most 100';
+
+    // Check the boundary first so unpatched code fails before the large case.
+    expect(() => formatFeePreview('1', 18, 'ETH', 101)).toThrow(message);
+    expect(() => formatFeePreview('1', 18, 'ETH', 20_000_000)).toThrow(message);
+  });
+});

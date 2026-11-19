@@ -5,6 +5,7 @@ import { USD } from 'dinero.js/currencies';
 // Display/fiat only: never use these results as transaction or adapter inputs.
 const MAX_SAFE_MINOR_UNITS = 9_007_199_254_740_991n;
 const MAX_DECIMAL_PLACES = 1_000_000_000;
+const MAX_DISPLAY_DECIMAL_PLACES = 100;
 
 function assertIntegerString(value: string, label: string): void {
   if (
@@ -24,6 +25,18 @@ function assertDecimalPlaces(value: number, label: string): void {
   ) {
     throw new Error(
       `${label} must be a safe non-negative integer at most ${MAX_DECIMAL_PLACES}`,
+    );
+  }
+}
+
+function assertDisplayDecimalPlaces(value: number): void {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value > MAX_DISPLAY_DECIMAL_PLACES
+  ) {
+    throw new Error(
+      `displayDecimals must be a safe non-negative integer at most ${MAX_DISPLAY_DECIMAL_PLACES}`,
     );
   }
 }
@@ -58,7 +71,7 @@ export function formatFeePreview(
 ): string {
   assertIntegerString(valueBaseUnits, 'valueBaseUnits');
   assertDecimalPlaces(decimals, 'decimals');
-  assertDecimalPlaces(displayDecimals, 'displayDecimals');
+  assertDisplayDecimalPlaces(displayDecimals);
 
   if (typeof symbol !== 'string' || symbol.trim().length === 0) {
     throw new Error('symbol must be a non-empty string');
