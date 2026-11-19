@@ -13,6 +13,7 @@ import { Label } from '../ui/components/label';
 import { ensureAdapters, useWallet } from '../state/wallet-context';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
+import { formatFeePreview } from '../wallet/money';
 import {
   validateRecipient,
   previewSendAmount,
@@ -533,7 +534,8 @@ export function SendScreen() {
             {feeEstimate?.ok && chain === 'eth' && (
               <p className="text-sm text-muted-foreground">
                 Estimated fee:{' '}
-                {formatNativeWithSymbol(feeEstimate.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}
+                {/* Estimated fee is a preview: Decimal rounds display to 6 places; the review screen keeps the exact fee. */}
+                {formatFeePreview(feeEstimate.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}
                 . The fee may change before signing. Max leaves the estimated
                 fee in your wallet.
               </p>
