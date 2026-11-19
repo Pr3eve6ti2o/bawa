@@ -10,7 +10,7 @@ import {
 } from '../../scripts/wasm-integrity.mjs';
 
 const EXPECTED_CONNECT_SRC =
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com";
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com";
 
 describe('T47 security headers', () => {
   it('CSP allows same-origin scripts plus WASM compilation only', () => {
@@ -29,7 +29,7 @@ describe('T47 security headers', () => {
     expect(CONTENT_SECURITY_POLICY).not.toContain('*');
   });
 
-  it('CSP blocks plugins, base hijack and framing; connect-src allows only the five pinned provider origins', () => {
+  it('CSP blocks plugins, base hijack and framing; connect-src allows only the six pinned provider origins', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
@@ -40,10 +40,10 @@ describe('T47 security headers', () => {
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith('connect-src '));
     expect(connectSrc).toBe(EXPECTED_CONNECT_SRC);
-    // Exactly five https: origins in the whole policy, all of them in
+    // Exactly six https: origins in the whole policy, all of them in
     // connect-src: mempool.space (BTC), ethereum-rpc.publicnode.com (ETH RPC)
     // + eth.blockscout.com (ETH history), api.trongrid.io (TRX),
-    // toncenter.com (TON).
+    // toncenter.com (TON), api.coingecko.com (CoinGecko price feed).
     const httpsOrigins = CONTENT_SECURITY_POLICY.match(/https:\/\/[^\s;]+/g) ?? [];
     expect(httpsOrigins).toEqual([
       'https://mempool.space',
@@ -51,6 +51,7 @@ describe('T47 security headers', () => {
       'https://eth.blockscout.com',
       'https://api.trongrid.io',
       'https://toncenter.com',
+      'https://api.coingecko.com',
     ]);
   });
 
