@@ -14,9 +14,7 @@ The builder routes requests through `ai/` and selects from `registry/`. Build an
 
 ### `apps/web`
 
-The web starter is a watch-only deployable built with React 19, Vite and Tailwind. It is MIT-licensed.
-
-It consumes the TypeScript contracts from `packages/contracts`. It does not perform offline wallet generation or recovery.
+The web starter is a deployable built with React 19, Vite and Tailwind. It is MIT-licensed and consumes the TypeScript contracts from `packages/contracts`. It performs in-browser wallet generation and recovery, read-only balances/history via adapters, and offline send signing, with broadcast disabled.
 
 ### `apps/android`
 
@@ -75,7 +73,7 @@ Request routing and prompts for the builder live here. Read them with `WALLET_BU
 
 - **Mnemonic format:** BIP-39, 24 words, with an empty BIP-39 passphrase.
 - **Secret permissions:** `secrets/` has mode `0700`; `seed.enc.json` has mode `0600`.
-- **No broadcast:** send/broadcast functions throw.
+- **No broadcast:** Only broadcast is disabled: `broadcastSigned` returns `{ status: 'disabled' }`; send functions sign offline and do not throw.
 - **Network direction:** mainnet-first in direction, testnet-safe in behaviour. Mainnet direction does not remove the no-broadcast invariant.
 - **Fixtures:** published fixtures are public test vectors. Never fund them.
 

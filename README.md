@@ -50,6 +50,7 @@ Choose your request text. Run the builder and launcher commands from the repo ro
 | Menu launcher | `python3 tools/bawa_cli.py` |
 | Routed launcher | `python3 tools/bawa_cli.py --route "Create a Web wallet"` |
 | Wallet engine | `@trustwallet/wallet-core` `4.9.3` |
+| Web starter libraries | Dependencies: `@scure/bip39` `2.4.0`, `decimal.js` `10.6.0`, `dinero.js` `2.0.2`, `mnemonic-words` `2.0.0`; devDependency (test oracle): `bip39` `3.1.2` (bitcoinjs/bip39); Python requirement: `mnemonic==0.21` (trezor/python-mnemonic). See ADR-0005. |
 
 ![Bawa Balanced UI direction for builder output](docs/ui-ux-assets/direction-04-bawa-balanced.png)
 

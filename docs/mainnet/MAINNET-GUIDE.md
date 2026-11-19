@@ -1833,7 +1833,7 @@ These are code-level capabilities, not evidence of a completed send. The Android
 | BTC | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a BTC transaction. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
 | ETH | `EthSendComposer.kt` supports native ETH transfers only, with sending conditional on the `chainId` port. No ERC-20 transfers, contract calls or data payloads. | Transfer-only code with a fixed gas limit of `21000`. This is not a general contract-call or token-send path. |
 | TRX | An `AnySigner` signing path exists, but there is no composer. The Send screen cannot compose, sign or broadcast a TRX transaction. | The TRX path supports native TRX only. In `tx.js`, `signTrx` builds a transfer contract with `feeLimit` hardcoded to **1,000,000 SUN (1 TRX)**. There is no TRC-20 send path and no pre-send resource check. |
-| TON | Signing is refused: “TON signing is unimplemented in this build”. The Send screen reports “not implemented”. | A testnet broadcast submission implementation exists. This does not establish a complete mainnet composition, signing and submission capability. |
+| TON | Signing is refused: “TON signing is unimplemented in this build”. The Send screen reports “not implemented”. | Offline TON signing is now implemented in `apps/web/src/wallet/send.ts` (`signTonOffline`). No broadcast implementation exists in the current starter, so there is still no complete end-to-end mainnet send capability. |
 
 The Web broadcast paths are testnet submission implementations. HTTP 200 probes on **2026-11-09** confirmed mainnet endpoint reachability only: no transaction was submitted and no funds moved. The TRX `feeLimit` is a hardcoded limit, not an observed fee or a resource estimate.
 
@@ -1841,7 +1841,7 @@ The Web broadcast paths are testnet submission implementations. HTTP 200 probes 
 
 **Prevention and stop:** check the intended chain’s actual composition and signing capability, not merely whether it displays a receiving address or has signing code. Stop where the required path is absent, the Android `chainId` prerequisite remains unresolved, or the claim rests only on a broadcast adapter or endpoint probe. These limitations remain funding blockers under §17 and §21.
 
-**Scope — TON send is out of scope for this section.** The repository generates a single TON deposit address and contains no TON signing, composition or broadcast code. The Android draft refuses TON signing (“TON signing is unimplemented in this build”); the Web draft has only a testnet broadcast submission implementation. This guide therefore gives no TON send procedure, no broadcast instructions and no rehearsal procedure for TON. Funding TON without a send path means relying on an external wallet for withdrawal (see the loss mode above).
+**Scope — TON send is out of scope for this section.** The repository generates a single TON deposit address, and the current Web starter now implements offline TON signing and transfer composition. The Android draft still refuses TON signing. Broadcast is disabled everywhere in the current starter; no testnet broadcast submission exists in the current `apps/web`. This guide therefore gives no TON send procedure, no broadcast instructions and no rehearsal procedure for TON. Funding TON without a send path means relying on an external wallet for withdrawal (see the loss mode above).
 
 **Additional gaps in the Android draft send path.**
 
@@ -3509,7 +3509,7 @@ These observations verify public lookup access and returned history/status; they
 
 **Blocks writing completion:** No.
 
-**Clearance condition:** Met by the independent lookup procedure and the read-only demonstrations above. The draft send code named by M-04 does not exist in the repo at `981d0ba`. The current `apps/web` starter has no send code; its Send screen says sending is not implemented. There is no send code to fix. The procedure is the clearance evidence, not a code fix, an executed send or an implemented reconciliation feature.
+**Clearance condition:** Met by the independent lookup procedure and the read-only demonstrations above. The draft send code named by M-04 (`tx.js`, a local-only draft file) still does not exist in any repo revision. At `7220e8f`, the current `apps/web` starter has send code in `apps/web/src/wallet/send.ts`, including offline signing, but broadcast is disabled (`broadcastSigned` returns `{ status: 'disabled' }`). This is not the M-04 draft code and needed no fix for M-04. The procedure is the clearance evidence, not a code fix, an executed send or an implemented reconciliation feature.
 
 **Gate/source links:** Re-checked register: M22 F26–F27 and M24 I18.
 
