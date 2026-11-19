@@ -47,15 +47,14 @@ Derivation policy, where `i` is the address index:
 
 ## Mock or unavailable
 
-- **Balances, prices and transaction history:** mock or unavailable, not live data.
-  No provider has been selected.
-- **Sending:** not implemented. There is no signing or broadcast code.
-- **Wallet creation in the browser:** unavailable. Use the repository tools
-  [`tools/make_wallet.py`](../../tools/make_wallet.py) or
-  [`tools/hdwallet-gen/generate.js`](../../tools/hdwallet-gen/generate.js) outside the browser.
-  Import only the resulting extended public keys into this app, never secret output.
-  The creation and mnemonic-backup screens do not generate or reveal secret material.
-- **TON:** watch-only import of a public address only; no derivation, no send.
+- **Balances and transaction history:** live data from the pinned providers, not mock values; they surface as unavailable or error when a provider cannot be reached, never as invented figures. **Prices:** no price feed is connected, so there is no portfolio fiat total.
+- **Sending:** offline signing is implemented for BTC, ETH, TRX and TON using the vault key via Trust Wallet Core `AnySigner.sign`.
+  Broadcast is not implemented and remains disabled until separately authorised; no secrets leave the browser.
+- **Wallet creation in the browser:** available. The create-wallet screen generates a mnemonic, and the mnemonic-backup screen shows it for write-down.
+  The repository tools [`tools/make_wallet.py`](../../tools/make_wallet.py) or [`tools/hdwallet-gen/generate.js`](../../tools/hdwallet-gen/generate.js) remain alternatives outside the browser; import only their extended public keys, never secret output.
+  No secrets leave the browser; broadcast remains disabled.
+- **TON:** derived at `m/44'/607'/0'` (V4 R2), with balance/history adapters and offline signing; watch-only public-address import remains an option.
+  Broadcast remains disabled until separately authorised; no secrets leave the browser.
 
 ## Security notes
 

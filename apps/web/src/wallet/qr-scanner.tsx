@@ -10,10 +10,12 @@ export interface QrScannerProps {
 }
 
 /**
- * Browser camera QR scanner (Phase 4 preparation — standalone, unwired).
- * Follows the BlueWallet ScanQRCode contract: a decoded value, a cancel
- * action, and an error callback. Decodes at ~10 fps from the camera frame
- * via an off-screen canvas and jsQR. The send flow itself is Phase 4.
+ * Browser camera QR scanner, wired into the send flow's recipient step
+ * (send.tsx "Scan QR" button; the decoded value fills the recipient and
+ * is validated as a bare address — payment-request URI parsing is not
+ * implemented). Follows the BlueWallet ScanQRCode contract: a decoded
+ * value, a cancel action, and an error callback. Decodes at ~10 fps from
+ * the camera frame via an off-screen canvas and jsQR.
  */
 export function QrScanner({ onScan, onCancel, onError }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
