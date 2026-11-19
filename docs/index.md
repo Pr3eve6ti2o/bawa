@@ -1,6 +1,6 @@
 # Documentation index
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026 except where a later verification is named; passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with the 20 November 2026 re-verifications named below (engine smoke 217, web vitest 457, quality-gates run); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -39,7 +39,7 @@ This index maps Bawa's wallet reference and AI Wallet Builder: where to start, w
 - [FAQ](FAQ.md) — `DOCUMENTED_NOT_TESTED`: common questions, via the reference catalogue.
 - [FURTHER-READING](FURTHER-READING.md) — `DOCUMENTED_NOT_TESTED`: supporting reading, via the reference catalogue.
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
-- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine suite 92/92; this does not verify on-device Android derivation.
+- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 217 checks pass (verified 2026-11-20 on this tree); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
 - [External tools](EXTERNAL-TOOLS.md) — `DOCUMENTED_NOT_TESTED`: evaluated external repositories and packages for building with Bawa.
 - [UI/UX catalogue](UI-UX-CATALOGUE.md) — `DOCUMENTED_NOT_TESTED`: design reference and the route into `docs/ui-ux-assets/`.
 - [UI template registry](UI-TEMPLATE-REGISTRY.yaml) — `DOCUMENTED_NOT_TESTED`: template metadata.
@@ -65,27 +65,27 @@ This index maps Bawa's wallet reference and AI Wallet Builder: where to start, w
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 144/144 pass (verified 2026-11-14) and a successful build.
-- [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/android/`, 57 tests, 57/57 pass (verified 2026-11-14 by a clean Gradle run), APK build and emulator install/launch; Add remains `UNVERIFIED`.
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 457 tests in 40 files, all passed (verified 2026-11-20 on this tree) and a successful build.
+- [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — no Android SDK on this machine, so Gradle tests are `NOT-RUN`. The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build.mjs), [test](../scripts/test.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
 - [Registry tests](../tests/registry.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 10/10.
 - [Negative-input tests](../tests/negative-inputs.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 36/36.
 - [Chain-fixture tests](../tests/chain-fixtures.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 8 tests, run first-hand (part of the 17 pass / 0 fail / 1 skipped Phase 9 run).
-- [Failure-mode tests](../tests/failure-modes.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 6 tests, run first-hand; the R-01 test is skipped pending the auditfix2 (H8) fix.
-- [Stale-data tests](../tests/stale-data.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 4 tests, run first-hand.
+- [Failure-mode tests](../tests/failure-modes.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 10 test declarations; the suite passed in the 2026-11-20 phase9 run (157/158 pass overall; the single failure was in stale-data, not here).
+- [Stale-data tests](../tests/stale-data.test.mjs) — `FAIL` on the 2026-11-20 phase9 run: 7 test declarations, 6 passed and 1 failed — Doc 4 §21 M-31 disposition (the test still asserts OPEN; the guide correctly records CLOSED since 2026-11-13).
 - [Clean-checkout tests](../tests/clean-checkout.test.mjs) — `IMPLEMENTED_AND_VERIFIED`: 3/3.
 
 ## Evidence and gates
 
 - [Testing guide](TESTING.md) — `DOCUMENTED_NOT_TESTED`: test commands and scope; use the named results rather than assuming blanket coverage.
 - [Sample requests](sample-requests.md) — `IMPLEMENTED_AND_VERIFIED` for the two exercised requests: web 3/3 and multi-chain 6/6 steps VERIFIED; other requests are not covered by that evidence.
-- [Android evidence](android-evidence.md) — `IMPLEMENTED_AND_VERIFIED`: 57 tests, 57/57 pass (verified 2026-11-14), APK and emulator install/launch only; the Add path is `UNVERIFIED`.
+- [Android evidence](android-evidence.md) — `IMPLEMENTED_AND_VERIFIED` for install/launch only: 57 `@Test` annotations counted (re-counted 2026-11-20); executed passing count NOT re-established here; APK and emulator install/launch only; the Add path is `UNVERIFIED`.
 - [Accessibility review](accessibility-review.md) — `DOCUMENTED_NOT_TESTED`: review material; GUI verification remains outstanding.
 - [Security release gates](security-release-gates.md) — `DOCUMENTED_NOT_TESTED`: independent review and release gates are not cleared by local test results.
 - [Registry maintenance](registry-maintenance.md) — `DOCUMENTED_NOT_TESTED`: registry update guidance.
 - [Security guidance](SECURITY.md) — `DOCUMENTED_NOT_TESTED`: security documentation, not independent approval.
-- [Quality gates](../scripts/quality-gates.mjs) — `IMPLEMENTED_AND_VERIFIED`: 11/11 automated gates; not mainnet or independent-review clearance.
+- [Quality gates](../scripts/quality-gates.mjs) — `FAIL` on the 2026-11-20 run on this tree (`--skip-android`): 2 gates failed — `phase9-tests` (stale-data: Doc 4 §21 M-31 disposition; the test still asserts OPEN, the guide correctly records CLOSED) and `secret-scan`; 4 skipped (android-tests, audit-pip, sast-bandit, sast-ruff). The earlier 11/11 and 13/13 figures are earlier runs, not this tree's current result; not mainnet or independent-review clearance.
 - [Handoff](handoff.md) — `DOCUMENTED_NOT_TESTED`: handover record and unresolved work.
 
 ## Open items
@@ -96,5 +96,5 @@ This index maps Bawa's wallet reference and AI Wallet Builder: where to start, w
 - [Mainnet activation](mainnet/MAINNET-GUIDE.md) — `EXTERNALLY_DEPENDENT`: activation remains gated.
 - [On-device Android derivation](android-evidence.md) — `EXTERNALLY_DEPENDENT`: no AAR; on-device derivation remains unverified.
 - [Doc 4 §5 SHA staleness](mainnet/MAINNET-GUIDE.md) — `OPEN`: the stale SHA needs correction and re-verification.
-- [R-01 Node fix](handoff.md) — `OPEN`: fix pending (`auditfix2`, `H8`); resolution remains `UNVERIFIED`.
+- [R-01 invalid-point validation](handoff.md) — `RESOLVED`: implemented in the shared validator (`tools/hdwallet-gen/extended-key.js`, bad-point rejection) and mirrored in `apps/web/src/engine/boundary.ts` (R-01). The earlier OPEN note in this index was stale.
 - [Android Add path](android-evidence.md) — `UNVERIFIED`: APK installation and launch do not verify Add.

@@ -1,12 +1,14 @@
 # Bawa capability map — lane D1 audit
 
+> **2026-11-20 update — base `e493720`:** Refreshed on `panel-rebuild/org-docs`, based on `panel-rebuild/adopt-proper`. The launcher exists. The web suite passed all 457 tests in 40 files; engine tests passed 217 smoke checks plus register-links checks (both exit 0). Desktop/phone live-browser previews have been screenshot-checked. Web-count and `docs/11`/main-pin discrepancies are resolved. Still open: seven Web registry gaps, including live-browser balance/history; Android's executed passing count and stale guide build claim; the classifier's code-pinned refusal sentence, which still says testnet-default (needs a code change); and recovery rehearsal. M-35 funding was declined on 2026-11-13; rehearsal addresses were retired.
+
 - **Repository:** `Pr3eve6ti2o/bawa`
-- **Audited commit:** feature-branch working copy at `85b8d47` (merge of `9750a91` + `27ff384`), tree clean — verified first-hand on the VM before any model call.
-- **Audit date:** 2026-11-14
+- **Audited base:** `e493720` on `panel-rebuild/adopt-proper`; documentation refresh on `panel-rebuild/org-docs`. The earlier working-copy pin `85b8d47` is historical.
+- **Audit date:** 2026-11-20 refresh, verified first-hand; original audit dated 2026-11-14.
 - **Lane:** D1 (audit + capability map), Bawa DX transformation re-dispatch.
 - **Method:** first-hand inspection on the VM via boxd (repo tree, `docs/`, `tools/`, `scripts/`, `ai/`, `registry/`, `apps/`, `templates/`, `tests/`, CI workflows, all 5 branch worktrees), then 4 gpt-6.1-sol (API 2, max reasoning) drafting calls; every factual claim below was checked against the actual file on the VM by the lane before assembly. No test suite was executed in this lane, so no test is claimed passed in this run — "IMPLEMENTED_AND_TESTED" below rests on supplied historical/CI evidence, scoped as stated.
 - **Scope note (standing rule):** a guide or blueprint is not an implementation. A passing generator test does not verify custody, recovery, signing, broadcast, transaction construction or mainnet readiness.
-- **Launcher:** `tools/bawa_cli.py` does not exist on any branch (verified by directory listing). "Direct" launcher relevance below means future reuse of existing code, not an implemented integration.
+- **Launcher:** `tools/bawa_cli.py` exists on this branch. It provides five main options — Create an HD wallet; Create or Configure a Watch-Only Wallet; Build a Cryptocurrency Wallet Application; Build Cryptocurrency Tools; Security, Recovery and Development — plus `0. Exit`. "Direct" launcher relevance below means direct reuse through this existing launcher, not a proposed integration.
 
 ## Labels used in this map
 
@@ -16,11 +18,11 @@
 - **NEEDS_EXTERNAL** — delivery or verification requires resources outside the repo (RPC/indexers, funding, a desktop/device, owner approval).
 - **NOT_IMPLEMENTED** — no repo implementation exists for the stated capability.
 
-**Scope.** This map covers the HD wallet engine and native-asset mainnet tooling in `Pr3eve6ti2o/bawa`, at audited feature working-copy commit `85b8d47`, using only supplied evidence. A guide or blueprint is not an implementation. IMPLEMENTED_AND_TESTED below relies on supplied historical test evidence, not a new run or full verification of this commit; no suite was run in this lane. `tools/bawa_cli.py` does not exist: “direct” launcher relevance means future reuse of existing code, not an implemented launcher integration.
+**Scope.** This map covers the HD wallet engine and native-asset mainnet tooling in `Pr3eve6ti2o/bawa` on `panel-rebuild/org-docs`, based on `panel-rebuild/adopt-proper` at `e493720`. The `85b8d47` pin belongs to the historical 2026-11-14 audit. A guide or blueprint is not an implementation. Evidence now includes first-hand verification on 2026-11-20, including executed web Vitest and `tools/hdwallet-gen` `npm test` runs, alongside explicitly dated historical records. `IMPLEMENTED_AND_TESTED` is limited to the checks stated; it does not imply complete browser integration or establish Android's executed passing count. `tools/bawa_cli.py` exists: "direct" launcher relevance means direct reuse via that launcher.
 
 ## 1. HD wallet engine (Trust Wallet Core 4.9.3)
 
-**CI context:** `.github/workflows/ci.yml` syntax-checks the engine JS, runs the hdwallet package’s `test/smoke.test.js` and `test/register-links.test.js`, checks TTY refusal, and runs the Python tests cited below. Supplied CI history: 51 runs; latest at `27ff384` passed on 2026-11-13—not an asserted pass at `85b8d47`.
+**CI context:** `.github/workflows/ci.yml` syntax-checks the engine JS, runs the hdwallet package’s `test/smoke.test.js` and `test/register-links.test.js`, checks TTY refusal, and runs the Python tests cited below. Supplied CI history: 51 runs; latest at `27ff384` passed on 2026-11-13—not an asserted pass at this refresh's base `e493720`.
 
 - **Generation — IMPLEMENTED_AND_TESTED.** `tools/hdwallet-gen/generate.js`; dependency pinned by `tools/hdwallet-gen/package.json`: Trust Wallet Core 4.9.3 WASM, 24-word BIP-39, empty passphrase. Fixed paths: BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i`, TRX `m/44'/195'/0'/0/i`, TON `m/44'/607'/0'`. Public-only stdout; live generation requires a controlling terminal.  
   **Tests/CI:** Package smoke/register-links run in CI; generator TTY refusal is explicitly asserted there. No interactive generation result was supplied for this lane.  
@@ -62,7 +64,7 @@
 
 **No broadcast, no send, and no funded execution have ever happened from this repo.**
 
-**Test provenance:** The 31 `tests/*.mjs` files are **not run by CI**. The named suites are `tests/mainnet-unsigned-tx.test.mjs`, `tests/mainnet-signing.test.mjs`, `tests/mainnet-guards.test.mjs` and `tests/mainnet-fees.test.mjs` (verified first-hand from the `tests/` listing); their counts are counted `test()` declarations, not executed results. `AGENTS.md` records an H9 baseline of 130 checks, 0 fail at `0b2aa295`; that is historical evidence, and its “no transaction construction/signing” statement predates the T33/T35 modules.
+**Test provenance:** The 31 `tests/*.mjs` files are **not run by CI**. The named suites are `tests/mainnet-unsigned-tx.test.mjs`, `tests/mainnet-signing.test.mjs`, `tests/mainnet-guards.test.mjs` and `tests/mainnet-fees.test.mjs` (verified first-hand from the `tests/` listing); their counts are counted `test()` declarations, not executed results. The H9 baseline was 130 checks, 0 fail at `0b2aa295`; that is historical evidence, and its “no transaction construction/signing” statement predates the T33/T35 modules. The current engine suite is 217 smoke checks, 0 fail (verified 2026-11-20 on this tree).
 
 - **Unsigned native-asset builders — IMPLEMENTED_UNTESTED.** `tools/mainnet-tx/unsigned-tx.mjs`: offline, public-input-only BTC P2WPKH, ETH legacy/EIP-1559, TRON TransferContract and TON V4 R2 construction. No network, signing or broadcast; broadcast/send/token/contract stubs always throw.  
   **Tests/CI:** `mainnet-unsigned-tx` suite in `tests/*.mjs`—24 declarations, no CI. `test/test_unsigned_serialization.py` also exists; no executed result or stated CI run is supplied.  
@@ -94,17 +96,21 @@
 
 ## 3. Web starter (apps/web)
 
-*Scope: `Pr3eve6ti2o/bawa`, working copy at `85b8d47`. Tested labels below refer to recorded, limited verification—not tests run in this lane.*
+*Scope: `Pr3eve6ti2o/bawa`, working copy at `e493720` (2026-11-20 refresh; the `85b8d47` pin was the 2026-11-14 audit). Tested labels below refer to recorded, limited verification—not tests run in this lane.*
 
 - **IMPLEMENTED_AND_TESTED — starter build/unit/HTTP scope only.** Source: `apps/web/`; overview: `apps/web/README.md`. Stack: React **19.2.5**, Vite **8.3.8**, TypeScript **5.9.3**, Tailwind **4.2.4**, Vitest **4.1.12**, wallet-core **4.9.3**. Vendored token-ui supplies UI components only; provenance and exclusions are in §6.
   - The documented 14-screen inventory (`docs/14`, §5.1) covers welcome, create, import, dashboard, asset list/detail, send, receive, transaction history/detail, network selection, wallet management, security settings and mnemonic backup. Screen inventory does **not** establish functional sending or transaction history.
-  - **Recorded verification:** `templates/web/UPSTREAM.md`, first-hand record dated **2026-11-10**: `tsc --noEmit` exit 0; `vitest run` **25/25**; `vite build` exit 0; `vite preview` served `/` and `/wallet-core.wasm` with HTTP 200. **Not re-run here.**
+  - **Recorded verification (2026-11-20):** The web starter's Vitest suite executed **457 tests in 40 test files**, all passed, **exit 0**. `templates/web/UPSTREAM.md`'s **2026-11-10** results remain historical: `tsc --noEmit` exit 0; `vitest run` **25/25**; `vite build` exit 0; `vite preview` served `/` and `/wallet-core.wasm` with HTTP 200. That 25/25 record is not the current executed count. Typecheck and build also passed in the 2026-11-20 quality-gates run (`web-typecheck` PASS, `web-build` PASS).
 
-- **IMPLEMENTED_UNTESTED — browser execution of the boundary/integration.** `apps/web/src/engine/boundary.ts` implements validation before WASM, including R-01 point validation in pure BigInt. `scripts/copy-wasm.mjs` supplies WASM to `apps/web/public/` on predev/prebuild; WASM is never committed. The recorded asset-delivery checks do not establish browser engine execution or interactive wallet behavior. **No live-browser run has ever been performed.**
+- **IMPLEMENTED_UNTESTED — browser execution of the boundary/integration.** `apps/web/src/engine/boundary.ts` implements validation before WASM, including R-01 point validation in pure BigInt. `scripts/copy-wasm.mjs` supplies WASM to `apps/web/public/` on predev/prebuild; WASM is never committed. The recorded asset-delivery checks do not establish browser engine execution or interactive wallet behavior. Live previews have been served and screenshot-checked at desktop and phone widths; that is preview/UI evidence, not complete verification of the browser boundary or network integration.
 
-- **NOT_IMPLEMENTED — eight registry-listed gaps.** `registry/profiles.json`, `web-wallet`: send; sign; broadcast; balances; prices; transaction history; live-browser verification (only preview HTTP checks and unit tests are recorded); on-device derivation (**no on-device concept in web**).
+- **IMPLEMENTED_AND_TESTED — served-browser preview/screenshot checks only.** Live previews of the web starter have been served and screenshot-checked at desktop and phone widths. This is preview/UI evidence, not complete verification of the browser boundary or network integration.
 
-- **Unresolved test-count discrepancy:** the repository records **25 tests**, while this lane counted **9 Vitest test files** under `apps/web/src` and roughly **117** `it(`-matching lines. That grep count is unreliable: it includes substrings such as `split()`/`visit()`. Neither number is reconciled; the true executed count needs a Vitest run.
+- **IMPLEMENTED_UNTESTED — live-browser balance/history execution.** Read-only `getBalance` and `getHistory` adapters are verified in Node. No live-browser balance/history run has happened: the app's own CSP blocks their fetches in a served-browser preview.
+
+- **Registry-listed gaps — seven missing, partial or unverified items.** As read on **2026-11-20**, `registry/profiles.json`, profile `web-wallet`, lists: broadcast; TON fee-quote (send preview reports unavailable; signing still works with a seqno); TON post-sign verification (partial only: no-error + 32-byte hash + BOC magic, no BOC re-parse); prices; live-browser balance/history run; auto-lock timer (lock screen exists; inactivity timer not built); on-device derivation (web has no on-device concept — derivation is in-browser WASM). Send, sign, balances and transaction history are **no longer registry-listed gaps**: offline signing exists in `apps/web/src/wallet/send.ts`, and read-only `getBalance`/`getHistory` adapters exist. Offline signing does not imply broadcast support; Node adapter verification does not establish a served-browser balance/history run.
+
+- **Resolved test-count discrepancy (2026-11-20):** the first-hand Vitest run executed **457 tests in 40 test files**, all passed, exit 0. This replaces the conflicting 25 versus approximately 117 figures; the upstream 25/25 record remains historical evidence.
 
 ## 4. Android starter (apps/android)
 
@@ -118,7 +124,7 @@
   - **Add-button acceptance path stays NOT_IMPLEMENTED.** `docs/android-evidence.md` explicitly records **NOT VERIFIED**: taps were swallowed under TCG emulation. Unit-test evidence does not establish this acceptance path.
   - **NEEDS_EXTERNAL — native engine artifact and KVM verification environment.** The starter has no AAR for any version; on-device address derivation remains open. No KVM-backed verification result is supplied.
 
-- **Unresolved test-count discrepancy:** the repository records **17 tests**, but this lane counted **57 `@Test` annotations across five Kotlin test files**: `ConfirmationPolicyTest` 24, `DerivationPolicyTest` 7, `ExtendedKeyValidatorTest` 18, `WalletViewModelTest` 5, `ImportWalletAddButtonTest` 3. These are annotation counts, not confirmed executed/passing counts; **17 versus 57 remains unresolved**.
+- **Unresolved test-count discrepancy:** the repository records **17 tests**, but this lane counted **57 `@Test` annotations across five Kotlin test files**: `ConfirmationPolicyTest` 24, `DerivationPolicyTest` 7, `ExtendedKeyValidatorTest` 18, `WalletViewModelTest` 5, `ImportWalletAddButtonTest` 3. These are annotation counts, not confirmed executed/passing counts; **17 versus 57 remains unresolved**. Grep on **2026-11-20** re-counted the same **57 annotations** across the same five files. The executed passing count remains **unknown**: no Android SDK exists on this machine, so no Gradle run was possible for this refresh. The earlier 17-test figure is not confirmed by this annotation re-count.
 
 - **Toolchain support caveat:** AGP **8.2.2** does not officially support compileSdk **35**; that requires AGP **8.6.0+**. The recorded build proceeds via `android.suppressUnsupportedCompileSdk=35`. Kotlin **1.9.22**’s supported Gradle range tops out at **8.1.1**, while this repository uses **8.7**. A recorded successful build does not make this combination officially supported.
 
@@ -157,7 +163,7 @@ The listed gaps are **NOT_IMPLEMENTED** in their stated profile scope; external 
 
 - **DOCUMENTED_ONLY (needs AI implementation) — routing/refusal blueprint.** `ai/request-routing.md` maps the seven registry profiles—CLI, Bitcoin, EVM, multichain, watch-only, web and Android—to `ai/prompts/create-*.md` (**eight files**) and `ai/profiles/*.md` (**seven files**). Documentation is not evidence of fully implemented or end-to-end-tested AI routing.
 - Documented refusals cover mainnet without separate approval; swaps/staking/bridges; signing/broadcast claims; TON send; unlisted profiles; TON xpub.
-- **Unresolved mainnet-default conflict:** routing documentation defaults to **testnet** and requires refusal of **mainnet without separate approval**. This conflicts with the owner’s **mainnet-first direction for the DX run**. No resolution or routing change is established by the supplied evidence.
+- **Mainnet-default conflict — partly resolved 2026-11-20:** `AGENTS.md`, `WALLET_BUILDER.md` and the `ai/request-routing.md` scope boundary are now aligned to the owner's **mainnet-first** direction (testnet secondary; mainnet use still needs separate approval and real-funds gates). One code-pinned remnant stays OPEN: `scripts/classify-request.mjs` emits the refusal sentence "the default scope is testnet" verbatim and `tests/classifier.test.mjs` asserts it — changing that sentence needs a code change, not a doc edit. The Web/Android guides remain testnet-framed.
 
 ## 6. External dependencies and recommended tools
 
@@ -186,7 +192,7 @@ All documents remain guides. Implementation labels below apply only to the named
 | `docs/05-watch-only` | 536 | BTC/ETH/TRX/TON watch-only derivation | BTC/ETH/TRX procedure: IMPLEMENTED_AND_TESTED (differential test, index 0/1 scope) — `derive.js`; TON: IMPLEMENTED_UNTESTED — `derive-ton.js` | Separate derivation from GUI import and withdrawal verification. |
 | `docs/06-tracking` | 739 | Tracking from $0 using explorers/RPC | DOCUMENTED_ONLY | No tracking code; chain data requires external services. |
 | `docs/07-payment-tracking` | 885 | Payment tracking and reconciliation | DOCUMENTED_ONLY | `test/payment_record_check.py` checks a record schema, not live payments. |
-| `docs/08-security-recovery` | 1,252 | Security/recovery; 12 limitations stated up front | DOCUMENTED_ONLY; decryption subset IMPLEMENTED_AND_TESTED (CI scope: `test/test_decrypt_seed.py`) — `tools/decrypt_seed.py` | Link recovery instructions; do not claim a completed rehearsal. |
+| `docs/08-security-recovery` | 1,297 | Security/recovery; 12 limitations stated up front | DOCUMENTED_ONLY; decryption subset IMPLEMENTED_AND_TESTED (CI scope: `test/test_decrypt_seed.py`) — `tools/decrypt_seed.py` | Link recovery instructions; do not claim a completed rehearsal. |
 | `docs/09-signing-and-hardware` | 918 | Descriptors, PSBT and hardware signing | DOCUMENTED_ONLY | No PSBT/hardware integration; local test-only signing is separate. |
 | `docs/10-operations-and-testing` | 1,502 | Operations, release gates and incident response | DOCUMENTED_ONLY; gate-check subset IMPLEMENTED_UNTESTED — `scripts/quality-gates.mjs` | Only coded checks are enforced, not the entire operational blueprint. |
 | `docs/11-trust-wallet-and-independent-verification` | 577 | wallet-core reference and independent bip-utils verification | DOCUMENTED_ONLY; verifier IMPLEMENTED_AND_TESTED (CI scope, BTC/ETH/TRX index 0/1) — `test/differential_test.py` | Flag guide reference **4.9.2** versus repo tool pin **4.9.3**. |
@@ -202,21 +208,23 @@ All documents remain guides. Implementation labels below apply only to the named
 | `docs/SECURITY.md`, `docs/TESTING.md` and other listed support/plan/review docs | — | Companion documentation; inventory alone establishes no runtime capability | DOCUMENTED_ONLY | Reference and AI implementation inputs, not execution evidence. |
 | `research/ui-candidates.md` | — | token-ui selected as WEB-01; shadcn/ui alternative not selected | DOCUMENTED_ONLY | UI selection is not wallet functionality. |
 
+**Line-count note:** this table's line counts are as of **2026-11-14**, except where explicitly re-counted. `docs/08-security-recovery/README.md` was re-counted on **2026-11-20** at **1,297 lines**.
+
 ## 8. Mainnet readiness gap (mainnet-first intent vs actual state)
 
 **Existing, bounded components:** BTC/ETH/TRX/TON mainnet derivation; unsigned builders; local **test-only** mainnet signing; guards and fee components. These do **not** establish an operational, funded send path. Builder/signing coverage must not be assumed identical across all four chains.
 
 **Read-only evidence:** `docs/mainnet/evidence/t32-probe-2026-11-12.json` and `t32-smoke-2026-11-12c.json` record live read-only probes dated **2026-11-12**. They are not funded execution or broadcast evidence.
 
-**Documentation is not implementation:** `docs/mainnet/MAINNET-GUIDE.md` (4,503 lines) explicitly states **“Guide prose only — no app or UI code.”** Its evidence baseline is **2026-11-09**, with code pin **e3b65fb8**, not the working-copy pin **85b8d47**. The signing, unsigned-transaction, vector and guard documents, plus payment-record examples/schemas, do not implement their blueprints. `M35-REHEARSAL-PROCEDURE.md` is a **492-line DRAFT**.
+**Documentation is not implementation:** `docs/mainnet/MAINNET-GUIDE.md` (4,503 lines) explicitly states **“Guide prose only — no app or UI code.”** Its evidence baseline is **2026-11-09**, with code pin **e3b65fb8**, not this refresh's branch base **e493720**. The signing, unsigned-transaction, vector and guard documents, plus payment-record examples/schemas, do not implement their blueprints. `M35-REHEARSAL-PROCEDURE.md` is a **492-line DRAFT**.
 
 | Gap | Required work |
 |---|---|
 | No payment execution or broadcast implementation | Implement the end-to-end send/broadcast path. Independently verify construction, signing, guards and fees; do not promote the test-only signer into a production or hardware flow by assumption. |
 | No funded mainnet execution; M-35 funding declined and rehearsal not executed | Finalize the draft procedure, obtain explicit authorization/funding, then execute and record the funded rehearsal after the execution path exists. |
 | External live-data dependencies remain | Integrate required external RPC/indexer/data sources; do not present balances/history/prices as repo-delivered functionality. |
-| `AGENTS.md` and `ai/request-routing.md` still default to testnet and require separate mainnet approval; Web/Android guides are testnet-framed | Align routing and guide entry points with mainnet-first intent. Reframe testnet as secondary; **do not delete testnet code in this run**. |
-| Documentation pins and execution evidence need reconciliation | Reconcile e3b65fb8-based mainnet prose with 85b8d47 and guide wallet-core 4.9.2 references with tool pin 4.9.3. Complete and record relevant browser, GUI/M-39, recovery and transaction-path checks. |
+| `AGENTS.md`, `WALLET_BUILDER.md` and the `ai/request-routing.md` scope boundary are aligned to mainnet-first in this lane (2026-11-20); the classifier's code-pinned refusal sentence still says testnet-default (needs a code change). Web/Android guides are testnet-framed | Complete the guide entry-point alignment to mainnet-first. Reframe testnet as secondary; **do not delete testnet code in this run**. |
+| Documentation pins and execution evidence need reconciliation | Reconcile e3b65fb8-based mainnet prose with e493720 and guide wallet-core 4.9.2 references with tool pin 4.9.3. Complete and record relevant browser, GUI/M-39, recovery and transaction-path checks. |
 
 **Mainnet readiness is not established.** These are required work items, not a readiness declaration.
 
@@ -236,7 +244,7 @@ Labels are scoped to the capability named, not to the wallet as a whole.
 | Hardware signing | DOCUMENTED_ONLY | `docs/09` describes it; the local test-only signer is not a hardware flow. |
 | PSBT flows | DOCUMENTED_ONLY | Descriptors/PSBT are guide material; no PSBT implementation. |
 | On-device Android derivation | NOT_IMPLEMENTED | Android starter implements UI/boundaries only. |
-| Live-browser Web execution | IMPLEMENTED_UNTESTED | Starter/import code exists, but no live-browser run was done. |
+| Live-browser Web execution | IMPLEMENTED_AND_TESTED for preview/screenshot checks; IMPLEMENTED_UNTESTED for balance/history | Live previews served and screenshot-checked at desktop and phone widths. Read-only `getBalance`/`getHistory` adapters are verified in Node, but no live-browser balance/history run has happened: the app's own CSP blocks their fetches in a served-browser preview. |
 | External GUI watch-only import | DOCUMENTED_ONLY | Workflow documented but untested; no desktop machine was available on the test VM. |
 | GUI watch-only withdrawal | NEEDS_EXTERNAL | **M-39 OPEN**; external GUI verification is outstanding, and import is not withdrawal. |
 | Recovery rehearsal | IMPLEMENTED_UNTESTED | `tools/decrypt_seed.py` exists; README’s verified-on table lists the rehearsal as not run. |
@@ -257,12 +265,12 @@ Labels are scoped to the capability named, not to the wallet as a whole.
 **Standing rule:** A passing generator test does **not** verify custody, recovery, signing, broadcast, transaction construction or mainnet readiness.
 
 
-## Appendix A — Unresolved discrepancies (do not treat as settled)
+## Appendix A — Discrepancies (resolved and unresolved; do not treat the unresolved one as settled)
 
-1. **Web starter test count — 25 vs ~117.** The repo records `vitest run` 25/25 (`templates/web/UPSTREAM.md`, 2026-11-10). This lane counted 9 Vitest test files in `apps/web/src` and roughly 117 `it(`-matching lines. The grep count is unreliable (it matches substrings such as `split()`/`visit()`). Neither number is reconciled; the true executed count needs a Vitest run.
-2. **Android starter test count — 17 vs 57.** The repo records `./gradlew testDebugUnitTest` 17/17 (`templates/android/UPSTREAM.md`). This lane counted 57 `@Test` annotations across the 5 Kotlin test files (ConfirmationPolicyTest 24, DerivationPolicyTest 7, ExtendedKeyValidatorTest 18, WalletViewModelTest 5, ImportWalletAddButtonTest 3). Annotation counts are not confirmed executed/passing counts; 17 vs 57 remains unresolved and needs a Gradle test run.
-3. **Guide wallet-core pins — 4.9.2 vs 4.9.3.** `docs/11` and the Android guide cite 4.9.2 as the reference engine; the repo tool pin is 4.9.3 (`tools/hdwallet-gen/package.json`, `apps/web/package.json`). The guides' 4.9.2 is a reference only, never the tool pin — but the drift should be reconciled in the docs.
-4. **Main-branch wallet-core pin — 4.8.4 vs 4.9.3.** Main pins 4.8.4; the feature branch pins 4.9.3 (see BRANCH-AUDIT.md).
+1. **RESOLVED — web executed test count.** The first-hand **2026-11-20** Vitest run executed **457 tests in 40 test files**, all passed, **exit 0**. This establishes the current executed count in place of the conflicting 25 versus approximately 117 figures. The upstream 25/25 record remains historical evidence.
+2. **OPEN — Android annotation count versus executed passing count.** Grep on **2026-11-20** re-counted **57 `@Test` annotations** across the same **five Kotlin test files**: `ConfirmationPolicyTest` 24; `DerivationPolicyTest` 7; `ExtendedKeyValidatorTest` 18; `WalletViewModelTest` 5; `ImportWalletAddButtonTest` 3. These are **annotation counts, not executed passes**. The executed passing count remains **unknown**: no Android SDK exists on this machine, so no Gradle run was possible for this refresh. The earlier 17-test figure is not confirmed by this annotation re-count.
+3. **RESOLVED for `docs/11` — historical reference engine versus current tool pin.** `docs/11-trust-wallet-and-independent-verification/README.md` explicitly frames **4.9.2** as the historical reference engine; line 129 plainly states that the current tool pin is **4.9.3**. These are not conflicting current pins. The Android guide's **4.9.2** remains an explicitly framed testnet source-build pin. Its separate "no Gradle build, no APK" claim is stale: **an APK was built and run on an emulator**. That build/run evidence does not establish Android's executed passing test count.
+4. **RESOLVED — main-branch tool pin.** Reading `origin/main:tools/hdwallet-gen/package.json` on **2026-11-20** verified that main pins wallet-core **4.9.3**. The claim that main pins **4.8.4** is stale.
 
 ## Appendix B — Audit method and Sol calls (lane D1)
 

@@ -39,11 +39,11 @@ The one-prompt workflow is `scripts/build-wallet.mjs "<request>"`. It classifies
 
 ## Scope boundaries affecting routing
 
-- Testnet is the default throughout. Mainnet without separate approval must be refused. Unspecified testnet path/network details are OPEN; supplied derivation references do not authorize mainnet use.
+- Mainnet-first is the direction throughout (ADR-0003); a request that names testnet uses testnet. Mainnet use without separate approval must be refused. Unspecified network details are OPEN; supplied derivation references do not authorize mainnet use.
 - Signing code in this repo is the web wallet's offline signer (real vault keys) and a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented. A wallet name, UI screen or foundation choice does not establish those capabilities.
 - ETH derivation does not establish generic EVM operation. Unspecified EVM capabilities are OPEN, not supported claims.
 - TON is generation-only in the proposed multichain profile: no send and no xpub. TRX derivation is `m/44'/195'/0'/0/i`; TON derivation is `m/44'/607'/0'`, generation-only.
-- Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (25 tests, build + preview verified); no live browser run has been performed.
+- Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (457 tests in 40 files, all passed 2026-11-20, build + preview verified); live previews have been served and screenshot-checked, but no live-browser balance/history run has happened.
 - An Android debug APK is produced by `./gradlew assembleDebug` (52,456,212 bytes, verified); no AAR exists for any version, and on-device derivation is not implemented.
 - Web, Android and watch-only chain/path coverage not supplied here is OPEN; do not borrow another profile's capabilities.
 
@@ -81,6 +81,8 @@ Report the matching sentence verbatim for each unsupported part. Do not improvis
 
 Separate mainnet approval does not itself establish implementation or verification.
 
+Note (2026-11-20): the mainnet refusal sentence above is code-pinned — `scripts/classify-request.mjs` emits it verbatim and `tests/classifier.test.mjs` asserts it. Its "default scope is testnet" wording is the refusal fallback, not the routing direction, which is mainnet-first (see "Scope boundaries affecting routing"). Changing the sentence needs a code change to the classifier and its tests, not a doc edit.
+
 ## Pending validation and reporting
 
 - Route a matching request and report its registry status (`DOCUMENTED_NOT_TESTED` or `STARTER_IMPLEMENTED_AND_VERIFIED`) with the implemented/missing lists. Record the profile ID and prompt.
@@ -88,4 +90,4 @@ Separate mainnet approval does not itself establish implementation or verificati
 - Require the profile's recorded evidence before promising it or claiming it is verified. Existing engine evidence or owner approval of a foundation is not a substitute.
 - Carry the selected profile's verification requirements into the plan and report. For web/Android, retain the 14-screen contract requirement and the recorded Phase 5 foundation inspection.
 - Use evidence labels only as justified: IMPLEMENTED_AND_VERIFIED / STARTER_IMPLEMENTED_AND_VERIFIED / DOCUMENTED_NOT_TESTED / PROPOSED / OPEN / EXTERNALLY_DEPENDENT / UNVERIFIED. STARTER_IMPLEMENTED_AND_VERIFIED means the starter for the profile is implemented and verified within its documented scope; it is not a complete wallet.
-- Report the selected route or split routes, testnet scope, refused parts, validation and inspection gaps, OPEN facts, evidence labels and next required verification. Do not claim capabilities beyond the evidence.
+- Report the selected route or split routes, network scope, refused parts, validation and inspection gaps, OPEN facts, evidence labels and next required verification. Do not claim capabilities beyond the evidence.

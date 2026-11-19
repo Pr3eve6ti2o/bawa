@@ -1,8 +1,8 @@
 # Architecture
 
-This is the code map for Bawa on `feature/ai-wallet-builder`. Read it alongside `README.md` and `CONTRIBUTING.md`.
+This is the code map for Bawa on the `panel-rebuild/adopt-proper` line (base commit `e493720`). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
-The builder routes requests through `ai/` and selects from `registry/`. Build and check entry points live in `scripts/`. The watch-only apps are deployables; wallet generation and recovery are separate offline tools under `tools/`.
+The builder routes requests through `ai/` and selects from `registry/`. Build and check entry points live in `scripts/`. The starters under `apps/` are deployables; wallet generation and recovery are separate offline tools under `tools/`.
 
 ## Code map
 
