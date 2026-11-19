@@ -1,0 +1,4 @@
+{"ts":"2026-11-20T00:55:00+05:30","lane":"A","call":1,"host":"gray-pinee","api":"API 1","model":"gpt-6.1-sol","reasoning":"max","prompt_file":"/tmp/sol-a-prompt1.md","prompt_words":314,"output":"/tmp/sol-a-sec12.md","status":"launched"}
+{"ts":"2026-11-20T01:00:00+05:30","lane":"A","call":1,"status":"landed","output_bytes":3478,"duration_ms":115958,"note":"sections 1-2, verified accurate against first-hand evidence"}
+{"ts":"2026-11-20T01:00:00+05:30","lane":"A","call":2,"host":"gray-pinee","api":"API 1","model":"gpt-6.1-sol","reasoning":"max","prompt_file":"/tmp/sol-a-prompt2.md","prompt_words":394,"output":"/tmp/sol-a-sec34.md","status":"launched"}
+{"ts":"2026-11-20T01:10:00+05:30","lane":"A","call":2,"status":"landed","output_bytes":4986,"duration_ms":169970,"note":"sections 3-4, 2 lane corrections applied in assembly (4-chain tracker baseline verified; Trust Wallet chain-logo basis already in-repo)"}
