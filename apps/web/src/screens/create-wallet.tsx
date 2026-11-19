@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
-import { createVault, hasVault } from '../wallet/vault';
+import { createVault, hasVault, isLocked } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -133,9 +133,14 @@ export function CreateWalletScreen() {
       setPassword('');
       setConfirmPassword('');
       setPassphraseUsed(passphrase.length > 0);
-      await unlockVault(password, passphrase);
-      setPassphrase('');
-      await refreshVaultAccounts();
+      try {
+        await unlockVault(password, passphrase);
+        setPassphrase('');
+        await refreshVaultAccounts();
+      } catch (error) {
+        if (isLocked()) throw error;
+        // Balance/history refresh failures must not block a created, unlocked wallet.
+      }
       setStep(4);
     } catch {
       // The mnemonic is already cleared above when creation succeeded;
