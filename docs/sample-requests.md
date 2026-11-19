@@ -15,9 +15,7 @@ node scripts/build-wallet.mjs "Create a Web wallet" --out reports/web-report.jso
 - Expected profile: `web-wallet`.
 - Expected platforms: `[web]`.
 - Expected outcome: generate, setup, build and test are each `VERIFIED`.
-- Capability boundary: Web derives in-browser via wallet-core WASM, as
-  documented. Balances are not implemented (no provider), and send is not
-  implemented. Verification does not remove these limitations.
+- Capability boundary: Web derives in-browser via wallet-core WASM, as documented. Balances and history are now implemented via read-only mainnet adapters, and send is now implemented as offline signing for BTC, ETH, TRX, and TON. Broadcast remains disabled and unauthorised, and prices are still not implemented. Verification does not remove these limitations.
 
 ## 2. Create an Android wallet
 

@@ -171,7 +171,7 @@ The listed gaps are **NOT_IMPLEMENTED** in their stated profile scope; external 
 
 `paulmillr/scure-bip39`, `scure-bip32`, `trustwallet/wallet-core`, `bitcoinjs/bitcoinjs-lib`, `bitcoin/bitcoin`, `Blockstream/esplora`, `spesmilo/electrumx`, `wevm/viem`, `ethers-io/ethers.js`, `anza-xyz/kit`, `ton-org/ton`, `cosmos/chain-registry`, `cosmos/cosmjs`, Cardano CIPs, `polkadot-js`, `XRPLF/xrpl.js`, Trezor, Ledger and Foundry/Anvil.
 
-These are **recommendations, not implemented integrations**; no code is vendored for these recommendations. Only **wallet-core** is already a repository dependency from this list, with the limited evidence scope stated above.
+`paulmillr/scure-bip39` is now an implemented dependency via `@scure/bip39` for validation/tests/docs only, not a replacement for wallet-core, and `wevm/viem` is an `apps/web` dependency (`viem` at `^2.58.0`) for signing helpers; apart from these and the existing wallet-core dependency, the remaining listed integrations are recommendations only. Adoption does not establish send/broadcast support, and Android has no AAR. The six newly adopted items are `@scure/bip39` 2.4.0, `decimal.js` 10.6.0, `dinero.js` 2.0.2 and `mnemonic-words` 2.0.0 in `apps/web/package.json` dependencies, `bip39` 3.1.2 (`bitcoinjs/bip39`, test oracle only) in its devDependencies, and `mnemonic==0.21` (`trezor/python-mnemonic`, used as a second check in `tools/make_wallet.py`) in `requirements.txt`; `@trustwallet/wallet-core` 4.9.3 remains the only engine dependency, pinned in `tools/hdwallet-gen` and `apps/web`, with the limited evidence scope stated above.
 
 ## 7. Documentation (docs/01–16 + specialist guides)
 
@@ -226,10 +226,11 @@ Labels are scoped to the capability named, not to the wallet as a whole.
 
 | Capability | Label | One-line reason |
 |---|---|---|
-| Send / payment execution | NOT_IMPLEMENTED | No payment-execution code; record-schema validation and local signing are not sending. |
+| Send / payment execution | IMPLEMENTED_UNTESTED | Offline signing exists for BTC/ETH/TRX/TON; broadcast is disabled, and no live payment has been executed. |
 | Broadcast | NOT_IMPLEMENTED | No broadcast implementation anywhere in the repo. |
-| Funded mainnet execution / M-35 | NEEDS_EXTERNAL | Funding was declined; M-35 is unexecuted, and the send/broadcast path is also missing. |
-| Balances, prices and history | NEEDS_EXTERNAL | No tracking code, backend, indexer, hosted service or database; external data integration is required. |
+| Funded mainnet execution / M-35 | NEEDS_EXTERNAL | Funding was declined and M-35 remains unexecuted; the send signing path exists, but broadcast is disabled. |
+| Balances and history | IMPLEMENTED_UNTESTED | Read-only mainnet adapters implement getBalance and getHistory. |
+| Prices | NEEDS_EXTERNAL | No price feed is implemented; external price data integration is required. |
 | Swaps, staking and bridges | NOT_IMPLEMENTED | None is implemented in the repo. |
 | WalletConnect | NOT_IMPLEMENTED | No integration code. |
 | Hardware signing | DOCUMENTED_ONLY | `docs/09` describes it; the local test-only signer is not a hardware flow. |
@@ -239,9 +240,9 @@ Labels are scoped to the capability named, not to the wallet as a whole.
 | External GUI watch-only import | DOCUMENTED_ONLY | Workflow documented but untested; no desktop machine was available on the test VM. |
 | GUI watch-only withdrawal | NEEDS_EXTERNAL | **M-39 OPEN**; external GUI verification is outstanding, and import is not withdrawal. |
 | Recovery rehearsal | IMPLEMENTED_UNTESTED | `tools/decrypt_seed.py` exists; README’s verified-on table lists the rehearsal as not run. |
-| Live testnet spend | NOT_IMPLEMENTED | No repo send/broadcast path and no live-spend evidence supplied. |
+| Live testnet spend | NOT_IMPLEMENTED | Signing exists, but broadcast is disabled and no live testnet spend was executed. |
 | Generic EVM beyond ETH | NOT_IMPLEMENTED | No beyond-ETH EVM implementation is evidenced. |
-| TON send | NOT_IMPLEMENTED | TON derivation/watch-only support does not implement payment execution. |
+| TON send | IMPLEMENTED_UNTESTED | TON offline signing is implemented; broadcast is disabled, and no live TON send has been executed. |
 | TON xpub | NOT_IMPLEMENTED | No TON xpub capability is evidenced; `derive-ton.js` does not establish it. |
 | Chains beyond BTC/ETH/TRX/TON in code | NOT_IMPLEMENTED | Solana/Cosmos/Cardano/Substrate/XRPL appear only in `docs/02` prose; no implementation. |
 
