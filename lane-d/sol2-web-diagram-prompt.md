@@ -1,0 +1,14 @@
+You are helping document the Bawa web wallet (apps/web). Please be kind and precise — thank you!
+
+TASK: Draft ONE Mermaid flowchart for the web wallet's components and data flow. Emit ONLY the Mermaid code block plus up to 3 short lines noting anything you think is missing. Do not invent components.
+
+VERIFIED FACTS (use only these — every node must map to a real path):
+- Screens (apps/web/src/screens/, routed in apps/web/src/app/app.tsx with react-router, lazy-loaded): welcome, dashboard (index), create-wallet, import-wallet, mnemonic-backup, asset-list, asset-detail (assets/:chain), receive, send, transaction-history, transaction-detail, network-selection, wallet-management, security-settings, lock. UI components are vendored token-ui in apps/web/src/ui/.
+- State (apps/web/src/state/wallet-context.tsx): WalletContext provider; VaultState is no-vault / locked / unlocked; auto-lock on inactivity and page-hide; selectedChain defaults to btc; refreshBalances() pulls public balances.
+- Vault (apps/web/src/wallet/vault.ts): PBKDF2 600,000 iterations SHA-256, AES-GCM-256, envelope in localStorage under key bawa-vault (version, KDF params, salt, IV, ciphertext only — never a mnemonic, seed, key or password). The decrypted mnemonic lives only transiently in a module closure while unlocked, never in React state, refs, localStorage or logs.
+- Core (apps/web/src/wallet/core.ts, loaded via apps/web/src/engine/boundary.ts): Trust Wallet Core 4.9.3 WASM; generates the 24-word BIP-39 mnemonic (empty passphrase) and derives addresses. Default paths: BTC m/84'/0'/0'/0/0, ETH m/44'/60'/0'/0/0, TRX m/44'/195'/0'/0/0, TON m/44'/607'/0' (one address).
+- Chains (apps/web/src/wallet/chains.ts): ChainId is btc | eth | trx | ton only. Capabilities per chain: derive, restore, receive, balance, history, fee-quote, unsigned-plan, local-sign, post-sign-verify — each verified, blocked, unsupported or candidate, with evidence. TON fee-quote and post-sign-verify are blocked.
+- Adapters (apps/web/src/wallet/adapters/btc.ts, eth.ts, trx.ts, ton.ts; registry in apps/web/src/wallet/providers.ts): read-only BalanceProvider per chain — viem for ETH, TronGrid for TRX, TonCenter for TON, Electrum-WS/proxy for BTC. Until an adapter registers, balances stay unavailable with reason no-adapter. No balance is ever fabricated.
+- Send (apps/web/src/wallet/send.ts): offline transaction construction and local signing with real vault keys; broadcastSigned returns { status: 'disabled' } — there is no broadcast path.
+
+ACCEPTANCE CHECK: valid Mermaid flowchart syntax; at most 9 top-level nodes (use subgraphs for Screens / State / Wallet layer / Public data); include accTitle and accDescr lines; show the trust boundary (where secrets live: vault closure + core) versus the public-data side (adapters/providers); every label names a real path above.

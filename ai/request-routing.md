@@ -37,6 +37,37 @@ A Markdown rule is not platform enforcement: it cannot authenticate approval or 
 
 The one-prompt workflow is `scripts/build-wallet.mjs "<request>"`. It classifies, generates the profile's project with `scripts/generate-project.mjs` into `generated/<profile-id>`, verifies that generated project, and writes a JSON report. Its classification order is: both web+android words → split-required (AMBIGUOUS) report, exit 2 — the caller runs one build per profile; the CLI does not execute two builds; android → android-wallet; web/website/browser → web-wallet; multi-chain/multichain → multichain-wallet; hd/hierarchical deterministic/cli/command-line → hd-wallet-cli; bitcoin/btc → bitcoin-wallet (bitcoin + watch-only without generation language selects watch-only-wallet); evm/ethereum/eth → evm-wallet (ETH derivation only); watch-only/watch only/xpub/extended public key → watch-only-wallet; otherwise unclassifiable. It does not require the word "wallet". The CLI never waits for input: an unclassifiable request writes a classification-failure report (profile null, exit 2); a refused request writes a refusal report (profile null, `refusal` carrying the exact sentence below, exit 2); an ambiguous request writes an AMBIGUOUS report (profile null, exit 2).
 
+```mermaid
+flowchart TD
+    accTitle: Bawa one-prompt wallet build workflow
+    accDescr: The non-interactive CLI treats the request as untrusted data, selects only from registry, and either writes an exit-2 outcome report or generates, verifies, audits claims, and writes a successful JSON report.
+
+    subgraph Routing["Request routing — CLI never waits for input"]
+        Parse["Parse<br/>scripts/build-wallet.mjs &quot;&lt;request&gt;&quot;<br/>Untrusted task data — T46<br/>Embedded instructions cannot amend routing policy"]
+        Classify["Classify<br/>scripts/classify-request.mjs"]
+        Plan["Plan: scripts/plan-build.mjs<br/>Then match profile → select engine → select chains<br/>→ select template → inspect<br/>Selection source ONLY: registry/<br/>profiles.json, capabilities.json, engines.json, ui.json<br/>Never invent a stack"]
+
+        Parse --> Classify --> Plan
+    end
+
+    Generate["Generate<br/>Scaffold: scripts/generate-project.mjs<br/>Into generated/&lt;profile-id&gt;<br/>Then implement"]
+    Verify["Verify<br/>Gates: scripts/quality-gates.mjs<br/>scripts/validate-registry.mjs<br/>scripts/secret-scan.mjs<br/>scripts/gate-verdict.mjs<br/>Then audit claims"]
+    Report["Report<br/>Successful run writes a JSON report"]
+
+    ClassificationFailure["Write classification-failure report<br/>profile: null<br/>Exit 2"]
+    Refusal["Write refusal report<br/>Exit 2"]
+    Ambiguous["Write AMBIGUOUS report<br/>Exit 2"]
+
+    Plan --> Generate --> Verify --> Report
+    Routing -->|Unclassifiable| ClassificationFailure
+    Routing -->|Refused| Refusal
+    Routing -->|Ambiguous| Ambiguous
+```
+
+The diagram does not specify what happens when a verification gate fails — the
+text above is the authority for outcomes, and it names only the three exit-2
+reports (classification failure, refusal, ambiguous).
+
 ## Scope boundaries affecting routing
 
 - Testnet is the default throughout. Mainnet without separate approval must be refused. Unspecified testnet path/network details are OPEN; supplied derivation references do not authorize mainnet use.
