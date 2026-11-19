@@ -9,6 +9,7 @@ import type { ChainAdapter } from '../wallet/adapters/types';
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
+  ensureAdapters: vi.fn(async () => undefined),
 }));
 
 const ethAdapter: ChainAdapter = {

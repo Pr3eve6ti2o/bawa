@@ -1,0 +1,433 @@
+{
+  "base": "http://localhost:8931",
+  "startedAt": "2026-11-19T10:53:54.186Z",
+  "steps": {
+    "initialLoad": {
+      "wallMs": 192,
+      "domContentLoaded": 92,
+      "load": 102,
+      "paints": {
+        "first-paint": 112,
+        "first-contentful-paint": 156
+      },
+      "resources": [
+        {
+          "name": "index-DIXel3t2.js",
+          "kb": 77,
+          "ms": 33,
+          "encodedKb": 77
+        },
+        {
+          "name": "rolldown-runtime-COiEfhsA.js",
+          "kb": 1,
+          "ms": 20,
+          "encodedKb": 1
+        },
+        {
+          "name": "vault-CCbsl_Fq.js",
+          "kb": 17,
+          "ms": 31,
+          "encodedKb": 16
+        },
+        {
+          "name": "jsx-runtime-DePvh3-m.js",
+          "kb": 1,
+          "ms": 20,
+          "encodedKb": 0
+        },
+        {
+          "name": "chains-BDtBJEgC.js",
+          "kb": 1,
+          "ms": 27,
+          "encodedKb": 1
+        },
+        {
+          "name": "utils-lONwo_Fm.js",
+          "kb": 8,
+          "ms": 33,
+          "encodedKb": 8
+        },
+        {
+          "name": "index-CFGvNKeI.css",
+          "kb": 164,
+          "ms": 53,
+          "encodedKb": 164
+        },
+        {
+          "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+          "kb": 24,
+          "ms": 29,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-500-normal-Cerq10X2.woff2",
+          "kb": 24,
+          "ms": 30,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-400-normal-C38fXH4l.woff2",
+          "kb": 23,
+          "ms": 29,
+          "encodedKb": 23
+        },
+        {
+          "name": "inter-latin-600-normal-LgqL8muc.woff2",
+          "kb": 24,
+          "ms": 30,
+          "encodedKb": 24
+        }
+      ]
+    },
+    "timeToInteractiveMs": 196,
+    "generateMs": 78,
+    "wasmResource": {
+      "transferKb": 10178,
+      "durationMs": 27
+    },
+    "confirmToReadyMs": 224,
+    "step4AddressBlocks": 4,
+    "dashboardAfterCreate": {
+      "ms": 326,
+      "settled": 7,
+      "loading": 0
+    },
+    "reloadToLockedBoxMs": 81,
+    "unlockToDashboardMs": 225,
+    "dashboardAfterUnlock": {
+      "ms": 1,
+      "settled": 6,
+      "loading": 0
+    },
+    "throttledSlow4G": {
+      "wallMs": 1996,
+      "paints": {
+        "first-paint": 1792,
+        "first-contentful-paint": 1856
+      },
+      "timeToInteractiveMs": 2000,
+      "generateMs": 52528,
+      "wasmResource": {
+        "transferKb": 10178,
+        "durationMs": 52650
+      }
+    }
+  },
+  "requests": [
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 200,
+      "ms": 24
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 200,
+      "ms": 24
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 200,
+      "ms": 24
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 200,
+      "ms": 27
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 200,
+      "ms": 31
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 200,
+      "ms": 31
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DIXel3t2.js",
+      "status": 200,
+      "ms": 36
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DIXel3t2.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 304,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 304,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 304,
+      "ms": 13
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 304,
+      "ms": 13
+    },
+    {
+      "url": "http://localhost:8931/assets/alert-CYXGx3OF.js",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "http://localhost:8931/assets/label-BRtzLZ5c.js",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "http://localhost:8931/assets/core-C34TjdGu.js",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "http://localhost:8931/assets/create-wallet-n7dyScJH.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/boundary-CTR5a24j.js",
+      "status": 200,
+      "ms": 77
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-Bpv4vmSW.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/adapters-TnmX0V9_.js",
+      "status": 200,
+      "ms": 17
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 74
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 74
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q5fdyh5rs98udrt9u7pm46qx42mjuth2d26s002",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q5fdyh5rs98udrt9u7pm46qx42mjuth2d26s002/txs",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 200,
+      "ms": 86
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 200,
+      "ms": 107
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 109
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 109
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 112
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 14
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 17
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 25
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TKbYdkTbvw15qsunpunKLcg2CU115V1Pee/transactions?limit=25&order_by=block_timestamp,de",
+      "status": 429,
+      "ms": 37
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0xC2C61666387EA6546c3289A220611f29FA1B509A&page=1&of",
+      "status": 429,
+      "ms": 83
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TKbYdkTbvw15qsunpunKLcg2CU115V1Pee",
+      "status": 200,
+      "ms": 112
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 0
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 200,
+      "ms": 12
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 200,
+      "ms": 13
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 200,
+      "ms": 12
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 200,
+      "ms": 13
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 200,
+      "ms": 12
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DIXel3t2.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/boundary-CTR5a24j.js",
+      "status": 200,
+      "ms": 50
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/label-BRtzLZ5c.js",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/lock-B1xQpyRC.js",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/core-C34TjdGu.js",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-Bpv4vmSW.js",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "http://localhost:8931/assets/adapters-TnmX0V9_.js",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 6
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 6
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q5fdyh5rs98udrt9u7pm46qx42mjuth2d26s002",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 8
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1q5fdyh5rs98udrt9u7pm46qx42mjuth2d26s002/txs",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 16
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 27
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 29
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 21
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0xC2C61666387EA6546c3289A220611f29FA1B509A&page=1&of",
+      "status": 429,
+      "ms": 34
+    }
+  ],
+  "pbkdf2Ms": [
+    157,
+    87,
+    72
+  ]
+}

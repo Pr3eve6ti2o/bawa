@@ -21,7 +21,8 @@ export const CHAIN_CHIP_COLORS: Record<string, string> = {
  * number. A failed fetch shows "unavailable", never zero.
  */
 export function AssetRows({ hideZero }: { hideZero: boolean }) {
-  const { balances, refreshBalances } = useWallet();
+  const { balances, refreshBalances, vaultState, vaultAddresses, addresses } =
+    useWallet();
   const chains = availableFor('balance');
 
   if (chains.length === 0) {
@@ -71,6 +72,17 @@ export function AssetRows({ hideZero }: { hideZero: boolean }) {
         }
 
         if (balance.status === 'unavailable' || balance.status === 'error') {
+          // Locked vault, no address for this chain: the balance is not
+          // "unavailable", it is hidden until unlock. Say so honestly and
+          // hide Retry (it cannot fetch without an address). A locked vault
+          // WITH a watch-only address still shows the real failure + Retry.
+          const hasAddress =
+            (vaultAddresses?.[chain]?.length ?? 0) > 0 ||
+            (addresses?.[chain]?.length ?? 0) > 0;
+          const lockedNoAddress =
+            vaultState === 'locked' &&
+            !hasAddress &&
+            balance.status === 'unavailable';
           return (
             <li key={chain} className="flex items-center gap-3 py-4">
               {avatar}
@@ -79,18 +91,22 @@ export function AssetRows({ hideZero }: { hideZero: boolean }) {
                   {config.displayName}
                 </span>
                 <span className="block text-xs text-[#9da9c7]">
-                  {balance.status === 'unavailable'
-                    ? 'Balance unavailable'
-                    : 'Could not load balance'}
+                  {lockedNoAddress
+                    ? 'Unlock your wallet to see balances'
+                    : balance.status === 'unavailable'
+                      ? 'Balance unavailable'
+                      : 'Could not load balance'}
                 </span>
               </span>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void refreshBalances()}
-              >
-                Retry
-              </Button>
+              {!lockedNoAddress && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void refreshBalances()}
+                >
+                  Retry
+                </Button>
+              )}
             </li>
           );
         }

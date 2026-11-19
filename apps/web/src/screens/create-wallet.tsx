@@ -4,9 +4,10 @@
 // No secret is ever logged.
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
+import { loadCore } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
-import { createVault, hasVault, isLocked } from '../wallet/vault';
+import { createVault, hasVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -21,6 +22,17 @@ import {
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { StepCard } from '../ui/components/step-card';
+
+function yieldFrame(): Promise<void> {
+  // One macrotask yield: lets React commit the progress label before the
+  // next (async) stage starts. requestAnimationFrame is deliberately NOT
+  // used: it never fires in a background tab or a non-visual environment
+  // (jsdom), which would stall the flow; the paint still happens while
+  // the following stage awaits its (off-main-thread) work.
+  return new Promise<void>((resolve) => {
+    setTimeout(() => resolve(undefined), 0);
+  });
+}
 
 const MIN_PASSWORD_LENGTH = 8;
 const CONFIRM_WORD_COUNT = 3;
@@ -51,7 +63,7 @@ function pickConfirmPositions(wordCount: number, count: number): number[] {
 }
 
 export function CreateWalletScreen() {
-  const { vaultAddresses, unlockVault, refreshVaultAccounts } = useWallet();
+  const { vaultAddresses, refreshVaultAccounts } = useWallet();
   const [step, setStep] = useState<Step>(1);
   const [vaultExists, setVaultExists] = useState(false);
   const [password, setPassword] = useState('');
@@ -64,10 +76,17 @@ export function CreateWalletScreen() {
   const [confirmInputs, setConfirmInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
 
-  // Clear the mnemonic when the screen unmounts.
-  useEffect(() => () => {
-    setMnemonic(null);
+  useEffect(() => {
+    // Preload the engine while the user types. Failure is fine because
+    // handleGenerate loads it on demand.
+    void loadCore().catch(() => {});
+
+    // Clear the mnemonic when the screen unmounts.
+    return () => {
+      setMnemonic(null);
+    };
   }, []);
 
   useEffect(() => {
@@ -94,6 +113,12 @@ export function CreateWalletScreen() {
     }
     setIsBusy(true);
     try {
+      setProgress('Loading wallet engine…');
+      await yieldFrame();
+      await loadCore();
+
+      setProgress('Generating recovery phrase…');
+      await yieldFrame();
       const generated = await createWallet();
       const generatedWords = generated.split(' ');
       if (generatedWords.length !== 24) {
@@ -107,6 +132,7 @@ export function CreateWalletScreen() {
       setMnemonic(null);
       setError('The wallet could not be generated. Please try again.');
     } finally {
+      setProgress(null);
       setIsBusy(false);
     }
   }
@@ -127,20 +153,18 @@ export function CreateWalletScreen() {
     }
     setIsBusy(true);
     try {
+      setProgress('Encrypting vault…');
+      await yieldFrame();
       const profileIds = SUPPORTED_CHAINS.map((chain) => profileFor(chain));
-      await createVault(mnemonic, password, profileIds);
+      await createVault(mnemonic, password, profileIds, passphrase);
       setMnemonic(null);
       setPassword('');
       setConfirmPassword('');
       setPassphraseUsed(passphrase.length > 0);
-      try {
-        await unlockVault(password, passphrase);
-        setPassphrase('');
-        await refreshVaultAccounts();
-      } catch (error) {
-        if (isLocked()) throw error;
-        // Balance/history refresh failures must not block a created, unlocked wallet.
-      }
+      setProgress('Deriving addresses…');
+      await yieldFrame();
+      await refreshVaultAccounts();
+      setPassphrase('');
       setStep(4);
     } catch {
       // The mnemonic is already cleared above when creation succeeded;
@@ -151,6 +175,7 @@ export function CreateWalletScreen() {
       );
     } finally {
       setIsBusy(false);
+      setProgress(null);
     }
   }
 
@@ -285,7 +310,7 @@ export function CreateWalletScreen() {
                   </p>
                 </div>
                 <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
-                  {isBusy ? 'Generating…' : 'Generate recovery phrase'}
+                  {isBusy ? (progress ?? 'Generating…') : 'Generate recovery phrase'}
                 </Button>
               </fieldset>
             </form>
@@ -369,7 +394,7 @@ export function CreateWalletScreen() {
                   </div>
                 ))}
                 <Button type="submit" className="h-auto whitespace-normal py-3 text-center">
-                  {isBusy ? 'Saving…' : 'Confirm and create wallet'}
+                  {isBusy ? (progress ?? 'Saving…') : 'Confirm and create wallet'}
                 </Button>
               </fieldset>
             </form>

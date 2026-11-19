@@ -38,6 +38,16 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+// The import screen is lazy-loaded (route code-splitting): after mount,
+// wait for it to appear before the tests touch its controls.
+async function waitForImportScreen(div: HTMLDivElement): Promise<void> {
+  await act(async () => {
+    for (let i = 0; i < 40 && !div.querySelector('#wallet-xpub'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  });
+}
+
 describe.sequential('ImportWalletScreen TON (R01)', () => {
   const TON_ADDRESS = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
 
@@ -53,6 +63,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     await act(async () => {
       root.render(<App />);
     });
+    await waitForImportScreen(div);
     return {
       div,
       cleanup: async () => {
@@ -162,6 +173,7 @@ describe.sequential('ImportWalletScreen (T41)', () => {
       await act(async () => {
         root.render(<App />);
       });
+      await waitForImportScreen(div);
 
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
@@ -215,6 +227,7 @@ describe.sequential('ImportWalletScreen (T41)', () => {
       await act(async () => {
         root.render(<App />);
       });
+      await waitForImportScreen(div);
       expect(div.textContent).toContain('Labels are stored in plain text in this browser');
       expect(div.textContent).toContain('do not enter secrets');
     } finally {
@@ -265,6 +278,7 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
     await act(async () => {
       root.render(<App />);
     });
+    await waitForImportScreen(div);
     return {
       div,
       cleanup: async () => {

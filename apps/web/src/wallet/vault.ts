@@ -125,7 +125,7 @@ async function encryptEnvelope(
   mnemonic: string,
   password: string,
   profileIds: string[],
-): Promise<VaultEnvelope> {
+): Promise<{ envelope: VaultEnvelope; key: CryptoKey }> {
   const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
@@ -135,16 +135,19 @@ async function encryptEnvelope(
     new TextEncoder().encode(mnemonic),
   );
   return {
-    version: VAULT_VERSION,
-    kdf: {
-      name: 'PBKDF2',
-      hash: PBKDF2_HASH,
-      iterations: PBKDF2_ITERATIONS,
-      saltB64: toBase64(salt),
+    envelope: {
+      version: VAULT_VERSION,
+      kdf: {
+        name: 'PBKDF2',
+        hash: PBKDF2_HASH,
+        iterations: PBKDF2_ITERATIONS,
+        saltB64: toBase64(salt),
+      },
+      ivB64: toBase64(iv),
+      ciphertextB64: toBase64(new Uint8Array(ciphertext)),
+      profileIds: [...profileIds],
     },
-    ivB64: toBase64(iv),
-    ciphertextB64: toBase64(new Uint8Array(ciphertext)),
-    profileIds: [...profileIds],
+    key,
   };
 }
 
@@ -153,6 +156,7 @@ export async function createVault(
   mnemonic: string,
   password: string,
   profileIds: string[],
+  passphrase = '',
 ): Promise<void> {
   if (mnemonic.length === 0) {
     throw new Error('Mnemonic must not be empty.');
@@ -163,9 +167,11 @@ export async function createVault(
   if (hasVault()) {
     throw new Error('A vault already exists.');
   }
-  const envelope = await encryptEnvelope(mnemonic, password, profileIds);
+  const { envelope, key } = await encryptEnvelope(mnemonic, password, profileIds);
   writeEnvelope(envelope);
-  lock();
+  unlockedKey = key;
+  unlockedMnemonic = mnemonic;
+  unlockedPassphrase = passphrase;
 }
 
 export function hasVault(): boolean {
@@ -282,7 +288,11 @@ export async function changePassword(
   const wasLocked = isLocked();
   await unlock(oldPassword);
   const mnemonic = unlockedMnemonic as string;
-  const next = await encryptEnvelope(mnemonic, newPassword, envelope.profileIds);
+  const { envelope: next } = await encryptEnvelope(
+    mnemonic,
+    newPassword,
+    envelope.profileIds,
+  );
   writeEnvelope(next);
   if (wasLocked) {
     lock();

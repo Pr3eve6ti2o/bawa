@@ -45,6 +45,13 @@ async function mountBackupScreen() {
   await act(async () => {
     root.render(<App />);
   });
+  // The backup screen is lazy-loaded: wait for the Suspense fallback to
+  // clear before the tests assert on its content.
+  await act(async () => {
+    for (let i = 0; i < 40 && div.textContent?.includes('Loading…'); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  });
   return {
     div,
     cleanup: async () => {

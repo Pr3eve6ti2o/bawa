@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import type { ReactNode } from 'react';
@@ -13,6 +13,16 @@ import {
   VAULT_WRONG_PASSWORD,
 } from './vault';
 import { SUPPORTED_CHAINS } from './chains';
+
+// No adapter is registered in this file: the adapters module is mocked so
+// lazy registration (ensureAdapters) cannot bring the real adapters in.
+// getAdapter() returning undefined is the "no adapter" state under test.
+vi.mock('./adapters', () => ({
+  getAdapter: vi.fn(() => undefined),
+  registerAdapter: vi.fn(),
+  registeredChains: vi.fn(() => []),
+  registerAllAdapters: vi.fn(),
+}));
 
 // Standard public BIP-39 test vector — disposable test data, never a real secret.
 const TEST_MNEMONIC =
@@ -84,6 +94,9 @@ describe('wallet context — vault-backed accounts', () => {
 
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        // createVault leaves the vault unlocked; these tests' premise is
+        // a locked vault.
+        lock();
         await latest?.refreshVaultAccounts();
       });
       expect(latest?.vaultState).toBe('locked');
@@ -115,6 +128,9 @@ describe('wallet context — vault-backed accounts', () => {
     try {
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        // createVault leaves the vault unlocked; these tests' premise is
+        // a locked vault.
+        lock();
         await latest?.refreshVaultAccounts();
       });
       expect(latest?.vaultState).toBe('locked');

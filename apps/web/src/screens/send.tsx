@@ -10,7 +10,7 @@ import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-import { useWallet } from '../state/wallet-context';
+import { ensureAdapters, useWallet } from '../state/wallet-context';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
 import {
@@ -107,6 +107,12 @@ export function SendScreen() {
   async function handleAmountNext(): Promise<void> {
     setPreviewBusy(true);
     try {
+      try {
+        await ensureAdapters();
+      } catch {
+        setPreview({ ok: false, reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+        return;
+      }
       const result = await previewSendAmount(chain, from, recipient, amount);
       setPreview(result);
       if (result.ok) setStep('review');
@@ -124,6 +130,12 @@ export function SendScreen() {
       return;
     }
     if (!preview || !preview.ok) return;
+    try {
+      await ensureAdapters();
+    } catch {
+      setSignState({ status: 'error', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+      return;
+    }
     const previewOk = preview;
     setSignState({ status: 'signing' });
     try {

@@ -1,0 +1,443 @@
+{
+  "base": "http://localhost:8931",
+  "startedAt": "2026-11-19T10:48:17.677Z",
+  "steps": {
+    "initialLoad": {
+      "wallMs": 177,
+      "domContentLoaded": 81,
+      "load": 91,
+      "paints": {
+        "first-paint": 108,
+        "first-contentful-paint": 148
+      },
+      "resources": [
+        {
+          "name": "index-DDDbthH4.js",
+          "kb": 77,
+          "ms": 26,
+          "encodedKb": 77
+        },
+        {
+          "name": "rolldown-runtime-COiEfhsA.js",
+          "kb": 1,
+          "ms": 14,
+          "encodedKb": 1
+        },
+        {
+          "name": "vault-CCbsl_Fq.js",
+          "kb": 17,
+          "ms": 24,
+          "encodedKb": 16
+        },
+        {
+          "name": "jsx-runtime-DePvh3-m.js",
+          "kb": 1,
+          "ms": 15,
+          "encodedKb": 0
+        },
+        {
+          "name": "chains-BDtBJEgC.js",
+          "kb": 1,
+          "ms": 18,
+          "encodedKb": 1
+        },
+        {
+          "name": "utils-lONwo_Fm.js",
+          "kb": 8,
+          "ms": 26,
+          "encodedKb": 8
+        },
+        {
+          "name": "index-CFGvNKeI.css",
+          "kb": 164,
+          "ms": 39,
+          "encodedKb": 164
+        },
+        {
+          "name": "inter-latin-400-normal-C38fXH4l.woff2",
+          "kb": 23,
+          "ms": 32,
+          "encodedKb": 23
+        },
+        {
+          "name": "inter-latin-600-normal-LgqL8muc.woff2",
+          "kb": 24,
+          "ms": 32,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+          "kb": 24,
+          "ms": 31,
+          "encodedKb": 24
+        },
+        {
+          "name": "inter-latin-500-normal-Cerq10X2.woff2",
+          "kb": 24,
+          "ms": 32,
+          "encodedKb": 24
+        }
+      ]
+    },
+    "timeToInteractiveMs": 182,
+    "generateMs": 61,
+    "wasmResource": {
+      "transferKb": 10178,
+      "durationMs": 25
+    },
+    "confirmToReadyMs": 225,
+    "step4AddressBlocks": 4,
+    "dashboardAfterCreate": {
+      "ms": 324,
+      "settled": 7,
+      "loading": 0
+    },
+    "reloadToLockedBoxMs": 83,
+    "unlockToDashboardMs": 234,
+    "dashboardAfterUnlock": {
+      "ms": 258,
+      "settled": 6,
+      "loading": 0
+    },
+    "throttledSlow4G": {
+      "wallMs": 1991,
+      "paints": {
+        "first-paint": 1788,
+        "first-contentful-paint": 1836
+      },
+      "timeToInteractiveMs": 1996,
+      "generateMs": 104731,
+      "wasmResource": {
+        "transferKb": 10178,
+        "durationMs": 84814
+      }
+    }
+  },
+  "requests": [
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 200,
+      "ms": 21
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 200,
+      "ms": 25
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 200,
+      "ms": 23
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 200,
+      "ms": 24
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 200,
+      "ms": 24
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 200,
+      "ms": 23
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DDDbthH4.js",
+      "status": 200,
+      "ms": 30
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DDDbthH4.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 304,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/create-wallet-C6Hw2gjd.js",
+      "status": 200,
+      "ms": 25
+    },
+    {
+      "url": "http://localhost:8931/assets/core-C29-Sn5c.js",
+      "status": 200,
+      "ms": 25
+    },
+    {
+      "url": "http://localhost:8931/assets/label-DhSsktpm.js",
+      "status": 200,
+      "ms": 25
+    },
+    {
+      "url": "http://localhost:8931/assets/alert-CUUqNVp_.js",
+      "status": 200,
+      "ms": 26
+    },
+    {
+      "url": "http://localhost:8931/assets/boundary-Dm6u5d1E.js",
+      "status": 200,
+      "ms": 64
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-Bpv4vmSW.js",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/adapters-DMaObuGR.js",
+      "status": 200,
+      "ms": 15
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 200,
+      "ms": 86
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 200,
+      "ms": 90
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 100
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 200,
+      "ms": 7
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 108
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TNPsw8fiP5v8HqFY51c9GnCy78CaErJRKm/transactions?limit=25&order_by=block_timestamp,de",
+      "status": 429,
+      "ms": 16
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 7
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 15
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 20
+    },
+    {
+      "url": "https://api.trongrid.io/v1/accounts/TNPsw8fiP5v8HqFY51c9GnCy78CaErJRKm",
+      "status": 200,
+      "ms": 101
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0x0F121142fB5FFfAADb5e63Ce81bF0E7c5b155458&page=1&of",
+      "status": 429,
+      "ms": 94
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 351
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 353
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1qu97wjxqn5wdl32ftzr0564hxg805fwde08utda",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1qu97wjxqn5wdl32ftzr0564hxg805fwde08utda/txs",
+      "status": 200,
+      "ms": 5
+    },
+    {
+      "url": "http://localhost:8931/assets/index-CFGvNKeI.css",
+      "status": 304,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/rolldown-runtime-COiEfhsA.js",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/vault-CCbsl_Fq.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/chains-BDtBJEgC.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/jsx-runtime-DePvh3-m.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-lONwo_Fm.js",
+      "status": 200,
+      "ms": 14
+    },
+    {
+      "url": "http://localhost:8931/assets/index-DDDbthH4.js",
+      "status": 200,
+      "ms": 15
+    },
+    {
+      "url": "http://localhost:8931/assets/boundary-Dm6u5d1E.js",
+      "status": 200,
+      "ms": 49
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/label-DhSsktpm.js",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "http://localhost:8931/assets/lock-Ps8sFQCD.js",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/core-C29-Sn5c.js",
+      "status": 200,
+      "ms": 2
+    },
+    {
+      "url": "http://localhost:8931/wallet-core.wasm",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "http://localhost:8931/assets/adapters-DMaObuGR.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "http://localhost:8931/assets/utils-Bpv4vmSW.js",
+      "status": 304,
+      "ms": 3
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 5
+    },
+    {
+      "url": "https://mempool.space/api/v1/blocks/0",
+      "status": 200,
+      "ms": 6
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 9
+    },
+    {
+      "url": "https://api.trongrid.io/wallet/getnowblock",
+      "status": 429,
+      "ms": 10
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1qu97wjxqn5wdl32ftzr0564hxg805fwde08utda",
+      "status": 200,
+      "ms": 3
+    },
+    {
+      "url": "https://mempool.space/api/address/bc1qu97wjxqn5wdl32ftzr0564hxg805fwde08utda/txs",
+      "status": 200,
+      "ms": 4
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 16
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 21
+    },
+    {
+      "url": "https://toncenter.com/api/v2/jsonRPC",
+      "status": 429,
+      "ms": 21
+    },
+    {
+      "url": "https://ethereum-rpc.publicnode.com/",
+      "status": 200,
+      "ms": 19
+    },
+    {
+      "url": "https://eth.blockscout.com/api?module=account&action=txlist&address=0x0F121142fB5FFfAADb5e63Ce81bF0E7c5b155458&page=1&of",
+      "status": 429,
+      "ms": 32
+    }
+  ],
+  "pbkdf2Ms": [
+    165,
+    82,
+    72
+  ]
+}

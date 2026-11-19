@@ -51,7 +51,15 @@ describe('vault', () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     expect(hasVault()).toBe(true);
     expect(vaultProfiles()).toEqual(TEST_PROFILES);
-    expect(isLocked()).toBe(true);
+    expect(isLocked()).toBe(false);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('leaves the vault unlocked with the session passphrase', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    expect(isLocked()).toBe(false);
+    expect(getSessionPassphrase()).toBe('TREZOR');
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
 
   it('stores only an encrypted envelope, never plaintext secrets', async () => {
@@ -84,6 +92,7 @@ describe('vault', () => {
 
   it('rejects a wrong password with one fixed message and stays locked', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
     await expect(unlock('wrong password')).rejects.toThrow(
       VAULT_WRONG_PASSWORD,
     );
@@ -118,6 +127,7 @@ describe('vault', () => {
 
   it('fails closed on a tampered ciphertext', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
     const envelope = readRawEnvelope();
     const ciphertext = envelope.ciphertextB64 as string;
     const flipped =
@@ -164,6 +174,7 @@ describe('withMnemonicAsync', () => {
 
   it('throws when locked', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
     await expect(withMnemonicAsync(async () => 'never')).rejects.toThrow(
       'Vault is locked.',
     );

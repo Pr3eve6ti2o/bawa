@@ -75,6 +75,9 @@ beforeEach(() => {
 describe('wallet context — passphrase unlock', () => {
   it('refuses to unlock without the passphrase when the flag is set', async () => {
     await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    // createVault leaves the vault unlocked; this test's premise is a
+    // locked vault whose unlock is refused.
+    lock();
     setPassphraseUsed(true);
     const mounted = await mountProvider();
     try {
