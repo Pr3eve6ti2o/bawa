@@ -131,4 +131,18 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Create a wallet');
     });
   });
+
+  it('renders the Create screen with all seven tools', async () => {
+    await withRenderedApp('/create', (div) => {
+      expect(div.querySelector('#create-title')?.textContent).toBe('Create');
+      expect(div.textContent).toContain('Multichain wallet');
+      expect(div.textContent).toContain('HD wallet');
+      expect(div.textContent).toContain('Web wallet');
+      expect(div.textContent).toContain('Android wallet');
+      expect(div.textContent).toContain('Smart contract creator');
+      expect(div.textContent).toContain('Multi-Sig Wallet v2');
+      expect(div.textContent).toContain('Web3 Wallet Kit');
+      expect(div.textContent).toContain('Build brief');
+    });
+  });
 });

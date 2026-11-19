@@ -8,51 +8,17 @@ import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import type { ChainId } from '../engine/boundary';
-
-// Chain logos: Trust Wallet asset registry (trustwallet/assets, MIT,
-// Copyright (c) 2019-2023 Trust Wallet) — blockchains/<chain>/info/logo.png.
-// Full licence note: apps/web/README.md "Chain logos".
-import bitcoinLogo from '../assets/chains/bitcoin.png';
-import ethereumLogo from '../assets/chains/ethereum.png';
-import tronLogo from '../assets/chains/tron.png';
-import tonLogo from '../assets/chains/ton.png';
-
-const CHAIN_LOGOS: Partial<Record<ChainId, string>> = {
-  btc: bitcoinLogo,
-  eth: ethereumLogo,
-  trx: tronLogo,
-  ton: tonLogo,
-};
+import { TokenLogo } from './token-logo';
 
 /**
- * Native chain logo (40px default). Decorative: the chain name is adjacent text, so alt is empty.
- * Chains without a logo file yet show the symbol initial.
+ * Native chain logo (40px default), rendered through TokenLogo so the
+ * asset rows, asset detail and wallet management all share one logo
+ * path: a real Trust Wallet logo when registered, a readable ticker
+ * badge otherwise. See ./token-logo for the source and attribution.
  */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
-  const logo = CHAIN_LOGOS[chain];
-
-  if (!logo) {
-    return (
-      <span
-        aria-hidden="true"
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-muted"
-        style={size !== 40 ? { width: size, height: size } : undefined}
-      >
-        {chainConfig(chain).symbol.charAt(0)}
-      </span>
-    );
-  }
-
-  return (
-    <img
-      src={logo}
-      alt=""
-      width={size}
-      height={size}
-      className="size-10 shrink-0 rounded-full"
-      style={size !== 40 ? { width: size, height: size } : undefined}
-    />
-  );
+  return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
+}
 }
 
 export const CHAIN_CHIP_COLORS: Record<string, string> = {
