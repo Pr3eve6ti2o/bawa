@@ -9,3 +9,4 @@ Decisions that shape the repository, recorded so a later reader knows what was d
 | [0003](0003-mainnet-first.md) | Mainnet-first direction; testnet code stays secondary and for testing. |
 | [0004](0004-monorepo-by-deployable.md) | One repository organised by deployable; `packages/` only with a second consumer. |
 | [0005](0005-adopted-libraries.md) | Adopt six scoped, pinned libraries for mnemonic checks/data and fee/fiat/display math; keep wallet-core as the only engine. |
+| [0006](0006-use-case-split.md) | Split the guide into 10 numbered use-case sections (docs/01–docs/10). |
