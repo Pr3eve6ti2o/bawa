@@ -1,0 +1,16 @@
+Hello Sol, please help with a small focused review — thank you. You are reviewing the Python dependency files of the Bawa HD wallet repo (panel-rebuild/adopt-proper branch). You cannot see the files; all facts you need are below. Please analyse and recommend; do NOT write code or new files.
+
+FACTS:
+- requirements.txt (all pinned with ==): cryptography==50.0.2, bip-utils==2.12.3, mnemonic==0.21, pynacl==1.6.2, requests==2.34.2. The file comments say pynacl and requests are "security floor pins for transitive deps" (pynacl 1.6.2 fixes a libsodium advisory in 1.5.0; requests 2.34.2 fixes advisories in 2.31.0).
+- requirements.lock (pip-compile, Python 3.12, with hashes): 23 packages: bip-utils 2.12.3, bitarray 3.12.3, cbor2 6.2.1, certifi 2026.10.23, cffi 2.1.1, charset-normalizer 3.5.2, coincurve 21.0.0, cryptography 50.0.2, ecdsa 0.19.2, ed25519-blake2b-fork 1.4.2, idna 3.20, mnemonic 0.21, py-sr25519-bindings 0.2.4, pycparser 3.12, pycryptodome 3.24.1, pycryptodomex 3.24.2, pynacl 1.6.2, pytoniq-core-fork 0.1.48, requests 2.34.2, six 1.17.0, typing-extensions 4.16.0, urllib3 2.8.0, x25519 0.0.2. The lock says pynacl is via pytoniq-core-fork; certifi, idna, urllib3 via requests.
+- Code imports (verified by grep over tools/ and test/): bip_utils, cryptography, and mnemonic (trezor, "from mnemonic import Mnemonic" in tools/make_wallet.py) are imported directly. No Python file imports requests or nacl directly.
+- Licences verified on PyPI: cryptography Apache-2.0 OR BSD-3-Clause; bip-utils MIT; mnemonic MIT; pynacl Apache-2.0; requests Apache-2.0. Only mnemonic's licence is recorded in requirements.txt (comment).
+
+QUESTIONS (answer each briefly):
+1. Is requirements.txt consistent with the lock (versions match)?
+2. Is "requests" justified as a direct pin, given nothing imports it and its only role is pulling certifi/idna/urllib3/charset-normalizer into the lock? Recommend keep-as-floor-pin or remove, with reasoning. If removed, which lock entries drop?
+3. Is pynacl correctly described as a transitive floor pin?
+4. Any other stale, missing, or contradictory entry?
+5. What licence lines should be added to requirements.txt for the other direct pins?
+
+ACCEPTANCE: short numbered answers. Do NOT recommend upgrades unless a version is broken or has a known vulnerability you can name precisely (pinning and correcting only). Do NOT invent versions or advisories.

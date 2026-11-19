@@ -1,0 +1,18 @@
+Hello Sol, please help with a small focused review — thank you. You are reviewing the web app dependency file of the Bawa HD wallet repo (panel-rebuild/adopt-proper branch, apps/web/package.json). You cannot see the files; all facts you need are below. Please analyse and recommend; do NOT write code or new files.
+
+FACTS:
+- apps/web/package.json: 51 dependencies + 9 devDependencies. All are pinned to exact versions EXCEPT three caret ranges: "jsqr": "^1.4.0", "long": "^5.3.2", "viem": "^2.58.0".
+- apps/web/package-lock.json (lockfileVersion 3, 334 packages) resolves them to jsqr 1.4.0, long 5.3.2, viem 2.58.0. Every package.json dependency is present in the lock; nothing is missing.
+- Registry latest versions, checked 2026-11-20: jsqr 1.4.0, long 5.3.2, viem 2.58.2, lucide-react 1.76.0 (lucide-react is pinned to 1.14.0 in package.json).
+- Usage verified by grep over src, scripts, tests, config and CSS: all 60 dependencies are used. Examples: @fontsource/inter and @fontsource/noto-sans-sc are used via CSS @import in src/ui/styles/globals.css; @tailwindcss/vite and @vitejs/plugin-react are used in vite.config.ts; typescript, vite, jsdom via tooling; @types/* as types.
+- apps/web/package.json has NO "license" field. The repo root LICENSE is MIT, and the root, tools, and tools/hdwallet-gen package.json files all declare "license": "MIT". packages/contracts/package.json also has no license field (and no description or engines).
+- @trustwallet/wallet-core is 4.9.3 in both apps/web and tools/hdwallet-gen — consistent. engines: node >=22 <23, enforced by .npmrc engine-strict=true; apps/web/.npmrc also sets ignore-scripts=true.
+
+QUESTIONS (answer each briefly):
+1. Is pinning the three caret dependencies to their lock-resolved versions (jsqr 1.4.0, long 5.3.2, viem 2.58.0) the right fix? Note the rule: pin and correct, do NOT upgrade unless a version is broken or has a known vulnerability.
+2. Any risk in pinning viem to 2.58.0 while the registry latest in its range is 2.58.2?
+3. Should "license": "MIT" be added to apps/web/package.json and to packages/contracts/package.json? Anything else missing from contracts (description, engines)?
+4. Any other stale, missing, or contradictory entry in apps/web/package.json?
+5. lucide-react is pinned at 1.14.0 while latest is 1.76.0 — confirm leaving it pinned is correct under the no-upgrade rule.
+
+ACCEPTANCE: short numbered answers. Do NOT recommend upgrades unless a version is broken or has a known vulnerability you can name precisely. Do NOT invent versions or advisories.
