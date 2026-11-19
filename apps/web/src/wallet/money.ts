@@ -6,14 +6,21 @@ import { USD } from 'dinero.js/currencies';
 const MAX_SAFE_MINOR_UNITS = 9_007_199_254_740_991n;
 const MAX_DECIMAL_PLACES = 1_000_000_000;
 const MAX_DISPLAY_DECIMAL_PLACES = 100;
+// Decimal precision below scales with the input length, so an unbounded
+// digit string is unbounded CPU (100k digits measured at ~7s). 1,000
+// digits is >12x the largest real value (a 256-bit integer, 78 digits).
+const MAX_INTEGER_STRING_LENGTH = 1_000;
 
 function assertIntegerString(value: string, label: string): void {
   if (
     typeof value !== 'string' ||
     value.length === 0 ||
+    value.length > MAX_INTEGER_STRING_LENGTH ||
     /[^0-9]/.test(value)
   ) {
-    throw new Error(`${label} must be a non-negative integer string`);
+    throw new Error(
+      `${label} must be a non-negative integer string of at most ${MAX_INTEGER_STRING_LENGTH} digits`,
+    );
   }
 }
 

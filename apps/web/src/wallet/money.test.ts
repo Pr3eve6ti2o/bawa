@@ -113,6 +113,22 @@ describe('formatFeePreview', () => {
       formatFeePreview('1', 18, 1 as unknown as string),
     ).toThrow(/symbol/);
   });
+
+  it('rejects over-long base-unit strings (DoS cap: 1,000 digits)', () => {
+    // Decimal precision scales with input length: 100k digits measured
+    // at ~7s before this cap, 1M digits past 110s. The cap keeps the
+    // worst case near 1ms while allowing >12x the largest real value
+    // (a 256-bit integer is 78 digits).
+    expect(() => formatFeePreview('9'.repeat(1001), 18, 'ETH')).toThrow(
+      /valueBaseUnits.*at most 1000 digits/,
+    );
+  });
+
+  it('accepts a 1,000-digit base-unit string at the cap', () => {
+    expect(formatFeePreview('9'.repeat(1000), 18, 'ETH')).toMatch(
+      / ETH$/,
+    );
+  });
 });
 
 describe('fiatMinorUnits', () => {
@@ -182,6 +198,15 @@ describe('fiatMinorUnits', () => {
       );
     },
   );
+
+  it('rejects over-long balance and price strings (DoS cap)', () => {
+    expect(() => fiatMinorUnits('9'.repeat(1001), 8, '100')).toThrow(
+      /balanceBaseUnits.*at most 1000 digits/,
+    );
+    expect(() => fiatMinorUnits('1', 8, '9'.repeat(1001))).toThrow(
+      /priceMinorUnitsPerWhole.*at most 1000 digits/,
+    );
+  });
 
   it('rejects non-string balances and prices', () => {
     expect(() =>
