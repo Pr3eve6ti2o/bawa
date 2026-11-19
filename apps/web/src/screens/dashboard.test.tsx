@@ -174,6 +174,21 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('shows an Unlock link to /lock when the vault is locked', async () => {
+    // Coordinator merge fix: Lane C removed the locked banner, which
+    // removed the only direct way to reach /lock from the dashboard
+    // after a reload. The hero must offer an Unlock affordance.
+    setWallet(balancesFor({}), { vaultState: 'locked' });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Unlock your wallet');
+      const link = mounted.div.querySelector('a[href="/lock"]');
+      expect(link).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('never renders a fabricated portfolio total', async () => {
     setWallet(balancesFor({}));
     const mounted = await mountScreen();

@@ -26,6 +26,7 @@ export function DashboardScreen() {
     history,
     refreshBalances,
     refreshHistory,
+    vaultState,
   } = useWallet();
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
@@ -88,6 +89,11 @@ export function DashboardScreen() {
             No price feed connected — portfolio total unavailable. Balances below
             are exact native amounts from the mainnet adapters.
           </p>
+        )}
+        {vaultState === 'locked' && (
+          <Button asChild>
+            <Link to="/lock">Unlock your wallet</Link>
+          </Button>
         )}
         <Button
           type="button"
