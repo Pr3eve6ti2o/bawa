@@ -67,7 +67,19 @@
       "broadcast",
       "confirmation-policy enforcement in code",
       "any graphical UI"
-    ]
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "IMPLEMENTED_AND_VERIFIED",
+      "receive": "DOCUMENTED_NOT_TESTED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   },
   {
     "id": "bitcoin-wallet",
@@ -129,7 +141,19 @@
       "broadcast",
       "transaction construction",
       "6-confirmation enforcement in code (policy only, documented not enforced)"
-    ]
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "DOCUMENTED_NOT_TESTED",
+      "receive": "DOCUMENTED_NOT_TESTED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   },
   {
     "id": "evm-wallet",
@@ -194,7 +218,19 @@
       "broadcast",
       "transaction construction",
       "finality enforcement in code (policy only, documented not enforced)"
-    ]
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "DOCUMENTED_NOT_TESTED",
+      "receive": "DOCUMENTED_NOT_TESTED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   },
   {
     "id": "multichain-wallet",
@@ -263,7 +299,19 @@
       "broadcast",
       "cross-chain transaction operation",
       "confirmation-policy enforcement in code"
-    ]
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "DOCUMENTED_NOT_TESTED",
+      "receive": "DOCUMENTED_NOT_TESTED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   },
   {
     "id": "web-wallet",
@@ -296,8 +344,8 @@
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
         "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.",
         "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Offline send is implemented in apps/web (src/wallet/send.ts): transaction construction (plan-transfer) and local signing via wallet-core AnySigner for all four chains, post-sign verification for BTC/ETH/TRX (TON partial, no BOC re-parse). Broadcast is not implemented anywhere: every adapter broadcast() throws and broadcastSigned always returns disabled. (Rebuild 2026-11-19; registry v2.)",
+        "Mainnet only since the 2026-11-19 rebuild: testnet addresses are rejected as wrong-network and no testnet adapter exists.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check."
       ]
     },
@@ -326,21 +374,35 @@
       "M-38"
     ],
     "implemented": [
+      "in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses (verified IMPLEMENTATION-REPORT.md section 6 items 1-2)",
       "watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM with pre-WASM validation (Base58Check, checksum, private rejection, per-chain versions, R-01 point validation)",
       "14 screens with honest loading/empty/stale/locked/gate-failed/error states",
       "receive-QR display",
-      "import of extended public keys only"
+      "import of extended public keys only",
+      "read-only mainnet balances and transaction history via per-chain adapters, verified against a second source (exact-zero fixture balances; real history items; section 6 item 5)",
+      "offline send: transaction construction (plan-transfer) and local signing via wallet-core AnySigner for all four chains, with post-sign verification for BTC/ETH/TRX (verified section 6 item 6)"
     ],
     "missing": [
-      "send",
-      "sign",
       "broadcast",
-      "balances",
+      "TON fee-quote (send preview reports unavailable; signing still works with a seqno)",
+      "TON post-sign verification (partial only: no-error + 32-byte hash + BOC magic, no BOC re-parse)",
       "prices",
-      "transaction history",
-      "live-browser run (preview HTTP checks + unit tests only)",
-      "on-device derivation (web has no on-device concept \u2014 derivation is in-browser WASM)"
-    ]
+      "live-browser balance/history run (adapters verified in Node; the app's own CSP blocks the fetches in a served browser preview)",
+      "auto-lock timer (lock screen exists; inactivity timer not built)",
+      "on-device derivation (web has no on-device concept - derivation is in-browser WASM)"
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "IMPLEMENTED_AND_VERIFIED",
+      "receive": "IMPLEMENTED_AND_VERIFIED",
+      "balance": "IMPLEMENTED_AND_VERIFIED",
+      "history": "IMPLEMENTED_AND_VERIFIED",
+      "fee-quote": "DOCUMENTED_NOT_TESTED",
+      "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
+      "local-sign": "IMPLEMENTED_AND_VERIFIED",
+      "verify-signature": "DOCUMENTED_NOT_TESTED"
+    }
   },
   {
     "id": "android-wallet",
@@ -419,7 +481,19 @@
       "transaction history",
       "on-device Add-button acceptance path (taps swallowed under TCG emulation \u2014 NOT VERIFIED)",
       "KVM-backed emulator run (a KVM-engaged launch crashed the host VM in ~8 s \u2014 NOT VERIFIED)"
-    ]
+    ],
+    "operations": {
+      "create": "NOT_SUPPORTED",
+      "derive": "NOT_SUPPORTED",
+      "restore": "NOT_SUPPORTED",
+      "receive": "STARTER_IMPLEMENTED_AND_VERIFIED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   },
   {
     "id": "watch-only-wallet",
@@ -488,6 +562,18 @@
       "confirmation-policy enforcement",
       "TON (excluded: no xpub)",
       "any secret intake or signing"
-    ]
+    ],
+    "operations": {
+      "create": "NOT_SUPPORTED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "NOT_SUPPORTED",
+      "receive": "DOCUMENTED_NOT_TESTED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   }
 ]

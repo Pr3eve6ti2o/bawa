@@ -12,14 +12,14 @@ paths and recorded findings; do not invent support or extrapolate between networ
 
 | Path | Contents |
 | --- | --- |
-| `registry/profiles.json` | 7 wallet profiles |
-| `registry/capabilities.json` | 8 chain/network entries, each recording 10 operations |
+| `registry/profiles.json` | 7 wallet profiles, each with a v2 `operations` map (10 wallet-build operations) |
+| `registry/capabilities.json` | Version 2: 8 chain/network entries, each recording 10 operations, plus a top-level `chainSupport` roll-up per chain |
 | `registry/engines.json` | 5 engine entries |
 | `registry/ui.json` | 11 UI entries, including 3 research-only `OPEN` entries |
 
 The schemas are `registry/schemas/profile.schema.json` and
 `registry/schemas/registry.schema.json`. Follow their existing structure when editing.
-The 31-entry total counts registry entries, not individual operation records.
+The 32-entry total counts registry entries, not individual operation records.
 
 Validation lives in `scripts/validate-registry.mjs`; registry tests live in
 `tests/registry.test.mjs`. The capability detector is `ai/detect-capabilities.mjs`.
@@ -65,6 +65,94 @@ stops building, record the failing command and result and downgrade to the statu
 the remaining evidence supports. Do not leave it verified while waiting for a fix,
 and do not erase the earlier evidence.
 
+## Registry v2 (2026-11-19, PR2 Lane A)
+
+Version 2 adds the machine-readable operation support a planner checks
+before routing a request. A catalogue listing is NOT support: listing a
+chain never implies the profile can do an operation on it.
+
+### The wallet-build operations
+
+The 10 operations are the wallet-build schema `require` vocabulary:
+
+`create`, `derive`, `restore`, `receive`, `balance`, `history`,
+`fee-quote`, `plan-transfer`, `local-sign`, `verify-signature`.
+
+They are NOT the per-network operations in `capabilities.json` entries
+(`generate`, `derive`, `watch-only`, `receive-address`, `import`,
+`recover`, `send`, `sign`, `broadcast`, `confirm`). The per-network maps
+are the repository-tooling record and are unchanged in v2; the new maps
+are the per-profile / per-chain support record. There is deliberately no
+`broadcast` wallet-build operation: broadcast is disabled in every
+adapter and in `broadcastSigned`, in all profiles.
+
+### Where the statuses live
+
+- Every profile in `registry/profiles.json` carries an `operations`
+  object with all 10 operations. The status is the MINIMUM across the
+  profile's chains: an operation is only claimed at a status if it holds
+  for every chain the profile lists. (Example: web-wallet `fee-quote` is
+  `DOCUMENTED_NOT_TESTED` because TON fee-quote is blocked, even though
+  BTC/ETH/TRX fee-quote is verified.)
+- `registry/capabilities.json` carries a top-level `chainSupport` object
+  keyed by chain id (`btc`, `eth`, `trx`, `ton`). Each entry is
+  `{ "profiles": [<profile ids listing this chain>], "operations": {...} }`.
+  The operations status is the BEST status demonstrated for that operation
+  on that specific chain by any profile listing it. (Example:
+  `chainSupport.btc.fee-quote` is `IMPLEMENTED_AND_VERIFIED` from the web
+  wallet, while `chainSupport.ton.fee-quote` is `DOCUMENTED_NOT_TESTED`.)
+- `chainSupport.profiles` must list exactly the profiles whose `chains`
+  include that chain. The validator enforces this, plus version 2, plus
+  that every `operations` map has exactly the 10 operations with a known
+  status.
+
+### Status vocabulary for operations
+
+Only these four statuses may appear in an `operations` map:
+
+| Status | Meaning |
+| --- | --- |
+| `IMPLEMENTED_AND_VERIFIED` | Demonstrated behaviour for the exact claim, backed by a test run, build or recorded inspection (same evidence rule as the entry-level status). |
+| `STARTER_IMPLEMENTED_AND_VERIFIED` | The starter demonstrates the operation within its documented scope; it is not a complete wallet. (Android `receive` only: receive-QR display in the starter UI, with no on-device derivation behind it.) |
+| `DOCUMENTED_NOT_TESTED` | Documented or described but not demonstrated — including documented as blocked or unavailable (TON fee-quote; TON post-sign-verify, which is partial only). |
+| `NOT_SUPPORTED` | The profile/chain does not provide the operation: no implementation in scope (all CLI send/sign/broadcast-adjacent operations; Android on-device derivation, which has no AAR). |
+
+Do not use `PROPOSED`, `OPEN`, `UNVERIFIED` or `EXTERNALLY_DEPENDENT`
+inside an `operations` map; the validator rejects them there.
+
+### Send/sign claims in free-text lists
+
+The validator's send/sign wording ban in `implemented[]` is now
+evidence-scoped, because the rebuild falsified its old premise ("no
+signing code exists in the repository"). A profile may name send/sign in
+`implemented[]` only when its own `operations` map verifies BOTH
+`plan-transfer` and `local-sign` (currently only web-wallet). Broadcast
+and submission wording stays forbidden in `implemented[]` for EVERY
+profile. Bare `send` / `sign` / `broadcast` elements are never allowed in
+`implemented[]` — write an evidenced sentence instead.
+
+### Recorded caveats (2026-11-19)
+
+These limits are part of the v2 record, not footnotes to be dropped on
+the next edit:
+
+- TON `fee-quote` is blocked: send preview reports unavailable; signing
+  still works with a seqno. No fee is invented.
+- TON `verify-signature` is partial only: no-error + 32-byte hash + BOC
+  magic, no BOC re-parse (no BOC parser vendored). Lane E's independent
+  TON verification covers the cryptography through repo tooling, not
+  inside the app.
+- TRX index-1 HDWallet-path address does not match the published xpub
+  fixture (`TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B` via xpub); the
+  discrepancy is unresolved and recorded, not claimed.
+- Balances/history are verified in Node (Lane D, two-source cross-checks);
+  the app's own CSP (`connect-src 'self'`) blocks the adapter fetches in
+  a served browser preview, so no lane verified balances inside a real
+  browser. Widening `connect-src` to the four pinned provider origins is
+  a later code change.
+- No live non-zero balance was ever checked; all fixture addresses are
+  exact-zero. Non-zero rendering is covered by stubbed unit tests only.
+
 ## Licences and pins
 
 MIT and Apache-2.0 foundations are adopted. Record their licence evidence; adoption
@@ -91,10 +179,10 @@ and fixtures. Registry checks are not a substitute for those runs.
    licence rules above, and record any inspection, test or build findings.
 
 2. From the repository root, run `node scripts/validate-registry.mjs`.
-   The current baseline prints `OK: 4 files, 31 entries validated` and exits `0`.
+   The current baseline prints `OK: 4 files, 32 entries validated` and exits `0`.
    An intentional addition may change the totals; investigate unexplained changes.
 
-3. Run `node --test tests/registry.test.mjs`. The current suite contains 10 tests;
+3. Run `node --test tests/registry.test.mjs`. The current suite contains 29 tests;
    require all tests to pass. Do not weaken checks to hide an unsupported entry.
 
 4. Run `node ai/detect-capabilities.mjs`. Review the result against the edited
@@ -113,7 +201,13 @@ and fixtures. Registry checks are not a substitute for those runs.
 
 ## Current state
 
-The recorded baseline is 31 validated entries. `web-wallet` and `android-wallet`
+The recorded baseline is 32 validated entries. `web-wallet` and `android-wallet`
 are `STARTER_IMPLEMENTED_AND_VERIFIED` since the acceptance programme (2026-11-10);
 they carried `IMPLEMENTED_AND_VERIFIED` in Phases 6–7 under the old label. Three UI entries remain
 research-only `OPEN`, and the XChain pin is verified in `XChain-Platform/xchain-wallet`; XChain remains never selectable, and no XChain code has been copied. The XChain pin verification is fresh evidence (2026-11-12); the rest of this summary records the existing state.
+
+Registry v2 (2026-11-19, PR2 Lane A): `capabilities.json` is version 2 with
+`chainSupport` for btc/eth/trx/ton; every profile carries the 10-operation
+map. The rebuilt web wallet verifies offline send (`plan-transfer` +
+`local-sign`, all four chains; post-sign verification for BTC/ETH/TRX) and
+read-only balances/history; broadcast remains not implemented anywhere.

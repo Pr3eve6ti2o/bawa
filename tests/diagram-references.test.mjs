@@ -216,10 +216,10 @@ test("no production signing/broadcast call exists in repo code", () => {
   assert.equal(
     registryCallLines.length,
     1,
-    "only the FORBIDDEN_IMPLEMENTED regex line may match in the registry",
+    "only the FORBIDDEN_BROADCAST regex line may match in the registry",
   );
   assert.ok(
     registryCallLines.every((line) => line.includes("broadcast(s|ed|ing)?")),
-    "registry matches must be confined to the FORBIDDEN_IMPLEMENTED regex literal",
+    "registry matches must be confined to the FORBIDDEN_BROADCAST regex literal",
   );
 });
