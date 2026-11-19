@@ -1,9 +1,14 @@
 /**
  * Regression checks for diagram references and source-level feature claims.
  *
- * Guard the offline-signing / broadcast-disabled facts for Web Send,
- * including BTC, ETH, TRX and TON support at the chain boundary.
- * Android management retains its no-signing / no-broadcast disclaimer.
+ * T08 diagram-reference test — Doc 4 §13.0. Guards the corrected diagram's
+ * traced claims: every in-repo path it cites must exist, every
+ * validation-draft path it marks NOT IN REPO must stay absent, and the
+ * offline-send / gated-signing facts it states must hold: the web wallet
+ * signs offline with real vault keys (BTC, ETH, TRX and TON); the
+ * T25-isolated tool signs only with temporary unfunded test credentials.
+ * Neither provides a broadcast path. Android management retains its
+ * no-signing / no-broadcast disclaimer.
  */
 // Run: node tests/diagram-references.test.mjs (Node >=22 <23).
 // No network, no secrets, no private material.
@@ -124,6 +129,18 @@ test("Web Send signs offline with broadcast disabled and ChainId includes TON", 
     send.includes("<fieldset disabled"),
     false,
     "send.tsx must not reintroduce the old always-disabled Send fieldset",
+  );
+  assert.ok(
+    send.includes("previewSendAmount"),
+    "send.tsx must wire the offline send preview",
+  );
+  assert.ok(
+    send.includes("signEthOffline"),
+    "send.tsx must wire offline signing",
+  );
+  assert.ok(
+    send.includes("not sent anywhere: broadcast is disabled until separately"),
+    "send.tsx must state signed transactions are not sent anywhere",
   );
   assert.ok(
     send.includes("Broadcast is disabled until separately authorised"),

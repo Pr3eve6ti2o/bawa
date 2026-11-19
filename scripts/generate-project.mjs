@@ -159,15 +159,19 @@ function bulletList(items) {
 }
 
 function readmeFor(profile) {
-  // implemented/missing come from the registry entry (added in the
-  // acceptance programme); fall back to a conservative, platform-aware
-  // derivation until the registry carries them.
+  // implemented/missing come from the registry entry; fall back to a
+  // conservative, platform-aware derivation for any profile that omits
+  // them (the schema does not require the lists).
   const fallbackImplemented = {
     cli: ['Derivation primitives via the repository tools (see security notes)'],
     web: [
-      'Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.3 WASM boundary',
-      '14-screen UI navigation with mock data and unavailable actions labelled as such',
-      'Receive-screen QR display of a derived address',
+      'In-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses',
+      'Watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM',
+      '14 screens with honest loading/empty/stale/locked/gate-failed/error states',
+      'Receive-QR display',
+      'Import of extended public keys only',
+      'Read-only mainnet balances and transaction history via per-chain adapters',
+      'Offline send: transaction construction (plan-transfer) and local signing via wallet-core AnySigner for all four chains, with post-sign verification for BTC/ETH/TRX',
     ],
     android: [
       'Extended-public-key validation (no secrets, no derivation on-device)',
@@ -177,7 +181,7 @@ function readmeFor(profile) {
   };
   const fallbackMissing = {
     cli: ['send', 'sign', 'broadcast', 'balances', 'prices', 'history'],
-    web: ['send', 'sign', 'broadcast', 'balances', 'prices', 'history', 'wallet creation and backup (repository tools only)'],
+    web: ['broadcast', 'prices'],
     android: ['on-device derivation', 'send', 'sign', 'broadcast', 'balances', 'prices', 'history', 'wallet creation and backup (repository tools only)'],
   };
   const implemented = Array.isArray(profile.implemented)
@@ -199,6 +203,20 @@ function readmeFor(profile) {
       : profile.platform === 'web'
         ? 'Install dependencies with `npm ci`, build with `npm run build`, run the tests with `npx vitest run`. The wallet-core WASM file is copied into `public/` by the prebuild step; never commit it. The starter\'s own README is preserved as `README-starter.md` in this directory. This copy still depends on the repository checkout for `@bawa/contracts` (a local `file:` dependency).'
         : 'Build with `./gradlew assembleDebug` and run the unit tests with `./gradlew testDebugUnitTest` (needs `JAVA_HOME` pointing at JDK 17 and `ANDROID_HOME` pointing at an Android SDK with platform 35). The starter\'s own README is preserved as `README-starter.md` in this directory.';
+  const boundaries =
+    profile.platform === 'web'
+      ? [
+          '- Mainnet only. Testnet addresses are rejected as wrong-network.',
+          '- Offline send and signing exist in this starter; broadcast is not implemented anywhere.',
+          '- Read-only mainnet balances and transaction history exist in this starter via per-chain adapters; prices are unavailable \u2014 no provider selected.',
+          '- Secrets (mnemonics, seeds, private keys, private extended keys) never leave the trusted key/vault boundary and never enter adapters, UI state, logs or telemetry.',
+        ]
+      : [
+          '- Testnet only. Mainnet is out of scope without separate approval.',
+          '- No send, sign or broadcast code exists in this project.',
+          '- No balances, prices or transaction history: no provider is selected.',
+          '- Secrets (mnemonics, seeds, private keys, private extended keys) never leave the trusted key/vault boundary and never enter adapters, UI state, logs or telemetry.',
+        ];
   return [
     '# Generated ' + profile.id,
     '',
@@ -229,10 +247,7 @@ function readmeFor(profile) {
     '',
     '## Boundaries',
     '',
-    '- Testnet only. Mainnet is out of scope without separate approval.',
-    '- No send, sign or broadcast code exists in this project or in the repository.',
-    '- No balances, prices or transaction history: no provider is selected.',
-    '- Secrets (mnemonics, seeds, private keys, private extended keys) never leave the trusted key/vault boundary and never enter adapters, UI state, logs or telemetry.',
+    ...boundaries,
     '',
   ].join('\n');
 }
