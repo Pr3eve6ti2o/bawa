@@ -89,10 +89,12 @@ test('valid request passes (web-wallet, btc, create+derive+receive)', () => {
 });
 
 test('valid request passes through the natural-language entry point', () => {
+  // Registry v2: hd-wallet-cli supports create/derive/restore; receive is
+  // DOCUMENTED_NOT_TESTED for a CLI (no receive UI), so it is not requested.
   const result = planFromNaturalLanguage(
     'hd-wallet-cli',
     ['btc'],
-    ['create', 'derive', 'receive'],
+    ['create', 'derive'],
     'opt-in-read-only',
     'disabled',
     REGISTRY_DIR,
@@ -121,16 +123,16 @@ test('offline mode + balance is rejected with MODE_OPERATION_CONFLICT', () => {
   );
 });
 
-test('an operation the profile does not support is rejected (balance: no registry capability)', () => {
+test('an operation the profile does not support is rejected (fee-quote: DOCUMENTED_NOT_TESTED for web-wallet, registry v2)', () => {
   const result = planFromRequest(
-    request({ require: ['create', 'balance'] }),
+    request({ require: ['create', 'fee-quote'] }),
     REGISTRY_DIR,
   );
   assert.ok(
     codes(result).includes('OPERATION_NOT_SUPPORTED'),
     JSON.stringify(result.errors),
   );
-  // opt-in-read-only mode: no mode conflict for balance, only support.
+  // opt-in-read-only mode: no mode conflict for fee-quote, only support.
   assert.ok(!codes(result).includes('MODE_OPERATION_CONFLICT'));
 });
 
@@ -149,9 +151,9 @@ test('an operation the profile does not support is rejected (local-sign: sign is
   assert.ok(!codes(result).includes('MODE_OPERATION_CONFLICT'));
 });
 
-test('an operation the profile does not support is rejected (restore: recover is DOCUMENTED_NOT_TESTED)', () => {
+test('an operation the profile does not support is rejected (verify-signature: DOCUMENTED_NOT_TESTED for web-wallet, registry v2)', () => {
   const result = planFromRequest(
-    request({ require: ['restore'] }),
+    request({ require: ['verify-signature'] }),
     REGISTRY_DIR,
   );
   assert.ok(
@@ -235,19 +237,27 @@ test('all errors are collected, not just the first', () => {
   assert.ok(result.errors.length >= 2);
 });
 
-test('TON derive fails closed against the current registry (OPEN, not verified)', () => {
-  // The guide registry still lists ton-mainnet derive as OPEN, even though
-  // the rebuilt app verified TON derivation. The planner follows the
-  // registry and fails closed; a registry refresh may change this.
-  const result = planFromRequest(
+test('TON derive passes under registry v2 (verified by the rebuilt app)', () => {
+  // Registry v2 records TON derive as IMPLEMENTED_AND_VERIFIED (the rebuilt
+  // app verified it), flipping the v1 fail-closed behaviour Lane B pinned.
+  // TON fee-quote is still DOCUMENTED_NOT_TESTED and must fail closed.
+  const derived = planFromRequest(
     request({
       networks: [{ id: 'ton', profile: 'web-wallet' }],
       require: ['derive'],
     }),
     REGISTRY_DIR,
   );
+  assert.equal(derived.ok, true, JSON.stringify(derived.errors));
+  const quoted = planFromRequest(
+    request({
+      networks: [{ id: 'ton', profile: 'web-wallet' }],
+      require: ['create', 'fee-quote'],
+    }),
+    REGISTRY_DIR,
+  );
   assert.ok(
-    codes(result).includes('OPERATION_NOT_SUPPORTED'),
-    JSON.stringify(result.errors),
+    codes(quoted).includes('OPERATION_NOT_SUPPORTED'),
+    JSON.stringify(quoted.errors),
   );
 });
