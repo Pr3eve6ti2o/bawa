@@ -7,6 +7,7 @@ import {
   isEngineReady,
   validateAccountKey,
   validateExtendedKey,
+  validateSolanaAddress,
   validateTonAddress,
 } from './boundary';
 
@@ -22,6 +23,10 @@ const ethXpub =
   'xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc';
 const trxXpub =
   'xpub6BuGaD9QhYL3taLFfDBrnJJTd6NnLniCBKVJsRsev1Ct9ZUfwPTwqDZSfPhFkmWvM9CA8veqHQWeBMnUgxPEv41H1Bqb3QbkZ3zpCRzzaeF';
+const ltcLtub =
+  'Ltub2ZANw57Fi4JfMGenngwfZMqDrsccTf2m3qEjvLuk8faGXB973sSqGttAdKBvGSCLG9DXh2yxaUB9qpwQUe2zCCtrZPhjxGuMAWqL6F7Xrpd';
+const dogeDgub =
+  'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs';
 
 const fixtures = [
   {
@@ -147,6 +152,32 @@ describe.sequential('watch-only engine boundary', () => {
 
   it('rejects a BTC version when validating for ETH', async () => {
     await expect(validateExtendedKey(btcZpub, 'eth')).resolves.toMatchObject({
+      ok: false,
+      reason: 'version-not-allowed',
+    });
+  });
+
+  it('recognises the LTC fixture on its own chain', async () => {
+    await expect(validateExtendedKey(ltcLtub, 'ltc')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('recognises the DOGE fixture on its own chain', async () => {
+    await expect(validateExtendedKey(dogeDgub, 'doge')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('rejects an LTC version when validating for BTC', async () => {
+    await expect(validateExtendedKey(ltcLtub, 'btc')).resolves.toMatchObject({
+      ok: false,
+      reason: 'version-not-allowed',
+    });
+  });
+
+  it('rejects a BTC version when validating for LTC', async () => {
+    await expect(validateExtendedKey(btcZpub, 'ltc')).resolves.toMatchObject({
       ok: false,
       reason: 'version-not-allowed',
     });
@@ -447,5 +478,40 @@ describe('TON watch-only address validation (R01)', () => {
 
   it('rejects derivation at index 1', async () => {
     await expect(deriveAddress('ton', address, 1)).rejects.toThrow();
+  });
+});
+
+describe('SOL watch-only address validation', () => {
+  const address = 'GjJyeC1r2RgkuoCWMyPYkCWSGSGLcz266EaAkLA27AhL';
+
+  it('accepts the probe address', () => {
+    expect(validateSolanaAddress(address)).toEqual({ ok: true });
+  });
+
+  it.each([
+    [
+      'invalid base58 character',
+      'GjJyeC1r2RgkuoCWMyPYkCWSGSGLcz266EaAkLA27Ah0',
+      'invalid-length',
+    ],
+    [
+      'short address',
+      'GjJyeC1r2RgkuoCWMyPYkCWSGSGLcz266EaAkLA27',
+      'invalid-length',
+    ],
+    ['64-byte key', '1'.repeat(64), 'secret-like'],
+    ['12-word mnemonic', 'abandon '.repeat(11) + 'about', 'secret-like'],
+    ['empty input', '', 'empty'],
+    ['whitespace input', ' \t\n ', 'empty'],
+  ] as const)('rejects %s', (_name, input, reason) => {
+    expect(validateSolanaAddress(input)).toMatchObject({ ok: false, reason });
+  });
+
+  it('returns exactly the supplied address when five addresses are requested', async () => {
+    await expect(deriveAddresses('sol', address, 5)).resolves.toEqual([address]);
+  });
+
+  it('rejects derivation at index 1', async () => {
+    await expect(deriveAddress('sol', address, 1)).rejects.toThrow();
   });
 });

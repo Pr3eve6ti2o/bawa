@@ -1,7 +1,7 @@
 import { initWasm } from '@trustwallet/wallet-core';
 import type { TonAddressValidation } from '@bawa/contracts';
 
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge';
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -24,6 +24,15 @@ const MAX_BASE58_LENGTH = 112;
 const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   // F-17: BIP-49 ypub (049d7cb2) is accepted for BTC, like the shared
   // validator (tools/hdwallet-gen/extended-key.js).
+  sol: [], // Like TON, no xpub.
+  bsc: ['0488b21e'],
+  matic: ['0488b21e'],
+  arb: ['0488b21e'],
+  op: ['0488b21e'],
+  base: ['0488b21e'],
+  avax: ['0488b21e'],
+  ltc: ['019da462'],
+  doge: ['02facafd'],
   btc: ['0488b21e', '049d7cb2', '04b24746'],
   eth: ['0488b21e'],
   trx: ['0488b21e'],
@@ -33,7 +42,15 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   ton: [],
 };
 
-const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton'>, string>> = {
+const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, string>> = {
+  ltc: "m/84'/2'/0'/0",
+  doge: "m/44'/3'/0'/0",
+  bsc: "m/44'/60'/0'/0",
+  matic: "m/44'/60'/0'/0",
+  arb: "m/44'/60'/0'/0",
+  op: "m/44'/60'/0'/0",
+  base: "m/44'/60'/0'/0",
+  avax: "m/44'/60'/0'/0",
   btc: "m/84'/0'/0'/0",
   eth: "m/44'/60'/0'/0",
   trx: "m/44'/195'/0'/0",
@@ -425,6 +442,81 @@ export function validateTonAddress(address: string): TonAddressValidation {
   };
 }
 
+export function validateSolanaAddress(
+  address: string
+): { ok: true } | { ok: false; reason: string; message: string } {
+  const value = address.trim();
+
+  if (value.length === 0) {
+    return {
+      ok: false,
+      reason: 'empty',
+      message: 'Solana address is required.',
+    };
+  }
+
+  const words = value.split(/ +/);
+  const isMnemonic =
+    /^[a-z ]+$/i.test(value) && (words.length === 12 || words.length === 24);
+
+  if (/\s/.test(value) || /^(?:xprv|zprv|tprv|yprv)/i.test(value) || isMnemonic) {
+    return {
+      ok: false,
+      reason: 'secret-like',
+      message: 'Use a public Solana address only.',
+    };
+  }
+
+  function decodeBase58(input: string): Uint8Array | null {
+    const bytes: number[] = [];
+
+    for (const character of input) {
+      const digit = BASE58_ALPHABET.indexOf(character);
+      if (digit < 0) return null;
+
+      let carry = digit;
+
+      for (let i = 0; i < bytes.length; i++) {
+        carry += (bytes[i] ?? 0) * 58;
+        bytes[i] = carry & 0xff;
+        carry >>>= 8;
+      }
+
+      while (carry > 0) {
+        bytes.push(carry & 0xff);
+        carry >>>= 8;
+      }
+    }
+
+    for (const character of input) {
+      if (character !== '1') break;
+      bytes.push(0);
+    }
+
+    return Uint8Array.from(bytes.reverse());
+  }
+
+  const decoded = decodeBase58(value);
+
+  if (decoded?.length === 64) {
+    return {
+      ok: false,
+      reason: 'secret-like',
+      message: 'Use a public Solana address only.',
+    };
+  }
+
+  if (decoded === null || decoded.length !== 32) {
+    return {
+      ok: false,
+      reason: 'invalid-length',
+      message: 'Invalid Solana address length.',
+    };
+  }
+
+  return { ok: true };
+}
+
 // Watch-only import validation for any chain: TON validates a public
 // address, btc/eth/trx validate an extended public key — and the key
 // must be the account-level key (depth 3, account 0; R02-F01), so a
@@ -435,8 +527,8 @@ export async function validateWatchOnlyImport(
   chain: ChainId,
   value: string,
 ): Promise<{ ok: true } | { ok: false; reason: string; message: string }> {
-  if (chain === 'ton') {
-    const validation = validateTonAddress(value);
+  if (chain === 'sol' || chain === 'ton') {
+    const validation = (chain === 'sol' ? validateSolanaAddress : validateTonAddress)(value);
     if (!validation.ok) {
       return {
         ok: false,
@@ -458,15 +550,15 @@ export async function deriveAddress(
     throw new Error('index out of range');
   }
 
-  // TON has exactly one address per wallet (fully hardened path): the
-  // imported public address itself, at index 0 only. No WASM call.
-  if (chain === 'ton') {
+  // TON and SOL each have exactly one address per wallet (fully hardened
+  // path): the imported public address itself, at index 0 only. No WASM call.
+  if (chain === 'sol' || chain === 'ton') {
     if (index !== 0) {
       throw new Error('index out of range');
     }
-    const tonValidation = validateTonAddress(xpub);
-    if (!tonValidation.ok) {
-      throw new Error(tonValidation.message);
+    const addressValidation = (chain === 'sol' ? validateSolanaAddress : validateTonAddress)(xpub);
+    if (!addressValidation.ok) {
+      throw new Error(addressValidation.message);
     }
     return xpub.trim();
   }
@@ -483,6 +575,14 @@ export async function deriveAddress(
   try {
     const core = await loadCore();
     const coin = {
+    ltc: core.CoinType.litecoin,
+    doge: core.CoinType.dogecoin,
+    bsc: core.CoinType.smartChain,
+    matic: core.CoinType.polygon,
+    arb: core.CoinType.arbitrum,
+    op: core.CoinType.optimism,
+    base: core.CoinType.base,
+    avax: core.CoinType.avalancheCChain,
       btc: core.CoinType.bitcoin,
       eth: core.CoinType.ethereum,
       trx: core.CoinType.tron,
@@ -518,9 +618,9 @@ export async function deriveAddresses(
     throw new Error('count out of range');
   }
 
-  // TON has one address; callers must use derivedCount 1. The count is
-  // still range-checked above so a bad count fails the same way.
-  if (chain === 'ton') {
+  // TON and SOL each have one address; callers must use derivedCount 1.
+  // The count is still range-checked above so a bad count fails the same way.
+  if (chain === 'sol' || chain === 'ton') {
     return [await deriveAddress(chain, xpub, 0)];
   }
 

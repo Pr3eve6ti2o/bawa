@@ -27,6 +27,15 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   trx: { displayName: 'TRON', symbol: 'TRX' },
   ton: { displayName: 'TON', symbol: 'TON' },
+  sol: { displayName: 'Solana', symbol: 'SOL' },
+  bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  matic: { displayName: 'Polygon', symbol: 'POL' },
+  arb: { displayName: 'Arbitrum One', symbol: 'ETH' },
+  op: { displayName: 'OP Mainnet', symbol: 'ETH' },
+  base: { displayName: 'Base', symbol: 'ETH' },
+  avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  ltc: { displayName: 'Litecoin', symbol: 'LTC' },
+  doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -106,6 +115,15 @@ const perChainEmpty = (): Record<ChainKey, HistoryState> => ({
   eth: emptyHistory,
   trx: emptyHistory,
   ton: emptyHistory,
+  sol: emptyHistory,
+  bsc: emptyHistory,
+  matic: emptyHistory,
+  arb: emptyHistory,
+  op: emptyHistory,
+  base: emptyHistory,
+  avax: emptyHistory,
+  ltc: emptyHistory,
+  doge: emptyHistory,
 });
 
 describe('transaction history screen', () => {

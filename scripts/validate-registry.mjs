@@ -31,8 +31,8 @@ export function validateStructure(files) {
   if (!Array.isArray(profiles)) {
     errors.push("ERROR profiles: expected an array");
   } else {
-    if (profiles.length !== 7) {
-      errors.push(`ERROR profiles: expected 7 profiles, found ${profiles.length}`);
+    if (profiles.length !== 8) {
+      errors.push(`ERROR profiles: expected 8 profiles, found ${profiles.length}`);
     }
 
     const ids = new Set();
@@ -100,7 +100,7 @@ export function validateStructure(files) {
   return errors;
 }
 
-export const CHAINS = ["btc", "eth", "trx", "ton"];
+export const CHAINS = ["btc", "eth", "trx", "ton", "sol", "bsc", "matic", "arb", "op", "base", "avax", "ltc", "doge"];
 export const OPERATIONS = [
   "generate",
   "derive",

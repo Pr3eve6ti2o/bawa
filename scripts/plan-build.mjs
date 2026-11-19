@@ -34,7 +34,7 @@ export const OPERATIONS = [
 
 // Chains any profile in the registry supports (registry/profiles.json;
 // also scripts/validate-registry.mjs CHAINS).
-export const CHAINS = ['btc', 'eth', 'trx', 'ton'];
+export const CHAINS = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'];
 
 // Recognised real chains that no profile in the registry supports.
 // Solana is the documented misroute: docs/wallet-reference-map.md names it

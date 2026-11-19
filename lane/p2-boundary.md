@@ -1,0 +1,20 @@
+You are writing TypeScript for the Bawa wallet repo (Wallet Core 4.9.3, strict TS, noUncheckedIndexedAccess). File: apps/web/src/engine/boundary.ts. Do NOT change BTC/ETH/TRX/TON behaviour, paths, IDs, or operations. Emit ONLY new/changed code blocks, each in its own fenced typescript block with a one-line anchor comment stating where it goes.
+
+Context (verified first-hand): EVM chains (bsc, matic, arb, op, base, avax) share ETH's derivation m/44'/60'/0'/0/i and xpub version 0488b21e, so the same account xpub derives the same address as ETH. LTC is BIP84 m/84'/2'/0'/0/i with account-key version 019da462 (Ltub). DOGE is BIP44 m/44'/3'/0'/0/i with version 02facafd (dgub). SOL is Ed25519, default path m/44'/501'/0', no xpub — handle it exactly like TON (validate a public address, index 0 only, echo it). Wallet Core CoinType names: litecoin, dogecoin, smartChain, polygon, arbitrum, optimism, base, avalancheCChain, solana.
+
+Current code you must match (style: 2-space indent, single quotes):
+- `export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';`
+- ALLOWED_VERSIONS is `Readonly<Record<ChainId, readonly string[]>>` with btc ['0488b21e','049d7cb2','04b24746'], eth ['0488b21e'], trx ['0488b21e'], ton [] (comment: TON has no xpub, empty list is a backstop).
+- DERIVATION_PREFIXES is `Readonly<Record<Exclude<ChainId, 'ton'>, string>>` with btc "m/84'/0'/0'/0", eth "m/44'/60'/0'/0", trx "m/44'/195'/0'/0".
+- deriveAddress has a TON early return (index must be 0, validateTonAddress, return trimmed input), then validateAccountKey, then a coin map `{ btc: core.CoinType.bitcoin, eth: core.CoinType.ethereum, trx: core.CoinType.tron }[chain]` and `const path = DERIVATION_PREFIXES[chain] + '/' + index`.
+- validateWatchOnlyImport routes 'ton' to validateTonAddress, everything else to validateAccountKey.
+
+Changes:
+1. ChainId becomes 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge'.
+2. ALLOWED_VERSIONS: add sol: [] (comment: like TON, no xpub), bsc/matic/arb/op/base/avax: ['0488b21e'], ltc: ['019da462'], doge: ['02facafd']. Keep the four existing entries byte-identical.
+3. DERIVATION_PREFIXES: change the type to Record<Exclude<ChainId, 'ton' | 'sol'>, string> and add ltc "m/84'/2'/0'/0", doge "m/44'/3'/0'/0", bsc/matic/arb/op/base/avax "m/44'/60'/0'/0". Keep the three existing entries byte-identical.
+4. Add validateSolanaAddress(address: string) right after validateTonAddress, same return shape ({ ok: true } | { ok: false; reason: string; message: string }): trim; empty -> reason 'empty'; any whitespace or a private-key prefix (xprv/zprv/tprv/yprv, case-insensitive) or a 12/24-word mnemonic shape (only letters and spaces) -> reason 'secret-like', message 'Use a public Solana address only.'; otherwise Base58-decode using the file's existing BASE58_ALPHABET (write a small local decode helper that returns null on an invalid character); the decoded bytes must be exactly 32 -> else reason 'invalid-length', message 'Invalid Solana address length.'; a 64-byte decode is a secret key -> reason 'secret-like'. Return { ok: true } only for a 32-byte decode.
+5. validateWatchOnlyImport: add a sol branch before the ton branch that routes to validateSolanaAddress with the same error mapping as ton.
+6. deriveAddress: add a sol early return mirroring the ton block (index must be 0 else 'index out of range'; validateSolanaAddress, throw its message on failure; return the trimmed input). Extend the coin map with ltc: core.CoinType.litecoin, doge: core.CoinType.dogecoin, bsc: core.CoinType.smartChain, matic: core.CoinType.polygon, arb: core.CoinType.arbitrum, op: core.CoinType.optimism, base: core.CoinType.base, avax: core.CoinType.avalancheCChain. Nothing else changes in deriveAddress.
+
+Acceptance: strict TS compiles; the 4 original chains behave exactly as before; new xpub chains derive through validateAccountKey + the coin map; SOL behaves like TON (address import, index 0 only). Output only the code blocks plus anchors, no other prose.

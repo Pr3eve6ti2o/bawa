@@ -1,0 +1,1 @@
+Please paste the current `apps/web/src/wallet/chains.test.ts` (or the named test blocks). I need the existing assertions—especially the RPC endpoints, profile IDs, and typed-error constructor—to preserve them exactly.

@@ -56,7 +56,19 @@ const STORAGE_KEY = 'bawa-watch-only-xpubs';
 export const LABEL_MAX_LENGTH = 40;
 type PerChain<T> = Record<ChainId, T>;
 const perChain = <T,>(make: () => T): PerChain<T> => ({
-  btc: make(), eth: make(), trx: make(), ton: make(),
+  btc: make(),
+  eth: make(),
+  trx: make(),
+  ton: make(),
+  sol: make(),
+  bsc: make(),
+  matic: make(),
+  arb: make(),
+  op: make(),
+  base: make(),
+  avax: make(),
+  ltc: make(),
+  doge: make(),
 });
 
 export type VaultState = 'no-vault' | 'locked' | 'unlocked';
@@ -430,6 +442,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         eth: [derived.eth],
         trx: [derived.trx],
         ton: [derived.ton],
+        sol: [derived.sol],
+        bsc: [derived.bsc],
+        matic: [derived.matic],
+        arb: [derived.arb],
+        op: [derived.op],
+        base: [derived.base],
+        avax: [derived.avax],
+        ltc: [derived.ltc],
+        doge: [derived.doge],
       },
     }));
     // Balances/history load in the background: this function returns as

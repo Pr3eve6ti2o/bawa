@@ -575,5 +575,82 @@
       "local-sign": "NOT_SUPPORTED",
       "verify-signature": "NOT_SUPPORTED"
     }
+  },
+  {
+    "id": "multichain-extended-wallet",
+    "platform": "web",
+    "chains": [
+      "sol",
+      "bsc",
+      "matic",
+      "arb",
+      "op",
+      "base",
+      "avax",
+      "ltc",
+      "doge"
+    ],
+    "engine": {
+      "name": "trust-wallet-core",
+      "version": "4.9.3",
+      "status": "IMPLEMENTED_AND_VERIFIED"
+    },
+    "ui": {
+      "route": "token-ui",
+      "foundation": "web-01-token-ui",
+      "status": "DOCUMENTED_NOT_TESTED"
+    },
+    "security": {
+      "boundaries": [
+        "mnemonics, seeds, private keys, private extended keys, vault keys and wallet handles stay inside the trusted key/vault boundary",
+        "chain adapters never receive secrets or secret-bearing objects",
+        "UI never holds secrets and never owns transaction authority or signing policy"
+      ],
+      "notes": [
+        "Extended chains are derivation/receive only: SOL, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin and Dogecoin derive and receive through wallet-core 4.9.3 WASM (verified by the 2026-11-20 derivation probe on the BIP-39 test-vector mnemonic); no adapter, no balance/history read, no send builder and no broadcast for any of them.",
+        "SOL has no xpub and no watch-only route: one address per wallet at m/44'/501'/0', like TON at m/44'/607'/0'.",
+        "Mainnet only: testnet addresses are rejected as wrong-network and no testnet adapter exists."
+      ]
+    },
+    "verification": {
+      "requirements": [
+        "derivation reproduces the Wallet Core 4.9.3 probe fixtures for all nine chains",
+        "no secret reaches adapters, UI state, logs or telemetry",
+        "unsupported operations stay blocked and are never faked"
+      ],
+      "status": "DOCUMENTED_NOT_TESTED"
+    },
+    "status": "DOCUMENTED_NOT_TESTED",
+    "sources": [
+      "apps/web/src/wallet/chains.ts",
+      "apps/web/src/wallet/core.ts",
+      "lane/evidence/probe-2026-11-20.jsonl"
+    ],
+    "implemented": [
+      "in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses for the nine extended chains",
+      "derivation and receive-address display for SOL, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Litecoin and Dogecoin via wallet-core 4.9.3 WASM (verified by the 2026-11-20 derivation probe)"
+    ],
+    "missing": [
+      "balance",
+      "history",
+      "fee-quote",
+      "plan-transfer",
+      "local-sign",
+      "verify-signature",
+      "broadcast",
+      "prices"
+    ],
+    "operations": {
+      "create": "IMPLEMENTED_AND_VERIFIED",
+      "derive": "IMPLEMENTED_AND_VERIFIED",
+      "restore": "IMPLEMENTED_AND_VERIFIED",
+      "receive": "IMPLEMENTED_AND_VERIFIED",
+      "balance": "NOT_SUPPORTED",
+      "history": "NOT_SUPPORTED",
+      "fee-quote": "NOT_SUPPORTED",
+      "plan-transfer": "NOT_SUPPORTED",
+      "local-sign": "NOT_SUPPORTED",
+      "verify-signature": "NOT_SUPPORTED"
+    }
   }
 ]
