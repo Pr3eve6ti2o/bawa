@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -171,7 +171,17 @@ test('generation itself still runs for the gated profile (generate-project, no n
     false,
     'generated/build-wallet-test-web must not exist before this test; remove it to run it',
   );
-  t.after(() => rmSync(out, { recursive: true, force: true }));
+  t.after(() => {
+    rmSync(out, { recursive: true, force: true });
+    // Remove the parent too when it is left empty, so the test leaves
+    // no trace behind (generated/ itself is gitignored, but an empty
+    // dir is still litter).
+    try {
+      rmdirSync(join(REPO_ROOT, 'generated'));
+    } catch {
+      // Non-empty: another run owns the remaining output; leave it.
+    }
+  });
   const result = spawnSync(
     process.execPath,
     [GENERATE_PROJECT, 'web-wallet', '--out', out, '--force'],
