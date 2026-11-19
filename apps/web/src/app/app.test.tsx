@@ -62,11 +62,46 @@ async function withRenderedApp(
 }
 
 describe.sequential('App', () => {
-  it('renders the wallet title and the empty dashboard', async () => {
+  it('renders the wallet title and welcome screen without a vault', async () => {
+    window.localStorage.removeItem('bawa-vault');
+
     await withRenderedApp('/', (div) => {
       expect(div.textContent).toContain('Bawa Web Wallet');
-      expect(div.textContent).toContain('No wallet yet');
+      expect(div.textContent).toContain('Welcome to Bawa Web Wallet');
+      expect(div.textContent).toContain(
+        'Mainnet only — this wallet never connects to a test network',
+      );
+      expect(div.textContent).not.toContain('No wallet yet');
     });
+  });
+
+  it('renders the locked dashboard when a vault is present', async () => {
+    window.localStorage.setItem(
+      'bawa-vault',
+      JSON.stringify({
+        version: 1,
+        kdf: {
+          name: 'PBKDF2',
+          hash: 'SHA-256',
+          iterations: 600000,
+          saltB64: 'AAAAAAAAAAAAAAAAAAAAAA==',
+        },
+        ivB64: 'AAAAAAAAAAAAAAAA',
+        ciphertextB64: 'AAAAAAAAAAAAAAAAAAAAAA==',
+        profileIds: [],
+      }),
+    );
+
+    try {
+      await withRenderedApp('/', (div) => {
+        expect(div.textContent).toContain(
+          'Vault locked — your vault addresses are hidden until you unlock.',
+        );
+        expect(div.textContent).not.toContain('Welcome to Bawa Web Wallet');
+      });
+    } finally {
+      window.localStorage.removeItem('bawa-vault');
+    }
   });
 
   it('renders the watch-only wallet import page', async () => {

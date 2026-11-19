@@ -44,6 +44,12 @@ const moreLinks = [
   { to: '/welcome', label: 'Welcome' },
 ] as const;
 
+function HomeScreen() {
+  const { vaultState } = useWallet();
+
+  return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
+}
+
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { vaultState } = useWallet();
@@ -171,7 +177,7 @@ export function App() {
       <WalletProvider>
         <Routes>
           <Route path="/" element={<AppLayout />}>
-            <Route index element={<DashboardScreen />} />
+            <Route index element={<HomeScreen />} />
             <Route path="welcome" element={<WelcomeScreen />} />
             <Route path="create-wallet" element={<CreateWalletScreen />} />
             <Route path="import-wallet" element={<ImportWalletScreen />} />
