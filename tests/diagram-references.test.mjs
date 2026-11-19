@@ -1,9 +1,10 @@
-// T08 diagram-reference regression test — Doc 4 §13.0.
-// Guards the corrected diagram's traced claims: every in-repo path it cites
-// must exist, every validation-draft path it marks NOT IN REPO must stay
-// absent, and the Send-disabled / gated-signing facts it states must hold:
-// the only signing code is a local, test-only signer restricted to temporary
-// unfunded test credentials, and broadcast is not implemented.
+/**
+ * Regression checks for diagram references and source-level feature claims.
+ *
+ * Guard the offline-signing / broadcast-disabled facts for Web Send,
+ * including BTC, ETH, TRX and TON support at the chain boundary.
+ * Android management retains its no-signing / no-broadcast disclaimer.
+ */
 // Run: node tests/diagram-references.test.mjs (Node >=22 <23).
 // No network, no secrets, no private material.
 import test from "node:test";
@@ -109,31 +110,53 @@ test("validation-draft files stay out of the repo", () => {
   }
 });
 
-test("Web Send stays disabled and watch-only derivation stays TON-free", () => {
+test("Web Send signs offline with broadcast disabled and ChainId includes TON", () => {
   const send = fs.readFileSync(
     path.join(ROOT, "apps/web/src/screens/send.tsx"),
     "utf8",
   );
-  assert.ok(
+  assert.equal(
     send.includes("Sending is not implemented in this starter"),
-    "send.tsx must state sending is not implemented",
+    false,
+    "send.tsx must not reintroduce the obsolete unimplemented-Send placeholder",
   );
-  assert.ok(
-    send.includes("onSubmit={(event) => event.preventDefault()}"),
-    "send.tsx form must prevent submission",
-  );
-  assert.ok(
+  assert.equal(
     send.includes("<fieldset disabled"),
-    "send.tsx form must be a disabled fieldset",
+    false,
+    "send.tsx must not reintroduce the old always-disabled Send fieldset",
   );
+  assert.ok(
+    send.includes("Broadcast is disabled until separately authorised"),
+    "send.tsx must retain the warning that broadcast requires separate authorisation",
+  );
+  assert.ok(
+    send.includes("Send signed — not broadcast"),
+    "send.tsx must describe the result as signed, not broadcast",
+  );
+
+  for (const signer of [
+    "signEthOffline",
+    "signBtcOffline",
+    "signTrxOffline",
+    "signTonOffline",
+  ]) {
+    assert.match(
+      send,
+      new RegExp(
+        `import\\s*\\{[^}]*\\b${signer}\\b[^}]*\\}\\s*from\\s*['"]\\.\\./wallet/send['"]`,
+      ),
+      `send.tsx must not drop the ${signer} import from ../wallet/send required for offline signing`,
+    );
+  }
+
   const boundary = fs.readFileSync(
     path.join(ROOT, "apps/web/src/engine/boundary.ts"),
     "utf8",
   );
   assert.match(
     boundary,
-    /export type ChainId = 'btc' \| 'eth' \| 'trx'/,
-    "boundary.ts ChainId must cover BTC/ETH/TRX only (no TON)",
+    /export\s+type\s+ChainId\s*=\s*'btc'\s*\|\s*'eth'\s*\|\s*'trx'\s*\|\s*'ton'\s*;/,
+    "boundary.ts ChainId must not omit TON or remove BTC, ETH or TRX",
   );
   const android = fs.readFileSync(
     path.join(
@@ -144,20 +167,38 @@ test("Web Send stays disabled and watch-only derivation stays TON-free", () => {
   );
   assert.ok(
     android.includes("There is no signing, broadcast or transaction-construction code."),
-    "Android starter must state no signing/broadcast/construction code",
+    "ManagementScreens.kt must retain its no-signing, no-broadcast, no-transaction-construction disclaimer",
   );
 });
 
-test("no production signing/broadcast call exists in repo code", () => {
-  // The only signing code is a local, test-only signer restricted to temporary
-  // unfunded test credentials; broadcast is not implemented.
+test("no broadcast submission exists; broadcast stays a disabled stub", () => {
+  // Production offline signing EXISTS (apps/web/src/wallet/send.ts signs
+  // offline with the vault key via AnySigner.sign); what must never exist
+  // is a broadcast/submission call. Broadcast exists only as disabled
+  // stubs: the ChainAdapter interface returns Promise<never> and every
+  // adapter broadcast() throws BROADCAST_DISABLED_MESSAGE.
   const codeDirs = ["tools", "apps", "scripts", "packages"];
-  const callPattern = /\b(signTransaction|sendRawTransaction)\s*\(|\bbroadcast\s*\(/;
-  const allowlist = {
+  const submitPattern = /\b(signTransaction|sendRawTransaction)\s*\(/;
+  const broadcastPattern = /\bbroadcast\s*\(/;
+  const callPattern = new RegExp(
+    `${submitPattern.source}|${broadcastPattern.source}`,
+  );
+  const submitAllowlist = {
     // signTransaction is a throwing stub, verified below.
     "tools/mainnet-tx/unsigned-tx.mjs": true,
     // broadcast( appears only inside the FORBIDDEN_IMPLEMENTED regex literal.
     "scripts/validate-registry.mjs": true,
+  };
+  const broadcastAllowlist = {
+    ...submitAllowlist,
+    // Interface declares broadcast(): Promise<never> — the disabled contract.
+    "apps/web/src/wallet/adapters/types.ts": true,
+    // Tests asserting adapter broadcast() rejects with the disabled message.
+    "apps/web/src/wallet/adapters/btc.test.ts": true,
+    "apps/web/src/wallet/adapters/eth.test.ts": true,
+    "apps/web/src/wallet/adapters/ton.test.ts": true,
+    "apps/web/src/wallet/adapters/trx.test.ts": true,
+    "apps/web/src/wallet/adapters/types.test.ts": true,
   };
   const offenders = [];
   for (const dir of codeDirs) {
@@ -168,7 +209,12 @@ test("no production signing/broadcast call exists in repo code", () => {
       if (file.includes(`${path.sep}node_modules${path.sep}`)) continue;
       const text = fs.readFileSync(file, "utf8");
       const repoPath = path.relative(ROOT, file).split(path.sep).join("/");
-      if (callPattern.test(text) && !Object.hasOwn(allowlist, repoPath)) {
+      if (
+        (submitPattern.test(text) &&
+          !Object.hasOwn(submitAllowlist, repoPath)) ||
+        (broadcastPattern.test(text) &&
+          !Object.hasOwn(broadcastAllowlist, repoPath))
+      ) {
         offenders.push(repoPath);
       }
     }
@@ -176,7 +222,28 @@ test("no production signing/broadcast call exists in repo code", () => {
   assert.deepEqual(
     offenders,
     [],
-    `production signing/broadcast implementation call found in: ${offenders.join(", ")}`,
+    `broadcast/submission implementation call found in: ${offenders.join(", ")}`,
+  );
+
+  // The disabled design itself must stay pinned: the interface promises
+  // never, and send.ts broadcastSigned always returns disabled.
+  const adapterTypes = fs.readFileSync(
+    path.join(ROOT, "apps/web/src/wallet/adapters/types.ts"),
+    "utf8",
+  );
+  assert.ok(
+    adapterTypes.includes("broadcast(signedTx: unknown): Promise<never>"),
+    "ChainAdapter.broadcast must stay declared as Promise<never> (disabled by contract)",
+  );
+  const send = fs.readFileSync(
+    path.join(ROOT, "apps/web/src/wallet/send.ts"),
+    "utf8",
+  );
+  assert.ok(
+    send.includes(
+      "return { status: 'disabled', reason: BROADCAST_DISABLED_MESSAGE }",
+    ),
+    "send.ts broadcastSigned must stay returning disabled",
   );
 
   const localSigning = fs.readFileSync(
