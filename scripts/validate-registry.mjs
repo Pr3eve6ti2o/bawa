@@ -113,6 +113,28 @@ export const OPERATIONS = [
   "broadcast",
   "confirm",
 ];
+// Registry v2 (PR2 Lane A, 2026-11-19): the wallet-build operation set a
+// planner checks, and the per-item support statuses it may carry. The old
+// OPERATIONS list above is the per-network capabilities.json vocabulary and
+// is unchanged.
+export const V2_OPERATIONS = [
+  "create",
+  "derive",
+  "restore",
+  "receive",
+  "balance",
+  "history",
+  "fee-quote",
+  "plan-transfer",
+  "local-sign",
+  "verify-signature",
+];
+export const V2_STATUSES = [
+  "IMPLEMENTED_AND_VERIFIED",
+  "STARTER_IMPLEMENTED_AND_VERIFIED",
+  "DOCUMENTED_NOT_TESTED",
+  "NOT_SUPPORTED",
+];
 
 export function validateReferences(files) {
   const errors = [];
@@ -228,15 +250,154 @@ export function validateReferences(files) {
   return errors;
 }
 
+// Registry v2 (PR2 Lane A, 2026-11-19): the wallet-build operation set.
+// Every profile carries an `operations` object mapping the 10 wallet-build
+// operations to a support status, and capabilities.json carries a
+// `chainSupport` roll-up keyed by chain. A catalogue listing is not support:
+// the per-item status is what the planner may rely on.
+// Profile operations are the minimum across the profile's chains (an op is
+// only claimed at a status if it holds for every chain the profile lists);
+// chainSupport operations are the best status demonstrated for that
+// operation on that specific chain by any profile listing it. That is why
+// web-wallet fee-quote is DOCUMENTED_NOT_TESTED at profile level (TON is
+// blocked) while chainSupport btc/eth/trx fee-quote is
+// IMPLEMENTED_AND_VERIFIED.
+export function validateOperationsV2(files) {
+  const errors = [];
+  const profiles = Array.isArray(files.profiles)
+    ? files.profiles
+    : (files.profiles?.profiles ?? []);
+  const capabilities = files.capabilities;
+
+  if (capabilities?.version !== 2) {
+    errors.push(
+      `ERROR capabilities.json.version: expected 2 (registry v2), found ${JSON.stringify(capabilities?.version)}`,
+    );
+  }
+
+  const profileIds = new Set();
+  const chainToProfiles = new Map();
+  profiles.forEach((profile, index) => {
+    const label = `profiles.json.profiles[${profile?.id ?? index}]`;
+    if (typeof profile?.id === "string") profileIds.add(profile.id);
+    if (Array.isArray(profile?.chains)) {
+      for (const chain of profile.chains) {
+        if (!chainToProfiles.has(chain)) chainToProfiles.set(chain, []);
+        chainToProfiles.get(chain).push(profile?.id);
+      }
+    }
+
+    const operationMap = profile?.operations;
+    if (
+      operationMap === null ||
+      typeof operationMap !== "object" ||
+      Array.isArray(operationMap)
+    ) {
+      errors.push(
+        `ERROR ${label}.operations: expected an object containing exactly the 10 wallet-build operations`,
+      );
+      return;
+    }
+    checkRequired(operationMap, V2_OPERATIONS, `${label}.operations`, errors);
+    for (const [operation, status] of Object.entries(operationMap)) {
+      const operationLabel = `${label}.operations.${operation}`;
+      if (!V2_OPERATIONS.includes(operation)) {
+        errors.push(
+          `ERROR ${operationLabel}: unexpected operation "${operation}"`,
+        );
+      }
+      checkEnum(status, V2_STATUSES, operationLabel, errors);
+    }
+  });
+
+  const chainSupport = capabilities?.chainSupport;
+  if (
+    chainSupport === null ||
+    typeof chainSupport !== "object" ||
+    Array.isArray(chainSupport)
+  ) {
+    errors.push(
+      "ERROR capabilities.json.chainSupport: expected an object keyed by chain id",
+    );
+    return errors;
+  }
+  for (const [chain, entry] of Object.entries(chainSupport)) {
+    const label = `capabilities.json.chainSupport.${chain}`;
+    if (!CHAINS.includes(chain)) {
+      errors.push(`ERROR ${label}: unknown chain "${chain}"`);
+    }
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(
+        `ERROR ${label}: expected an object with profiles and operations`,
+      );
+      continue;
+    }
+    const listed = Array.isArray(entry.profiles) ? entry.profiles : [];
+    for (const id of listed) {
+      if (!profileIds.has(id)) {
+        errors.push(`ERROR ${label}.profiles: unknown profile "${id}"`);
+      }
+    }
+    const expected = chainToProfiles.get(chain) ?? [];
+    const same =
+      listed.length === expected.length &&
+      [...listed].sort().join(",") === [...expected].sort().join(",");
+    if (!same) {
+      errors.push(
+        `ERROR ${label}.profiles: expected the profiles listing ${chain} ([${expected.join(", ")}]), found [${listed.join(", ")}]`,
+      );
+    }
+    const operationMap = entry.operations;
+    if (
+      operationMap === null ||
+      typeof operationMap !== "object" ||
+      Array.isArray(operationMap)
+    ) {
+      errors.push(
+        `ERROR ${label}.operations: expected an object containing exactly the 10 wallet-build operations`,
+      );
+      continue;
+    }
+    checkRequired(operationMap, V2_OPERATIONS, `${label}.operations`, errors);
+    for (const [operation, status] of Object.entries(operationMap)) {
+      const operationLabel = `${label}.operations.${operation}`;
+      if (!V2_OPERATIONS.includes(operation)) {
+        errors.push(
+          `ERROR ${operationLabel}: unexpected operation "${operation}"`,
+        );
+      }
+      checkEnum(status, V2_STATUSES, operationLabel, errors);
+    }
+  }
+  for (const chain of chainToProfiles.keys()) {
+    if (!Object.prototype.hasOwnProperty.call(chainSupport, chain)) {
+      errors.push(
+        `ERROR capabilities.json.chainSupport: missing chain "${chain}" listed by a profile`,
+      );
+    }
+  }
+  return errors;
+}
+
 // T46: operation wording that must never appear in a profile's
-// implemented[] list. The only signing code in the repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented, so any implemented claim using these words (including
-// "sending", "signing", "broadcasting", "sent transactions",
-// "signature creation" and transaction-submission wording) is false
-// on its face. The words stay allowed in missing[], where they belong.
+// implemented[] list without backing evidence. Broadcast/submission wording
+// is forbidden for every profile: broadcast is not implemented anywhere
+// (disabled in every adapter and in broadcastSigned), so any implemented
+// claim using those words (including "broadcasting" and
+// transaction-submission wording) is false on its face.
+// Send/sign wording ("sending", "signing", "sent transactions",
+// "signature creation" and near-synonyms) is forbidden UNLESS the profile's
+// own `operations` map verifies both plan-transfer and local-sign — since
+// the 2026-11-19 rebuild the web wallet does (apps/web/src/wallet/send.ts,
+// verified IMPLEMENTATION-REPORT.md section 6 item 6), so its evidenced
+// send/sign claims are allowed while every other profile's are still
+// rejected. The words stay allowed in missing[], where they belong.
 // Lexical checks cannot catch every euphemism; this covers the direct
 // forms and the clearest near-synonyms.
-export const FORBIDDEN_IMPLEMENTED =
-  /\b(send(s|ing)?|sent|sign(s|ed|ing)?|signature(s)?|broadcast(s|ed|ing)?|submit(s|ted|ting)?|submission)\b/i;
+export const FORBIDDEN_SEND_SIGN =
+  /\b(send(s|ing)?|sent|sign(s|ed|ing)?|signature(s)?)\b/i;
+export const FORBIDDEN_BROADCAST =
+  /\b(broadcast(s|ed|ing)?|submit(s|ted|ting)?|submission)\b/i;
 
 export function validateProfileClaims(files) {
   const errors = [];
@@ -263,10 +424,29 @@ export function validateProfileClaims(files) {
       : [];
     const missing = Array.isArray(profile?.missing) ? profile.missing : [];
 
+    // Registry v2: send/sign wording is allowed only when the profile's
+    // operations map verifies plan-transfer AND local-sign; broadcast
+    // wording is never allowed in implemented[].
+    const operations = profile?.operations;
+    const sendSignVerified =
+      operations !== null &&
+      typeof operations === "object" &&
+      !Array.isArray(operations) &&
+      ["plan-transfer", "local-sign"].every((op) =>
+        ["IMPLEMENTED_AND_VERIFIED", "STARTER_IMPLEMENTED_AND_VERIFIED"].includes(
+          operations[op],
+        ),
+      );
     for (const entry of implemented) {
-      if (typeof entry === "string" && FORBIDDEN_IMPLEMENTED.test(entry)) {
+      if (typeof entry !== "string") continue;
+      if (!sendSignVerified && FORBIDDEN_SEND_SIGN.test(entry)) {
         errors.push(
-          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims a send/sign/broadcast capability; the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented`,
+          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims send/sign support, but this profile's operations map does not verify plan-transfer and local-sign`,
+        );
+      }
+      if (FORBIDDEN_BROADCAST.test(entry)) {
+        errors.push(
+          `ERROR ${label}.implemented: entry ${JSON.stringify(entry)} claims broadcast/submission support; broadcast is not implemented in any profile (disabled in every adapter and in broadcastSigned)`,
         );
       }
     }
@@ -442,6 +622,7 @@ export function validateAll(registryDir = "registry", schemaDir, repoRoot) {
 
   const errors = validateStructure(files)
     .concat(validateReferences(files))
+    .concat(validateOperationsV2(files))
     .concat(validateProfileClaims(files))
     .concat(validateEnginePin(files, resolvedRepoRoot, strict))
     .concat(validateProfileAssets(files, resolvedRepoRoot, strict));

@@ -21,6 +21,15 @@
         "UNVERIFIED",
         "EXTERNALLY_DEPENDENT"
       ]
+    },
+    "operationStatus": {
+      "type": "string",
+      "enum": [
+        "IMPLEMENTED_AND_VERIFIED",
+        "STARTER_IMPLEMENTED_AND_VERIFIED",
+        "DOCUMENTED_NOT_TESTED",
+        "NOT_SUPPORTED"
+      ]
     }
   },
   "properties": {
@@ -39,6 +48,72 @@
     "updated": {
       "type": "string",
       "format": "date"
+    },
+    "chainSupport": {
+      "type": "object",
+      "description": "Registry v2 per-chain roll-up (capabilities.json only). Each chain maps to the profiles listing it and the best demonstrated status per wallet-build operation on that chain.",
+      "propertyNames": {
+        "enum": [
+          "btc",
+          "eth",
+          "trx",
+          "ton"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "profiles",
+          "operations"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "profiles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "hd-wallet-cli",
+                "bitcoin-wallet",
+                "evm-wallet",
+                "multichain-wallet",
+                "web-wallet",
+                "android-wallet",
+                "watch-only-wallet"
+              ]
+            }
+          },
+          "operations": {
+            "type": "object",
+            "required": [
+              "create",
+              "derive",
+              "restore",
+              "receive",
+              "balance",
+              "history",
+              "fee-quote",
+              "plan-transfer",
+              "local-sign",
+              "verify-signature"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "create": { "$ref": "#/definitions/operationStatus" },
+              "derive": { "$ref": "#/definitions/operationStatus" },
+              "restore": { "$ref": "#/definitions/operationStatus" },
+              "receive": { "$ref": "#/definitions/operationStatus" },
+              "balance": { "$ref": "#/definitions/operationStatus" },
+              "history": { "$ref": "#/definitions/operationStatus" },
+              "fee-quote": { "$ref": "#/definitions/operationStatus" },
+              "plan-transfer": { "$ref": "#/definitions/operationStatus" },
+              "local-sign": { "$ref": "#/definitions/operationStatus" },
+              "verify-signature": { "$ref": "#/definitions/operationStatus" }
+            }
+          }
+        }
+      }
     },
     "entries": {
       "type": "array",

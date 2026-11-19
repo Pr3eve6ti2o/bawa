@@ -2,6 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bawa.example/registry/schemas/profile.schema.json",
   "type": "object",
+  "definitions": {
+    "operationStatus": {
+      "type": "string",
+      "enum": [
+        "IMPLEMENTED_AND_VERIFIED",
+        "STARTER_IMPLEMENTED_AND_VERIFIED",
+        "DOCUMENTED_NOT_TESTED",
+        "NOT_SUPPORTED"
+      ]
+    }
+  },
   "required": [
     "id",
     "platform",
@@ -11,7 +22,8 @@
     "security",
     "verification",
     "status",
-    "sources"
+    "sources",
+    "operations"
   ],
   "additionalProperties": false,
   "properties": {
@@ -202,6 +214,35 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "operations": {
+      "type": "object",
+      "description": "Per-operation support status in the wallet-build vocabulary (registry v2). One entry per operation; the status is the minimum across the profile's chains.",
+      "required": [
+        "create",
+        "derive",
+        "restore",
+        "receive",
+        "balance",
+        "history",
+        "fee-quote",
+        "plan-transfer",
+        "local-sign",
+        "verify-signature"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "create": { "$ref": "#/definitions/operationStatus" },
+        "derive": { "$ref": "#/definitions/operationStatus" },
+        "restore": { "$ref": "#/definitions/operationStatus" },
+        "receive": { "$ref": "#/definitions/operationStatus" },
+        "balance": { "$ref": "#/definitions/operationStatus" },
+        "history": { "$ref": "#/definitions/operationStatus" },
+        "fee-quote": { "$ref": "#/definitions/operationStatus" },
+        "plan-transfer": { "$ref": "#/definitions/operationStatus" },
+        "local-sign": { "$ref": "#/definitions/operationStatus" },
+        "verify-signature": { "$ref": "#/definitions/operationStatus" }
       }
     }
   }

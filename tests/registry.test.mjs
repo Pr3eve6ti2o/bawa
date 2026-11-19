@@ -42,6 +42,7 @@ const profileFields = [
   'verification',
   'status',
   'sources',
+  'operations',
 ];
 
 function readJson(filename) {
@@ -347,9 +348,9 @@ test('T46: an implemented send claim is rejected', async (t) => {
   );
 });
 
-test('T46: send/sign/broadcast wording variants are rejected', async (t) => {
+test('T46: send/sign/broadcast wording variants are rejected for an unverified profile', async (t) => {
   const fixture = makeRepoFixture(t);
-  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+  mutateFixtureProfile(fixture, 'hd-wallet-cli', (profile) => {
     profile.implemented = [
       'Sending BTC to friends',
       'SIGNING support',
@@ -365,9 +366,9 @@ test('T46: send/sign/broadcast wording variants are rejected', async (t) => {
   }
 });
 
-test('T46 re-audit: euphemistic capability claims are rejected', async (t) => {
+test('T46 re-audit: euphemistic capability claims are rejected for an unverified profile', async (t) => {
   const fixture = makeRepoFixture(t);
-  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+  mutateFixtureProfile(fixture, 'hd-wallet-cli', (profile) => {
     profile.implemented = [
       'sent transactions',
       'signature creation',
@@ -381,6 +382,141 @@ test('T46 re-audit: euphemistic capability claims are rejected', async (t) => {
       `Expected an error mentioning "${wording}"; received:\n${errors.join('\n') || '(none)'}`,
     );
   }
+});
+
+// Registry v2 (PR2 Lane A, 2026-11-19): the web wallet's send/sign claims
+// are allowed because its operations map verifies plan-transfer and
+// local-sign (IMPLEMENTATION-REPORT.md section 6 item 6); broadcast
+// wording stays forbidden for every profile.
+test('Registry v2: an evidenced web-wallet send/sign claim is allowed, broadcast is not', async (t) => {
+  const fixture = makeRepoFixture(t);
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = [
+      'Sending BTC to friends',
+      'offline SIGNING via AnySigner',
+    ];
+  });
+  const { errors } = await validateAll(fixture.registry, undefined, fixture.root);
+  assert.ok(
+    !errors.some((error) => /Sending BTC/i.test(error) || /SIGNING/i.test(error)),
+    `Expected no send/sign error for the evidenced web-wallet claim; received:\n${errors.join('\n') || '(none)'}`,
+  );
+  mutateFixtureProfile(fixture, 'web-wallet', (profile) => {
+    profile.implemented = [...profile.implemented, 'broadcasting transactions'];
+  });
+  const { errors: errors2 } = await validateAll(fixture.registry, undefined, fixture.root);
+  assert.ok(
+    errors2.some((error) => error.includes('broadcasting transactions')),
+    `Expected a broadcast-claim error; received:\n${errors2.join('\n') || '(none)'}`,
+  );
+});
+
+// Registry v2 shape: version 2, per-profile operations, chainSupport.
+const V2_OPERATIONS = [
+  'create',
+  'derive',
+  'restore',
+  'receive',
+  'balance',
+  'history',
+  'fee-quote',
+  'plan-transfer',
+  'local-sign',
+  'verify-signature',
+];
+const V2_STATUSES = new Set([
+  'IMPLEMENTED_AND_VERIFIED',
+  'STARTER_IMPLEMENTED_AND_VERIFIED',
+  'DOCUMENTED_NOT_TESTED',
+  'NOT_SUPPORTED',
+]);
+
+test('Registry v2: version is 2, every profile has all ten operations, chainSupport covers every chain', () => {
+  const { entries: profiles } = readRegistry(registryDir, 'profiles');
+  const capabilities = readJson(path.join(registryDir, 'capabilities.json'));
+  assert.equal(capabilities.version, 2);
+  const chainSupport = capabilities.chainSupport;
+  assert.ok(chainSupport !== null && typeof chainSupport === 'object');
+
+  const chainToProfiles = new Map();
+  for (const profile of profiles) {
+    const operations = profile.operations;
+    assert.ok(
+      operations !== null && typeof operations === 'object' && !Array.isArray(operations),
+      `${profile.id} must have an operations object`,
+    );
+    for (const operation of V2_OPERATIONS) {
+      assert.ok(
+        Object.hasOwn(operations, operation),
+        `${profile.id}.operations.${operation} must be present`,
+      );
+      assert.ok(
+        V2_STATUSES.has(operations[operation]),
+        `${profile.id}.operations.${operation} must have a recognised v2 status, got ${JSON.stringify(operations[operation])}`,
+      );
+    }
+    assert.equal(
+      Object.keys(operations).length,
+      10,
+      `${profile.id}.operations must contain exactly the 10 wallet-build operations`,
+    );
+    for (const chain of profile.chains) {
+      if (!chainToProfiles.has(chain)) chainToProfiles.set(chain, []);
+      chainToProfiles.get(chain).push(profile.id);
+    }
+  }
+  assert.deepEqual(Object.keys(chainSupport).sort(), [...chainToProfiles.keys()].sort());
+  for (const [chain, ids] of chainToProfiles) {
+    const entry = chainSupport[chain];
+    assert.ok(entry, `chainSupport must cover ${chain}`);
+    assert.deepEqual(
+      [...entry.profiles].sort(),
+      [...ids].sort(),
+      `chainSupport.${chain}.profiles must match the profiles listing ${chain}`,
+    );
+    for (const operation of V2_OPERATIONS) {
+      assert.ok(
+        Object.hasOwn(entry.operations, operation),
+        `chainSupport.${chain}.operations.${operation} must be present`,
+      );
+      assert.ok(
+        V2_STATUSES.has(entry.operations[operation]),
+        `chainSupport.${chain}.operations.${operation} must have a recognised v2 status`,
+      );
+    }
+  }
+});
+
+test('Registry v2: a profile without operations is rejected', async (t) => {
+  const dir = makeFixture(t);
+  mutateRegistry(dir, 'profiles', (profiles) => {
+    delete profiles[0].operations;
+  });
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected a missing-operations error');
+  assertErrorMentions(errors, 'operations');
+});
+
+test('Registry v2: chainSupport naming the wrong profiles is rejected', async (t) => {
+  const dir = makeFixture(t);
+  const filename = path.join(dir, 'capabilities.json');
+  const document = readJson(filename);
+  document.chainSupport.btc.profiles = ['web-wallet'];
+  fs.writeFileSync(filename, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected a chainSupport profiles-mismatch error');
+  assertErrorMentions(errors, 'btc');
+});
+
+test('Registry v2: version 1 is rejected', async (t) => {
+  const dir = makeFixture(t);
+  const filename = path.join(dir, 'capabilities.json');
+  const document = readJson(filename);
+  document.version = 1;
+  fs.writeFileSync(filename, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
+  const { errors } = await validateAll(dir);
+  assert.ok(errors.length > 0, 'Expected a version-1 error');
+  assertErrorMentions(errors, 'version');
 });
 
 test('T46: implemented/missing overlap is rejected', async (t) => {

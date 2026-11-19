@@ -1,7 +1,94 @@
 {
   "registry": "capabilities",
-  "version": 1,
-  "updated": "2026-11-10",
+  "version": 2,
+  "updated": "2026-11-19",
+  "chainSupport": {
+    "btc": {
+      "profiles": [
+        "hd-wallet-cli",
+        "bitcoin-wallet",
+        "multichain-wallet",
+        "web-wallet",
+        "android-wallet",
+        "watch-only-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "IMPLEMENTED_AND_VERIFIED",
+        "fee-quote": "IMPLEMENTED_AND_VERIFIED",
+        "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
+        "local-sign": "IMPLEMENTED_AND_VERIFIED",
+        "verify-signature": "IMPLEMENTED_AND_VERIFIED"
+      }
+    },
+    "eth": {
+      "profiles": [
+        "hd-wallet-cli",
+        "evm-wallet",
+        "multichain-wallet",
+        "web-wallet",
+        "android-wallet",
+        "watch-only-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "IMPLEMENTED_AND_VERIFIED",
+        "fee-quote": "IMPLEMENTED_AND_VERIFIED",
+        "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
+        "local-sign": "IMPLEMENTED_AND_VERIFIED",
+        "verify-signature": "IMPLEMENTED_AND_VERIFIED"
+      }
+    },
+    "trx": {
+      "profiles": [
+        "hd-wallet-cli",
+        "multichain-wallet",
+        "web-wallet",
+        "android-wallet",
+        "watch-only-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "IMPLEMENTED_AND_VERIFIED",
+        "fee-quote": "IMPLEMENTED_AND_VERIFIED",
+        "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
+        "local-sign": "IMPLEMENTED_AND_VERIFIED",
+        "verify-signature": "IMPLEMENTED_AND_VERIFIED"
+      }
+    },
+    "ton": {
+      "profiles": [
+        "hd-wallet-cli",
+        "multichain-wallet",
+        "web-wallet",
+        "android-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "IMPLEMENTED_AND_VERIFIED",
+        "fee-quote": "DOCUMENTED_NOT_TESTED",
+        "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
+        "local-sign": "IMPLEMENTED_AND_VERIFIED",
+        "verify-signature": "DOCUMENTED_NOT_TESTED"
+      }
+    }
+  },
   "entries": [
     {
       "id": "btc-mainnet",
