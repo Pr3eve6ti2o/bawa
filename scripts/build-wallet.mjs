@@ -23,23 +23,23 @@ import { validateAll } from './validate-registry.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const notes = [
-  'send/sign/broadcast is not implemented in either starter',
-  'balances, prices and transaction history are unavailable — no provider selected',
+  'broadcast is not implemented anywhere',
+  'prices are unavailable — no provider selected',
   'on-device address derivation is not implemented on Android — no Trust Wallet Core AAR exists',
   'a successful build on one platform does not imply success on the other',
 ];
 
 // Platform-aware fallback for the registry's implemented/missing lists.
-// Mirrors scripts/generate-project.mjs; dead code once the registry
-// carries implemented/missing for every profile (a04/a05).
+// Mirrors scripts/generate-project.mjs; retained because the schema does
+// not require implemented/missing, so a future profile may still omit them.
 const fallbackImplemented = {
   cli: ['Derivation primitives via the repository tools (see security notes)'],
-  web: ['Watch-only address derivation in the browser (BTC, ETH, TRX, indices 0-4) via the vendored wallet-core 4.9.3 WASM boundary', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'Receive-screen QR display of a derived address'],
+  web: ['In-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses', 'Watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM', '14 screens with honest loading/empty/stale/locked/gate-failed/error states', 'Receive-QR display', 'Import of extended public keys only', 'Read-only mainnet balances and transaction history via per-chain adapters', 'Offline send: transaction construction (plan-transfer) and local signing via wallet-core AnySigner for all four chains, with post-sign verification for BTC/ETH/TRX'],
   android: ['Extended-public-key validation (no secrets, no derivation on-device)', '14-screen UI navigation with mock data and unavailable actions labelled as such', 'QR display of an address'],
 };
 const fallbackMissing = {
   cli: ['send', 'sign', 'broadcast', 'balances', 'prices', 'history'],
-  web: ['send', 'sign', 'broadcast', 'balances', 'prices', 'history', 'wallet creation and backup (repository tools only)'],
+  web: ['broadcast', 'prices'],
   android: ['on-device derivation', 'send', 'sign', 'broadcast', 'balances', 'prices', 'history', 'wallet creation and backup (repository tools only)'],
 };
 

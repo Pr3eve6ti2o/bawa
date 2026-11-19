@@ -29,7 +29,7 @@
         "Generation for BTC, ETH, TRX and TON and watch-only derivation for BTC, ETH, TRX and TON are IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers these primitives only, not a complete wallet or verification of every security boundary.",
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed; i is the receiving address index.",
         "TON uses m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (single address, no index).",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.",
         "No graphical UI foundation applies to this CLI profile. Full wallet verification remains DOCUMENTED_NOT_TESTED despite the verified generation and derivation primitives."
@@ -107,7 +107,7 @@
         "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "BTC watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status records derivation evidence, not verification of a complete Bitcoin wallet or every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. BTC uses m/84'/0'/0'/0/i, with account 0 and receiving branch 0 fixed.",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policy: BTC 6 confirmations, a customary recommendation. This is a documented policy, not enforced code.",
         "No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation."
@@ -181,7 +181,7 @@
         "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "ETH watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers this derivation evidence only; it does not establish generic EVM-wallet operation or verification of every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. ETH uses m/44'/60'/0'/0/i, with account 0 and receiving branch 0 fixed. This profile covers ETH only.",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policy: ETH finalised. Retain \"12\" only as an unsourced extra minimum, never as a substitute for finality. This is a documented policy, not enforced code.",
         "No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation."
@@ -262,7 +262,7 @@
         "Generation for BTC, ETH, TRX and TON and watch-only derivation for BTC, ETH, TRX and TON are IMPLEMENTED_AND_VERIFIED through the repository tools. This engine status does not establish an integrated multichain wallet or verification of every security boundary.",
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed.",
         "TON is single-address at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (no index).",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.",
         "No graphical UI foundation applies to this CLI profile. Shared derivation evidence does not establish cross-chain transaction operation."
@@ -436,7 +436,7 @@
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
         "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; on-device derivation is not implemented (no AAR); verification is through CLI tools and the web boundary tests, not Android derivation.",
         "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
-        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check."
       ]
@@ -526,7 +526,7 @@
         "BTC, ETH and TRX watch-only derivation through the repository tools is IMPLEMENTED_AND_VERIFIED. The engine status covers those derivation primitives only. The watch-only wallet product has not been built and remains DOCUMENTED_NOT_TESTED.",
         "Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Address derivation uses the corresponding extended public keys, not private key material.",
         "TON is excluded because it has no xpub; its generation-only route is not part of this watch-only profile.",
-        "Send, sign and broadcast are outside this profile and remain DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.",
+        "Send, sign and broadcast are outside this profile and remain DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
         "Testnet is the default; mainnet is out of scope by default.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*.",
         "No graphical UI foundation applies to this CLI profile. Verified derivation does not establish a built monitoring interface or enforced confirmation policies."

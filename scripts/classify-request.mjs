@@ -362,7 +362,7 @@ const REFUSAL_TON_SEND =
 const REFUSAL_TON_XPUB =
   'I cannot provide TON xpub support; the proposed TON scope has no xpub support.';
 const REFUSAL_SIGNING =
-  'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.';
+  'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.';
 const REFUSAL_MAINNET =
   'I cannot support mainnet use without separate approval; the default scope is testnet.';
 const REFUSAL_SWAPS =

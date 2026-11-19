@@ -144,11 +144,11 @@ describe('findRefusal()', () => {
   test('generic signing / broadcast / send is refused', () => {
     assert.equal(
       findRefusal('Add signing support to the web wallet'),
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.',
     );
     assert.equal(
       findRefusal('Add broadcast support'),
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.',
     );
   });
 
@@ -235,11 +235,11 @@ describe('T46 negator scope', () => {
   test('a negator across a comma does not negate send', () => {
     assert.equal(
       findRefusal('Build a wallet with no fees, send BTC daily'),
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.',
     );
     assert.equal(
       findRefusal('Build a wallet, not complicated, send funds'),
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.',
     );
   });
 
@@ -247,7 +247,7 @@ describe('T46 negator scope', () => {
     assert.equal(negated('send', 'Send BTC, no send on mainnet'), false);
     assert.equal(
       findRefusal('Send BTC, no send on mainnet'),
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.',
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.',
     );
   });
 
@@ -277,7 +277,7 @@ describe('T46 spelling and synonyms', () => {
 
   test('transfer / pay / withdraw with a value word are refused as send', () => {
     const signing =
-      'I cannot claim signing or broadcast support for production use: the only signing code in this repository is a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented.';
+      'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.';
     assert.equal(
       findRefusal('Build a web wallet to transfer BTC to friends'),
       signing,

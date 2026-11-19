@@ -1,9 +1,10 @@
 // T08 diagram-reference regression test — Doc 4 §13.0.
 // Guards the corrected diagram's traced claims: every in-repo path it cites
 // must exist, every validation-draft path it marks NOT IN REPO must stay
-// absent, and the Send-disabled / gated-signing facts it states must hold:
-// the only signing code is a local, test-only signer restricted to temporary
-// unfunded test credentials, and broadcast is not implemented.
+// absent, and the offline-send / gated-signing facts it states must hold:
+// the web wallet signs offline with real vault keys; the T25-isolated tool
+// signs only with temporary unfunded test credentials. Neither provides a
+// broadcast path.
 // Run: node tests/diagram-references.test.mjs (Node >=22 <23).
 // No network, no secrets, no private material.
 import test from "node:test";
@@ -109,22 +110,26 @@ test("validation-draft files stay out of the repo", () => {
   }
 });
 
-test("Web Send stays disabled and watch-only derivation stays TON-free", () => {
+test("Web Send signs offline with broadcast disabled; watch-only derivation stays TON-free", () => {
   const send = fs.readFileSync(
     path.join(ROOT, "apps/web/src/screens/send.tsx"),
     "utf8",
   );
   assert.ok(
-    send.includes("Sending is not implemented in this starter"),
-    "send.tsx must state sending is not implemented",
+    send.includes("previewSendAmount"),
+    "send.tsx must wire the offline send preview",
   );
   assert.ok(
-    send.includes("onSubmit={(event) => event.preventDefault()}"),
-    "send.tsx form must prevent submission",
+    send.includes("signEthOffline"),
+    "send.tsx must wire offline signing",
   );
   assert.ok(
-    send.includes("<fieldset disabled"),
-    "send.tsx form must be a disabled fieldset",
+    send.includes("Broadcast is disabled until separately authorised"),
+    "send.tsx must state broadcast is disabled",
+  );
+  assert.ok(
+    send.includes("not sent anywhere: broadcast is disabled until separately"),
+    "send.tsx must state signed transactions are not sent anywhere",
   );
   const boundary = fs.readFileSync(
     path.join(ROOT, "apps/web/src/engine/boundary.ts"),
@@ -149,8 +154,7 @@ test("Web Send stays disabled and watch-only derivation stays TON-free", () => {
 });
 
 test("no production signing/broadcast call exists in repo code", () => {
-  // The only signing code is a local, test-only signer restricted to temporary
-  // unfunded test credentials; broadcast is not implemented.
+  // Keep the prohibited-call scan intact; exempt only the throwing broadcast contract and the five rejection-test call sites, never production broadcast calls.
   const codeDirs = ["tools", "apps", "scripts", "packages"];
   const callPattern = /\b(signTransaction|sendRawTransaction)\s*\(|\bbroadcast\s*\(/;
   const allowlist = {
@@ -158,6 +162,16 @@ test("no production signing/broadcast call exists in repo code", () => {
     "tools/mainnet-tx/unsigned-tx.mjs": true,
     // broadcast( appears only inside the FORBIDDEN_IMPLEMENTED regex literal.
     "scripts/validate-registry.mjs": true,
+    // broadcast( is the throwing-stub interface contract (Promise<never>).
+    "apps/web/src/wallet/adapters/types.ts": true,
+    // broadcast( appears only in 'broadcast stays disabled' tests asserting
+    // adapter.broadcast(...) rejects, and the throwing stub adapter in
+    // types.test.ts those assertions use.
+    "apps/web/src/wallet/adapters/btc.test.ts": true,
+    "apps/web/src/wallet/adapters/eth.test.ts": true,
+    "apps/web/src/wallet/adapters/ton.test.ts": true,
+    "apps/web/src/wallet/adapters/trx.test.ts": true,
+    "apps/web/src/wallet/adapters/types.test.ts": true,
   };
   const offenders = [];
   for (const dir of codeDirs) {
