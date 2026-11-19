@@ -516,6 +516,25 @@ def assert_bundle_decrypts(bundle_path, data_key) -> str:
                 "seed bundle independent verification failed: plaintext is "
                 "not a valid 24-word BIP-39 mnemonic"
             )
+        try:
+            from mnemonic import Mnemonic
+        except ImportError:
+            raise SystemExit(
+                "seed bundle independent verification failed: "
+                "mnemonic package is not installed"
+            ) from None
+        try:
+            m = Mnemonic("english")
+            if m.check(text) is not True or len(m.to_entropy(text)) != 32:
+                raise SystemExit(
+                    "seed bundle independent verification failed: "
+                    "trezor mnemonic validation failed"
+                ) from None
+        except Exception:
+            raise SystemExit(
+                "seed bundle independent verification failed: "
+                "trezor mnemonic validation failed"
+            ) from None
     except UnicodeDecodeError:
         raise SystemExit(
             "seed bundle independent verification failed: plaintext is not UTF-8"

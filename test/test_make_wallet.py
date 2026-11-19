@@ -303,6 +303,36 @@ class TestAssertBundleDecrypts(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 assert_bundle_decrypts(path, key)
 
+    def test_tampered_checksum_word_rejected(self):
+        import tempfile
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["zoo"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
+            with self.assertRaises(SystemExit):
+                assert_bundle_decrypts(path, key)
+
+
+class TestTrezorMnemonicLibrary(unittest.TestCase):
+    def test_generate_256_bit_mnemonic(self):
+        from mnemonic import Mnemonic
+
+        m = Mnemonic("english")
+        words = m.generate(strength=256)
+        self.assertEqual(len(words.split()), 24)
+        self.assertIs(m.check(words), True)
+        self.assertEqual(len(m.to_entropy(words)), 32)
+
+    def test_seed_matches_bip_utils(self):
+        from bip_utils import Bip39SeedGenerator
+        from mnemonic import Mnemonic
+
+        words = " ".join(["abandon"] * 23 + ["art"])
+        seed = Mnemonic("english").to_seed(words, passphrase="")
+        self.assertEqual(len(seed), 64)
+        self.assertEqual(seed, Bip39SeedGenerator(words).Generate())
+
 
 class TestRunGenerator(unittest.TestCase):
     """F-14: generator output is collected under a byte cap."""
