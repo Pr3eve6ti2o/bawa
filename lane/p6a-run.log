@@ -1,2 +1,0 @@
-FAILED: Error: TOOL error: AgentRouter /responses (400) [bad-request]: {"error":{"code":"content-blocked","message":"content-blocked (request id: 202611200413376702735966p9sdtkYfTyPR)","param":"","type":"agent_router_api_error"}}
-stderr tail: (empty)

@@ -1,2 +1,0 @@
-FAILED: Error: TOOL error: AgentRouter /responses (transport) [upstream-transient]: AgentRouter /responses gateway status: incomplete (max_output_tokens)
-stderr tail: (empty)
