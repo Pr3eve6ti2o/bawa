@@ -9,6 +9,9 @@ import {
   verifyWasmHash,
 } from '../../scripts/wasm-integrity.mjs';
 
+const EXPECTED_CONNECT_SRC =
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com";
+
 describe('T47 security headers', () => {
   it('CSP allows same-origin scripts plus WASM compilation only', () => {
     const scriptSrc = CONTENT_SECURITY_POLICY.split(';')
@@ -18,17 +21,37 @@ describe('T47 security headers', () => {
     // ('unsafe-inline' appears ONLY in style-src — see the next test.)
     expect(scriptSrc).toBe("script-src 'self' 'wasm-unsafe-eval'");
     expect(CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline'");
+    // No off-origin script source: script-src lists no https: origin.
+    // (connect-src DOES list the five pinned provider origins — see below —
+    // so the old whole-policy 'no https:' assertion no longer applies.)
+    expect(scriptSrc).not.toContain('https:');
     expect(CONTENT_SECURITY_POLICY).not.toContain('http:');
-    expect(CONTENT_SECURITY_POLICY).not.toContain('https:');
     expect(CONTENT_SECURITY_POLICY).not.toContain('*');
   });
 
-  it('CSP blocks plugins, base hijack, framing and off-origin fetches', () => {
+  it('CSP blocks plugins, base hijack and framing; connect-src allows only the five pinned provider origins', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
-    expect(CONTENT_SECURITY_POLICY).toContain("connect-src 'self'");
+    expect(CONTENT_SECURITY_POLICY).toContain(EXPECTED_CONNECT_SRC);
     expect(CONTENT_SECURITY_POLICY).toContain("form-action 'self'");
+    // Exact match on the directive: no other origin may creep in.
+    const connectSrc = CONTENT_SECURITY_POLICY.split(';')
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith('connect-src '));
+    expect(connectSrc).toBe(EXPECTED_CONNECT_SRC);
+    // Exactly five https: origins in the whole policy, all of them in
+    // connect-src: mempool.space (BTC), ethereum-rpc.publicnode.com (ETH RPC)
+    // + eth.blockscout.com (ETH history), api.trongrid.io (TRX),
+    // toncenter.com (TON).
+    const httpsOrigins = CONTENT_SECURITY_POLICY.match(/https:\/\/[^\s;]+/g) ?? [];
+    expect(httpsOrigins).toEqual([
+      'https://mempool.space',
+      'https://ethereum-rpc.publicnode.com',
+      'https://eth.blockscout.com',
+      'https://api.trongrid.io',
+      'https://toncenter.com',
+    ]);
   });
 
   it('preview/server headers carry the CSP and framing + sniffing guards', () => {
