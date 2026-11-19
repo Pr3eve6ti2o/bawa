@@ -17,7 +17,8 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { classifyRequest, findRefusal } from './classify-request.mjs';
+import { classifyRequest, extractChains, findRefusal } from './classify-request.mjs';
+import { planFromNaturalLanguage } from './plan-build.mjs';
 import { validateAll } from './validate-registry.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -144,7 +145,10 @@ function main() {
   }
 
   // Classification lives in scripts/classify-request.mjs (F-20/21/22).
-  const result = classifyRequest(request);
+  // The registry profiles are passed in so the classifier's chain
+  // check (PR2 Lane C) can verify a named chain against the matched
+  // profile's chains.
+  const result = classifyRequest(request, profiles);
   let profileId = null;
   let ambiguous = null;
   if (result.profile) {
@@ -203,6 +207,72 @@ function main() {
   }
   const platform = profile.platform;
   const generatedPath = join(repoRoot, 'generated', profileId);
+
+  // PR2 Lane C: planner gate. After classification succeeds and before
+  // ANY generation step, prove the classified profile can build for the
+  // chains named in the request. This is the second layer behind the
+  // classifier's own chain check, and the one that catches the
+  // documented misroute (docs/wallet-reference-map.md:156):
+  // classifyRequest() routed "Build a web wallet for Solana" to the
+  // web-wallet profile even though that starter has no Solana support.
+  // A planner rejection fails closed: a JSON report (same shape as the
+  // refusal/unclassifiable reports, with a `planRejection` field
+  // carrying the planner's errors), exit 2, and nothing generated.
+  const namedChains = extractChains(request);
+  const planChains =
+    namedChains.length > 0 ? namedChains : [...profile.chains];
+  // A plain-language build request implies wallet creation. Creation is
+  // the one operation the registry verifies for every chain on every
+  // profile: derive is OPEN for TON in the registry, so requiring it
+  // would newly reject valid TON and no-chain builds that the profile's
+  // own chains list supports. The gate's job here is the chain/profile
+  // misroute, which the planner's chain check covers for any operation
+  // set; broadcast stays disabled and the mode stays opt-in-read-only.
+  const planResult = planFromNaturalLanguage(
+    profileId,
+    planChains,
+    ['create'],
+    'opt-in-read-only',
+    'disabled',
+    join(repoRoot, 'registry'),
+  );
+  if (!planResult.ok) {
+    const reportPath = writeReport(
+      {
+        request,
+        profile: profileId,
+        platforms: [],
+        steps: [],
+        generatedPath: null,
+        generatedFiles: [],
+        capabilities: { implemented: [], missing: [], chains: [] },
+        verification: null,
+        ambiguous: null,
+        planRejection: {
+          profile: profileId,
+          chains: planChains,
+          errors: planResult.errors,
+        },
+        notes,
+      },
+      outArg,
+    );
+    console.log(reportPath);
+    console.log('build-wallet: PLAN REJECTED');
+    return 2;
+  }
+
+  // Test-only hook (used by scripts/build-wallet.test.mjs): stop after
+  // the planner gate passes, without generating. It exists so the gate
+  // can be verified for valid requests without running the slow
+  // generate + verify steps (npm ci / vite build / vitest / gradle).
+  // Never set in production use.
+  if (process.env.BUILD_WALLET_STOP_AFTER_PLAN === '1') {
+    console.log(
+      `build-wallet: PLAN OK ${profileId} ${planChains.join(',')}`,
+    );
+    return 0;
+  }
 
   const steps = [];
   let blocked = false;

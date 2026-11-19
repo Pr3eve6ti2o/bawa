@@ -1,15 +1,25 @@
 // classify-request.mjs — request classification for the one-prompt
 // workflow (extracted from scripts/build-wallet.mjs, F-20/21/22/31).
-// Pure functions: no I/O, no process state. Exported for unit testing.
+// Exported for unit testing. The matching helpers are pure; the
+// chain/profile check (PR2 Lane C) reads the profile chains from
+// registry/profiles.json — never hard-coded — via loadProfiles(), unless
+// the caller passes the profiles array in.
 //
-// Return shapes from classifyRequest(request):
+// Return shapes from classifyRequest(request, profiles?):
 //   { profile: <profile id> }            — routed to a profile
 //   { ambiguous: 'split' }               — web + Android in one request
-//   { unclassifiable: true, reason }     — no profile matches (F-20)
+//   { unclassifiable: true, reason }     — no profile matches (F-20), or
+//     the request names a chain the matched profile does not support
+//     (PR2: "Build a web wallet for Solana" is unclassifiable, not
+//     web-wallet — the web-wallet profile has no Solana support)
 //
 // findRefusal(request) returns the exact refusal sentence from
 // ai/request-routing.md ("Unsupported requests") or null. Checked
 // BEFORE classification (F-31).
+
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -122,8 +132,155 @@ const NON_ETH_EVM_CHAINS = [
   'mode', 'taiko', 'injective', 'zkevm', 'polygon zkevm',
 ];
 
-export function classifyRequest(request) {
+// PR2 Lane C: chain names recognised in plain-language requests, mapped
+// to the registry chain id. The map covers the chains the builder can
+// build (btc/eth/trx/ton) plus recognised real chains no profile
+// supports (solana, cosmos, ...) so a request naming one fails closed
+// instead of routing to a profile that cannot build for it.
+//
+// Deliberately NOT bare words: 'base' (only 'base chain' / 'base
+// network' — bare "base" false-positives on "base fee"), 'mode',
+// 'scroll', 'blast', 'harmony' (ordinary English words in wallet
+// requests — "dark mode", "smooth scroll"), 'near' (only the 'near
+// protocol' phrase), 'dot' (polkadot is covered; bare "dot" is not a
+// chain mention), 'apt' (aptos is covered; bare "apt" is an English
+// word). The evm branch's NON_ETH_EVM_CHAINS check still covers
+// scroll/blast/harmony/mode when the request names Ethereum/EVM.
+export const CHAIN_NAME_TO_ID = {
+  bitcoin: 'btc',
+  btc: 'btc',
+  ethereum: 'eth',
+  eth: 'eth',
+  ether: 'eth',
+  tron: 'trx',
+  trx: 'trx',
+  ton: 'ton',
+  solana: 'solana',
+  sol: 'solana',
+  cosmos: 'cosmos',
+  atom: 'cosmos',
+  dogecoin: 'doge',
+  doge: 'doge',
+  litecoin: 'ltc',
+  ltc: 'ltc',
+  cardano: 'ada',
+  ada: 'ada',
+  polkadot: 'dot',
+  ripple: 'xrp',
+  xrp: 'xrp',
+  stellar: 'xlm',
+  xlm: 'xlm',
+  monero: 'xmr',
+  xmr: 'xmr',
+  zcash: 'zec',
+  zec: 'zec',
+  avalanche: 'avax',
+  avax: 'avax',
+  polygon: 'polygon',
+  matic: 'polygon',
+  arbitrum: 'arbitrum',
+  optimism: 'optimism',
+  bsc: 'bsc',
+  'binance smart chain': 'bsc',
+  'bnb chain': 'bsc',
+  'bnb smart chain': 'bsc',
+  'base chain': 'base',
+  'base network': 'base',
+  fantom: 'fantom',
+  gnosis: 'gnosis',
+  celo: 'celo',
+  zksync: 'zksync',
+  linea: 'linea',
+  mantle: 'mantle',
+  cronos: 'cronos',
+  moonbeam: 'moonbeam',
+  moonriver: 'moonriver',
+  metis: 'metis',
+  sei: 'sei',
+  kava: 'kava',
+  taiko: 'taiko',
+  injective: 'injective',
+  zkevm: 'zkevm',
+  'polygon zkevm': 'zkevm',
+  sui: 'sui',
+  aptos: 'aptos',
+  hedera: 'hbar',
+  hbar: 'hbar',
+  algorand: 'algo',
+  algo: 'algo',
+  tezos: 'xtz',
+  xtz: 'xtz',
+  filecoin: 'fil',
+  fil: 'fil',
+  'internet computer': 'icp',
+  icp: 'icp',
+  'near protocol': 'near',
+};
+
+// extractChains(request): the chain ids named (non-negated) in the
+// request, in map order, deduplicated. Used by the classifyRequest
+// chain check and by build-wallet.mjs to build the planner input.
+export function extractChains(request) {
+  const found = [];
+  for (const [name, id] of Object.entries(CHAIN_NAME_TO_ID)) {
+    const named = name.includes(' ')
+      ? requestedPhrase(name, request)
+      : requested(name, request);
+    if (named && !found.includes(id)) found.push(id);
+  }
+  return found;
+}
+
+// The registry profiles, read from registry/profiles.json relative to
+// this module (never hard-coded). Cached after the first read; null
+// when the file cannot be read, in which case the chain check is
+// skipped (build-wallet.mjs fails closed earlier via validateAll;
+// direct callers keep the previous routing behaviour).
+let cachedProfiles;
+function loadProfiles() {
+  if (cachedProfiles !== undefined) return cachedProfiles;
+  cachedProfiles = null;
+  try {
+    const profilesPath = join(
+      dirname(fileURLToPath(import.meta.url)),
+      '..',
+      'registry',
+      'profiles.json',
+    );
+    const parsed = JSON.parse(readFileSync(profilesPath, 'utf8'));
+    if (Array.isArray(parsed)) cachedProfiles = parsed;
+  } catch {
+    // Registry unreadable: skip the chain check (see above).
+  }
+  return cachedProfiles;
+}
+
+// withChainCheck(result, request, profiles): fail-closed wrapper for a
+// { profile } classification. If the request names a chain the matched
+// profile does not support (per its registry `chains`), the request is
+// unclassifiable, with a reason naming the chain, the profile and the
+// profile's supported chains. Ambiguous / unclassifiable results and
+// requests naming no chain pass through unchanged.
+function withChainCheck(result, request, profiles) {
+  if (!result.profile || !Array.isArray(profiles)) return result;
+  const profile = profiles.find((entry) => entry?.id === result.profile);
+  const supported = Array.isArray(profile?.chains) ? profile.chains : null;
+  if (!supported) return result;
+  const named = extractChains(request);
+  const unsupported = named.filter((chain) => !supported.includes(chain));
+  if (unsupported.length === 0) return result;
+  return {
+    unclassifiable: true,
+    reason: `chain '${unsupported.join(', ')}' requested but not supported by the ${result.profile} profile (supported chains: ${supported.join(', ')})`,
+  };
+}
+
+export function classifyRequest(request, profiles) {
   const lower = request.toLowerCase();
+  // The profiles to check named chains against: the caller's array, or
+  // the registry when the caller passes none. Chain lists are never
+  // hard-coded here.
+  const registryProfiles = profiles ?? loadProfiles();
   // Short tokens match as whole words only: substring matching would
   // false-positive ("eth" inside "something", "cli" inside "click").
   const hasWeb =
@@ -138,14 +295,16 @@ export function classifyRequest(request) {
     requestedPhrase('extended public key', request);
 
   // Classification, ordered, first match wins. No "wallet" word required.
+  // Every single-profile return goes through the chain check (PR2 Lane C);
+  // ambiguous and unclassifiable returns are untouched.
   if (hasWeb && hasAndroid) {
     return { ambiguous: 'split' };
   } else if (hasAndroid) {
-    return { profile: 'android-wallet' };
+    return withChainCheck({ profile: 'android-wallet' }, request, registryProfiles);
   } else if (hasWeb) {
-    return { profile: 'web-wallet' };
+    return withChainCheck({ profile: 'web-wallet' }, request, registryProfiles);
   } else if (word('multi-chain', lower) || word('multichain', lower)) {
-    return { profile: 'multichain-wallet' };
+    return withChainCheck({ profile: 'multichain-wallet' }, request, registryProfiles);
   } else if (
     requested('hd', request) ||
     requestedPhrase('hierarchical deterministic', request) ||
@@ -153,7 +312,7 @@ export function classifyRequest(request) {
     requestedPhrase('command-line', request) ||
     requestedPhrase('command line', request)
   ) {
-    return { profile: 'hd-wallet-cli' };
+    return withChainCheck({ profile: 'hd-wallet-cli' }, request, registryProfiles);
   } else if (
     (requested('bitcoin', request) || requested('btc', request)) &&
     (requested('evm', request) || requested('ethereum', request) || requested('eth', request))
@@ -172,9 +331,9 @@ export function classifyRequest(request) {
     // F-21: a Bitcoin request with watch-only language and no
     // generation language is a watch-only request, not ambiguous.
     if (hasWatchOnly && !generationLanguage) {
-      return { profile: 'watch-only-wallet' };
+      return withChainCheck({ profile: 'watch-only-wallet' }, request, registryProfiles);
     }
-    return { profile: 'bitcoin-wallet' };
+    return withChainCheck({ profile: 'bitcoin-wallet' }, request, registryProfiles);
   } else if (requested('evm', request) || requested('ethereum', request) || requested('eth', request)) {
     // T46: a named non-ETH EVM chain fails closed instead of silently
     // routing to the ETH-only evm-wallet profile.
@@ -189,9 +348,9 @@ export function classifyRequest(request) {
         reason: `non-ETH EVM chain requested: ${nonEthChain}; the evm-wallet profile covers ETH derivation only`,
       };
     }
-    return { profile: 'evm-wallet' };
+    return withChainCheck({ profile: 'evm-wallet' }, request, registryProfiles);
   } else if (hasWatchOnly) {
-    return { profile: 'watch-only-wallet' };
+    return withChainCheck({ profile: 'watch-only-wallet' }, request, registryProfiles);
   }
   return { unclassifiable: true, reason: 'cannot classify request' };
 }

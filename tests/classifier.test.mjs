@@ -1,8 +1,13 @@
 // Unit tests for scripts/classify-request.mjs (F-20/21/22/31).
-// Pure-function tests: no generation, no I/O.
+// No generation. classifyRequest reads registry/profiles.json by
+// default (cached) for the PR2 chain check; pass the profiles array
+// explicitly to avoid the read.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyRequest, findRefusal, negated } from '../scripts/classify-request.mjs';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { classifyRequest, extractChains, findRefusal, negated } from '../scripts/classify-request.mjs';
 
 describe('negated()', () => {
   test('a token preceded by "no" within 30 chars does not count', () => {
@@ -348,6 +353,111 @@ describe('T46 non-ETH EVM chain', () => {
         unclassifiable: true,
         reason: 'non-ETH EVM chain requested: base chain; the evm-wallet profile covers ETH derivation only',
       },
+    );
+  });
+});
+
+// PR2 Lane C: a request naming a chain the matched profile does not
+// support fails closed as unclassifiable (the Solana misroute), with a
+// reason naming the chain, the profile and the profile's supported
+// chains. Chain lists come from registry/profiles.json, never from
+// hard-coded lists in the classifier.
+describe('PR2 Lane C chain/profile mismatch', () => {
+  test('Solana on web is unclassifiable, not web-wallet', () => {
+    assert.deepEqual(classifyRequest('Build a web wallet for Solana'), {
+      unclassifiable: true,
+      reason: "chain 'solana' requested but not supported by the web-wallet profile (supported chains: btc, eth, trx, ton)",
+    });
+  });
+
+  test('Bitcoin on web still routes to web-wallet', () => {
+    assert.deepEqual(classifyRequest('Build a web wallet for Bitcoin'), {
+      profile: 'web-wallet',
+    });
+    assert.deepEqual(classifyRequest('Build a web wallet for BTC'), {
+      profile: 'web-wallet',
+    });
+  });
+
+  test('Cosmos on web is unclassifiable (same fail-closed shape)', () => {
+    const result = classifyRequest('Build a web wallet for Cosmos');
+    assert.equal(result.unclassifiable, true);
+    assert.match(result.reason, /cosmos/);
+    assert.match(result.reason, /web-wallet/);
+    assert.match(result.reason, /btc, eth, trx, ton/);
+  });
+
+  test('Ethereum on web still routes; no chain named still routes', () => {
+    assert.deepEqual(
+      classifyRequest('Build a web wallet for Ethereum'),
+      { profile: 'web-wallet' },
+    );
+    assert.deepEqual(classifyRequest('Build a web wallet'), {
+      profile: 'web-wallet',
+    });
+  });
+
+  test('TON on watch-only is unclassifiable (TON has no xpub)', () => {
+    const result = classifyRequest('Build a watch-only wallet for TON');
+    assert.equal(result.unclassifiable, true);
+    assert.match(result.reason, /ton/);
+    assert.match(result.reason, /watch-only-wallet/);
+    assert.match(result.reason, /btc, eth, trx/);
+  });
+
+  test('a negated chain does not block routing', () => {
+    assert.deepEqual(classifyRequest('Build a web wallet, no Solana'), {
+      profile: 'web-wallet',
+    });
+  });
+
+  test('explicit profiles argument (the build-wallet call path) behaves the same', () => {
+    const profiles = JSON.parse(
+      readFileSync(
+        join(
+          dirname(fileURLToPath(import.meta.url)),
+          '..',
+          'registry',
+          'profiles.json',
+        ),
+        'utf8',
+      ),
+    );
+    assert.deepEqual(
+      classifyRequest('Build a web wallet for Solana', profiles),
+      {
+        unclassifiable: true,
+        reason: "chain 'solana' requested but not supported by the web-wallet profile (supported chains: btc, eth, trx, ton)",
+      },
+    );
+    assert.deepEqual(
+      classifyRequest('Build a web wallet for Bitcoin', profiles),
+      { profile: 'web-wallet' },
+    );
+  });
+});
+
+describe('extractChains()', () => {
+  test('names map to registry chain ids, deduplicated', () => {
+    assert.deepEqual(
+      extractChains('Build a web wallet for Solana and Bitcoin'),
+      ['btc', 'solana'],
+    );
+    assert.deepEqual(
+      extractChains('Build a web wallet for Base chain'),
+      ['base'],
+    );
+    assert.deepEqual(
+      extractChains('Build a web wallet with base fee support'),
+      [],
+    );
+  });
+
+  test('negated chains are not extracted', () => {
+    assert.deepEqual(extractChains('Build a web wallet, no Solana'), []);
+    assert.deepEqual(
+      extractChains('Build a web wallet for Bitcoin, not Solana'),
+      ['btc'],
     );
   });
 });
