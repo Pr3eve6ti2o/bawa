@@ -7,6 +7,7 @@ import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import { AssetRows } from './asset-rows';
+import { Card } from '../ui/components/card';
 
 const ACTIONS = [
   { to: '/send', icon: Send, label: 'Send' },
@@ -23,9 +24,6 @@ export function DashboardScreen() {
   const {
     balances,
     history,
-    locked,
-    unlock,
-    vaultState,
     refreshBalances,
     refreshHistory,
   } = useWallet();
@@ -82,17 +80,22 @@ export function DashboardScreen() {
     <div className="space-y-6">
       <h1 className="sr-only">Portfolio</h1>
 
-      <div className="space-y-1 pt-1">
-        <p className="text-[13px] font-medium text-[#aab5d1]">Portfolio balance</p>
-        <p className="text-2xl font-bold tracking-tight text-white">{hero.text}</p>
+      <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
+        <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
+        <p className="text-display-lg font-bold tracking-tight text-panel-text">{hero.text}</p>
         {hero.noPriceFeed && (
-          <p className="text-[13px] text-[#aab5d1]">
+          <p className="text-xs leading-[18px] text-panel-text-muted">
             No price feed connected — portfolio total unavailable. Balances below
             are exact native amounts from the mainnet adapters.
           </p>
         )}
-        <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
-          {hero.retry ? 'Retry' : 'Refresh balances'}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={heroLoading}
+          onClick={() => void refreshBalances()}
+        >
+          {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
         </Button>
       </div>
 
@@ -101,12 +104,12 @@ export function DashboardScreen() {
           <Link
             key={to}
             to={to}
-            className="flex flex-col items-center gap-2 rounded-[15px] py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
+            className="flex flex-col items-center gap-2 rounded-[15px] py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
           >
-            <span className="flex size-14 items-center justify-center rounded-full bg-[#263451] text-[#b4aaff] transition-colors hover:bg-[#2a3651]">
+            <span className="flex size-14 items-center justify-center rounded-full bg-panel-icon-tile text-panel-accent transition-colors hover:bg-panel-action-hover">
               <Icon className="size-6" aria-hidden="true" />
             </span>
-            <span className="text-[11px] font-semibold text-[#edf0fc]">{label}</span>
+            <span className="text-xs leading-4 font-medium text-panel-text">{label}</span>
           </Link>
         ))}
       </div>
@@ -121,7 +124,7 @@ export function DashboardScreen() {
       <div
         role="tablist"
         aria-label="Wallet views"
-        className="mb-4 flex w-fit gap-1 rounded-xl border border-[#263454] bg-[#0b1326] p-1"
+        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1"
       >
         {(['tokens', 'activity'] as const).map((tab) => (
           <button
@@ -149,10 +152,10 @@ export function DashboardScreen() {
               setAssetsTab(nextTab);
               document.getElementById(`dashboard-assets-${nextTab}-tab`)?.focus();
             }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8daeff] ${
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
               assetsTab === tab
-                ? 'bg-[#1a2948] text-white'
-                : 'text-[#c8d0e8] hover:bg-[#14213b] hover:text-white'
+                ? 'bg-panel-active text-panel-text'
+                : 'text-panel-text-soft hover:bg-panel-hover hover:text-panel-text'
             }`}
           >
             {tab === 'tokens' ? 'Tokens' : 'Activity'}
@@ -168,21 +171,24 @@ export function DashboardScreen() {
         {assetsTab === 'tokens' ? (
           <section aria-label="Assets">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">Assets</h2>
-              <label className="flex items-center gap-2 text-xs font-semibold text-[#c8d0e8]">
-                <input
-                  type="checkbox"
-                  checked={hideZero}
-                  onChange={(event) => setHideZero(event.target.checked)}
-                />
+              <h2 className="text-lg font-semibold text-panel-text">Assets</h2>
+              <Button
+                type="button"
+                aria-pressed={hideZero}
+                onClick={() => setHideZero((current) => !current)}
+                variant={hideZero ? 'default' : 'outline'}
+                className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+              >
                 Hide zero balances
-              </label>
+              </Button>
             </div>
-            <AssetRows hideZero={hideZero} />
+            <Card className="mt-4">
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} />
+            </Card>
           </section>
         ) : (
           <section aria-label="Activity" className="space-y-3">
-            <h2 className="text-lg font-bold text-white">Recent activity</h2>
+            <h2 className="text-lg font-semibold text-panel-text">Recent activity</h2>
 
             {(() => {
               const chains = availableFor('history');
@@ -222,7 +228,7 @@ export function DashboardScreen() {
               return (
                 <>
                   {rows.length > 0 ? (
-                    <ul className="divide-y divide-[#263454] overflow-hidden rounded-xl border border-[#263454] bg-[#0b1326]">
+                    <ul className="divide-y divide-panel-border overflow-hidden rounded-xl border border-panel-border bg-panel-surface">
                       {rows.map(({ chain, tx }) => {
                         const config = chainConfig(chain);
                         const time = timestampMs(tx.timestamp);
@@ -237,16 +243,16 @@ export function DashboardScreen() {
                           <li key={`${chain}:${tx.hash}`}>
                             <Link
                               to={`/transactions/${tx.hash}`}
-                              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-[#14213b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-[#8daeff]"
+                              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-panel-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-panel-accent"
                             >
                               <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-white">
+                                <span className="block text-sm font-semibold text-panel-text">
                                   {direction}
-                                  <span className="font-normal text-[#c8d0e8]">
+                                  <span className="font-normal text-panel-text-soft">
                                     {' · '}{config.symbol}
                                   </span>
                                 </span>
-                                <span className="mt-1 block text-xs text-[#a5b2d3]">
+                                <span className="mt-1 block text-xs text-panel-text-muted">
                                   {time == null
                                     ? 'Pending'
                                     : new Date(time).toLocaleDateString('en-GB', {
@@ -259,7 +265,7 @@ export function DashboardScreen() {
                                       : ''}
                                 </span>
                               </span>
-                              <span className="shrink-0 text-right text-sm font-semibold text-white">
+                              <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
                                 {formatNativeWithSymbol(
                                   tx.amountBaseUnits,
                                   CHAIN_DECIMALS[chain],
@@ -272,25 +278,24 @@ export function DashboardScreen() {
                       })}
                     </ul>
                   ) : loading ? (
-                    <Skeleton className="h-20 w-full rounded-xl bg-[#14213b]" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
                   ) : (
-                    <p className="rounded-xl border border-[#263454] bg-[#0b1326] p-4 text-sm text-[#c8d0e8]">
-                      No transactions yet
-                    </p>
+                    <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
                   )}
 
                   {unavailableChains.map((chain) => (
                     <div
                       key={`history-unavailable:${chain}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[#263454] bg-[#0b1326] px-4 py-3"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
                     >
-                      <p className="text-sm text-[#c8d0e8]">
+                      <p className="text-sm text-panel-text-soft">
                         {chainConfig(chain).displayName} history unavailable
                       </p>
                       <Button
                         type="button"
+                        variant="outline"
                         onClick={() => void refreshHistory()}
-                        className="shrink-0 rounded-lg border border-[#334767] bg-[#1a2948] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#223658]"
+                        className="h-11 shrink-0"
                       >
                         Retry
                       </Button>
@@ -303,48 +308,6 @@ export function DashboardScreen() {
         )}
       </div>
 
-      {locked ? (
-        <div className="space-y-4 rounded-[20px] bg-[#243454] p-5">
-          <p className="text-sm text-[#eff2fc]">
-            Locked — derived addresses are hidden until you unlock.
-          </p>
-          <Button type="button" onClick={() => void unlock()}>
-            Unlock
-          </Button>
-        </div>
-      ) : vaultState === 'locked' ? (
-        <div className="space-y-3 rounded-[20px] bg-[#243454] p-5">
-          <p className="text-sm text-[#eff2fc]">
-            Vault locked — your vault addresses are hidden until you unlock.
-          </p>
-          <Link
-            to="/lock"
-            className="inline-block rounded-full bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] px-4 py-2 text-sm font-semibold text-white"
-          >
-            Unlock
-          </Link>
-        </div>
-      ) : vaultState === 'no-vault' ? (
-        <div className="space-y-3 rounded-[20px] bg-[#243454] p-5">
-          <p className="text-sm text-[#eff2fc]">
-            No wallet yet — create a wallet or import one to see its balances.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/create-wallet"
-              className="inline-block rounded-full bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] px-4 py-2 text-sm font-semibold text-white"
-            >
-              Create wallet
-            </Link>
-            <Link
-              to="/import-wallet"
-              className="inline-block rounded-full border border-white/10 bg-[#263451] px-4 py-2 text-sm font-semibold text-[#eff2fc]"
-            >
-              Import wallet
-            </Link>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

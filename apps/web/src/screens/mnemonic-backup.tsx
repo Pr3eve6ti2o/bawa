@@ -35,7 +35,7 @@ export function MnemonicBackupScreen() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
           <CardDescription>

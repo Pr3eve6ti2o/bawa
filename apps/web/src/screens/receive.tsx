@@ -6,6 +6,9 @@ import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/format';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
+import { Card } from '../ui/components/card';
+import { Input } from '../ui/components/input';
+import { Label } from '../ui/components/label';
 
 export function ReceiveScreen() {
   const { addresses, vaultAddresses, selectedChain, setSelectedChain } = useWallet();
@@ -105,16 +108,22 @@ export function ReceiveScreen() {
               setAmount('');
               setSelectedChain(available);
             }}
-            className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff] ${
+            className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               chain === available
-                ? 'bg-gradient-to-r from-[#8b7cff] to-[#4f7cff] text-white'
-                : 'border border-white/10 bg-[#263451] text-[#aab5d1] hover:text-white'
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-muted-foreground hover:text-foreground'
             }`}
           >
             {chainConfig(available).symbol}
           </button>
         ))}
       </div>
+
+      <Alert>
+        <AlertDescription>
+          Send only on the selected network — the sender must use the network you selected, even where addresses look the same.
+        </AlertDescription>
+      </Alert>
 
       {isWatchOnly && (
         <Alert>
@@ -125,24 +134,47 @@ export function ReceiveScreen() {
         </Alert>
       )}
 
-      <div className="rounded-[30px] border border-white/10 bg-[#243454] p-6 text-white">
+      {address && (
+        <div className="space-y-1">
+          <Label htmlFor="receive-amount" className="text-sm font-medium">
+            Amount (optional) — {config.symbol}
+          </Label>
+          <Input
+            id="receive-amount"
+            type="text"
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder={`0.0 ${config.symbol}`}
+            className="h-12"
+          />
+          {amountError ? (
+            <p role="alert" className="text-sm text-destructive">{amountError}</p>
+          ) : null}
+        </div>
+      )}
+
+      <Card className="rounded-xl border-border bg-card p-6 text-foreground">
         {address ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="rounded-[20px] bg-white p-4">
-              <QRCodeSVG
-                value={qrValue}
-                size={192}
-                marginSize={4}
-                title={`${config.symbol} receiving address`}
-              />
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+              {/* Keep the white QR surround for scannability, including in dark mode. */}
+              <div className="shrink-0 rounded-[20px] bg-white p-4">
+                <QRCodeSVG
+                  value={qrValue}
+                  size={192}
+                  marginSize={4}
+                  title={`${config.symbol} receiving address`}
+                />
+              </div>
+              {(chain === 'trx' || chain === 'ton') && amount.trim() !== '' && !amountError && (
+                <p className="text-sm text-muted-foreground">
+                  Requested amount: {amount.trim()} {config.symbol} (shown as text — the QR
+                  encodes the address only).
+                </p>
+              )}
             </div>
-            <p className="w-full break-all text-center font-mono text-sm text-[#eff2fc]">{address}</p>
-            {(chain === 'trx' || chain === 'ton') && amount.trim() !== '' && !amountError && (
-              <p className="text-sm text-[#aab5d1]">
-                Requested amount: {amount.trim()} {config.symbol} (shown as text — the QR
-                encodes the address only).
-              </p>
-            )}
+            <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button type="button" onClick={() => void copyAddress()}>
                 Copy address
@@ -154,34 +186,16 @@ export function ReceiveScreen() {
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-[#eff2fc]">No receiving address available for this chain.</p>
-            <Link to="/import-wallet" className="font-medium text-[#b4aaff] underline underline-offset-4">
+            <p className="text-foreground">No receiving address available for this chain.</p>
+            <Link to="/import-wallet" className="font-medium text-primary underline underline-offset-4">
               Import wallet
             </Link>
           </div>
         )}
-        <p role="status" className="mt-4 text-center text-sm text-[#aab5d1]">
+        <p role="status" className="mt-4 text-center text-sm text-muted-foreground">
           {copyStatus}
         </p>
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="receive-amount" className="text-sm font-medium">
-          Amount (optional) — {config.symbol}
-        </label>
-        <input
-          id="receive-amount"
-          type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder={`0.0 ${config.symbol}`}
-          className="h-10 w-full rounded-lg border bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
-        />
-        {amountError ? (
-          <p role="alert" className="text-sm text-red-500">{amountError}</p>
-        ) : null}
-      </div>
+      </Card>
 
       <p className="text-sm text-muted-foreground">
         Mainnet only — this address is for the {config.displayName} mainnet. Funds sent on another network cannot be recovered.

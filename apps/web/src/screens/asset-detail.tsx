@@ -4,7 +4,8 @@ import { useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
-import { CHAIN_CHIP_COLORS } from './asset-rows';
+import { ChainLogo } from './asset-rows';
+import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
@@ -67,72 +68,106 @@ export function AssetDetailScreen() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="flex items-center gap-3 text-2xl font-semibold">
-          <span
-            className="flex size-10 items-center justify-center rounded-full text-base font-bold text-[#19223a]"
-            style={{ backgroundColor: CHAIN_CHIP_COLORS[chain] ?? '#9daeff' }}
-          >
-            {config.displayName.slice(0, 1)}
-          </span>
-          {config.displayName}
-        </h1>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={state === 'loading'}
-            onClick={refreshAll}
-          >
-            Refresh
-          </Button>
-          <Button asChild>
-            <Link to="/receive" onClick={() => setSelectedChain(chain)}>
-              Receive
+      <Link
+        to="/assets"
+        aria-label="Back to assets"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-panel-text hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+      >
+        <ArrowLeft className="size-5" aria-hidden="true" />
+      </Link>
+
+      <div className="space-y-4 rounded-2xl bg-panel-surface-raised p-4">
+        <div className="flex items-center gap-3">
+          <ChainLogo chain={chain} size={48} />
+          <div>
+            <h1 className="text-2xl font-semibold text-panel-text">{config.displayName}</h1>
+            <p className="text-sm text-panel-text-muted">{config.displayName} mainnet</p>
+          </div>
+        </div>
+        {balance.status === 'loading' ? (
+          <div role="status">
+            <Skeleton className="h-8 w-48" />
+            <span className="sr-only">Loading balance…</span>
+          </div>
+        ) : balance.status === 'zero' ? (
+          <>
+            <p className="text-[32px] font-semibold leading-10 text-panel-text">
+              0 {config.symbol}
+            </p>
+            <p className="text-sm text-panel-text-muted">Zero balance</p>
+          </>
+        ) : balance.status === 'available' ? (
+          <p className="text-[32px] font-semibold leading-10 text-panel-text">
+            {formatNativeWithSymbol(
+              balance.value ?? '0',
+              CHAIN_DECIMALS[chain as ChainId],
+              config.symbol,
+            )}
+          </p>
+        ) : (
+          <>
+            <p className="text-lg font-semibold text-panel-text">Balance unavailable</p>
+            <p className="text-sm text-panel-text-muted">
+              {balance.status === 'error'
+                ? 'Could not load the balance.'
+                : 'No balance adapter is available for this chain.'}
+              {balance.reason ? ` (${balance.reason})` : ''}
+            </p>
+            <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
+              Retry
+            </Button>
+          </>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        {chain !== 'ton' && (
+          <Button asChild className="h-11">
+            <Link to="/send" onClick={() => setSelectedChain(chain)}>
+              Send
             </Link>
           </Button>
-        </div>
-      </header>
+        )}
+        <Button asChild variant="outline" className="h-11">
+          <Link to="/receive" onClick={() => setSelectedChain(chain)}>
+            Receive
+          </Link>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={state === 'loading'}
+          onClick={refreshAll}
+          className="h-11"
+        >
+          Refresh
+        </Button>
+      </div>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
-        <CardContent className="space-y-2 pt-6">
-          <p className="text-sm text-muted-foreground">
-            Balance · {config.displayName} mainnet
-          </p>
-          {balance.status === 'loading' ? (
-            <div role="status">
-              <Skeleton className="h-8 w-48" />
-              <span className="sr-only">Loading balance…</span>
+      <Card className="rounded-xl">
+        <CardContent className="pt-6">
+          <dl className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">Balance</dt>
+              <dd className="font-semibold">
+                {balance.status === 'loading'
+                  ? 'Loading…'
+                  : balance.status === 'zero'
+                    ? `0 ${config.symbol}`
+                    : balance.status === 'available'
+                      ? formatNativeWithSymbol(
+                          balance.value ?? '0',
+                          CHAIN_DECIMALS[chain as ChainId],
+                          config.symbol,
+                        )
+                      : 'Balance unavailable'}
+              </dd>
             </div>
-          ) : balance.status === 'zero' ? (
-            <>
-              <p className="text-2xl font-bold">
-                0 {config.symbol}
-              </p>
-              <p className="text-sm text-muted-foreground">Zero balance</p>
-            </>
-          ) : balance.status === 'available' ? (
-            <p className="text-2xl font-bold">
-              {formatNativeWithSymbol(
-                balance.value ?? '0',
-                CHAIN_DECIMALS[chain as ChainId],
-                config.symbol,
-              )}
-            </p>
-          ) : (
-            <>
-              <p className="text-lg font-semibold">Balance unavailable</p>
-              <p className="text-sm text-muted-foreground">
-                {balance.status === 'error'
-                  ? 'Could not load the balance.'
-                  : 'No balance adapter is available for this chain.'}
-                {balance.reason ? ` (${balance.reason})` : ''}
-              </p>
-              <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
-                Retry
-              </Button>
-            </>
-          )}
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">Network</dt>
+              <dd className="font-semibold">{config.displayName} mainnet</dd>
+            </div>
+          </dl>
         </CardContent>
       </Card>
 
@@ -151,7 +186,7 @@ export function AssetDetailScreen() {
               <li key={tx.hash} className="rounded-lg border p-3">
                 <Link
                   to={`/transactions/${tx.hash}`}
-                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
                 >
                   <span className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm font-medium">
@@ -205,7 +240,7 @@ export function AssetDetailScreen() {
         )}
       </section>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
         <CardContent className="pt-6">
           <dl className="space-y-4">
             <div>

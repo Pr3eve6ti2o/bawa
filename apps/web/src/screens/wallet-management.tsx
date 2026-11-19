@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
-import { chainConfig } from "../wallet/chains";
-import { CHAIN_CHIP_COLORS } from "./asset-rows";
+import { ChainLogo } from "./asset-rows";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 import { Input } from "../ui/components/input";
@@ -72,7 +71,7 @@ export function WalletManagementScreen() {
       </h1>
 
       {vaultState === "unlocked" && (
-        <Card className="rounded-[20px] border-[#d6deed]">
+        <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Vault account</CardTitle>
           </CardHeader>
@@ -142,19 +141,13 @@ export function WalletManagementScreen() {
             const wallet = xpubs[id];
             if (!wallet) return null;
             const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
-            const chip = CHAIN_CHIP_COLORS[id] ?? '#9daeff';
 
             return (
               <li key={id}>
-                <Card className="rounded-[20px] border-[#d6deed]">
+                <Card className="rounded-xl">
                   <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="flex size-10 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-[#19223a]"
-                        style={{ backgroundColor: chip }}
-                      >
-                        {chainConfig(id).symbol}
-                      </span>
+                      <ChainLogo chain={id} />
                       <div className="min-w-0 space-y-1">
                         <CardTitle>{name}</CardTitle>
                         <p className="break-words text-sm text-muted-foreground">

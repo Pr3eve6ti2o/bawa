@@ -19,7 +19,7 @@ export function NetworkSelectionScreen() {
         </p>
       </header>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Mainnet</CardTitle>
         </CardHeader>
@@ -28,10 +28,10 @@ export function NetworkSelectionScreen() {
             {networks.map(({ id, mainnet }) => (
               <li
                 key={id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-[#d6deed] bg-white p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[15px] border border-border bg-card p-3"
               >
                 <span>{mainnet}</span>
-                <span className="flex h-6 items-center rounded-[12px] bg-[#224f45] px-3 text-[10px] font-bold text-[#94e1c3]">
+                <span className="flex h-6 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
                   ACTIVE
                 </span>
               </li>

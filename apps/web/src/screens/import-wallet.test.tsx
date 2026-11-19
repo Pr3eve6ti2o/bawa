@@ -94,9 +94,26 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     });
   }
 
+  // Radix Tabs activates its triggers on mousedown, not click — a plain
+  // .click() never switches the tab in jsdom. Dispatch both, as a real press does.
+  async function clickTabTrigger(div: HTMLDivElement, text: string) {
+    const trigger = [...div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    expect(trigger).not.toBeUndefined();
+    await act(async () => {
+      trigger!.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true, button: 0 }),
+      );
+      trigger!.click();
+    });
+  }
+
   it('switches the label to TON public address when TON is clicked', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
+      // Lane C: restore-first is the default tab — switch to Watch-only first.
+      await clickTabTrigger(div, 'Watch-only');
       await clickButton(div, 'TON');
       expect(
         div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
@@ -110,6 +127,8 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
   it('shows a valid TON wallet in the imported list', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
+      // Lane C: restore-first is the default tab — switch to Watch-only first.
+      await clickTabTrigger(div, 'Watch-only');
       await clickButton(div, 'TON');
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
@@ -134,6 +153,8 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
   it('clears a rejected mnemonic on the TON tab and shows a secret-free error', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
+      // Lane C: restore-first is the default tab — switch to Watch-only first.
+      await clickTabTrigger(div, 'Watch-only');
       await clickButton(div, 'TON');
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
@@ -174,6 +195,19 @@ describe.sequential('ImportWalletScreen (T41)', () => {
         root.render(<App />);
       });
       await waitForImportScreen(div);
+
+      // Lane C: restore-first is the default tab — switch to Watch-only first.
+      // (Radix Tabs activates on mousedown, not click.)
+      const watchOnlyTab = [...div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'Watch-only',
+      );
+      expect(watchOnlyTab).not.toBeUndefined();
+      await act(async () => {
+        watchOnlyTab!.dispatchEvent(
+          new MouseEvent('mousedown', { bubbles: true, button: 0 }),
+        );
+        watchOnlyTab!.click();
+      });
 
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
@@ -228,6 +262,18 @@ describe.sequential('ImportWalletScreen (T41)', () => {
         root.render(<App />);
       });
       await waitForImportScreen(div);
+      // Lane C: the label guidance lives in the Watch-only form.
+      // (Radix Tabs activates on mousedown, not click.)
+      const watchOnlyTab = [...div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'Watch-only',
+      );
+      expect(watchOnlyTab).not.toBeUndefined();
+      await act(async () => {
+        watchOnlyTab!.dispatchEvent(
+          new MouseEvent('mousedown', { bubbles: true, button: 0 }),
+        );
+        watchOnlyTab!.click();
+      });
       expect(div.textContent).toContain('Labels are stored in plain text in this browser');
       expect(div.textContent).toContain('do not enter secrets');
     } finally {
@@ -323,7 +369,9 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
   }
 
   async function openPhraseMode(div: HTMLDivElement) {
-    await clickButton(div, 'Recovery phrase');
+    // Lane C: the restore tab is now labelled "Restore full wallet"
+    // (restore-first is the default mode).
+    await clickButton(div, 'Restore full wallet');
     expect(div.querySelector('#recovery-phrase')).not.toBeNull();
   }
 
@@ -342,7 +390,7 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       await openPhraseMode(div);
       await restorePhrase(div, 'hello world');
       await waitFor(div, () =>
-        (div.textContent ?? '').includes('12-word or 24-word'),
+        (div.textContent ?? '').includes('Enter a 12- or 24-word recovery phrase.'),
       );
       const input = div.querySelector<HTMLInputElement>('#recovery-phrase');
       expect(input?.value).toBe('');

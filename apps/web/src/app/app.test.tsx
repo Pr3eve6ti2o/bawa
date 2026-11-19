@@ -102,9 +102,14 @@ describe.sequential('App', () => {
 
     try {
       await withRenderedApp('/', (div) => {
-        expect(div.textContent).toContain(
+        // Lane C (spec §5): the locked banner was removed from the
+        // dashboard — the locked dashboard shows the hero and rows, and
+        // unlocking lives on the /lock route.
+        expect(div.textContent).not.toContain(
           'Vault locked — your vault addresses are hidden until you unlock.',
         );
+        expect(div.textContent).toContain('Portfolio balance');
+        expect(div.textContent).toContain('Send');
         expect(div.textContent).not.toContain('Welcome to Bawa Web Wallet');
       });
     } finally {

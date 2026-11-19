@@ -5,6 +5,36 @@ import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
 import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
+import type { ChainId } from '../engine/boundary';
+
+// Chain logos: Trust Wallet asset registry (trustwallet/assets, MIT,
+// Copyright (c) 2019-2023 Trust Wallet) — blockchains/<chain>/info/logo.png.
+// Full licence note: apps/web/README.md "Chain logos".
+import bitcoinLogo from '../assets/chains/bitcoin.png';
+import ethereumLogo from '../assets/chains/ethereum.png';
+import tronLogo from '../assets/chains/tron.png';
+import tonLogo from '../assets/chains/ton.png';
+
+const CHAIN_LOGOS: Record<ChainId, string> = {
+  btc: bitcoinLogo,
+  eth: ethereumLogo,
+  trx: tronLogo,
+  ton: tonLogo,
+};
+
+/** Native chain logo (40px default). Decorative: the chain name is adjacent text, so alt is empty. */
+export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
+  return (
+    <img
+      src={CHAIN_LOGOS[chain]}
+      alt=""
+      width={size}
+      height={size}
+      className="size-10 shrink-0 rounded-full"
+      style={size !== 40 ? { width: size, height: size } : undefined}
+    />
+  );
+}
 
 export const CHAIN_CHIP_COLORS: Record<string, string> = {
   btc: '#f7931a',
@@ -20,13 +50,13 @@ export const CHAIN_CHIP_COLORS: Record<string, string> = {
  * show the native token balance only — never a fiat value or a fabricated
  * number. A failed fetch shows "unavailable", never zero.
  */
-export function AssetRows({ hideZero }: { hideZero: boolean }) {
+export function AssetRows({ hideZero, onShowAll }: { hideZero: boolean; onShowAll?: () => void }) {
   const { balances, refreshBalances, vaultState, vaultAddresses, addresses } =
     useWallet();
   const chains = availableFor('balance');
 
   if (chains.length === 0) {
-    return <p className="text-sm text-[#aab5d1]">No balance adapters verified yet.</p>;
+    return <p className="p-4 text-sm text-muted-foreground">No balance adapters verified yet.</p>;
   }
 
   const visible = chains.filter((chain) => {
@@ -36,31 +66,30 @@ export function AssetRows({ hideZero }: { hideZero: boolean }) {
   });
 
   if (visible.length === 0) {
+    if (hideZero) {
+      return (
+        <div className="space-y-2 p-4">
+          <p className="text-sm text-muted-foreground">No non-zero balances</p>
+          <Button type="button" variant="outline" onClick={() => onShowAll?.()}>
+            Show all
+          </Button>
+        </div>
+      );
+    }
+
     return (
-      <p className="text-sm text-[#aab5d1]">
+      <p className="p-4 text-sm text-muted-foreground">
         All balances are zero — turn off “Hide zero balances” to see them.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y divide-white/10">
+    <ul className="divide-y divide-border">
       {visible.map((chain) => {
         const config = chainConfig(chain);
         const balance = balances[chain];
-        const avatar = (
-          <span className="relative flex size-10 shrink-0 items-center justify-center">
-            <span
-              className="flex size-10 items-center justify-center rounded-full text-[11px] font-bold text-[#19223a]"
-              style={{ backgroundColor: CHAIN_CHIP_COLORS[chain] ?? '#9daeff' }}
-            >
-              {config.symbol}
-            </span>
-            <span className="absolute -bottom-1 -right-1 flex h-4 items-center rounded-full bg-[#293654] px-1 text-[8px] font-bold text-[#c8d0e8] ring-1 ring-[#19223a]">
-              {config.symbol}
-            </span>
-          </span>
-        );
+        const avatar = <ChainLogo chain={chain} />;
 
         if (balance.status === 'loading') {
           return (
@@ -84,13 +113,13 @@ export function AssetRows({ hideZero }: { hideZero: boolean }) {
             !hasAddress &&
             balance.status === 'unavailable';
           return (
-            <li key={chain} className="flex items-center gap-3 py-4">
+            <li key={chain} className="flex items-center gap-3 px-4 py-3">
               {avatar}
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-bold text-[#eff2fc]">
+                <span className="block text-[15px] font-bold text-foreground">
                   {config.displayName}
                 </span>
-                <span className="block text-xs text-[#9da9c7]">
+                <span className="block text-xs text-muted-foreground">
                   {lockedNoAddress
                     ? 'Unlock your wallet to see balances'
                     : balance.status === 'unavailable'
@@ -123,14 +152,13 @@ export function AssetRows({ hideZero }: { hideZero: boolean }) {
           <li key={chain}>
             <Link
               to={`/assets/${chain}`}
-              className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b4aaff]"
+              className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
             >
               <AssetRow
                 avatar={avatar}
-                symbol={config.displayName}
-                amount={`${config.symbol} · ${config.displayName} mainnet`}
-                value={value}
-                detail={balance.status === 'zero' ? 'Zero balance' : undefined}
+                symbol={config.symbol}
+                amount={balance.status === 'zero' ? 'Zero balance' : value}
+                detail={`${config.displayName} mainnet`}
               />
             </Link>
           </li>

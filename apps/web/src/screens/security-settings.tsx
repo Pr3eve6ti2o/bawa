@@ -1,10 +1,19 @@
 import { Link } from "react-router";
-import { useWallet } from "../state/wallet-context";
+import { AUTO_LOCK_OPTIONS, useWallet } from "../state/wallet-context";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
 
+const AUTO_LOCK_LABELS: Record<number, string> = {
+  0: 'Immediately',
+  1: '1 minute',
+  5: '5 minutes',
+  15: '15 minutes',
+  60: '1 hour',
+  1440: '1 day',
+};
+
 export function SecuritySettingsScreen() {
-  const { vaultState, lockVault } = useWallet();
+  const { vaultState, lockVault, autoLockMinutes, setAutoLockMinutes } = useWallet();
 
   return (
     <section className="space-y-6" aria-labelledby="security-heading">
@@ -12,9 +21,9 @@ export function SecuritySettingsScreen() {
         Security &amp; backup
       </h1>
 
-      <div className="rounded-[20px] border border-white/10 bg-[#243454] p-6 text-white">
-        <h2 className="text-lg font-bold text-white">What this wallet does</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-[#aab5d1]">
+      <div className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6">
+        <h2 className="text-lg font-bold text-panel-text">What this wallet does</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-panel-text-muted">
           <li>Your recovery phrase is generated in this browser and stored encrypted in the vault (AES-GCM-256, PBKDF2 600,000 rounds).</li>
           <li>Private keys are held in memory only while the vault is unlocked — never in plaintext storage, logs or requests.</li>
           <li>Signing happens offline on this device.</li>
@@ -22,7 +31,7 @@ export function SecuritySettingsScreen() {
         </ul>
       </div>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Vault lock</CardTitle>
         </CardHeader>
@@ -47,7 +56,36 @@ export function SecuritySettingsScreen() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[20px] border-[#d6deed]">
+      <Card className="rounded-xl">
+        <CardHeader>
+          <CardTitle>Lock after inactivity</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <select
+            id="auto-lock"
+            aria-label="Lock after inactivity"
+            value={String(autoLockMinutes)}
+            onChange={(event) => setAutoLockMinutes(Number(event.target.value))}
+            className="h-12 w-full rounded-md border border-border bg-input-background px-4 text-body-md text-foreground"
+          >
+            {AUTO_LOCK_OPTIONS.map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {AUTO_LOCK_LABELS[minutes]}
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-muted-foreground">
+            The vault locks after this long without activity. Any activity resets the timer. Watch-only stays usable while the vault is locked.
+          </p>
+          {vaultState === 'unlocked' && (
+            <Button type="button" onClick={() => lockVault()}>
+              Lock now
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Backup procedure</CardTitle>
         </CardHeader>

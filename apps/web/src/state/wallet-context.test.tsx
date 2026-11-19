@@ -176,3 +176,100 @@ describe('wallet context — vault account selection', () => {
     }
   });
 });
+
+describe('wallet context — auto-lock (Lane C, spec §9)', () => {
+  it('defaults to 5 minutes', async () => {
+    const mounted = await mountProvider();
+    try {
+      expect(exposed!.autoLockMinutes).toBe(5);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('reads a stored preference on mount', async () => {
+    window.localStorage.setItem('bawa-auto-lock-minutes', '60');
+    const mounted = await mountProvider();
+    try {
+      expect(exposed!.autoLockMinutes).toBe(60);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('persists the preference and ignores values outside the options', async () => {
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        exposed!.setAutoLockMinutes(15);
+      });
+      expect(exposed!.autoLockMinutes).toBe(15);
+      expect(window.localStorage.getItem('bawa-auto-lock-minutes')).toBe(
+        '15',
+      );
+      await act(async () => {
+        exposed!.setAutoLockMinutes(7);
+      });
+      expect(exposed!.autoLockMinutes).toBe(15);
+      expect(window.localStorage.getItem('bawa-auto-lock-minutes')).toBe(
+        '15',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('locks after the inactivity interval and resets the timer on activity', async () => {
+    vi.useFakeTimers();
+    try {
+      await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+      const mounted = await mountProvider();
+      try {
+        await act(async () => {
+          await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+        });
+        expect(exposed!.vaultState).toBe('unlocked');
+        // 1 minute of inactivity: still unlocked (default 5 min).
+        await act(async () => {
+          vi.advanceTimersByTime(60_000);
+        });
+        expect(exposed!.vaultState).toBe('unlocked');
+        // Activity resets the deadline: 4 more minutes pass, still unlocked.
+        await act(async () => {
+          window.dispatchEvent(new Event('pointerdown'));
+          vi.advanceTimersByTime(4 * 60_000);
+        });
+        expect(exposed!.vaultState).toBe('unlocked');
+        // 1 more minute without activity: the 5-minute deadline passes.
+        await act(async () => {
+          vi.advanceTimersByTime(60_000);
+        });
+        expect(exposed!.vaultState).toBe('locked');
+      } finally {
+        await mounted.cleanup();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('locks on pagehide when set to Immediately', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        exposed!.setAutoLockMinutes(0);
+      });
+      await act(async () => {
+        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+      });
+      expect(exposed!.vaultState).toBe('unlocked');
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+      expect(exposed!.vaultState).toBe('locked');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
