@@ -2,7 +2,7 @@
 /**
  * Oracle only — bitcoinjs/bip39 is a devDependency for tests.
  * wallet-core WASM (@trustwallet/wallet-core 4.9.3) owns production mnemonic handling.
- * Published test phrases only, never real mnemonics.
+ * Published test vectors and freshly generated random test phrases only, never real wallet mnemonics.
  */
 import { describe, expect, it } from 'vitest';
 import * as bip39 from 'bip39';

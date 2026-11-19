@@ -266,6 +266,30 @@ class TestAssertBundleDecrypts(unittest.TestCase):
             path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
             assert_bundle_decrypts(path, key)
 
+    def test_missing_mnemonic_package_rejected(self):
+        import builtins
+        import tempfile
+        from unittest.mock import patch
+
+        key = os.urandom(32)
+        mnemonic = " ".join(["abandon"] * 23 + ["art"])
+        real_import = builtins.__import__
+
+        def block_mnemonic_import(name, *args, **kwargs):
+            if name == "mnemonic" or name.startswith("mnemonic."):
+                raise ImportError("simulated missing mnemonic package")
+            return real_import(name, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_bundle(mnemonic.encode("utf-8"), key, tmp)
+            with patch("builtins.__import__", new=block_mnemonic_import):
+                with self.assertRaisesRegex(
+                    SystemExit,
+                    "seed bundle independent verification failed: "
+                    "mnemonic package is not installed",
+                ):
+                    assert_bundle_decrypts(path, key)
+
     def test_corrupt_ciphertext_rejected(self):
         import json
         import tempfile
