@@ -6,7 +6,8 @@
 // - src/app/security-headers.test.ts: regression tests on the policy text.
 //
 // The policy is strict on purpose: the app loads no third-party script,
-// style, font, image, worker or network resource. Everything is same-origin.
+// style, font, image or worker resource. Everything except the pinned
+// read-only provider fetches below is same-origin.
 // Notes per directive:
 // - script-src 'self' 'wasm-unsafe-eval': 'wasm-unsafe-eval' is REQUIRED for
 //   WebAssembly.compile/instantiateStreaming (wallet-core WASM) once any CSP
@@ -19,7 +20,13 @@
 // - img-src 'self' data:: QR codes are inline SVG (no raster fetch); data:
 //   is kept for favicon-style assets. font-src 'self' data:: @fontsource
 //   woff2 is self-hosted; data: covers inlined font subsets if any.
-// - connect-src 'self': the only fetch is the same-origin wallet-core.wasm.
+// - connect-src 'self' plus the five pinned provider origins: the
+//   same-origin wallet-core.wasm fetch plus the read-only balance/history
+//   adapter endpoints — BTC https://mempool.space, ETH
+//   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
+//   (history), TRX https://api.trongrid.io, TON https://toncenter.com.
+//   No other origin, no wildcard. Explorer links (tronscan.org,
+//   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
 // - frame-ancestors 'none' is in the shared string: it is ignored when the
 //   policy is delivered via a <meta> tag, but enforced as an HTTP header
@@ -31,7 +38,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
