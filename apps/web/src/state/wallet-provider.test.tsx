@@ -3,21 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import type { ReactNode } from 'react';
-import { WalletProvider, useWallet } from '../state/wallet-context';
-import type { WalletContextValue } from '../state/wallet-context';
-import { deriveAddresses } from './core';
+import { WalletProvider, useWallet } from './wallet-context';
+import type { WalletContextValue } from './wallet-context';
+import { deriveAddresses } from '../wallet/core';
 import {
   createVault,
   deleteVault,
   lock,
   VAULT_WRONG_PASSWORD,
-} from './vault';
-import { SUPPORTED_CHAINS } from './chains';
+} from '../wallet/vault';
+import { SUPPORTED_CHAINS } from '../wallet/chains';
 
 // No adapter is registered in this file: the adapters module is mocked so
 // lazy registration (ensureAdapters) cannot bring the real adapters in.
 // getAdapter() returning undefined is the "no adapter" state under test.
-vi.mock('./adapters', () => ({
+vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
   registerAdapter: vi.fn(),
   registeredChains: vi.fn(() => []),

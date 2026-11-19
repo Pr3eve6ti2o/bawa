@@ -1,5 +1,5 @@
 import type { ChainId } from '../../engine/boundary';
-import type { BalanceProvider } from '../providers';
+import type { BalanceProvider } from '../balance-providers';
 
 /**
  * Shared adapter contract (Fix Lane 2, Phase 2). Adapters are read-only

@@ -268,7 +268,7 @@ Treat xpubs and zpubs as **sensitive public material**: an xpub cannot sign, but
 
 Reject private material at every public-only boundary, including the derivation worker’s JSONL channel. Contain diagnostics so that no secret reaches logs.
 
-Keep `tools/hdwallet-gen/derive_daemon.js` on the watch-only side: it uses Trust Wallet Core to derive and validate addresses, but does not establish ownership, find funds or authorise spending. Handle its startup readiness record separately from derivation replies. Allow only one outstanding request per worker because replies have no request identifier, and keep the request context alongside each returned address.
+Keep `tools/hdwallet-gen/derive-daemon.js` on the watch-only side: it uses Trust Wallet Core to derive and validate addresses, but does not establish ownership, find funds or authorise spending. Handle its startup readiness record separately from derivation replies. Allow only one outstanding request per worker because replies have no request identifier, and keep the request context alongside each returned address.
 
 Use the worker’s recognised request fields, `chain`, `xpub` and `index`. Do not rely on additional properties to select another network or derivation branch. Require explicit, tested network-aware derivation for a testnet integration, rather than adding a property that the worker ignores.
 

@@ -235,7 +235,7 @@ An indexer provides observations, never signing authority. Recipients, amounts, 
 
 Use deadlines, bounded read retries with backoff and jitter, and per-endpoint rate limits; honour `Retry-After`. A failed request must not silently become a zero balance or empty history.
 
-**Local derivation stays separate.** `derive_daemon.js` is a persistent public-only service, not a signer or RPC client:
+**Local derivation stays separate.** `derive-daemon.js` is a persistent public-only service, not a signer or RPC client:
 
 - Transport is JSONL over stdin/stdout. Wait for `{"ready":true}` before sending requests.
 - A conceptual request is `{"chain":"btc","xpub":"<XPUB>","index":5}`. Allowed chains are `btc`, `eth` and `trx`.

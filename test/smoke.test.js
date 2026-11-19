@@ -14,7 +14,7 @@
 //   single V4 R2 address from a 32-byte Ed25519 public key (no xpub, no
 //   index — the account path m/44'/607'/0' is fully hardened). The policy
 //   guard below asserts no TON derivation path exists in the xpub tools
-//   (derive.js, derive_daemon.js).
+//   (derive.js, derive-daemon.js).
 //
 // Any failure exits non-zero. Nothing here touches the network.
 "use strict";
@@ -173,7 +173,7 @@ function runCli(script, args, stdinData) {
 
 async function testDaemon() {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive-daemon.js")], {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let buf = "";
@@ -226,7 +226,7 @@ async function testDaemon() {
 // and rejects any other branch value without deriving.
 async function testDaemonBranch() {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive-daemon.js")], {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let buf = "";
@@ -287,7 +287,7 @@ async function testDaemonPrivateRejection() {
   return new Promise((resolve) => {
     const child = spawn(
       process.execPath,
-      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      [path.join(TOOLS_DIR, "derive-daemon.js")],
       {
         cwd: TOOLS_DIR,
         stdio: ["pipe", "pipe", "pipe"],
@@ -312,7 +312,7 @@ async function testDaemonPrivateRejection() {
       if (finished) return;
       finished = true;
       clearTimeout(timer);
-      check("derive_daemon.js rejects a private extended key", cond, detail);
+      check("derive-daemon.js rejects a private extended key", cond, detail);
       child.kill();
       resolve();
     }
@@ -514,7 +514,7 @@ async function testDaemonDefects() {
     try {
       child = spawn(
         process.execPath,
-        [path.join(TOOLS_DIR, "derive_daemon.js")],
+        [path.join(TOOLS_DIR, "derive-daemon.js")],
         { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
       );
     } catch (err) {
@@ -658,7 +658,7 @@ async function testDaemonLineLength() {
   await new Promise((resolve) => {
     const child = spawn(
       process.execPath,
-      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      [path.join(TOOLS_DIR, "derive-daemon.js")],
       { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
     );
     let finished = false;
@@ -735,7 +735,7 @@ async function testDaemonLineLength() {
   await new Promise((resolve) => {
     const child = spawn(
       process.execPath,
-      [path.join(TOOLS_DIR, "derive_daemon.js")],
+      [path.join(TOOLS_DIR, "derive-daemon.js")],
       { cwd: TOOLS_DIR, stdio: ["pipe", "pipe", "pipe"] }
     );
     let finished = false;
@@ -842,7 +842,7 @@ async function testDaemonAccountLevel() {
         address: FIXTURES.btc[0],
       },
     ];
-    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive-daemon.js")], {
       cwd: TOOLS_DIR,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -930,7 +930,7 @@ async function testDaemonAccountLevel() {
 // ("Unhandled 'error' event / Error: write EPIPE" on stderr).
 async function testDaemonEpipe() {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive_daemon.js")], {
+    const child = spawn(process.execPath, [path.join(TOOLS_DIR, "derive-daemon.js")], {
       cwd: TOOLS_DIR,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -1111,7 +1111,7 @@ Module._load = function (request, parent, isMain) {
     // Part B: startup initializes once; only the valid request derives.
     resetCounts();
     const child = spawn(process.execPath, [
-      path.join(TOOLS_DIR, "derive_daemon.js"),
+      path.join(TOOLS_DIR, "derive-daemon.js"),
     ], {
       cwd: TOOLS_DIR,
       env: childEnv,
@@ -1292,7 +1292,7 @@ Module._load = function (request, parent, isMain) {
   // xpub tools (branch is now a 0|1 parameter, default receiving), and no
   // TON derivation path exists in either (TON has no xpub; its watch-only
   // route is the separate derive-ton.js).
-  for (const script of ["derive.js", "derive_daemon.js"]) {
+  for (const script of ["derive.js", "derive-daemon.js"]) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, script), "utf8");
     check(`${script} carries BTC/ETH/TRX paths`,
       src.includes("m/84'/0'/0'/${branch}/${i}") && src.includes("m/44'/60'/0'/${branch}/${i}") && src.includes("m/44'/195'/0'/${branch}/${i}"));
@@ -1527,7 +1527,7 @@ Module._load = function (request, parent, isMain) {
     }
   }
 
-  // 9. derive_daemon.js rejection checks (private key, checksum, wrong chain).
+  // 9. derive-daemon.js rejection checks (private key, checksum, wrong chain).
   await testDaemonPrivateRejection();
   await testDaemonDefects();
   await testDaemonLineLength();

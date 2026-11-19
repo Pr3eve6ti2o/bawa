@@ -1,5 +1,5 @@
 import type { ChainId } from '../../engine/boundary';
-import { registerBalanceProvider } from '../providers';
+import { registerBalanceProvider } from '../balance-providers';
 import type { ChainAdapter } from './types';
 import { toBalanceProvider } from './types';
 import { createEthAdapter } from './eth';

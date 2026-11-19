@@ -2,18 +2,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import { WalletProvider, useWallet } from '../state/wallet-context';
-import type { WalletContextValue } from '../state/wallet-context';
-import { createVault, deleteVault, lock } from './vault';
-import { registerAdapter } from './adapters';
-import type { AdapterResult, AdapterTx, ChainAdapter } from './adapters/types';
+import { WalletProvider, useWallet } from './wallet-context';
+import type { WalletContextValue } from './wallet-context';
+import { createVault, deleteVault, lock } from '../wallet/vault';
+import { registerAdapter } from '../wallet/adapters';
+import type { AdapterResult, AdapterTx, ChainAdapter } from '../wallet/adapters/types';
 
 // The capability registry is mocked to verified so the adapter path is
 // exercised; the no-adapter gate itself is covered by wallet-context.test.tsx.
 // Only availableFor is overridden — the rest (incl. pathFor, used by
 // deriveAddressesAt) comes from the real module.
-vi.mock('./chains', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./chains')>();
+vi.mock('../wallet/chains', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../wallet/chains')>();
   return {
     ...actual,
     availableFor: () => ['btc', 'eth', 'trx', 'ton'],

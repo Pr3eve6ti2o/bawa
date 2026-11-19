@@ -11,7 +11,7 @@ TON watch-only import is now implemented in the Web starter (TON tab on
 the import screen; public-address validation — tag, workchain, CRC16;
 Receive QR + copy; unit tests pass; live-browser run still not done),
 and the step-by-step GUI workflow is documented in
-[GUI-WATCH-ONLY-WORKFLOW.md](GUI-WATCH-ONLY-WORKFLOW.md). The **external
+[gui-watch-only-workflow.md](gui-watch-only-workflow.md). The **external
 GUI** watch-only import below stays `DOCUMENTED_NOT_TESTED`: no desktop
 machine is available on the test VM, so no GUI import was performed.
 

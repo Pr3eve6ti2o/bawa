@@ -491,7 +491,7 @@ The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3,
 ### Phase 8 — Complete the one-prompt build workflow
 
 - **Objective:** connect request parsing through routing, registries, starter generation, setup, build and test to the final report.
-- **Files:** OPEN allocations: `scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build.mjs`, `scripts/test.mjs`, `docs/sample-requests.md` and `tests/clean-checkout.test.mjs`.
+- **Files:** OPEN allocations: `scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/test.mjs`, `docs/sample-requests.md` and `tests/clean-checkout.test.mjs`.
 - **Dependencies:** the entry, registry, engine and adoption contracts must be settled. End-to-end execution can only begin after at least one Phase 6–7 starter builds.
 - **Exit gate:** clean-checkout tests exercise at least two materially different wallet requests through the complete workflow. Sample identities remain OPEN until supported by validated profiles. Reports must distinguish verified outcomes, mocks and unresolved limitations. Success on one platform must not imply success on another.
 - **Not included:** unsupported profile promises, mainnet activation, independent security approval or execution of the separate rehearsal programme.

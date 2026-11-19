@@ -279,7 +279,7 @@ function validateExtendedKey(input, chain) {
 
 /*
  * Account-level validation (T45 F-T45-1): validateExtendedKey plus the
- * account-0 input contract. Every derivation caller (derive_daemon.js,
+ * account-0 input contract. Every derivation caller (derive-daemon.js,
  * derive.js, compare.js) derives account 0 with a fixed path, so the
  * input must be an account-level key (depth 3) for account 0 (child
  * number 0x80000000). Any other depth or child number would be silently

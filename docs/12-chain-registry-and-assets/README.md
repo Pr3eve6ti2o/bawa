@@ -143,7 +143,7 @@ Use the entry ID `ton` as the lookup anchor, with coin ID 607 as corroboration. 
 
 At tag `4.9.2`, the entry's derivation is `[{path: "m/44'/607'/0'"}]`: an account node with no `/0/0` level. That literal path comes from Core's registry, not from inferring a path from coin ID 607.
 
-In Bawa's supplied implementation, TON support is **generation-only**. The generator outputs one deposit address per wallet, records `ton_address` and `ton_path`, and exports no TON xpub. Neither `derive.js` nor `derive_daemon.js` supports TON. Bawa stores the Wallet Core-derived value as `ton_path`, obtained from `CoinTypeExt.derivationPath(CoinType.ton)`; see docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy) for its interpretation.
+In Bawa's supplied implementation, TON support is **generation-only**. The generator outputs one deposit address per wallet, records `ton_address` and `ton_path`, and exports no TON xpub. Neither `derive.js` nor `derive-daemon.js` supports TON. Bawa stores the Wallet Core-derived value as `ton_path`, obtained from `CoinTypeExt.derivationPath(CoinType.ton)`; see docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy) for its interpretation.
 
 For TON wallet configuration, the registry answers derivation only: it carries no wallet ID, no contract version and no testnet flag. The mainnet `info.rpc` endpoint does not supply those wallet settings.
 

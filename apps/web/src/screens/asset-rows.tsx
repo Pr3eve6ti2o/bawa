@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
+import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';

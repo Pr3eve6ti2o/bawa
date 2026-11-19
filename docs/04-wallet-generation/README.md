@@ -20,7 +20,7 @@ The surrounding tools have distinct roles:
 
 - `make_wallet.py` orchestrates filesystem and environment work and protects the public-output boundary.
 - `derive.js` performs one-shot watch-only derivation. The xpub goes over stdin, deliberately **not** in argv. Chain and index are arguments; the output is one derived address.
-- `derive_daemon.js` provides persistent watch-only derivation using newline-delimited JSON. It loads Wallet Core once and reuses it.
+- `derive-daemon.js` provides persistent watch-only derivation using newline-delimited JSON. It loads Wallet Core once and reuses it.
 - `compare.js` gives you a diagnostic cross-check of derived addresses against the parent application’s expectations.
 - `decrypt_seed.py` is your recovery utility for the application-specific seed bundle.
 

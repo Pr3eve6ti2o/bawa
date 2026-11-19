@@ -1,4 +1,4 @@
-// derive_daemon.js — persistent public-only Trust Wallet Core derivation daemon.
+// derive-daemon.js — persistent public-only Trust Wallet Core derivation daemon.
 // JSONL request: {"chain":"btc|eth|trx","xpub":"...","index":5}
 // Optional "branch": 0 (receiving, default) or 1 (change). Any other value
 // is a bad request. The branch selects the BIP-44 change component only;

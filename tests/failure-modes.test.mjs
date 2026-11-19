@@ -135,7 +135,7 @@ describe('failure modes', () => {
   });
 
   test('daemon rejects bad requests and stays up', async () => {
-    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive-daemon.js')], {
       cwd: toolsDir,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -185,7 +185,7 @@ describe('failure modes', () => {
   });
 
   test('daemon rejects a terminated multibyte oversized line and stays up (F-09)', async () => {
-    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive-daemon.js')], {
       cwd: toolsDir,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -237,7 +237,7 @@ describe('failure modes', () => {
   });
 
   test('daemon rejects an unterminated oversized line once and exits (F-09)', async () => {
-    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive-daemon.js')], {
       cwd: toolsDir,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -286,7 +286,7 @@ describe('failure modes', () => {
   });
 
   test('daemon answers a valid request and an oversized fragment in one chunk (F-10)', async () => {
-    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive-daemon.js')], {
       cwd: toolsDir,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -340,7 +340,7 @@ describe('failure modes', () => {
   });
 
   test('daemon exits on SIGTERM with blocked stdout (F-11)', async () => {
-    const child = spawn(process.execPath, [join(toolsDir, 'derive_daemon.js')], {
+    const child = spawn(process.execPath, [join(toolsDir, 'derive-daemon.js')], {
       cwd: toolsDir,
       stdio: ['pipe', 'pipe', 'pipe'],
     });

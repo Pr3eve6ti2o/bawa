@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decimalToBaseUnits, formatNativeAmount, formatNativeWithSymbol } from './format';
+import { decimalToBaseUnits, formatNativeAmount, formatNativeWithSymbol } from './chain-amount-format';
 
 describe('formatNativeAmount', () => {
   it('formats zero', () => {
