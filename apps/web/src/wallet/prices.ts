@@ -1,7 +1,10 @@
 /**
  * CoinGecko public API: https://api.coingecko.com/api/v3 (terms 2026-11-20).
  * GET /simple/price?ids=bitcoin,ethereum,tron,the-open-network&vs_currencies=usd&include_last_updated_at=true
- * IDs: btc=bitcoin; eth=ethereum; trx=tron; ton=the-open-network.
+ * IDs: btc=bitcoin; eth=ethereum; trx=tron; ton=the-open-network;
+ * sol=solana; bsc=binancecoin; matic=matic-network; arb=arbitrum;
+ * op=optimism; base=ethereum (Base native asset is ETH);
+ * avax=avalanche-2; ltc=litecoin; doge=dogecoin.
  * Keyless: ~5 calls/min/shared IP; back off on 429; not recommended for production.
  * Optional import.meta.env.VITE_COINGECKO_DEMO_KEY -> x-cg-demo-api-key.
  * Demo tier: 10,000 credits/month; 100 calls/min.
@@ -27,6 +30,15 @@ export const PRICE_IDS: Record<ChainId, string> = {
   eth: 'ethereum',
   trx: 'tron',
   ton: 'the-open-network',
+  sol: 'solana',
+  bsc: 'binancecoin',
+  matic: 'matic-network',
+  arb: 'arbitrum',
+  op: 'optimism',
+  base: 'ethereum',
+  avax: 'avalanche-2',
+  ltc: 'litecoin',
+  doge: 'dogecoin',
 };
 
 export const PRICE_ASSET_IDS: Record<ChainId, string> = {
@@ -34,6 +46,15 @@ export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   eth: 'eip155:1/slip44:60',
   trx: 'tron:0x2b6653dc/slip44:195',
   ton: 'ton:-239/slip44:607',
+  sol: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501',
+  bsc: 'eip155:56/slip44:60',
+  matic: 'eip155:137/slip44:60',
+  arb: 'eip155:42161/slip44:60',
+  op: 'eip155:10/slip44:60',
+  base: 'eip155:8453/slip44:60',
+  avax: 'eip155:43114/slip44:60',
+  ltc: 'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/slip44:2',
+  doge: 'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691/slip44:3',
 };
 
 export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
@@ -173,6 +194,15 @@ export function parsePriceResponse(
     eth: parseChain('eth'),
     trx: parseChain('trx'),
     ton: parseChain('ton'),
+    sol: parseChain('sol'),
+    bsc: parseChain('bsc'),
+    matic: parseChain('matic'),
+    arb: parseChain('arb'),
+    op: parseChain('op'),
+    base: parseChain('base'),
+    avax: parseChain('avax'),
+    ltc: parseChain('ltc'),
+    doge: parseChain('doge'),
   };
 }
 
@@ -180,7 +210,7 @@ export async function fetchPrices(
   fetchFn: typeof fetch,
   nowMs?: number,
 ): Promise<PriceMap> {
-  const chains = ['btc', 'eth', 'trx', 'ton'] as const;
+  const chains = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'] as const;
   const allError = (
     entry: Extract<PriceEntry, { status: 'error' }>,
   ): PriceMap =>
@@ -205,7 +235,7 @@ export async function fetchPrices(
     headers['x-cg-demo-api-key'] = demoKey;
   }
 
-  const ids = Object.values(PRICE_IDS).join(',');
+  const ids = [...new Set(Object.values(PRICE_IDS))].join(',');
   const url =
     `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
     '&vs_currencies=usd&include_last_updated_at=true';
@@ -412,6 +442,15 @@ function idleEntries(): PriceMap {
     eth: { status: 'unavailable', reason: 'missing' },
     trx: { status: 'unavailable', reason: 'missing' },
     ton: { status: 'unavailable', reason: 'missing' },
+    sol: { status: 'unavailable', reason: 'missing' },
+    bsc: { status: 'unavailable', reason: 'missing' },
+    matic: { status: 'unavailable', reason: 'missing' },
+    arb: { status: 'unavailable', reason: 'missing' },
+    op: { status: 'unavailable', reason: 'missing' },
+    base: { status: 'unavailable', reason: 'missing' },
+    avax: { status: 'unavailable', reason: 'missing' },
+    ltc: { status: 'unavailable', reason: 'missing' },
+    doge: { status: 'unavailable', reason: 'missing' },
   };
 }
 
@@ -432,6 +471,15 @@ export function usePrices(): { state: PricesState; refresh: () => void } {
         eth: { status: 'error', reason: 'network' },
         trx: { status: 'error', reason: 'network' },
         ton: { status: 'error', reason: 'network' },
+        sol: { status: 'error', reason: 'network' },
+        bsc: { status: 'error', reason: 'network' },
+        matic: { status: 'error', reason: 'network' },
+        arb: { status: 'error', reason: 'network' },
+        op: { status: 'error', reason: 'network' },
+        base: { status: 'error', reason: 'network' },
+        avax: { status: 'error', reason: 'network' },
+        ltc: { status: 'error', reason: 'network' },
+        doge: { status: 'error', reason: 'network' },
       },
       lastFetchedAtMs: null,
     };

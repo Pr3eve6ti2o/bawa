@@ -19,7 +19,6 @@ import { TokenLogo } from './token-logo';
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
   return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
 }
-}
 
 export const CHAIN_CHIP_COLORS: Record<string, string> = {
   btc: '#f7931a',

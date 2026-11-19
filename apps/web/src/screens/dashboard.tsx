@@ -54,7 +54,10 @@ export function DashboardScreen() {
     priceError: null,
   });
 
-  const heroBalances = Object.values(balances);
+  // Only chains with a verified balance adapter count toward the hero.
+  // The multichain-extension chains have no balance adapter yet, so their
+  // 'unavailable' status must not fail the hero.
+  const heroBalances = availableFor('balance').map((chain) => balances[chain]);
   const heroLoading = heroBalances.some((b) => b?.status === 'loading');
   const heroFailed = heroBalances.some(
     (b) => b?.status === 'unavailable' || b?.status === 'error',
@@ -65,8 +68,8 @@ export function DashboardScreen() {
     (entry) => (entry?.status === 'error' ? [entry.reason] : []),
   );
   const sharedPriceError =
-    priceEntries.length === 4 &&
-    priceErrorReasons.length === 4 &&
+    priceEntries.length > 0 &&
+    priceErrorReasons.length === priceEntries.length &&
     priceErrorReasons.every((reason) => reason === priceErrorReasons[0])
       ? (priceErrorReasons[0] ?? null)
       : null;

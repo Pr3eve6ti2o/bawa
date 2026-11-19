@@ -26,6 +26,14 @@ function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_update
     ethereum: { usd: 1774.93, last_updated_at: secondsBefore(ageMs) },
     tron: { usd: 0.310229, last_updated_at: secondsBefore(ageMs) },
     'the-open-network': { usd: 1.028, last_updated_at: secondsBefore(ageMs) },
+    solana: { usd: 150, last_updated_at: secondsBefore(ageMs) },
+    binancecoin: { usd: 600, last_updated_at: secondsBefore(ageMs) },
+    'matic-network': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
+    arbitrum: { usd: 1.0, last_updated_at: secondsBefore(ageMs) },
+    optimism: { usd: 2.0, last_updated_at: secondsBefore(ageMs) },
+    'avalanche-2': { usd: 25, last_updated_at: secondsBefore(ageMs) },
+    litecoin: { usd: 80, last_updated_at: secondsBefore(ageMs) },
+    dogecoin: { usd: 0.15, last_updated_at: secondsBefore(ageMs) },
   };
 }
 
@@ -215,7 +223,7 @@ describe('fetchPrices', () => {
     vi.unstubAllGlobals();
   });
 
-  it('fetches all four fresh prices in one batch without a demo key', async () => {
+  it('fetches all thirteen fresh prices in one batch without a demo key', async () => {
     vi.stubEnv('VITE_COINGECKO_DEMO_KEY', '');
     try {
       const calls: Array<{ url: string; init: unknown }> = [];
@@ -233,14 +241,14 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,matic-network,arbitrum,optimism,avalanche-2,litecoin,dogecoin&vs_currencies=usd&include_last_updated_at=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }
       ).headers;
       expect(headers['Accept']).toBe('application/json');
       expect(headers).not.toHaveProperty('x-cg-demo-api-key');
-      expect(Object.values(prices)).toHaveLength(4);
+      expect(Object.values(prices)).toHaveLength(13);
       for (const price of Object.values(prices)) {
         expect(price).toMatchObject({ status: 'fresh' });
       }
@@ -276,7 +284,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -295,7 +303,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -314,7 +322,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -330,7 +338,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -346,7 +354,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -367,7 +375,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(4);
+    expect(Object.values(prices)).toHaveLength(13);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -434,11 +442,11 @@ describe('portfolioTotal', () => {
   const fresh = parsePriceResponse(freshPayload(), NOW_MS);
   const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
   const zero = { status: 'zero' } as const;
-  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero };
+  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero, sol: zero, bsc: zero, matic: zero, arb: zero, op: zero, base: zero, avax: zero, ltc: zero, doge: zero };
   const btc = { status: 'available', value: '100000000' } as const;
   const eth = { status: 'available', value: '1500000000000000000' } as const;
 
-  it('returns zero when all four balances are zero', () => {
+  it('returns zero when all balances are zero', () => {
     expect(portfolioTotal(zeros, fresh, NOW_MS)).toEqual({
       status: 'zero', text: '$0.00', partial: false,
     });
@@ -459,6 +467,7 @@ describe('portfolioTotal', () => {
 
   it('returns unavailable when all nonzero balances have expired quotes', () => {
     const balances = {
+      ...zeros,
       btc, eth,
       trx: { status: 'available', value: '1000000' },
       ton: { status: 'available', value: '1000000000' },
@@ -564,7 +573,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(4);
+      expect(entries).toHaveLength(13);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'fresh' });
       expect(Number.isFinite(latest!.state.lastFetchedAtMs)).toBe(true);
     } finally {
@@ -585,7 +594,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(4);
+      expect(entries).toHaveLength(13);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
@@ -615,7 +624,7 @@ describe('usePrices', () => {
       await act(async () => { latest?.refresh(); });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(4);
+      expect(entries).toHaveLength(13);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
