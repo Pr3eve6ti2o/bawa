@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   bytesToHex,
   keccak256,
@@ -1012,5 +1012,231 @@ describe('simulateSend ETH and TON', () => {
       error: { code: 'stale-seqno', chain: 'ton' },
       code: 'bad-seqno',
     });
+  });
+});
+
+describe('offline signing — determinism and TON external signer', () => {
+  const mnemonic = 'abandon '.repeat(11) + 'about';
+  const passphrase = 'TREZOR';
+
+  const expected = {
+    btc: {
+      txHash: 'e1fedbc2b7d283348895200e9cffe882728d1934b61e17da6a42d341fc73e2da',
+      feeBaseUnits: '1410',
+    },
+    eth: {
+      txHash: '0x08bbd8cf9baad0ff45e1220c95a205bd47f1506fa91312fde4247b01b551f578',
+    },
+    trx: {
+      txId: 'c7c6843bafc655cd226f1fcf0e049bbbddfaf931bb90344ca70c6c7d30550f52',
+    },
+    ton: {
+      messageHash: '0x9b098e9a691c990951e4c0c1b6a453be43790440952307dc91603a69868bacbf',
+    },
+  } as const;
+
+  const btc = () =>
+    signBtcOffline(
+      mnemonic,
+      passphrase,
+      'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+      '50000',
+      [{
+        txid: createHash('sha256').update('lane3-btc-test-utxo').digest('hex'),
+        vout: 0,
+        valueBaseUnits: '100000',
+      }],
+      '10',
+      'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu',
+    );
+
+  const eth = () =>
+    signEthOffline(
+      mnemonic,
+      passphrase,
+      '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+
+  const trx = () =>
+    signTrxOffline(
+      mnemonic,
+      passphrase,
+      'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c',
+      '1000000',
+      {
+        timestamp: 1_700_000_000_000,
+        number: 1,
+        txTrieRoot: '00'.repeat(32),
+        parentHash: '00'.repeat(32),
+        witnessAddress: 'TAyDUYP5rcf56xFwrg8cU1qQwvnWpkeapM',
+      },
+    );
+
+  const tonArgs = [
+    mnemonic,
+    passphrase,
+    'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+    '1000000000',
+    0,
+  ] as const;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Strict deep equality compares the serialized transaction/BOC strings exactly.
+  it('BTC signs the same transfer twice with byte-identical output', async () => {
+    const first = await btc();
+    const second = await btc();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.btc });
+  });
+
+  it('ETH signs the same transfer twice with byte-identical output', async () => {
+    const first = await eth();
+    const second = await eth();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.eth });
+  });
+
+  // TRX timestamp comes from Date.now(), so the txId below is pinned only because this suite freezes time; the probe txId was recorded at an unrecorded wall-clock time and is not reproducible.
+  it('TRX signs the same transfer twice with byte-identical output', async () => {
+    const first = await trx();
+    const second = await trx();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.trx });
+  });
+
+  it('TON signs the same transfer twice with byte-identical output when time is frozen', async () => {
+    const first = await signTonOffline(...tonArgs);
+    const second = await signTonOffline(...tonArgs);
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.ton });
+  });
+
+  it('TON accepts the external signer\u2019s local-path BOC and hash verbatim', async () => {
+    // Omitting options exercises the default walletVersion, v4r2.
+    const local = await signTonOffline(...tonArgs);
+    if (!local.ok) {
+      throw new Error('Local TON fixture signing failed');
+    }
+
+    const signer = vi.fn(async () => ({
+      signedBocBase64: local.signedBocBase64,
+      messageHash: local.messageHash,
+    }));
+
+    const external = await signTonOffline(...tonArgs, {
+      walletVersion: 'v4r2',
+      signer,
+    });
+
+    expect(signer).toHaveBeenCalledTimes(1);
+    if (!external.ok) {
+      throw new Error('External TON fixture signing failed');
+    }
+
+    expect(external.signedBocBase64).toBe(local.signedBocBase64);
+    expect(external.messageHash).toBe(local.messageHash);
+  });
+
+  it('TON rejects a garbage external-signer BOC with signing-failed', async () => {
+    const signer = vi.fn(async () => ({
+      signedBocBase64: 'garbage',
+      messageHash: expected.ton.messageHash,
+    }));
+
+    const result = await signTonOffline(...tonArgs, { signer });
+
+    expect(signer).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: false, code: 'signing-failed' });
+  });
+
+  it('TON rejects v3r2 without a signer with unsupported-version', async () => {
+    const result = await signTonOffline(...tonArgs, {
+      walletVersion: 'v3r2',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'unsupported-version' });
+  });
+});
+
+describe.skip('mainnet qualification (item 23) — manual step, never in routine runs', () => {
+  /*
+   * Item 23 is a SEPARATE manual qualification, not proved by offline tests.
+   *
+   * Procedure, entirely outside Vitest:
+   * 1. Generate disposable one-time keys; never use a funded key or the public
+   *    regression-fixture key. Never print a mnemonic or put one in evidence.
+   * 2. Record the intended chain inputs and sign those recorded inputs offline
+   *    using the disposable keys. Keep secret material out of the record.
+   * 3. Broadcast once per chain by hand, only if a valid mainnet transaction
+   *    can be constructed without violating those constraints.
+   * 4. Verify the real receipt manually, paste its explorer URL and txid below,
+   *    then replace describe.skip with describe.
+   *
+   * Leave this skipped if the constraints cannot be met or no receipt exists.
+   * No test broadcasts, including after un-skipping.
+   *
+   * expectedOffline contains the preceding suite's golden expected values,
+   * NOT mainnet receipt IDs for different disposable keys/network inputs.
+   * Never broadcast golden-vector payloads: the BTC outpoint is synthetic,
+   * the TON expiry is frozen, and the fixture mnemonic is public.
+   * TON messageHash is not a mainnet transaction ID.
+   * Do not copy a reference hash into a receipt slot as fabricated evidence.
+   */
+  const records = [
+    {
+      chain: 'BTC',
+      expectedOffline: {
+        txHash: 'e1fedbc2b7d283348895200e9cffe882728d1934b61e17da6a42d341fc73e2da',
+        feeBaseUnits: '1410',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'ETH',
+      expectedOffline: {
+        txHash: '0x08bbd8cf9baad0ff45e1220c95a205bd47f1506fa91312fde4247b01b551f578',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'TRX',
+      expectedOffline: {
+        txId: 'c7c6843bafc655cd226f1fcf0e049bbbddfaf931bb90344ca70c6c7d30550f52',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'TON',
+      expectedOffline: {
+        messageHash: '0x9b098e9a691c990951e4c0c1b6a453be43790440952307dc91603a69868bacbf',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+  ];
+
+  // Evidence-presence gate only; authenticity/inclusion verification is manual.
+  it.each(records)('$chain — manually verified receipt is recorded', ({ explorerUrl, txid }) => {
+    expect(txid.trim(), 'Paste the actual manually confirmed mainnet txid').not.toBe('');
+    expect(explorerUrl.trim(), 'Paste the actual explorer URL').not.toBe('');
+    expect(new URL(explorerUrl.trim()).protocol).toBe('https:');
   });
 });
