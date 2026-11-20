@@ -81,6 +81,48 @@ const VECTORS = [
     seed:
       'bda85446c68413707090a52022edd26a1c9462295029f2e60cd7c4f2bbd3097170af7a4d73245cafa9c3cca8d561a7c3de6f5d4a10be8ed2a5e608d68f92fcc8',
   },
+  {
+    entropy: '7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f',
+    mnemonic:
+      'legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth useful legal winner thank year wave sausage worth title',
+    seed:
+      'bc09fca1804f7e69da93c2f2028eb238c227f2e9dda30cd63699232578480a4021b146ad717fbb7e451ce9eb835f43620bf5c514db0f8add49f5d121449d3e87',
+  },
+  {
+    entropy: '8080808080808080808080808080808080808080808080808080808080808080',
+    mnemonic:
+      'letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic bless',
+    seed:
+      'c0c519bd0e91a2ed54357d9d1ebef6f5af218a153624cf4f2da911a0ed8f7a09e2ef61af0aca007096df430022f7a2b6fb91661a9589097069720d015e4e982f',
+  },
+  {
+    entropy: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    mnemonic:
+      'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo vote',
+    seed:
+      'dd48c104698c30cfe2b6142103248622fb7bb0ff692eebb00089b32d22484e1613912f0a5b694407be899ffd31ed3992c456cdf60f5d4564b8ba3f05a69890ad',
+  },
+  {
+    entropy: '9e885d952ad362caeb4efe34a8e91bd2',
+    mnemonic:
+      'ozone drill grab fiber curtain grace pudding thank cruise elder eight picnic',
+    seed:
+      '274ddc525802f7c828d8ef7ddbcdc5304e87ac3535913611fbbfa986d0c9e5476c91689f9c8a54fd55bd38606aa6a8595ad213d4c9c9f9aca3fb217069a41028',
+  },
+  {
+    entropy: '6610b25967cdcca9d59875f5cb50b0ea75433311869e930b',
+    mnemonic:
+      'gravity machine north sort system female filter attitude volume fold club stay feature office ecology stable narrow fog',
+    seed:
+      '628c3827a8823298ee685db84f55caa34b5cc195a778e52d45f59bcf75aba68e4d7590e101dc414bc1bbd5737666fbbef35d1f1903953b66624f910feef245ac',
+  },
+  {
+    entropy: '68a79eaca2324873eacc50cb9c6eca8cc68ea5d936f98787c60c7ebc74e6ce7c',
+    mnemonic:
+      'hamster diagram private dutch cause delay private meat slide toddler razor book happy fancy gospel tennis maple dilemma loan word shrug inflict delay length',
+    seed:
+      '64c87cde7e12ecf6704ab95bb1408bef047c22db4cc7491c4271d170a1b213d20b385bc1588d9c7b38f1b39d415665b8a9030c9ec653d75e65f847d8fc1fc440',
+  },
 ] as const;
 
 function hexToBytes(hex: string): Uint8Array {
