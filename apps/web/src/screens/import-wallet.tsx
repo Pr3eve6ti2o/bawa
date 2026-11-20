@@ -90,8 +90,7 @@ export function ImportWalletScreen() {
   const [phraseError, setPhraseError] = useState<string | null>(null);
   const [vaultPassword, setVaultPassword] = useState('');
   const [vaultPasswordConfirm, setVaultPasswordConfirm] = useState('');
-  // Optional BIP-39 passphrase (25th word): never stored, entered again at
-  // every unlock. It also shapes the previewed addresses below.
+  // Optional BIP-39 passphrase (25th word): never stored. It also shapes the previewed addresses below.
   const [passphrase, setPassphrase] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -169,7 +168,7 @@ export function ImportWalletScreen() {
     } catch {
       setNormalizedMnemonic(null);
       setPhraseError(
-        'The wallet could not be saved. If a vault was created, unlock it from Security; otherwise try again.',
+        'The wallet could not be saved. Please try again.',
       );
     } finally {
       setIsSaving(false);
@@ -310,7 +309,8 @@ export function ImportWalletScreen() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Optional BIP-39 passphrase (25th word). It is never
-                    stored — you must enter it every time you unlock. The
+                    stored — you will need it again if you restore this wallet
+                    elsewhere. The
                     previewed addresses below are derived with it.
                   </p>
                 </div>
@@ -436,8 +436,7 @@ export function ImportWalletScreen() {
             Never paste a mnemonic, seed or private key here.
             An extended public key lets its holder track this account&apos;s
             derivable addresses, balances and transaction history. Imported
-            keys are stored in this browser (localStorage) and stay stored
-            when the wallet is locked; they are readable by this site&apos;s
+            keys are stored in this browser (localStorage). They are readable by this site&apos;s
             scripts and by extensions with access to this site.
           </p>
 

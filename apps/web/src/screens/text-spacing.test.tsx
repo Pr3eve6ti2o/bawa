@@ -267,7 +267,7 @@ describe('text spacing', () => {
       <StepCard
         icon="1"
         label="Set a vault password"
-        detail="At least 8 characters. You will need it to unlock the wallet."
+        detail="At least 8 characters. It encrypts the vault on this device."
         state="active"
       />,
     );

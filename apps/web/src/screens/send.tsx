@@ -47,7 +47,7 @@ type SignState =
   | { status: 'error'; reason: string };
 
 export function SendScreen() {
-  const { vaultState, vaultAddresses, balances, selectedChain } = useWallet();
+  const { vaultAddresses, balances, selectedChain } = useWallet();
   const chainsWithWallet: ChainId[] = CHAINS.filter(
     (chain) => vaultAddresses[chain].length > 0,
   );
@@ -127,13 +127,6 @@ export function SendScreen() {
   }
 
   async function handleSign(): Promise<void> {
-    if (vaultState !== 'unlocked') {
-      setSignState({
-        status: 'error',
-        reason: 'Your vault is locked. Unlock it in Security settings to sign.',
-      });
-      return;
-    }
     if (!preview || !preview.ok) return;
     try {
       await ensureAdapters();
@@ -616,14 +609,6 @@ export function SendScreen() {
               <p className="text-destructive">
                 {signState.reason}
               </p>
-              {vaultState !== 'unlocked' && (
-                <Link
-                  to="/lock"
-                  className="inline-block font-medium text-primary underline underline-offset-4"
-                >
-                  Go to the lock screen to unlock
-                </Link>
-              )}
             </div>
           )}
         </div>

@@ -75,8 +75,7 @@ export function CreateWalletScreen() {
   const [vaultExists, setVaultExists] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  // Optional BIP-39 passphrase (25th word): never stored, entered again at
-  // every unlock. Distinct from the vault password.
+  // Optional BIP-39 passphrase (25th word): never stored. Distinct from the vault password.
   const [passphrase, setPassphrase] = useState('');
   const [mnemonic, setMnemonic] = useState<string | null>(null);
   const [confirmPositions, setConfirmPositions] = useState<number[]>([]);
@@ -187,7 +186,7 @@ export function CreateWalletScreen() {
       // clear again on any failure so no copy lingers.
       setMnemonic(null);
       setError(
-        'The wallet could not be saved. If a vault was created, unlock it from Security; otherwise try again.',
+        'The wallet could not be saved. Please try again.',
       );
     } finally {
       setIsBusy(false);
@@ -286,7 +285,7 @@ export function CreateWalletScreen() {
               <StepCard
                 icon={<span>1</span>}
                 label="Set a vault password"
-                detail="At least 8 characters. You will need it to unlock the wallet."
+                detail="At least 8 characters. It encrypts the vault on this device."
                 state={step === 1 ? 'active' : step > 1 ? 'completed' : 'pending'}
               />
             </li>
@@ -371,7 +370,8 @@ export function CreateWalletScreen() {
                   />
                   <p className="text-sm text-muted-foreground">
                     Optional BIP-39 passphrase (25th word). It is never
-                    stored — you must enter it every time you unlock. It is
+                    stored — you will need it again if you restore this wallet
+                    elsewhere. It is
                     not your vault password.
                   </p>
                 </div>

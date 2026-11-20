@@ -60,9 +60,6 @@ const loadNetworkSelection = () =>
     default: m.NetworkSelectionScreen,
   }));
 const NetworkSelectionScreen = lazy(loadNetworkSelection);
-const loadLock = () =>
-  import('../screens/lock').then((m) => ({ default: m.LockScreen }));
-const LockScreen = lazy(loadLock);
 const loadWalletManagement = () =>
   import('../screens/wallet-management').then((m) => ({
     default: m.WalletManagementScreen,
@@ -83,7 +80,6 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/transactions': loadTransactionHistory,
   '/track': loadTrackTransaction,
   '/networks': loadNetworkSelection,
-  '/lock': loadLock,
   '/wallets': loadWalletManagement,
 };
 
@@ -136,24 +132,6 @@ function AppLayout() {
   }, [moreOpen]);
   const location = useLocation();
   const pathname = location.pathname;
-  // Lock-with-return-to (Rabby /unlock?from=, MetaMask state.from):
-  // remember the last route the user was on before /lock, so unlocking
-  // sends them back instead of dropping them on the dashboard. This
-  // matters because reload is the current workaround for a stale render
-  // and reload locks the vault. sessionStorage, not localStorage, so
-  // the return target dies with the tab. The key is duplicated in
-  // lock.tsx — keep the two in sync.
-  useEffect(() => {
-    if (location.pathname === '/lock') return;
-    try {
-      window.sessionStorage.setItem(
-        'bawa-lock-return-to',
-        `${location.pathname}${location.search}`,
-      );
-    } catch {
-      // Private mode / disabled storage: the lock screen falls back to '/'.
-    }
-  }, [location.pathname, location.search]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
   // the create-wallet flow and the send flow. Send review is a state
   // inside /send rather than its own route, so the whole /send flow
@@ -165,15 +143,14 @@ function AppLayout() {
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
-  // /create-wallet, /lock and /security keep the 480px cap below lg only:
+  // /create-wallet and /security keep the 480px cap below lg only:
   // at lg they go full content width so the screens can lay out in two
-  // columns (create-wallet, security) or as a centred card in the
-  // workspace (lock).
+  // columns (create-wallet, security).
   const isNarrow =
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
-  const isWideAtLg = ['/create-wallet', '/lock', '/security'].includes(pathname);
+  const isWideAtLg = ['/create-wallet', '/security'].includes(pathname);
 
   return (
     <div className="min-h-screen bg-background sm:py-6 lg:py-0">
@@ -377,7 +354,6 @@ export function App() {
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
-            <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
           </Routes>

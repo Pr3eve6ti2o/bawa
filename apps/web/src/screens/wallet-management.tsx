@@ -18,7 +18,6 @@ export function WalletManagementScreen() {
   const {
     xpubs,
     removeXpub,
-    vaultState,
     vaultAccount,
     setVaultAccount,
     vaultAddresses,
@@ -37,10 +36,9 @@ export function WalletManagementScreen() {
   const [accountError, setAccountError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (vaultState !== "unlocked") return;
     setAccountInput(String(vaultAccount.account));
     setIndexInput(String(vaultAccount.index));
-  }, [vaultState, vaultAccount.account, vaultAccount.index]);
+  }, [vaultAccount.account, vaultAccount.index]);
 
   async function applyVaultAccount() {
     if (isDeriving) return;
@@ -70,12 +68,11 @@ export function WalletManagementScreen() {
         Wallets
       </h1>
 
-      {vaultState === "unlocked" && (
-        <Card className="rounded-xl">
-          <CardHeader>
-            <CardTitle>Vault account</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card className="rounded-xl">
+        <CardHeader>
+          <CardTitle>Vault account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-2">
                 <Label htmlFor="vault-account">Account</Label>
@@ -131,9 +128,8 @@ export function WalletManagementScreen() {
             <p className="text-sm text-muted-foreground">
               TON has one address per wallet — account and index do not change it.
             </p>
-          </CardContent>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
 
       {hasWallets ? (
         <ul className="space-y-4">
@@ -195,7 +191,7 @@ export function WalletManagementScreen() {
       <p className="text-sm text-muted-foreground">
         Only extended public keys and TON public addresses are stored (in localStorage). No secrets are stored anywhere in this wallet.
         An extended public key lets its holder track this account&apos;s derivable addresses, balances and
-        transaction history. Stored keys stay stored when the wallet is locked; forgetting a key removes it
+        transaction history. Forgetting a key removes it
         from this browser, but cannot revoke a copy someone already took.
       </p>
 

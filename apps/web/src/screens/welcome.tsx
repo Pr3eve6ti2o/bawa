@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router";
 import { Network } from "lucide-react";
 import { useWallet } from "../state/wallet-context";
-import type { BalanceState } from "../state/wallet-context";
+import type { BalanceState, VaultState } from "../state/wallet-context";
 import {
   availableFor,
   chainConfig,
@@ -52,14 +52,14 @@ type ChainStripDisplay = {
  * price when the balance is zero or unavailable, and "Unavailable" —
  * never $0.00 — when the balance or the price feed fails. With no vault
  * the strip is navigation only (logo + name + dash), per the Lane C
- * §5 empty state; with a locked vault it points at unlocking.
+ * §5 empty state. The vault never locks, so there is no locked state.
  */
 function chainStripDisplay(
   chain: ChainId,
   balance: BalanceState,
   entry: PriceEntry | undefined,
   nowMs: number,
-  vaultState: "no-vault" | "locked" | "unlocked",
+  vaultState: VaultState,
 ): ChainStripDisplay {
   const config = chainConfig(chain);
   if (vaultState === "no-vault") {
@@ -68,15 +68,6 @@ function chainStripDisplay(
       primary: "—",
       freshness: "none",
       freshnessLabel: "No wallet yet",
-    };
-  }
-  if (vaultState === "locked") {
-    return {
-      loading: false,
-      primary: "Unavailable",
-      secondary: "Unlock to see balances",
-      freshness: "none",
-      freshnessLabel: "Wallet locked",
     };
   }
   if (balance.status === "loading") {

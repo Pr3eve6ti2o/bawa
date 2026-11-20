@@ -83,7 +83,7 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the locked dashboard when a vault is present', async () => {
+  it('renders the dashboard when a vault is present', async () => {
     window.localStorage.setItem(
       'bawa-vault',
       JSON.stringify({
@@ -102,9 +102,9 @@ describe.sequential('App', () => {
 
     try {
       await withRenderedApp('/', (div) => {
-        // Lane C (spec §5): the locked banner was removed from the
-        // dashboard — the locked dashboard shows the hero and rows, and
-        // unlocking lives on the /lock route.
+        // Vault-lock removal: there is no locked state and no /lock
+        // route any more — a vault present means the dashboard, with
+        // the hero and rows, straight away.
         expect(div.textContent).not.toContain(
           'Vault locked — your vault addresses are hidden until you unlock.',
         );

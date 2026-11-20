@@ -102,7 +102,7 @@ function setPrices(
 }
 
 function setWallet(
-  vaultState: 'no-vault' | 'locked' | 'unlocked',
+  vaultState: 'no-vault' | 'unlocked',
   balances: Record<ChainKey, BalanceState>,
 ): void {
   vi.mocked(useWallet).mockReturnValue({
@@ -229,16 +229,7 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
     }
   });
 
-  it('points at unlocking when the vault is locked', async () => {
-    setWallet('locked', balancesFor({}));
-    setPrices(
-      { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null },
-    );
-    const mounted = await mountScreen();
-    try {
-      expect(mounted.div.textContent).toContain('Unlock to see balances');
-    } finally {
-      await mounted.cleanup();
-    }
-  });
+  // Vault-lock removal: the strip used to point at unlocking when the
+  // vault was locked. There is no locked state any more — an existing
+  // vault always shows its balances, so no such test remains.
 });

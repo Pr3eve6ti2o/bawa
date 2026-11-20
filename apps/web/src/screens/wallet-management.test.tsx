@@ -22,14 +22,12 @@ const TEST_ADDRESSES = {
 };
 
 function setWallet(
-  vaultState: string,
   setVaultAccount: (account: number, index: number) => Promise<void>,
   vaultAccount = { account: 0, index: 0 },
 ): void {
   vi.mocked(useWallet).mockReturnValue({
     xpubs: { btc: null, eth: null, trx: null, ton: null },
     removeXpub: vi.fn(),
-    vaultState,
     vaultAccount,
     setVaultAccount,
     vaultAddresses: TEST_ADDRESSES,
@@ -79,8 +77,8 @@ async function mountScreen() {
 }
 
 describe('wallet management — vault account selection', () => {
-  it('shows the derived addresses and the TON note when unlocked', async () => {
-    setWallet('unlocked', vi.fn(async () => {}));
+  it('shows the derived addresses and the TON note (the vault is always unlocked)', async () => {
+    setWallet(vi.fn(async () => {}));
     const mounted = await mountScreen();
     try {
       expect(
@@ -98,12 +96,14 @@ describe('wallet management — vault account selection', () => {
     }
   });
 
-  it('hides the vault account section when the vault is locked', async () => {
-    setWallet('locked', vi.fn(async () => {}));
+  it('always shows the vault account section — the vault never locks', async () => {
+    // Vault-lock removal: the section used to hide when the vault was
+    // locked. There is no locked state any more, so it always renders.
+    setWallet(vi.fn(async () => {}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.querySelector('#vault-account')).toBeNull();
-      expect(mounted.div.textContent).not.toContain('Vault account');
+      expect(mounted.div.querySelector('#vault-account')).not.toBeNull();
+      expect(mounted.div.textContent).toContain('Vault account');
     } finally {
       await mounted.cleanup();
     }
@@ -111,7 +111,7 @@ describe('wallet management — vault account selection', () => {
 
   it('applies the entered account/index and clamps invalid input to 0', async () => {
     const setVaultAccount = vi.fn(async () => {});
-    setWallet('unlocked', setVaultAccount);
+    setWallet(setVaultAccount);
     const mounted = await mountScreen();
     try {
       const index = mounted.div.querySelector(
@@ -145,7 +145,7 @@ describe('wallet management — vault account selection', () => {
   });
 
   it('shows the error when setVaultAccount throws', async () => {
-    setWallet('unlocked', async () => {
+    setWallet(async () => {
       throw new RangeError('index must be a non-negative safe integer below 0x80000000');
     });
     const mounted = await mountScreen();

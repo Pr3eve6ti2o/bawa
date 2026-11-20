@@ -180,7 +180,6 @@ export function DashboardScreen() {
   const {
     balances,
     refreshBalances,
-    vaultState,
   } = useWallet();
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
@@ -390,9 +389,7 @@ export function DashboardScreen() {
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
             {hero.balancesFailed
-              ? vaultState === 'locked'
-                ? 'Unlock your wallet to see your portfolio total.'
-                : 'Balances could not be loaded, so the portfolio total is unavailable.'
+              ? 'Balances could not be loaded, so the portfolio total is unavailable.'
               : pricesState.status === 'idle'
                 ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
                 : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
@@ -408,11 +405,6 @@ export function DashboardScreen() {
                   ? 'Price feed timed out — retry.'
                   : 'Price feed error — retry.'}
           </p>
-        )}
-        {vaultState === 'locked' && (
-          <Button asChild>
-            <Link to="/lock">Unlock your wallet</Link>
-          </Button>
         )}
         <Button
           type="button"

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from '../app/app';
-import { createVault, deleteVault, lock } from '../wallet/vault';
+import { createVault, deleteVault } from '../wallet/vault';
 
 // jsdom has no matchMedia; the vendored theme toggle reads it on mount.
 if (typeof window.matchMedia !== 'function') {
@@ -75,13 +75,11 @@ async function mountBackupScreen() {
 describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   beforeEach(() => {
     localStorage.clear();
-    lock();
     deleteVault();
   });
 
   afterEach(() => {
     localStorage.clear();
-    lock();
     deleteVault();
   });
 

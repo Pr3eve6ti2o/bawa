@@ -66,8 +66,6 @@ function setWallet(balances: Record<ChainKey, BalanceState>, extra: Record<strin
   vi.mocked(useWallet).mockReturnValue({
     balances,
     refreshBalances: mockRefreshBalances,
-    locked: false,
-    unlock: vi.fn(),
     vaultState: 'unlocked',
     ...extra,
   } as unknown as ReturnType<typeof useWallet>);
@@ -198,29 +196,6 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).not.toContain('No wallet yet');
       expect(mounted.div.textContent).not.toContain('Create wallet');
       expect(mounted.div.textContent).not.toContain('Vault locked');
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('shows an Unlock link to /lock when the vault is locked', async () => {
-    // Coordinator merge fix: Lane C removed the locked banner, which
-    // removed the only direct way to reach /lock from the dashboard
-    // after a reload. The hero must offer an Unlock affordance.
-    setWallet(balancesFor({}), { vaultState: 'locked' });
-    const mounted = await mountScreen();
-    try {
-      expect(mounted.div.textContent).toContain('Unlock your wallet');
-      const link = mounted.div.querySelector('a[href="/lock"]');
-      expect(link).not.toBeNull();
-      // A locked vault is not a load failure: the hero must say the
-      // total needs an unlock, not that balances "could not be loaded".
-      expect(mounted.div.textContent).toContain(
-        'Unlock your wallet to see your portfolio total.',
-      );
-      expect(mounted.div.textContent).not.toContain(
-        'Balances could not be loaded',
-      );
     } finally {
       await mounted.cleanup();
     }

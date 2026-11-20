@@ -84,7 +84,7 @@ function getRowModel(
   nowMs: number,
   pricesLoading: boolean | undefined,
 ): AssetRowModel {
-  const { balances, vaultState, vaultAddresses, addresses } = wallet;
+  const { balances } = wallet;
   const config = chainConfig(chain);
   const balance: BalanceState = balances[chain];
   const entry: PriceEntry | undefined = prices?.[chain];
@@ -102,25 +102,17 @@ function getRowModel(
   }
 
   if (balance.status === 'unavailable' || balance.status === 'error') {
-    const hasAddress =
-      (vaultAddresses?.[chain]?.length ?? 0) > 0 ||
-      (addresses?.[chain]?.length ?? 0) > 0;
-    const lockedNoAddress =
-      vaultState === 'locked' &&
-      !hasAddress &&
-      balance.status === 'unavailable';
     return {
       kind: 'unavailable',
       chain,
       displayName: config.displayName,
       symbol: config.symbol,
-      statusText: lockedNoAddress
-        ? 'Unlock your wallet to see balances'
-        : balance.status === 'unavailable'
+      statusText:
+        balance.status === 'unavailable'
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
-      showRetry: !lockedNoAddress,
+      showRetry: true,
     };
   }
 
@@ -372,7 +364,7 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
  * (availableFor('balance')). A non-zero balance shows its fiat value
  * when the caller passes a fresh price. Every row also shows the
  * per-unit price ("$61,706.00", labelled "per BTC") whenever a fresh
- * price is available — including zero balances and locked/unavailable
+ * price is available — including zero balances and unavailable
  * balances — so a working feed is visible and a failed one says so
  * ("Price unavailable" / "Price error" / "Price expired"), never a
  * silent empty and never a fabricated number. While the first fetch is
