@@ -227,10 +227,10 @@ export function CreateWalletScreen() {
                 <span
                   className={`flex size-10 shrink-0 items-center justify-center rounded-full text-body-md ${
                     progressStep < step
-                      ? "bg-success text-primary-foreground"
+                      ? "bg-success-surface text-success-text"
                       : progressStep === step
                         ? "bg-primary font-bold text-primary-foreground"
-                        : "bg-surface-blue-dim text-primary"
+                        : "bg-surface-blue-dim text-foreground"
                   }`}
                 >
                   {progressStep < step ? (

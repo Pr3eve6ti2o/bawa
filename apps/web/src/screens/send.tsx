@@ -385,10 +385,10 @@ export function SendScreen() {
                   <span
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm ${
                       index < activeIndex
-                        ? 'bg-success text-success-foreground'
+                        ? 'bg-success-surface text-success-text'
                         : index === activeIndex
                           ? 'bg-primary font-bold text-primary-foreground'
-                          : 'bg-surface-blue-dim text-primary'
+                          : 'bg-surface-blue-dim text-foreground'
                     }`}
                   >
                     {index < activeIndex ? '✓' : index + 1}

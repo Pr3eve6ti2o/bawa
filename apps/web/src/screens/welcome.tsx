@@ -37,7 +37,7 @@ export function WelcomeScreen() {
 
         <ol className="mt-4 space-y-2 text-body-md">
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               1
             </span>
             <span className="font-semibold text-panel-text">
@@ -45,7 +45,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               2
             </span>
             <span className="font-semibold text-panel-text">
@@ -53,7 +53,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               3
             </span>
             <span className="font-semibold text-panel-text">
@@ -61,7 +61,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               4
             </span>
             <span className="font-semibold text-panel-text">
