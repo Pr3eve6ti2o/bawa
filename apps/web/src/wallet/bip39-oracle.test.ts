@@ -123,6 +123,48 @@ const VECTORS = [
     seed:
       '64c87cde7e12ecf6704ab95bb1408bef047c22db4cc7491c4271d170a1b213d20b385bc1588d9c7b38f1b39d415665b8a9030c9ec653d75e65f847d8fc1fc440',
   },
+  {
+    entropy: 'c0ba5a8e914111210f2bd131f3d5e08d',
+    mnemonic:
+      'scheme spot photo card baby mountain device kick cradle pact join borrow',
+    seed:
+      'ea725895aaae8d4c1cf682c1bfd2d358d52ed9f0f0591131b559e2724bb234fca05aa9c02c57407e04ee9dc3b454aa63fbff483a8b11de949624b9f1831a9612',
+  },
+  {
+    entropy: '6d9be1ee6ebd27a258115aad99b7317b9c8d28b6d76431c3',
+    mnemonic:
+      'horn tenant knee talent sponsor spell gate clip pulse soap slush warm silver nephew swap uncle crack brave',
+    seed:
+      'fd579828af3da1d32544ce4db5c73d53fc8acc4ddb1e3b251a31179cdb71e853c56d2fcb11aed39898ce6c34b10b5382772db8796e52837b54468aeb312cfc3d',
+  },
+  {
+    entropy: '9f6a2878b2520799a44ef18bc7df394e7061a224d2c33cd015b157d746869863',
+    mnemonic:
+      'panda eyebrow bullet gorilla call smoke muffin taste mesh discover soft ostrich alcohol speed nation flash devote level hobby quick inner drive ghost inside',
+    seed:
+      '72be8e052fc4919d2adf28d5306b5474b0069df35b02303de8c1729c9538dbb6fc2d731d5f832193cd9fb6aeecbc469594a70e3dd50811b5067f3b88b28c3e8d',
+  },
+  {
+    entropy: '23db8160a31d3e0dca3688ed941adbf3',
+    mnemonic:
+      'cat swing flag economy stadium alone churn speed unique patch report train',
+    seed:
+      'deb5f45449e615feff5640f2e49f933ff51895de3b4381832b3139941c57b59205a42480c52175b6efcffaa58a2503887c1e8b363a707256bdd2b587b46541f5',
+  },
+  {
+    entropy: '8197a4a47f0425faeaa69deebc05ca29c0a5b5cc76ceacc0',
+    mnemonic:
+      'light rule cinnamon wrap drastic word pride squirrel upgrade then income fatal apart sustain crack supply proud access',
+    seed:
+      '4cbdff1ca2db800fd61cae72a57475fdc6bab03e441fd63f96dabd1f183ef5b782925f00105f318309a7e9c3ea6967c7801e46c8a58082674c860a37b93eda02',
+  },
+  {
+    entropy: '066dca1a2bb7e8a1db2832148ce9933eea0f3ac9548d793112d9a95c9407efad',
+    mnemonic:
+      'all hour make first leader extend hole alien behind guard gospel lava path output census museum junior mass reopen famous sing advance salt reform',
+    seed:
+      '26e975ec644423f4a4c4f4215ef09b4bd7ef924e85d1d17c4cf3f136c2863cf6df0a475045652c57eb5fb41513ca2a2d67722b77e954b4b3fc11f7590449191d',
+  },
 ] as const;
 
 function hexToBytes(hex: string): Uint8Array {
