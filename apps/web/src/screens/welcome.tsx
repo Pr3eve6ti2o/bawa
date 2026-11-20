@@ -10,8 +10,8 @@ import {
 
 export function WelcomeScreen() {
   return (
-    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6">
-      <div className="rounded-[30px] border border-panel-border bg-panel-surface-raised p-7 text-panel-text sm:p-8">
+    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
+      <div className="rounded-[30px] border border-panel-border bg-panel-surface-raised p-7 text-panel-text sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <p className="text-sm font-bold tracking-widest text-panel-accent">
           BAWA
         </p>
@@ -71,7 +71,7 @@ export function WelcomeScreen() {
         </ol>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
         <Card className="flex flex-col rounded-xl bg-card text-foreground">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
@@ -105,7 +105,7 @@ export function WelcomeScreen() {
         </Card>
       </div>
 
-      <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground">
+      <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <p>Mainnet only — this wallet never connects to a test network.</p>
         <p>
           Balances and history come from the mainnet adapters. Sending signs

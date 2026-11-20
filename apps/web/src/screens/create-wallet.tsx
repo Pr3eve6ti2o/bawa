@@ -182,7 +182,7 @@ export function CreateWalletScreen() {
 
   if (vaultExists) {
     return (
-      <section aria-labelledby="create-wallet-title" className="space-y-6">
+      <section aria-labelledby="create-wallet-title" className="space-y-6 lg:mx-auto lg:max-w-2xl">
         <Card className="rounded-xl">
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
@@ -207,8 +207,8 @@ export function CreateWalletScreen() {
   }
 
   return (
-    <section aria-labelledby="create-wallet-title" className="space-y-6">
-      <Card className="rounded-xl">
+    <section aria-labelledby="create-wallet-title" className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
+      <Card className="rounded-xl lg:col-span-2 lg:sticky lg:top-6">
         <CardHeader>
           <CardTitle id="create-wallet-title">Create a wallet</CardTitle>
           <CardDescription>
@@ -299,6 +299,7 @@ export function CreateWalletScreen() {
         </CardContent>
       </Card>
 
+      <div className="space-y-6 lg:col-span-3">
       {error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -388,7 +389,7 @@ export function CreateWalletScreen() {
                 or website.
               </AlertDescription>
             </Alert>
-            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2">
+            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2 lg:grid-cols-4">
               {words.map((word, index) => (
                 <li
                   key={index}
@@ -480,6 +481,7 @@ export function CreateWalletScreen() {
           </CardContent>
         </Card>
       )}
+      </div>
     </section>
   );
 }
