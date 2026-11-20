@@ -222,3 +222,62 @@ export function fetchJsonWithRetry(
     operation: 'fetchJson',
   });
 }
+
+export type RetryMetrics = {
+  calls: number;
+  retries: number;
+  successes: number;
+  giveUps: number;
+};
+
+const retryMetricsState: RetryMetrics = {
+  calls: 0,
+  retries: 0,
+  successes: 0,
+  giveUps: 0,
+};
+
+const retryEventSubscribers = new Set<(event: RetryEvent) => void>();
+
+export function subscribeRetryEvents(listener: (event: RetryEvent) => void): () => void {
+  retryEventSubscribers.add(listener);
+
+  return () => {
+    retryEventSubscribers.delete(listener);
+  };
+}
+
+export function getRetryMetrics(): RetryMetrics {
+  return { ...retryMetricsState };
+}
+
+export function resetRetryMetrics(): void {
+  retryMetricsState.calls = 0;
+  retryMetricsState.retries = 0;
+  retryMetricsState.successes = 0;
+  retryMetricsState.giveUps = 0;
+}
+
+setDefaultRetryEventListener((event: RetryEvent): void => {
+  switch (event.kind) {
+    case 'retry_attempt':
+      retryMetricsState.retries += 1;
+      break;
+    case 'retry_success':
+      retryMetricsState.successes += 1;
+      retryMetricsState.calls += 1;
+      break;
+    case 'retry_give_up':
+      retryMetricsState.giveUps += 1;
+      retryMetricsState.calls += 1;
+      break;
+  }
+
+  for (const listener of Array.from(retryEventSubscribers)) {
+    try {
+      listener({ ...event });
+    } catch {
+      // Subscriber failures must not affect retries or other subscribers.
+    }
+  }
+});
