@@ -54,6 +54,7 @@ Recovery encryption uses AES-256-GCM with the additional authenticated data (AAD
 - Do not treat a version range as a tested dependency graph.
 - The tools lockfile is committed and records Core `4.9.3` exactly. No root lockfile is committed; the root `package.json` has no dependencies. Before a production release, verify and document the tools lockfile's clean-install origin and reproducibility.
 - The current `ci.yml` contains no dependency- or secret-scanning steps, and scanning evidence is recorded as `blocked-unverified`. Add and verify both kinds of scanning in CI/release workflows, and record the results.
+- `ecdsa` 0.19.2 carries PYSEC-2026-1325 / CVE-2024-23342 (Minerva P-256 timing) with no fix version; it is an accepted residual risk, not a silently dropped finding. Reachability was adjudicated first-hand (coincurve backend active at runtime, our tools never sign, P-256 unreached). Full record: `docs/SECURITY-FINDINGS.md` §1 and `docs/security-AUDIT-TOOLCHAIN.md` §6.
 - Prefer signed/tagged releases. No release checksums or provenance are recorded in the repository. Record checksums and provenance where practical.
 
 ## Known limitations
@@ -65,6 +66,8 @@ An external security review is required before treating this as production custo
 A vulnerability-disclosure procedure is documented in the Vulnerability disclosure procedure section below. No private email contact is published; publishing one remains an open maintainer action. Do not post exploit details publicly.
 
 No session or inactivity timeout is implemented in the repository code. The 10-minute auto-lock is specified only in the Web draft. The 120-second subprocess timeout in `make_wallet.py` applies to generation, not inactivity; the daemon has no timeout.
+
+The 1,000-digit input cap for `formatFeePreview` exists on `panel-rebuild/org-diagnostics` (82970d2) and is not yet merged into adopt-proper; the 100-display-decimal cap is in this branch. See `docs/SECURITY-FINDINGS.md` §2–§3.
 
 ## Vulnerability disclosure procedure
 

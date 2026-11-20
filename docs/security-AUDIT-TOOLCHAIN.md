@@ -161,6 +161,13 @@ Full outputs: `T38/evidence/` in the fan-out lane dir
   `bip-utils` uses `ecdsa` for secp256k1, the advisory is
   P-256-specific. T40+ must adjudicate; do not present this as a
   confirmed exploitable finding in Bawa.
+  Adjudicated 2026-11-19/20 (diagnostics lane, re-verified first-hand by
+  Lane D): `bip_utils` selects the coincurve backend at runtime
+  (`EccConf.USE_COINCURVE` true), the ecdsa-backend wrapper exposes no
+  signing method, and our tools never sign — verdict: accepted residual
+  risk, no fix version exists. See `docs/SECURITY-FINDINGS.md` §1.
+  (Also: the pinned `bip-utils` version is 2.12.3, not 2.12.2 as written
+  above.)
 - Bandit (`bandit -r tools test`, 1,123 lines): **18 issues — 6
   Low, 12 Medium, 0 High**. All Medium are B108 hardcoded `/tmp`
   strings in test fixtures; Low are B101 asserts in tests and
@@ -192,6 +199,9 @@ Full outputs: `T38/evidence/` in the fan-out lane dir
   This is the single most important toolchain gap after the
   missing configs: `requirements.txt` without a lockfile makes
   Python results resolver-dependent.
+  Update 2026-11-20 (Lane D): `requirements.lock` now exists
+  (pip-compile style, hashed pins, `ecdsa==0.19.2` via `bip-utils`),
+  so scans against the lockfile are deterministic.
 
 ## 7. Reproducible commands (copy-paste, repo root)
 
