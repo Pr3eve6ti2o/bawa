@@ -1,4 +1,4 @@
-# ADR-0006 — Live price feed provider (CoinGecko)
+# ADR-0007 — Live price feed provider (CoinGecko)
 
 ## Context
 
