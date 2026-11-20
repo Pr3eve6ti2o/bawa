@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Link } from "react-router";
-import { Network } from "lucide-react";
+import { StepCard } from "../ui/components/step-card";
 import { Button } from "../ui/components/button";
+import { BawaIcon } from "../ui/components/icons";
 import {
   Card,
   CardContent,
@@ -14,66 +15,43 @@ import { PopularChainsStrip } from "../ui/components/chain-strip";
 export function WelcomeScreen() {
   return (
     <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
-      <div className="rounded-[30px] border border-panel-border bg-panel-surface-raised p-7 text-panel-text sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
-        <p className="text-sm font-bold tracking-widest text-panel-accent">
-          BAWA
-        </p>
+      <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
+        <div aria-hidden="true" className="flex items-end gap-3 text-ink">
+          <BawaIcon name="wallet" className="size-16 -rotate-3" />
+          <BawaIcon name="coins" className="size-10 rotate-3" />
+        </div>
         <h1
           id="welcome-title"
-          className="mt-3 text-title-lg font-bold tracking-tight text-panel-text"
+          className="mt-3 text-title-lg font-bold tracking-tight text-ink"
         >
-          Welcome to Bawa Web Wallet
+          Welcome to <span className="bawa-marker">Bawa</span> Web Wallet
         </h1>
-        <p className="mt-2 max-w-xl text-body-md text-panel-text-muted">
+        <p className="mt-2 max-w-xl text-body-md text-ink">
           A self-custodial multi-chain wallet. Create a wallet in the browser
           — your recovery phrase is encrypted on this device with your vault
           password — or import a watch-only wallet to track addresses without
           holding secrets.
         </p>
 
-        <div className="mt-6 flex h-11 items-center justify-between rounded-xl bg-panel-surface px-4">
-          <p className="text-xs font-semibold text-panel-text-soft">Network</p>
-          <span className="flex h-6 items-center rounded-xl bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+        <div className="mt-6 flex h-11 items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper px-4">
+          <p className="text-xs font-semibold text-ink">Network</p>
+          <span className="flex h-6 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
             MAINNET
           </span>
         </div>
 
-        <ol className="mt-4 space-y-2 text-body-md">
-          <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
-              1
-            </span>
-            {' '}
-            <span className="font-semibold text-panel-text">
-              Set a vault password
-            </span>
+        <ol className="mt-4 space-y-3 text-body-md">
+          <li>
+            <StepCard icon={<span>1</span>} label="Set a vault password" state="pending" />
           </li>
-          <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
-              2
-            </span>
-            {' '}
-            <span className="font-semibold text-panel-text">
-              Write down 24 words
-            </span>
+          <li>
+            <StepCard icon={<span>2</span>} label="Write down 24 words" state="pending" />
           </li>
-          <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
-              3
-            </span>
-            {' '}
-            <span className="font-semibold text-panel-text">
-              Confirm 3 words
-            </span>
+          <li>
+            <StepCard icon={<span>3</span>} label="Confirm 3 words" state="pending" />
           </li>
-          <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
-              4
-            </span>
-            {' '}
-            <span className="font-semibold text-panel-text">
-              See your addresses
-            </span>
+          <li>
+            <StepCard icon={<span>4</span>} label="See your addresses" state="pending" />
           </li>
         </ol>
       </div>
@@ -112,7 +90,7 @@ export function WelcomeScreen() {
         </Card>
       </div>
 
-      <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground lg:col-span-3 lg:col-start-1 lg:row-start-2">
+      <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <p>Mainnet only — this wallet never connects to a test network.</p>
         <p>
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.

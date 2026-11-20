@@ -5,12 +5,11 @@ import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
-import { ChainLogo } from './asset-rows';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
-import { Skeleton } from '../ui/components/skeleton';
+import { BawaLoading } from '../ui/components/loading';
 
 const DERIVATION_PATHS = {
   btc: "m/84'/0'/0'/0/i",
@@ -147,25 +146,27 @@ export function AssetDetailScreen() {
         <ArrowLeft className="size-5" aria-hidden="true" />
       </Link>
 
-      <div className="space-y-4 rounded-2xl bg-panel-surface-raised p-4">
+      <div className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-4">
         <div className="flex items-center gap-3">
-          <ChainLogo chain={chain} size={48} />
+          <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+            <svg viewBox="0 0 48 48" aria-hidden="true" className="size-10 rotate-3">
+              <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
+              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={24}>{config.symbol}</text>
+            </svg>
+          </span>
           <div>
-            <h1 className="text-2xl font-semibold text-panel-text">{config.displayName}</h1>
-            <p className="text-sm text-panel-text-muted">{`${config.displayName} mainnet`}</p>
+            <h1 className="text-2xl font-semibold text-ink">{config.displayName}</h1>
+            <p className="text-sm text-ink">{`${config.displayName} mainnet`}</p>
           </div>
         </div>
         {balance.status === 'loading' ? (
-          <div role="status">
-            <Skeleton className="h-8 w-48" />
-            <span className="sr-only">Loading balance…</span>
-          </div>
+          <BawaLoading label="Loading balance…" />
         ) : balance.status === 'zero' ? (
           <>
-            <p className="text-[32px] font-semibold leading-10 text-panel-text">
-              0 {config.symbol}
+            <p className="text-[32px] font-semibold leading-10 text-ink">
+              {`0 ${config.symbol}`}
             </p>
-            <p className="text-sm text-panel-text-muted">Zero balance</p>
+            <p className="text-sm text-ink">Zero balance</p>
           </>
         ) : balance.status === 'available' ? (
           <p className="text-[32px] font-semibold leading-10 text-panel-text">
@@ -203,14 +204,12 @@ export function AssetDetailScreen() {
         translucent panel treatment as the app's sticky bottom nav.
         Order and behaviour are unchanged — layout only.
       */}
-      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-xl bg-panel-surface/95 px-2 py-2 backdrop-blur">
-        {chain !== 'ton' && (
-          <Button asChild className="h-11">
-            <Link to="/send" onClick={() => setSelectedChain(chain)}>
-              Send
-            </Link>
-          </Button>
-        )}
+      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
+        <Button asChild className="h-11">
+          <Link to="/send" onClick={() => setSelectedChain(chain)}>
+            Send
+          </Link>
+        </Button>
         <Button asChild variant="outline" className="h-11">
           <Link to="/receive" onClick={() => setSelectedChain(chain)}>
             Receive
@@ -289,10 +288,7 @@ export function AssetDetailScreen() {
           </Link>
         </div>
         {chainHistory.status === 'loading' && recentTxs.length === 0 ? (
-          <div role="status">
-            <Skeleton className="h-24 w-full" />
-            <span className="sr-only">Loading transactions…</span>
-          </div>
+          <BawaLoading label="Loading transactions…" />
         ) : showHistoryList ? (
           <>
             {chainHistory.status === 'loading' ? (
@@ -397,10 +393,7 @@ export function AssetDetailScreen() {
             ))}
           </ul>
         ) : state === 'loading' ? (
-          <div role="status">
-            <Skeleton className="h-24 w-full" />
-            <span className="sr-only">Loading derived addresses…</span>
-          </div>
+          <BawaLoading label="Loading derived addresses…" />
         ) : state === 'empty' ? (
           <div className="space-y-2 rounded-lg border p-4">
             <p>No wallet imported for this chain</p>

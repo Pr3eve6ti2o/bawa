@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Activity, ArrowDownToLine, Eye, EyeOff, Send } from 'lucide-react';
+import { BawaIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import {
@@ -16,9 +16,9 @@ import { Card } from '../ui/components/card';
 import { PopularChainsStrip } from '../ui/components/chain-strip';
 
 const ACTIONS = [
-  { to: '/send', icon: Send, label: 'Send' },
-  { to: '/receive', icon: ArrowDownToLine, label: 'Receive' },
-  { to: '/transactions', icon: Activity, label: 'Activity' },
+  { to: '/send', icon: 'send', label: 'Send' },
+  { to: '/receive', icon: 'receive', label: 'Receive' },
+  { to: '/transactions', icon: 'activity', label: 'Activity' },
 ] as const;
 
 /**
@@ -209,25 +209,26 @@ export function DashboardScreen() {
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
-      <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
+      <div className="space-y-1 rounded-bawa border-2 border-ink bg-paper p-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
+          <p className="text-[13px] leading-[18px] font-medium text-ink">Portfolio balance</p>
           <button
             type="button"
             aria-pressed={hideBalance}
             aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
             title={hideBalance ? 'Show balance' : 'Hide balance'}
             onClick={() => toggleHideBalance()}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-panel-text-muted transition-colors hover:bg-panel-action-hover hover:text-panel-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+            className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink hover:bg-sun focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
             {hideBalance ? (
-              <EyeOff className="size-5" aria-hidden="true" />
+              <BawaIcon name="eye-off" className="size-5" />
             ) : (
-              <Eye className="size-5" aria-hidden="true" />
+              <BawaIcon name="eye" className="size-5" />
             )}
           </button>
         </div>
-        <p className="text-display-lg font-bold tracking-tight text-panel-text">{heroText}</p>
+        <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker">{heroText}</span></p>
+        <p className="font-display text-xl text-ink">Your coins, drawn to scale — almost</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
@@ -259,16 +260,16 @@ export function DashboardScreen() {
         <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
       <div className="grid grid-cols-3 gap-2 lg:self-center">
-        {ACTIONS.map(({ to, icon: Icon, label }) => (
+        {ACTIONS.map(({ to, icon, label }) => (
           <Link
             key={to}
             to={to}
-            className="flex flex-col items-center gap-2 rounded-[15px] py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+            className="flex flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
           >
-            <span className="flex size-14 items-center justify-center rounded-full bg-panel-icon-tile text-panel-accent transition-colors hover:bg-panel-action-hover">
-              <Icon className="size-6" aria-hidden="true" />
+            <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+              <BawaIcon name={icon} className="size-6" />
             </span>
-            <span className="text-xs leading-4 font-medium text-panel-text">{label}</span>
+            <span className="text-xs leading-4 font-medium text-ink">{label}</span>
           </Link>
         ))}
       </div>
@@ -291,7 +292,7 @@ export function DashboardScreen() {
       <div
         role="tablist"
         aria-label="Wallet views"
-        className="sticky top-0 z-10 mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1 lg:col-span-2"
+        className="sticky top-0 z-10 mb-4 flex w-fit gap-1 rounded-bawa border-2 border-ink bg-paper p-1 lg:col-span-2"
       >
         {(['tokens', 'activity'] as const).map((tab) => (
           <button
@@ -321,8 +322,8 @@ export function DashboardScreen() {
             }}
             className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent ${
               assetsTab === tab
-                ? 'bg-panel-active text-panel-text'
-                : 'text-panel-text-soft hover:bg-panel-hover hover:text-panel-text'
+                ? 'bg-sun text-ink'
+                : 'text-ink hover:bg-sun'
             }`}
           >
             {tab === 'tokens' ? 'Tokens' : 'Activity'}
@@ -340,7 +341,7 @@ export function DashboardScreen() {
           <div className="lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 xl:grid-cols-[2fr_1fr]">
           <section aria-label="Assets">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-panel-text">Assets</h2>
+              <h2 className="text-lg font-semibold text-ink">Assets</h2>
               <Button
                 type="button"
                 aria-pressed={hideZero}
