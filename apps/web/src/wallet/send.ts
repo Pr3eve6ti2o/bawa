@@ -407,11 +407,111 @@ export async function simulateSend(
     };
   }
 
-  // BTC/TRX retain the successful preview object and its fees unchanged;
-  // their freshness checks (UTXO coverage, account inputs) arrive in a
-  // follow-up piece.
+  // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
   if (chain !== 'eth' && chain !== 'ton') {
-    return preview;
+    const adapter = getAdapter(chain);
+    if (!adapter) {
+      return simulationFailed(
+        chain,
+        undefined,
+        'adapter-unavailable',
+        `No adapter available for ${chain}.`,
+      );
+    }
+
+    try {
+      if (chain === 'btc') {
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok' || inputs.data.kind !== 'utxo') {
+          const reason = 'BTC UTXO inputs are unavailable.';
+          return simulationFailed(
+            chain,
+            inputs.status === 'ok'
+              ? { status: 'unavailable', reason }
+              : inputs,
+            'fee-unavailable',
+            reason,
+          );
+        }
+
+        const feeEstimate = await adapter.estimateFee();
+        if (feeEstimate.status !== 'ok') {
+          return simulationFailed(
+            chain,
+            feeEstimate,
+            'fee-unavailable',
+            'The live BTC sat/vB fee rate is unavailable.',
+          );
+        }
+
+        // The BTC fee quote is a sat/vB RATE in feeBaseUnits (see
+        // previewSendAmount); planBtcFee turns it into the real fee.
+        const plan = await planBtcFee(
+          from,
+          to,
+          preview.amountBaseUnits,
+          feeEstimate.data.feeBaseUnits,
+          inputs.data.utxos,
+        );
+        if (!plan.ok) {
+          return simulationFailed(
+            chain,
+            plan,
+            'fee-unavailable',
+            'Unable to plan a fee using the live BTC inputs and rate.',
+          );
+        }
+
+        const amount = BigInt(preview.amountBaseUnits);
+        const available = inputs.data.utxos.reduce(
+          (total, utxo) => total + BigInt(utxo.valueBaseUnits),
+          BigInt(0),
+        );
+        if (available < amount + BigInt(plan.feeBaseUnits)) {
+          return simulationFailed(
+            chain,
+            undefined,
+            'insufficient-funds',
+            'BTC UTXOs no longer cover the amount plus the planned fee.',
+          );
+        }
+
+        return { ...preview, feeBaseUnits: plan.feeBaseUnits };
+      }
+
+      if (chain === 'trx') {
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok' || inputs.data.kind !== 'account') {
+          const reason = 'TRX account inputs are unavailable.';
+          return simulationFailed(
+            chain,
+            inputs.status === 'ok'
+              ? { status: 'unavailable', reason }
+              : inputs,
+            'adapter-unavailable',
+            reason,
+          );
+        }
+      }
+
+      return preview;
+    } catch (cause: unknown) {
+      const code =
+        chain === 'btc' ? 'fee-unavailable' : 'adapter-unavailable';
+      const reason =
+        chain === 'btc'
+          ? 'Unable to refresh BTC inputs and fees.'
+          : 'Unable to refresh TRX account inputs.';
+      return simulationFailed(
+        chain,
+        {
+          status: 'error',
+          reason: cause instanceof Error ? cause.message : reason,
+        },
+        code,
+        reason,
+      );
+    }
   }
 
   const kind = chain === 'eth' ? 'nonce' : 'seqno';
