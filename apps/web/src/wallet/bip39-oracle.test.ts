@@ -15,6 +15,12 @@ import * as scure from '@scure/bip39';
 import { wordlist as scureEnglish } from '@scure/bip39/wordlists/english.js';
 import * as bitcoinjs from 'bip39';
 import { describe, expect, it } from 'vitest';
+import { expect as extraExpect, it as extraIt } from "vitest";
+import * as extraScure from "@scure/bip39";
+import { wordlist as extraEnglish } from "@scure/bip39/wordlists/english.js";
+import * as extraBitcoinjs from "bip39";
+import { loadCore } from "../engine/boundary";
+
 
 const bitcoinjsEnglish = bitcoinjs.wordlists.english;
 
@@ -291,4 +297,223 @@ describe('BIP-39 two-engine known-answer oracle', () => {
       expect(scureSeed).toBe(bitcoinjsSeed);
     },
   );
+});
+
+// Provenance: https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+// Public vectors and synthetic patterns/mutations only; never user mnemonics.
+// Wallet Core's mnemonic APIs use English and expose no wordlist argument.
+
+function extraHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function extraDecodeFixtureEntropy(hex: string): Uint8Array {
+  if (
+    hex.length === 0 ||
+    hex.length % 2 !== 0 ||
+    /[^0-9a-fA-F]/u.test(hex)
+  ) {
+    throw new Error("Invalid fixture entropy hex");
+  }
+
+  return Uint8Array.from({ length: hex.length / 2 }, (_, index) =>
+    Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16),
+  );
+}
+
+extraIt("Wallet Core agrees with every public BIP-39 vector", async () => {
+  extraExpect.assertions(VECTORS.length * 4);
+  const core = await loadCore();
+
+  for (const vector of VECTORS) {
+    const wallet = core.HDWallet.createWithMnemonic(vector.mnemonic, "TREZOR");
+    try {
+      extraExpect(extraHex(wallet.seed())).toBe(vector.seed);
+      extraExpect(extraHex(wallet.entropy())).toBe(vector.entropy);
+      extraExpect(wallet.mnemonic()).toBe(vector.mnemonic);
+      extraExpect(core.Mnemonic.isValid(vector.mnemonic)).toBe(true);
+    } finally {
+      wallet.delete();
+    }
+  }
+});
+
+extraIt("160- and 224-bit patterns agree across all three engines", async () => {
+  extraExpect.assertions(64);
+  const core = await loadCore();
+
+  for (const byteLength of [20, 28]) {
+    const patterns = [
+      "00".repeat(byteLength),
+      "7f".repeat(byteLength),
+      "ff".repeat(byteLength),
+      extraHex(Uint8Array.from({ length: byteLength }, (_, index) => index)),
+    ];
+
+    for (const entropyHex of patterns) {
+      const entropy = extraDecodeFixtureEntropy(entropyHex);
+      const scureMnemonic = extraScure.entropyToMnemonic(entropy, extraEnglish);
+      const bitcoinjsMnemonic = extraBitcoinjs.entropyToMnemonic(
+        entropyHex,
+        extraBitcoinjs.wordlists.english,
+      );
+
+      const entropyWallet = core.HDWallet.createWithEntropy(entropy, "TREZOR");
+      try {
+        const coreMnemonic = entropyWallet.mnemonic();
+        const mnemonicWallet = core.HDWallet.createWithMnemonic(
+          coreMnemonic,
+          "TREZOR",
+        );
+        try {
+          extraExpect(bitcoinjsMnemonic).toBe(scureMnemonic);
+          extraExpect(coreMnemonic).toBe(scureMnemonic);
+
+          extraExpect(
+            extraHex(extraScure.mnemonicToEntropy(scureMnemonic, extraEnglish)),
+          ).toBe(entropyHex);
+          extraExpect(
+            extraBitcoinjs.mnemonicToEntropy(
+              bitcoinjsMnemonic,
+              extraBitcoinjs.wordlists.english,
+            ),
+          ).toBe(entropyHex);
+          extraExpect(extraHex(mnemonicWallet.entropy())).toBe(entropyHex);
+
+          extraExpect(
+            extraScure.validateMnemonic(scureMnemonic, extraEnglish),
+          ).toBe(true);
+          extraExpect(
+            extraBitcoinjs.validateMnemonic(
+              bitcoinjsMnemonic,
+              extraBitcoinjs.wordlists.english,
+            ),
+          ).toBe(true);
+          extraExpect(core.Mnemonic.isValid(coreMnemonic)).toBe(true);
+        } finally {
+          mnemonicWallet.delete();
+        }
+      } finally {
+        entropyWallet.delete();
+      }
+    }
+  }
+});
+
+extraIt("agrees on invalid and valid mutations of the 12-word zero vector", async () => {
+  extraExpect.assertions(14);
+  const core = await loadCore();
+  const vector = VECTORS.find(({ entropy }) => entropy === "00".repeat(16));
+  if (!vector) {
+    throw new Error("Missing 128-bit zero vector in VECTORS");
+  }
+
+  const words = vector.mnemonic.split(" ");
+  extraExpect(words).toHaveLength(12);
+
+  const mutations = [
+    { index: 11, replacement: "abandon", valid: false },
+    { index: 11, replacement: "zoo", valid: false },
+    { index: 11, replacement: "ability", valid: false },
+    { index: 4, replacement: "ahead", valid: true }, // Word 5, one-based.
+  ] as const;
+
+  let sawValidMutation = false;
+  for (const mutation of mutations) {
+    const mutatedWords = [...words];
+    mutatedWords[mutation.index] = mutation.replacement;
+    const mnemonic = mutatedWords.join(" ");
+
+    const scureValid = extraScure.validateMnemonic(mnemonic, extraEnglish);
+    const bitcoinjsValid = extraBitcoinjs.validateMnemonic(
+      mnemonic,
+      extraBitcoinjs.wordlists.english,
+    );
+    const coreValid = core.Mnemonic.isValid(mnemonic);
+
+    extraExpect(bitcoinjsValid).toBe(scureValid);
+    extraExpect(coreValid).toBe(scureValid);
+    extraExpect(scureValid).toBe(mutation.valid);
+    sawValidMutation = sawValidMutation || scureValid;
+  }
+
+  extraExpect(sawValidMutation).toBe(true);
+});
+
+extraIt("strictly decodes fixture entropy while accepting uppercase hex", () => {
+  extraExpect.assertions(8);
+  const hex = "000102030405060708090a0b0c0d0e0f";
+
+  extraExpect(extraDecodeFixtureEntropy(hex.toUpperCase())).toEqual(
+    Uint8Array.from({ length: 16 }, (_, index) => index),
+  );
+
+  const rejected = [
+    "",
+    hex.slice(0, -1), // Odd length.
+    `${hex.slice(0, 2)}  ${hex.slice(2)}`, // Even-length embedded whitespace.
+    `${hex}\n`,
+    `${hex}\r\n`, // Even length: must not slip through a permissive $ anchor.
+    `${hex}zz`,
+    `${hex}0g`, // parseInt alone would accept the leading zero.
+  ];
+
+  for (const malformed of rejected) {
+    extraExpect(() => extraDecodeFixtureEntropy(malformed)).toThrow(
+      "Invalid fixture entropy hex",
+    );
+  }
+});
+
+extraIt("insulates explicit English oracles from bitcoinjs's default wordlist", () => {
+  extraExpect.assertions(4);
+  const vector = VECTORS[0];
+  if (!vector) {
+    throw new Error("VECTORS must contain public BIP-39 fixtures");
+  }
+
+  const entropy = extraDecodeFixtureEntropy(vector.entropy);
+  const readExplicitOracle = () => ({
+    scure: {
+      mnemonic: extraScure.entropyToMnemonic(entropy, extraEnglish),
+      entropy: extraHex(
+        extraScure.mnemonicToEntropy(vector.mnemonic, extraEnglish),
+      ),
+      valid: extraScure.validateMnemonic(vector.mnemonic, extraEnglish),
+    },
+    bitcoinjs: {
+      mnemonic: extraBitcoinjs.entropyToMnemonic(
+        vector.entropy,
+        extraBitcoinjs.wordlists.english,
+      ),
+      entropy: extraBitcoinjs.mnemonicToEntropy(
+        vector.mnemonic,
+        extraBitcoinjs.wordlists.english,
+      ),
+      valid: extraBitcoinjs.validateMnemonic(
+        vector.mnemonic,
+        extraBitcoinjs.wordlists.english,
+      ),
+    },
+  });
+
+  const before = readExplicitOracle();
+  try {
+    extraBitcoinjs.setDefaultWordlist("japanese");
+    extraExpect(extraBitcoinjs.getDefaultWordlist()).toBe("japanese");
+
+    const after = readExplicitOracle();
+    extraExpect(after).toEqual(before);
+
+    const expected = {
+      mnemonic: vector.mnemonic,
+      entropy: vector.entropy,
+      valid: true,
+    };
+    extraExpect(after).toEqual({ scure: expected, bitcoinjs: expected });
+  } finally {
+    extraBitcoinjs.setDefaultWordlist("english");
+  }
+
+  extraExpect(extraBitcoinjs.getDefaultWordlist()).toBe("english");
 });
