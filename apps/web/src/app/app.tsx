@@ -10,63 +10,96 @@ import {
 import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
-const CreateWalletScreen = lazy(() =>
-  import('../screens/create-wallet').then((m) => ({ default: m.CreateWalletScreen })),
-);
-const CreateScreen = lazy(() =>
-  import('../screens/create').then((m) => ({ default: m.CreateScreen })),
-);
-const ImportWalletScreen = lazy(() =>
-  import('../screens/import-wallet').then((m) => ({ default: m.ImportWalletScreen })),
-);
-const MnemonicBackupScreen = lazy(() =>
-  import('../screens/mnemonic-backup').then((m) => ({ default: m.MnemonicBackupScreen })),
-);
-const AssetListScreen = lazy(() =>
-  import('../screens/asset-list').then((m) => ({ default: m.AssetListScreen })),
-);
-const AssetDetailScreen = lazy(() =>
-  import('../screens/asset-detail').then((m) => ({ default: m.AssetDetailScreen })),
-);
-const ReceiveScreen = lazy(() =>
-  import('../screens/receive').then((m) => ({ default: m.ReceiveScreen })),
-);
-const SendScreen = lazy(() =>
-  import('../screens/send').then((m) => ({ default: m.SendScreen })),
-);
-const TransactionHistoryScreen = lazy(() =>
+// Hot routes are eager imports (Rabby pattern): the live browser showed
+// the first click on /assets/:chain, /security, /create and
+// /create-wallet rendering the previous screen while the lazy chunk
+// loaded. These four screens ship in the main bundle so the first
+// navigation renders immediately; every other route stays code-split
+// below.
+import { AssetDetailScreen } from '../screens/asset-detail';
+import { CreateScreen } from '../screens/create';
+import { CreateWalletScreen } from '../screens/create-wallet';
+import { SecuritySettingsScreen } from '../screens/security-settings';
+
+const loadImportWallet = () =>
+  import('../screens/import-wallet').then((m) => ({
+    default: m.ImportWalletScreen,
+  }));
+const ImportWalletScreen = lazy(loadImportWallet);
+const loadMnemonicBackup = () =>
+  import('../screens/mnemonic-backup').then((m) => ({
+    default: m.MnemonicBackupScreen,
+  }));
+const MnemonicBackupScreen = lazy(loadMnemonicBackup);
+const loadAssetList = () =>
+  import('../screens/asset-list').then((m) => ({ default: m.AssetListScreen }));
+const AssetListScreen = lazy(loadAssetList);
+const loadReceive = () =>
+  import('../screens/receive').then((m) => ({ default: m.ReceiveScreen }));
+const ReceiveScreen = lazy(loadReceive);
+const loadSend = () =>
+  import('../screens/send').then((m) => ({ default: m.SendScreen }));
+const SendScreen = lazy(loadSend);
+const loadTransactionHistory = () =>
   import('../screens/transaction-history').then((m) => ({
     default: m.TransactionHistoryScreen,
-  })),
-);
-const TransactionDetailScreen = lazy(() =>
+  }));
+const TransactionHistoryScreen = lazy(loadTransactionHistory);
+const loadTransactionDetail = () =>
   import('../screens/transaction-detail').then((m) => ({
     default: m.TransactionDetailScreen,
-  })),
-);
-const TrackTransactionScreen = lazy(() =>
+  }));
+const TransactionDetailScreen = lazy(loadTransactionDetail);
+const loadTrackTransaction = () =>
   import('../screens/track-transaction').then((m) => ({
     default: m.TrackTransactionScreen,
-  })),
-);
-const NetworkSelectionScreen = lazy(() =>
+  }));
+const TrackTransactionScreen = lazy(loadTrackTransaction);
+const loadNetworkSelection = () =>
   import('../screens/network-selection').then((m) => ({
     default: m.NetworkSelectionScreen,
-  })),
-);
-const LockScreen = lazy(() =>
-  import('../screens/lock').then((m) => ({ default: m.LockScreen })),
-);
-const WalletManagementScreen = lazy(() =>
+  }));
+const NetworkSelectionScreen = lazy(loadNetworkSelection);
+const loadLock = () =>
+  import('../screens/lock').then((m) => ({ default: m.LockScreen }));
+const LockScreen = lazy(loadLock);
+const loadWalletManagement = () =>
   import('../screens/wallet-management').then((m) => ({
     default: m.WalletManagementScreen,
-  })),
-);
-const SecuritySettingsScreen = lazy(() =>
-  import('../screens/security-settings').then((m) => ({
-    default: m.SecuritySettingsScreen,
-  })),
-);
+  }));
+const WalletManagementScreen = lazy(loadWalletManagement);
+
+// Route-chunk preloading (MetaMask's preload pattern): hovering or
+// focusing a nav link starts loading that route's chunk, so the click
+// itself renders at once. The desktop sidebar (sidebar-nav.tsx) can
+// reuse this export. A failed preload is swallowed — it must never
+// break navigation, and the click itself still loads the chunk.
+const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
+  '/import-wallet': loadImportWallet,
+  '/mnemonic-backup': loadMnemonicBackup,
+  '/assets': loadAssetList,
+  '/receive': loadReceive,
+  '/send': loadSend,
+  '/transactions': loadTransactionHistory,
+  '/track': loadTrackTransaction,
+  '/networks': loadNetworkSelection,
+  '/lock': loadLock,
+  '/wallets': loadWalletManagement,
+};
+
+const preloadedRoutes = new Set<string>();
+
+export function preloadRoute(to: string): void {
+  const firstSegment = `/${to.split('/').filter(Boolean)[0] ?? ''}`;
+  const loader = ROUTE_PRELOADERS[to] ?? ROUTE_PRELOADERS[firstSegment];
+  if (!loader || preloadedRoutes.has(to)) return;
+  preloadedRoutes.add(to);
+  loader().catch(() => {
+    // A failed preload is not fatal: the navigation retries the import,
+    // so allow a later hover to try again.
+    preloadedRoutes.delete(to);
+  });
+}
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
@@ -101,7 +134,26 @@ function AppLayout() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [moreOpen]);
-  const pathname = useLocation().pathname;
+  const location = useLocation();
+  const pathname = location.pathname;
+  // Lock-with-return-to (Rabby /unlock?from=, MetaMask state.from):
+  // remember the last route the user was on before /lock, so unlocking
+  // sends them back instead of dropping them on the dashboard. This
+  // matters because reload is the current workaround for a stale render
+  // and reload locks the vault. sessionStorage, not localStorage, so
+  // the return target dies with the tab. The key is duplicated in
+  // lock.tsx — keep the two in sync.
+  useEffect(() => {
+    if (location.pathname === '/lock') return;
+    try {
+      window.sessionStorage.setItem(
+        'bawa-lock-return-to',
+        `${location.pathname}${location.search}`,
+      );
+    } catch {
+      // Private mode / disabled storage: the lock screen falls back to '/'.
+    }
+  }, [location.pathname, location.search]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
   // the create-wallet flow and the send flow. Send review is a state
   // inside /send rather than its own route, so the whole /send flow
@@ -139,6 +191,7 @@ function AppLayout() {
                 onToggleCollapse={() =>
                   setSidebarCollapsed((value) => !value)
                 }
+                onPreloadRoute={preloadRoute}
               />
             </div>
           </aside>
@@ -148,6 +201,8 @@ function AppLayout() {
           <header className="hidden h-[72px] shrink-0 items-center justify-between border-b border-panel-border px-6 lg:flex xl:px-8">
             <Link
               to="/wallets"
+              onMouseEnter={() => preloadRoute('/wallets')}
+              onFocus={() => preloadRoute('/wallets')}
               className="truncate text-sm font-medium text-panel-text-muted hover:text-panel-text"
             >
               {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
@@ -168,6 +223,8 @@ function AppLayout() {
                 </h1>
                 <Link
                   to="/wallets"
+                  onMouseEnter={() => preloadRoute('/wallets')}
+                  onFocus={() => preloadRoute('/wallets')}
                   className="block truncate text-xs leading-tight text-panel-text-muted hover:text-panel-text"
                 >
                   {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
@@ -213,6 +270,8 @@ function AppLayout() {
                   to={to}
                   role="menuitem"
                   onClick={() => setMoreOpen(false)}
+                  onMouseEnter={() => preloadRoute(to)}
+                  onFocus={() => preloadRoute(to)}
                 className="block rounded-[12px] px-3 py-2.5 text-sm font-medium text-panel-text hover:bg-panel-hover"
               >
                 {label}
@@ -233,6 +292,8 @@ function AppLayout() {
                   to={to}
                   end={to === '/'}
                   onClick={() => setMoreOpen(false)}
+                  onMouseEnter={() => preloadRoute(to)}
+                  onFocus={() => preloadRoute(to)}
                   className={({ isActive }) =>
                     `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
                       isActive ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'

@@ -263,13 +263,14 @@ export async function deriveAddresses(
  * Derive addresses at a non-default account/index.
  * Paths come from pathFor(chain, account, index) — except TON, which always
  * uses m/44'/607'/0' and ignores account/index (one address per wallet).
- * Per-chain pubkey form, proven first-hand on Wallet Core 4.9.3: BTC
- * getPublicKeySecp256k1(true) (33-byte compressed), ETH and TRX
- * getPublicKeySecp256k1(false) (65-byte uncompressed), TON
- * getPublicKeyEd25519(); then CoinTypeExt.deriveAddressFromPublicKey.
- * SOL Ed25519 like TON; LTC/DOGE compressed like BTC;
- * BSC/MATIC/ARB/OP/BASE/AVAX uncompressed like ETH.
- * At account 0 index 0 the result equals deriveAddresses() exactly.
+ * Pubkey form is normalised at the deriveAddressFromPublicKey call site
+ * (Phase 3, Lane H): the secp256k1 key is always extracted compressed,
+ * then .uncompressed() for ETH/TRX/EVM chains — the 65-byte
+ * secp256k1Extended form that Tron/Address.cpp and Ethereum/Address.cpp
+ * require (a 33-byte key throws across the WASM boundary uncaught and
+ * aborts the instance) — while BTC-family chains use the compressed form
+ * as extracted. TON/SOL Ed25519 keys are used as-is. At account 0 index 0
+ * the result equals deriveAddresses() exactly.
  */
 export async function deriveAddressesAt(
   mnemonic: string,
@@ -298,19 +299,44 @@ export async function deriveAddressesAt(
       const key = wallet.getKey(coin, path);
 
       try {
-        const pubkey =
+        // Extract compressed (the store/transport form, cf. @scure/bip32:
+        // store compressed, decompress at the point of use), then
+        // normalise the form AT the deriveAddressFromPublicKey call site.
+        // Wallet Core 4.9.3's Tron/Address.cpp and Ethereum/Address.cpp
+        // throw unless the key is the 65-byte secp256k1Extended form, and
+        // the throw crosses the WASM boundary uncaught and aborts the
+        // instance; BTC-family chains throw on the 65-byte form instead.
+        // Normalising here — not via the extraction boolean — fixes every
+        // caller, including future ones. uncompressed() is bound in the
+        // shipped WASM binary (probe 2026-11-20: .data().length === 65).
+        // BTC-family keys are already compressed as extracted, so no
+        // .compressed() call is made for them (it would return *this and
+        // a delete would double-free the shared object).
+        const rawPubkey =
           chain === 'ton' || chain === 'sol'
             ? key.getPublicKeyEd25519()
-            : key.getPublicKeySecp256k1(chain === 'btc' || chain === 'ltc' || chain === 'doge');
+            : key.getPublicKeySecp256k1(true);
 
         try {
-          return checkedAddress(
-            core,
-            chain,
-            core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey),
-          );
+          const isSecp256k1 = chain !== 'ton' && chain !== 'sol';
+          const needsExtended =
+            isSecp256k1 &&
+            chain !== 'btc' &&
+            chain !== 'ltc' &&
+            chain !== 'doge';
+          const pubkey = needsExtended ? rawPubkey.uncompressed() : rawPubkey;
+
+          try {
+            return checkedAddress(
+              core,
+              chain,
+              core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey),
+            );
+          } finally {
+            if (pubkey !== rawPubkey) pubkey.delete();
+          }
         } finally {
-          pubkey.delete();
+          rawPubkey.delete();
         }
       } finally {
         key.delete();

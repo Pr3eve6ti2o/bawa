@@ -754,10 +754,28 @@ describe('portfolioTotal', () => {
     });
   });
 
-  it('never produces a partial total over an unavailable balance', () => {
+  it('produces a partial total over an unavailable balance (failed chain counts as 0)', () => {
+    // Phase 3, Lane H: the all-or-nothing gate is gone — a failed chain
+    // contributes 0 (Safe's aggregateBalance shape) and the total reads
+    // Partial instead of blanking.
     const balances = { ...zeros, btc, eth: { status: 'unavailable' } } as const;
-    expect(portfolioTotal(balances, fresh, NOW_MS)).toMatchObject({
-      status: 'unavailable', text: 'Unavailable',
+    expect(portfolioTotal(balances, fresh, NOW_MS)).toEqual({
+      status: 'partial',
+      text: '$62,683.00',
+      partial: true,
+    });
+  });
+
+  it('produces a partial total over an error balance', () => {
+    const balances = {
+      ...zeros,
+      btc,
+      eth: { status: 'error', reason: 'rpc-error' },
+    } as const;
+    expect(portfolioTotal(balances, fresh, NOW_MS)).toEqual({
+      status: 'partial',
+      text: '$62,683.00',
+      partial: true,
     });
   });
 

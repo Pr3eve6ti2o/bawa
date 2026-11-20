@@ -95,6 +95,39 @@ describe('ton adapter — rate limiting', () => {
     ).toBe(3);
   });
 
+  it('spaces concurrent calls by the minimum gap (serial gate)', async () => {
+    // Phase 3, Lane H: TonCenter's keyless tier allows ~1 req/s. The
+    // identity check, the balance and the history must start at least
+    // one gap apart, or history 429s. A 50 ms test gap keeps this fast.
+    const startedAt: number[] = [];
+    const queue = [MASTERCHAIN, '123456789', []];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        startedAt.push(Date.now());
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, result: queue.shift() }),
+        };
+      }),
+    );
+    const adapter = createTonAdapter({ minCallGapMs: 50 });
+
+    const [balance, history] = await Promise.all([
+      adapter.getBalance(ADDRESS),
+      adapter.getHistory(ADDRESS),
+    ]);
+
+    expect(balance.status).toBe('ok');
+    expect(history.status).toBe('ok');
+    expect(startedAt).toHaveLength(3);
+    // 45 ms allows timer slop on the 50 ms gap; a missing gate would
+    // show ~0 ms between the identity check and the balance.
+    expect((startedAt[1] as number) - (startedAt[0] as number)).toBeGreaterThanOrEqual(45);
+    expect((startedAt[2] as number) - (startedAt[1] as number)).toBeGreaterThanOrEqual(45);
+  });
+
   it('a 429 then a 200 returns the balance', async () => {
     vi.stubGlobal(
       'fetch',

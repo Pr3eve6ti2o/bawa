@@ -52,11 +52,14 @@ export type SidebarNavProps = {
   readonly collapsed?: boolean;
   /** Collapse toggle handler, owned by the app shell in app.tsx. */
   readonly onToggleCollapse?: () => void;
+  /** Route-chunk preloader (MetaMask pattern), owned by app.tsx. */
+  readonly onPreloadRoute?: (to: string) => void;
 };
 
 export function SidebarNav({
   collapsed = false,
   onToggleCollapse,
+  onPreloadRoute,
 }: SidebarNavProps) {
   return (
     <>
@@ -88,6 +91,8 @@ export function SidebarNav({
               to={to}
               end={to === "/"}
               title={collapsed ? label : undefined}
+              onMouseEnter={() => onPreloadRoute?.(to)}
+              onFocus={() => onPreloadRoute?.(to)}
               className={({ isActive }) =>
                 [
                   "relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm",

@@ -4,7 +4,7 @@ import {
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { availableFor } from '../wallet/chains';
-import type { AdapterTx } from '../wallet/adapters/types';
+import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
 
@@ -70,6 +70,9 @@ const perChain = <T,>(make: () => T): PerChain<T> => ({
   ltc: make(),
   doge: make(),
 });
+const ALL_CHAIN_IDS = [
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+] as const;
 
 export type VaultState = 'no-vault' | 'locked' | 'unlocked';
 
@@ -84,6 +87,20 @@ export const AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 60, 1440] as const;
 export const AUTO_LOCK_DEFAULT_MINUTES = 5;
 const AUTO_LOCK_MINUTES_KEY = 'bawa-auto-lock-minutes';
 const AUTO_LOCK_DEADLINE_KEY = 'bawa-auto-lock-deadline';
+
+// Lane G, Phase 3 — boot rehydration (Safe's persistStore + useHydrateStore
+// pattern, Rabby's pending-guard pattern). Only PUBLIC derived addresses are
+// persisted: an address is public data, exactly like the watch-only xpubs
+// already stored under STORAGE_KEY. Keys, mnemonics, seeds and passphrases
+// are never written here. The stored record is versioned (vercel-react-best-practices
+// client-localstorage-schema: version and minimise localStorage data) and is
+// only trusted when it matches the stored vault-account selection.
+const VAULT_ADDRESSES_KEY = 'bawa-vault-addresses:v1';
+// Last-good balances cache (the usePrices() pattern, prices.ts): public
+// balance values with the address they belong to, so a boot never shows
+// another account's balance. Entries older than this are ignored.
+const BALANCE_CACHE_KEY = 'bawa:balances-cache:v1';
+export const BALANCE_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
 
 function readAutoLockMinutes(): number {
   try {
@@ -117,21 +134,46 @@ export interface BalanceState {
   value?: string;
   /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
   reason?: string;
+  /** True while a refetch is in flight and value is the last good one. */
+  refreshing?: boolean;
+  /** True when value is the last good one kept after a failed refetch, or from cache. */
+  stale?: boolean;
+  /** Epoch ms when the last good value was fetched (cache freshness). */
+  fetchedAtMs?: number;
 }
 
 export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
-
 export interface HistoryState {
   status: HistoryStatus;
   txs: AdapterTx[];
   reason?: string;
+  /** True while a refetch is in flight and txs are the last good ones. */
+  refreshing?: boolean;
+  /** True when txs are the last good ones kept after a failed refetch. */
+  stale?: boolean;
+  /** Epoch ms when the last good txs were fetched. */
+  fetchedAtMs?: number;
 }
 
+// First paint is a pending state, never an error (Safe's useAsync /
+// useTotalBalances rule: error only after the first attempt settles).
+// Balances/history start at 'loading' when a fetch is about to run (see
+// initialWalletState, which starts them unavailable when no fetch can run
+// at all); a mount refresh resolves every chain out of it (no-adapter /
+// no-address when no fetch can run).
 const initialBalances = (): PerChain<BalanceState> =>
-  perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-adapter' }));
+  perChain<BalanceState>(() => ({ status: 'loading' }));
 
 const initialHistory = (): PerChain<HistoryState> =>
-  perChain<HistoryState>(() => ({ status: 'unavailable', reason: 'no-adapter', txs: [] }));
+  perChain<HistoryState>(() => ({ status: 'loading', txs: [] }));
+
+// Locking hides the vault: balances/history go back to unavailable with no
+// address in memory (never to 'loading' — no fetch will run while locked).
+const clearedBalances = (): PerChain<BalanceState> =>
+  perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-address' }));
+
+const clearedHistory = (): PerChain<HistoryState> =>
+  perChain<HistoryState>(() => ({ status: 'unavailable', reason: 'no-address', txs: [] }));
 
 interface WalletState {
   xpubs: PerChain<WatchOnlyWallet | null>;
@@ -149,6 +191,10 @@ interface WalletState {
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
   history: PerChain<HistoryState>;
+  // True until boot hydration finishes (watch-only xpubs validated and
+  // vault addresses rehydrated). Screens render a loading state, not an
+  // error, while this is true (Rabby's pending-guard pattern).
+  hydrating: boolean;
 }
 
 export interface WalletContextValue extends WalletState {
@@ -194,23 +240,249 @@ function computeVaultState(): VaultState {
   return vault.isLocked() ? 'locked' : 'unlocked';
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  // No state or refs may hold a mnemonic, seed, private key, private extended key,
-  // vault key or data key. Only validated public watch-only wallets enter state.
-  // vaultAddresses are public addresses derived from the vault; they are safe here.
-  const [state, setState] = useState<WalletState>(() => ({
+// --- Lane G: central reason → human sentence map (Safe's cgw-errors.ts
+// rule: "the status is never shown to the user"). No screen may render a
+// raw reason: call this instead. Unknown provider reasons fall back to a
+// generic sentence, never to the raw string. Kept in state and logs only.
+export function humanReasonMessage(reason: string | undefined, kind: 'balance' | 'history'): string {
+  if (reason === undefined || reason === '') return '';
+  const lower = reason.toLowerCase();
+  if (lower === 'no-adapter') {
+    return kind === 'history'
+      ? 'Transaction history is not connected for this chain yet.'
+      : 'This chain is not connected yet.';
+  }
+  if (lower === 'no-address') return 'No address is available for this chain yet.';
+  if (lower.includes('invalid') && lower.includes('address')) {
+    return 'The address for this chain looks invalid.';
+  }
+  if (isTransientReason(reason)) {
+    return 'The network is busy or unreachable. Please try again in a moment.';
+  }
+  return 'Please try again later.';
+}
+
+// Transient failures are the only ones worth retrying (the usePrices()
+// retry set, plus HTTP 5xx): 429 / rate-limit, 5xx, timeouts and network
+// errors. Anything else (bad address, malformed response, a provider's
+// permanent refusal) fails immediately with no retry.
+export function isTransientReason(reason: string | undefined): boolean {
+  if (reason === undefined || reason === '') return false;
+  const lower = reason.toLowerCase();
+  return lower.includes('429')
+    || lower.includes('rate limit')
+    || lower.includes('rate-limit')
+    || lower.includes('ratelimited')
+    || /http 5\d\d/.test(lower)
+    || lower.includes('timed out')
+    || lower.includes('timeout')
+    || lower.includes('network error')
+    || lower.includes('failed to fetch');
+}
+
+function parseRetryAfterMs(reason: string): number | null {
+  const match = /retry-after[:\s]+(\d+)/i.exec(reason);
+  if (match === null || match[1] === undefined) return null;
+  const seconds = Number(match[1]);
+  if (!Number.isFinite(seconds) || seconds < 0) return null;
+  return Math.min(30_000, seconds * 1000);
+}
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+// Bounded retries for read-only fetches (the usePrices() shape: 3 attempts,
+// 1s then 2s delays, Retry-After honoured and capped at 30s). GET retries
+// are inherently safe; a failed fetch never overwrites last-good data here
+// — the caller decides that from the returned result.
+async function fetchWithRetry<T>(
+  fetchOnce: () => Promise<AdapterResult<T>>,
+): Promise<AdapterResult<T>> {
+  let last: AdapterResult<T> | undefined;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await fetchOnce();
+    if (result.status === 'ok') return result;
+    last = result;
+    if (attempt === 2 || !isTransientReason(result.reason)) break;
+    const retryAfterMs = parseRetryAfterMs(result.reason);
+    const delayMs = retryAfterMs ?? 1000 * (attempt + 1);
+    if (delayMs > 0) await sleep(delayMs);
+  }
+  // last is always set: the loop returns early only on 'ok', and breaks
+  // after storing a non-ok result.
+  return last as AdapterResult<T>;
+}
+
+// --- Lane G: persisted public vault addresses (see VAULT_ADDRESSES_KEY) ---
+const isStoredAddress = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0 && value.length <= 128 && !/\s/.test(value);
+
+interface PersistedVaultAddresses {
+  account: number;
+  index: number;
+  addresses: PerChain<string[]>;
+}
+
+function readPersistedVaultAddresses(): PersistedVaultAddresses | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(VAULT_ADDRESSES_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || parsed.version !== 1) return null;
+    const account = parsed.account;
+    const index = parsed.index;
+    if (typeof account !== 'number' || !Number.isSafeInteger(account) || account < 0) return null;
+    if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) return null;
+    if (!isRecord(parsed.addresses)) return null;
+    const addresses = perChain<string[]>(() => []);
+    for (const chain of ALL_CHAIN_IDS) {
+      const entry: unknown = parsed.addresses[chain];
+      if (entry === undefined) continue;
+      if (!Array.isArray(entry) || entry.length > 8) return null;
+      const list: string[] = [];
+      for (const item of entry as unknown[]) {
+        if (!isStoredAddress(item)) return null;
+        list.push(item);
+      }
+      addresses[chain] = list;
+    }
+    return { account, index, addresses };
+  } catch {
+    return null;
+  }
+}
+
+function persistVaultAddresses(
+  account: number,
+  index: number,
+  addresses: PerChain<string[]>,
+): void {
+  try {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      VAULT_ADDRESSES_KEY,
+      JSON.stringify({ version: 1, account, index, addresses }),
+    );
+  } catch {
+    // Persistence is best-effort; the in-memory addresses still work.
+  }
+}
+
+// --- Lane G: last-good balances cache (see BALANCE_CACHE_KEY) ---
+interface CachedBalance {
+  address: string;
+  status: 'available' | 'zero';
+  value: string;
+  fetchedAtMs: number;
+}
+
+function readCachedBalances(): Partial<Record<ChainId, CachedBalance>> {
+  try {
+    if (typeof window === 'undefined') return {};
+    const raw = window.localStorage.getItem(BALANCE_CACHE_KEY);
+    if (raw === null) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || parsed.version !== 1 || !isRecord(parsed.balances)) return {};
+    const out: Partial<Record<ChainId, CachedBalance>> = {};
+    for (const chain of ALL_CHAIN_IDS) {
+      const entry: unknown = parsed.balances[chain];
+      if (!isRecord(entry)) continue;
+      if (!isStoredAddress(entry.address)) continue;
+      if (entry.status !== 'available' && entry.status !== 'zero') continue;
+      if (typeof entry.value !== 'string' || entry.value === '') continue;
+      if (typeof entry.fetchedAtMs !== 'number' || !Number.isFinite(entry.fetchedAtMs)) continue;
+      out[chain] = {
+        address: entry.address,
+        status: entry.status,
+        value: entry.value,
+        fetchedAtMs: entry.fetchedAtMs,
+      };
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function saveCachedBalances(entries: Partial<Record<ChainId, CachedBalance>>): void {
+  try {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      BALANCE_CACHE_KEY,
+      JSON.stringify({ version: 1, balances: entries }),
+    );
+  } catch {
+    // Cache writes are best-effort.
+  }
+}
+
+// Boot state: rehydrated public vault addresses (if any) plus last-good
+// cached balances for those same addresses, labelled stale. Anything
+// without a fresh-enough cached value starts at 'loading' — but only when
+// a fetch is actually about to run (Safe's rule: the error/empty state
+// must never be a placeholder before the first attempt, and equally a
+// loading state must never stand in when no fetch can run at all). With
+// no persisted addresses and no stored xpubs, nothing can ever load, so
+// balances/history start at unavailable/no-address immediately — the
+// no-vault first paint keeps showing 'Balance unavailable', not a
+// skeleton that never resolves.
+function initialWalletState(): WalletState {
+  const persisted = readPersistedVaultAddresses();
+  const stored = readStored();
+  const hasPersistedAddress =
+    persisted !== null
+    && ALL_CHAIN_IDS.some((chain) => persisted.addresses[chain].length > 0);
+  const hasStoredXpub = ALL_CHAIN_IDS.some((chain) => {
+    const entry: unknown = stored[chain];
+    return isRecord(entry) && typeof entry.xpub === 'string' && entry.xpub.trim() !== '';
+  });
+  const mayFetch = hasPersistedAddress || hasStoredXpub;
+  const cached = readCachedBalances();
+  const now = Date.now();
+  const balances = mayFetch ? initialBalances() : clearedBalances();
+  if (persisted !== null) {
+    for (const chain of ALL_CHAIN_IDS) {
+      const address = persisted.addresses[chain][0];
+      const entry = cached[chain];
+      if (address === undefined || entry === undefined) continue;
+      if (entry.address !== address) continue;
+      if (now - entry.fetchedAtMs > BALANCE_CACHE_MAX_AGE_MS) continue;
+      balances[chain] = {
+        status: entry.status,
+        value: entry.value,
+        stale: true,
+        fetchedAtMs: entry.fetchedAtMs,
+      };
+    }
+  }
+  return {
     xpubs: perChain<WatchOnlyWallet | null>(() => null),
     addresses: perChain<DerivedAddress[]>(() => []),
     uiState: perChain<UiState>(() => 'empty'),
     errors: perChain<string | null>(() => null),
     locked: false,
     vaultState: 'no-vault',
-    vaultAccount: { account: 0, index: 0 },
-    vaultAddresses: perChain<string[]>(() => []),
+    vaultAccount: persisted === null
+      ? { account: 0, index: 0 }
+      : { account: persisted.account, index: persisted.index },
+    vaultAddresses: persisted === null
+      ? perChain<string[]>(() => [])
+      : persisted.addresses,
     vaultProfileIds: null,
-    balances: initialBalances(),
-    history: initialHistory(),
-  }));
+    balances,
+    history: mayFetch ? initialHistory() : clearedHistory(),
+    hydrating: true,
+  };
+}
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  // No state or refs may hold a mnemonic, seed, private key, private extended key,
+  // vault key or data key. Only validated public watch-only wallets enter state.
+  // vaultAddresses are public addresses derived from the vault; they are safe here.
+  const [state, setState] = useState<WalletState>(() => initialWalletState());
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
   const [autoLockMinutes, setAutoLockMinutesState] = useState<number>(() => readAutoLockMinutes());
@@ -296,10 +568,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Balances and history come from the Phase 2 adapters, gated on the
   // capability registry: a chain is readable only when its balance/history
   // capability is verified (availableFor). A failed fetch is reported as
-  // unavailable/error, never as zero.
+  // unavailable/error, never as zero. Lane G, Phase 3 (Safe's
+  // [data|undefined, error|undefined, loading] triple + RTK Query's
+  // currentData rule): a refetch keeps the last good value visible
+  // (refreshing) instead of replacing it with loading, and a failed
+  // refetch keeps it labelled stale — an error state appears only when no
+  // data exists at all. Transient failures retry boundedly (see
+  // fetchWithRetry); the last good value is cached for the next boot.
   const refreshBalances = useCallback(async () => {
     const { getAdapter } = await ensureAdapters();
-    await Promise.all(CHAINS.map(async (chain) => {
+    // Every chain in the registry resolves out of the initial 'loading'
+    // state here — not just the four balance chains — so no chain is left
+    // showing a first-load skeleton forever. Chains without a verified
+    // balance adapter resolve to unavailable/no-adapter below.
+    await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
       const request = ++balanceRequests.current[chain];
       const setBalance = (balance: BalanceState) => {
         if (request !== balanceRequests.current[chain]) return;
@@ -324,15 +606,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setBalance({ status: 'unavailable', reason: 'no-address' });
         return;
       }
-      setBalance({ status: 'loading' });
-      const result = await adapter.getBalance(address);
+      const previous = current.current.balances[chain];
+      const hasLastGood = previous.status === 'available' || previous.status === 'zero';
+      if (hasLastGood) {
+        setBalance({ ...previous, refreshing: true, stale: false });
+      } else if (previous.status !== 'loading') {
+        setBalance({ status: 'loading' });
+      }
+      const result = await fetchWithRetry(() => adapter.getBalance(address));
       if (request !== balanceRequests.current[chain]) return;
       if (result.status === 'ok') {
-        setBalance(
-          result.data.valueBaseUnits === '0'
-            ? { status: 'zero', value: '0' }
-            : { status: 'available', value: result.data.valueBaseUnits },
-        );
+        const fetchedAtMs = Date.now();
+        const next: BalanceState = result.data.valueBaseUnits === '0'
+          ? { status: 'zero', value: '0', fetchedAtMs }
+          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        setBalance(next);
+        try {
+          const cached = readCachedBalances();
+          cached[chain] = {
+            address,
+            status: next.status === 'zero' ? 'zero' : 'available',
+            value: next.value ?? '0',
+            fetchedAtMs,
+          };
+          saveCachedBalances(cached);
+        } catch {
+          // Cache writes are best-effort.
+        }
+      } else if (hasLastGood) {
+        setBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });
       } else if (result.status === 'unavailable') {
         setBalance({ status: 'unavailable', reason: result.reason });
       } else {
@@ -343,7 +645,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const refreshHistory = useCallback(async () => {
     const { getAdapter } = await ensureAdapters();
-    await Promise.all(CHAINS.map(async (chain) => {
+    // See refreshBalances: every chain resolves out of 'loading' here.
+    await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
       const request = ++historyRequests.current[chain];
       const setHistory = (history: HistoryState) => {
         if (request !== historyRequests.current[chain]) return;
@@ -368,15 +671,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setHistory({ status: 'unavailable', reason: 'no-address', txs: [] });
         return;
       }
-      setHistory({ status: 'loading', txs: [] });
-      const result = await adapter.getHistory(address, 25);
+      const previous = current.current.history[chain];
+      const hasLastGood = previous.status === 'loaded' || previous.status === 'empty';
+      if (hasLastGood) {
+        setHistory({ ...previous, refreshing: true, stale: false });
+      } else if (previous.status !== 'loading') {
+        setHistory({ status: 'loading', txs: [] });
+      }
+      const result = await fetchWithRetry(() => adapter.getHistory(address, 25));
       if (request !== historyRequests.current[chain]) return;
       if (result.status === 'ok') {
+        const fetchedAtMs = Date.now();
         setHistory(
           result.data.length === 0
-            ? { status: 'empty', txs: [] }
-            : { status: 'loaded', txs: result.data },
+            ? { status: 'empty', txs: [], fetchedAtMs }
+            : { status: 'loaded', txs: result.data, fetchedAtMs },
         );
+      } else if (hasLastGood) {
+        setHistory({ ...previous, refreshing: false, stale: true, reason: result.reason });
       } else if (result.status === 'unavailable') {
         setHistory({ status: 'unavailable', reason: result.reason, txs: [] });
       } else {
@@ -401,11 +713,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
     const selected = selection ?? current.current.vaultAccount;
     if (vaultState !== 'unlocked') {
+      // Locked: no re-derivation is possible, but the persisted public
+      // addresses for this selection are still usable for public balance
+      // reads (see VAULT_ADDRESSES_KEY). Any other selection has no
+      // addresses in memory.
+      const persisted = readPersistedVaultAddresses();
+      const restored =
+        persisted !== null
+          && persisted.account === selected.account
+          && persisted.index === selected.index
+          ? persisted.addresses
+          : perChain<string[]>(() => []);
       update(previous => ({
         ...previous,
         vaultState,
         vaultProfileIds: profileIds,
-        vaultAddresses: perChain<string[]>(() => []),
+        vaultAddresses: restored,
       }));
       return;
     }
@@ -433,26 +756,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     if (request !== vaultDerivations.current) return;
+    const addresses: PerChain<string[]> = {
+      btc: [derived.btc],
+      eth: [derived.eth],
+      trx: [derived.trx],
+      ton: [derived.ton],
+      sol: [derived.sol],
+      bsc: [derived.bsc],
+      matic: [derived.matic],
+      arb: [derived.arb],
+      op: [derived.op],
+      base: [derived.base],
+      avax: [derived.avax],
+      ltc: [derived.ltc],
+      doge: [derived.doge],
+    };
     update(previous => ({
       ...previous,
       vaultState,
       vaultProfileIds: profileIds,
-      vaultAddresses: {
-        btc: [derived.btc],
-        eth: [derived.eth],
-        trx: [derived.trx],
-        ton: [derived.ton],
-        sol: [derived.sol],
-        bsc: [derived.bsc],
-        matic: [derived.matic],
-        arb: [derived.arb],
-        op: [derived.op],
-        base: [derived.base],
-        avax: [derived.avax],
-        ltc: [derived.ltc],
-        doge: [derived.doge],
-      },
+      vaultAddresses: addresses,
     }));
+    // Persist the PUBLIC addresses only (never keys or the mnemonic), so a
+    // reload or direct load can fetch balances/history without an unlock.
+    persistVaultAddresses(selected.account, selected.index, addresses);
     // Balances/history load in the background: this function returns as
     // soon as the derived addresses are in state, so the wallet shows
     // immediately. A failed background refresh leaves the per-chain
@@ -498,8 +825,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
       // Vault addresses are hidden: drop their balances/history too.
-      balances: initialBalances(),
-      history: initialHistory(),
+      balances: clearedBalances(),
+      history: clearedHistory(),
     }));
   }, [update]);
 
@@ -615,8 +942,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultState: computeVaultState(),
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
-      balances: initialBalances(),
-      history: initialHistory(),
+      balances: clearedBalances(),
+      history: clearedHistory(),
     }));
   }, [update]);
 
@@ -662,17 +989,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // Ignore corrupt or unverifiable entries; never restore unvalidated data.
       }
     })).then(() => {
-      if (!cancelled) setHydrated(true);
+      if (!cancelled) {
+        setHydrated(true);
+        update(previous => ({ ...previous, hydrating: false }));
+      }
     });
     return () => {
       cancelled = true;
       ++lifetime.current;
       CHAINS.forEach(chain => { ++derivations.current[chain]; });
     };
-  }, [putWallet]);
+  }, [putWallet, update]);
 
   // Vault state is read from storage on mount (no vault -> 'no-vault').
-  // Addresses are derived only after an explicit unlockVault(password).
+  // Addresses are derived only after an explicit unlockVault(password) —
+  // except for the public addresses rehydrated from storage in
+  // initialWalletState, which need no unlock to be read.
   useEffect(() => {
     update(previous => ({
       ...previous,
@@ -689,6 +1021,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Storage may be unavailable; keep validated public data in memory.
     }
   }, [hydrated, state.xpubs]);
+
+  // Boot refresh (Lane G, Phase 3): once hydration finishes, balances and
+  // history load for the rehydrated vault or watch-only addresses, so a
+  // direct load or reload shows data without an unlock. History starts
+  // only after balances settle (the Lane B balance-before-history rule).
+  useEffect(() => {
+    if (!hydrated) return;
+    void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
+  }, [hydrated, refreshBalances, refreshHistory]);
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,

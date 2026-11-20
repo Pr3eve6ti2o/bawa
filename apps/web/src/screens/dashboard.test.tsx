@@ -367,6 +367,12 @@ describe('dashboard screen', () => {
     });
   }
 
+  // The hero total element (the big display figure), so a test can assert
+  // on the hero alone without the asset rows' fiat values interfering.
+  function heroAmount(mounted: { div: HTMLDivElement }): string | null {
+    return mounted.div.querySelector('.text-display-lg')?.textContent ?? null;
+  }
+
   it('shows the live portfolio total with source and freshness after refreshing prices', async () => {
     setWallet(
       balancesFor({
@@ -392,6 +398,92 @@ describe('dashboard screen', () => {
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
+    }
+  });
+
+  it('shows a Partial total when one balance has failed', async () => {
+    // Phase 3, Lane H: one chain's failure no longer blanks the hero —
+    // the loaded chains sum to a partial total and only the failed row
+    // is marked Unavailable.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'error', reason: 'rpc-error' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('$62,683.00 (Partial)');
+      expect(mounted.div.textContent).toContain('Partial total');
+      expect(mounted.div.textContent).toContain('Powered by CoinGecko');
+      // Only the failed chain is marked; the hero itself is a total.
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('Balances could not be loaded');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('persists the hide-balance toggle across mounts', async () => {
+    // Phase 3, Lane H: the toggle is persisted in localStorage (Rabby
+    // persists it). Clear first so no earlier test can leak a value in,
+    // and clear again at the end so no later test inherits the hidden
+    // state.
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(heroAmount(mounted)).toBe('$62,683.00');
+      const hideButton = mounted.div.querySelector(
+        'button[aria-label="Hide balance"]',
+      ) as HTMLButtonElement;
+      expect(hideButton).not.toBeNull();
+      await act(async () => {
+        hideButton.click();
+      });
+      // The hero total is masked; the strip amounts are masked too. The
+      // asset rows below still show their fiat values — the toggle masks
+      // the hero and the strip only, so assert on the hero element, not
+      // on the whole page.
+      expect(heroAmount(mounted)).toBe('••••••');
+      expect(window.localStorage.getItem('bawa:hide-balance:v1')).toBe('1');
+    } finally {
+      await mounted.cleanup();
+    }
+    // A fresh mount reads the persisted value: the total stays hidden.
+    const remounted = await mountScreen();
+    try {
+      await clickRefreshPrices(remounted);
+      expect(heroAmount(remounted)).toBe('••••••');
+      expect(
+        remounted.div.querySelector('button[aria-label="Show balance"]'),
+      ).not.toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+      await remounted.cleanup();
+      window.localStorage.clear();
     }
   });
 

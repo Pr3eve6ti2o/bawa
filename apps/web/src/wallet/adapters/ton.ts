@@ -17,6 +17,12 @@ const DECIMALS = 9;
 export interface TonAdapterOverrides {
   baseUrl?: string;
   retryDelaysMs?: number[];
+  /**
+   * Minimum gap (ms) between the start of one TonCenter request and the
+   * start of the next. Default 1100 (TonCenter's keyless tier allows
+   * ~1 req/s). Tests may pass a smaller gap; production must not.
+   */
+  minCallGapMs?: number;
 }
 
 const sleep = (delayMs: number): Promise<void> =>
@@ -49,13 +55,33 @@ export function createTonAdapter(
   overrides: TonAdapterOverrides = {},
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
+  // Per-adapter serial gate (Phase 3, Lane H): TonCenter's keyless tier
+  // allows ~1 req/s, and Bawa fires the identity check, the balance and
+  // the history back-to-back — three calls inside ~1 s, so history 429s
+  // twice before recovering. Every rpc() call runs through one promise
+  // chain, and every HTTP attempt waits until ~1100 ms after the previous
+  // attempt STARTED (not finished), covering the identity check and the
+  // 429 retries. A token bucket adds nothing over this for a 1 req/s
+  // limit with a single consumer.
+  const minCallGapMs = overrides.minCallGapMs ?? 1100;
+  let gateChain: Promise<void> = Promise.resolve();
+  let lastAttemptStartedAtMs = 0;
+  const waitForGap = async (): Promise<void> => {
+    const nowMs = Date.now();
+    const waitMs = minCallGapMs - (nowMs - lastAttemptStartedAtMs);
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+    lastAttemptStartedAtMs = Date.now();
+  };
+
   // Chain-identity check result, cached per instance: TON's identity rests
   // on the pinned mainnet host (testnet lives on testnet.toncenter.com).
   // The host is fixed at construction, so one check per instance is enough.
   let identityChecked = false;
   let identityCheckInFlight: Promise<AdapterResult<never> | null> | null = null;
 
-  const rpc = async (
+  const rpcUnpaced = async (
     method: string,
     params: Record<string, unknown>,
   ): Promise<AdapterResult<unknown>> => {
@@ -66,6 +92,11 @@ export function createTonAdapter(
       let rateLimited = false;
 
       try {
+        // The gap is enforced per attempt, so a 429 retry also waits its
+        // turn instead of firing into the same 1 s window. The retry
+        // delay (1200/2400 ms) already exceeds the gap, so in production
+        // the wait here is normally zero after a retry sleep.
+        await waitForGap();
         raw = await fetchJson(baseUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -108,6 +139,22 @@ export function createTonAdapter(
       }
       return { status: 'ok', data: raw['result'], source: SOURCE, fetchedAt: Date.now() };
     }
+  };
+
+  // Serialised entry point: every call waits its turn on the chain, so
+  // two concurrent callers (balance + history) can never overlap, and
+  // each call's attempts are gap-checked in waitForGap. The chain is kept
+  // alive on failure so one failed call never blocks the next.
+  const rpc = async (
+    method: string,
+    params: Record<string, unknown>,
+  ): Promise<AdapterResult<unknown>> => {
+    const run = gateChain.then(() => rpcUnpaced(method, params));
+    gateChain = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   };
 
   const requireMainnet = async (): Promise<AdapterResult<never> | null> => {

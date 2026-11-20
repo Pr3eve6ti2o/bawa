@@ -591,12 +591,10 @@ export function portfolioTotal(
 } {
   const chains: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
   const list = chains.map((chain) => balances[chain]);
-  if (
-    list.some(
-      ({ status }) =>
-        status === 'loading' || status === 'unavailable' || status === 'error',
-    )
-  ) {
+  // A chain still loading means the total is not decidable yet; the
+  // dashboard holds the previous hero text in that case. Loading is not
+  // a failure, so it is the one status that still yields 'unavailable'.
+  if (list.some(({ status }) => status === 'loading')) {
     return { status: 'unavailable', text: 'Unavailable', partial: false };
   }
   if (
@@ -608,11 +606,18 @@ export function portfolioTotal(
     return { status: 'zero', text: '$0.00', partial: false };
   }
 
+  // Partial total (Safe's aggregateBalance shape): sum the chains that
+  // loaded; a failed chain contributes 0 and marks the total partial.
+  // No all-or-nothing gate — one chain's failure never blanks the total.
   const contributed: number[] = [];
   let partial = false;
   for (const chain of chains) {
     const balance = balances[chain];
     if (balance.status === 'zero' || balance.value === '0') {
+      continue;
+    }
+    if (balance.status === 'unavailable' || balance.status === 'error') {
+      partial = true;
       continue;
     }
     const entry = entries[chain];

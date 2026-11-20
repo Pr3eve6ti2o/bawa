@@ -186,8 +186,27 @@ export function DashboardScreen() {
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
   // Hide-balance toggle (Rabby's DashboardPanel): masks the hero total
   // and the strip amounts. Local state only — it never hides a state
-  // label such as "Unavailable".
-  const [hideBalance, setHideBalance] = useState(false);
+  // label such as "Unavailable". Persisted in localStorage (Rabby
+  // persists it); a missing or unreadable store means visible.
+  const HIDE_BALANCE_KEY = 'bawa:hide-balance:v1';
+  const [hideBalance, setHideBalance] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(HIDE_BALANCE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleHideBalance = () => {
+    setHideBalance((current) => {
+      const next = !current;
+      try {
+        globalThis.localStorage?.setItem(HIDE_BALANCE_KEY, next ? '1' : '0');
+      } catch {
+        // Persistence is best-effort; the toggle still works in memory.
+      }
+      return next;
+    });
+  };
 
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
@@ -243,9 +262,15 @@ export function DashboardScreen() {
   // 'unavailable' status must not fail the hero.
   const heroBalances = availableFor('balance').map((chain) => balances[chain]);
   const heroLoading = heroBalances.some((b) => b?.status === 'loading');
-  const heroFailed = heroBalances.some(
-    (b) => b?.status === 'unavailable' || b?.status === 'error',
-  );
+  // A failed chain contributes 0 to the total (portfolioTotal's partial
+  // path) and is marked on its own row/strip entry — it never blanks the
+  // hero. allHeroFailed is only for the message when NO balance loaded
+  // at all, so the hero can say balances (not prices) are the cause.
+  const allHeroFailed =
+    heroBalances.length > 0 &&
+    heroBalances.every(
+      (b) => b?.status === 'unavailable' || b?.status === 'error',
+    );
 
   const priceEntries = Object.values(pricesState.entries);
   const hasCachedPrices = priceEntries.some(
@@ -261,68 +286,62 @@ export function DashboardScreen() {
       ? (priceErrorReasons[0] ?? null)
       : null;
 
-  const nextHero: typeof lastHeroRef.current | null = heroFailed
-    ? {
-        text: 'Unavailable',
-        noPriceFeed: true,
-        retry: true,
-        partialNote: false,
-        showAttribution: false,
-        priceError: sharedPriceError,
-        // Balances failed, not (only) prices: the message below names the
-        // balances as the cause of the missing total. The price error is
-        // still surfaced when the feed itself failed too, so a
-        // rate-limited feed is never hidden behind the balances failure.
-        balancesFailed: true,
-      }
-    : heroLoading
-      ? null
-      : (() => {
-          const total = portfolioTotal(balances, pricesState.entries, Date.now());
+  const nextHero: typeof lastHeroRef.current | null = heroLoading
+    ? null
+    : (() => {
+        const total = portfolioTotal(balances, pricesState.entries, Date.now());
 
-          switch (total.status) {
-            case 'zero':
-              return {
-                text: '$0.00',
-                noPriceFeed: false,
-                retry: false,
-                partialNote: false,
-                showAttribution: false,
-                priceError: null,
-                balancesFailed: false,
-              };
-            case 'total':
-              return {
-                text: total.text,
-                noPriceFeed: false,
-                retry: false,
-                partialNote: false,
-                showAttribution: true,
-                priceError: null,
-                balancesFailed: false,
-              };
-            case 'partial':
-              return {
-                text: `${total.text} (Partial)`,
-                noPriceFeed: false,
-                retry: false,
-                partialNote: true,
-                showAttribution: true,
-                priceError: null,
-                balancesFailed: false,
-              };
-            case 'unavailable':
-              return {
-                text: 'Unavailable',
-                noPriceFeed: true,
-                retry: false,
-                partialNote: false,
-                showAttribution: false,
-                priceError: sharedPriceError,
-                balancesFailed: false,
-              };
-          }
-        })();
+        switch (total.status) {
+          case 'zero':
+            return {
+              text: '$0.00',
+              noPriceFeed: false,
+              retry: false,
+              partialNote: false,
+              showAttribution: false,
+              priceError: null,
+              balancesFailed: false,
+            };
+          case 'total':
+            return {
+              text: total.text,
+              noPriceFeed: false,
+              retry: false,
+              partialNote: false,
+              showAttribution: true,
+              priceError: null,
+              balancesFailed: false,
+            };
+          case 'partial':
+            return {
+              text: `${total.text} (Partial)`,
+              noPriceFeed: false,
+              retry: false,
+              partialNote: true,
+              showAttribution: true,
+              priceError: null,
+              balancesFailed: false,
+            };
+          case 'unavailable':
+            return {
+              text: 'Unavailable',
+              noPriceFeed: true,
+              retry: allHeroFailed,
+              partialNote: false,
+              showAttribution: false,
+              priceError: sharedPriceError,
+              // Balances failed, not (only) prices: the message below names
+              // the balances as the cause of the missing total. The price
+              // error is still surfaced when the feed itself failed too, so
+              // a rate-limited feed is never hidden behind the balances
+              // failure. Only when every hero balance failed is the cause
+              // the balances; otherwise the total is missing for want of a
+              // fresh price (a partial total needs at least one priced
+              // balance).
+              balancesFailed: allHeroFailed,
+            };
+        }
+      })();
 
   const hero = nextHero ?? lastHeroRef.current;
 
@@ -351,7 +370,7 @@ export function DashboardScreen() {
             aria-pressed={hideBalance}
             aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
             title={hideBalance ? 'Show balance' : 'Hide balance'}
-            onClick={() => setHideBalance((current) => !current)}
+            onClick={() => toggleHideBalance()}
             className="flex size-9 shrink-0 items-center justify-center rounded-full text-panel-text-muted transition-colors hover:bg-panel-action-hover hover:text-panel-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
           >
             {hideBalance ? (
@@ -366,7 +385,7 @@ export function DashboardScreen() {
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
         {hero.partialNote && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total — only balances with a fresh price are included.</p>
+          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total — some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { useWallet } from '../state/wallet-context';
+import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { ChainLogo } from './asset-rows';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
@@ -22,6 +23,8 @@ export function AssetDetailScreen() {
   const {
     xpubs,
     addresses,
+    vaultAddresses,
+    hydrating,
     uiState,
     errors,
     balances,
@@ -32,6 +35,44 @@ export function AssetDetailScreen() {
     setSelectedChain,
   } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
+
+  // Per-unit price from the same live CoinGecko feed as the dashboard
+  // strip and the asset list (usePrices pattern: auto-fetch on mount,
+  // refresh about every 60 seconds). No price is ever invented: a
+  // missing/expired/failed feed reads as such in the Details block.
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  useEffect(() => {
+    if (pricesState.status === 'idle') {
+      refreshPrices();
+    }
+  }, [pricesState.status, refreshPrices]);
+  const refreshPricesRef = useRef(refreshPrices);
+  useEffect(() => {
+    refreshPricesRef.current = refreshPrices;
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshPricesRef.current();
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mount / chain refresh (Lane G, Phase 3): a direct load or a move to
+  // another chain re-fetches for that chain. Gated on hydration so the
+  // first call has the rehydrated addresses — without an address a fetch
+  // cannot run and Retry would be dead. The provider also refreshes once
+  // after hydration; this covers later :chain changes.
+  useEffect(() => {
+    if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') return;
+    if (hydrating) return;
+    void refreshChain(chain as ChainId);
+    // Promise.resolve: the real refreshBalances always returns a promise,
+    // but a mocked context may not — history must still run after balances.
+    void Promise.resolve(refreshBalances()).finally(() => {
+      void refreshHistory();
+    });
+  }, [chain, hydrating, refreshChain, refreshBalances, refreshHistory]);
 
   if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
     return (
@@ -49,6 +90,35 @@ export function AssetDetailScreen() {
   const recentTxs = [...chainHistory.txs]
     .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
     .slice(0, 5);
+  // Single source of truth for "is there a wallet for this chain" (Lane G,
+  // Phase 3; Rabby's one-account-list pattern): the union of the vault's
+  // derived addresses and the watch-only xpub's derived addresses. "Not
+  // imported" only when BOTH are empty for the chain — the xpub record
+  // alone is a watch-only detail, not the wallet-existence test.
+  const vaultList = vaultAddresses?.[chain] ?? [];
+  const hasVaultAddress = vaultList.length > 0;
+  const firstVaultAddress = vaultList[0];
+  const hasWallet = hasVaultAddress || (addresses[chain]?.length ?? 0) > 0;
+  const showHistoryList =
+    chainHistory.status === 'loaded'
+    || (chainHistory.status === 'loading' && recentTxs.length > 0);
+  const unitPrice = unitPriceForChain(pricesState.entries[chain], Date.now());
+  const detailsBalance =
+    balance.status === 'loading'
+      ? 'Loading…'
+      : balance.status === 'zero'
+        ? `0 ${config.symbol}`
+        : balance.status === 'available'
+          ? formatNativeWithSymbol(
+              balance.value ?? '0',
+              CHAIN_DECIMALS[chain as ChainId],
+              config.symbol,
+            )
+          : 'Balance unavailable';
+  const detailsBalanceStale =
+    (balance.status === 'available' || balance.status === 'zero') && balance.stale === true
+      ? ' (stale)'
+      : '';
 
   async function copyAddress(address: string) {
     setCopyStatus('');
@@ -62,7 +132,7 @@ export function AssetDetailScreen() {
 
   function refreshAll() {
     void refreshChain(chain as ChainId);
-    void refreshBalances().finally(() => {
+    void Promise.resolve(refreshBalances()).finally(() => {
       void refreshHistory();
     });
   }
@@ -112,20 +182,18 @@ export function AssetDetailScreen() {
               {balance.status === 'error'
                 ? 'Could not load the balance.'
                 : 'Balance unavailable for this network.'}
-              {/* Machine-readable reason codes (no-adapter, no-address)
-                  are not shown to users; a provider's own error detail
-                  still is. */}
-              {balance.reason &&
-              balance.reason !== 'no-adapter' &&
-              balance.reason !== 'no-address'
-                ? ` (${balance.reason})`
-                : ''}
+              {balance.reason ? ` ${humanReasonMessage(balance.reason, 'balance')}` : ''}
             </p>
             <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
               Retry
             </Button>
           </>
         )}
+        {(balance.status === 'available' || balance.status === 'zero') && balance.stale === true ? (
+          <p className="text-sm text-panel-text-muted">
+            Showing the last loaded balance — it may be out of date.
+          </p>
+        ) : null}
       </div>
 
       {/*
@@ -161,11 +229,10 @@ export function AssetDetailScreen() {
 
       {/*
         Details block, in MetaMask's market position (after the actions,
-        before activity). Bawa has no market data — no price, market cap
-        or chart feed exists, and none is invented here — so this block
-        shows the on-chain details the screen already had (balance,
-        network), now under its own heading instead of floating
-        unlabelled after the actions.
+        before activity). The per-unit price comes from the same live
+        CoinGecko feed as the dashboard strip and the asset list; the
+        other rows are the on-chain details the screen already had
+        (balance, network).
       */}
       <section aria-labelledby="asset-details-heading" className="space-y-3">
         <h2 id="asset-details-heading" className="text-lg font-semibold">
@@ -177,17 +244,27 @@ export function AssetDetailScreen() {
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Balance</dt>
                 <dd className="font-semibold">
-                  {balance.status === 'loading'
-                    ? 'Loading…'
-                    : balance.status === 'zero'
-                      ? `0 ${config.symbol}`
-                      : balance.status === 'available'
-                        ? formatNativeWithSymbol(
-                            balance.value ?? '0',
-                            CHAIN_DECIMALS[chain as ChainId],
-                            config.symbol,
-                          )
-                        : 'Balance unavailable'}
+                  {detailsBalance}
+                  {detailsBalanceStale}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Price</dt>
+                <dd className="text-right font-semibold">
+                  {unitPrice.kind === 'fresh' ? (
+                    <>
+                      <span>{unitPrice.text}</span>
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        {`per ${config.symbol} · CoinGecko`}
+                      </span>
+                    </>
+                  ) : unitPrice.kind === 'expired' ? (
+                    'Price expired'
+                  ) : unitPrice.kind === 'error' ? (
+                    'Price error'
+                  ) : (
+                    'Price unavailable'
+                  )}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -211,53 +288,58 @@ export function AssetDetailScreen() {
             Track a transaction
           </Link>
         </div>
-        {chainHistory.status === 'loading' ? (
+        {chainHistory.status === 'loading' && recentTxs.length === 0 ? (
           <div role="status">
             <Skeleton className="h-24 w-full" />
             <span className="sr-only">Loading transactions…</span>
           </div>
-        ) : chainHistory.status === 'loaded' ? (
-          <ul className="space-y-3">
-            {recentTxs.map((tx) => (
-              <li key={tx.hash} className="rounded-lg border p-3">
-                <Link
-                  to={`/transactions/${tx.hash}`}
-                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
-                >
-                  <span className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-sm font-medium">
-                      {tx.direction === 'in'
-                        ? 'Received'
-                        : tx.direction === 'out'
-                          ? 'Sent'
-                          : 'Self transfer'}
+        ) : showHistoryList ? (
+          <>
+            {chainHistory.status === 'loading' ? (
+              <p className="text-sm text-muted-foreground">Updating transactions…</p>
+            ) : null}
+            <ul className="space-y-3">
+              {recentTxs.map((tx) => (
+                <li key={tx.hash} className="rounded-lg border p-3">
+                  <Link
+                    to={`/transactions/${tx.hash}`}
+                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+                  >
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-medium">
+                        {tx.direction === 'in'
+                          ? 'Received'
+                          : tx.direction === 'out'
+                            ? 'Sent'
+                            : 'Self transfer'}
+                      </span>
+                      {' '}
+                      <span className="text-sm font-semibold">
+                        {formatNativeWithSymbol(
+                          tx.amountBaseUnits,
+                          CHAIN_DECIMALS[chain as ChainId],
+                          config.symbol,
+                        )}
+                      </span>
                     </span>
-                    {' '}
-                    <span className="text-sm font-semibold">
-                      {formatNativeWithSymbol(
-                        tx.amountBaseUnits,
-                        CHAIN_DECIMALS[chain as ChainId],
-                        config.symbol,
-                      )}
+                    <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                      {tx.hash}
                     </span>
-                  </span>
-                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                    {tx.hash}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {tx.timestamp === null
-                      ? 'Pending'
-                      : new Date(tx.timestamp).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                    {tx.status === 'failed' ? ' · Failed' : tx.status === 'pending' ? ' · Pending' : ''}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {tx.timestamp === null
+                        ? 'Pending'
+                        : new Date(tx.timestamp).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                      {tx.status === 'failed' ? ' · Failed' : tx.status === 'pending' ? ' · Pending' : ''}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : chainHistory.status === 'empty' ? (
           <p className="rounded-lg border p-4 text-sm text-muted-foreground">
             No transactions yet for this chain.
@@ -268,7 +350,7 @@ export function AssetDetailScreen() {
               {chainHistory.status === 'error'
                 ? 'Could not load transactions.'
                 : 'Transaction history is unavailable for this chain.'}
-              {chainHistory.reason ? ` (${chainHistory.reason})` : ''}
+              {chainHistory.reason ? ` ${humanReasonMessage(chainHistory.reason, 'history')}` : ''}
             </p>
             <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
               Retry
@@ -281,7 +363,40 @@ export function AssetDetailScreen() {
         <h2 id="derived-addresses-heading" className="text-lg font-semibold">
           {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
         </h2>
-        {state === 'loading' ? (
+        {hasWallet ? (
+          <ul className="space-y-3">
+            {vaultList.map((address) => (
+              <li key={`vault:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                <span className="text-sm text-muted-foreground">Vault</span>
+                {' '}
+                <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Copy vault address"
+                  onClick={() => void copyAddress(address)}
+                >
+                  Copy
+                </Button>
+              </li>
+            ))}
+            {addresses[chain].map(({ index, address }) => (
+              <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
+                {' '}
+                <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={`Copy address at index ${index}`}
+                  onClick={() => void copyAddress(address)}
+                >
+                  Copy
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : state === 'loading' ? (
           <div role="status">
             <Skeleton className="h-24 w-full" />
             <span className="sr-only">Loading derived addresses…</span>
@@ -330,9 +445,13 @@ export function AssetDetailScreen() {
         <CardContent className="pt-6">
           <dl className="space-y-4">
             <div>
-              <dt className="text-sm text-muted-foreground">{chain === 'ton' ? 'Imported TON address' : 'Imported xpub'}</dt>
+              <dt className="text-sm text-muted-foreground">{xpub ? (chain === 'ton' ? 'Imported TON address' : 'Imported xpub') : hasVaultAddress ? 'Vault address' : (chain === 'ton' ? 'Imported TON address' : 'Imported xpub')}</dt>
               <dd className="break-all font-mono text-sm">
-                {xpub ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}` : 'Not imported'}
+                {xpub
+                  ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}`
+                  : hasVaultAddress && firstVaultAddress !== undefined
+                    ? `${firstVaultAddress.slice(0, 12)}…${firstVaultAddress.slice(-8)}`
+                    : 'Not imported'}
               </dd>
             </div>
             <div>

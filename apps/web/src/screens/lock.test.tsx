@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -32,7 +32,12 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-async function mountScreen() {
+async function mountScreen(
+  initialEntries: (
+    | string
+    | { pathname: string; search?: string; state?: unknown }
+  )[] = ['/lock'],
+) {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -40,10 +45,11 @@ async function mountScreen() {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/lock']}>
+      <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/lock" element={<LockScreen />} />
           <Route path="/" element={<div>Dashboard marker</div>} />
+          <Route path="/assets/btc" element={<div>Asset detail marker</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -68,6 +74,10 @@ async function mountScreen() {
 }
 
 describe('lock screen', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
   it('unlocks and navigates home on the right password', async () => {
     const unlockVault = vi.fn(async () => {});
     setWallet('locked', unlockVault);
@@ -167,4 +177,86 @@ describe('lock screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('returns to ?from= after unlocking instead of the dashboard', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault);
+    const mounted = await mountScreen(['/lock?from=/assets/btc']);
+    try {
+      await unlockWith(mounted.div, 'correct horse');
+      expect(unlockVault).toHaveBeenCalledWith('correct horse', '');
+      expect(mounted.div.textContent).toContain('Asset detail marker');
+      expect(mounted.div.textContent).not.toContain('Dashboard marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('returns to location state.from after unlocking', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault);
+    const mounted = await mountScreen([
+      { pathname: '/lock', state: { from: '/assets/btc' } },
+    ]);
+    try {
+      await unlockWith(mounted.div, 'correct horse');
+      expect(mounted.div.textContent).toContain('Asset detail marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('returns to the stored pre-lock route after unlocking', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault);
+    sessionStorage.setItem('bawa-lock-return-to', '/assets/btc');
+    const mounted = await mountScreen();
+    try {
+      await unlockWith(mounted.div, 'correct horse');
+      expect(mounted.div.textContent).toContain('Asset detail marker');
+      expect(sessionStorage.getItem('bawa-lock-return-to')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('ignores an off-site ?from= and falls back to the dashboard', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault);
+    const mounted = await mountScreen([
+      '/lock?from=https://evil.example/assets/btc',
+    ]);
+    try {
+      await unlockWith(mounted.div, 'correct horse');
+      expect(mounted.div.textContent).toContain('Dashboard marker');
+      expect(mounted.div.textContent).not.toContain('Asset detail marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('ignores a ?from= pointing back at /lock and falls back to the dashboard', async () => {
+    const unlockVault = vi.fn(async () => {});
+    setWallet('locked', unlockVault);
+    const mounted = await mountScreen(['/lock?from=/lock']);
+    try {
+      await unlockWith(mounted.div, 'correct horse');
+      expect(mounted.div.textContent).toContain('Dashboard marker');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
+
+async function unlockWith(div: HTMLDivElement, password: string) {
+  const input = div.querySelector('#lock-password') as HTMLInputElement;
+  await act(async () => {
+    setInputValue(input, password);
+  });
+  const button = [...div.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent === 'Unlock',
+  ) as HTMLButtonElement;
+  await act(async () => {
+    button.click();
+  });
+}

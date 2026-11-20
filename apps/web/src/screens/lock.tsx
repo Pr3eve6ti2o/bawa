@@ -4,9 +4,12 @@
 // NOT gated app-wide: watch-only mode stays usable while the vault is
 // locked, so this screen is a route (/lock) linked from the dashboard
 // banner and the send screen, not an AppLayout gate.
+// Lock-with-return-to (Phase 3 Lane F): after unlocking, the user goes
+// back to the route they were on before /lock instead of always landing
+// on the dashboard — see safeReturnTo / LOCK_RETURN_TO_KEY below.
 import { Wallet } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { useWallet } from '../state/wallet-context';
 import { isPassphraseUsed } from '../wallet/passphrase';
@@ -15,9 +18,46 @@ import { Card } from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
+// Lock-with-return-to: the return target comes from, in order, the
+// ?from= search param (Rabby's /unlock?from=), location state
+// (MetaMask's state.from), then the last non-/lock route app.tsx stored
+// in sessionStorage. The storage key is duplicated in app.tsx — keep
+// the two in sync. Only same-app paths are accepted, so a crafted link
+// cannot redirect off-site, and /lock itself is never a return target.
+const LOCK_RETURN_TO_KEY = 'bawa-lock-return-to';
+
+function safeReturnTo(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  if (
+    value === '/lock' ||
+    value.startsWith('/lock?') ||
+    value.startsWith('/lock#')
+  ) {
+    return null;
+  }
+  return value;
+}
+
+function readStoredReturnTo(): string | null {
+  try {
+    return safeReturnTo(window.sessionStorage.getItem(LOCK_RETURN_TO_KEY));
+  } catch {
+    return null;
+  }
+}
+
 export function LockScreen() {
   const { unlockVault, vaultState } = useWallet();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo =
+    safeReturnTo(new URLSearchParams(location.search).get('from')) ??
+    safeReturnTo(
+      (location.state as { from?: unknown } | null)?.from,
+    ) ??
+    readStoredReturnTo() ??
+    '/';
   const [password, setPassword] = useState('');
   // Shown only when the vault was created with a BIP-39 passphrase.
   const [passphrase, setPassphrase] = useState('');
@@ -33,7 +73,12 @@ export function LockScreen() {
 
     try {
       await unlockVault(password, passphrase);
-      navigate('/');
+      try {
+        window.sessionStorage.removeItem(LOCK_RETURN_TO_KEY);
+      } catch {
+        // Non-fatal: a stale stored target only affects the next unlock.
+      }
+      navigate(returnTo, { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
       setPassword('');

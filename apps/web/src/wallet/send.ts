@@ -1,6 +1,6 @@
 import Long from 'long';
 import { TW } from '@trustwallet/wallet-core';
-import { bytesToHex, keccak256 } from 'viem';
+import { bytesToHex, keccak256, parseTransaction, recoverAddress, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { deriveAddresses, withSigningKey } from './core';
@@ -328,6 +328,101 @@ export function tronAddressToBytes(address: string): Uint8Array {
   return full.slice(0, 21);
 }
 
+export type EthSignIntent = {
+  from: string;
+  to: string;
+  amountBaseUnits: string;
+  nonce: string;
+  chainId: number;
+};
+
+/**
+ * Post-sign verification for ETH (Phase 3, Lane H; mirrors the BTC
+ * output check in signBtcOffline). The signed transaction is re-decoded
+ * with viem's parseTransaction — an independent RLP/ecrecover path from
+ * Wallet Core's signer — and from/to/value/nonce/chainId are asserted
+ * against the signing intent before anything is returned. The sender is
+ * recovered from the signature over the EIP-155 unsigned serialization,
+ * so a signer bug or a wrong-chainId input fails here instead of
+ * returning a signed transaction. Never throws: a parse or recovery
+ * failure is a verification failure, not an exception.
+ */
+export async function verifyEthSignedTx(
+  signedTxHex: `0x${string}`,
+  intent: EthSignIntent,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    const parsed = parseTransaction(signedTxHex);
+    if (parsed.to?.toLowerCase() !== intent.to.toLowerCase()) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction destination does not match the signing intent.',
+      };
+    }
+    if (parsed.value !== BigInt(intent.amountBaseUnits)) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction value does not match the signing intent.',
+      };
+    }
+    if (parsed.nonce === null || parsed.nonce === undefined || BigInt(parsed.nonce) !== BigInt(intent.nonce)) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction nonce does not match the signing intent.',
+      };
+    }
+    if (parsed.chainId !== intent.chainId) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction chain id does not match the signing intent.',
+      };
+    }
+    if (
+      parsed.gasPrice === undefined ||
+      parsed.gas === undefined ||
+      parsed.r === undefined ||
+      parsed.s === undefined ||
+      parsed.v === undefined
+    ) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction failed post-sign verification.',
+      };
+    }
+    // viem parseTransaction leaves `from` undefined in 2.58; recover it
+    // from the signature over the unsigned serialization (EIP-155).
+    const payload = serializeTransaction({
+      chainId: parsed.chainId,
+      nonce: parsed.nonce,
+      gasPrice: parsed.gasPrice,
+      gas: parsed.gas,
+      to: parsed.to,
+      value: parsed.value,
+      data: parsed.data ?? '0x',
+    });
+    const recovered = await recoverAddress({
+      hash: keccak256(payload),
+      signature: {
+        r: parsed.r as `0x${string}`,
+        s: parsed.s as `0x${string}`,
+        yParity: Number((parsed.v as bigint) - 35n - BigInt(parsed.chainId) * 2n),
+      },
+    });
+    if (recovered.toLowerCase() !== intent.from.toLowerCase()) {
+      return {
+        ok: false,
+        reason: 'Signed ETH transaction sender does not match the signing intent.',
+      };
+    }
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      reason: 'Signed ETH transaction failed post-sign verification.',
+    };
+  }
+}
+
 /**
  * Offline ETH native-transfer signing (Sol p4, landed 2026-11-19 in 197.4s;
  * corrected hands-on). Sol called key.data(), but withSigningKey already
@@ -420,6 +515,20 @@ export async function signEthOffline(
               ok: false as const,
               reason: 'Signer returned an empty transaction.',
             };
+          }
+
+          // Post-sign verification (Phase 3, Lane H): the signed
+          // transaction must re-decode to exactly the intent before it
+          // is returned. The signing flow itself is unchanged.
+          const verified = await verifyEthSignedTx(bytesToHex(signedBytes), {
+            from,
+            to,
+            amountBaseUnits,
+            nonce,
+            chainId: 1,
+          });
+          if (!verified.ok) {
+            return { ok: false as const, reason: verified.reason };
           }
 
           // Finish all byte access before the disposable key is freed.

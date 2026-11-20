@@ -5,11 +5,18 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { AssetDetailScreen } from './asset-detail';
 import { useWallet } from '../state/wallet-context';
+import { usePrices } from '../wallet/prices';
 import { chainConfig } from '../wallet/chains';
 import type { BalanceState, HistoryState } from '../state/wallet-context';
 
-vi.mock('../state/wallet-context', () => ({
+vi.mock('../state/wallet-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../state/wallet-context')>()),
   useWallet: vi.fn(),
+}));
+
+vi.mock('../wallet/prices', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../wallet/prices')>()),
+  usePrices: vi.fn(),
 }));
 
 vi.mock('../wallet/chains', () => ({
@@ -43,25 +50,44 @@ function perChain<T>(value: T): Record<ChainKey, T> {
   return { btc: value, eth: value, trx: value, ton: value, sol: value, bsc: value, matic: value, arb: value, op: value, base: value, avax: value, ltc: value, doge: value };
 }
 
+const unavailablePrices = perChain({ status: 'unavailable', reason: 'missing' } as const);
+
+function setPrices(
+  entries: Record<ChainKey, unknown>,
+): void {
+  vi.mocked(usePrices).mockReturnValue({
+    state: { status: 'ready', entries, lastFetchedAtMs: Date.now() },
+    refresh: vi.fn(),
+  } as unknown as ReturnType<typeof usePrices>);
+}
+
 function setWallet(
   balances: Record<ChainKey, BalanceState>,
   history: Record<ChainKey, HistoryState>,
+  overrides?: {
+    vaultAddresses?: Record<ChainKey, string[]>;
+    addresses?: Record<ChainKey, { index: number; address: string }[]>;
+    uiState?: Record<ChainKey, string>;
+    xpubs?: Record<string, { xpub: string } | null>;
+  },
 ): void {
   vi.mocked(useWallet).mockReturnValue({
-    xpubs: {
+    xpubs: overrides?.xpubs ?? {
       eth: { xpub: 'xpub6TestWallet1234567890abcdef' },
       btc: null,
       trx: null,
       ton: null,
     },
-    addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
-    uiState: perChain('loaded'),
+    addresses: overrides?.addresses ?? perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+    vaultAddresses: overrides?.vaultAddresses ?? perChain([] as string[]),
+    hydrating: false,
+    uiState: (overrides?.uiState ?? perChain('loaded')) as unknown as Record<ChainKey, never>,
     errors: perChain(null),
     balances,
     history,
-    refreshChain: vi.fn(),
-    refreshBalances: vi.fn(),
-    refreshHistory: vi.fn(),
+    refreshChain: vi.fn(async () => {}),
+    refreshBalances: vi.fn(async () => {}),
+    refreshHistory: vi.fn(async () => {}),
     setSelectedChain: vi.fn(),
   } as unknown as ReturnType<typeof useWallet>);
 }
@@ -105,6 +131,7 @@ beforeEach(() => {
   vi.mocked(chainConfig).mockImplementation(
     (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
   );
+  setPrices(unavailablePrices);
 });
 
 const emptyHistory: HistoryState = { status: 'empty', txs: [] };
@@ -119,6 +146,8 @@ describe('asset detail screen', () => {
         ton: null,
       },
       addresses: perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
+      vaultAddresses: perChain([] as string[]),
+      hydrating: false,
       uiState: perChain('loaded'),
       errors: perChain(null),
       balances: {
@@ -144,19 +173,36 @@ describe('asset detail screen', () => {
           ],
         },
       },
-      refreshChain: vi.fn(),
-      refreshBalances: vi.fn(),
-      refreshHistory: vi.fn(),
+      refreshChain: vi.fn(async () => {}),
+      refreshBalances: vi.fn(async () => {}),
+      refreshHistory: vi.fn(async () => {}),
       setSelectedChain: vi.fn(),
     } as unknown as ReturnType<typeof useWallet>);
+    // Live per-unit price for ETH: the Details block shows it, never invented.
+    setPrices({
+      ...unavailablePrices,
+      eth: {
+        status: 'fresh',
+        quote: {
+          chain: 'eth',
+          assetId: 'eip155:1/slip44:60',
+          providerAssetId: 'ethereum',
+          usdPrice: '2000',
+          providerUpdatedAtMs: Date.now(),
+          fetchedAtMs: Date.now(),
+          source: 'CoinGecko',
+        },
+      },
+    });
     const mounted = await mountScreen('/assets/eth');
     try {
       expect(mounted.div.textContent).toContain('1.5 ETH');
       expect(mounted.div.textContent).toContain('Received');
       expect(mounted.div.textContent).toContain('0xabc');
       expect(mounted.div.textContent).not.toContain('Demo balance');
-      // No fiat amount anywhere: no fabricated portfolio total.
-      expect(mounted.div.textContent).not.toContain('$');
+      // The live per-unit price renders in the Details block.
+      expect(mounted.div.textContent).toContain('$2,000.00');
+      expect(mounted.div.textContent).toContain('per ETH');
     } finally {
       await mounted.cleanup();
     }
@@ -191,8 +237,58 @@ describe('asset detail screen', () => {
     const mounted = await mountScreen('/assets/eth');
     try {
       expect(mounted.div.textContent).toContain('Balance unavailable');
-      expect(mounted.div.textContent).toContain('boom');
+      // Machine-readable reasons never reach the UI: no raw code, only
+      // the human sentence.
+      expect(mounted.div.textContent).not.toContain('boom');
+      expect(mounted.div.textContent).toContain('Please try again later.');
       expect(mounted.div.textContent).not.toContain('1.5 ETH');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('never shows the raw history reason', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: { status: 'error', reason: 'no-adapter', txs: [] },
+      },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Could not load transactions.');
+      expect(mounted.div.textContent).not.toContain('no-adapter');
+      expect(mounted.div.textContent).toContain(
+        'Transaction history is not connected for this chain yet.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a vault address instead of "No wallet imported"', async () => {
+    setWallet(
+      perChain({ status: 'unavailable', reason: 'no-adapter' }),
+      perChain(emptyHistory),
+      {
+        vaultAddresses: {
+          ...perChain([] as string[]),
+          eth: ['0x27Ef5cDBe01777D62438AfFeb695e33fC2335979'],
+        },
+        addresses: perChain([] as { index: number; address: string }[]),
+        uiState: perChain('empty'),
+        xpubs: { eth: null, btc: null, trx: null, ton: null },
+      },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).not.toContain('No wallet imported for this chain');
+      expect(mounted.div.textContent).toContain('0x27Ef5cDBe01777D62438AfFeb695e33fC2335979');
+      expect(mounted.div.textContent).toContain('Vault address');
     } finally {
       await mounted.cleanup();
     }
