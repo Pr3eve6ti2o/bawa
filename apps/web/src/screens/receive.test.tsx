@@ -148,7 +148,7 @@ describe('receive screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain(
-        'Receive is unavailable — no receive adapter is verified yet.',
+        "Receive isn't available for this network yet.",
       );
     } finally {
       await mounted.cleanup();

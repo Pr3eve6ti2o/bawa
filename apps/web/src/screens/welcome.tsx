@@ -108,8 +108,7 @@ export function WelcomeScreen() {
       <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground">
         <p>Mainnet only — this wallet never connects to a test network.</p>
         <p>
-          Balances and history come from the mainnet adapters. Sending signs
-          offline; broadcast is disabled until separately authorised.
+          Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.
         </p>
       </aside>
     </section>

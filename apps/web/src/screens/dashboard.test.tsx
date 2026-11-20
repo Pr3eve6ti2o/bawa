@@ -167,12 +167,12 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows the empty state when no balance adapter is verified', async () => {
+  it('shows the empty state when no balances are available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No balance adapters verified yet.');
+      expect(mounted.div.textContent).toContain("Balances aren't available yet.");
     } finally {
       await mounted.cleanup();
     }

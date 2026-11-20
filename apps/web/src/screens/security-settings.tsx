@@ -24,10 +24,10 @@ export function SecuritySettingsScreen() {
       <div className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6">
         <h2 className="text-lg font-bold text-panel-text">What this wallet does</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-panel-text-muted">
-          <li>Your recovery phrase is generated in this browser and stored encrypted in the vault (AES-GCM-256, PBKDF2 600,000 rounds).</li>
-          <li>Private keys are held in memory only while the vault is unlocked — never in plaintext storage, logs or requests.</li>
+          <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
+          <li>Your private keys stay in temporary memory on this device only while the vault is unlocked. The wallet never saves them unencrypted, never writes them to logs, and never sends them online.</li>
           <li>Signing happens offline on this device.</li>
-          <li>Broadcast is disabled until separately authorised — signing never sends funds.</li>
+          <li>Sending funds is switched off until it is separately approved — signing alone never moves your funds.</li>
         </ul>
       </div>
 

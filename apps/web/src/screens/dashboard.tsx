@@ -150,8 +150,8 @@ export function DashboardScreen() {
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
             {pricesState.status === 'idle'
-              ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are exact native amounts from the mainnet adapters.'
-              : 'No fresh prices — portfolio total unavailable. Balances below are exact native amounts from the mainnet adapters.'}
+              ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are exact amounts in each currency.'
+              : 'No fresh prices — portfolio total unavailable. Balances below are exact amounts in each currency.'}
           </p>
         )}
         {hero.priceError !== null && (
@@ -196,11 +196,11 @@ export function DashboardScreen() {
       </div>
 
       {/*
-        Tokens/Activity tabs (Phase 5, Sol p11b, landed 2026-11-19 in 445.6s).
-        Two Sol errors corrected hands-on: tx.amount -> tx.amountBaseUnits
-        (the real AdapterTx field) and chainConfig[chain] -> chainConfig(chain)
-        (chainConfig is a function, not a record). No NFTs tab: no NFT support
-        exists, and unimplemented features stay absent.
+        Tokens/Activity tabs. Two errors corrected hands-on: tx.amount ->
+        tx.amountBaseUnits (the real transaction field) and
+        chainConfig[chain] -> chainConfig(chain) (chainConfig is a function,
+        not a record). No NFTs tab: no NFT support exists, and unimplemented
+        features stay absent.
       */}
       <div
         role="tablist"

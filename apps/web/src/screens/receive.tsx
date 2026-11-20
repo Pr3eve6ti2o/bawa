@@ -85,7 +85,7 @@ export function ReceiveScreen() {
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">Receive</h1>
         <p className="text-sm text-muted-foreground">
-          Receive is unavailable — no receive adapter is verified yet.
+          Receive isn't available for this network yet.
         </p>
       </div>
     );
