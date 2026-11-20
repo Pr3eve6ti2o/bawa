@@ -12,7 +12,7 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { ensureAdapters, useWallet } from '../state/wallet-context';
 import { chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
+import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { formatFeePreview } from '../wallet/money';
 import {
   validateRecipient,

@@ -9,7 +9,7 @@ import {
   BROADCAST_DISABLED_MESSAGE,
   type UtxoInput,
 } from './adapters/types';
-import { CHAIN_DECIMALS, decimalToBaseUnits } from './format';
+import { CHAIN_DECIMALS, decimalToBaseUnits } from './chain-amount-format';
 
 /**
  * Send flow (Fix Lane 3, Phase 4). Pure send-domain helpers on top of the

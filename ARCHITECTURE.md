@@ -24,7 +24,7 @@ It does not consume `packages/contracts` and does not perform offline wallet gen
 
 ### `tools/`
 
-- `tools/hdwallet-gen` contains Node tools using `@trustwallet/wallet-core` 4.9.3: `derive.js`, `generate.js`, `compare.js`, `extended-key.js`, `derive-ton.js` and `derive_daemon.js`.
+- `tools/hdwallet-gen` contains Node tools using `@trustwallet/wallet-core` 4.9.3: `derive.js`, `generate.js`, `compare.js`, `extended-key.js`, `derive-ton.js` and `derive-daemon.js`.
 - `tools/make_wallet.py` and `tools/decrypt_seed.py` provide Python wallet generation and recovery using `cryptography` 50.0.2 and `bip-utils` 2.12.3.
 - `tools/bawa_cli.py` is the launcher, with 5 options and `--route`.
 
@@ -40,7 +40,7 @@ These registries provide the builder’s allowed choices. The builder selects fr
 
 Build, setup, test and validation entry points live here:
 
-`scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build.mjs`, `scripts/test.mjs`, `scripts/validate-registry.mjs` and `scripts/quality-gates.mjs`.
+`scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/test.mjs`, `scripts/validate-registry.mjs` and `scripts/quality-gates.mjs`.
 
 ### `packages/contracts`
 

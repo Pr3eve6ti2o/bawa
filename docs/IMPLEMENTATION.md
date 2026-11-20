@@ -9,14 +9,14 @@ Interactive generation (implemented here):
   Trust Wallet Core → BTC/ETH/TRON account public roots; TON address + `ton_path`.
 
 Online application
-  Public derivation (implemented by `derive.js` / `derive_daemon.js`):
+  Public derivation (implemented by `derive.js` / `derive-daemon.js`):
     BTC/ETH/TRON public roots → addresses.
       ↓
   External application responsibilities, not implemented by these tools:
     RPC / node / indexer access → tracking / payment reconciliation.
 ```
 
-The generator does not need an online chain connection to create wallet material. `derive.js` and `derive_daemon.js` contain private-extended-key rejection guards; `compare.js` does not enforce a public-only input boundary.
+The generator does not need an online chain connection to create wallet material. `derive.js` and `derive-daemon.js` contain private-extended-key rejection guards; `compare.js` does not enforce a public-only input boundary.
 
 The generator requires a controlling terminal. If it cannot open `/dev/tty` for writing, it reports FATAL and exits with status 1. Network-independent generation does not imply unattended operation.
 
@@ -25,13 +25,13 @@ The generator requires a controlling terminal. If it cannot open `/dev/tty` for 
 - `tools/make_wallet.py` — orchestration, environment/bootstrap checks and backup handling.
 - `tools/hdwallet-gen/generate.js` — Trust Wallet Core generation and public-root export.
 - `tools/hdwallet-gen/derive.js` — one-shot public derivation.
-- `tools/hdwallet-gen/derive_daemon.js` — JSON-line daemon for repeated public derivation.
+- `tools/hdwallet-gen/derive-daemon.js` — JSON-line daemon for repeated public derivation.
 - `tools/hdwallet-gen/compare.js` — comparison helper intended for public inputs; it must not be relied on to reject private extended keys.
 - `tools/decrypt_seed.py` — controlled recovery of the encrypted seed artifact.
 
 ### Daemon protocol
 
-`tools/hdwallet-gen/derive_daemon.js` accepts one JSON object per line:
+`tools/hdwallet-gen/derive-daemon.js` accepts one JSON object per line:
 `{"chain":"btc|eth|trx","xpub":"...","index":5}`.
 Only `btc`, `eth` and `trx` are supported for `chain`; TON public derivation
 is not provided by the daemon.
@@ -53,8 +53,8 @@ and an unknown-chain rejection.
 - Ethereum BIP-44 account: `m/44'/60'/0'` → `xpub`.
 - TRON BIP-44 account: `m/44'/195'/0'` → `xpub`.
 
-`derive.js` and `derive_daemon.js` use the external `/0/i` branch: BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i` and TRON `m/44'/195'/0'/0/i`.
-- TON: exports the address obtained through `w.getAddressForCoin(CoinType.ton)` and the stdout JSON field `ton_path`, whose value is `m/44'/607'/0'` (from `CoinTypeExt.derivationPath(CoinType.ton)`). Neither `derive.js` nor `derive_daemon.js` provides TON public derivation.
+`derive.js` and `derive-daemon.js` use the external `/0/i` branch: BTC `m/84'/0'/0'/0/i`, ETH `m/44'/60'/0'/0/i` and TRON `m/44'/195'/0'/0/i`.
+- TON: exports the address obtained through `w.getAddressForCoin(CoinType.ton)` and the stdout JSON field `ton_path`, whose value is `m/44'/607'/0'` (from `CoinTypeExt.derivationPath(CoinType.ton)`). Neither `derive.js` nor `derive-daemon.js` provides TON public derivation.
 
 TON is intentionally treated as chain-specific because wallet contract/version and wallet-ID/subwallet semantics matter.
 

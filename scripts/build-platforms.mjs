@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const usage = 'Usage: node scripts/build.mjs [--platform web|android|all] [--skip-install]';
+const usage = 'Usage: node scripts/build-platforms.mjs [--platform web|android|all] [--skip-install]';
 
 function usageError() {
   console.error(usage);

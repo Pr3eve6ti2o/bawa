@@ -603,7 +603,7 @@ async function runDaemon(requests) {
   const startedAt = Date.now();
   const child = spawn(
     process.execPath,
-    [path.join(ROOT, "tools/hdwallet-gen/derive_daemon.js")],
+    [path.join(ROOT, "tools/hdwallet-gen/derive-daemon.js")],
     { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] },
   );
 

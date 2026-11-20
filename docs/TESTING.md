@@ -62,7 +62,7 @@ Known exception: tools/hdwallet-gen/compare.js has no private-extended-key check
 - unexpected existing outputs — **no automated coverage**;
 - missing .env — **no automated coverage**.
 
-Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:83–92` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive_daemon.js:76–85` rejects over-long lines ("request too large") and malformed JSON ("bad json").
+Implemented guards are not automated tests: `tools/hdwallet-gen/derive.js:83–92` enforces `MAX_INDEX 2147483647` and rejects private extended keys; `tools/hdwallet-gen/derive-daemon.js:76–85` rejects over-long lines ("request too large") and malformed JSON ("bad json").
 
 ## TON-specific coverage
 

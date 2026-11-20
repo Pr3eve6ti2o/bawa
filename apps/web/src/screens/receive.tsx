@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/format';
+import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';

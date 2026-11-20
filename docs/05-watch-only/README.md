@@ -68,7 +68,7 @@ The approved receiving paths are:
 **Daemon interface**
 
 ```sh
-node tools/hdwallet-gen/derive_daemon.js
+node tools/hdwallet-gen/derive-daemon.js
 ```
 
 > **Expected result**
@@ -295,7 +295,7 @@ Treat allocation records as recovery metadata, not evidence of use. Showing an a
 Start the daemon:
 
 ```sh
-node tools/hdwallet-gen/derive_daemon.js
+node tools/hdwallet-gen/derive-daemon.js
 ```
 
 Wait for `{"ready": true}` before sending requests. Send one JSON request per line:
@@ -388,7 +388,7 @@ A validation exception reaches the outer handler. Do not confuse that with valid
 Start the daemon:
 
 ```sh
-node tools/hdwallet-gen/derive_daemon.js
+node tools/hdwallet-gen/derive-daemon.js
 ```
 
 The values below are placeholders, and `→` marks a response. The private-key case is illustrative: keep live private material out of watch-only input.
@@ -431,20 +431,20 @@ The script takes `XPUB_BTC`, `XPUB_ETH` and `XPUB_TRX` and prints the first thre
 
 A missing chain xpub throws, and the top-level handler exits with status `1`. Check the exit status even when the output looks plausible: earlier chains may already have printed before a later chain fails. Use this for a spot-check, not as an allocation mechanism.
 
-`compare.js` does not perform the private-extended-key rejection used by `derive.js` and `derive_daemon.js`. Supply public extended keys only in the chain xpub settings. An `xprv` can be accepted and produce addresses successfully, so successful output does not prove that the input is public.
+`compare.js` does not perform the private-extended-key rejection used by `derive.js` and `derive-daemon.js`. Supply public extended keys only in the chain xpub settings. An `xprv` can be accepted and produce addresses successfully, so successful output does not prove that the input is public.
 
 **Reader pattern — not a Bawa file**
 
 Supervise the calling application that owns the pipes. Do not send the daemon's stdout directly to the journal.
 
-Use an unprivileged user and fill in the placeholders for your installation. The unit below runs the CALLER (the pipe-owning wrapper), never the daemon directly — `StandardInput`/`StandardOutput` here belong to the wrapper. The daemon's stdin/stdout are the JSONL pipes the wrapper creates and owns; the daemon must never inherit the unit's standard streams. Do NOT put `node tools/hdwallet-gen/derive_daemon.js` as `ExecStart` itself: with `StandardInput=null` it sees stdin EOF at once and exits 0 (not a failure, so `Restart=on-failure` does not act), and its JSONL replies would go to the journal instead of the caller.
+Use an unprivileged user and fill in the placeholders for your installation. The unit below runs the CALLER (the pipe-owning wrapper), never the daemon directly — `StandardInput`/`StandardOutput` here belong to the wrapper. The daemon's stdin/stdout are the JSONL pipes the wrapper creates and owns; the daemon must never inherit the unit's standard streams. Do NOT put `node tools/hdwallet-gen/derive-daemon.js` as `ExecStart` itself: with `StandardInput=null` it sees stdin EOF at once and exits 0 (not a failure, so `Restart=on-failure` does not act), and its JSONL replies would go to the journal instead of the caller.
 
 ```ini
 [Service]
 Type=simple
 User=<unprivileged-user>
 WorkingDirectory=<repository-root>
-ExecStart=<env-binary> -i PATH=<minimal-path> <pipe-owning-caller> -- node tools/hdwallet-gen/derive_daemon.js
+ExecStart=<env-binary> -i PATH=<minimal-path> <pipe-owning-caller> -- node tools/hdwallet-gen/derive-daemon.js
 Restart=on-failure
 RestartSec=<restart-delay>
 NoNewPrivileges=yes

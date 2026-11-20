@@ -13,7 +13,7 @@ import { chainConfig } from '../wallet/chains';
 import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
-} from '../wallet/format';
+} from '../wallet/chain-amount-format';
 
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 

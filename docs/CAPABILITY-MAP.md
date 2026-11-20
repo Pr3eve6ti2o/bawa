@@ -40,7 +40,7 @@
   **Tests/CI:** `test/ton-watch-only-vectors.test.js` exists, but no executed result is supplied and it is not among the stated CI test runs; CI syntax-checks the implementation.  
   Launcher relevance: Direct public-key derivation after validation; must not offer indexed TON deposits.
 
-- **Persistent derivation daemon — IMPLEMENTED_UNTESTED.** `tools/hdwallet-gen/derive_daemon.js`: public-only JSONL derivation for BTC/ETH/TRX, branches 0/1.  
+- **Persistent derivation daemon — IMPLEMENTED_UNTESTED.** `tools/hdwallet-gen/derive-daemon.js`: public-only JSONL derivation for BTC/ETH/TRX, branches 0/1.  
   **Tests/CI:** CI syntax-checks it; no daemon-specific behavioral test file or package-suite coverage is established by the evidence.  
   Launcher relevance: Direct daemon reuse; integration and behavioral validation remain AI-guided work.
 
@@ -138,7 +138,7 @@
 | Differentiated project generation | **IMPLEMENTED_UNTESTED** | `scripts/generate-project.mjs` generates per registry profile and copies `scripts/generate-templates/derive.mjs` and `scripts/generate-templates/verify.mjs`. `generated/` contains **seven profile directories from prior runs**; their presence does not prove complete or verified wallet products. |
 | Pure request classifier | **IMPLEMENTED_AND_TESTED — reported unit-test scope** | `scripts/classify-request.mjs`; `tests/classifier.test.mjs` has **32 `test()` occurrences**. The supplied evidence calls it unit-tested but gives no execution result or confirmed passing count. This does not verify the full builder or every routing refusal. |
 | Quality gates and test runner | **IMPLEMENTED_UNTESTED** | `scripts/quality-gates.mjs`: lockfile pin check first, secret scan, verdict; supports `--skip-android`. `scripts/test.mjs` runs web Vitest and Android Gradle tests; Android requires `JAVA_HOME` and `ANDROID_HOME`, otherwise it reports `NOT-RUN`. No gate verdict or runner result is supplied. |
-| Supporting scripts | **IMPLEMENTED_UNTESTED** | `scripts/setup.mjs`, `scripts/build.mjs`, `scripts/validate-registry.mjs`, `scripts/secret-scan.mjs`, `scripts/check-lockfiles.mjs`, `scripts/gate-verdict.mjs` exist. No execution evidence is supplied for these scripts. |
+| Supporting scripts | **IMPLEMENTED_UNTESTED** | `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/validate-registry.mjs`, `scripts/secret-scan.mjs`, `scripts/check-lockfiles.mjs`, `scripts/gate-verdict.mjs` exist. No execution evidence is supplied for these scripts. |
 | Offline capability detection | **IMPLEMENTED_UNTESTED** | `ai/detect-capabilities.mjs`: read-only, offline toolchain capability check, exit **0/1**. No invocation result is supplied. |
 
 ### Registry profiles
@@ -201,7 +201,7 @@ All documents remain guides. Implementation labels below apply only to the named
 | `docs/14-wallet-app-implementation` | 440 | Modules, fixture gate, typed errors, build checklist; testnet/published vectors | DOCUMENTED_ONLY; starters are partial implementation | AI implementation checklist, not a complete wallet. |
 | `docs/15-threat-model-and-theft-prevention` | 366 | Phishing, SIM swap, poisoning, malware, supply chain and incidents | DOCUMENTED_ONLY | Threat guidance, not security certification. |
 | `docs/16-security-decision-guide` | 188 | Free/paid help, spending thresholds and checklist | DOCUMENTED_ONLY | Human decision support, not runtime enforcement. |
-| `GUI-WATCH-ONLY-WORKFLOW.md`, `TON-WATCH-ONLY-TESTING.md` | — | Watch-only import workflows; Web import validation and unit tests are present | DOCUMENTED_ONLY; Web import IMPLEMENTED_UNTESTED at live-browser scope | External GUI import remains untested; M-39 withdrawal remains OPEN. |
+| `gui-watch-only-workflow.md`, `ton-watch-only-testing.md` | — | Watch-only import workflows; Web import validation and unit tests are present | DOCUMENTED_ONLY; Web import IMPLEMENTED_UNTESTED at live-browser scope | External GUI import remains untested; M-39 withdrawal remains OPEN. |
 | `docs/web-wallet/WEB-GUIDE.md` | 1,101 | Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet | DOCUMENTED_ONLY; web starter implements UI/boundaries only | Testnet-framed guide; no live-browser run established. |
 | `docs/android-wallet/ANDROID-GUIDE.md` | 5,516 | Testnet-only Android guide; prose source-build pin 4.9.2 | DOCUMENTED_ONLY; Android starter implements UI/boundaries only | No on-device derivation; reconcile prose pin with repo tool pin 4.9.3. |
 | `docs/RECOVERY.md` | — | Recovery instructions accompanying decryption | DOCUMENTED_ONLY; tool: `tools/decrypt_seed.py` | Recovery exists as a tool/procedure, but rehearsal was not run. |

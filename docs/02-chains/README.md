@@ -271,7 +271,7 @@ For TRON encoding, prepend `0x41` to get `P = 0x41 || H` (21 bytes). Append the 
 
 The hex form is `41` plus 40 hex digits: 42 characters, with no `0x`. Removing the initial `41` recovers `H`. Ethereum displays `H` as `0x` plus 40 hex digits: `0x` is notation, while `41` is a real byte. Never obtain `H` by trimming characters from the Base58 address.
 
-**Watch-only boundary:** `derive.js` and `derive_daemon.js` implement `trx` with `m/44'/195'/0'/0/i`, accept integer indices `0..2147483647`, and reject private extended keys.
+**Watch-only boundary:** `derive.js` and `derive-daemon.js` implement `trx` with `m/44'/195'/0'/0/i`, accept integer indices `0..2147483647`, and reject private extended keys.
 
 **Validation checklist:**
 
@@ -289,7 +289,7 @@ For a dedicated TRON app, prefer a maintained TRON SDK or Wallet Core’s TRON f
 **Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, you produce an address that belongs to nobody.
 ## 6. TON
 
-TON is generation-only in Bawa: you get one deposit address per wallet, with no xpub exported and no TON xpub watch-only flow. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive_daemon.js` support `btc`, `eth` and `trx` only.
+TON is generation-only in Bawa: you get one deposit address per wallet, with no xpub exported and no TON xpub watch-only flow. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive-daemon.js` support `btc`, `eth` and `trx` only.
 
 [TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. Use the full compatibility model:
 

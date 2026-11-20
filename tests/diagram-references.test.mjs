@@ -28,7 +28,7 @@ const IN_REPO = [
   "tools/decrypt_seed.py",
   "tools/hdwallet-gen/derive.js",
   "tools/hdwallet-gen/compare.js",
-  "tools/hdwallet-gen/derive_daemon.js",
+  "tools/hdwallet-gen/derive-daemon.js",
   "tools/hdwallet-gen/extended-key.js",
   "tools/hdwallet-gen/generate.js",
   "apps/web/src/engine/boundary.ts",

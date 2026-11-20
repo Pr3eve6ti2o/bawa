@@ -44,7 +44,7 @@ Treat `e3b65fb832db287fdc8d54794980dd0b3456cc12` as the reference code baseline.
 
 > **Expected result:**
 >
-> `derive.js`, `derive_daemon.js` and `compare.js` pass `node --check` (verified 2026-11-08).
+> `derive.js`, `derive-daemon.js` and `compare.js` pass `node --check` (verified 2026-11-08).
 >
 > At `e3b65fb832db287fdc8d54794980dd0b3456cc12`, `npm test` targets `test/smoke.test.js`, which is in this tree; the 28-check smoke suite passes 28/28 (verified 2026-11-08). At the former pin `082f7915` the file was not in the tree and the suite belonged only to the phase-1 repair copy.
 
@@ -970,7 +970,7 @@ python3 -m py_compile tools/make_wallet.py tools/decrypt_seed.py
 python3 test/differential_test.py
 ```
 
-The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive_daemon.js` and `compare.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
+The root npm commands forward to the tooling package. Its `check` script uses `node --check` on `generate.js`, `derive.js`, `derive-daemon.js` and `compare.js`; that is a syntax check, not a wallet-generation test. The Python compilation command likewise checks the two named scripts without establishing that recovery works.
 
 **Expected result:** all four commands completing successfully. At the pinned commit e3b65fb832db287fdc8d54794980dd0b3456cc12 they do: `npm run check` exits 0 and `npm test` passes 28/28 (verified 2026-11-08; all nine CI steps replayed exit 0, D23). At the former pin 082f7915, `npm run check` failed on three files and `npm test` could not run. Bawa does not document a fixed success transcript; if the outcome is unclear, confirm the expected behaviour for your revision with the maintainer. Passing these checks does not certify the machine as safe for real wallet generation.
 
@@ -1081,7 +1081,7 @@ These checks are guidance for your own setup, not Bawa monitoring features. Bawa
 
 These checks belong to your monitoring setup, not Bawa monitoring features. Bawa does not document monitoring tools, thresholds or recovery commands; confirm tooling, timeout/retry limits, gap policy, finality rules and storage budgets with the maintainer.
 
-Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive_daemon.js` performs repeated public derivation over JSON lines, not monitoring.
+Use Trust Wallet Core interactively on a trusted machine; keep mnemonic and seed material there. Only account-level public roots (`xpub`/`zpub`) or public addresses belong online. `derive.js` rejects private extended keys with exit status 2. `compare.js` has no such check and can accept a private extended key while returning incorrect output with exit status 0. Never supply private extended keys to online tools. `tools/hdwallet-gen/derive-daemon.js` performs repeated public derivation over JSON lines, not monitoring.
 
 `compare.js` reads its `.env` path from `process.env.BAWA_ENV_FILE` first, with `NOVA_ENV` as a deprecated fallback. Check this setting and verify the selected `.env` file before running the tool: an inherited Nova Shop value in `NOVA_ENV` can silently redirect Bawa's env-file lookup.
 

@@ -1,6 +1,6 @@
 # GUI watch-only workflow — Bawa TON
 
-**Status: M-39 OPEN.** This document provides a workflow and evidence-capture procedure, not a verified withdrawal. It builds on [TON-WATCH-ONLY-TESTING.md](TON-WATCH-ONLY-TESTING.md), lane T24, base tip `981d0ba`. The GUI watch-only test was **NOT performed**: no desktop machine is available on the test VM. The live-browser Web run is also untested. The in-app TON import itself (Part A) is covered by Web starter unit tests (R01: address validation + import screen); only its live-browser run is still not done.
+**Status: M-39 OPEN.** This document provides a workflow and evidence-capture procedure, not a verified withdrawal. It builds on [ton-watch-only-testing.md](ton-watch-only-testing.md), lane T24, base tip `981d0ba`. The GUI watch-only test was **NOT performed**: no desktop machine is available on the test VM. The live-browser Web run is also untested. The in-app TON import itself (Part A) is covered by Web starter unit tests (R01: address validation + import screen); only its live-browser run is still not done.
 
 **NEVER paste a seed phrase or private key into any GUI wallet or into Bawa’s watch-only import.** Watch-only means address-only import: it can monitor balances/activity but never send, sign or withdraw. Bawa generates one TON deposit address per wallet and cannot send TON.
 
