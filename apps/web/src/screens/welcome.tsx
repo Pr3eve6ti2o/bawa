@@ -10,7 +10,7 @@ import {
 
 export function WelcomeScreen() {
   return (
-    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6">
+    <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:grid lg:max-w-[1024px] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0 xl:max-w-[1152px]">
       <div className="rounded-[30px] border border-panel-border bg-panel-surface-raised p-7 text-panel-text sm:p-8">
         <p className="text-sm font-bold tracking-widest text-panel-accent">
           BAWA
@@ -37,7 +37,7 @@ export function WelcomeScreen() {
 
         <ol className="mt-4 space-y-2 text-body-md">
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
               1
             </span>
             <span className="font-semibold text-panel-text">
@@ -45,7 +45,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
               2
             </span>
             <span className="font-semibold text-panel-text">
@@ -53,7 +53,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
               3
             </span>
             <span className="font-semibold text-panel-text">
@@ -61,7 +61,7 @@ export function WelcomeScreen() {
             </span>
           </li>
           <li className="flex items-center gap-3 rounded-xl p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-step-pending-text">
               4
             </span>
             <span className="font-semibold text-panel-text">
@@ -71,7 +71,7 @@ export function WelcomeScreen() {
         </ol>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <Card className="flex flex-col rounded-xl bg-card text-foreground">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Create a wallet</CardTitle>
@@ -105,11 +105,11 @@ export function WelcomeScreen() {
         </Card>
       </div>
 
-      <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground">
+      <aside className="space-y-2 rounded-[20px] border border-border bg-card p-4 text-sm text-muted-foreground lg:col-start-1 lg:row-start-2">
         <p>Mainnet only — this wallet never connects to a test network.</p>
         <p>
-          Balances and history come from the mainnet adapters. Sending signs
-          offline; broadcast is disabled until separately authorised.
+          Balances and history come from the live networks. Signing happens
+          on this device, and sending is not turned on yet.
         </p>
       </aside>
     </section>

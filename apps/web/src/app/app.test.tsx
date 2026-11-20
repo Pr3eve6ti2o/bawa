@@ -142,7 +142,7 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Smart contract creator');
       expect(div.textContent).toContain('Multi-Sig Wallet v2');
       expect(div.textContent).toContain('Web3 Wallet Kit');
-      expect(div.textContent).toContain('Build brief');
+      expect(div.textContent).toContain('Coming soon');
     });
   });
 });

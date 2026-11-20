@@ -41,7 +41,7 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
   const chains = availableFor('balance');
 
   if (chains.length === 0) {
-    return <p className="p-4 text-sm text-muted-foreground">No balance adapters verified yet.</p>;
+    return <p className="p-4 text-sm text-muted-foreground">Balances are not available right now.</p>;
   }
 
   const visible = chains.filter((chain) => {

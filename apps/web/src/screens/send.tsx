@@ -115,7 +115,7 @@ export function SendScreen() {
       try {
         await ensureAdapters();
       } catch {
-        setPreview({ ok: false, reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+        setPreview({ ok: false, reason: 'Balances could not be loaded. Check your connection and retry.' });
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount);
@@ -138,7 +138,7 @@ export function SendScreen() {
     try {
       await ensureAdapters();
     } catch {
-      setSignState({ status: 'error', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+      setSignState({ status: 'error', reason: 'Balances could not be loaded. Check your connection and retry.' });
       return;
     }
     const previewOk = preview;
@@ -358,8 +358,8 @@ export function SendScreen() {
           role="note"
           className="rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
         >
-          Broadcast is disabled until separately authorised. This flow signs
-          offline only — nothing here sends cryptocurrency anywhere.
+          Sending is not turned on yet. This flow signs offline only —
+          nothing here sends cryptocurrency anywhere.
         </p>
       </header>
 
@@ -387,8 +387,8 @@ export function SendScreen() {
                       index < activeIndex
                         ? 'bg-success text-success-foreground'
                         : index === activeIndex
-                          ? 'bg-primary font-bold text-primary-foreground'
-                          : 'bg-surface-blue-dim text-primary'
+                          ? 'bg-primary-solid font-bold text-primary-foreground'
+                          : 'bg-surface-blue-dim text-step-pending-text'
                     }`}
                   >
                     {index < activeIndex ? '✓' : index + 1}
@@ -452,7 +452,7 @@ export function SendScreen() {
               type="text"
               value={recipient}
               onChange={(event) => setRecipient(event.target.value)}
-              placeholder={`Enter a ${config.displayName} address`}
+              placeholder={`Enter ${/^[AEIOU]/.test(config.displayName) ? 'an' : 'a'} ${config.displayName} address`}
               autoComplete="off"
             />
             {recipientError && (

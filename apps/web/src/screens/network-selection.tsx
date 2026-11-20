@@ -41,8 +41,8 @@ export function NetworkSelectionScreen() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Balances and history come from the Phase 2 mainnet adapters; no
-        testnet adapter exists.
+        Balances and history come from the live mainnet networks. This wallet
+        never connects to a test network.
       </p>
     </section>
   );

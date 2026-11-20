@@ -110,8 +110,15 @@ export function AssetDetailScreen() {
             <p className="text-sm text-panel-text-muted">
               {balance.status === 'error'
                 ? 'Could not load the balance.'
-                : 'No balance adapter is available for this chain.'}
-              {balance.reason ? ` (${balance.reason})` : ''}
+                : 'Balances are not available for this chain right now.'}
+              {/* Machine-readable reason codes (no-adapter, no-address)
+                  are not shown to users; a provider's own error detail
+                  still is. */}
+              {balance.reason &&
+              balance.reason !== 'no-adapter' &&
+              balance.reason !== 'no-address'
+                ? ` (${balance.reason})`
+                : ''}
             </p>
             <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
               Retry

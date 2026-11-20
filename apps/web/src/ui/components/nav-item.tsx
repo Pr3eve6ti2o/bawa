@@ -15,7 +15,7 @@ function NavItem({ icon, active, destructive, className, children, ...props }: N
       data-active={active || undefined}
       className={cn(
         'mb-1 flex h-11 w-full items-center gap-3 rounded-lg px-4 text-sm font-medium transition-colors',
-        active && 'bg-primary text-primary-foreground shadow-[var(--shadow-nav-active)]',
+        active && 'bg-primary-solid text-primary-foreground shadow-[var(--shadow-nav-active)]',
         !active && !destructive && 'text-muted-foreground hover:bg-secondary',
         destructive && 'text-destructive hover:bg-destructive/8',
         className,

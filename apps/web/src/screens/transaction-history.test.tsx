@@ -190,12 +190,12 @@ describe('transaction history screen', () => {
     }
   });
 
-  it('shows the no-adapter empty state when no history adapter is verified', async () => {
+  it('shows the empty state when no history is available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(perChainEmpty());
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('no history adapter is verified yet');
+      expect(mounted.div.textContent).toContain('No transaction history is available right now');
     } finally {
       await mounted.cleanup();
     }

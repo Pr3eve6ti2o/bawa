@@ -243,14 +243,14 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Broadcast is disabled');
+      expect(mounted.div.textContent).toContain('Sending is not turned on yet');
       await reachReview(mounted.div);
       expect(mounted.div.textContent).toContain('Review send');
       expect(mounted.div.textContent).toContain('0.5 ETH');
       expect(mounted.div.textContent).toContain('0.00042 ETH');
       expect(mounted.div.textContent).toContain('0.50042 ETH');
       expect(mounted.div.textContent).toContain('stub fee');
-      expect(mounted.div.textContent).toContain('Broadcast is disabled');
+      expect(mounted.div.textContent).toContain('Sending is not turned on yet');
       await click(mounted.div, 'Sign offline');
       await waitForText(mounted.div, 'Send signed — not broadcast');
       expect(mounted.div.textContent).toContain(

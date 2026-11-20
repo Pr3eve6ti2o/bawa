@@ -24,10 +24,10 @@ export function SecuritySettingsScreen() {
       <div className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6">
         <h2 className="text-lg font-bold text-panel-text">What this wallet does</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-panel-text-muted">
-          <li>Your recovery phrase is generated in this browser and stored encrypted in the vault (AES-GCM-256, PBKDF2 600,000 rounds).</li>
+          <li>Your recovery phrase is generated in this browser and stored encrypted in the vault on this device.</li>
           <li>Private keys are held in memory only while the vault is unlocked — never in plaintext storage, logs or requests.</li>
           <li>Signing happens offline on this device.</li>
-          <li>Broadcast is disabled until separately authorised — signing never sends funds.</li>
+          <li>Sending is not turned on yet — signing a transaction never sends funds by itself.</li>
         </ul>
       </div>
 
@@ -97,7 +97,7 @@ export function SecuritySettingsScreen() {
             to="/mnemonic-backup"
             className="inline-block text-sm font-medium text-primary underline underline-offset-4"
           >
-            View the real backup procedure
+            View the backup procedure
           </Link>
         </CardContent>
       </Card>

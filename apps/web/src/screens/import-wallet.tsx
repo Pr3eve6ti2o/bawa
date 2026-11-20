@@ -458,7 +458,7 @@ export function ImportWalletScreen() {
                     onClick={() => setChain(option)}
                        className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                          chain === option
-                           ? 'bg-primary text-primary-foreground'
+                           ? 'bg-primary-solid text-primary-foreground'
                            : 'border border-border bg-card text-muted-foreground hover:text-foreground'
                        }`}
                   >

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
@@ -115,6 +115,17 @@ beforeEach(() => {
 });
 
 describe('dashboard screen', () => {
+  // The dashboard fetches prices on mount now, so every test stubs the
+  // price feed with fresh prices by default — no test ever hits the real
+  // CoinGecko API. Tests that need a different feed re-stub it themselves.
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = stubPriceFetch({ ok: true, status: 200, json: async () => freshPayload() });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('shows skeletons while balances load', async () => {
     setWallet(balancesFor({ btc: { status: 'loading' } }));
     const mounted = await mountScreen();
@@ -172,7 +183,7 @@ describe('dashboard screen', () => {
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No balance adapters verified yet.');
+      expect(mounted.div.textContent).toContain('Balances are not available right now.');
     } finally {
       await mounted.cleanup();
     }
@@ -213,8 +224,20 @@ describe('dashboard screen', () => {
     try {
       // No fiat amount anywhere: no fabricated portfolio total.
       expect(mounted.div.textContent).not.toContain('$');
-      // The feed exists now; the hero invites a manual refresh instead of claiming no feed is connected.
-      expect(mounted.div.textContent).toContain('No prices loaded yet');
+      // Balances failed, not prices: the hero says so (prices load on
+      // mount now, so "No prices loaded yet" no longer applies here).
+      expect(mounted.div.textContent).toContain('Balances could not be loaded');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('fetches prices on mount without waiting for the Refresh button', async () => {
+    setWallet(balancesFor({}));
+    const mounted = await mountScreen();
+    try {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0]![0])).toContain('api.coingecko.com');
     } finally {
       await mounted.cleanup();
     }
@@ -225,16 +248,15 @@ describe('dashboard screen', () => {
     status: number;
     json?: () => Promise<unknown>;
     headers?: { get: (name: string) => string | null };
-  }): void {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: response.ok,
-        status: response.status,
-        json: response.json ?? (async () => ({})),
-        headers: response.headers ?? { get: () => null },
-      })),
-    );
+  }): ReturnType<typeof vi.fn> {
+    const mock = vi.fn(async () => ({
+      ok: response.ok,
+      status: response.status,
+      json: response.json ?? (async () => ({})),
+      headers: response.headers ?? { get: () => null },
+    }));
+    vi.stubGlobal('fetch', mock);
+    return mock;
   }
   function freshPayload(ageSeconds = 30): Record<string, { usd: number; last_updated_at: number }> {
     const lastUpdatedAt = Math.floor(Date.now() / 1000) - ageSeconds;

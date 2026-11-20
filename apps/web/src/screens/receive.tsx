@@ -85,7 +85,7 @@ export function ReceiveScreen() {
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">Receive</h1>
         <p className="text-sm text-muted-foreground">
-          Receive is unavailable — no receive adapter is verified yet.
+          Receive is not available right now.
         </p>
       </div>
     );
@@ -110,7 +110,7 @@ export function ReceiveScreen() {
             }}
             className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               chain === available
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary-solid text-primary-foreground'
                 : 'border border-border bg-card text-muted-foreground hover:text-foreground'
             }`}
           >

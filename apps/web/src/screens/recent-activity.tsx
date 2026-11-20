@@ -123,8 +123,11 @@ export function RecentActivity() {
                 key={`history-unavailable:${chain}`}
                 className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
               >
+                {/* One text node on purpose: the chain name used to render
+                    as an expression followed by a text node, which some text
+                    extraction reads back joined as "TONhistory". */}
                 <p className="text-sm text-panel-text-soft">
-                  {chainConfig(chain).displayName} history unavailable
+                  {`${chainConfig(chain).displayName} history unavailable`}
                 </p>
                 <Button
                   type="button"

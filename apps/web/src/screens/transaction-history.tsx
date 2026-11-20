@@ -54,7 +54,7 @@ export function TransactionHistoryScreen() {
         <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
           <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-relaxed text-panel-text-muted">
-            No transaction history — no history adapter is verified yet.
+            No transaction history is available right now.
           </p>
           <p className="text-sm leading-relaxed text-panel-text-muted">
             Import a watch-only wallet to see its derived addresses, or open
@@ -63,7 +63,7 @@ export function TransactionHistoryScreen() {
           <div className="flex flex-wrap gap-3 pt-1">
             <Link
               to="/receive"
-              className="inline-block rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              className="inline-block rounded-full bg-primary-solid px-4 py-2 text-sm font-semibold text-primary-foreground"
             >
               Receive
             </Link>

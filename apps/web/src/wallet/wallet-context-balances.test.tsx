@@ -114,7 +114,7 @@ function stubAdapter(
       reason: 'stub',
     }),
     broadcast: async () => {
-      throw new Error('Broadcast is disabled until separately authorised.');
+      throw new Error('Sending is not turned on yet. It needs to be enabled separately.');
     },
   };
 }

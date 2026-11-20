@@ -34,6 +34,24 @@ export function DashboardScreen() {
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
 
+  // Prices load on mount and refresh every 60 seconds (the documented
+  // CoinGecko refresh cadence in wallet/prices.ts). Before this fix the
+  // feed stayed idle until the user pressed "Refresh prices", so a fresh
+  // session showed "No prices loaded yet" and an Unavailable total even
+  // though the feed itself was healthy. The ref always calls the latest
+  // refresh so the interval never goes stale; usePrices still guards
+  // against overlapping fetches, and a failed fetch keeps the honest
+  // error state — prices are never fabricated.
+  const refreshPricesRef = useRef(refreshPrices);
+  refreshPricesRef.current = refreshPrices;
+  useEffect(() => {
+    refreshPricesRef.current();
+    const timer = window.setInterval(() => {
+      refreshPricesRef.current();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   // Hold the last settled hero text while balances refresh so it never flashes
   // Unavailable mid-refresh. Missing, expired, or failed prices are never $0.00.
   const lastHeroRef = useRef<{
@@ -43,6 +61,7 @@ export function DashboardScreen() {
     partialNote: boolean;
     showAttribution: boolean;
     priceError: 'rate-limited' | 'network' | 'provider' | 'timeout' | null;
+    balancesFailed: boolean;
   }>({
     text: 'Unavailable',
     noPriceFeed: false,
@@ -50,6 +69,7 @@ export function DashboardScreen() {
     partialNote: false,
     showAttribution: false,
     priceError: null,
+    balancesFailed: false,
   });
 
   // Only chains with a verified balance adapter count toward the hero.
@@ -80,6 +100,11 @@ export function DashboardScreen() {
         partialNote: false,
         showAttribution: false,
         priceError: null,
+        // Balances failed, not prices: the message below must say so.
+        // (Before the price auto-fetch this branch could only be reached
+        // with idle prices, so it blamed the feed; now the feed loads on
+        // mount and the honest cause is the balances.)
+        balancesFailed: true,
       }
     : heroLoading
       ? null
@@ -95,6 +120,7 @@ export function DashboardScreen() {
                 partialNote: false,
                 showAttribution: false,
                 priceError: null,
+                balancesFailed: false,
               };
             case 'total':
               return {
@@ -104,6 +130,7 @@ export function DashboardScreen() {
                 partialNote: false,
                 showAttribution: true,
                 priceError: null,
+                balancesFailed: false,
               };
             case 'partial':
               return {
@@ -113,6 +140,7 @@ export function DashboardScreen() {
                 partialNote: true,
                 showAttribution: true,
                 priceError: null,
+                balancesFailed: false,
               };
             case 'unavailable':
               return {
@@ -122,6 +150,7 @@ export function DashboardScreen() {
                 partialNote: false,
                 showAttribution: false,
                 priceError: sharedPriceError,
+                balancesFailed: false,
               };
           }
         })();
@@ -149,9 +178,11 @@ export function DashboardScreen() {
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
-            {pricesState.status === 'idle'
-              ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are exact native amounts from the mainnet adapters.'
-              : 'No fresh prices — portfolio total unavailable. Balances below are exact native amounts from the mainnet adapters.'}
+            {hero.balancesFailed
+              ? 'Balances could not be loaded, so the portfolio total is unavailable.'
+              : pricesState.status === 'idle'
+                ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
+                : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
           </p>
         )}
         {hero.priceError !== null && (

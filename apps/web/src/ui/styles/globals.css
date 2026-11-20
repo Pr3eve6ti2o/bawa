@@ -27,6 +27,22 @@
   --primary-hover: rgb(82 72 192);
   --primary-active: rgb(79 124 255);
   --primary-disabled: rgb(196 192 245);
+  /* Solid action purple: the button / step-circle background that keeps
+     white text at WCAG AA in BOTH themes. --primary itself is lifted to
+     #8b7cff inside the dark panel (and in .dark) so it stays readable as
+     TEXT on navy — but white text on #8b7cff is only 3.27:1, so every
+     filled control with white text uses --primary-solid instead (white on
+     #6258d9 is 5.36:1, on hover #5248c0 6.89:1, on active #4a44a0 8.00:1).
+     The same #4a44a0 is the disabled-button text on the pale disabled
+     fill (4.65:1 on #c4c0f5; the old white-on-pale was 1.72:1) and the
+     pending step number on the pale step circle (4.65:1). In .dark the
+     disabled text stays white (12.03:1 on #2a3651) and the pending step
+     number is pale lavender #e6e4ff (6.15:1 on the dark #0052a5 fill). */
+  --primary-solid: rgb(98 88 217);
+  --primary-solid-hover: rgb(82 72 192);
+  --primary-solid-active: rgb(74 68 160);
+  --primary-disabled-foreground: rgb(74 68 160);
+  --step-pending-text: rgb(74 68 160);
   --primary-soft: rgb(230 228 255);
   --primary-foreground: rgb(255 255 255);
   --secondary: rgb(238 240 252);
@@ -35,8 +51,12 @@
   --accent-foreground: rgb(27 39 66);
   --muted: rgb(238 240 252);
   --muted-foreground: rgb(100 113 140);
-  --destructive: rgb(243 99 111);
-  --destructive-hover: rgb(242 36 53);
+  /* Deepened for WCAG AA as TEXT on white (4.83:1) and as a filled
+     button with white text (4.83:1). The old #f3636f was 3.08:1 both
+     ways, which failed every error message (lock, send, receive,
+     wallet management) and every destructive button. */
+  --destructive: rgb(220 38 38);
+  --destructive-hover: rgb(185 28 28);
   --destructive-foreground: rgb(255 255 255);
 
   /* Borders & focus */
@@ -73,7 +93,10 @@
   /* Feedback */
   --success: rgb(75 206 113);
   --success-foreground: rgb(255 255 255);
-  --success-text: rgb(34 142 66);
+  /* Darkened for WCAG AA as text on white (5.40:1) and on the success
+     badge surface (4.54:1 on #daf1e1). The old #228e42 was 4.19:1 on
+     white and 3.52:1 on the badge surface. */
+  --success-text: rgb(27 122 56);
   --success-surface: rgb(218 241 225);
   --success-border: rgb(138 218 161);
   --success-surface-tint: rgb(218 241 225);
@@ -98,6 +121,12 @@
 
   /* Text extras */
   --text-secondary-gray: rgb(100 113 140);
+  /* Input placeholder text. The old placeholder used --muted-foreground,
+     which inside the dark panel is #aab5d1 — 1.75:1 on the pale input
+     fill #eeeefc — and outside it #64718c, 4.32:1 on #eeeefc. This token
+     is 5.21:1 on the input fill in light mode; in .dark it is #aab5d1
+     (9.31:1 on the dark input fill). */
+  --placeholder: rgb(88 100 128);
   --text-tertiary: rgb(159 169 199);
   --text-disabled: rgb(185 195 219);
   --text-inverse: rgb(255 255 255);
@@ -228,6 +257,13 @@
   --primary-hover: rgb(79 124 255);
   --primary-active: rgb(98 88 217);
   --primary-disabled: rgb(42 54 81);
+  /* Same AA-safe solid action purple as light mode, so filled controls
+     with white text pass in dark mode too (white on #8b7cff is 3.27:1). */
+  --primary-solid: rgb(98 88 217);
+  --primary-solid-hover: rgb(82 72 192);
+  --primary-solid-active: rgb(74 68 160);
+  --primary-disabled-foreground: rgb(255 255 255);
+  --step-pending-text: rgb(230 228 255);
   --primary-soft: rgb(38 52 81);
   --primary-foreground: rgb(255 255 255);
   --secondary: rgb(24 38 74);
@@ -299,6 +335,7 @@
 
   /* Text extras */
   --text-secondary-gray: rgb(221 222 234);
+  --placeholder: rgb(170 181 209);
   --text-tertiary: rgb(207 210 219);
   --text-disabled: rgb(107 114 128);
   --text-inverse: rgb(17 29 74);
@@ -360,6 +397,11 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-active: var(--primary-active);
   --color-primary-disabled: var(--primary-disabled);
+  --color-primary-solid: var(--primary-solid);
+  --color-primary-solid-hover: var(--primary-solid-hover);
+  --color-primary-solid-active: var(--primary-solid-active);
+  --color-primary-disabled-foreground: var(--primary-disabled-foreground);
+  --color-step-pending-text: var(--step-pending-text);
   --color-primary-soft: var(--primary-soft);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -454,6 +496,7 @@
   --color-text-tertiary: var(--text-tertiary);
   --color-text-secondary-gray: var(--text-secondary-gray);
   --color-text-disabled: var(--text-disabled);
+  --color-placeholder: var(--placeholder);
   --color-text-inverse: var(--text-inverse);
   --color-text-ai: var(--text-ai);
 

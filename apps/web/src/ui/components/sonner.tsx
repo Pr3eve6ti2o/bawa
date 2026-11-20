@@ -13,7 +13,7 @@ function Toaster({ className, ...props }: ToasterProps) {
           toast:
             'group toast group-[.toaster]:rounded-xl group-[.toaster]:border-border group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:shadow-[var(--shadow-card)]',
           description: 'group-[.toast]:text-muted-foreground',
-          actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+          actionButton: 'group-[.toast]:bg-primary-solid group-[.toast]:text-primary-foreground',
           cancelButton: 'group-[.toast]:bg-secondary group-[.toast]:text-foreground',
           success:
             'group-[.toaster]:border-success-border group-[.toaster]:bg-success-surface group-[.toaster]:text-foreground',
