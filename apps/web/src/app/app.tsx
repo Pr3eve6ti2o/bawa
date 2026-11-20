@@ -115,7 +115,7 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background sm:py-6 lg:py-0">
-      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none">
+      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none lg:min-h-screen">
         <aside className="hidden shrink-0 lg:block lg:w-[224px] lg:border-r lg:border-panel-border lg:bg-panel-surface">
           <div className="sticky top-0 flex max-h-screen flex-col overflow-y-auto">
             <SidebarNav />

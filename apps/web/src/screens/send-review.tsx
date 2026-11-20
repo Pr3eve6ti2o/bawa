@@ -82,7 +82,7 @@ export function SendReview({
         role="alert"
         className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-4 text-warning-text"
       >
-        <p className="font-semibold">Broadcast is disabled</p>
+        <p className="font-semibold">Sending is switched off</p>
         <p className="break-words text-sm">{disabledReason}</p>
       </div>
 

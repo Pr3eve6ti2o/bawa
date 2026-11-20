@@ -114,7 +114,7 @@ function stubAdapter(
       reason: 'stub',
     }),
     broadcast: async () => {
-      throw new Error('Broadcast is disabled until separately authorised.');
+      throw new Error('Sending funds is switched off until it is separately approved.');
     },
   };
 }

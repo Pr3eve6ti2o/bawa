@@ -123,7 +123,7 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the send screen (offline signing; broadcast disabled)', async () => {
+  it('renders the send screen (offline signing; sending switched off)', async () => {
     await withRenderedApp('/send', (div) => {
       // No vault in the default app state, so the send screen shows its
       // no-wallet state; the placeholder copy is gone with Phase 4.

@@ -358,7 +358,7 @@ export function SendScreen() {
           role="note"
           className="rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
         >
-          Broadcast is disabled until separately authorised. This flow signs
+          Sending funds is switched off until it is separately approved. This flow signs
           offline only — nothing here sends cryptocurrency anywhere.
         </p>
       </header>
@@ -442,8 +442,7 @@ export function SendScreen() {
             Sending from{' '}<span className="break-all font-mono">{from}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Check the full address and network carefully — a transaction, if
-            later broadcast, cannot be reversed.
+            Check the full address and network carefully — a transaction, once sent, cannot be reversed.
           </p>
           <div className="space-y-2">
             <Label htmlFor="send-recipient">Recipient address</Label>
@@ -628,12 +627,12 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            Send signed — not broadcast
+            Send signed — not sent
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             The transaction was signed offline with your vault key. It was
-            not sent anywhere: broadcast is disabled until separately
-            authorised.
+            not sent anywhere: sending funds is switched off until it is separately
+            approved.
           </p>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
@@ -658,9 +657,9 @@ export function SendScreen() {
             </Button>
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            If a broadcast outcome is ever unknown, it stays unresolved —
-            never resend it and never compose a replacement without
-            independent reconciliation.
+            If it is ever unclear whether a transaction was sent, it stays unresolved —
+            never resend it and never create a replacement without
+            checking the network first.
           </p>
           <Link
             to="/"
