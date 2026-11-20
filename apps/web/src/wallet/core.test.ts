@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadCore } from '../engine/boundary';
 import {
+  createPartialSigner,
   createWallet,
   deriveAddresses,
   deriveAddressesAt,
@@ -305,4 +306,76 @@ describe('seed-to-xprv: Bitcoin BIP-44 account keys, not master keys', () => {
       },
     );
   }
+});
+
+describe('createPartialSigner facade', () => {
+  const chains = [
+    { chain: 'eth', signatureLength: 65 },
+    { chain: 'btc', signatureLength: 65 },
+    { chain: 'trx', signatureLength: 65 },
+    { chain: 'ton', signatureLength: 64 },
+  ] as const;
+
+  it('matches deriveAddresses on every chain for the ETH vector and a fresh mnemonic', async () => {
+    const mnemonic = await createWallet();
+    const fixtures = [
+      { mnemonic: ETH_VECTOR_MNEMONIC, passphrase: 'TREZOR' },
+      { mnemonic, passphrase: '' },
+    ];
+
+    for (const fixture of fixtures) {
+      const addresses = await deriveAddresses(
+        fixture.mnemonic,
+        fixture.passphrase,
+      );
+
+      for (const { chain } of chains) {
+        const signer = await createPartialSigner(
+          fixture.mnemonic,
+          fixture.passphrase,
+          chain,
+        );
+
+        expect(signer.chain).toBe(chain);
+        expect(signer.address).toBe(addresses[chain]);
+      }
+    }
+  });
+
+  it('rejects a 31-byte digest on every chain', async () => {
+    const mnemonic = await createWallet();
+    const digest = new Uint8Array(31);
+
+    for (const { chain } of chains) {
+      const signer = await createPartialSigner(mnemonic, '', chain);
+
+      await expect(signer.signDigest(digest)).rejects.toThrow(
+        /^signDigest requires exactly 32 bytes$/,
+      );
+    }
+  });
+
+  it('returns 65-byte ETH/BTC/TRX signatures and 64-byte TON signatures', async () => {
+    const mnemonic = await createWallet();
+    const digest = new Uint8Array(32).fill(0x42);
+
+    for (const { chain, signatureLength } of chains) {
+      const signer = await createPartialSigner(mnemonic, '', chain);
+      const signature = await signer.signDigest(digest);
+
+      expect(signature).toBeInstanceOf(Uint8Array);
+      expect(signature).toHaveLength(signatureLength);
+    }
+  });
+
+  it('signs the same ETH digest deterministically', async () => {
+    const mnemonic = await createWallet();
+    const signer = await createPartialSigner(mnemonic, '', 'eth');
+    const digest = new Uint8Array(32).fill(0x42);
+
+    const first = (await signer.signDigest(digest)).slice();
+    const second = await signer.signDigest(digest);
+
+    expect(second).toEqual(first);
+  });
 });
