@@ -399,8 +399,14 @@ export function SendScreen() {
             ? 1
             : step === 'amount'
               ? 2
-              : step === 'review'
-                ? (signState.status === 'signing' ? 4 : 3)
+              : step === 'review' || step === 'result'
+                ? {
+                    review: 3,
+                    simulating: 3,
+                    signing: 4,
+                    signed: 5,
+                    'broadcast-disabled': 5,
+                  }[approvalStage]
                 : 5;
         return (
           <div className="space-y-2">
@@ -628,6 +634,7 @@ export function SendScreen() {
             )}
             feeNote={preview.feeNote}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
+            stage={approvalStage}
             onBack={() => setStep('amount')}
             onSign={() => void handleSign()}
           />

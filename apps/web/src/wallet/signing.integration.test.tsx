@@ -5,6 +5,11 @@ import { act } from 'react-dom/test-utils';
 import { SendReview, type SendReviewProps } from '../screens/send-review';
 import { createWallet, deriveAddresses } from './core';
 import { signEthOffline, simulateSend } from './send';
+import {
+  SEND_APPROVAL_STAGES,
+  canStartSigning,
+  type SendApprovalStage,
+} from '../screens/send';
 import { registerAdapter } from './adapters';
 import type {
   AdapterResult,
@@ -50,6 +55,7 @@ function simStub(balance: string, decimals: number, fee: AdapterResult<FeeEstima
       total: '0.01042 ETH',
       feeNote: 'Estimated fee from the live adapter.',
       disabledReason: 'Broadcast is disabled until separately authorised.',
+      stage: 'review',
       onBack: () => {},
       onSign,
     };
@@ -221,4 +227,102 @@ function simStub(balance: string, decimals: number, fee: AdapterResult<FeeEstima
     expect(other.from).toBe(otherFrom);
     expect(other.from).not.toBe(retry.from);
   });
+});
+
+describe('send approval stages', () => {
+  it('exports the approval stages in order', () => {
+    expect(SEND_APPROVAL_STAGES).toEqual([
+      'review',
+      'simulating',
+      'signing',
+      'signed',
+      'broadcast-disabled',
+    ]);
+  });
+
+  it('allows signing only at the review stage', () => {
+    for (const stage of SEND_APPROVAL_STAGES) {
+      expect(canStartSigning(stage)).toBe(stage === 'review');
+    }
+  });
+});
+
+describe('SendReview approval stages', () => {
+  const cases: ReadonlyArray<{
+    stage: SendApprovalStage;
+    heading: string;
+    signDisabled: boolean;
+  }> = [
+    { stage: 'review', heading: 'Review your send', signDisabled: false },
+    {
+      stage: 'simulating',
+      heading: 'Checking the send can go ahead…',
+      signDisabled: true,
+    },
+    {
+      stage: 'signing',
+      heading: 'Signing offline…',
+      signDisabled: true,
+    },
+    {
+      stage: 'signed',
+      heading: 'Signed — broadcast disabled',
+      signDisabled: true,
+    },
+    {
+      stage: 'broadcast-disabled',
+      heading: 'Signed — broadcast disabled',
+      signDisabled: true,
+    },
+  ];
+
+  for (const { stage, heading, signDisabled } of cases) {
+    it(`shows the ${stage} stage and gates offline signing`, async () => {
+      const onSign = vi.fn();
+      const onBack = vi.fn();
+      const props: SendReviewProps = {
+        chainName: 'Ethereum',
+        symbol: 'ETH',
+        recipient: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        amount: '0.01 ETH',
+        fee: '0.00042 ETH',
+        total: '0.01042 ETH',
+        feeNote: 'Estimated fee from the live adapter.',
+        disabledReason: 'Broadcast is disabled until separately authorised.',
+        stage,
+        onBack,
+        onSign,
+      };
+
+      const mounted = await mountReview(props);
+      try {
+        expect(mounted.div.querySelector('h1')?.textContent).toBe(heading);
+
+        const signButton = getSignOfflineButton(mounted.div);
+        expect(signButton.disabled).toBe(signDisabled);
+        expect(
+          mounted.div.querySelector('[role="alert"]')?.textContent,
+        ).toContain('Broadcast is disabled');
+
+        await act(async () => {
+          signButton.click();
+        });
+        expect(onSign).toHaveBeenCalledTimes(signDisabled ? 0 : 1);
+
+        if (stage === 'review') {
+          const backButton = Array.from(
+            mounted.div.querySelectorAll('button'),
+          ).find((button) => button.textContent?.trim() === 'Back');
+          if (!backButton) throw new Error('Missing Back button.');
+          expect(backButton.disabled).toBe(false);
+          await act(async () => {
+            backButton.click();
+          });
+          expect(onBack).toHaveBeenCalledTimes(1);
+        }
+      } finally {
+        await mounted.cleanup();
+      }
+    });
+  }
 });
