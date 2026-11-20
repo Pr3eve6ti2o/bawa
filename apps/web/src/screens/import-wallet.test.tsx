@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from '../app/app';
+import { expandUniquePrefix } from './import-wallet';
 import { deriveAddresses } from '../wallet/core';
 import { deleteVault, hasVault, lock } from '../wallet/vault';
 
@@ -480,4 +481,18 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       await cleanup();
     }
   }, 30_000);
+});
+
+describe('expandUniquePrefix', () => {
+  it.each([
+    ['aban', 'abandon '],
+    ['ab', 'ab'],
+    ['abandon', 'abandon'],
+    ['abandon aban', 'abandon abandon '],
+    ['aban ', 'aban '],
+    ['', ''],
+    ['ABAN', 'abandon '],
+  ])('expandUniquePrefix(%j) returns %j', (input, expected) => {
+    expect(expandUniquePrefix(input)).toBe(expected);
+  });
 });

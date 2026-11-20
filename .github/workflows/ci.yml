@@ -87,6 +87,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # setup-python@v5
@@ -95,3 +97,237 @@ jobs:
 
       - name: Check internal documentation links
         run: python tools/check-links.py
+
+      - name: Docs drift check (code-versus-doc last change)
+        # Beyond the link checker: the generated capability section in
+        # WALLET_BUILDER.md must not be older than chains.ts, and every
+        # docs/*.md file must be named in docs/inventory.md. A doc whose
+        # staleness cannot be determined is reported as "can't tell",
+        # never as current.
+        run: |
+          set -eu
+          marker=$(grep -F "Generated " WALLET_BUILDER.md | head -1 | sed -n 's/.*from chains.ts at \([0-9a-f]*\).*/\1/p')
+          if [ -z "$marker" ]; then echo "drift: WALLET_BUILDER.md has no generated-capability marker"; exit 1; fi
+          chains_head=$(git log -1 --format=%H -- apps/web/src/wallet/chains.ts)
+          # Current iff the last chains.ts change predates (or is) the
+          # generation commit: chains_head must be an ancestor of the
+          # marker. If the marker is an ancestor of chains_head instead,
+          # chains.ts changed after generation (stale). Otherwise the
+          # two are unrelated and staleness cannot be determined.
+          if git merge-base --is-ancestor "$chains_head" "$marker"; then
+            :
+          elif git merge-base --is-ancestor "$marker" "$chains_head"; then
+            echo "drift: WALLET_BUILDER.md capability section is stale — chains.ts changed after it (marker $marker, HEAD $chains_head). Regenerate the section from chains.ts."
+            exit 1
+          else
+            echo "drift: can't tell whether WALLET_BUILDER.md capability section is current (marker $marker and chains.ts HEAD $chains_head are unrelated)"
+            exit 1
+          fi
+          missing=$(find docs -name '*.md' | while read -r f; do grep -Fq "$f" docs/inventory.md || echo "$f"; done)
+          if [ -n "$missing" ]; then
+            echo "drift: docs not named in docs/inventory.md:"
+            printf '%s\n' "$missing"
+            exit 1
+          fi
+          echo "drift: OK (capability section current at $marker; inventory complete)"
+
+  # Mandatory apps/web gates (repo-study Phase 3, item 26). The wallet
+  # previously shipped with no CI gate at all; this job is required, so
+  # main cannot go green without the wallet passing. Wire it as a
+  # required status check in branch protection.
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # setup-node@v4
+        with:
+          node-version: '22.23.4'
+
+      - name: Assert versions
+        run: |
+          test "$(node --version)" = "v22.23.4"
+          test "$(npm --version)" = "10.9.9"
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: apps/web
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Unit tests (vitest)
+        working-directory: apps/web
+        run: npm run test
+
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Bundle-size gate
+        # Budgets from PERF.md (measured 2026-11-20 + ~5%): total JS in
+        # dist/assets <= 4,040,000 bytes; largest single JS chunk
+        # <= 3,050,000 bytes. The boundary chunk is the WASM engine and
+        # dominates by design; Vite's 500 kB chunk warning is expected
+        # for it and is not a failure.
+        working-directory: apps/web
+        run: |
+          node --input-type=module -e "
+            import { readdirSync, statSync } from 'node:fs';
+            const files = readdirSync('dist/assets').filter((f) => f.endsWith('.js'));
+            const sizes = files.map((f) => statSync('dist/assets/' + f).size);
+            const total = sizes.reduce((a, b) => a + b, 0);
+            const largest = Math.max(...sizes);
+            console.log('bundle: total JS ' + total + ' bytes, largest chunk ' + largest + ' bytes');
+            if (total > 4040000) { console.error('bundle: total JS exceeds 4040000 bytes'); process.exit(1); }
+            if (largest > 3050000) { console.error('bundle: largest JS chunk exceeds 3050000 bytes'); process.exit(1); }
+            console.log('bundle: OK');
+          "
+
+      - name: npm audit (web)
+        working-directory: apps/web
+        run: npm audit
+
+      - name: Dependency-version check (publish-time pins)
+        run: node scripts/check-pinned-dependencies.js
+
+      - name: Wallet dependency-cycle check
+        run: node scripts/check-wallet-cycles.mjs
+
+      - name: Crypto-architecture boundary tests
+        run: node scripts/crypto-architecture.test.js
+
+      - name: Chains generation drift check (P4 item 22)
+        # P4 owns the generator (apps/web/scripts/generate-chains.mjs);
+        # this lane only wires the check. Regenerate and diff: if the
+        # generator is not landed yet, the step skips with a note.
+        run: |
+          if [ ! -f apps/web/scripts/generate-chains.mjs ]; then
+            echo "chains drift: generator not landed yet (P4 item 22); skipping"
+            exit 0
+          fi
+          node apps/web/scripts/generate-chains.mjs
+          git diff --exit-code -- apps/web/src/wallet/chains.ts || {
+            echo "chains drift: chains.ts differs from a fresh generation from the registry — regenerate and commit"
+            exit 1
+          }
+          echo "chains drift: OK"
+
+  # Critical-path E2E harness (repo-study Phase 3, item 27). Runs the
+  # Playwright suite against the built app and enforces its verdict.
+  # Failure screenshots contain no secret-bearing regions (the harness
+  # masks the recovery-phrase and password fields); no tracing runs on
+  # credential-bearing tests.
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # setup-node@v4
+        with:
+          node-version: '22.23.4'
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Run E2E tests
+        working-directory: apps/web
+        run: npx playwright test
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+  # Floor guard (CONSTRAINTS.md, "Guard the bar"): diff-scoped check
+  # for the five cheap roads to green. Adapted from the
+  # constraint-driven-development skill's floor-guard reference.
+  # Exit 2 if the guard cannot run (no base); never let that read as 0.
+  floor-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Floor guard
+        run: |
+          set -u
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "floor-guard: no base to diff against (first push?)"
+            exit 2
+          fi
+          if ! git merge-base --is-ancestor "$base" HEAD; then
+            echo "floor-guard: base $base is not an ancestor of HEAD (rewritten history?)"
+            exit 2
+          fi
+          # Roads 2-4 are checked on code files only: a document
+          # describing a suppression (CONSTRAINTS.md itself names every
+          # marker) is not a suppression. The CONSTRAINTS.md checks
+          # below stay scoped to that file.
+          code='*.ts *.tsx *.js *.mjs *.cjs *.py *.rs *.go *.java *.kt *.swift'
+          diff=$(git diff --unified=0 "$base"...HEAD -- $code || true)
+          untracked=$(git ls-files --others --exclude-standard -- $code)
+          for f in $untracked; do
+            diff="$diff
+          $(git diff --no-index --unified=0 /dev/null "$f" || true)"
+          done
+          violations=0
+          echo "$diff" | grep '^+' | grep -v '^+++' | grep -E '@ts-ignore|@ts-nocheck|eslint-disable|istanbul ignore|nosemgrep|gitleaks:allow' && { echo "floor-guard: new suppression comment (silenced checker)"; violations=1; } || true
+          echo "$diff" | grep '^+' | grep -v '^+++' | grep -E '\.(skip|todo)\b|\bxit\(|\bxdescribe\(' && { echo "floor-guard: test made easier (skip added)"; violations=1; } || true
+          echo "$diff" | grep '^+' | grep -v '^+++' | grep -E 'throw new (Error|NotImplemented).*[Nn]ot implemented|catch\s*\(\w*\)\s*\{\s*\}|catch\s*\{\s*\}|\bTODO\b' && { echo "floor-guard: unfinished work (stub / empty catch / TODO)"; violations=1; } || true
+          deleted_tests=$(git diff --name-status "$base"...HEAD -- . | awk '$1 == "D" && $2 ~ /test/ {print $2}')
+          if [ -n "$deleted_tests" ]; then echo "floor-guard: test file deleted:"; printf '%s\n' "$deleted_tests"; violations=1; fi
+          # Rule-removed check, scoped to CONSTRAINTS.md: a removed floor
+          # bullet or table row (other than an exception row) is a
+          # loosening. Exception rows (E1, W1, ...) may be removed
+          # (that tightens); new exception rows are noticed, not failed.
+          constraints_removed=$(git diff --unified=0 "$base"...HEAD -- CONSTRAINTS.md | grep '^-[^-]' || true)
+          if printf '%s\n' "$constraints_removed" | grep -Eq '^- (-|\|)'; then
+            if printf '%s\n' "$constraints_removed" | grep -Ev '^- \| *(E|W)[0-9]+ *\|' | grep -Eq '^- (-|\|)'; then
+              echo "floor-guard: rule removed or weakened in CONSTRAINTS.md:"
+              printf '%s\n' "$constraints_removed"
+              violations=1
+            fi
+          fi
+          new_exceptions=$(git diff --unified=0 "$base"...HEAD -- CONSTRAINTS.md | grep '^+' | grep -v '^+++' | grep -E '^\+\| *(E|W)[0-9]+ *\|' || true)
+          if [ -n "$new_exceptions" ]; then
+            echo "floor-guard NOTICE: new exception row(s) in CONSTRAINTS.md — must have an owner and a <=90-day expiry:"
+            printf '%s\n' "$new_exceptions"
+          fi
+          if [ "$violations" = "1" ]; then
+            echo "floor-guard: FAILED — a move that lowers the bar. Fix the code, or route it through a tracked exception."
+            exit 1
+          fi
+          echo "floor-guard: clean"

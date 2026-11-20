@@ -64,6 +64,80 @@ Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` 
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
 Unspecified commands, interfaces or dependency versions are OPEN until inspected.
 
+## Verified 4.9.3 workflow (minimal)
+
+This is the minimal workflow verified against Trust Wallet Core 4.9.3.
+It is the smallest path that exercises the engine end to end in this
+repo; anything less is not a verification of the engine.
+
+**Pin.** `@trustwallet/wallet-core` is pinned to exactly **4.9.3** in
+`apps/web/package.json` and `tools/hdwallet-gen` (ADR-0001). The 4.9.3
+WASM is 10,422,325 bytes, SHA-256
+`13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`.
+Verify the hash on every upgrade; never use a version range. The
+prebuild step (`apps/web/scripts/copy-wasm.mjs`, run by `prebuild` /
+`predev` / `build`) copies the pinned WASM into the app — a stale WASM
+with new glue is how the 4.8.4/4.9.3 incident happened, and the
+dependency-version check (`scripts/check-pinned-dependencies.js`) now
+guards the pin.
+
+**Run.** From `apps/web`, after `npm ci`:
+
+```sh
+npm run typecheck   # tsc --noEmit, 0 errors
+npm run build       # copy-wasm + tsc + vite build, 0 errors
+npm run test        # vitest run — 40 files, 460 tests, all passing (2026-11-20)
+```
+
+**Upstream sources.** The engine is Apache-2.0, upstream
+[trustwallet/wallet-core](https://github.com/trustwallet/wallet-core)
+(default branch `master`): the WASM entry in
+[`wasm/`](https://github.com/trustwallet/wallet-core/tree/master/wasm),
+the C headers in
+[`include/TrustWalletCore/`](https://github.com/trustwallet/wallet-core/tree/master/include/TrustWalletCore)
+(including `TWHDWallet.h`), the WASM tests in
+[`wasm/tests/`](https://github.com/trustwallet/wallet-core/tree/master/wasm/tests),
+and the native tests in
+[`tests/`](https://github.com/trustwallet/wallet-core/tree/master/tests).
+Bawa's own engine checks are `apps/web/src/wallet/core.test.ts`
+(derivation), `apps/web/src/wallet/send.test.ts` (offline signing plus
+AnySigner probe runs, disposable keys, no broadcast), and
+`apps/web/src/engine/boundary-retry.test.ts` (WASM-init behaviour).
+
+**What this workflow does not prove.** A successful build and test run
+prove only their build scope. They do not demonstrate transaction
+handling, mainnet readiness, or a send on any network — no send has
+ever run on any network, and broadcast stays disabled.
+
+## Capability section (generated from `chains.ts`)
+
+<!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
+     Regenerate when chains.ts changes; the CI drift check fails otherwise.
+     Generated 2026-11-20 from chains.ts at 0fd3a2e. -->
+
+| Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bitcoin (BTC) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
+| Ethereum (ETH) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
+| TRON (TRX) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
+| TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked |
+
+TON `fee-quote` is blocked: a TON fee depends on the unsigned message,
+which is Phase 4 work — no fee number is ever invented. TON
+`post-sign-verify` is blocked: the signed BOC is not re-parsed (no BOC
+parser vendored); verification is no-error + 32-byte hash + BOC magic
+only. Listing a chain never implies it can do an operation; a chain is
+available for an operation only when `availableFor(capability)` in
+`apps/web/src/wallet/chains.ts` returns it. The nine prospective chains
+in the registry are recovery profiles only, not implemented `CHAINS`
+entries, and are not listed here.
+
+<!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
+
+If you want to use a wallet to hold funds, see the product-user route
+in [README.md](README.md) ("If you want a wallet to use"). This
+document is builder material.
+
 Derivation is fixed: **BIP-39, 256-bit entropy, 24 words, empty passphrase, account 0, receiving branch 0 only**. Preserve the chain-specific paths below; do not invent alternate paths or index ranges.
 
 | Chain | Fixed derivation / generation policy | Confirmation policy |

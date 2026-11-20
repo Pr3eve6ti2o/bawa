@@ -31,6 +31,36 @@ python3 -m py_compile tools/make_wallet.py tools/decrypt_seed.py
 python3 test/differential_test.py
 ~~~
 
+For the web wallet (`apps/web`), also run `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` there. The quality bar for all of this is `CONSTRAINTS.md`; do not weaken it to make a change pass.
+
+## Adopting a dependency
+
+Every new dependency is a decision, recorded, not a silent addition.
+Before adding a dependency, complete this checklist and record it in
+the pull request (or the lane report):
+
+- [ ] **Source link.** The exact repository/package URL and the pinned
+  version (or revision). An abbreviated name is not a source.
+- [ ] **Warning.** What the dependency costs: size, maintenance,
+  licence, supply-chain surface, and what breaks if it goes
+  unmaintained. If you cannot name a cost, you have not inspected it.
+- [ ] **Owner confirmation.** Who owns the dependency going forward
+  (a person, not a team), and who re-reviews it when it changes.
+- [ ] **One real use case.** The single concrete use in this repo that
+  justifies the dependency. "Might need it later" is not a use case.
+  A dependency with no consumer is not added.
+- [ ] **Licence check.** The licence is MIT, Apache-2.0, or ISC — or
+  the dependency is patterns-only (study the idea, write fresh code)
+  because its licence blocks adaptation. Per-file verification for
+  mixed-licence sources (MetaMask, Aptos, Sui); the two-year FSL→MIT
+  conversion checked for safe-transaction-service.
+- [ ] **Lockfile.** The lockfile diff is reviewed, never hand-edited.
+  A version range is never used where an exact pin is the policy
+  (notably `@trustwallet/wallet-core` 4.9.3 — see ADR-0001).
+- [ ] **Pin recorded.** The pin and its reason are recorded where the
+  dependency is used (package.json comment, ADR, or
+  `scripts/check-pinned-dependencies.js`).
+
 ## Review and approval
 
 Request review from the repository owner (Pr3eve6ti2o). Merge only after the checks above pass and the owner approves.

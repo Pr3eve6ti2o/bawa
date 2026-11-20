@@ -3,10 +3,28 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { availableFor } from '../wallet/chains';
-import type { AdapterTx } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
+import {
+  createRefresh,
+  ensureAdapters,
+  type BalanceState,
+  type HistoryState,
+  type RefreshReport,
+} from './wallet-refresh';
+
+// The refresh state machine lives in ./wallet-refresh; these are
+// re-exported so existing importers (screens, tests, the send screen's
+// ensureAdapters) keep working unchanged.
+export { ensureAdapters };
+export type {
+  BalanceState,
+  BalanceStatus,
+  HistoryState,
+  HistoryStatus,
+  RefreshFailure,
+  RefreshReport,
+} from './wallet-refresh';
 
 let vaultCorePromise: Promise<typeof import('../wallet/core')> | undefined;
 
@@ -18,27 +36,6 @@ function loadVaultCore(): Promise<typeof import('../wallet/core')> {
     });
   }
   return vaultCorePromise;
-}
-
-
-let adaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
-
-// Lazy adapter loading: the adapter chunk (viem + adapters, ~3 MB) must not
-// load before first paint. First caller imports it and registers the
-// adapters once; concurrent callers share the promise. A rejected import
-// clears the cache so a later call retries. Exported for the send screen,
-// which also reads adapters but loads after the wallet context.
-export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
-  if (adaptersPromise) return adaptersPromise;
-  const promise = import('../wallet/adapters').then((adapters) => {
-    adapters.registerAllAdapters();
-    return adapters;
-  });
-  adaptersPromise = promise;
-  void promise.catch(() => {
-    if (adaptersPromise === promise) adaptersPromise = null;
-  });
-  return promise;
 }
 
 
@@ -97,23 +94,6 @@ function readAutoLockDeadline(): number | null {
   }
 }
 
-export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
-
-export interface BalanceState {
-  status: BalanceStatus;
-  /** Raw native balance as a decimal string, when a provider returned one. */
-  value?: string;
-  /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
-  reason?: string;
-}
-
-export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
-
-export interface HistoryState {
-  status: HistoryStatus;
-  txs: AdapterTx[];
-  reason?: string;
-}
 
 const initialBalances = (): PerChain<BalanceState> =>
   perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-adapter' }));
@@ -137,6 +117,8 @@ interface WalletState {
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
   history: PerChain<HistoryState>;
+  /** Latest refresh report per kind (null until that kind has run). */
+  refreshReports: { balances: RefreshReport | null; history: RefreshReport | null };
 }
 
 export interface WalletContextValue extends WalletState {
@@ -198,6 +180,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     vaultProfileIds: null,
     balances: initialBalances(),
     history: initialHistory(),
+    refreshReports: { balances: null, history: null },
   }));
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
@@ -209,8 +192,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const changed = useRef(perChain(() => false));
   const derivations = useRef(perChain(() => 0));
   const vaultDerivations = useRef(0);
-  const balanceRequests = useRef(perChain(() => 0));
-  const historyRequests = useRef(perChain(() => 0));
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -281,97 +262,44 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void putWallet(chain, null);
   }, [putWallet]);
 
-  // Balances and history come from the Phase 2 adapters, gated on the
-  // capability registry: a chain is readable only when its balance/history
-  // capability is verified (availableFor). A failed fetch is reported as
-  // unavailable/error, never as zero.
+  // Balances and history refresh lives in ./wallet-refresh (item 28):
+  // the per-chain adapter reads, request coalescing, last-good
+  // retention and the failure report. This provider only wires it to
+  // state and records the latest report, so a failed refresh is an
+  // explicit outcome instead of a swallowed rejection.
+  const refresh = useMemo(() => createRefresh({
+    getAddress: (chain) =>
+      current.current.vaultAddresses[chain][0] ??
+      current.current.addresses[chain][0]?.address,
+    getBalance: (chain) => current.current.balances[chain],
+    getHistory: (chain) => current.current.history[chain],
+    setBalance: (chain, state) =>
+      update((previous) => ({
+        ...previous,
+        balances: { ...previous.balances, [chain]: state },
+      })),
+    setHistory: (chain, state) =>
+      update((previous) => ({
+        ...previous,
+        history: { ...previous.history, [chain]: state },
+      })),
+  }), [update]);
+
   const refreshBalances = useCallback(async () => {
-    const { getAdapter } = await ensureAdapters();
-    await Promise.all(CHAINS.map(async (chain) => {
-      const request = ++balanceRequests.current[chain];
-      const setBalance = (balance: BalanceState) => {
-        if (request !== balanceRequests.current[chain]) return;
-        update(previous => ({
-          ...previous,
-          balances: { ...previous.balances, [chain]: balance },
-        }));
-      };
-      if (!availableFor('balance').includes(chain)) {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
-      }
-      const adapter = getAdapter(chain);
-      if (!adapter) {
-        setBalance({ status: 'unavailable', reason: 'no-adapter' });
-        return;
-      }
-      const address =
-        current.current.vaultAddresses[chain][0] ??
-        current.current.addresses[chain][0]?.address;
-      if (!address) {
-        setBalance({ status: 'unavailable', reason: 'no-address' });
-        return;
-      }
-      setBalance({ status: 'loading' });
-      const result = await adapter.getBalance(address);
-      if (request !== balanceRequests.current[chain]) return;
-      if (result.status === 'ok') {
-        setBalance(
-          result.data.valueBaseUnits === '0'
-            ? { status: 'zero', value: '0' }
-            : { status: 'available', value: result.data.valueBaseUnits },
-        );
-      } else if (result.status === 'unavailable') {
-        setBalance({ status: 'unavailable', reason: result.reason });
-      } else {
-        setBalance({ status: 'error', reason: result.reason });
-      }
+    const report = await refresh.refreshBalances();
+    update((previous) => ({
+      ...previous,
+      refreshReports: { ...previous.refreshReports, balances: report },
     }));
-  }, [update]);
+  }, [refresh, update]);
 
   const refreshHistory = useCallback(async () => {
-    const { getAdapter } = await ensureAdapters();
-    await Promise.all(CHAINS.map(async (chain) => {
-      const request = ++historyRequests.current[chain];
-      const setHistory = (history: HistoryState) => {
-        if (request !== historyRequests.current[chain]) return;
-        update(previous => ({
-          ...previous,
-          history: { ...previous.history, [chain]: history },
-        }));
-      };
-      if (!availableFor('history').includes(chain)) {
-        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
-        return;
-      }
-      const adapter = getAdapter(chain);
-      if (!adapter) {
-        setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
-        return;
-      }
-      const address =
-        current.current.vaultAddresses[chain][0] ??
-        current.current.addresses[chain][0]?.address;
-      if (!address) {
-        setHistory({ status: 'unavailable', reason: 'no-address', txs: [] });
-        return;
-      }
-      setHistory({ status: 'loading', txs: [] });
-      const result = await adapter.getHistory(address, 25);
-      if (request !== historyRequests.current[chain]) return;
-      if (result.status === 'ok') {
-        setHistory(
-          result.data.length === 0
-            ? { status: 'empty', txs: [] }
-            : { status: 'loaded', txs: result.data },
-        );
-      } else if (result.status === 'unavailable') {
-        setHistory({ status: 'unavailable', reason: result.reason, txs: [] });
-      } else {
-        setHistory({ status: 'error', reason: result.reason, txs: [] });
-      }
+    const report = await refresh.refreshHistory();
+    update((previous) => ({
+      ...previous,
+      refreshReports: { ...previous.refreshReports, history: report },
     }));
-  }, [update]);
+  }, [refresh, update]);
 
   // Vault-backed accounts. An xpub can never be upgraded into signing keys:
   // spending requires vault creation or mnemonic restoration. Watch-only xpubs
@@ -434,11 +362,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }));
     // Balances/history load in the background: this function returns as
     // soon as the derived addresses are in state, so the wallet shows
-    // immediately. A failed background refresh leaves the per-chain
-    // error/unavailable state (or the previous state) and the dashboard
-    // Retry button re-runs it; it never throws here.
-    void refreshBalances().catch(() => {});
-    void refreshHistory().catch(() => {});
+    // immediately. A failed background refresh is an explicit outcome
+    // now, not a swallowed rejection: refreshBalances/refreshHistory
+    // resolve with a report (stored in refreshReports) and the
+    // dashboard Retry button re-runs them. They never throw here.
+    void refreshBalances();
+    void refreshHistory();
   }, [update, refreshBalances, refreshHistory]);
 
   // Switch the derived vault account. Validates like deriveAddressesAt
@@ -478,6 +407,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Vault addresses are hidden: drop their balances/history too.
       balances: initialBalances(),
       history: initialHistory(),
+      refreshReports: { balances: null, history: null },
     }));
   }, [update]);
 
@@ -595,6 +525,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultAddresses: perChain<string[]>(() => []),
       balances: initialBalances(),
       history: initialHistory(),
+      refreshReports: { balances: null, history: null },
     }));
   }, [update]);
 
