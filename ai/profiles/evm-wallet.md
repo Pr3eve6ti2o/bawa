@@ -35,8 +35,8 @@
 - Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
 - ETH watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers this derivation evidence only; it does not establish generic EVM-wallet operation or verification of every security boundary.
 - Key generation policy is BIP-39 with 24 words and an empty passphrase. ETH uses m/44'/60'/0'/0/i, with account 0 and receiving branch 0 fixed. This profile covers ETH only.
-- Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.
-- Testnet is the default; mainnet is out of scope by default.
+- The end-to-end send/sign/broadcast/confirm flow remains DOCUMENTED_NOT_TESTED; transaction construction (plan-transfer) and local signing exist in apps/web, but broadcast is not implemented anywhere in the repository.
+- Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.
 - M-38 confirmation policy: ETH finalised. Retain "12" only as an unsourced extra minimum, never as a substitute for finality. This is a documented policy, not enforced code.
 - No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation.
 

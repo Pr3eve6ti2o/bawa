@@ -23,6 +23,8 @@ description: Build a non-custodial Web wallet from the Bawa repository for Bitco
 
 Use this guide to build a non-custodial Web wallet for Bitcoin testnet4, Ethereum Sepolia, TRON Nile and TON testnet from the Bawa repo. Bawa supplies documentation and an engine reference; it is not a hosted wallet, a custody service or an exchange. You build the app by following this guide: fourteen screens, an encrypted local vault and watch-only derivation, using Trust Wallet Core. Follow only Web-specific steps here; use the repo guide for the derivation contract, fixture vectors, test taxonomy, release gates, repo-level troubleshooting and FAQ. Repo guide sections **13 (troubleshooting)** and **14 (FAQ)** are the canonical home for repo-level questions; this guide’s [Section K](#k-troubleshooting-by-symptom) covers only Web-specific recovery. Keep your build testnet-only. Mainnet is absent from this guide set; any mainnet work is a separate, reviewed change outside this set, and passing the gates does not authorise it.
 
+> **Scope note (2026-11-20):** Bawa’s repository direction is mainnet-first (ADR-0003). This Web wallet guide’s testnet-only scope is for demonstration/testing, not the repository default.
+
 ### Contents
 
 - [A. Scope and starting points](#a-scope-and-starting-points) — Confirm the testnet boundary, choose your route and locate the shared repo material.
@@ -285,7 +287,7 @@ The 600,000-iteration count follows the OWASP 2023 password-hashing guidance cit
 
 ### Session lifetime
 
-Expect a 10-minute auto-lock. On lock, the vault key leaves memory and the app returns you to the locked screen. Treat that as the end of the unlocked session, not proof that every sensitive copy has disappeared. Garbage-collected strings and native copies may remain. Do not interpret the screen change as proof that those copies have gone.
+The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock. Current implementation at 5e7eb1d: no lock exists; the optional restoration is not yet implemented.
 
 ### Complete the backup gate before receiving
 
@@ -550,7 +552,7 @@ Apply these constraints alongside the common ceremony. A single signing entry po
 | Bitcoin | Check UTXO inputs, the fee and change outputs; use the witness-stripped txid described above. |
 | Ethereum | Enforce chain ID `11155111` before every signing input (Section E), and check nonce, gas and data. |
 | TRON | Use the Nile network only; look up transaction identifiers through the TronGrid Nile API. |
-| TON | The repo is generation-only. In the app, use a sequence number, `expireAt` set to now plus 60 seconds, wallet version `2` (V4R2) and mode `3` for a TON transfer. Take the destination address from the address object’s data. Compatibility with any specific wallet is unverified. |
+| TON | In the web-wallet profile, TON is single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. In the app, use a sequence number, `expireAt` set to now plus 60 seconds, wallet version `2` (V4R2) and mode `3` for a TON transfer. Take the destination address from the address object’s data. Compatibility with any specific wallet is unverified. |
 
 ### Confirmation tracking
 
@@ -886,7 +888,7 @@ Do not read the validation-draft row as a list of components available in the re
 
 | Status | Scope |
 | --- | --- |
-| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock; fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing. |
+| Implemented in the validation draft (local-only, not in any repo) | 14 screens written; vault PBKDF2-600k + AES-256-GCM with AAD `bawa-web-vault-v1`; 10-minute auto-lock (draft evidence only; the current target is optional auto-lock, OFF by default); fixture gate as a startup barrier; four testnet adapters (BTC testnet4, Sepolia, Nile, TON testnet); EIP-1559 signing with `txMode: 1` (demonstration completed on Core 4.9.2 for the construction/signing demonstration scope, D21 2026-11-08; the in-browser proof, send, sign and broadcast remain open); token-balance reading; 31 offline unit tests passing. |
 | Unimplemented | token management and token sends; the Web Worker demanded by the old guide was never built — the worker is an honest recommendation, not a built component, and main-thread boundaries are as validated; cross-tab atomicity was demanded, not implemented — narrow it to a single-tab registry or list it here as unimplemented; no local regtest/signet stage for any chain (Section H); live spend was not exercised (broadcast disabled). Implemented since the validation draft: QR receive (receive.tsx renders the derived address as a QR code; BIP-21 amount URI for BTC, ETH value in wei, plain address for TRX/TON); QR payment-request scanning (Section F) at the decode level — qr-scanner.tsx is a camera scanner wired into the send screen, but payment-request URI parsing is not implemented (the scanned value is used as a bare address); live wallet creation and live restore in the browser (core.ts createWallet()/restoreWallet), not only in the V2 browser run (2026-11-08). |
 
 A successful build or testnet send does not replace the release gates below.

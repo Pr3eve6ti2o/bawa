@@ -1,7 +1,7 @@
 {
   "registry": "ui",
   "version": 1,
-  "updated": "2026-11-12",
+  "updated": "2026-11-20",
   "entries": [
     {
       "id": "web-01-token-ui",
@@ -67,7 +67,7 @@
       "source": "tetherto/wdk-starter-kotlin",
       "revision": "a4fa21729ba621c095d8638bc8c50de541008214",
       "licence": "Apache-2.0",
-      "reviewed_at": "2026-11-10",
+      "reviewed_at": "2026-11-20",
       "chains": [
         "btc",
         "eth",
@@ -77,7 +77,7 @@
       "operations": [
         "ui"
       ],
-      "notes": "SELECTED Android foundation, UI LAYER ONLY (Phase 5, inspected 2026-11-10: commit a4fa2172 exists, dated 2026-09-30; Apache-2.0 confirmed; 20 files; Gradle 8.7, AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00, JVM 17 \u2014 JDK 17 CONFIRMED by the starter. Its wdk-core-kotlin engine module is OUTSIDE this repo (settings.gradle includes it from ../wdk-core-kotlin), so the starter does NOT build standalone; UI-only adoption must remove that dependency and all WdkCore imports and rebuild the protected 24-word ceremony. 7 screens present (Welcome/Create/Import/Home/Send/Receive/Sign); 7 of the 14-screen contract still missing. See templates/android/UPSTREAM.md."
+      "notes": "SELECTED Android foundation, UI LAYER ONLY (Phase 5, inspected 2026-11-10: commit a4fa2172 exists, dated 2026-09-30; Apache-2.0 confirmed; 20 files; Gradle 8.7, AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00, JVM 17 \u2014 JDK 17 CONFIRMED by the starter. Its wdk-core-kotlin engine module is OUTSIDE this repo (settings.gradle includes it from ../wdk-core-kotlin), so the starter does NOT build standalone; UI-only adoption must remove that dependency and all WdkCore imports and rebuild the protected 24-word ceremony. The upstream template has 7 screens (Welcome/Create/Import/Home/Send/Receive/Sign); the Bawa Android starter built on it implements all 14 screens of the docs/14 section 5.1 contract (Welcome, CreateWallet, ImportWallet, MnemonicBackup, Portfolio, AssetList, AssetDetail, Receive, Send, TransactionHistory, TransactionDetail, NetworkSelection, WalletManagement, SecuritySettings), verified by first-hand count in apps/android on 2026-11-20. See templates/android/UPSTREAM.md."
     },
     {
       "id": "and-02-devkit-wallet",

@@ -1,6 +1,6 @@
 ---
 title: Trust Wallet Core and Independent Verification
-description: Use Trust Wallet Core 4.9.2 as the reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
+description: Use Trust Wallet Core 4.9.3 as the reference engine and bip-utils as the independent verifier; publish fixtures, compare public outputs, and keep every release gate blocked until it has its own evidence.
 last-updated: 2026-11-09
 ---
 
@@ -13,6 +13,7 @@ How-to guide.
 > **Scope:** repo guide docs/11 against the pinned repo at 754721cd, with previously recorded live link checks retained as historical evidence
 > **Repository commit:** 754721cd
 > **Tool versions:** bip-utils 2.12.2, cryptography 50.0.2, Python 3.12.3, Node v24.22.2 (VM), outside the repo's declared >=22 <23 range  
+> **Pin note (2026-11-20):** The current `bip-utils` pin in `requirements.txt` is **2.12.3**. Mentions of **2.12.2** record the version the fixtures were verified against on **2026-11-08**.
 > **Actually run:** `python3 test/differential_test.py` (PASS, exit 0); the Core 4.9.2 tag and registry checks; live wallet creation under a real pty plus decrypt round trip byte-identical (V1, PASS, pushed head 082f7915); TRX address confirmed by Core 4.8.4 (V3) and re-confirmed on Core 4.9.2 (D31, 2026-11-08)  
 > **Not run:** no live testnet spend.
 > **Completed:** The Wallet Core side of the differential comparison for the xpub mapping was captured (D31, 2026-11-08).
@@ -126,7 +127,7 @@ clean-install CI
 Where no independent implementation or published vector exists, document the limitation instead of implying equivalent assurance.
 ## Verification, differential fixtures
 
-Use Trust Wallet Core **4.9.2** as Bawa’s reference engine (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published **2026-11-06**, npm registry returns **200**). At repository commit `754721cd`, `tools/hdwallet-gen/package.json` and `tools/hdwallet-gen/package-lock.json` still pin **4.8.4**. At that commit, running `npm ci` in `tools/hdwallet-gen` installs **4.8.4**, so that revision's tool commands exercise **4.8.4**, not **4.9.2**. On the current revision, running `npm ci` in `tools/hdwallet-gen` installs **4.9.3**, so the repository's tool commands exercise **4.9.3**. Keep bip-utils in the test layer and identify the Core version for each verification run.
+Use Trust Wallet Core **4.9.3** as Bawa's reference engine, matching the repository pin qualified by R08 on 2026-11-12 and applied by E02 on 2026-11-13. The former reference engine, **4.9.2** (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06, npm registry returned 200), is a GitHub prerelease. At commit `754721cd`, the tools still pinned **4.8.4**; the current revision installs **4.9.3**. Keep bip-utils in the test layer and identify the Core version for each verification run.
 
 The live EIP-1559 signing proof was demonstrated on Core 4.9.2 for the construction/signing demonstration scope (D21, 2026-11-08); the in-browser proof, send, sign and broadcast remain open.
 
@@ -306,7 +307,7 @@ For the standards and paths covered by Bawa’s differential tests, require Wall
 
 ### Use the reference engine and independent verifier
 
-Use Trust Wallet Core 4.9.2, packaged as @trustwallet/wallet-core, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. This reference-engine role records the version the guides’ verification evidence was produced against; it does not make `4.9.2` the pin. `4.9.2` is a GitHub prerelease; the repository pin is now `4.9.3` (upgraded 2026-11-13 after its qualification run, R08/E02; the former pin `4.9.1` is superseded) (Doc 4 section 21 M-21). Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
+Use Trust Wallet Core 4.9.3, packaged as `@trustwallet/wallet-core`, as Bawa’s reference engine for wallet cryptography, including wallet creation and import, receiving-address derivation and custom derivation paths. R08 qualified 4.9.3 on 2026-11-12 and E02 applied it on 2026-11-13, establishing 4.9.3 as the repository pin. The 4.9.2 GitHub prerelease is the former reference engine, not the current pin; the former pin 4.9.1 is superseded (Doc 4 section 21 M-21). Consult the [Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (link checked live on 8 November 2026). The developer.trustwallet.com deep links redirect to the marketing homepage; the docs home returns HTTP 302 when redirects are not followed and redirects to the Trust Wallet marketing homepage, not documentation (checked live 2026-11-09). Link it only as the vendor's home page, not as documentation.
 
 Report source checks as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the check was made against that tag. Reserve “device-proven” for results supported by a device run.
 

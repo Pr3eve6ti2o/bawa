@@ -1,7 +1,7 @@
 ---
 title: Chain Registry & Asset Metadata
-description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's four chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
-last-updated: 2026-11-09
+description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's thirteen chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
+last-updated: 2026-11-20
 ---
 
 # Chain Registry & Asset Metadata
@@ -19,7 +19,7 @@ Reference.
 ## Contents
 
 - [Trust Wallet Core registry](#trust-wallet-core-registry)
-- [Bawa's four chains in the registry](#bawas-four-chains-in-the-registry)
+- [Bawa's thirteen chains in the registry](#bawas-thirteen-chains-in-the-registry)
 - [Bawa's own chain support](#bawas-own-chain-support)
 - [Testnet and the registry](#testnet-and-the-registry)
 - [Cosmos Chain Registry](#cosmos-chain-registry)
@@ -37,7 +37,7 @@ Reference.
 
 **Status:** Metadata reference; contribution and validation procedures are incomplete.
 
-Bawa ships no chain registry; this section interprets the [Trust Wallet Core registry](../GLOSSARY.md) (`registry.json`) and Trust Wallet Assets, both upstream, and explains what each can and cannot answer for Bawa.
+Bawa ships a local chain registry: `registry/capabilities.json` (v2, with 13 chains in `chainSupport`), `registry/engines.json`, `registry/profiles.json`, and `registry/ui.json`. This section interprets Bawa’s local registry alongside the upstream Trust Wallet Core registry (`registry.json`) and Trust Wallet Assets, and explains what each can and cannot answer for Bawa.
 
 The Trust Wallet Core registry is mainnet metadata: it holds 168 entries and zero testnet entries. It describes coin, derivation and address parameters for Trust Wallet Core; it does not define Bawa's supported networks. Trust Wallet Assets supplies asset metadata for identification and display; an entry there does not establish Bawa's engine compatibility or payment support.
 
@@ -105,14 +105,14 @@ In `registry.json` at 4.9.2, the `explorer` object is present on 168/168 entries
 
 **Sources**
 
-- [Core 4.9.2: field reference](https://github.com/trustwallet/wallet-core/blob/4.9.2/docs/registry-fields.md)
-- [Core 4.9.2: raw registry](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.2/registry.json)
+- [Core 4.9.3: field reference](https://github.com/trustwallet/wallet-core/blob/4.9.3/docs/registry-fields.md)
+- [Core 4.9.3: raw registry](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json)
 
-Pin for both sources: tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. Re-pin and re-verify whenever the Core pin moves.
+Pin for both sources: tag `4.9.3`, commit `7a21615fad32edd8dc0b040d845de3973cde2c5a`, published 2026-11-11, fetched and re-verified via the GitHub API 2026-11-20. R08 qualified 4.9.3 on 2026-11-12; E02 applied it on 2026-11-13. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. Re-pin and re-verify whenever the Core pin moves.
 
 Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
 
-## Bawa's four chains in the registry
+## Bawa's thirteen chains in the registry
 
 The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy).
 
@@ -179,12 +179,11 @@ verify-signature.
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
-    accDescr: adopt-proper supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested. panel-rebuild/multichain-create includes the same four chains plus nine derive-only additions, with create, derive, restore and receive verified and the remaining six operations unsupported.
+    accDescr: adopt-proper supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus nine derive-only additions, with create, derive, restore and receive verified and the remaining six operations unsupported. The 13-chain registry was merged into adopt-proper from panel-rebuild/multichain-create; it is not a separate branch.
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
-    A["adopt-proper<br/>4 chains"]
-    M["panel-rebuild/multichain-create<br/>13 chains: same 4 + 9 added"]
+    A["adopt-proper<br/>13 chains in chainSupport"]
 
     F["Fully verified: BTC / ETH / TRX<br/>All 10 operations: IMPLEMENTED_AND_VERIFIED"]
 
@@ -193,12 +192,9 @@ flowchart TB
     D["Derive-only: 9 added chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge)<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive<br/>NOT_SUPPORTED: balance, history, fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
 
     S --> A
-    S --> M
     A --> F
     A --> T
-    M -->|"same baseline"| F
-    M -->|"same baseline"| T
-    M --> D
+    A --> D
 ```
 
 Derivation paths below are Bawa's pinned `pathFor` values
@@ -208,21 +204,21 @@ are single-address: their paths ignore account and index. The six EVM chains
 path shape as ETH — they are distinct chains that share a derivation scheme,
 not the same chain.
 
-| Chain | Derivation path | adopt-proper (4 chains) | panel-rebuild/multichain-create (13 chains) |
+| Chain | Derivation path | adopt-proper (13 chains in chainSupport) |
 | --- | --- | --- | --- |
-| Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
-| Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
-| TRON (trx) | `m/44'/195'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
-| TON (ton) | `m/44'/607'/0'` (one address) | Partial: fee-quote, verify-signature `DOCUMENTED_NOT_TESTED`; other 8 verified | Same as adopt-proper |
-| Solana (sol) | `m/44'/501'/0'` (one address) | Not present | Derive-only |
-| BNB Smart Chain (bsc) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| Polygon (matic) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| Arbitrum One (arb) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| OP Mainnet (op) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| Base (base) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| Avalanche C-Chain (avax) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
-| Litecoin (ltc) | `m/84'/2'/a'/0/i` | Not present | Derive-only |
-| Dogecoin (doge) | `m/44'/3'/a'/0/i` | Not present | Derive-only |
+| Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) |
+| Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) |
+| TRON (trx) | `m/44'/195'/a'/0/i` | Fully verified (10/10) |
+| TON (ton) | `m/44'/607'/0'` (one address) | Partial: fee-quote, verify-signature `DOCUMENTED_NOT_TESTED`; other 8 verified |
+| Solana (sol) | `m/44'/501'/0'` (one address) | Derive-only |
+| BNB Smart Chain (bsc) | `m/44'/60'/a'/0/i` | Derive-only |
+| Polygon (matic) | `m/44'/60'/a'/0/i` | Derive-only |
+| Arbitrum One (arb) | `m/44'/60'/a'/0/i` | Derive-only |
+| OP Mainnet (op) | `m/44'/60'/a'/0/i` | Derive-only |
+| Base (base) | `m/44'/60'/a'/0/i` | Derive-only |
+| Avalanche C-Chain (avax) | `m/44'/60'/a'/0/i` | Derive-only |
+| Litecoin (ltc) | `m/84'/2'/a'/0/i` | Derive-only |
+| Dogecoin (doge) | `m/44'/3'/a'/0/i` | Derive-only |
 
 - **Fully verified** = all 10 operations `IMPLEMENTED_AND_VERIFIED`.
 - **Derive-only** = create, derive, restore, receive

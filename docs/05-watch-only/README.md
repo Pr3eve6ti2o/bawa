@@ -123,6 +123,14 @@ On the intended success path, the daemon calls `HDWallet.getPublicKeyFromExtende
 
 Core’s [`registry.json`](https://github.com/trustwallet/wallet-core/blob/master/registry.json) records Bitcoin’s HRP as `bc`; [`src/Bitcoin/Entry.cpp`](https://github.com/trustwallet/wallet-core/blob/master/src/Bitcoin/Entry.cpp) implements `validateAddress` using the coin’s address-validation configuration. A `tb1q` address can be accepted by the signing path while being rejected by Bitcoin’s default address-validation path. Do not treat signing acceptance as evidence that the daemon’s validation accepts the address.
 
+## 3.5 TON watch-only via derive-ton.js
+
+Single-address generation plus a public-key-only watch-only route via `derive-ton.js` (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. No mnemonic, seed or private key is involved. Input must be exactly 64 hex characters, with no `0x` prefix.
+
+```sh
+echo "<64 hex chars>" | node derive-ton.js
+```
+
 ## 4. Account scope and discovery
 
 Export after the hardened boundary. The account node is `m/purpose'/coin'/account'`; for the ETH example, export at `m/44'/60'/0'`. Your public runtime derives the remaining non-hardened levels. It does not traverse the hardened levels itself.

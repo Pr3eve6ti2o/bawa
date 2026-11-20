@@ -36,8 +36,8 @@
 - Generation for BTC, ETH, TRX and TON and watch-only derivation for BTC, ETH, TRX and TON are IMPLEMENTED_AND_VERIFIED through the repository tools. This engine status does not establish an integrated multichain wallet or verification of every security boundary.
 - Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed.
 - TON is single-address at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (no index).
-- Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.
-- Testnet is the default; mainnet is out of scope by default.
+- The end-to-end send/sign/broadcast/confirm flow remains DOCUMENTED_NOT_TESTED; transaction construction (plan-transfer) and local signing exist in apps/web, but broadcast is not implemented anywhere in the repository.
+- Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.
 - M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining "12" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.
 - No graphical UI foundation applies to this CLI profile. Shared derivation evidence does not establish cross-chain transaction operation.
 

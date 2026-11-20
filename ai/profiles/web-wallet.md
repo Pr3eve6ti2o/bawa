@@ -35,13 +35,13 @@
 
 ## Security notes
 
-- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration — the boundary tests do.
+- The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 51 test files: 669 tests passed and 1 skipped (first-hand Vitest run 2026-11-20, exit 0); vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.3 is the repository pin and the guides' reference engine. CLI derivation evidence alone does not verify this integration — the boundary tests do.
 - WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented; app tests render title, empty dashboard, import and send-not-implemented states.
 - The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.
 - Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.
 - TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.
-- Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.
-- Testnet is the default; mainnet is out of scope by default.
+- The end-to-end send/sign/broadcast/confirm flow remains DOCUMENTED_NOT_TESTED; transaction construction (plan-transfer) and local signing exist in apps/web, but broadcast is not implemented anywhere in the repository.
+- Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.
 - M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining "12" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.
 
 ## Verification requirements

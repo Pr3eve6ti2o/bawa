@@ -23,6 +23,8 @@ _How-to guide. Read from top to bottom on your first pass._
 > - Evidence: w4-and-a/verify-fixtures/verify.mjs and verify-ton-path.cjs; NOTES.md; REWRITE-NOTES.md.
 > - Sources fetched on: 2026-11-08.
 
+> **Scope note (2026-11-20):** Bawa’s repository direction is mainnet-first (ADR-0003). This Android wallet guide’s testnet-only scope is for demonstration/testing, not the repository default.
+
 ## Pick a starting point
 
 Read from top to bottom on your first pass. If you're building and only need one part, read section A first, then jump to that section; you must still pass the fixture gate in D.7 before any wallet action.

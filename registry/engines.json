@@ -1,7 +1,7 @@
 {
   "registry": "engines",
   "version": 1,
-  "updated": "2026-11-13",
+  "updated": "2026-11-20",
   "entries": [
     {
       "id": "trust-wallet-core-4-8-4",
@@ -37,7 +37,7 @@
       "reviewed_at": "2026-11-13",
       "chains": ["btc", "eth", "trx", "ton"],
       "operations": ["generate", "derive", "watch-only"],
-      "notes": "Qualified by R08 on 2026-11-12 (differential run vs 4.9.1: tools smoke 213 ok / 0 fail, 9+9 fixture addresses identical, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12, web vitest 120/120, tsc + build exit 0). Applied by E02 on 2026-11-13 on owner approval (overriding the R08 HOLD). No Android AAR for any version."
+      "notes": "Qualified by R08 on 2026-11-12 (differential run vs 4.9.1: tools smoke 213 ok / 0 fail, 9+9 fixture addresses identical, TON fixture PASS, EIP-1559 chainId 1 local sign PASS with byte-identical signed bytes and independent sender recovery 12/12, web vitest 51 test files: 669 passed + 1 skipped (first-hand Vitest run 2026-11-20, exit 0), tsc + build exit 0). Applied by E02 on 2026-11-13 on owner approval (overriding the R08 HOLD). No Android AAR for any version."
     },
     {
       "id": "trust-wallet-core-4-9-2",
@@ -55,8 +55,8 @@
       "id": "bip-utils-verification-layer",
       "name": "bip-utils + cryptography verification layer",
       "status": "IMPLEMENTED_AND_VERIFIED",
-      "source": "bip-utils 2.12.2 + cryptography 50.0.2",
-      "revision": "2.12.2",
+      "source": "bip-utils 2.12.3 + cryptography 50.0.2",
+      "revision": "2.12.3",
       "licence": "MIT",
       "reviewed_at": "2026-11-10",
       "chains": ["btc", "eth", "trx"],
