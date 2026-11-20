@@ -1171,6 +1171,30 @@ describe('offline signing — determinism and TON external signer', () => {
 
     expect(result).toMatchObject({ ok: false, code: 'unsupported-version' });
   });
+
+  it('BTC signedTxHex matches the full expected transaction', async () => {
+    const result = await btc();
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('BTC offline signing failed');
+    }
+
+    expect(result.signedTxHex).toBe(
+      '0x0100000000010160ef5293b6ab415f141e54745288c9c494e7db842f7a3962b042e168f22435f90000000000000000000250c30000000000001600140c03e507f38033aca9ac5c32b32dce56051d097bcebd0000000000001600146507b03ecb290510ee3a730585f83136b6b466f2024730440220527995e5eb1e623f25929299fd8a24824c5cfff74f077cac98a77854140a36f9022071bddaa1feb9b46461ac03ad785e48398eaa7ac5f1183e07bdbf82253d42be06012102a0f073d11f80811fb4e6d2b0299695c866a0988c1acf9f82a96ebb925524f32800000000',
+    );
+  });
+
+  it('ETH signedTxHex matches the full expected transaction', async () => {
+    const result = await eth();
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('ETH offline signing failed');
+    }
+
+    expect(result.signedTxHex).toBe(
+      '0xf86b808504a817c8008252089427ef5cdbe01777d62438affeb695e33fc2335979872386f26fc100008026a02424e6dfd3460ce80faa99dd7ddc7a263ea1746fe5597cebe4bae8d16b86b47ca02a997cb91efe84498f836566ae0cf000a50903353672940ffc3142dbc4903dc9',
+    );
+  });
 });
 
 describe.skip('mainnet qualification (item 23) — manual step, never in routine runs', () => {
