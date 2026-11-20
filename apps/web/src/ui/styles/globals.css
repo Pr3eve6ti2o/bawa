@@ -25,7 +25,7 @@
   /* Actions */
   --primary: rgb(98 88 217);
   --primary-hover: rgb(82 72 192);
-  --primary-active: rgb(79 124 255);
+  --primary-active: rgb(82 72 192);
   --primary-disabled: rgb(196 192 245);
   --primary-soft: rgb(230 228 255);
   --primary-foreground: rgb(255 255 255);
@@ -34,7 +34,7 @@
   --accent: rgb(238 240 252);
   --accent-foreground: rgb(27 39 66);
   --muted: rgb(238 240 252);
-  --muted-foreground: rgb(100 113 140);
+  --muted-foreground: rgb(90 106 138);
   --destructive: rgb(243 99 111);
   --destructive-hover: rgb(242 36 53);
   --destructive-foreground: rgb(255 255 255);
@@ -73,12 +73,12 @@
   /* Feedback */
   --success: rgb(75 206 113);
   --success-foreground: rgb(255 255 255);
-  --success-text: rgb(34 142 66);
+  --success-text: rgb(27 122 56);
   --success-surface: rgb(218 241 225);
   --success-border: rgb(138 218 161);
   --success-surface-tint: rgb(218 241 225);
   --warning: rgb(252 140 77);
-  --warning-text: rgb(199 71 0);
+  --warning-text: rgb(168 60 0);
   --warning-surface: rgb(250 227 215);
   --warning-border: rgb(246 168 124);
   --danger-border: rgb(239 134 143);
@@ -97,9 +97,9 @@
   --tx-dropped: rgb(153 161 175);
 
   /* Text extras */
-  --text-secondary-gray: rgb(100 113 140);
-  --text-tertiary: rgb(159 169 199);
-  --text-disabled: rgb(185 195 219);
+  --text-secondary-gray: rgb(90 106 138);
+  --text-tertiary: rgb(90 106 138);
+  --text-disabled: rgb(90 106 138);
   --text-inverse: rgb(255 255 255);
   --text-ai: rgb(98 88 217);
 
@@ -200,15 +200,26 @@
   --primary-hover: rgb(98 88 217);
 }
 .bawa-panel .bg-card {
-  --muted-foreground: rgb(100 113 140);
+  --muted-foreground: rgb(90 106 138);
+  --primary: rgb(98 88 217);
+}
+
+/* Panel primary as a background: --primary is lifted to #8b7cff so it reads
+   as text on navy (5.66:1), but as a background with white text it is only
+   3.27:1. Elements carrying bg-primary (default Buttons, nav pills, step
+   circles, tooltips) get the light primary back so white text stays
+   5.36:1. Verified in the built CSS: Tailwind emits
+   .bg-primary{background-color:var(--primary)}, so this per-element
+   override is what the utility reads. */
+.bawa-panel .bg-primary {
   --primary: rgb(98 88 217);
 }
 
 /* Dark mode: cards inside the panel are dark (#18264a), so the light-mode
-   override above would render dark muted text (#64718c) on a dark card —
-   3.03:1. On dark cards the muted text and primary return to their light
+   override above would render dark muted text (#5a6a8a) on a dark card —
+   2.73:1. On dark cards the muted text and primary return to their light
    dark-theme values: #aab5d1 on #18264a is 7.24:1, #8b7cff on #18264a is
-   4.54:1. Light mode is unchanged: #64718c on white is 4.90:1. */
+   4.54:1. Light mode is unchanged: #5a6a8a on white is 5.44:1. */
 .dark .bawa-panel .bg-card {
   --muted-foreground: rgb(170 181 209);
   --primary: rgb(139 124 255);
@@ -225,7 +236,7 @@
 
   /* Actions */
   --primary: rgb(139 124 255);
-  --primary-hover: rgb(79 124 255);
+  --primary-hover: rgb(98 88 217);
   --primary-active: rgb(98 88 217);
   --primary-disabled: rgb(42 54 81);
   --primary-soft: rgb(38 52 81);
@@ -274,16 +285,16 @@
   /* Feedback */
   --success: rgb(98 208 130);
   --success-foreground: rgb(255 255 255);
-  --success-text: rgb(98 208 130);
+  --success-text: rgb(230 247 234);
   --success-surface: rgb(45 124 68);
   --success-border: rgb(48 187 88);
   --success-surface-tint: rgb(45 124 68);
   --warning: rgb(248 142 83);
-  --warning-text: rgb(248 142 83);
+  --warning-text: rgb(255 228 209);
   --warning-surface: rgb(151 84 46);
   --warning-border: rgb(255 101 14);
   --danger-border: rgb(242 36 53);
-  --error-text: rgb(239 98 110);
+  --error-text: rgb(255 201 205);
   --error-surface: rgb(146 59 67);
   --info: rgb(50 202 250);
   --info-surface: rgb(0 96 126);
@@ -300,7 +311,7 @@
   /* Text extras */
   --text-secondary-gray: rgb(221 222 234);
   --text-tertiary: rgb(207 210 219);
-  --text-disabled: rgb(107 114 128);
+  --text-disabled: rgb(170 181 209);
   --text-inverse: rgb(17 29 74);
   --text-ai: rgb(196 181 253);
 

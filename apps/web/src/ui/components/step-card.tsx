@@ -29,8 +29,8 @@ function StepCard({ icon, label, detail, state = 'pending', className, ...props 
         className={cn(
           'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
           state === 'completed'
-            ? 'bg-success text-success-foreground'
-            : 'bg-surface-blue-dim text-primary',
+            ? 'bg-success-surface text-success-text'
+            : 'bg-surface-blue-dim text-foreground',
         )}
       >
         {state === 'completed' ? <Check className="h-5 w-5" /> : icon}
