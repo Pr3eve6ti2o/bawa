@@ -16,6 +16,8 @@ import {
   type UtxoInput,
 } from './adapters/types';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from './chain-amount-format';
+import { isTestVault } from './vault';
+import type { KeyProvenance } from './vault';
 
 /**
  * Send flow (Fix Lane 3, Phase 4). Pure send-domain helpers on top of the
@@ -749,6 +751,30 @@ export async function signEthOffline(
 }
 
 /**
+ * Item 36 enforcement (S6b): a test-marked account must never reach a
+ * broadcast path. Broadcast itself stays DISABLED until separately
+ * authorised; this guard is the second line of defence.
+ */
+export function isBroadcastAllowedFor(provenance: KeyProvenance): boolean {
+  return provenance.isTesting !== true;
+}
+
+export function assertNotTestAccount(): void {
+  let testing = false;
+  try {
+    testing = isTestVault();
+  } catch {
+    // No readable vault (for example, no storage in this environment):
+    // there is provably no test-marked account to bar, and broadcast is
+    // disabled regardless, so fall through to the disabled result.
+    testing = false;
+  }
+  if (testing) {
+    throw new Error('Broadcast blocked: account has test provenance.');
+  }
+}
+
+/**
  * Broadcast stub (Sol p5, landed 2026-11-19 in 29.3s; no corrections).
  * Always disabled: broadcast stays DISABLED until separately authorised.
  * This function never touches the network.
@@ -757,6 +783,7 @@ export async function broadcastSigned(
   chain: ChainId,
   signedTxHex: string,
 ): Promise<{ status: 'disabled'; reason: string }> {
+  assertNotTestAccount();
   void chain;
   void signedTxHex;
 

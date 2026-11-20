@@ -16,9 +16,11 @@ import {
   signTonOffline,
   tronAddressToBytes,
   broadcastSigned,
+  isBroadcastAllowedFor,
   markBroadcastUnknown,
 } from './send';
 import { createWallet, deriveAddresses } from './core';
+import { createVault, deleteVault, TEST_PROVENANCE } from './vault';
 import { loadCore } from '../engine/boundary';
 import { registerAdapter } from './adapters';
 import type {
@@ -612,5 +614,83 @@ describe('tronAddressToBytes', () => {
     expect(() =>
       tronAddressToBytes('0x27Ef5cDBe01777D62438AfFeb695e33fC2335979'),
     ).toThrow('Invalid TRON address.');
+  });
+});
+
+describe('isBroadcastAllowedFor (S6b, item 36)', () => {
+  it('rejects TEST_PROVENANCE', () => {
+    expect(isBroadcastAllowedFor(TEST_PROVENANCE)).toBe(false);
+  });
+
+  it('allows created, non-test provenance', () => {
+    expect(
+      isBroadcastAllowedFor({ source: 'created', isTesting: false }),
+    ).toBe(true);
+  });
+
+  it('allows unknown, non-test provenance', () => {
+    expect(
+      isBroadcastAllowedFor({ source: 'unknown', isTesting: false }),
+    ).toBe(true);
+  });
+});
+
+describe('item 36 broadcast guard with real vaults (S6b-2)', () => {
+  it('blocks test provenance and keeps default provenance disabled', async () => {
+    // send.test.ts runs in the node environment (no localStorage), so
+    // install a minimal in-memory Storage for this test only. vault.ts
+    // reads storage at call time, so a test-time shim works.
+    const holder = globalThis as Record<string, unknown>;
+    const previousStorage = holder.localStorage;
+    const store = new Map<string, string>();
+    const shim = {
+      get length() {
+        return store.size;
+      },
+      clear: () => {
+        store.clear();
+      },
+      getItem: (key: string) => store.get(key) ?? null,
+      key: (index: number) => [...store.keys()][index] ?? null,
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    } as Storage;
+    holder.localStorage = shim;
+
+    try {
+      const mnemonic = await createWallet();
+      const password = 'test-only-password';
+
+      await createVault(
+        mnemonic,
+        password,
+        ['bawa-evm-bip44-v1'],
+        '',
+        TEST_PROVENANCE,
+      );
+
+      await expect(broadcastSigned('eth', '0x1234')).rejects.toThrow(
+        'Broadcast blocked: account has test provenance.',
+      );
+
+      // createVault refuses when a vault already exists.
+      deleteVault();
+      await createVault(mnemonic, password, ['bawa-evm-bip44-v1'], '');
+
+      await expect(broadcastSigned('eth', '0x1234')).resolves.toEqual({
+        status: 'disabled',
+        reason: 'Broadcast is disabled until separately authorised.',
+      });
+    } finally {
+      if (previousStorage === undefined) {
+        delete holder.localStorage;
+      } else {
+        holder.localStorage = previousStorage;
+      }
+    }
   });
 });
