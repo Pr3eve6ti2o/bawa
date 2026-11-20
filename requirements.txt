@@ -1,9 +1,15 @@
+# Direct Python dependencies, all pinned with ==.
+# Licences verified against PyPI 2026-11-20.
+# cryptography — Apache-2.0 OR BSD-3-Clause.
 cryptography==50.0.2
+# bip-utils — MIT.
 bip-utils==2.12.3
 # trezor/python-mnemonic (MIT licence).
 mnemonic==0.21
 # Security floor pins for transitive deps (see T48 F-10/F-11):
-# pynacl 1.6.2 fixes the libsodium input-validation advisory affecting 1.5.0;
-# requests 2.34.2 fixes the MODERATE advisories affecting 2.31.0.
+# pynacl 1.6.2 (Apache-2.0) fixes the libsodium input-validation advisory affecting 1.5.0;
+#   required by bip-utils (pynacl~=1.5) and pytoniq-core-fork (PyNaCl>=1.5.0).
+# requests 2.34.2 (Apache-2.0) fixes the MODERATE advisories affecting 2.31.0;
+#   required by pytoniq-core-fork (requests>=2.31.0), which bip-utils pulls in.
 pynacl==1.6.2
 requests==2.34.2
