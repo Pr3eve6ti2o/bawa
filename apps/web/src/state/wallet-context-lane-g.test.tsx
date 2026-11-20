@@ -183,6 +183,94 @@ describe('wallet context — reason messages (Lane G)', () => {
     expect(isTransientReason('Invalid Bitcoin address')).toBe(false);
     expect(isTransientReason(undefined)).toBe(false);
   });
+
+
+  it('uses price-specific reason messages', () => {
+    expect(humanReasonMessage('no-adapter', 'price')).toBe(
+      'Prices are not connected for this chain yet.',
+    );
+    expect(humanReasonMessage('rate-limited', 'price')).toBe(
+      'Price feed rate-limited — try again shortly.',
+    );
+    expect(humanReasonMessage('network', 'price')).toBe(
+      'Could not reach the price feed — check your connection and retry.',
+    );
+    expect(humanReasonMessage('timeout', 'price')).toBe(
+      'Price feed timed out — retry.',
+    );
+    expect(humanReasonMessage('provider', 'price')).toBe(
+      'Price feed error — retry.',
+    );
+  });
+
+  it('uses tracking-specific reason messages', () => {
+    expect(humanReasonMessage('no-adapter', 'track')).toBe(
+      'Tracking is not connected for this chain yet.',
+    );
+    expect(humanReasonMessage('not-included', 'track')).toBe(
+      'This transaction is not included in a block yet.',
+    );
+    expect(humanReasonMessage('unsupported', 'track')).toBe(
+      'This is not supported for this chain yet.',
+    );
+  });
+
+  it('uses general reason messages', () => {
+    expect(humanReasonMessage('no-adapter', 'general')).toBe(
+      'This feature is not connected yet.',
+    );
+    expect(humanReasonMessage('stub', 'general')).toBe(
+      'This feature is not available yet.',
+    );
+    expect(humanReasonMessage('unavailable-chain-data', 'general')).toBe(
+      'Data for this chain is unavailable right now.',
+    );
+  });
+
+  it('uses the same address-invalid message for every kind', () => {
+    const kinds = ['balance', 'history', 'price', 'track', 'general'] as const;
+
+    for (const kind of kinds) {
+      expect(humanReasonMessage('invalid-checksum', kind)).toBe(
+        'The address for this chain looks invalid.',
+      );
+      expect(humanReasonMessage('invalid-length', kind)).toBe(
+        'The address for this chain looks invalid.',
+      );
+      expect(humanReasonMessage('invalid-base58', kind)).toBe(
+        'The address for this chain looks invalid.',
+      );
+    }
+  });
+
+  it('warns about secret-like and private-key inputs', () => {
+    const kinds = ['balance', 'history', 'price', 'track', 'general'] as const;
+
+    for (const kind of kinds) {
+      expect(humanReasonMessage('secret-like', kind)).toBe(
+        'That looks like a secret. Please check what you entered.',
+      );
+      expect(humanReasonMessage('private-key', kind)).toBe(
+        'That looks like a secret. Please check what you entered.',
+      );
+    }
+  });
+
+  it('avoids raw reason codes and uses a fallback for unknown reasons', () => {
+    expect(humanReasonMessage('no-adapter', 'price')).not.toContain('no-adapter');
+
+    // The price-specific sentence includes "rate-limited"; check general here.
+    expect(humanReasonMessage('rate-limited', 'general')).not.toContain(
+      'rate-limited',
+    );
+
+    expect(humanReasonMessage('not-included', 'track')).not.toContain(
+      'not-included',
+    );
+    expect(humanReasonMessage('some-weird-reason-xyz', 'general')).toBe(
+      'Please try again later.',
+    );
+  });
 });
 
 describe('wallet context — boot rehydration (Lane G)', () => {

@@ -218,10 +218,8 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
       // Zero balance keeps the asset-row wording and the per-unit price.
       expect(text).toContain('Zero balance');
       expect(text).toContain('per ETH');
-      // A loading balance shows a skeleton, never a blank or a zero.
-      expect(
-        mounted.div.querySelector('[data-slot="skeleton"]'),
-      ).not.toBeNull();
+      // A loading balance shows the loading indicator, never a blank or a zero.
+      expect(mounted.div.querySelector('[role="status"]')).not.toBeNull();
       // An unavailable balance says so.
       expect(text).toContain('Unavailable');
     } finally {

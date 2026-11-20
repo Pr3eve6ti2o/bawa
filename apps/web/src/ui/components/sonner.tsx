@@ -11,24 +11,26 @@ function Toaster({ className, ...props }: ToasterProps) {
       toastOptions={{
         classNames: {
           toast:
-            'group toast group-[.toaster]:rounded-xl group-[.toaster]:border-border group-[.toaster]:bg-card group-[.toaster]:text-foreground group-[.toaster]:shadow-[var(--shadow-card)]',
-          description: 'group-[.toast]:text-muted-foreground',
-          actionButton: 'group-[.toast]:bg-primary-solid group-[.toast]:text-primary-foreground',
-          cancelButton: 'group-[.toast]:bg-secondary group-[.toast]:text-foreground',
+            'group toast group-[.toaster]:rounded-bawa group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-paper group-[.toaster]:text-ink group-[.toaster]:shadow-none',
+          description: 'group-[.toast]:text-ink',
+          actionButton: 'group-[.toast]:bg-coral group-[.toast]:text-ink',
+          cancelButton:
+            'group-[.toast]:border-2 group-[.toast]:border-ink group-[.toast]:bg-paper group-[.toast]:text-ink',
           success:
-            'group-[.toaster]:border-success-border group-[.toaster]:bg-success-surface group-[.toaster]:text-foreground',
+            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-sun group-[.toaster]:text-ink',
           error:
-            'group-[.toaster]:border-destructive group-[.toaster]:bg-error-surface group-[.toaster]:text-foreground',
+            'group-[.toaster]:border-2 group-[.toaster]:border-coral group-[.toaster]:bg-paper group-[.toaster]:text-ink',
           warning:
-            'group-[.toaster]:border-warning-border group-[.toaster]:bg-warning-surface group-[.toaster]:text-foreground',
-          info: 'group-[.toaster]:border-info group-[.toaster]:bg-info-surface group-[.toaster]:text-foreground',
+            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-sun group-[.toaster]:text-ink',
+          info:
+            'group-[.toaster]:border-2 group-[.toaster]:border-ink group-[.toaster]:bg-paper group-[.toaster]:text-ink',
         },
       }}
       style={
         {
-          '--normal-bg': 'var(--popover)',
-          '--normal-text': 'var(--popover-foreground)',
-          '--normal-border': 'var(--border)',
+          '--normal-bg': 'var(--bawa-paper)',
+          '--normal-text': 'var(--bawa-ink)',
+          '--normal-border': 'var(--bawa-ink)',
         } as React.CSSProperties
       }
       {...props}

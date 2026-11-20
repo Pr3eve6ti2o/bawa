@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { useWallet } from '../state/wallet-context';
+import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import type { ChainId } from '../engine/boundary';
@@ -154,9 +154,9 @@ export function TransactionHistoryScreen() {
                   .map((chain) => chainConfig(chain).displayName)
                   .join(', ')} history unavailable${
                   failedChains.length === 1 && failedChains[0] !== undefined && history[failedChains[0]].reason
-                    ? ` (${history[failedChains[0] as ChainId].reason})`
-                    : ''
-                }.`}
+                    ? ` ${humanReasonMessage(history[failedChains[0] as ChainId].reason, 'history')}`
+                    : '.'
+                }`}
               </p>
               <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
                 Retry

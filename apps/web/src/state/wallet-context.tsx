@@ -209,21 +209,84 @@ function computeVaultState(): VaultState {
 // rule: "the status is never shown to the user"). No screen may render a
 // raw reason: call this instead. Unknown provider reasons fall back to a
 // generic sentence, never to the raw string. Kept in state and logs only.
-export function humanReasonMessage(reason: string | undefined, kind: 'balance' | 'history'): string {
-  if (reason === undefined || reason === '') return '';
-  const lower = reason.toLowerCase();
-  if (lower === 'no-adapter') {
-    return kind === 'history'
-      ? 'Transaction history is not connected for this chain yet.'
-      : 'This chain is not connected yet.';
+export function humanReasonMessage(
+  reason?: string,
+  kind: 'balance' | 'history' | 'price' | 'track' | 'general' = 'balance',
+): string {
+  if (!reason) return '';
+
+  const normalized = reason.toLowerCase();
+
+  if (normalized.includes('no-adapter')) {
+    switch (kind) {
+      case 'history':
+        return 'Transaction history is not connected for this chain yet.';
+      case 'price':
+        return 'Prices are not connected for this chain yet.';
+      case 'track':
+        return 'Tracking is not connected for this chain yet.';
+      case 'general':
+        return 'This feature is not connected yet.';
+      default:
+        return 'This chain is not connected yet.';
+    }
   }
-  if (lower === 'no-address') return 'No address is available for this chain yet.';
-  if (lower.includes('invalid') && lower.includes('address')) {
+
+  if (normalized.includes('no-address')) {
+    return 'No address is available for this chain yet.';
+  }
+
+  switch (normalized) {
+    case 'unsupported':
+    case 'unsupported-version':
+    case 'version-not-allowed':
+      return 'This is not supported for this chain yet.';
+    case 'unavailable-chain-data':
+      return 'Data for this chain is unavailable right now.';
+    case 'stub':
+      return 'This feature is not available yet.';
+    case 'invalid-length':
+    case 'invalid-checksum':
+    case 'invalid-character':
+    case 'invalid-base58':
+    case 'invalid-point':
+      return 'The address for this chain looks invalid.';
+    case 'secret-like':
+    case 'private-key':
+      return 'That looks like a secret. Please check what you entered.';
+  }
+
+  if (normalized.includes('invalid') && normalized.includes('address')) {
     return 'The address for this chain looks invalid.';
   }
+
+  if (kind === 'price') {
+    switch (normalized) {
+      case 'rate-limited':
+        return 'Price feed rate-limited — try again shortly.';
+      case 'network':
+        return 'Could not reach the price feed — check your connection and retry.';
+      case 'timeout':
+        return 'Price feed timed out — retry.';
+      case 'provider':
+        return 'Price feed error — retry.';
+    }
+  }
+
+  if (kind === 'track' && normalized === 'not-included') {
+    return 'This transaction is not included in a block yet.';
+  }
+
   if (isTransientReason(reason)) {
     return 'The network is busy or unreachable. Please try again in a moment.';
   }
+
+  // A reason that already reads as a human sentence is shown as-is; the
+  // map translates machine codes, it must not mangle informative messages.
+  if (reason.includes(' ')) {
+    return reason;
+  }
+
   return 'Please try again later.';
 }
 

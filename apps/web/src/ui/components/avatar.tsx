@@ -1,43 +1,34 @@
-import * as AvatarPrimitive from '@radix-ui/react-avatar'
-import { cn } from '../lib/utils'
-import { cva, type VariantProps } from 'class-variance-authority'
+"use client"
 
-const avatarVariants = cva(
-  'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full',
-  {
-    variants: {
-      size: {
-        xs: 'h-7 w-7',
-        sm: 'h-8 w-8',
-        md: 'h-10 w-10',
-        lg: 'h-12 w-12',
-      },
-    },
-    defaultVariants: {
-      size: 'md',
-    },
-  },
-)
+import * as React from "react"
+import * as AvatarPrimitive from "@radix-ui/react-avatar"
+
+import { cn } from "../lib/utils"
 
 function Avatar({
-  size,
   className,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> & VariantProps<typeof avatarVariants>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Root>) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
-      className={cn(avatarVariants({ size, className }))}
+      className={cn(
+        "relative flex size-8 shrink-0 overflow-hidden rounded-bawa-sm border-2 border-ink bg-paper text-ink",
+        className
+      )}
       {...props}
     />
   )
 }
 
-function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+function AvatarImage({
+  className,
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn('aspect-square size-full', className)}
+      className={cn("aspect-square size-full", className)}
       {...props}
     />
   )
@@ -50,10 +41,13 @@ function AvatarFallback({
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
-      className={cn('bg-muted flex size-full items-center justify-center rounded-full', className)}
+      className={cn(
+        "flex size-full items-center justify-center rounded-bawa-sm bg-sun text-ink",
+        className
+      )}
       {...props}
     />
   )
 }
 
-export { Avatar, AvatarFallback, AvatarImage, avatarVariants }
+export { Avatar, AvatarImage, AvatarFallback }

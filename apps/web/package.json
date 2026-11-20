@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/copy-wasm.mjs && vite",
-    "build": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build",
+    "build": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build && npm run palette-audit",
+    "palette-audit": "node scripts/palette-audit.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -17,6 +18,7 @@
   "dependencies": {
     "@bawa/contracts": "file:../../packages/contracts",
     "@fontsource-variable/noto-sans": "5.2.10",
+    "@fontsource/caveat": "5.3.0",
     "@fontsource/inter": "5.2.8",
     "@fontsource/noto-sans-sc": "5.2.9",
     "@radix-ui/react-avatar": "1.1.11",

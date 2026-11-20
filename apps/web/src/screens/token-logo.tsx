@@ -73,7 +73,7 @@ export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
     <span
       role="img"
       aria-label={`${symbol} logo unavailable`}
-      className="flex size-10 shrink-0 items-center justify-center rounded-full border border-panel-border bg-panel-surface-raised text-[11px] font-bold uppercase text-panel-text"
+      className="flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-[11px] font-bold uppercase text-ink"
       style={style}
     >
       {symbol.trim().toUpperCase().slice(0, 4) || '?'}

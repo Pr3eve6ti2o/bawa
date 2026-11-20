@@ -21,13 +21,6 @@ export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number 
   return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
 }
 
-export const CHAIN_CHIP_COLORS: Record<string, string> = {
-  btc: '#f7931a',
-  eth: '#627eea',
-  trx: '#eb0029',
-  ton: '#0098ea',
-};
-
 /**
  * Per-unit price cell: a fresh per-unit price, a price-feed state label,
  * or nothing (while the first price fetch is still in flight, idle
@@ -223,7 +216,7 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
     <li>
       <Link
         to={`/assets/${model.chain}`}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+        className="block"
       >
         <AssetRow
           avatar={<ChainLogo chain={model.chain} />}
@@ -318,7 +311,7 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
     <li>
       <Link
         to={`/assets/${model.chain}`}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+        className="block"
       >
         <div className={TABLE_GRID}>
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">

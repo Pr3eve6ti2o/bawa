@@ -15,6 +15,7 @@ import { Label } from '../ui/components/label';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Skeleton } from '../ui/components/skeleton';
+import { humanReasonMessage } from '../state/wallet-context';
 
 type ChainId = (typeof SUPPORTED_CHAINS)[number];
 // Result states wrap the tracker result so the discriminant is always
@@ -322,7 +323,7 @@ export function TrackTransactionScreen() {
           />
         )}
         {lookup.kind === 'result' && lookup.result.status === 'not-found' && (
-          <Alert className='border-amber-500/50 bg-amber-500/10'>
+          <Alert>
             <AlertDescription className='space-y-2'>
               <p>Transaction not found.</p>
               {lookup.result.note && <p>{lookup.result.note}</p>}
@@ -331,15 +332,15 @@ export function TrackTransactionScreen() {
           </Alert>
         )}
         {lookup.kind === 'result' && lookup.result.status === 'unsupported' && (
-          <Alert className='border-sky-500/50 bg-sky-500/10'>
-            <AlertDescription>{lookup.result.reason}</AlertDescription>
+          <Alert>
+            <AlertDescription>{humanReasonMessage(lookup.result.reason, 'track')}</AlertDescription>
           </Alert>
         )}
         {lookup.kind === 'result' && lookup.result.status === 'error' && (
-          <Alert className='border-red-500/50 bg-red-500/10'>
+          <Alert variant='destructive'>
             <AlertDescription className='space-y-2'>
               <p>Could not look up this transaction.</p>
-              <p>{lookup.result.reason}</p>
+              <p>{humanReasonMessage(lookup.result.reason, 'track')}</p>
               <Button type='button' variant='outline' disabled={!canLookup} onClick={() => void runLookup()}>
                 Retry
               </Button>
@@ -405,9 +406,9 @@ export function TrackTransactionScreen() {
           </ul>
         )}
         {activity.kind === 'result' && (activity.result.status === 'unavailable' || activity.result.status === 'error') && (
-          <Alert className='border-red-500/50 bg-red-500/10'>
+          <Alert variant='destructive'>
             <AlertDescription className='space-y-2'>
-              <p>{activity.result.reason}</p>
+              <p>{humanReasonMessage(activity.result.reason, 'track')}</p>
               <p>Recent activity could not be loaded.</p>
             </AlertDescription>
           </Alert>

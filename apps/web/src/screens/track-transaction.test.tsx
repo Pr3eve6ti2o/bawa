@@ -173,7 +173,9 @@ describe('TrackTransactionScreen', () => {
     await clickButton(div, 'Look up');
 
     expect(div.textContent).toContain('Could not look up this transaction');
-    expect(div.textContent).toContain('Network error: boom');
+    expect(div.textContent).toContain(
+      'The network is busy or unreachable. Please try again in a moment.',
+    );
     expect(div.textContent).not.toContain('Transaction not found');
   });
 

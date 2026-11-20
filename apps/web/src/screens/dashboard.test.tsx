@@ -8,7 +8,8 @@ import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import type { BalanceState } from '../state/wallet-context';
 
-vi.mock('../state/wallet-context', () => ({
+vi.mock('../state/wallet-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../state/wallet-context')>()),
   useWallet: vi.fn(),
 }));
 

@@ -226,12 +226,14 @@ export function ReceiveScreen() {
         {address ? (
           <div className="flex flex-col items-center gap-4">
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* Keep the white QR surround for scannability, including in dark mode. */}
-              <div className="shrink-0 rounded-[20px] bg-white p-4">
+              {/* Paper surround keeps the QR scannable — Ink modules on Paper. */}
+              <div className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
                 <QRCodeSVG
                   value={qrValue}
                   size={192}
                   marginSize={4}
+                  fgColor="#2B2B2B"
+                  bgColor="#FFFDF7"
                   title={`${config.symbol} receiving address`}
                 />
               </div>

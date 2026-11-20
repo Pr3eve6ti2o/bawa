@@ -1,65 +1,49 @@
-import * as ProgressPrimitive from '@radix-ui/react-progress'
-import { cn } from '../lib/utils'
-import { cva, type VariantProps } from 'class-variance-authority'
+"use client";
 
-const progressTrackVariants = cva('relative w-full overflow-hidden rounded-full', {
-  variants: {
-    variant: {
-      primary: 'bg-primary/20',
-      success: 'bg-progress-track',
-    },
-    size: {
-      sm: 'h-1.5',
-      md: 'h-2',
-    },
-  },
-  defaultVariants: {
-    variant: 'primary',
-    size: 'sm',
-  },
-})
+import * as ProgressPrimitive from "@radix-ui/react-progress";
+import type { ComponentProps } from "react";
 
-const progressBarVariants = cva(
-  'h-full w-full flex-1 rounded-full transition-all duration-[420ms]',
-  {
-    variants: {
-      variant: {
-        primary: 'bg-primary',
-        success: 'bg-success',
-      },
-    },
-    defaultVariants: {
-      variant: 'primary',
-    },
-  },
-)
+import { cn } from "../lib/utils";
 
-interface ProgressProps
-  extends Omit<React.ComponentProps<typeof ProgressPrimitive.Root>, 'children'>,
-    VariantProps<typeof progressTrackVariants> {
-  value: number
-}
+type ProgressProps = ComponentProps<typeof ProgressPrimitive.Root> & {
+  variant?: "primary" | "success";
+  size?: "sm" | "md";
+};
 
-function Progress({ value, variant, size, className, ...props }: ProgressProps) {
-  const clamped = Math.min(100, Math.max(0, value))
+function Progress({
+  value,
+  variant = "primary",
+  size = "md",
+  className,
+  ...props
+}: ProgressProps) {
+  const clampedValue = Math.min(100, Math.max(0, value || 0));
 
   return (
     <ProgressPrimitive.Root
-      data-slot="progress"
-      className={cn(progressTrackVariants({ variant, size, className }))}
-      value={clamped}
       {...props}
+      data-slot="progress"
+      value={clampedValue}
+      max={100}
+      className={cn(
+        "relative w-full overflow-hidden rounded-bawa-sm border-2 border-ink bg-paper",
+        size === "sm" ? "h-1.5" : "h-2",
+        className,
+      )}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className={cn(progressBarVariants({ variant }))}
+        className={cn(
+          "h-full w-full rounded-bawa-sm transition-transform duration-300",
+          variant === "success" ? "bg-sun" : "bg-coral",
+        )}
         style={{
-          transform: `translateX(-${100 - clamped}%)`,
-          transitionTimingFunction: 'var(--ease-emphasis)',
+          transform: `translateX(-${100 - clampedValue}%)`,
+          transitionTimingFunction: "var(--ease-emphasis)",
         }}
       />
     </ProgressPrimitive.Root>
-  )
+  );
 }
 
-export { Progress, progressTrackVariants }
+export { Progress };

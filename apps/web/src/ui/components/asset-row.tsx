@@ -7,7 +7,6 @@ interface AssetRowProps extends React.ComponentProps<'div'> {
   amount: string
   value?: string
   detail?: string
-  detailColor?: string
 }
 
 function AssetRow({
@@ -16,7 +15,6 @@ function AssetRow({
   amount,
   value,
   detail,
-  detailColor,
   className,
   ...props
 }: AssetRowProps) {
@@ -31,7 +29,7 @@ function AssetRow({
         <div>
           <div className="text-base font-semibold">{symbol}</div>
           {' '}
-          <div className="text-sm text-muted-foreground">{amount}</div>
+          <div className="text-sm text-ink">{amount}</div>
         </div>
       </div>
       {' '}
@@ -40,13 +38,7 @@ function AssetRow({
           {value ? <div className="text-base font-semibold">{value}</div> : null}
           {' '}
           {detail ? (
-            <div
-              data-design-audit-allow="dynamic-token-color"
-              className="text-xs"
-              style={detailColor ? { color: detailColor } : undefined}
-            >
-              {detail}
-            </div>
+            <div className="text-xs text-ink">{detail}</div>
           ) : null}
         </div>
       )}
