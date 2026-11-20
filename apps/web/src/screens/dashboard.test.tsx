@@ -208,14 +208,23 @@ describe('dashboard screen', () => {
   });
 
   it('never renders a fabricated portfolio total', async () => {
+    window.localStorage.clear();
     setWallet(balancesFor({}));
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
     const mounted = await mountScreen();
     try {
-      // No fiat amount anywhere: no fabricated portfolio total.
+      // Even with fresh prices available, failed balances must not be
+      // blamed on the price feed: no price note at all, no fiat total.
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('No prices loaded yet');
+      expect(mounted.div.textContent).not.toContain('No fresh prices');
       expect(mounted.div.textContent).not.toContain('$');
-      // The feed exists now; the hero invites a manual refresh instead of claiming no feed is connected.
-      expect(mounted.div.textContent).toContain('No prices loaded yet');
     } finally {
+      vi.unstubAllGlobals();
       await mounted.cleanup();
     }
   });
@@ -342,6 +351,39 @@ describe('dashboard screen', () => {
   });
 
   it('shows an honest error on a rate-limited price feed, never $0.00', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    // No Retry-After header, so the hook's back-off is 1000 ms then
+    // 2000 ms and the auto-fetch settles within the 4 s wait below.
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      // The auto-fetch on mount produces the error state; no click needed.
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain('Price feed rate-limited');
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('$');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('loads the portfolio total on mount without clicking', async () => {
+    window.localStorage.clear();
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -351,18 +393,84 @@ describe('dashboard screen', () => {
       }),
     );
     stubPriceFetch({
-      ok: false,
-      status: 429,
-      headers: {
-        get: (name: string) => (name === 'Retry-After' ? '120' : null),
-      },
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
     });
     const mounted = await mountScreen();
     try {
-      await clickRefreshPrices(mounted);
-      expect(mounted.div.textContent).toContain('Price feed rate-limited');
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('Powered by CoinGecko');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('retries the price fetch about every minute while mounted', async () => {
+    window.localStorage.clear();
+    vi.useFakeTimers();
+    try {
+      setWallet(
+        balancesFor({
+          btc: { status: 'available', value: '100000000' },
+          eth: { status: 'available', value: '0' },
+          trx: { status: 'available', value: '0' },
+          ton: { status: 'available', value: '0' },
+        }),
+      );
+      stubPriceFetch({
+        ok: true,
+        status: 200,
+        json: async () => freshPayload(),
+      });
+      const mounted = await mountScreen();
+      try {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(60_000);
+        });
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      } finally {
+        await mounted.cleanup();
+      }
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the rate-limited line even when a balance has failed', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'error', reason: 'rpc-error' },
+      }),
+    );
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain(
+        'Price feed rate-limited — try again shortly.',
+      );
       expect(mounted.div.textContent).toContain('Unavailable');
-      expect(mounted.div.textContent).not.toContain('$');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

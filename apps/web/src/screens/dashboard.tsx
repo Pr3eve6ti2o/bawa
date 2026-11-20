@@ -34,6 +34,32 @@ export function DashboardScreen() {
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
 
+  // Auto-fetch on mount: prices previously loaded only after a manual
+  // click, so the first paint never showed any price. The hook's own
+  // guard prevents starting another fetch while one is in flight.
+  useEffect(() => {
+    if (pricesState.status === 'idle') {
+      refreshPrices();
+    }
+  }, [pricesState.status, refreshPrices]);
+
+  // Refresh about every 60 seconds while mounted (the price module
+  // documents "Refresh ~60s"). The ref always holds the latest refresh
+  // callback, so the interval is set once and never resets on status
+  // changes. One call/minute per tab fits the keyless ~5 calls/min
+  // budget; several open tabs share it.
+  const refreshPricesRef = useRef(refreshPrices);
+  useEffect(() => {
+    refreshPricesRef.current = refreshPrices;
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshPricesRef.current();
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Hold the last settled hero text while balances refresh so it never flashes
   // Unavailable mid-refresh. Missing, expired, or failed prices are never $0.00.
   const lastHeroRef = useRef<{
@@ -62,6 +88,9 @@ export function DashboardScreen() {
   );
 
   const priceEntries = Object.values(pricesState.entries);
+  const hasCachedPrices = priceEntries.some(
+    (entry) => entry?.status === 'fresh' || entry?.status === 'expired',
+  );
   const priceErrorReasons = priceEntries.flatMap(
     (entry) => (entry?.status === 'error' ? [entry.reason] : []),
   );
@@ -75,11 +104,11 @@ export function DashboardScreen() {
   const nextHero: typeof lastHeroRef.current | null = heroFailed
     ? {
         text: 'Unavailable',
-        noPriceFeed: true,
+        noPriceFeed: false,
         retry: true,
         partialNote: false,
         showAttribution: false,
-        priceError: null,
+        priceError: sharedPriceError,
       }
     : heroLoading
       ? null
@@ -149,7 +178,7 @@ export function DashboardScreen() {
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
-            {pricesState.status === 'idle'
+            {pricesState.status === 'idle' && !hasCachedPrices
               ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are exact amounts in each currency.'
               : 'No fresh prices — portfolio total unavailable. Balances below are exact amounts in each currency.'}
           </p>

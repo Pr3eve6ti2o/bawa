@@ -15,7 +15,7 @@
  * Refresh ~60s; MAX_QUOTE_AGE_MS permits at most 10 minutes of quote age.
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './format';
@@ -103,6 +103,148 @@ export function isFreshQuote(quote: PriceQuote, nowMs: number): boolean {
     fetchAgeMs >= 0 &&
     fetchAgeMs <= MAX_QUOTE_AGE_MS
   );
+}
+
+export const PRICE_CACHE_KEY = 'bawa:prices-cache:v1';
+
+export type PriceCacheStore = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+};
+
+export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: PriceCacheStore): void {
+  try {
+    const quotes: Array<
+      Pick<PriceQuote, 'chain' | 'usdPrice' | 'providerUpdatedAtMs' | 'fetchedAtMs'>
+    > = [];
+
+    for (const chain of Object.keys(PRICE_IDS) as ChainId[]) {
+      const entry = entries[chain];
+      if (entry?.status !== 'fresh') continue;
+
+      const quote = entry.quote;
+      if (
+        typeof quote.usdPrice !== 'string' ||
+        quote.usdPrice.trim() !== quote.usdPrice ||
+        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(quote.usdPrice) ||
+        !Number.isFinite(Number(quote.usdPrice)) ||
+        Number(quote.usdPrice) <= 0 ||
+        !Number.isFinite(quote.providerUpdatedAtMs) ||
+        !Number.isFinite(quote.fetchedAtMs) ||
+        !isFreshQuote(quote, nowMs)
+      ) {
+        continue;
+      }
+
+      quotes.push({
+        chain,
+        usdPrice: quote.usdPrice,
+        providerUpdatedAtMs: quote.providerUpdatedAtMs,
+        fetchedAtMs: quote.fetchedAtMs,
+      });
+    }
+
+    if (quotes.length === 0) return;
+
+    const cacheStore = store ?? globalThis.localStorage;
+    if (!cacheStore) return;
+
+    cacheStore.setItem(PRICE_CACHE_KEY, JSON.stringify({ version: 1, quotes }));
+  } catch {
+    // Cache persistence is best-effort, including access to localStorage.
+  }
+}
+
+export function loadCachedPrices(nowMs: number, store?: PriceCacheStore): PriceMap | null {
+  try {
+    const cacheStore = store ?? globalThis.localStorage;
+    if (!cacheStore) return null;
+
+    const serialized = cacheStore.getItem(PRICE_CACHE_KEY);
+    if (serialized === null) return null;
+
+    const parsed: unknown = JSON.parse(serialized);
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      Object.getPrototypeOf(parsed) !== Object.prototype
+    ) {
+      return null;
+    }
+
+    const cache = parsed as Record<string, unknown>;
+    const hasOwn = Object.prototype.hasOwnProperty;
+    if (
+      !hasOwn.call(cache, 'version') ||
+      cache.version !== 1 ||
+      !hasOwn.call(cache, 'quotes') ||
+      !Array.isArray(cache.quotes)
+    ) {
+      return null;
+    }
+
+    const entries = {} as PriceMap;
+    for (const chain of Object.keys(PRICE_IDS) as ChainId[]) {
+      entries[chain] = { status: 'unavailable', reason: 'missing' };
+    }
+
+    let hasUsableRecord = false;
+    for (const value of cache.quotes as unknown[]) {
+      if (
+        typeof value !== 'object' ||
+        value === null ||
+        Object.getPrototypeOf(value) !== Object.prototype
+      ) {
+        continue;
+      }
+
+      const record = value as Record<string, unknown>;
+      if (
+        !['chain', 'usdPrice', 'providerUpdatedAtMs', 'fetchedAtMs'].every(
+          (key) => hasOwn.call(record, key),
+        )
+      ) {
+        continue;
+      }
+
+      const { chain, usdPrice, providerUpdatedAtMs, fetchedAtMs } = record;
+      if (
+        typeof chain !== 'string' ||
+        !hasOwn.call(PRICE_IDS, chain) ||
+        typeof usdPrice !== 'string' ||
+        usdPrice.trim() !== usdPrice ||
+        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(usdPrice) ||
+        !Number.isFinite(Number(usdPrice)) ||
+        Number(usdPrice) <= 0 ||
+        typeof providerUpdatedAtMs !== 'number' ||
+        !Number.isFinite(providerUpdatedAtMs) ||
+        typeof fetchedAtMs !== 'number' ||
+        !Number.isFinite(fetchedAtMs)
+      ) {
+        continue;
+      }
+
+      const chainId = chain as ChainId;
+      const quote: PriceQuote = {
+        chain: chainId,
+        assetId: PRICE_ASSET_IDS[chainId],
+        providerAssetId: PRICE_IDS[chainId],
+        usdPrice,
+        providerUpdatedAtMs,
+        fetchedAtMs,
+        source: 'CoinGecko',
+      };
+
+      entries[chainId] = isFreshQuote(quote, nowMs)
+        ? { status: 'fresh', quote }
+        : { status: 'expired', quote };
+      hasUsableRecord = true;
+    }
+
+    return hasUsableRecord ? entries : null;
+  } catch {
+    return null;
+  }
 }
 
 export function parsePriceResponse(
@@ -454,57 +596,132 @@ function idleEntries(): PriceMap {
   };
 }
 
-export function usePrices(): { state: PricesState; refresh: () => void } {
-  const [state, setState] = useState<PricesState>(() => ({
-    status: 'idle',
-    entries: idleEntries(),
-    lastFetchedAtMs: null,
-  }));
-  const inFlight = useRef(false);
-
-  const refresh = useCallback(() => {
-    if (state.status === 'loading' || inFlight.current) return;
-    const networkError: PricesState = {
-      status: 'ready',
-      entries: {
-        btc: { status: 'error', reason: 'network' },
-        eth: { status: 'error', reason: 'network' },
-        trx: { status: 'error', reason: 'network' },
-        ton: { status: 'error', reason: 'network' },
-        sol: { status: 'error', reason: 'network' },
-        bsc: { status: 'error', reason: 'network' },
-        matic: { status: 'error', reason: 'network' },
-        arb: { status: 'error', reason: 'network' },
-        op: { status: 'error', reason: 'network' },
-        base: { status: 'error', reason: 'network' },
-        avax: { status: 'error', reason: 'network' },
-        ltc: { status: 'error', reason: 'network' },
-        doge: { status: 'error', reason: 'network' },
-      },
+export function usePrices(
+  options?: { sleep?: (ms: number) => Promise<void> },
+): { state: PricesState; refresh: () => void } {
+  const [state, setState] = useState<PricesState>(() => {
+    let entries: PriceMap;
+    try {
+      entries = loadCachedPrices(Date.now()) ?? idleEntries();
+    } catch {
+      entries = idleEntries();
+    }
+    return {
+      status: 'idle',
+      entries,
       lastFetchedAtMs: null,
     };
+  });
+
+  const inFlight = useRef(false);
+  const mounted = useRef(true);
+  const sleep = options?.sleep;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const refresh = useCallback(() => {
+    if (!mounted.current || state.status === 'loading' || inFlight.current) return;
+
+    const networkEntries: PriceMap = { ...idleEntries() };
+    for (const chain of Object.keys(networkEntries) as Array<keyof PriceMap>) {
+      networkEntries[chain] = { status: 'error', reason: 'network' };
+    }
+    const networkError: PricesState = {
+      status: 'ready',
+      entries: networkEntries,
+      lastFetchedAtMs: null,
+    };
+
     if (typeof globalThis.fetch !== 'function') {
       setState(networkError);
       return;
     }
 
+    const wait =
+      sleep ??
+      ((ms: number) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        }));
+
     inFlight.current = true;
     setState((previous) => ({ ...previous, status: 'loading' }));
+
     void (async () => {
       try {
-        const entries = await fetchPrices(globalThis.fetch, Date.now());
-        setState({
-          status: 'ready',
-          entries,
-          lastFetchedAtMs: Date.now(),
-        });
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          if (!mounted.current) return;
+
+          const entries = await fetchPrices(globalThis.fetch, Date.now());
+          if (!mounted.current) return;
+
+          const values = Object.values(entries);
+          if (
+            attempt < 2 &&
+            values.length > 0 &&
+            values.every(
+              (entry) =>
+                entry.status === 'error' &&
+                (entry.reason === 'rate-limited' ||
+                  entry.reason === 'network' ||
+                  entry.reason === 'timeout'),
+            )
+          ) {
+            let delayMs = 1000 * (attempt + 1);
+            const rateLimited = values.find(
+              (entry) =>
+                entry.status === 'error' && entry.reason === 'rate-limited',
+            );
+
+            if (
+              rateLimited?.status === 'error' &&
+              rateLimited.reason === 'rate-limited'
+            ) {
+              const retryAfterMs = rateLimited.retryAfterMs;
+              delayMs = Math.min(
+                30_000,
+                Math.max(
+                  0,
+                  typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs)
+                    ? retryAfterMs
+                    : 1000,
+                ),
+              );
+            }
+
+            await wait(delayMs);
+            continue;
+          }
+
+          setState({
+            status: 'ready',
+            entries,
+            lastFetchedAtMs: Date.now(),
+          });
+
+          if (values.some((entry) => entry.status === 'fresh')) {
+            try {
+              saveCachedPrices(entries, Date.now());
+            } catch {
+              // Cache writes are best-effort.
+            }
+          }
+          return;
+        }
       } catch {
-        setState(networkError);
+        if (mounted.current) {
+          setState(networkError);
+        }
       } finally {
         inFlight.current = false;
       }
     })();
-  }, [state.status]);
+  }, [state.status, sleep]);
 
   return { state, refresh };
 }
