@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from '../app/app';
 import { createVault, deleteVault, lock } from '../wallet/vault';
+import { TEST_VAULT_PROFILE_IDS } from '../state/test-helpers';
 
 // jsdom has no matchMedia; the vendored theme toggle reads it on mount.
 if (typeof window.matchMedia !== 'function') {
@@ -26,12 +27,6 @@ const testGlobal = globalThis as typeof globalThis & {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
 
 async function mountBackupScreen() {
   const previousUrl = window.location.href;
@@ -156,14 +151,13 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   });
 
   it('lists the stored recovery profiles with a vault', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     const { div, cleanup } = await mountBackupScreen();
     try {
       expect(div.textContent).toContain('Recovery profiles');
-      expect(div.textContent).toContain('bawa-btc-bip84-v1');
-      expect(div.textContent).toContain('bawa-evm-bip44-v1');
-      expect(div.textContent).toContain('bawa-trx-bip44-v1');
-      expect(div.textContent).toContain('bawa-ton-v4r2-v1');
+      for (const profileId of TEST_VAULT_PROFILE_IDS) {
+        expect(div.textContent).toContain(profileId);
+      }
       expect(div.textContent).toContain(
         'Restoring with a different profile recovers different addresses',
       );
@@ -187,7 +181,7 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   });
 
   it('requires the password before the quiz or the phrase', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     const { div, cleanup } = await mountBackupScreen();
     try {
       expect(div.textContent).toContain('Reveal recovery phrase');
@@ -209,7 +203,7 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   // Unlocking derives all four chains through WASM, which can take
   // several seconds while the full suite runs in parallel workers.
   it('reveals only after the password and all three quiz answers', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     const { div, cleanup } = await mountBackupScreen();
     try {
       await openPasswordStage(div);

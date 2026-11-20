@@ -24,13 +24,14 @@ import {
   withMnemonicAsync,
   writeVaultBackup,
 } from './vault';
+import { BTC_PROFILE_ID, EVM_PROFILE_ID } from '../state/test-helpers';
 import { BawaError, ERROR_MESSAGES, WalletErrorCodes } from './errors';
 
 // Standard public BIP-39 test vector — disposable test data, never a real secret.
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = ['bawa-evm-bip44-v1', 'bawa-btc-bip84-v1'];
+const TEST_PROFILES = [EVM_PROFILE_ID, BTC_PROFILE_ID];
 
 function readRawEnvelope(): Record<string, unknown> {
   const raw = localStorage.getItem(VAULT_STORAGE_KEY);

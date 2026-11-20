@@ -6,6 +6,7 @@ import { WalletProvider, useWallet } from './wallet-context';
 import { deriveAddressesAt } from '../wallet/core';
 import { createVault, lock } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
+import { BTC_PROFILE_ID, EVM_PROFILE_ID } from './test-helpers';
 
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
@@ -24,7 +25,7 @@ const VECTOR_MNEMONIC =
   'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
 const VECTOR_ETH = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
 const TEST_PASSWORD = 'vault-test-password-2026';
-const TEST_PROFILES = ['bawa-evm-bip44-v1', 'bawa-btc-bip84-v1'];
+const TEST_PROFILES = [EVM_PROFILE_ID, BTC_PROFILE_ID];
 
 let exposed: ReturnType<typeof useWallet> | undefined;
 
