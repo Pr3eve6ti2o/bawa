@@ -399,7 +399,7 @@ export function SendScreen() {
                 </li>
               ))}
             </ol>
-            <p className="text-body-sm font-medium text-foreground">
+            <p className="text-body-sm font-medium text-panel-text-muted">
               {`Step ${activeIndex + 1} of 6: ${steps[activeIndex]}`}
             </p>
           </div>
