@@ -86,6 +86,7 @@ function HomeScreen() {
 
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { vaultState } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
@@ -101,6 +102,14 @@ function AppLayout() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [moreOpen]);
   const pathname = useLocation().pathname;
+  // Focused flows hide the navigation chrome (Safe PageLayout pattern):
+  // the create-wallet flow and the send flow. Send review is a state
+  // inside /send rather than its own route, so the whole /send flow
+  // hides the nav; the review step sits inside it. The desktop header
+  // stays: it carries the account context and the Mainnet pill, not
+  // navigation.
+  const isFocusedFlow =
+    pathname === '/create-wallet' || pathname === '/send';
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
@@ -117,11 +126,23 @@ function AppLayout() {
   return (
     <div className="min-h-screen bg-background sm:py-6 lg:py-0">
       <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none lg:min-h-screen">
-        <aside className="hidden shrink-0 lg:block lg:w-[224px] lg:border-r lg:border-panel-border lg:bg-panel-surface">
-          <div className="sticky top-0 flex max-h-screen flex-col overflow-y-auto">
-            <SidebarNav />
-          </div>
-        </aside>
+        {!isFocusedFlow && (
+          <aside
+            className={
+              'hidden shrink-0 lg:block lg:border-r lg:border-panel-border lg:bg-panel-surface ' +
+              (sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[224px]')
+            }
+          >
+            <div className="sticky top-0 flex h-screen flex-col overflow-y-auto">
+              <SidebarNav
+                collapsed={sidebarCollapsed}
+                onToggleCollapse={() =>
+                  setSidebarCollapsed((value) => !value)
+                }
+              />
+            </div>
+          </aside>
+        )}
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="hidden h-[72px] shrink-0 items-center justify-between border-b border-panel-border px-6 lg:flex xl:px-8">
@@ -180,7 +201,7 @@ function AppLayout() {
             )}
           </main>
 
-          {moreOpen && (
+          {!isFocusedFlow && moreOpen && (
             <div
               role="menu"
               aria-label="More"
@@ -200,8 +221,9 @@ function AppLayout() {
           </div>
         )}
 
-          <nav
-            aria-label="Main navigation"
+          {!isFocusedFlow && (
+            <nav
+              aria-label="Main navigation"
             className="sticky bottom-0 z-10 border-t border-panel-border bg-panel-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
           >
             <div className="grid grid-cols-5">
@@ -251,7 +273,8 @@ function AppLayout() {
                 More
               </button>
             </div>
-          </nav>
+            </nav>
+          )}
           <Toaster />
         </div>
       </div>

@@ -110,12 +110,29 @@ async function fillPasswords(div: HTMLDivElement) {
   });
 }
 
+
+// Lane B (Phase 2): step 2 now opens with a Rabby-style risk check — the
+// phrase is not rendered until all three boxes are ticked and the user
+// continues. Every flow that reaches the phrase screen goes through this.
+async function acknowledgeRisk(div: HTMLDivElement) {
+  await act(async () => {
+    const boxes = [...div.querySelectorAll('[id^="risk-check-"]')];
+    expect(boxes.length).toBe(3);
+    boxes.forEach((box) => (box as HTMLButtonElement).click());
+  });
+  await act(async () => {
+    findButton(div, 'I understand — show my recovery phrase').click();
+  });
+  await settle();
+}
+
 async function generate(div: HTMLDivElement) {
   await fillPasswords(div);
   await act(async () => {
     findButton(div, 'Generate recovery phrase').click();
   });
   await settle();
+  await acknowledgeRisk(div);
 }
 
 beforeEach(() => {
@@ -322,6 +339,7 @@ describe('create wallet screen', () => {
         findButton(mounted.div, 'Generate recovery phrase').click();
       });
       await settle();
+      await acknowledgeRisk(mounted.div);
       await act(async () => {
         findButton(mounted.div, 'I have written them down').click();
       });
@@ -350,6 +368,50 @@ describe('create wallet screen', () => {
       ], 'TREZOR');
       expect(isPassphraseUsed()).toBe(true);
       expect(mounted.div.textContent).toContain('Your wallet is ready');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the risk check before the recovery phrase and hides the phrase until acknowledged', async () => {
+    const mounted = await mountScreen();
+    try {
+      // Drive generation without the acknowledgeRisk helper: the phrase
+      // must not be shown yet.
+      await fillPasswords(mounted.div);
+      await act(async () => {
+        findButton(mounted.div, 'Generate recovery phrase').click();
+      });
+      await settle();
+      expect(mounted.div.textContent).toContain('Check the risks first');
+      expect(mounted.div.textContent).not.toContain('abandon');
+      expect(mounted.div.textContent).not.toContain('I have written them down');
+      const boxes = [...mounted.div.querySelectorAll('[id^="risk-check-"]')];
+      expect(boxes.length).toBe(3);
+      const continueButton = findButton(
+        mounted.div,
+        'I understand — show my recovery phrase',
+      );
+      expect(continueButton.disabled).toBe(true);
+      // Two of three ticked: still gated.
+      await act(async () => {
+        (boxes[0] as HTMLButtonElement).click();
+        (boxes[1] as HTMLButtonElement).click();
+      });
+      expect(continueButton.disabled).toBe(true);
+      expect(mounted.div.textContent).not.toContain('abandon');
+      // All three ticked: the phrase appears.
+      await act(async () => {
+        (boxes[2] as HTMLButtonElement).click();
+      });
+      expect(continueButton.disabled).toBe(false);
+      await act(async () => {
+        continueButton.click();
+      });
+      await settle();
+      expect(mounted.div.textContent).toContain('Write down your recovery phrase');
+      expect(mounted.div.textContent).toContain('abandon');
+      expect(mounted.div.textContent).toContain('I have written them down');
     } finally {
       await mounted.cleanup();
     }

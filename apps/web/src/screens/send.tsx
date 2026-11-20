@@ -500,6 +500,10 @@ export function SendScreen() {
           </h2>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">From</dt>
+              <dd className="min-w-0 break-all font-mono">{from}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">To</dt>
               <dd className="min-w-0 break-all font-mono">{recipient}</dd>
             </div>
@@ -580,6 +584,7 @@ export function SendScreen() {
           <SendReview
             chainName={config.displayName}
             symbol={config.symbol}
+            from={from}
             recipient={recipient}
             amount={formatNativeWithSymbol(
               preview.amountBaseUnits,

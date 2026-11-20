@@ -152,6 +152,10 @@ export function CreateScreen() {
         Choose what to create. Two options are ready today; the rest are coming
         soon.
       </p>
+      <p className="text-sm text-panel-text-muted">
+        Creating a wallet starts with a short risk check. Your recovery phrase
+        is shown only after you confirm you understand the risks.
+      </p>
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tools.map((tool) => (
           <li key={tool.name} className="min-w-0">

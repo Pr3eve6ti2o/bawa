@@ -3,6 +3,7 @@ package com.bawa.wallet
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -10,13 +11,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bawa.wallet.ui.BawaTheme
 import com.bawa.wallet.ui.Screen
 import com.bawa.wallet.ui.WalletViewModel
 import com.bawa.wallet.ui.screens.AssetDetailScreen
@@ -47,19 +47,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFF4FC3F7),
-                    background = Color(0xFF121212),
-                    surface = Color(0xFF1E1E1E),
-                    surfaceVariant = Color(0xFF2A2A2A),
-                    onBackground = Color.White,
-                    onSurface = Color.White,
-                    onSurfaceVariant = Color(0xFFAAAAAA),
-                    outline = Color(0xFF3A3A3A),
-                    error = Color(0xFFEF5350)
-                )
-            ) {
+            // Bawa Balanced direction-04 tokens (ui/BawaTheme.kt).
+            // The previous inline scheme was the vendored WDK palette.
+            BawaTheme {
                 val vm: WalletViewModel = viewModel()
                 BawaApp(vm)
             }
@@ -67,9 +57,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Layout contract (Lane C verdict, FINDINGS.md §4.5/§8): Rabby Mobile +
+// WDK — NO bottom tab bar, a single home screen with a fixed bottom
+// action row, stack navigation for everything else, a single-screen
+// state machine for Welcome / Create / Import. The 14-screen contract
+// is unchanged; only the navigation container differs from web.
 @Composable
 fun BawaApp(vm: WalletViewModel) {
     val screen by vm.currentScreen.collectAsState()
+
+    // System back reverses the navigation stack (WalletViewModel.goBack),
+    // instead of exiting the app from a sub-screen.
+    BackHandler { vm.goBack() }
 
     Box(
         modifier = Modifier

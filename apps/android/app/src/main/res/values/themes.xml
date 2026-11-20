@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Status and navigation bars match the Bawa Balanced shell
+         background (#0B1326, BawaTokens.Background) so the app paints
+         edge to edge in one colour; content pads away from the bars
+         in Compose (statusBarsPadding / navigationBarsPadding). -->
     <style name="Theme.Bawa" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:statusBarColor">#0B1326</item>
+        <item name="android:navigationBarColor">#0B1326</item>
     </style>
 </resources>

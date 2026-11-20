@@ -1,13 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Activity, ArrowDownToLine, Send } from 'lucide-react';
+import { Activity, ArrowDownToLine, Eye, EyeOff, Network, Send } from 'lucide-react';
 import { useWallet } from '../state/wallet-context';
+import type { BalanceState } from '../state/wallet-context';
+import type { ChainId } from '../engine/boundary';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
-import { portfolioTotal, usePrices, PRICE_ATTRIBUTION_TEXT } from '../wallet/prices';
+import {
+  fiatValueForBalance,
+  portfolioTotal,
+  quoteFreshnessLabel,
+  unitPriceForChain,
+  usePrices,
+  PRICE_ATTRIBUTION_TEXT,
+} from '../wallet/prices';
+import type { PriceEntry } from '../wallet/prices';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
-import { AssetRows } from './asset-rows';
+import { AssetRows, ChainLogo } from './asset-rows';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 
@@ -16,6 +26,149 @@ const ACTIONS = [
   { to: '/receive', icon: ArrowDownToLine, label: 'Receive' },
   { to: '/transactions', icon: Activity, label: 'Activity' },
 ] as const;
+
+// Popular chains strip order (layout findings §5.2): Bawa's canonical
+// order — Bitcoin, Ethereum, TRON, TON — never value-sorted, so the strip
+// never reorders itself on refresh, and never alphabetical, so BTC is
+// never buried.
+const STRIP_CHAINS: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+
+/**
+ * One Popular chains strip entry (layout findings §5.2, Rabby's
+ * value-sorted per-chain breakdown adapted to a fixed-order shortcut
+ * strip): logo, chain name, native balance, and the fiat value
+ * underneath only when a fresh price exists. A per-unit price always
+ * carries its "per BTC" label, so it can never be mistaken for a fiat
+ * value of the balance. A failed balance reads "Unavailable" and a
+ * failed price reads "Price expired" / "Price unavailable" /
+ * "Price error" — never $0.00, never a silent empty. Tapping an entry
+ * opens the asset detail; the strip never switches a global network
+ * (Bawa has none).
+ */
+function PopularChainEntry({
+  chain,
+  balance,
+  entry,
+  nowMs,
+  pricesLoading,
+  hideBalance,
+}: {
+  chain: ChainId;
+  balance: BalanceState;
+  entry: PriceEntry | undefined;
+  nowMs: number;
+  pricesLoading: boolean;
+  hideBalance: boolean;
+}) {
+  const config = chainConfig(chain);
+  const unit = unitPriceForChain(entry, nowMs);
+  // While the first fetch is still in flight, idle entries read as
+  // 'unavailable' — show nothing rather than a premature failure (the
+  // same rule the asset rows use).
+  const displayUnit =
+    pricesLoading === true && unit.kind === 'unavailable'
+      ? { kind: 'missing' as const }
+      : unit;
+  const priceIsFresh = entry?.status === 'fresh';
+
+  if (balance.status === 'loading') {
+    return (
+      <div className="w-40 shrink-0 rounded-2xl border border-panel-border bg-panel-surface p-3 sm:w-auto">
+        <Skeleton className="h-[68px] w-full" />
+        <span className="sr-only">{`Loading ${config.displayName} balance…`}</span>
+      </div>
+    );
+  }
+
+  // Line 1: the native balance, or the per-chain failure mark. A failed
+  // row is marked here, on its own entry — the hero total never blanks
+  // for one chain's failure (that aggregation is Phase 3; the strip
+  // already has a place for the mark).
+  let line1: string;
+  let line1IsAmount = false;
+  if (balance.status === 'unavailable' || balance.status === 'error') {
+    line1 = 'Unavailable';
+  } else if (balance.status === 'zero') {
+    line1 = `0 ${config.symbol}`;
+    line1IsAmount = true;
+  } else {
+    line1 = formatNativeWithSymbol(
+      balance.value ?? '0',
+      CHAIN_DECIMALS[chain],
+      config.symbol,
+    );
+    line1IsAmount = true;
+  }
+
+  // Line 2: the fiat value when a fresh price exists, else the per-unit
+  // price (labelled "per BTC") or the price feed's state.
+  let line2: string | undefined;
+  let line2IsAmount = false;
+  const priceStateText = (kind: string) =>
+    kind === 'expired'
+      ? 'Price expired'
+      : kind === 'unavailable'
+        ? 'Price unavailable'
+        : kind === 'error'
+          ? 'Price error'
+          : undefined;
+  if (entry !== undefined && (balance.status === 'available' || balance.status === 'zero')) {
+    const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
+    if (fiat.kind === 'fiat' && entry.status === 'fresh') {
+      line2 = fiat.text;
+      line2IsAmount = true;
+    } else if (fiat.kind === 'zero' || fiat.kind === 'balance-unavailable') {
+      if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
+        line2 = `${displayUnit.text} per ${config.symbol}`;
+        line2IsAmount = true;
+      } else {
+        line2 = priceStateText(displayUnit.kind);
+      }
+    } else {
+      line2 = priceStateText(fiat.kind);
+    }
+  } else if (balance.status === 'unavailable' || balance.status === 'error') {
+    if (displayUnit.kind === 'fresh') {
+      line2 = `${displayUnit.text} per ${config.symbol}`;
+      line2IsAmount = true;
+    } else {
+      line2 = priceStateText(displayUnit.kind);
+    }
+  }
+
+  // The hide-balance toggle (Rabby) masks amounts only — state labels
+  // such as "Unavailable" or "Price expired" stay visible.
+  const masked = (text: string, isAmount: boolean) =>
+    hideBalance && isAmount ? '••••••' : text;
+
+  return (
+    <Link
+      to={`/assets/${chain}`}
+      aria-label={`${config.displayName} asset details`}
+      className="w-40 shrink-0 rounded-2xl border border-panel-border bg-panel-surface p-3 transition-colors hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent sm:w-auto"
+    >
+      <span className="flex items-center gap-2">
+        <ChainLogo chain={chain} size={32} />
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-panel-text">
+          {config.displayName}
+        </span>
+        {priceIsFresh && (
+          <span
+            className="size-2 shrink-0 rounded-full bg-success"
+            title={entry !== undefined ? quoteFreshnessLabel(entry.quote, nowMs) : undefined}
+            aria-hidden="true"
+          />
+        )}
+      </span>
+      <span className="mt-2 block truncate text-sm font-semibold text-panel-text">
+        {masked(line1, line1IsAmount)}
+      </span>
+      <span className="block min-h-[16px] truncate text-xs text-panel-text-muted">
+        {line2 === undefined ? null : masked(line2, line2IsAmount)}
+      </span>
+    </Link>
+  );
+}
 
 /**
  * Panel home — real balances plus the live CoinGecko price feed. The hero
@@ -31,6 +184,10 @@ export function DashboardScreen() {
   } = useWallet();
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
+  // Hide-balance toggle (Rabby's DashboardPanel): masks the hero total
+  // and the strip amounts. Local state only — it never hides a state
+  // label such as "Unavailable".
+  const [hideBalance, setHideBalance] = useState(false);
 
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
@@ -175,13 +332,36 @@ export function DashboardScreen() {
     }
   }, [nextHero]);
 
+  const stripChains = STRIP_CHAINS.filter((chain) =>
+    availableFor('balance').includes(chain),
+  );
+  // The toggle masks a real total only; "Unavailable" stays visible so
+  // a missing total is never disguised as a hidden one.
+  const heroText = hideBalance && hero.text !== 'Unavailable' ? '••••••' : hero.text;
+
   return (
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
       <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
-        <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
-        <p className="text-display-lg font-bold tracking-tight text-panel-text">{hero.text}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
+          <button
+            type="button"
+            aria-pressed={hideBalance}
+            aria-label={hideBalance ? 'Show balance' : 'Hide balance'}
+            title={hideBalance ? 'Show balance' : 'Hide balance'}
+            onClick={() => setHideBalance((current) => !current)}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-panel-text-muted transition-colors hover:bg-panel-action-hover hover:text-panel-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
+          >
+            {hideBalance ? (
+              <EyeOff className="size-5" aria-hidden="true" />
+            ) : (
+              <Eye className="size-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        <p className="text-display-lg font-bold tracking-tight text-panel-text">{heroText}</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
@@ -241,6 +421,44 @@ export function DashboardScreen() {
       </div>
 
       {/*
+        Popular chains strip (layout findings §5.2): under the action
+        tiles, above the tabs — the first thing below the fold on a
+        phone, filling the empty area below the home content. Desktop is
+        a 4 + 1 card row; phones get a horizontally scrollable row with
+        the same entries (fixed-width cards, min-w-0 + shrink-0, so
+        nothing clips — cf. the flex-row clip lesson in AGENTS.md).
+        Lane A builds the strip component on Welcome; the dashboard
+        renders its own strip from the same live data.
+      */}
+      <section aria-label="Popular chains" className="lg:col-span-2">
+        <h2 className="text-lg font-semibold text-panel-text">Popular chains</h2>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0">
+          {stripChains.map((chain) => (
+            <PopularChainEntry
+              key={chain}
+              chain={chain}
+              balance={balances[chain]}
+              entry={pricesState.entries[chain]}
+              nowMs={Date.now()}
+              pricesLoading={pricesLoading}
+              hideBalance={hideBalance}
+            />
+          ))}
+          <Link
+            to="/networks"
+            aria-label="All networks"
+            className="flex w-40 shrink-0 flex-col justify-center gap-1 rounded-2xl border border-panel-border bg-panel-surface p-3 transition-colors hover:bg-panel-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent sm:w-auto"
+          >
+            <span className="flex size-8 items-center justify-center rounded-full bg-panel-icon-tile text-panel-accent">
+              <Network className="size-4" aria-hidden="true" />
+            </span>
+            <span className="text-[15px] font-bold text-panel-text">All networks</span>
+            <span className="text-xs text-panel-text-muted">View all chains</span>
+          </Link>
+        </div>
+      </section>
+
+      {/*
         Tokens/Activity tabs. Two errors corrected hands-on: tx.amount ->
         tx.amountBaseUnits (the real transaction field) and
         chainConfig[chain] -> chainConfig(chain) (chainConfig is a function,
@@ -250,7 +468,7 @@ export function DashboardScreen() {
       <div
         role="tablist"
         aria-label="Wallet views"
-        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1 lg:col-span-2"
+        className="sticky top-0 z-10 mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1 lg:col-span-2"
       >
         {(['tokens', 'activity'] as const).map((tab) => (
           <button

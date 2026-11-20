@@ -177,12 +177,25 @@ async function fillPasswords(div: HTMLDivElement) {
   });
 }
 
+async function acknowledgeRisk(div: HTMLDivElement) {
+  await act(async () => {
+    const boxes = [...div.querySelectorAll('[id^="risk-check-"]')];
+    expect(boxes.length).toBe(3);
+    boxes.forEach((box) => (box as HTMLButtonElement).click());
+  });
+  await act(async () => {
+    findButton(div, 'I understand — show my recovery phrase').click();
+  });
+  await settle();
+}
+
 async function generate(div: HTMLDivElement) {
   await fillPasswords(div);
   await act(async () => {
     findButton(div, 'Generate recovery phrase').click();
   });
   await settle();
+  await acknowledgeRisk(div);
 }
 
 function setWallet(history: Record<ChainKey, HistoryState>): void {

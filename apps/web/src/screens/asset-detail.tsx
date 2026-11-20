@@ -128,7 +128,14 @@ export function AssetDetailScreen() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      {/*
+        Sticky actions (MetaMask's asset-sticky-actions.tsx): Send /
+        Receive / Refresh stay pinned to the top of the viewport while
+        the transactions and addresses below scroll, using the same
+        translucent panel treatment as the app's sticky bottom nav.
+        Order and behaviour are unchanged — layout only.
+      */}
+      <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-xl bg-panel-surface/95 px-2 py-2 backdrop-blur">
         {chain !== 'ton' && (
           <Button asChild className="h-11">
             <Link to="/send" onClick={() => setSelectedChain(chain)}>
@@ -152,32 +159,45 @@ export function AssetDetailScreen() {
         </Button>
       </div>
 
-      <Card className="rounded-xl">
-        <CardContent className="pt-6">
-          <dl className="space-y-2 text-sm">
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted-foreground">Balance</dt>
-              <dd className="font-semibold">
-                {balance.status === 'loading'
-                  ? 'Loading…'
-                  : balance.status === 'zero'
-                    ? `0 ${config.symbol}`
-                    : balance.status === 'available'
-                      ? formatNativeWithSymbol(
-                          balance.value ?? '0',
-                          CHAIN_DECIMALS[chain as ChainId],
-                          config.symbol,
-                        )
-                      : 'Balance unavailable'}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted-foreground">Network</dt>
-              <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
+      {/*
+        Details block, in MetaMask's market position (after the actions,
+        before activity). Bawa has no market data — no price, market cap
+        or chart feed exists, and none is invented here — so this block
+        shows the on-chain details the screen already had (balance,
+        network), now under its own heading instead of floating
+        unlabelled after the actions.
+      */}
+      <section aria-labelledby="asset-details-heading" className="space-y-3">
+        <h2 id="asset-details-heading" className="text-lg font-semibold">
+          Details
+        </h2>
+        <Card className="rounded-xl">
+          <CardContent className="pt-6">
+            <dl className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Balance</dt>
+                <dd className="font-semibold">
+                  {balance.status === 'loading'
+                    ? 'Loading…'
+                    : balance.status === 'zero'
+                      ? `0 ${config.symbol}`
+                      : balance.status === 'available'
+                        ? formatNativeWithSymbol(
+                            balance.value ?? '0',
+                            CHAIN_DECIMALS[chain as ChainId],
+                            config.symbol,
+                          )
+                        : 'Balance unavailable'}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Network</dt>
+                <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      </section>
 
       <section aria-labelledby="recent-transactions-heading" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -257,29 +277,6 @@ export function AssetDetailScreen() {
         )}
       </section>
 
-      <Card className="rounded-xl">
-        <CardContent className="pt-6">
-          <dl className="space-y-4">
-            <div>
-              <dt className="text-sm text-muted-foreground">{chain === 'ton' ? 'Imported TON address' : 'Imported xpub'}</dt>
-              <dd className="break-all font-mono text-sm">
-                {xpub ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}` : 'Not imported'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-muted-foreground">Derivation</dt>
-              <dd className="break-all text-sm">
-                {chain === 'ton' ? (
-                  'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
-                ) : (
-                  <code>{DERIVATION_PATHS[chain]}</code>
-                )}
-              </dd>
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
-
       <section aria-labelledby="derived-addresses-heading" className="space-y-3">
         <h2 id="derived-addresses-heading" className="text-lg font-semibold">
           {chain === 'ton' ? 'Imported address' : 'Derived addresses'}
@@ -323,6 +320,34 @@ export function AssetDetailScreen() {
         )}
         <p role="status" className="text-sm text-muted-foreground">{copyStatus}</p>
       </section>
+
+      {/*
+        Import source, last: the xpub / derivation behind the addresses
+        above. Moved after the addresses (it documented the import
+        before the addresses it describes were shown).
+      */}
+      <Card className="rounded-xl">
+        <CardContent className="pt-6">
+          <dl className="space-y-4">
+            <div>
+              <dt className="text-sm text-muted-foreground">{chain === 'ton' ? 'Imported TON address' : 'Imported xpub'}</dt>
+              <dd className="break-all font-mono text-sm">
+                {xpub ? `${xpub.slice(0, 12)}…${xpub.slice(-8)}` : 'Not imported'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted-foreground">Derivation</dt>
+              <dd className="break-all text-sm">
+                {chain === 'ton' ? (
+                  'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
+                ) : (
+                  <code>{DERIVATION_PATHS[chain]}</code>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
     </div>
   );
 }

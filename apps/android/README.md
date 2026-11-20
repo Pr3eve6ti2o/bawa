@@ -5,6 +5,33 @@ This is a watch-only Android wallet built on the UI layer of the Tether WDK Star
 It validates extended public keys; it never generates, stores or displays a mnemonic, seed, private key,
 private extended key, vault key or data key. It derives no address on-device.
 
+## Layout (Phase 2 makeover)
+
+Rabby Mobile + WDK, per the layout study (`FINDINGS.md` §4.5/§8): **no bottom tab bar** — a single home
+screen with a **fixed bottom action row** (Send / Receive / Activity, pinned above the navigation bar),
+stack navigation for everything else, and a single-screen state machine for Welcome → Create → Import.
+The 14-screen contract is unchanged; only the navigation container differs from web.
+
+- **Home (Portfolio):** header (Portfolio + Testnet badge + lock) → portfolio hero (total, hide-balance
+  toggle, freshness note) → **Popular chains strip** (BTC, ETH, TRX, TON in canonical order, each a
+  shortcut to its asset detail; TON shown as not supported; "All networks" → Networks) → asset list.
+  The list scrolls between the header and the pinned row.
+- **Asset detail:** header → balance → **sticky Send/Receive row** (MetaMask asset-sticky-actions) →
+  derivation path → recent transactions.
+- **Receive:** a **per-network address list** (Phantom + OKX): one row per network with its key and
+  derivation path; tapping a row selects that chain.
+- **Create:** a **risk-check first step** (Rabby risk-check → display): the phrase is shown once and
+  never stored online, stated before any instruction appears.
+- **Send:** the review step gains Rabby-style **risk rows** (explicit chain label, full recipient, fee)
+  — layout only, no risk scoring invented.
+- **Transactions:** the Track function lives here — the **lookup form comes first**, guide second.
+- **Tokens:** Bawa Balanced direction-04 (`ui/BawaTheme.kt`), the same tokens as web adapted for the
+  dark Android shell: background `#0B1326`, surface `#11172B`, raised `#243454`, border `#263454`,
+  text `#EFF2FC`, muted `#AAB5D1`, accent violet `#8B7CFF` (primary on dark), primary-solid `#6258D9`
+  for filled buttons with white text. Chain tints: BTC `#F7931A`, ETH `#627EEA`, TRX `#FF0013`.
+- **Navigation:** `WalletViewModel` keeps a back stack — `navigate()` pushes, `goBack()` pops (system
+  back included) and falls back to each screen's fixed parent when the stack is empty.
+
 ## Build / test / run
 
 - Gradle 8.7 (wrapper), AGP 8.2.2, Kotlin 1.9.22, JVM 17.
@@ -94,9 +121,9 @@ on-device derivations or live confirmation checks.
 
 Paths below are relative to `app/src/main/java/com/bawa/wallet/`.
 
-- `ui/` — vendored WDK UI components.
+- `ui/` — vendored WDK UI components, plus `BawaTheme.kt` (Bawa Balanced tokens + theme).
 - `ui/screens/` — 14 screens in `WelcomeScreens.kt`, `PortfolioScreens.kt` and `ManagementScreens.kt`.
-- `ui/WalletViewModel.kt` — in-memory xpub state and UI-only locking.
+- `ui/WalletViewModel.kt` — in-memory xpub state, UI-only locking, navigation back stack, hide-balance toggle.
 - `core/` — pure-Kotlin validation in `ExtendedKeyValidator.kt`; derivation and confirmation policy in `DerivationPolicy.kt`.
 - `MainActivity.kt` — Android entry point.
 

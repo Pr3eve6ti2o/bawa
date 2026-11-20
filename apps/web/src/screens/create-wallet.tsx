@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/components/card';
+import { Checkbox } from '../ui/components/checkbox';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { StepCard } from '../ui/components/step-card';
@@ -36,6 +37,11 @@ function yieldFrame(): Promise<void> {
 }
 
 const MIN_PASSWORD_LENGTH = 8;
+const RISK_CHECKS: readonly string[] = [
+  'My recovery phrase is the only way to recover this wallet. If I lose it, no one can recover it for me. Bawa cannot reset it.',
+  'I will write the 24 words down on paper, in order, and keep them somewhere safe and private.',
+  'I will never photograph, share or store these words digitally, and never type them into any other app or website.',
+];
 const CONFIRM_WORD_COUNT = 3;
 const DISPLAY_ORDER = ['eth', 'btc', 'trx', 'ton'] as const;
 const CHAIN_LABELS: Record<string, string> = {
@@ -78,6 +84,13 @@ export function CreateWalletScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  // Risk check (step 2, Rabby-style): the phrase is generated on password
+  // submit but is NOT rendered until the user has ticked all three
+  // acknowledgements and continued. Reset on every new phrase, so an
+  // acknowledgement never carries over to a different phrase.
+  const [riskChecks, setRiskChecks] = useState<boolean[]>([false, false, false]);
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false);
+  const allRisksChecked = riskChecks.every(Boolean);
 
   useEffect(() => {
     // Preload the engine while the user types. Failure is fine because
@@ -126,6 +139,8 @@ export function CreateWalletScreen() {
         throw new Error('Wallet generation returned an unexpected word count.');
       }
       setMnemonic(generated);
+      setRiskChecks([false, false, false]);
+      setRiskAcknowledged(false);
       setConfirmPositions(pickConfirmPositions(24, CONFIRM_WORD_COUNT));
       setConfirmInputs({});
       setStep(2);
@@ -279,7 +294,7 @@ export function CreateWalletScreen() {
               <StepCard
                 icon={<span>2</span>}
                 label="Write down your recovery phrase"
-                detail="24 words, shown once. Never photograph, share or store them digitally."
+                detail="Shown once, after a short risk check. Never photograph, share or store them digitally."
                 state={step === 2 ? 'active' : step > 2 ? 'completed' : 'pending'}
               />
             </li>
@@ -376,7 +391,73 @@ export function CreateWalletScreen() {
         </Card>
       )}
 
-      {step === 2 && mnemonic !== null && (
+
+      {step === 2 && mnemonic !== null && !riskAcknowledged && (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>Check the risks first</CardTitle>
+            <CardDescription>
+              Your recovery phrase is shown once, on this screen only. Before
+              it appears, confirm you understand these three things.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <fieldset className="space-y-3">
+              <legend className="sr-only">Recovery phrase risks</legend>
+              {RISK_CHECKS.map((text, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <Checkbox
+                    id={`risk-check-${index}`}
+                    checked={riskChecks[index] ?? false}
+                    onCheckedChange={(checked) =>
+                      setRiskChecks((previous) =>
+                        previous.map((value, position) =>
+                          position === index ? checked === true : value,
+                        ),
+                      )
+                    }
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor={`risk-check-${index}`}
+                    className="text-sm font-normal leading-relaxed"
+                  >
+                    {text}
+                  </Label>
+                </div>
+              ))}
+            </fieldset>
+            {!allRisksChecked && (
+              <p className="text-sm text-muted-foreground">
+                Tick all three boxes to continue.
+              </p>
+            )}
+            <Button
+              type="button"
+              disabled={!allRisksChecked}
+              className="h-auto whitespace-normal py-3 text-center"
+              onClick={() => setRiskAcknowledged(true)}
+            >
+              I understand — show my recovery phrase
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto whitespace-normal py-3 text-center"
+              onClick={() => {
+                setMnemonic(null);
+                setRiskChecks([false, false, false]);
+                setRiskAcknowledged(false);
+                setStep(1);
+              }}
+            >
+              Back to password
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === 2 && mnemonic !== null && riskAcknowledged && (
         <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Write down your recovery phrase</CardTitle>

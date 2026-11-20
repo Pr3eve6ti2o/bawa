@@ -5,6 +5,13 @@ package com.bawa.wallet.ui
 // OutlineActionButton, QrCodeImage, ActionCard, AssetRow.
 // REMOVED: SeedWordCell and SeedInputCell — the starter never
 // handles mnemonics. No other behaviour changed.
+//
+// Added in the Phase 2 layout makeover (Bawa originals, not copies):
+// ChainAvatar, FixedBottomActionBar, DetailActionBar.
+//   - FixedBottomActionBar: Rabby Mobile's fixed bottomContainer —
+//     the action row pinned to the bottom of home, no tab bar.
+//   - DetailActionBar: MetaMask's asset-sticky-actions — Send/Receive
+//     pinned to the bottom of the asset detail screen.
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -18,17 +25,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,14 +51,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bawa.wallet.core.Chain
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 
@@ -125,7 +134,7 @@ fun PrimaryButton(title: String, enabled: Boolean = true, onClick: () -> Unit) {
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
+            containerColor = BawaTokens.PrimarySolid,
             disabledContainerColor = Color.Gray
         ),
         modifier = Modifier
@@ -213,6 +222,139 @@ fun ActionCard(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Str
         }
         Spacer(Modifier.height(8.dp))
         Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+// Chain avatar: a tinted circle with the chain's initial. The tint is
+// the chain's standard brand colour (BawaTheme.ChainTint); no logo
+// assets are copied from any wallet.
+@Composable
+fun ChainAvatar(chain: Chain, sizeDp: Int = 42) {
+    Box(
+        modifier = Modifier
+            .size(sizeDp.dp)
+            .clip(CircleShape)
+            .background(ChainTint(chain)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            chain.name.take(1),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
+    }
+}
+
+// Fixed bottom action row (Rabby Mobile bottomContainer pattern):
+// pinned to the bottom of the home screen, above the navigation bar
+// (navigationBarsPadding = safe area / gesture bar). This replaces
+// the web's 5-item bottom nav — Android has no tab bar at all.
+// Screens using it must give their scrolling content bottom padding
+// of at least 96dp so the last row is never hidden under the bar.
+@Composable
+fun FixedBottomActionBar(
+    onSend: () -> Unit,
+    onReceive: () -> Unit,
+    onActivity: () -> Unit,
+    enabled: Boolean = true
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline)
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        FilledTonalButton(
+            onClick = onSend,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = BawaTokens.PrimarySolid,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.weight(1f).height(48.dp)
+        ) {
+            Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Send", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        FilledTonalButton(
+            onClick = onReceive,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = BawaTokens.PrimarySolid,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.weight(1f).height(48.dp)
+        ) {
+            Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Receive", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        OutlinedButton(
+            onClick = onActivity,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.weight(1f).height(48.dp)
+        ) {
+            Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Activity", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+// Sticky Send/Receive row for the asset detail screen (MetaMask
+// asset-sticky-actions pattern): the two actions stay reachable
+// without scrolling back to the top.
+@Composable
+fun DetailActionBar(
+    onSend: () -> Unit,
+    onReceive: () -> Unit,
+    enabled: Boolean = true
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline)
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        FilledTonalButton(
+            onClick = onSend,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = BawaTokens.PrimarySolid,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.weight(1f).height(48.dp)
+        ) {
+            Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Send", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        FilledTonalButton(
+            onClick = onReceive,
+            enabled = enabled,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = BawaTokens.PrimarySolid,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.weight(1f).height(48.dp)
+        ) {
+            Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Receive", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 

@@ -65,18 +65,18 @@ function directionLabel(direction: string): string {
 const GENESIS_BTC_HASH =
   'f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16';
 
-// Guidance shown at the bottom of the page so the lower half is never
-// empty dark space. Restyled from Sol's emitted draft to use the app's
-// own panel tokens and Button component.
+// Guidance below the lookup form, collapsed by default (Phase 2, Lane D):
+// the lookup is the job of this screen, so the tool comes first and the
+// help sits behind one tap — a native details/summary, so it stays
+// keyboard-accessible with no extra state. The content is unchanged:
+// three steps, what a result shows, and the genesis-coinbase example
+// with its live lookup button.
 function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   return (
-    <section
-      aria-labelledby="track-guide-heading"
-      className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6"
-    >
-      <h2 id="track-guide-heading" className="text-xl font-semibold text-panel-text">
+    <details className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6">
+      <summary className="cursor-pointer text-xl font-semibold text-panel-text">
         How tracking works
-      </h2>
+      </summary>
 
       <div className="mt-5 grid gap-6 md:grid-cols-2">
         <ol className="list-decimal space-y-2 pl-5 text-sm text-panel-text-muted">
@@ -120,7 +120,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
           Look up this example
         </Button>
       </div>
-    </section>
+    </details>
   );
 }
 

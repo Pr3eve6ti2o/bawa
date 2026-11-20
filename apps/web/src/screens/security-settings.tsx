@@ -102,6 +102,9 @@ export function SecuritySettingsScreen() {
           <p className="max-w-[75ch] text-sm text-muted-foreground">
             Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach — anyone with the phrase can take the funds.
           </p>
+          <p className="max-w-[75ch] text-sm text-muted-foreground">
+            Back up first: this wallet shows no receiving address — and cannot receive funds — until you have written down your recovery phrase.
+          </p>
           <Link
             to="/mnemonic-backup"
             className="inline-block text-sm font-medium text-primary underline underline-offset-4"

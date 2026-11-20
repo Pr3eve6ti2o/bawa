@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
-import { availableFor, chainConfig } from '../wallet/chains';
+import { availableFor, chainConfig, type ChainId } from '../wallet/chains';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
+import { TokenLogo } from './token-logo';
 
 export function ReceiveScreen() {
   const { addresses, vaultAddresses, selectedChain, setSelectedChain } = useWallet();
@@ -17,6 +18,37 @@ export function ReceiveScreen() {
 
   const chains = availableFor('receive');
   const chain = chains.includes(selectedChain) ? selectedChain : chains[0];
+
+  // One address per network (Phase 2, Lane D — Phantom/OKX pattern): the
+  // vault address first, falling back to the watch-only imported address
+  // for that chain, exactly as the single-chain view did before.
+  function addressFor(candidate: ChainId): {
+    address: string | undefined;
+    watchOnly: boolean;
+  } {
+    const vault = vaultAddresses[candidate][0];
+    if (vault) return { address: vault, watchOnly: false };
+    const watched = addresses[candidate].find((entry) => entry.index === 0)?.address;
+    return watched ? { address: watched, watchOnly: true } : { address: undefined, watchOnly: false };
+  }
+
+  function selectChain(next: ChainId): void {
+    setCopyStatus('');
+    setAmount('');
+    setSelectedChain(next);
+  }
+
+  async function copyAddressFor(candidate: ChainId): Promise<void> {
+    const entry = addressFor(candidate);
+    if (!entry.address) return;
+    setCopyStatus('');
+    try {
+      await navigator.clipboard.writeText(entry.address);
+      setCopyStatus(`Copied ${chainConfig(candidate).displayName} address.`);
+    } catch {
+      setCopyStatus('Unable to copy the address. Please copy it manually.');
+    }
+  }
 
   const vaultAddress = chain ? vaultAddresses[chain][0] : undefined;
   const watchAddress = chain
@@ -97,27 +129,63 @@ export function ReceiveScreen() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Receive</h1>
 
-      <div role="group" aria-label="Receiving chain" className="flex flex-wrap gap-2">
-        {chains.map((available) => (
-          <button
-            key={available}
-            type="button"
-            aria-pressed={chain === available}
-            onClick={() => {
-              setCopyStatus('');
-              setAmount('');
-              setSelectedChain(available);
-            }}
-            className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              chain === available
-                ? 'bg-primary-solid text-primary-foreground'
-                : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {chainConfig(available).symbol}
-          </button>
-        ))}
-      </div>
+      <section aria-labelledby="receive-addresses-heading" className="space-y-3">
+        <h2 id="receive-addresses-heading" className="text-lg font-semibold">
+          Your addresses
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          One address per network. Choose a network to see its QR code.
+        </p>
+        <ul className="space-y-2">
+          {chains.map((available) => {
+            const entry = addressFor(available);
+            const listConfig = chainConfig(available);
+            const selected = available === chain;
+            return (
+              <li
+                key={available}
+                className={`flex items-center gap-3 rounded-xl border p-3 ${
+                  selected ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                }`}
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => selectChain(available)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <TokenLogo symbol={listConfig.symbol} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold">
+                      {listConfig.displayName} · {listConfig.symbol}
+                    </span>
+                    {entry.address ? (
+                      <span className="block break-all font-mono text-sm text-muted-foreground">
+                        {entry.address}
+                      </span>
+                    ) : (
+                      <span className="block text-sm text-muted-foreground">No address yet</span>
+                    )}
+                    {entry.watchOnly && (
+                      <span className="block text-sm text-muted-foreground">Watch-only</span>
+                    )}
+                  </span>
+                </button>
+                {entry.address && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={`Copy ${listConfig.displayName} address`}
+                    onClick={() => void copyAddressFor(available)}
+                  >
+                    Copy
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <Alert>
         <AlertDescription>

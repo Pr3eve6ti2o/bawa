@@ -3,11 +3,18 @@
 // recipient, amount, network fee and total — all real, from the adapter —
 // and the broadcast-disabled reason. The only action is "Sign offline";
 // there is no broadcast button.
+// Phase 2, Lane D: Rabby-style risk rows (catalogue STYLE-03) — the review
+// now states the network and the sending account explicitly, before the
+// recipient, so the three facts a signer must check are all in the list.
+// Only data the caller already has is shown; no risk score is invented.
+// `from` is optional so existing callers keep working unchanged.
 import { Button } from '../ui/components/button';
 
 export type SendReviewProps = {
   chainName: string;
   symbol: string;
+  /** Sending account, when the caller knows it. Shown as the From row. */
+  from?: string;
   recipient: string;
   amount: string;
   fee: string;
@@ -21,6 +28,7 @@ export type SendReviewProps = {
 export function SendReview({
   chainName,
   symbol,
+  from,
   recipient,
   amount,
   fee,
@@ -40,13 +48,29 @@ export function SendReview({
           Review send
         </h1>
         <p className="text-sm text-muted-foreground">
-          {`${chainName} · ${symbol}`}
+          Check each row carefully before signing.
         </p>
       </header>
 
       <div className="rounded-xl border border-border p-4">
         <dl className="divide-y divide-border">
           <div className="flex items-start justify-between gap-4 pb-4">
+            <dt className="shrink-0 text-sm text-muted-foreground">Network</dt>
+            <dd className="min-w-0 break-words text-right text-sm">
+              {chainName} · {symbol}
+            </dd>
+          </div>
+
+          {from && (
+            <div className="flex items-start justify-between gap-4 py-4">
+              <dt className="shrink-0 text-sm text-muted-foreground">From</dt>
+              <dd className="min-w-0 break-all text-right font-mono text-sm">
+                {from}
+              </dd>
+            </div>
+          )}
+
+          <div className="flex items-start justify-between gap-4 py-4">
             <dt className="shrink-0 text-sm text-muted-foreground">Recipient</dt>
             <dd className="min-w-0 break-all text-right text-sm">
               {recipient}

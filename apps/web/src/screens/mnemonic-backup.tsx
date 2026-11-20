@@ -63,6 +63,10 @@ export function MnemonicBackupScreen() {
                 offline in two places.
               </p>
               <p className="text-sm leading-relaxed">
+                If you lose these words, the wallet cannot be recovered —
+                Bawa cannot reset your recovery phrase.
+              </p>
+              <p className="text-sm leading-relaxed">
                 Never photograph the words, share them or paste them into any
                 app or website.
               </p>
