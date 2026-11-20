@@ -1,3 +1,9 @@
+// Engine facade contract: typed validation results, address strings, booleans,
+// and the ready-gate cross this boundary. Embind handles, CoinType values, and
+// protobuf codecs stay inside this file.
+// loadCore remains the transitional raw escape hatch for wallet/core.ts and
+// wallet/send.ts until their signer migration moves them onto facade operations.
+// No new raw-core consumers.
 import { initWasm } from '@trustwallet/wallet-core';
 import type { TonAddressValidation } from '@bawa/contracts';
 
@@ -46,10 +52,8 @@ let engineReady = false;
 
 export function loadCore(): Promise<WalletCore> {
   if (wasmPromise === undefined) {
-    // F-40: a rejected initialisation must not poison the cache for the
-    // page lifetime. Clear the cached promise on rejection (only if it
-    // is still the same promise) so a later call retries; in-flight and
-    // successful initialisation stay cached.
+    // F-40: In-flight loadCore() calls share one init attempt, and failures are surfaced without retrying within a call.
+    // Rejected promises are evicted so a subsequent call starts a fresh attempt; success stays cached for the page lifetime.
     const promise = (async () => {
       // No options: the wallet-core 4.9.3 Emscripten build rejects both
       // locateFile and wasmBinary (not in INCOMING_MODULE_JS_API). It
@@ -449,6 +453,45 @@ export async function validateWatchOnlyImport(
   return validateAccountKey(value, chain);
 }
 
+function coinTypeForChain(core: WalletCore, chain: Exclude<ChainId, 'ton'>) {
+  switch (chain) {
+    case 'btc':
+      return core.CoinType.bitcoin;
+    case 'eth':
+      return core.CoinType.ethereum;
+    case 'trx':
+      return core.CoinType.tron;
+    default:
+      throw new Error('unsupported chain for WASM coin mapping: ' + chain);
+  }
+}
+
+function deriveAddressWithCore(
+  core: WalletCore,
+  chain: Exclude<ChainId, 'ton'>,
+  key: string,
+  path: string,
+): { address: string; valid: boolean } {
+  const coin = coinTypeForChain(core, chain);
+  const pubkey = core.HDWallet.getPublicKeyFromExtended(key, coin, path);
+
+  if (pubkey === null || pubkey === undefined) {
+    throw new Error('engine returned no public key');
+  }
+
+  try {
+    const address = core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey);
+    if (!address) {
+      throw new Error('engine returned an empty address');
+    }
+
+    const valid = core.CoinTypeExt.validate(coin, address);
+    return { address, valid };
+  } finally {
+    pubkey.delete();
+  }
+}
+
 export async function deriveAddress(
   chain: ChainId,
   xpub: string,
@@ -482,20 +525,8 @@ export async function deriveAddress(
 
   try {
     const core = await loadCore();
-    const coin = {
-      btc: core.CoinType.bitcoin,
-      eth: core.CoinType.ethereum,
-      trx: core.CoinType.tron,
-    }[chain];
     const path = `${DERIVATION_PREFIXES[chain]}/${index}`;
-
-    const pubkey = core.HDWallet.getPublicKeyFromExtended(key, coin, path);
-    try {
-      address = core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey);
-      valid = core.CoinTypeExt.validate(coin, address);
-    } finally {
-      pubkey.delete();
-    }
+    ({ address, valid } = deriveAddressWithCore(core, chain, key, path));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error('derivation failed: ' + message);
@@ -531,6 +562,20 @@ export async function deriveAddresses(
   return addresses;
 }
 
-export function isEngineReady(): boolean {
+export function engineIsReady(): boolean {
   return engineReady;
+}
+
+export async function engineWaitReady(): Promise<boolean> {
+  try {
+    await loadCore();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Compatibility alias retained because an existing test file imports isEngineReady.
+export function isEngineReady(): boolean {
+  return engineIsReady();
 }
