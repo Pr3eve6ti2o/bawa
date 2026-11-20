@@ -17,6 +17,7 @@ import { formatFeePreview } from '../wallet/money';
 import {
   validateRecipient,
   previewSendAmount,
+  simulateSend,
   signEthOffline,
   signBtcOffline,
   signTrxOffline,
@@ -34,6 +35,20 @@ import type { ChainId } from '../engine/boundary';
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 type Step = 'recipient' | 'amount' | 'review' | 'result';
+
+export const SEND_APPROVAL_STAGES = [
+  'review',
+  'simulating',
+  'signing',
+  'signed',
+  'broadcast-disabled',
+] as const;
+
+export type SendApprovalStage = (typeof SEND_APPROVAL_STAGES)[number];
+
+export function canStartSigning(stage: SendApprovalStage): boolean {
+  return stage === 'review';
+}
 
 type SignState =
   | { status: 'idle' }
@@ -65,6 +80,7 @@ export function SendScreen() {
   const [preview, setPreview] = useState<SendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
+  const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
   const [copied, setCopied] = useState(false);
 
   const from = vaultAddresses[chain][0] ?? '';
@@ -127,6 +143,7 @@ export function SendScreen() {
   }
 
   async function handleSign(): Promise<void> {
+    if (approvalStage === 'simulating' || approvalStage === 'signing') return;
     if (vaultState !== 'unlocked') {
       setSignState({
         status: 'error',
@@ -142,6 +159,15 @@ export function SendScreen() {
       return;
     }
     const previewOk = preview;
+    setApprovalStage('simulating');
+    const simulation = await simulateSend(chain, from, recipient, amount);
+    if (!simulation.ok) {
+      setSignState({ status: 'error', reason: simulation.reason });
+      setApprovalStage('review');
+      return;
+    }
+
+    setApprovalStage('signing');
     setSignState({ status: 'signing' });
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
@@ -249,13 +275,16 @@ export function SendScreen() {
         payload: signed.payload,
         payloadLabel: signed.payloadLabel,
       });
+      setApprovalStage('signed');
       setStep('result');
+      setApprovalStage('broadcast-disabled');
     } catch (error: unknown) {
       setSignState({
         status: 'error',
         reason:
           error instanceof Error ? error.message : 'Signing failed.',
       });
+      setApprovalStage('review');
     }
   }
 
