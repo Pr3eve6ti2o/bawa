@@ -22,6 +22,10 @@ const btcZpub =
 const ETH_VECTOR_MNEMONIC =
   'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
 const ETH_VECTOR_ADDRESS = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+// BIP-39 seed of ETH_VECTOR_MNEMONIC with passphrase "TREZOR"
+// (PBKDF2-HMAC-SHA512, 2048 rounds, salt "mnemonicTREZOR").
+const ETH_VECTOR_SEED_HEX =
+  '7ae6f661157bda6492f6162701e570097fc726b6235011ea5ad09bf04986731ed4d92bc43cbdee047b60ea0dd1b1fa4274377c9bf5bd14ab1982c272d8076f29';
 
 describe('wallet/core', () => {
   it('creates a fresh 24-word mnemonic from CSPRNG entropy', async () => {
@@ -243,4 +247,62 @@ describe('wallet/core', () => {
     expect(captured).toBeDefined();
     expect(captured!.every((value) => value === 0)).toBe(true);
   });
+});
+
+describe('seed-to-xprv: Bitcoin BIP-44 account keys, not master keys', () => {
+  const vectors = [
+    {
+      // Public test vector: Trezor python-mnemonic, vectors.json, English[0] (MIT).
+      // https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+      name: 'Trezor English[0]',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      seedHex:
+        'c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04',
+      accountXprv:
+        'xprv9z3rKW6EbJfnxwVmsXBRWABiT5Zfh37GsqTXrcdaMssUntP2wumTtqKxSkZsytaxQZknwAhb3U8UR5cc3cxoMxdo4871tPPCTmeqckJyrWL',
+      masterXprv:
+        'xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF',
+    },
+    {
+      name: 'existing public ETH vector',
+      mnemonic: ETH_VECTOR_MNEMONIC,
+      seedHex: ETH_VECTOR_SEED_HEX,
+      accountXprv:
+        'xprv9yxpr2jZR35N6RHqgKAv2HCg1FnBvnSEgTi6ywrQSXkpVdUC2PmDLUMyK8GcEK2ca6i9ujqmnh5coVg9Mu9in194c5KYsG1KJzspxBYTmds',
+      masterXprv:
+        'xprv9s21ZrQH143K3Z5LVjLkoHSa1bsnRiMAGwPBwcL45YuU98ku7wcsaq72fC15FHnZRuZm1QY6r3azFttpb2CZxwJZqS3fZz5TerqqT7DvnBv',
+    },
+  ] as const;
+
+  for (const vector of vectors) {
+    it(
+      `${vector.name}: seed matches; account xprv at m/44'/0'/0' matches and is not the master xprv`,
+      async () => {
+        const core = await loadCore();
+        const wallet = core.HDWallet.createWithMnemonic(
+          vector.mnemonic,
+          'TREZOR',
+        );
+
+        try {
+          expect(Buffer.from(wallet.seed()).toString('hex')).toBe(
+            vector.seedHex,
+          );
+
+          // Wallet Core 4.9.3 returns the account key, not the master key.
+          const accountXprv = wallet.getExtendedPrivateKey(
+            core.Purpose.bip44,
+            core.CoinType.bitcoin,
+            core.HDVersion.xprv,
+          );
+
+          expect(accountXprv).toBe(vector.accountXprv);
+          expect(accountXprv).not.toBe(vector.masterXprv);
+        } finally {
+          wallet.delete();
+        }
+      },
+    );
+  }
 });
