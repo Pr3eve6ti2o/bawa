@@ -20,6 +20,7 @@ Reference.
 
 - [Trust Wallet Core registry](#trust-wallet-core-registry)
 - [Bawa's four chains in the registry](#bawas-four-chains-in-the-registry)
+- [Bawa's own chain support](#bawas-own-chain-support)
 - [Testnet and the registry](#testnet-and-the-registry)
 - [Cosmos Chain Registry](#cosmos-chain-registry)
 - [Trust Wallet Assets](#trust-wallet-assets)
@@ -164,6 +165,72 @@ The fixture below uses the published 15-word ripple test vector with an empty pa
 The wallet ID was the missing configuration parameter: Wallet V4 R2 with wallet ID `0` gives a different address. The value `698983191` is this fixture's configuration, not a universal TON default.
 
 The `UQC7…` form is a mainnet presentation, not a testnet address. Use the labelled testnet forms when referring to this fixture on testnet.
+
+## Bawa's own chain support
+
+This section is about Bawa's own registry (`registry/capabilities.json`,
+`chainSupport`) and `apps/web/src/wallet/chains.ts` — not the upstream Trust
+Wallet Core registry described above. Statuses are `IMPLEMENTED_AND_VERIFIED`,
+`DOCUMENTED_NOT_TESTED` or `NOT_SUPPORTED`, as recorded in
+`registry/capabilities.json`. The ten operations are: create, derive, restore,
+receive, balance, history, fee-quote, plan-transfer, local-sign,
+verify-signature.
+
+```mermaid
+flowchart TB
+    accTitle: Bawa chain support overview
+    accDescr: adopt-proper supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested. panel-rebuild/multichain-create includes the same four chains plus nine derive-only additions, with create, derive, restore and receive verified and the remaining six operations unsupported.
+
+    S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
+
+    A["adopt-proper<br/>4 chains"]
+    M["panel-rebuild/multichain-create<br/>13 chains: same 4 + 9 added"]
+
+    F["Fully verified: BTC / ETH / TRX<br/>All 10 operations: IMPLEMENTED_AND_VERIFIED"]
+
+    T["Partially verified: TON<br/>DOCUMENTED_NOT_TESTED: fee-quote, verify-signature<br/>IMPLEMENTED_AND_VERIFIED: other 8 operations"]
+
+    D["Derive-only: 9 added chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge)<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive<br/>NOT_SUPPORTED: balance, history, fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
+
+    S --> A
+    S --> M
+    A --> F
+    A --> T
+    M -->|"same baseline"| F
+    M -->|"same baseline"| T
+    M --> D
+```
+
+Derivation paths below are Bawa's pinned `pathFor` values
+(`apps/web/src/wallet/chains.ts`; `a` = account, `i` = index). TON and SOL
+are single-address: their paths ignore account and index. The six EVM chains
+(BSC, Polygon, Arbitrum, OP, Base, Avalanche) all use coin type 60, the same
+path shape as ETH — they are distinct chains that share a derivation scheme,
+not the same chain.
+
+| Chain | Derivation path | adopt-proper (4 chains) | panel-rebuild/multichain-create (13 chains) |
+| --- | --- | --- | --- |
+| Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
+| Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
+| TRON (trx) | `m/44'/195'/a'/0/i` | Fully verified (10/10) | Same as adopt-proper |
+| TON (ton) | `m/44'/607'/0'` (one address) | Partial: fee-quote, verify-signature `DOCUMENTED_NOT_TESTED`; other 8 verified | Same as adopt-proper |
+| Solana (sol) | `m/44'/501'/0'` (one address) | Not present | Derive-only |
+| BNB Smart Chain (bsc) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| Polygon (matic) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| Arbitrum One (arb) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| OP Mainnet (op) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| Base (base) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| Avalanche C-Chain (avax) | `m/44'/60'/a'/0/i` | Not present | Derive-only |
+| Litecoin (ltc) | `m/84'/2'/a'/0/i` | Not present | Derive-only |
+| Dogecoin (doge) | `m/44'/3'/a'/0/i` | Not present | Derive-only |
+
+- **Fully verified** = all 10 operations `IMPLEMENTED_AND_VERIFIED`.
+- **Derive-only** = create, derive, restore, receive
+  `IMPLEMENTED_AND_VERIFIED`; balance, history, fee-quote, plan-transfer,
+  local-sign, verify-signature `NOT_SUPPORTED`. A derive-only chain has no
+  balance, history or signing support in the repo — do not present it as a
+  working wallet chain.
+- No broadcast exists for any chain in the repo.
 
 ## Testnet and the registry
 

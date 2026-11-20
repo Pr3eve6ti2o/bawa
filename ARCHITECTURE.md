@@ -2,7 +2,50 @@
 
 This is the code map for Bawa on the `panel-rebuild/adopt-proper` line (base commit `e493720`). Read it alongside `README.md` and `CONTRIBUTING.md`.
 
+Branch state described here: `panel-rebuild/adopt-proper`. The wallet is 4 chains (BTC, ETH, TRX, TON). The 13-chain registry lives on `panel-rebuild/multichain-create` — see the chain diagram in `docs/12-chain-registry-and-assets/README.md`.
+
 The builder routes requests through `ai/` and selects from `registry/`. Build and check entry points live in `scripts/`. The starters under `apps/` are deployables; wallet generation and recovery are separate offline tools under `tools/`.
+
+## Repository architecture
+
+```mermaid
+flowchart TB
+    accTitle: Bawa wallet-builder repository architecture
+    accDescr: ai/ classifies requests into seven profiles. scripts/build-wallet.mjs selects only registry-defined stacks, then generates, verifies and reports. scripts/generate-project.mjs scaffolds generated/<profile-id>. apps/web alone consumes packages/contracts. Secrets never cross from offline generation or the web vault into watch-only or public network layers. Web broadcast is disabled; Android has neither signing nor broadcast.
+
+    ai["ai/<br/>Request routing and prompts<br/>Classifies requests into 1 of 7 profiles"]
+    registry["registry/<br/>Machine-readable JSON: profiles.json (7 profiles),<br/>capabilities.json, engines.json, ui.json<br/>Builder selects from these; never invents a stack"]
+    build["scripts/build-wallet.mjs<br/>One prompt: classify → generate → verify → report"]
+    generate["scripts/generate-project.mjs<br/>Project scaffolding"]
+    output["generated/&lt;profile-id&gt;<br/>Scaffolded project"]
+    contracts["packages/contracts<br/>TypeScript contracts<br/>Consumed by apps/web only"]
+    android["apps/android<br/>Kotlin + Compose; watch-only<br/>No signing; no broadcast"]
+    docs["docs/<br/>Guides 01–16 + mainnet docs"]
+
+    subgraph secretBoundary["tools/ + apps/web vault — TRUST BOUNDARY<br/>Mnemonic, seed and private keys never enter apps/android or public network layers"]
+        web["apps/web<br/>React 19 + Vite; BTC, ETH, TRX, TON<br/>In-browser generation: Trust Wallet Core 4.9.3<br/>Vault: PBKDF2 + AES-GCM-256 in localStorage<br/>Offline signing; broadcast DISABLED<br/>broadcastSigned returns status disabled"]
+
+        subgraph offlineTools["tools/ — offline, TTY-gated"]
+            hd["tools/hdwallet-gen<br/>Node; wallet-core 4.9.3<br/>derive.js, generate.js, compare.js,<br/>extended-key.js, derive-ton.js"]
+            make["tools/make_wallet.py<br/>Python; bip-utils"]
+            decrypt["tools/decrypt_seed.py<br/>Python; bip-utils"]
+        end
+    end
+
+    ai --> build
+    registry --> build
+    build --> generate
+    generate --> output
+    contracts --> web
+```
+
+The trust boundary is the point of the diagram: everything inside the
+`secretBoundary` subgraph holds secrets; `apps/android` and the public network
+layers never receive them. The web wallet's component diagram (screens, state,
+vault, core, adapters) is in `docs/13-wallet-app-architecture/README.md`; the
+build flow (request → classify → plan → generate) is in
+`ai/request-routing.md`; chain support is in
+`docs/12-chain-registry-and-assets/README.md`.
 
 ## Code map
 
@@ -101,3 +144,12 @@ Request routing and prompts for the builder live here. Read them with `WALLET_BU
 | Entry, contribution or repository instructions | `README.md`, `CONTRIBUTING.md`, `AGENTS.md` |
 
 Update this map when components, boundaries or invariants change—not for every implementation edit.
+
+## Change notes
+
+- 2026-11-20 (Lane D, repo-organisation programme; merged into
+  `panel-rebuild/adopt-proper` by Lane B): added the repository
+  architecture diagram; fixed the stale "on `feature/ai-wallet-builder`"
+  branch line; added pointers to the web-wallet component diagram, the build
+  flow diagram and the chain diagram. No component, boundary or invariant
+  changed.
