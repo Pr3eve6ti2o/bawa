@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
 import json
 import os
 import re
+import secrets
 import shutil
 import stat
 import subprocess
@@ -195,6 +197,40 @@ def assert_bundle_decrypts(bundle_path, data_key) -> str:
     return text
 
 
+@contextlib.contextmanager
+def _data_key_pipe(data_key):
+    """Yield the read end of an anonymous pipe pre-filled with the data key.
+
+    Ported from the panel branch (adopt-proper): the wrapper generates the
+    data key so it can independently verify the bundle afterwards, and the
+    key reaches the generator over an inherited anonymous pipe
+    (BAWA_DATA_KEY_FD), never the environment — a key in the child's
+    environment is visible in /proc/<pid>/environ to same-user processes,
+    and the hex-string copies cannot be zeroed. The write end is closed
+    before yielding, and the read end is closed on EVERY exit path — a
+    failed or short write, an exception in the caller, or normal return —
+    so no failure between pipe creation and the child spawn can leak the
+    read descriptor with unread key bytes. The caller passes the yielded
+    fd via pass_fds; that alone makes it inheritable in the child, so no
+    os.set_inheritable call is needed. A short write raises instead of
+    silently handing the child a truncated key.
+    """
+    key_r, key_w = os.pipe()
+    try:
+        try:
+            written = os.write(key_w, bytes(data_key))
+        finally:
+            os.close(key_w)
+        if written != len(data_key):
+            raise SystemExit("data-key pipe write incomplete")
+        yield key_r
+    finally:
+        try:
+            os.close(key_r)
+        except OSError:
+            pass
+
+
 def main() -> None:
     force = "--force" in sys.argv or "--regenerate" in sys.argv
     raw_secrets = os.path.expanduser(
@@ -232,35 +268,69 @@ def main() -> None:
         flush=True,
     )
 
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=os.environ.copy(),
-    )
-    if proc.returncode != 0:
-        raise SystemExit("wallet-core generation failed; stderr suppressed")
+    # The wrapper generates the data key so it can independently verify
+    # the bundle afterwards. The key reaches the generator over an
+    # inherited anonymous pipe (BAWA_DATA_KEY_FD), never the environment:
+    # a key in the child's environment is visible in /proc/<pid>/environ
+    # to same-user processes, and the hex-string copies cannot be zeroed.
+    # The key is written into the pipe before spawn (32 bytes fits the
+    # pipe buffer) and the write end is closed in the parent; the child
+    # reads exactly 32 bytes and closes its read end. The outer finally
+    # zeroes the wrapper's copy on every path after this point — a
+    # generator failure, malformed stdout, failed check or scan error
+    # must not skip the wipe. The key is a secret in memory only: it is
+    # never logged, never written to a file, never persisted, and never
+    # appears in captured stdout or test output.
+    data_key = bytearray(secrets.token_bytes(32))
+    try:
+        with _data_key_pipe(data_key) as key_r:
+            child_env = os.environ.copy()
+            child_env.pop("BAWA_DATA_KEY_HEX", None)
+            child_env["BAWA_DATA_KEY_FD"] = str(key_r)
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env=child_env,
+                pass_fds=(key_r,),
+            )
+            if proc.returncode != 0:
+                raise SystemExit("wallet-core generation failed; stderr suppressed")
 
-    data = json.loads(proc.stdout)
-    assertBundleVerified(data)
-    if _contains_seed_material(data):
-        raise SystemExit("H4 violation: seed material present in generator stdout")
+            try:
+                data = json.loads(proc.stdout)
+            except json.JSONDecodeError:
+                raise SystemExit("generator stdout malformed: invalid JSON") from None
+            assertBundleVerified(data)
+            if _contains_seed_material(data):
+                raise SystemExit("H4 violation: seed material present in generator stdout")
 
-    failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
-    if failed:
-        raise SystemExit(f"wallet-core self-checks failed: {failed}")
+            failed = [check["name"] for check in data.get("checks", []) if not check.get("ok")]
+            if failed:
+                raise SystemExit(f"wallet-core self-checks failed: {failed}")
 
-    reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
-    if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
-        raise SystemExit("seed bundle path outside configured secrets directory")
-    if not os.path.isfile(reported):
-        raise SystemExit("seed bundle missing")
+            reported = os.path.realpath(data.get("seed_encrypted_to") or seed_path)
+            if reported != secrets_dir and not reported.startswith(secrets_dir + os.sep):
+                raise SystemExit("seed bundle path outside configured secrets directory")
+            if not os.path.isfile(reported):
+                raise SystemExit("seed bundle missing")
 
-    nonce, ciphertext, mode = _parse_seed_bundle(reported)
-    del nonce, ciphertext
-    if mode != 0o600:
-        raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
+            nonce, ciphertext, mode = _parse_seed_bundle(reported)
+            del nonce, ciphertext
+            if mode != 0o600:
+                raise SystemExit(f"seed bundle must be 0600, got {oct(mode)}")
+
+            # Independent proof: decrypt the final bundle with the
+            # wrapper-held key and validate the plaintext as a BIP-39
+            # mnemonic. The generator's bundle_verified flag above is
+            # status, not proof. The returned mnemonic is dropped
+            # immediately; it is never logged or persisted.
+            mnemonic = assert_bundle_decrypts(reported, data_key)
+            del mnemonic  # plaintext no longer needed; drop the reference
+    finally:
+        for i in range(len(data_key)):
+            data_key[i] = 0
 
     raw_bundle = os.path.expanduser(
         os.environ.get("BAWA_BACKUP_DIR", os.path.join(BASE, "seed-backup"))

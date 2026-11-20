@@ -1216,6 +1216,47 @@ Module._load = function (request, parent, isMain) {
     );
   }
 
+  // 12. Data-key pipe: generate.js readDataKeyFromFd checks.
+  // The wrapper (tools/make_wallet.py) hands the data key to the
+  // generator over an inherited anonymous pipe (BAWA_DATA_KEY_FD).
+  {
+    const { readDataKeyFromFd } =
+      require(path.join(TOOLS_DIR, "generate.js"));
+    check("readDataKeyFromFd is exported", typeof readDataKeyFromFd === "function");
+    const keyDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "auditfix-fdkey-"));
+    try {
+      const keyFile = path.join(keyDir, "key.bin");
+      const keyBytes = crypto.randomBytes(32);
+      fs.writeFileSync(keyFile, keyBytes);
+      const fd = fs.openSync(keyFile, "r");
+      // readDataKeyFromFd closes the descriptor itself, on every path —
+      // the caller must not close it again.
+      check("readDataKeyFromFd: reads exactly 32 bytes",
+        Buffer.compare(readDataKeyFromFd(fd), keyBytes) === 0);
+      check("readDataKeyFromFd: closes the descriptor on success", (() => {
+        try { fs.fstatSync(fd); return false; } catch { return true; }
+      })());
+      const shortFile = path.join(keyDir, "short.bin");
+      fs.writeFileSync(shortFile, crypto.randomBytes(10));
+      const shortFd = fs.openSync(shortFile, "r");
+      let threw = false;
+      try {
+        readDataKeyFromFd(shortFd);
+      } catch {
+        threw = true;
+      }
+      check("readDataKeyFromFd: short read throws", threw === true);
+      check("readDataKeyFromFd: closes the descriptor on short read", (() => {
+        try { fs.fstatSync(shortFd); return false; } catch { return true; }
+      })());
+      check("readDataKeyFromFd: non-numeric fd throws", (() => {
+        try { readDataKeyFromFd("x"); return false; } catch { return true; }
+      })());
+    } finally {
+      fs.rmSync(keyDir, { recursive: true, force: true });
+    }
+  }
+
   if (failures > 0) {
     console.log(`SMOKE TESTS FAILED: ${failures} failure(s)`);
     process.exit(1);

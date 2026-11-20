@@ -47,6 +47,38 @@ function verifySeedBundle(bundlePath, dataKey, expectedMnemonic) {
   }
 }
 
+// Read exactly 32 raw key bytes from an inherited file descriptor
+// (the make_wallet.py pipe handoff). Throws on EOF, short reads, or a
+// non-numeric descriptor. The descriptor is single-use and is closed
+// here on EVERY path, including a failed read — the caller must not
+// close it again.
+function readDataKeyFromFd(fd) {
+  if (!Number.isInteger(fd) || fd < 0) {
+    throw new Error("BAWA_DATA_KEY_FD must be a file descriptor number");
+  }
+  let buf;
+  try {
+    buf = Buffer.alloc(32);
+    let off = 0;
+    while (off < 32) {
+      const n = fs.readSync(fd, buf, off, 32 - off, null);
+      if (n === 0) throw new Error("BAWA_DATA_KEY_FD: unexpected EOF");
+      off += n;
+    }
+    return buf;
+  } catch (err) {
+    // Wipe any key bytes received before the failure.
+    if (buf !== undefined) buf.fill(0);
+    throw err;
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {
+      // A close failure is not fatal; the read result (or throw) stands.
+    }
+  }
+}
+
 async function main() {
   let tty;
   try {
@@ -171,7 +203,26 @@ async function main() {
   // data-key display strings (immutable JS strings, plus split()/toString()
   // copies). Secret-string copies stay at the confirmation minimum: one hex
   // display and one first-word comparison.
-  const dataKey = crypto.randomBytes(32);
+  // The wrapper may supply the data key over an inherited pipe
+  // (BAWA_DATA_KEY_FD) so it can independently verify the bundle
+  // afterwards. A directly-run generator still generates a fresh key.
+  // A supplied key must be exactly 32 raw bytes (fd). The key is never
+  // taken from the environment: a key in the process environment is
+  // visible in /proc/<pid>/environ to same-user processes.
+  const dataKey = (() => {
+    const fdRaw = process.env.BAWA_DATA_KEY_FD;
+    if (fdRaw !== undefined) {
+      if (!/^\d+$/.test(fdRaw)) {
+        throw new Error(
+          "BAWA_DATA_KEY_FD must be a file descriptor number"
+        );
+      }
+      const fd = Number(fdRaw);
+      // readDataKeyFromFd closes the descriptor on every path.
+      return readDataKeyFromFd(fd);
+    }
+    return crypto.randomBytes(32);
+  })();
   try {
     const nonce = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", dataKey, nonce);
@@ -282,4 +333,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { verifySeedBundle };
+module.exports = { verifySeedBundle, readDataKeyFromFd };
