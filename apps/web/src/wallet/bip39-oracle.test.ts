@@ -165,6 +165,27 @@ const VECTORS = [
     seed:
       '26e975ec644423f4a4c4f4215ef09b4bd7ef924e85d1d17c4cf3f136c2863cf6df0a475045652c57eb5fb41513ca2a2d67722b77e954b4b3fc11f7590449191d',
   },
+  {
+    entropy: 'f30f8c1da665478f49b001d94c5fc452',
+    mnemonic:
+      'vessel ladder alter error federal sibling chat ability sun glass valve picture',
+    seed:
+      '2aaa9242daafcee6aa9d7269f17d4efe271e1b9a529178d7dc139cd18747090bf9d60295d0ce74309a78852a9caadf0af48aae1c6253839624076224374bc63f',
+  },
+  {
+    entropy: 'c10ec20dc3cd9f652c7fac2f1230f7a3c828389a14392f05',
+    mnemonic:
+      'scissors invite lock maple supreme raw rapid void congress muscle digital elegant little brisk hair mango congress clump',
+    seed:
+      '7b4a10be9d98e6cba265566db7f136718e1398c71cb581e1b2f464cac1ceedf4f3e274dc270003c670ad8d02c4558b2f8e39edea2775c9e232c7cb798b069e88',
+  },
+  {
+    entropy: 'f585c11aec520db57dd353c69554b21a89b20fb0650966fa0a9d6f74fd989d8f',
+    mnemonic:
+      'void come effort suffer camp survey warrior heavy shoot primary clutch crush open amazing screen patrol group space point ten exist slush involve unfold',
+    seed:
+      '01f5bced59dec48e362f2c45b5de68b9fd6c92c6634f44d6d40aab69056506f0e35524a518034ddc1192e1dacd32c1ed3eaa3c3b131c88ed8e7e54c49a5d0998',
+  },
 ] as const;
 
 function hexToBytes(hex: string): Uint8Array {
