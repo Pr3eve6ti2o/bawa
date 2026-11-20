@@ -1,13 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { loadCore } from '../engine/boundary';
 import {
+  bytesToHex,
+  hashMessage,
+  hexToBytes,
+  recoverAddress,
+  sha256,
+} from 'viem';
+import {
+  assertIntentMatchesTransaction,
+  assertPartialSigner,
+  createNoopSigner,
   createPartialSigner,
+  createTransactionIntent,
   createWallet,
   deriveAddresses,
   deriveAddressesAt,
   deriveFromXpub,
+  intentFingerprint,
+  isPartialSigner,
   restoreWallet,
   withSigningKey,
+  type AddressOnlyAccount,
+  type LocalAccount,
 } from './core';
 
 // Public fixtures already in the repo (apps/web/src/engine/boundary.test.ts).
@@ -377,5 +392,155 @@ describe('createPartialSigner facade', () => {
     const second = await signer.signDigest(digest);
 
     expect(second).toEqual(first);
+  });
+});
+
+describe('wallet core message signing, signer guards, and intents', () => {
+  const message = new Uint8Array([0x00, 0x01, 0x7f, 0x80, 0xff]);
+  const to = '0x1111111111111111111111111111111111111111';
+  const otherTo = '0x2222222222222222222222222222222222222222';
+  const amountBaseUnits = '1000';
+  const sequence = '1';
+
+  const signerFor = async (chain: 'eth' | 'btc' | 'trx' | 'ton') =>
+    createPartialSigner(await createWallet(), '', chain);
+
+  it('ETH signs the EIP-191 message hash and recovers its address', async () => {
+    const signer = await signerFor('eth');
+    const hash = hashMessage({ raw: message });
+    const signature = await signer.signMessage(message);
+
+    expect(signature).toEqual(await signer.signDigest(hexToBytes(hash)));
+
+    const recovered = await recoverAddress({
+      hash,
+      signature: bytesToHex(signature),
+    });
+
+    expect(recovered.toLowerCase()).toBe(signer.address.toLowerCase());
+  });
+
+  it.each(['btc', 'trx'] as const)(
+    '%s signs the SHA-256 message hash',
+    async (chain) => {
+      const signer = await signerFor(chain);
+      const signature = await signer.signMessage(message);
+
+      expect(signature).toEqual(
+        await signer.signDigest(hexToBytes(sha256(message))),
+      );
+    },
+  );
+
+  it('TON returns 64 deterministic message-signature bytes', async () => {
+    const signer = await signerFor('ton');
+    const first = await signer.signMessage(message);
+    const second = await signer.signMessage(message);
+
+    expect(first).toBeInstanceOf(Uint8Array);
+    expect(first).toHaveLength(64);
+    expect(second).toHaveLength(64);
+    expect(second).toEqual(first);
+  });
+
+  it('the ETH noop signer returns 65 zero bytes for digests and messages', async () => {
+    const signer = createNoopSigner('eth', to);
+    const zeros = new Uint8Array(65);
+
+    expect(
+      await signer.signDigest(hexToBytes(sha256(message))),
+    ).toEqual(zeros);
+    expect(await signer.signMessage(message)).toEqual(zeros);
+  });
+
+  it('recognizes signers but not address-only or local account wrappers', async () => {
+    const signer = await signerFor('eth');
+
+    const addressOnly: AddressOnlyAccount = {
+      kind: 'address-only',
+      chain: 'eth',
+      address: signer.address,
+    };
+    const local: LocalAccount = {
+      kind: 'local',
+      chain: 'eth',
+      address: signer.address,
+      signer,
+    };
+
+    expect(isPartialSigner(signer)).toBe(true);
+    expect(isPartialSigner(addressOnly)).toBe(false);
+    expect(isPartialSigner(local)).toBe(false);
+    expect(isPartialSigner(local.signer)).toBe(true);
+
+    expect(() => assertPartialSigner(signer)).not.toThrow();
+    expect(() => assertPartialSigner(addressOnly)).toThrow(
+      new Error('Expected PartialSigner; bad kind: address-only'),
+    );
+  });
+
+  it('rejects an empty recipient and a non-numeric amount', () => {
+    expect(() =>
+      createTransactionIntent('eth', '', amountBaseUnits, sequence),
+    ).toThrow(Error);
+
+    expect(() =>
+      createTransactionIntent('eth', to, 'not-a-number', sequence),
+    ).toThrow(Error);
+  });
+
+  it('produces a stable SHA-256 fingerprint sensitive to every intent field', () => {
+    const intent = createTransactionIntent(
+      'eth',
+      to,
+      amountBaseUnits,
+      sequence,
+    );
+    const fingerprint = intentFingerprint(intent);
+
+    expect(fingerprint).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(intentFingerprint(intent)).toBe(fingerprint);
+    expect(
+      intentFingerprint(
+        createTransactionIntent('eth', to, amountBaseUnits, sequence),
+      ),
+    ).toBe(fingerprint);
+
+    const changedIntents = [
+      createTransactionIntent('btc', to, amountBaseUnits, sequence),
+      createTransactionIntent('eth', otherTo, amountBaseUnits, sequence),
+      createTransactionIntent('eth', to, '1001', sequence),
+      createTransactionIntent('eth', to, amountBaseUnits, '2'),
+    ];
+
+    for (const changedIntent of changedIntents) {
+      expect(intentFingerprint(changedIntent)).not.toBe(fingerprint);
+    }
+  });
+
+  it('names to when only the transaction recipient differs', () => {
+    const intent = createTransactionIntent(
+      'eth',
+      to,
+      amountBaseUnits,
+      sequence,
+    );
+    const transaction = {
+      chain: "eth" as const,
+      to,
+      amountBaseUnits,
+      sequence,
+    };
+
+    expect(() =>
+      assertIntentMatchesTransaction(intent, transaction),
+    ).not.toThrow();
+
+    expect(() =>
+      assertIntentMatchesTransaction(intent, {
+        ...transaction,
+        to: otherTo,
+      }),
+    ).toThrow(new Error('Signing intent mismatch: to.'));
   });
 });
