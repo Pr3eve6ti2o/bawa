@@ -206,20 +206,8 @@ jobs:
         run: node scripts/crypto-architecture.test.js
 
       - name: Chains generation drift check (P4 item 22)
-        # P4 owns the generator (apps/web/scripts/generate-chains.mjs);
-        # this lane only wires the check. Regenerate and diff: if the
-        # generator is not landed yet, the step skips with a note.
         run: |
-          if [ ! -f apps/web/scripts/generate-chains.mjs ]; then
-            echo "chains drift: generator not landed yet (P4 item 22); skipping"
-            exit 0
-          fi
-          node apps/web/scripts/generate-chains.mjs
-          git diff --exit-code -- apps/web/src/wallet/chains.ts || {
-            echo "chains drift: chains.ts differs from a fresh generation from the registry — regenerate and commit"
-            exit 1
-          }
-          echo "chains drift: OK"
+          cd apps/web && node scripts/generate-chains.mjs --check
 
   # Critical-path E2E harness (repo-study Phase 3, item 27). Runs the
   # Playwright suite against the built app and enforces its verdict.
