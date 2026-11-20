@@ -546,7 +546,7 @@ Note that the rehearsal procedure was demonstrated end to end on a generated tes
 
    > **Expected result:** A confirmed testnet receipt and a confirmed outgoing transaction signed by the recovered wallet, not merely a transaction prepared by the interface.
 
-   For both transactions in step 8, apply the [MAINNET-GUIDE confirmation policy](../mainnet/MAINNET-GUIDE.md#L2639-L2640): **confirmed** means at least 6 confirmations on Bitcoin testnet (a customary recommendation, not a protocol requirement), or at least 12 confirmations **and** inclusion in a canonical finalised block on Ethereum testnet. For Ethereum, 12 confirmations alone are insufficient.
+   For both transactions in step 8, apply the [MAINNET-GUIDE confirmation policy](mainnet/MAINNET-GUIDE.md#L1663-L1664): **confirmed** means at least 6 confirmations on Bitcoin testnet (a customary recommendation, not a protocol requirement), or at least 12 confirmations **and** inclusion in a canonical finalised block on Ethereum testnet. For Ethereum, 12 confirmations alone are insufficient.
 
 9. **Record the result and repeat the routine.**
 

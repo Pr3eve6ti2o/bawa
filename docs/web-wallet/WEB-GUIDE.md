@@ -98,7 +98,7 @@ All links checked: **2026-11-08**.
 
    Use the declared Node range for your setup. Do not treat the observed out-of-range run as verification on a runtime within that range.
 
-   Core `4.8.4`, published 2026-09-24, is stale: six versions shipped between it and `4.9.2`. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and the `4.9.x` releases added Zcash v5 transactions.
+   Core `4.8.4`, published 2026-09-24, is stale relative to the current `4.9.3` pin. The upgrade matters because `4.8.7` fixed a keystore scrypt validation defect, and the `4.9.x` releases added Zcash v5 transactions.
 
    The Web/WASM integration itself is unchanged: `dist/index.js` and `dist/index.d.ts` are byte-identical between `4.8.4` and `4.9.2`, `Ethereum.proto` is unmodified, and `initWasm()` is still called with no arguments.
 

@@ -4,7 +4,7 @@ Bawa handles wallet recovery material and is security-sensitive software.
 
 ## Supported versions
 
-The `main` branch is the supported line (current HEAD `da82fe3`, snapshot 2026-11-17). Both `package.json` files list version `1.1.0`, but the repository has no release tags.
+The `main` branch is the supported line (current HEAD `667527e`; historical snapshot `da82fe3`, 2026-11-17). Both `package.json` files list version `1.1.0`, but the repository has no release tags.
 
 ## Reporting a vulnerability
 

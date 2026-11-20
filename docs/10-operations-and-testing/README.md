@@ -789,7 +789,7 @@ Retain separate integration-test and recovery-drill evidence as well. Do not inf
 
 Keep these three release gates **blocked (failed or unverified)** and not passable today:
 
-- **Full test plan green in CI:** **blocked (known failure)**. Root README section 18 marks full published-vector coverage **FAIL**, and the reported `compare.js` xprv acceptance is a known failure, not merely missing evidence. Require the documented full test plan and successful evidence for the recorded SHA, including both test jobs. Do not substitute a few passing fixtures for full published-vector coverage.
+- **Full test plan green in CI:** **blocked (known failure)**. `docs/README-FULL.md` section 18 (Gates, line 1237) marks full published-vector coverage **FAIL**, and the reported `compare.js` xprv acceptance is a known failure, not merely missing evidence. Require the documented full test plan and successful evidence for the recorded SHA, including both test jobs. Do not substitute a few passing fixtures for full published-vector coverage.
 - **Dependency and secret scanning clean:** require both named scanner runs, their recorded operators and retained redacted reports. Keep the dependency-scanning and secret-scanning statuses separate.
 - **Reproducible builds verified:** require evidence from `build` and `reproduce` showing execution of the companion procedure, with the artefact and checksum record.
 
