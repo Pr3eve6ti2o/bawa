@@ -72,7 +72,7 @@ Report the matching sentence verbatim for each unsupported part. Do not improvis
 
 | Unsupported intent | Exact sentence |
 | --- | --- |
-| Mainnet use without separate approval | “I cannot support mainnet use without separate approval; the default scope is testnet.” |
+| Mainnet use without separate approval | “I cannot support mainnet use without separate approval.” |
 | Swaps, staking or bridges | “I cannot provide swaps, staking or bridges; they are out of scope for this programme.” |
 | Signing or broadcast claims without an engine that implements them | “I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.” |
 | TON send | “I cannot provide TON send; TON is generation-only in the proposed multichain profile.” |
@@ -81,7 +81,7 @@ Report the matching sentence verbatim for each unsupported part. Do not improvis
 
 Separate mainnet approval does not itself establish implementation or verification.
 
-Note (2026-11-20): the mainnet refusal sentence above is code-pinned — `scripts/classify-request.mjs` emits it verbatim and `tests/classifier.test.mjs` asserts it. Its "default scope is testnet" wording is the refusal fallback, not the routing direction, which is mainnet-first (see "Scope boundaries affecting routing"). Changing the sentence needs a code change to the classifier and its tests, not a doc edit.
+Note (2026-11-20, Lane B): the mainnet refusal sentence was shortened on 2026-11-20 to drop the “default scope is testnet” clause: the direction is mainnet-first, and a refused request builds nothing — `scripts/build-wallet.mjs` writes a refusal report (profile null, exit 2), so the clause described no real behaviour. The sentence stays code-pinned — `scripts/classify-request.mjs` emits it verbatim and `tests/classifier.test.mjs` asserts it.
 
 ## Pending validation and reporting
 

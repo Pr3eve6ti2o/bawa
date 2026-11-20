@@ -130,8 +130,13 @@ vitest 40 files, 457 tests, all passed, exit 0; quality gates
 - `scripts/classify-request.mjs:367` emits the refusal sentence "the
   default scope is testnet" verbatim, and `tests/classifier.test.mjs`
   asserts it in six places. Aligning it with mainnet-first needs a code
-  change, not a doc edit. `scripts/generate-project.mjs:215` also says
+  change, not a doc edit. (Resolved 2026-11-20, Lane B: the sentence was
+  shortened to "I cannot support mainnet use without separate approval."
+  in the classifier, the `ai/request-routing.md` table and all six test
+  places.) `scripts/generate-project.mjs:215` also says
   "Testnet only. Mainnet is out of scope without separate approval."
+  (That line is a separate per-platform scope statement for generated
+  Android projects and is unchanged.)
 - Android executed passing count (17 vs 57 `@Test` annotations) is still
   unresolved: no Android SDK exists on gray-pinee, so no Gradle run was
   possible here. Needs a machine with an Android SDK.

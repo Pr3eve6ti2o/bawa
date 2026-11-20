@@ -364,7 +364,7 @@ const REFUSAL_TON_XPUB =
 const REFUSAL_SIGNING =
   'I cannot claim signing or broadcast support for production use: the web wallet signs offline with real vault keys, but broadcast is not implemented, so no signed transaction can leave the device; the other signing code is a local, test-only signer restricted to temporary unfunded test credentials.';
 const REFUSAL_MAINNET =
-  'I cannot support mainnet use without separate approval; the default scope is testnet.';
+  'I cannot support mainnet use without separate approval.';
 const REFUSAL_SWAPS =
   'I cannot provide swaps, staking or bridges; they are out of scope for this programme.';
 const REFUSAL_UNLISTED =

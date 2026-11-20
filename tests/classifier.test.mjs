@@ -166,7 +166,7 @@ describe('findRefusal()', () => {
   test('mainnet is refused', () => {
     assert.equal(
       findRefusal('Deploy the wallet on mainnet'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
   });
 
@@ -224,11 +224,11 @@ describe('T46 negator scope', () => {
     );
     assert.equal(
       findRefusal('Build a web wallet with no ads, mainnet support'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
     assert.equal(
       findRefusal('Build a web wallet with no ads and no tracking, mainnet please'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
   });
 
@@ -262,16 +262,16 @@ describe('T46 spelling and synonyms', () => {
   test('"main-net" and "main net" are refused as mainnet', () => {
     assert.equal(
       findRefusal('Build a web wallet for main-net use'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
     assert.equal(
       findRefusal('Build a web wallet for main net'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
     // T46 re-audit residual: U+2011 non-breaking hyphen must not evade it.
     assert.equal(
       findRefusal('Build a web wallet for main\u2011net use'),
-      'I cannot support mainnet use without separate approval; the default scope is testnet.',
+      'I cannot support mainnet use without separate approval.',
     );
   });
 
