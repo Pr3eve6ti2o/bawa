@@ -58,6 +58,72 @@ function directionLabel(direction: string): string {
   return 'Self transfer';
 }
 
+// The Bitcoin genesis block's coinbase transaction — a real, public,
+// verifiable transaction (the first one ever mined). Used only as the
+// worked example in the guidance section below; nothing about it is
+// presented as a result until the live indexer returns one.
+const GENESIS_BTC_HASH =
+  'f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16';
+
+// Guidance shown at the bottom of the page so the lower half is never
+// empty dark space. Restyled from Sol's emitted draft to use the app's
+// own panel tokens and Button component.
+function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
+  return (
+    <section
+      aria-labelledby="track-guide-heading"
+      className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6"
+    >
+      <h2 id="track-guide-heading" className="text-xl font-semibold text-panel-text">
+        How tracking works
+      </h2>
+
+      <div className="mt-5 grid gap-6 md:grid-cols-2">
+        <ol className="list-decimal space-y-2 pl-5 text-sm text-panel-text-muted">
+          <li>Pick a chain above.</li>
+          <li>Paste the transaction hash.</li>
+          <li>Look it up to see its status.</li>
+        </ol>
+
+        <div>
+          <h3 className="font-semibold text-panel-text">What a result shows</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-panel-text-muted">
+            <li>Status and confirmations</li>
+            <li>Block</li>
+            <li>From and to addresses</li>
+            <li>Amount and fee</li>
+            <li>Time</li>
+            <li>The indexer it came from</li>
+            <li>A link to the explorer</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-2 text-sm text-panel-text-muted">
+        <p>Results come from public indexers and may lag behind the chain.</p>
+        <p>A TON lookup also needs the account address.</p>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-panel-border bg-panel-surface p-4">
+        <h3 className="font-semibold text-panel-text">
+          Try a real one — the first Bitcoin transaction
+        </h3>
+        <p className="mt-2 text-sm text-panel-text-muted">
+          This is a real public Bitcoin transaction: the coinbase transaction
+          of the genesis block. Looking it up fetches the live result from
+          the indexer — nothing here is a pre-filled answer.
+        </p>
+        <code className="mt-3 block break-all font-mono text-sm text-panel-text">
+          {GENESIS_BTC_HASH}
+        </code>
+        <Button type="button" variant="outline" className="mt-4" onClick={onUseExample}>
+          Look up this example
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function TransactionDetails({ data, chain, checkedAt }: {
   data: TrackedTx;
   chain: ChainId;
@@ -139,19 +205,32 @@ export function TrackTransactionScreen() {
     setActivity({ kind: 'idle' });
   }
 
-  async function runLookup() {
-    if (!canLookup) return;
+  async function runLookup(hashOverride?: string, chainOverride?: ChainId) {
+    const value = (hashOverride ?? hash).trim();
+    const lookupChain = chainOverride ?? chain;
+    if (!value) return;
     const request = ++lookupRequest.current;
-    const addressForTon = chain === 'ton' ? tonAddress.trim() : undefined;
+    const addressForTon = lookupChain === 'ton' ? tonAddress.trim() : undefined;
     setLookup({ kind: 'loading' });
     try {
-      const result = await lookupTransaction(chain, hash.trim(), { address: addressForTon });
+      const result = await lookupTransaction(lookupChain, value, { address: addressForTon });
       if (request === lookupRequest.current) setLookup({ kind: 'result', result });
     } catch (error: unknown) {
       if (request === lookupRequest.current) {
         setLookup({ kind: 'result', result: { status: 'error', reason: errorReason(error) } });
       }
     }
+  }
+
+  // Fills the form with the real genesis-transaction example and runs a
+  // live lookup against the indexer; the result is whatever the indexer
+  // returns, shown in the lookup area above.
+  function useExample() {
+    setChain('btc');
+    setHash(GENESIS_BTC_HASH);
+    setTonAddress('');
+    void runLookup(GENESIS_BTC_HASH, 'btc');
+    document.getElementById('transaction-hash')?.scrollIntoView?.();
   }
 
   async function runActivity() {
@@ -334,6 +413,10 @@ export function TrackTransactionScreen() {
           </Alert>
         )}
       </section>
+
+      <div className='lg:col-span-2'>
+        <TrackGuide onUseExample={useExample} />
+      </div>
     </div>
   );
 }
