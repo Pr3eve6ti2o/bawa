@@ -892,3 +892,125 @@ describe('simulateSend failures and failure helpers', () => {
     });
   });
 });
+
+describe('simulateSend ETH and TON', () => {
+  const ethFrom = '0x7ef5cdbe01777d62438affeb695e33fc233597987';
+  const ethTo = '0x1111111111111111111111111111111111111111';
+  const tonAddress = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+  const ethBalance = '1000000000000000000';
+  const tonBalance = '1000000000';
+
+  const ethFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'eth',
+      networkId: 'test',
+      feeBaseUnits: '420000000000000',
+      unit: 'wei',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const tonFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'ton',
+      networkId: 'test',
+      feeBaseUnits: '1000000',
+      unit: 'nanoton',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  function simStub(chain: 'eth' | 'ton', balance: string, decimals: number, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  function okInputs(data: TxInput): AdapterResult<TxInput> {
+    return { status: 'ok', data, source: 'stub', fetchedAt: 0 };
+  }
+
+  it('simulates an ETH send with nonce inputs', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, okInputs({ kind: 'nonce', nonce: 5 })),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '500000000000000000',
+      feeBaseUnits: '420000000000000',
+    });
+  });
+
+  it('rejects unavailable ETH nonce inputs', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, {
+        status: 'unavailable',
+        reason: 'stub unavailable',
+      }),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-nonce', chain: 'eth' },
+      code: 'bad-nonce',
+    });
+  });
+
+  it('rejects seqno inputs for ETH', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, okInputs({ kind: 'seqno', seqno: 1 })),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-nonce', chain: 'eth' },
+      code: 'bad-nonce',
+    });
+  });
+
+  it('simulates a TON send with seqno inputs', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, okInputs({ kind: 'seqno', seqno: 3 })),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '500000000',
+      feeBaseUnits: '1000000',
+    });
+  });
+
+  it('rejects unavailable TON seqno inputs', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, {
+        status: 'unavailable',
+        reason: 'stub unavailable',
+      }),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-seqno', chain: 'ton' },
+      code: 'bad-seqno',
+    });
+  });
+
+  it('rejects nonce inputs for TON', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, okInputs({ kind: 'nonce', nonce: 1 })),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-seqno', chain: 'ton' },
+      code: 'bad-seqno',
+    });
+  });
+});
