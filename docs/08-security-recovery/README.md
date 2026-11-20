@@ -19,11 +19,15 @@ Twelve honest limitations. This guide does not promise:
 
 These limitations are not weaknesses of the guide — they are part of being honest about the engineering problem.
 
-Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.2 tag".
+Read "audited" as "reviewed against the ownership contract, with the scope, reviewer and date stated". For schemas, read "verified" as "source-verified against the Trust Wallet Core 4.9.3 tag".
 
-Bawa contains no transaction construction or signing implementation. The web and Android work is limited to local-only validation drafts in the workspace, outside any repository. The web draft was built and run once in a real headless browser on 8 November 2026. The Android draft has not achieved a Gradle build, has no Core AAR or APK and has not been run on a device.
+Bawa has offline unsigned native-asset transaction builders (`tools/mainnet-tx/unsigned-tx.mjs`), local signing (`tools/mainnet-signing/local-signing.mjs`) and web offline signing for BTC/ETH/TRX/TON (`apps/web/src/wallet/send.ts`). Both starters are in the repository: `apps/web` builds, passed all 457 tests across 40 test files on 2026-11-20 and has screenshot-checked live previews; a debug APK from `apps/android` was built, installed and launched on an emulator, with welcome and import screens visually verified. Broadcast is disabled everywhere, and no send has ever run on any network. Android still has no Core AAR or on-device derivation; its on-device Add-button acceptance path remains unverified. Recovery rehearsal has never been executed.
 
 Verified on 8 November 2026: the EIP-1559 construction/signing demonstration was re-run in a work copy upgraded to `@trustwallet/wallet-core@4.9.2`. With `txMode: 1`, it produced a `0x02` envelope, and independent Python verification recovered the published fixture sender. Remaining limitations: browser send/sign has not been exercised, nothing has been broadcast, and validation is limited to Node v24.
+
+Update on 2026-11-20: the engine is now `@trustwallet/wallet-core@4.9.3`, and the scope of the 8 November demonstration is unchanged.
+
+For the documented watch-only import workflow, see `docs/05-watch-only` and the `apps/web` import-wallet screen (xpub import for BTC/ETH/TRX; public-address import for TON).
 
 ## 2. Privacy: xpubs are sensitive public material
 
@@ -33,7 +37,7 @@ An xpub does not normally let an attacker spend, but its holder can derive many 
 - Do not paste them into public issue trackers, untrusted analytics dashboards, random "xpub checkers", unreviewed browser extensions or unnecessary chat messages.
 - For a multi-account application, consider whether each subsystem really needs the account-level xpub or a narrower public node suffices.
 - An xpub or zpub CANNOT recover the wallet: it reproduces only public descendants below the exported account node ([docs/RECOVERY.md](../RECOVERY.md)).
-- Bawa does not document an xpub-only import workflow — check your chosen watch-only tool's documentation.
+- Bawa documents an xpub-only import workflow in [docs/05-watch-only](../05-watch-only/README.md), and the `apps/web` import-wallet screen implements it (xpub import for BTC/ETH/TRX; public-address import for TON).
 ## 3. Backup and recovery
 
 A real backup is the ability to recreate the same wallet independently. For a conventional BIP-39/BIP-32 wallet, preserve the mnemonic, BIP-39 passphrase policy, chain derivation policy, account selection and network. For special chains, add whatever the chain requires. For TON, wallet contract/version and wallet-ID/subwallet configuration can matter.

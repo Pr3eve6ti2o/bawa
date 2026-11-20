@@ -1,8 +1,10 @@
 # Bawa Web starter
 
-This is the strictly watch-only Web starter for Bawa AI Wallet Builder, built on the vendored
-token-ui foundation. It derives addresses from extended public keys only; it never generates,
-stores or displays a mnemonic, seed, private key, private extended key, vault key or data key.
+This is the Web starter for Bawa AI Wallet Builder, built on the vendored token-ui
+foundation. It supports in-browser wallet generation and recovery, watch-only import,
+offline signing with broadcast disabled, and read-only balances and transaction history
+via chain adapters. No price feed is connected, so there is no portfolio fiat total.
+Secrets never leave the browser.
 
 ## Install, develop, build and test
 
@@ -23,9 +25,11 @@ Keep the repository checkout intact: `@bawa/contracts` is a local `file:` depend
 
 ## What works
 
-- Import one extended public key (xpub) per supported chain: BTC, ETH and TRX.
+- Import one extended public key (xpub) per chain for BTC, ETH and TRX.
   Keys are validated before storage.
-- Derive the first five addresses per chain, at indices 0–4, in the browser.
+- Import a TON public address for watch-only access.
+- Derive the first five addresses per chain for BTC, ETH and TRX, at indices 0–4,
+  in the browser.
   The engine is `@trustwallet/wallet-core` 4.9.3, loaded as WASM.
   Derivation uses `HDWallet.getPublicKeyFromExtended` and
   `CoinTypeExt.deriveAddressFromPublicKey`.
@@ -45,7 +49,7 @@ Derivation policy, where `i` is the address index:
 | ETH | `m/44'/60'/0'/0/i` |
 | TRX | `m/44'/195'/0'/0/i` |
 
-## Mock or unavailable
+## What works, what is mock, and what is unavailable
 
 - **Balances and transaction history:** live data from the pinned providers, not mock values; they surface as unavailable or error when a provider cannot be reached, never as invented figures. **Prices:** no price feed is connected, so there is no portfolio fiat total.
 - **Sending:** offline signing is implemented for BTC, ETH, TRX and TON using the vault key via Trust Wallet Core `AnySigner.sign`.
@@ -67,8 +71,9 @@ Derivation policy, where `i` is the address index:
   Derived addresses remain in memory.
 - The lock is UI state only, not a security boundary. Do not rely on it to protect stored xpubs.
 - No secrets reach telemetry or any provider: there is no telemetry and no provider.
-- Testnet only by policy; mainnet is out of scope. The derivation paths are not a
-  network-enforcement mechanism.
+- Mainnet-first in direction (ADR-0003), with read-only mainnet data via adapters.
+  Broadcast remains disabled; mainnet use requires separate approval and real-funds gates.
+  The derivation paths are not a network-enforcement mechanism.
 - Content-Security-Policy (T47): `src/app/security-headers.ts` is the single source
   of truth. The strict policy (`script-src 'self' 'wasm-unsafe-eval'`, no inline
   scripts, `object-src 'none'`, `frame-ancestors 'none'`) is served as an HTTP
@@ -107,3 +112,6 @@ component (`src/screens/asset-rows.tsx`) in place of ticker-letter chips.
 The boundary tests derive the published fixture addresses exactly for BTC, ETH and TRX at
 indices 0 and 1. They also reject private extended keys and keys with bad checksums, wrong
 versions or invalid secp256k1 points. Run `npm test` to see them pass.
+
+Verified on this tree on 2026-11-20: Vitest passed all 40 test files and all 457 tests
+(exit 0).

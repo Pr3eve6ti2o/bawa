@@ -1,7 +1,7 @@
 # Bawa
 
-[![CI build status for feature/ai-wallet-builder](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=feature%2Fai-wallet-builder)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Afeature%2Fai-wallet-builder)
-[![MIT license](https://img.shields.io/github/license/Pr3eve6ti2o/bawa)](LICENSE)
+[![CI build status for panel-rebuild/adopt-proper](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Fadopt-proper)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Fadopt-proper)
+[![MIT licence](https://img.shields.io/github/license/Pr3eve6ti2o/bawa)](LICENSE)
 
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. If you write wallet code or use an AI coding agent, give the agent one plain request; it uses this repo to produce a real, buildable project.
 
@@ -34,7 +34,7 @@ Install Node **22** (`22.23.4` verified) and Python **3.12+**. For the Android s
 Clone this branch, install the generator dependencies, and return to the repo root:
 
 ```sh
-git clone --branch feature/ai-wallet-builder https://github.com/Pr3eve6ti2o/bawa.git
+git clone --branch panel-rebuild/adopt-proper https://github.com/Pr3eve6ti2o/bawa.git
 cd bawa
 cd tools/hdwallet-gen && npm ci
 cd ../..
@@ -56,7 +56,9 @@ Choose your request text. Run the builder and launcher commands from the repo ro
 
 *Bawa Balanced UI direction for builder output—not a screenshot of the running starter.*
 
-Read the [full manual](docs/README-FULL.md): the previous 1,308-line README, preserved with only its link paths adjusted for the move from the root.## Usage
+Read the [full manual](docs/README-FULL.md): the previous 1,308-line README, preserved with only its link paths adjusted for the move from the root.
+
+## Usage
 
 ### 1. [Derive one watch-only Bitcoin address](docs/README-FULL.md)
 
@@ -84,7 +86,7 @@ node scripts/build-wallet.mjs "Create a Web wallet"
 
 Verified routing result: the launcher routes your request as an existing tool.
 
-Use the watch-only starters:
+Use the starters:
 
 - [Web starter](WALLET_BUILDER.md): `apps/web` — React 19 + Vite + Tailwind; MIT.
 - [Android starter](WALLET_BUILDER.md): `apps/android` — Kotlin + Compose + Material 3; Apache-2.0.
@@ -113,13 +115,13 @@ Verified routing result: your request routes to the build command; exit status `
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
-| License | [LICENSE](LICENSE) |
+| Licence | [LICENSE](LICENSE) |
 
 ## Why this exists — and when not to use it
 
 Use Bawa as a reference for [HD-wallet workflows](docs/README-FULL.md) and as a [builder](WALLET_BUILDER.md) that turns one plain request into a real, buildable project. It is **not** a hosted wallet, custody service, or exchange.
 
-Mainnet send/broadcast is not implemented. The repository is mainnet-first in direction but testnet-safe in behaviour; read the [mainnet gap assessment](docs/MAINNET-GAP-ASSESSMENT.md). If you want a ready-made wallet to hold funds, use a production wallet instead.
+Mainnet send/broadcast is not implemented; broadcast stays disabled. The repository is mainnet-first in direction but testnet-safe in behaviour; read the [mainnet gap assessment](docs/MAINNET-GAP-ASSESSMENT.md). If you want a ready-made wallet to hold funds, use a production wallet instead.
 
 ## Passphrase policy
 
@@ -135,7 +137,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) when you contribute.
 
 Report bugs through the repository’s GitHub Issues.
 
-## License
+## Licence
 
 MIT — see [LICENSE](LICENSE).
 
