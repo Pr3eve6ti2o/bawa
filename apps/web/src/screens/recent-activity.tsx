@@ -100,6 +100,7 @@ export function RecentActivity() {
                                 : ''}
                           </span>
                         </span>
+                        {' '}
                         <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
                           {formatNativeWithSymbol(
                             tx.amountBaseUnits,
@@ -124,7 +125,7 @@ export function RecentActivity() {
                 className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
               >
                 <p className="text-sm text-panel-text-soft">
-                  {chainConfig(chain).displayName} history unavailable
+                  {`${chainConfig(chain).displayName} history unavailable`}
                 </p>
                 <Button
                   type="button"

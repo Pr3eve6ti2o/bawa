@@ -125,6 +125,7 @@ export function TransactionHistoryScreen() {
                         {' · '}
                         {chainConfig(tx.chain).symbol}
                       </span>
+                      {' '}
                       <span className="text-sm font-semibold">
                         {formatNativeWithSymbol(
                           tx.amountBaseUnits,
@@ -149,14 +150,13 @@ export function TransactionHistoryScreen() {
           {failedChains.length > 0 && (
             <div className="space-y-2 rounded-lg border p-4">
               <p className="text-sm">
-                {failedChains
+                {`${failedChains
                   .map((chain) => chainConfig(chain).displayName)
-                  .join(', ')}{' '}
-                history unavailable
-                {failedChains.length === 1 && failedChains[0] !== undefined && history[failedChains[0]].reason
-                  ? ` (${history[failedChains[0] as ChainId].reason})`
-                  : ''}
-                .
+                  .join(', ')} history unavailable${
+                  failedChains.length === 1 && failedChains[0] !== undefined && history[failedChains[0]].reason
+                    ? ` (${history[failedChains[0] as ChainId].reason})`
+                    : ''
+                }.`}
               </p>
               <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
                 Retry

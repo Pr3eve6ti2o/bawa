@@ -81,7 +81,7 @@ export function AssetDetailScreen() {
           <ChainLogo chain={chain} size={48} />
           <div>
             <h1 className="text-2xl font-semibold text-panel-text">{config.displayName}</h1>
-            <p className="text-sm text-panel-text-muted">{config.displayName} mainnet</p>
+            <p className="text-sm text-panel-text-muted">{`${config.displayName} mainnet`}</p>
           </div>
         </div>
         {balance.status === 'loading' ? (
@@ -165,7 +165,7 @@ export function AssetDetailScreen() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-muted-foreground">Network</dt>
-              <dd className="font-semibold">{config.displayName} mainnet</dd>
+              <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
             </div>
           </dl>
         </CardContent>
@@ -204,6 +204,7 @@ export function AssetDetailScreen() {
                           ? 'Sent'
                           : 'Self transfer'}
                     </span>
+                    {' '}
                     <span className="text-sm font-semibold">
                       {formatNativeWithSymbol(
                         tx.amountBaseUnits,
@@ -297,7 +298,8 @@ export function AssetDetailScreen() {
           <ul className="space-y-3">
             {addresses[chain].map(({ index, address }) => (
               <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
-                <span className="text-sm text-muted-foreground">Index {index}</span>
+                <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
+                {' '}
                 <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
                 <Button
                   type="button"

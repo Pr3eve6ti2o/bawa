@@ -40,7 +40,7 @@ export function SendReview({
           Review send
         </h1>
         <p className="text-sm text-muted-foreground">
-          {chainName} · {symbol}
+          {`${chainName} · ${symbol}`}
         </p>
       </header>
 

@@ -162,7 +162,7 @@ export function TransactionDetailScreen() {
       {found ? (
         <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           <DetailRow label="Chain">
-            {chainConfig(found.chain).displayName} mainnet
+            {`${chainConfig(found.chain).displayName} mainnet`}
           </DetailRow>
 
           <DetailRow label="Direction">
@@ -196,7 +196,7 @@ export function TransactionDetailScreen() {
               <p
                 className={`font-medium ${STATUS_CLASSES[found.tx.status]}`}
               >
-                {found.tx.status} as reported by the network.
+                {`${found.tx.status} as reported by the network.`}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 <CheckedAt check={check} />

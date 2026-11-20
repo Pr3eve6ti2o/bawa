@@ -252,15 +252,14 @@ export function CreateWalletScreen() {
             ))}
           </ol>
           <p className="mb-5 text-body-sm font-medium text-foreground">
-            Step {step} of 4:{" "}
-            {
+            {`Step ${step} of 4: ${
               {
                 1: "Set a vault password",
                 2: "Write down 24 words",
                 3: "Confirm 3 words",
                 4: "Wallet ready",
               }[step]
-            }
+            }`}
           </p>
           <ol aria-label="Wallet creation steps" className="space-y-5">
             <li>
@@ -397,6 +396,7 @@ export function CreateWalletScreen() {
                   <span className="text-body-sm font-medium text-muted-foreground">
                     {index + 1}.
                   </span>
+                  {' '}
                   <span className="text-body-md font-semibold">{word}</span>
                 </li>
               ))}
@@ -426,7 +426,7 @@ export function CreateWalletScreen() {
                 {confirmPositions.map((position) => (
                   <div key={position} className="space-y-2">
                     <Label htmlFor={`confirm-word-${position}`}>
-                      Word {position + 1}
+                      {`Word ${position + 1}`}
                     </Label>
                     <Input
                       id={`confirm-word-${position}`}

@@ -35,8 +35,10 @@ function StepCard({ icon, label, detail, state = 'pending', className, ...props 
       >
         {state === 'completed' ? <Check className="h-5 w-5" /> : icon}
       </div>
+      {' '}
       <div>
         <div className="text-sm-plus font-bold">{label}</div>
+        {' '}
         <div className="mt-1 text-xs-plus leading-relaxed text-muted-foreground">{detail}</div>
       </div>
     </div>

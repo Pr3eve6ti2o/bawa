@@ -251,7 +251,7 @@ function ToolContents({ tool }: { tool: Tool }) {
                   href={reference.url}
                   className="break-all text-sm text-panel-accent underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
                 >
-                  {reference.name} ({reference.commit})
+                  {`${reference.name} (${reference.commit})`}
                 </a>
                 <p className="text-sm text-panel-text-muted">
                   {reference.note}
@@ -272,7 +272,7 @@ function ToolCard({ tool }: { tool: Tool }) {
         <ToolContents tool={tool} />
         <Button asChild className="mt-auto h-auto w-full whitespace-normal py-3 text-center">
           <Link to={tool.href} aria-label={`Open ${tool.name} creation`}>
-            Open {tool.name} creation
+            {`Open ${tool.name} creation`}
           </Link>
         </Button>
       </div>
