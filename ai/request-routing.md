@@ -1,7 +1,7 @@
 # ai/request-routing.md
 
 Read `AGENTS.md` and `WALLET_BUILDER.md`. Governing policy, layer rules and engine detail remain there and in `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
-The seven profiles are validated in `registry/profiles.json`; one profile file exists per profile in `ai/profiles/<id>.md`; the mapped prompt per profile is `ai/prompts/create-<id>.md`. A routing match is not proof of availability or verification.
+The eight profiles are validated in `registry/profiles.json`; one profile file exists per profile in `ai/profiles/<id>.md`; the mapped prompt per profile is `ai/prompts/create-<id>.md`. A routing match is not proof of availability or verification.
 Follow the entry-point workflow: parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report.
 
 ## User-request trust boundary (T46)
@@ -74,9 +74,10 @@ reports (classification failure, refusal, ambiguous).
 - Signing code in this repo is the web wallet's offline signer (real vault keys) and a local, test-only signer restricted to temporary unfunded test credentials, and broadcast is not implemented. A wallet name, UI screen or foundation choice does not establish those capabilities.
 - ETH derivation does not establish generic EVM operation. Unspecified EVM capabilities are OPEN, not supported claims.
 - TON is generation-only in the proposed multichain profile: no send and no xpub. TRX derivation is `m/44'/195'/0'/0/i`; TON derivation is `m/44'/607'/0'`, generation-only.
-- Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (457 tests in 40 files, all passed 2026-11-20, build + preview verified); live previews have been served and screenshot-checked, but no live-browser balance/history run has happened.
+- Web uses owner-approved `token-ui` (vendored in `apps/web/src/ui/`); Android uses owner-approved Tether WDK Starter Kotlin UI layer only. Phase 5 inspected these foundations; the web starter exists in `apps/web` (51 test files: 669 tests passed and 1 skipped, verified by a Vitest run on this tree 2026-11-20, exit 0, build + preview verified); live previews have been served and screenshot-checked, but no live-browser balance/history run has happened.
 - An Android debug APK is produced by `./gradlew assembleDebug` (52,456,212 bytes, verified); no AAR exists for any version, and on-device derivation is not implemented.
 - Web, Android and watch-only chain/path coverage not supplied here is OPEN; do not borrow another profile's capabilities.
+- The chain registry covers 13 chains (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge); network operations (balances, history, fee quotes) are verified for btc/eth/trx/ton only — the 9 additional chains are scoped to the multichain-extended-wallet profile and their network operations are not verified.
 
 ## Ambiguous requests: ask one question
 
@@ -113,6 +114,8 @@ Report the matching sentence verbatim for each unsupported part. Do not improvis
 Separate mainnet approval does not itself establish implementation or verification.
 
 Note (2026-11-20, Lane B): the mainnet refusal sentence was shortened on 2026-11-20 to drop the “default scope is testnet” clause: the direction is mainnet-first, and a refused request builds nothing — `scripts/build-wallet.mjs` writes a refusal report (profile null, exit 2), so the clause described no real behaviour. The sentence stays code-pinned — `scripts/classify-request.mjs` emits it verbatim and `tests/classifier.test.mjs` asserts it.
+
+**Note (2026-11-20):** The “seven” in the unlisted-profile refusal is stale: eight profiles exist. The quoted sentence is code-pinned — `scripts/classify-request.mjs` emits it verbatim and `tests/classifier.test.mjs` asserts it. The sentence stays as emitted by the classifier until the code is changed; that code change is a separate item flagged to the coordinator.
 
 ## Pending validation and reporting
 

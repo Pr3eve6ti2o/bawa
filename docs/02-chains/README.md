@@ -8,15 +8,16 @@ The common pattern is: secure a secret, then derive deterministic key material f
 
 ## 2. Bawa scope: support is more than a coin type
 
-Bawa supports watch-only address derivation for BTC, ETH, and TRX, and generation only for TON (one deposit address per wallet, no xpub derivation). Reference-only, NOT Bawa-supported: Solana (SOL) and Cardano (ADA). Listing a chain in the comparison table does not mean Bawa implements it.
+Bawa supports watch-only address derivation for BTC, ETH, and TRX, and single-address generation plus a public-key-only watch-only route via derive-ton.js for TON (32-byte Ed25519 public key; one V4 R2 address; no index; not xpub-based derivation). Reference-only, NOT Bawa-supported: Solana (SOL) and Cardano (ADA). Listing a chain in the comparison table does not mean Bawa implements it.
 
 Reference comparison table:
 
 | Chain | Bawa scope | Coin type (SLIP-0044) | Path |
 | --- | --- | --- | --- |
+| Bitcoin (BTC) | Native SegWit P2WPKH (BIP-84); `zpub` (SLIP-0132); watch-only | 0 | Account: `m/84'/0'/0'`; receiving: `m/84'/0'/0'/0/i` |
 | EVM (Ethereum) | Supported, watch-only | 60 | `m/44'/60'/0'/0/x` |
 | TRON | Supported, watch-only | 195 | `m/44'/195'/0'/0/x` |
-| TON | Generation-only | 607 | `ton_path` from `CoinTypeExt.derivationPath(CoinType.ton)` |
+| TON | Single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. | 607 | `ton_path` from `CoinTypeExt.derivationPath(CoinType.ton)` |
 | Solana | Reference-only | 501 | Wallet Core 4.9.2 registry paths: m/44'/501'/0' and m/44'/501'/0'/0'. |
 | Cardano | Reference-only | 1815 | CIP-1852 payment `m/1852'/1815'/0'/0/0`; staking `m/1852'/1815'/0'/2/0` |
 
@@ -289,7 +290,7 @@ For a dedicated TRON app, prefer a maintained TRON SDK or Wallet Core’s TRON f
 **Why this, and what breaks if you change it:** TRON and Ethereum share the key but not the address encoding. If you paste one chain’s address text into the other’s field, validation fails and no transfer can be constructed. If you “convert” by editing the prefix, you produce an address that belongs to nobody.
 ## 6. TON
 
-TON is generation-only in Bawa: you get one deposit address per wallet, with no xpub exported and no TON xpub watch-only flow. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive-daemon.js` support `btc`, `eth` and `trx` only.
+Single-address generation plus a public-key-only watch-only route via derive-ton.js (32-byte Ed25519 public key; one V4 R2 address; no index). This is not xpub-based derivation. The single-address output is Bawa’s behaviour, not a TON protocol rule. `derive.js` and `derive-daemon.js` support `btc`, `eth` and `trx` only.
 
 [TEP-3](https://github.com/ton-blockchain/TEPs/blob/master/text/0003-wallets.md) is the authority for wallet mnemonic schemes, Ed25519 keys, wallet smart contracts and subwallet/wallet-ID behaviour. Use the full compatibility model:
 
@@ -343,6 +344,8 @@ TON fixture, derived and independently verified on 2026-11-08 two ways — Trust
 - ed25519 public key (`m/44'/607'/0'`): `c8aeb00a8adb5879a58d031af01d6031fb743e1971a679c6ecea1354f022d0c9` (consistency-verified in this check: reproduces every fixture address exactly).
 - `ton_path`: `m/44'/607'/0'`; coin 607; curve ed25519.
 - Contract: Wallet V4 R2; wallet ID / subwallet `698983191` (0x29A9A317); workchain 0; seqno at derivation 0.
+
+The TON fixture passed verification at Trust Wallet Core 4.9.3 on 2026-11-12 (see registry/engines.json, R08).
 - Raw address: `0:bb819bc655d0b16613c06b3663e376da80171261f36fc1066899e8de98ce700f`.
 - Non-bounceable (mainnet presentation): `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn`.
 - Bounceable (mainnet presentation): `EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi`.

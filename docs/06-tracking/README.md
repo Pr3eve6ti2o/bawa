@@ -526,7 +526,7 @@ Store Bitcoin amounts as integer satoshis; convert only for display.
 
 Use `eth_getBalance`, `eth_getTransactionCount`, `eth_getBlockByNumber`, `eth_getTransactionReceipt` and `eth_getLogs`. Follow the JSON-RPC reference for their semantics.
 
-Bawa does not prescribe an endpoint, request bodies or a complete wallet/token/NFT collection strategy. Choose a provider for the exact network, check its current terms, implement the requests and test asset coverage before treating the dashboard as comprehensive.
+Bawa prescribes the default network endpoint URLs used by its read-only wallet adapters, but does not prescribe request bodies or a complete wallet/token/NFT collection strategy. Choose a provider for the exact network, check its current terms, implement the requests and test asset coverage before treating the dashboard as comprehensive. For the prescribed endpoints, see `apps/web/src/wallet/balance-providers.ts` and [doc 13](../13-wallet-app-architecture/README.md).
 ## 18. Commit evidence before progress; make stale and provisional visible; finish the local installation; polling cadence, backoff and WebSockets
 
 ### Commit evidence before progress

@@ -30,7 +30,7 @@
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed; i is the receiving address index.",
         "TON uses m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (single address, no index).",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.",
         "No graphical UI foundation applies to this CLI profile. Full wallet verification remains DOCUMENTED_NOT_TESTED despite the verified generation and derivation primitives."
       ]
@@ -108,7 +108,7 @@
         "BTC watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status records derivation evidence, not verification of a complete Bitcoin wallet or every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. BTC uses m/84'/0'/0'/0/i, with account 0 and receiving branch 0 fixed.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policy: BTC 6 confirmations, a customary recommendation. This is a documented policy, not enforced code.",
         "No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation."
       ]
@@ -182,7 +182,7 @@
         "ETH watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status covers this derivation evidence only; it does not establish generic EVM-wallet operation or verification of every security boundary.",
         "Key generation policy is BIP-39 with 24 words and an empty passphrase. ETH uses m/44'/60'/0'/0/i, with account 0 and receiving branch 0 fixed. This profile covers ETH only.",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policy: ETH finalised. Retain \"12\" only as an unsourced extra minimum, never as a substitute for finality. This is a documented policy, not enforced code.",
         "No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation."
       ]
@@ -263,7 +263,7 @@
         "Generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed.",
         "TON is single-address at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub; TON watch-only derivation from a 32-byte Ed25519 public key via tools/hdwallet-gen/derive-ton.js is IMPLEMENTED_AND_VERIFIED against the published fixture (no index).",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check.",
         "No graphical UI foundation applies to this CLI profile. Shared derivation evidence does not establish cross-chain transaction operation."
       ]
@@ -339,11 +339,11 @@
         "UI never holds secrets and never owns transaction authority or signing policy"
       ],
       "notes": [
-        "The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 25 web tests pass; vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.2 is the guides' reference engine only, never the tool pin. CLI derivation evidence alone does not verify this integration \u2014 the boundary tests do.",
+        "The web boundary (apps/web/src/engine/boundary.ts) derives all 6 published fixture addresses exactly (BTC/ETH/TRX indices 0 and 1) via wallet-core 4.9.3 WASM; 51 test files: 669 tests passed and 1 skipped (first-hand Vitest run 2026-11-20, exit 0); vite build exits 0; preview serves index + wallet-core.wasm with HTTP 200. 4.9.3 is the repository pin and the guides' reference engine. CLI derivation evidence alone does not verify this integration \u2014 the boundary tests do.",
         "WEB-01 pre-approves token-ui, registry foundation web-01-token-ui, as the web UI foundation. Phase 5 inspection is complete (2026-11-10). token-ui (pin 6380d5d4, MIT) is vendored into apps/web/src/ui/; the 14-screen contract from docs/14 section 5.1 is implemented; app tests render title, empty dashboard, import and send-not-implemented states.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
         "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; the web boundary verifies it in-browser via the boundary tests.",
-        "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
+        "TON is generation-only in this repo, with a public-key-only watch-only route (one deposit address from m/44'/607'/0', using Wallet V4 R2 and wallet ID 698983191; no TON xpub; TON watch-only derivation is tools/hdwallet-gen/derive-ton.js, producing a single V4 R2 address from a 32-byte Ed25519 public key, no index).",
         "Offline send is implemented in apps/web (src/wallet/send.ts): transaction construction (plan-transfer) and local signing via wallet-core AnySigner for all four chains, post-sign verification for BTC/ETH/TRX (TON partial, no BOC re-parse). Broadcast is not implemented anywhere: every adapter broadcast() throws and broadcastSigned always returns disabled. (Rebuild 2026-11-19; registry v2.)",
         "Mainnet only since the 2026-11-19 rebuild: testnet addresses are rejected as wrong-network and no testnet adapter exists.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check."
@@ -357,7 +357,7 @@
         "14-screen contract coverage checked against docs/14 section 5.1",
         "the token-ui foundation completes Phase 5 inspection before adoption and retains UI-only responsibilities (met: Phase 5 inspection done 2026-11-10; foundation adopted in Phase 6)",
         "Trust Wallet Core 4.9.3 integration is verified for the web profile without exposing secrets or signing authority to the UI",
-        "the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only",
+        "the fixed derivation policy is preserved, including BTC/ETH/TRX xpub watch-only derivation and TON public-key-only watch-only derivation (single V4 R2 address, no index)",
         "any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet"
       ],
       "status": "IMPLEMENTED_AND_VERIFIED"
@@ -376,7 +376,7 @@
     "implemented": [
       "in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses (verified IMPLEMENTATION-REPORT.md section 6 items 1-2)",
       "watch-only address derivation in the browser for BTC/ETH/TRX via wallet-core WASM with pre-WASM validation (Base58Check, checksum, private rejection, per-chain versions, R-01 point validation)",
-      "14 screens with honest loading/empty/stale/locked/gate-failed/error states",
+      "14 screens with honest loading/empty/stale/gate-failed/error states (no lock screen exists at 5e7eb1d; auto-lock is optional, OFF by default on /security, and not yet implemented)",
       "receive-QR display",
       "import of extended public keys only",
       "read-only mainnet balances and transaction history via per-chain adapters, verified against a second source (exact-zero fixture balances; real history items; section 6 item 5)",
@@ -386,9 +386,9 @@
       "broadcast",
       "TON fee-quote (send preview reports unavailable; signing still works with a seqno)",
       "TON post-sign verification (partial only: no-error + 32-byte hash + BOC magic, no BOC re-parse)",
-      "prices",
+      "fee estimator still missing; price feed exists (apps/web/src/wallet/prices.ts, CoinGecko, all 13 chains)",
       "live-browser balance/history run (adapters verified in Node; the app's own CSP blocks the fetches in a served browser preview)",
-      "auto-lock timer (lock screen exists; inactivity timer not built)",
+      "auto-lock (optional, OFF by default on /security; not yet implemented; no lock screen exists at 5e7eb1d). Target policy: the vault stays unlocked by default; auto-lock is an optional setting on the /security page \u2014 a toggle plus a duration (Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day); when enabled, the vault locks after the chosen period and unlocking needs the password; key-storage invariant \u2014 while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock.",
       "on-device derivation (web has no on-device concept - derivation is in-browser WASM)"
     ],
     "operations": {
@@ -432,12 +432,12 @@
       "notes": [
         "Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen and the required engine version for this profile. 4.9.2 is the guides' reference engine only, never the tool pin.",
         "No Android AAR exists for any version and no Android engine binding is verified. The Android engine binding remains OPEN. CLI generation and derivation evidence does not establish Android engine operation.",
-        "AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); 17 unit tests pass; emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.",
+        "AND-01 pre-approves Tether WDK Starter, registry foundation and-01-wdk-starter-kotlin, for the UI layer only. Phase 5 inspection is complete (2026-11-10). Tether WDK Starter UI layer only (pin a4fa2172, Apache-2.0), vendored components with SeedWordCell/SeedInputCell removed; 14 screens; ./gradlew assembleDebug exits 0 (APK 52,456,212 bytes); historical 2026-11-10 record: 17/17 unit tests passed (ExtendedKeyValidatorTest 10/10 + DerivationPolicyTest 7/7); the current apps/android tree has 57 @Test annotations across 5 test files, with no verified run of all 57 recorded (NOT-RUN); emulator (AVD bawa-pixel, API 35) install succeeds, app launches, welcome + import screens verified visually. This foundation does not provide a verified Android engine binding and must not own transaction authority or signing policy.",
         "The default visual direction is Bawa Balanced (STYLE-04). The 14-screen contract in docs/14-wallet-app-implementation section 5.1 is the single source of truth for screens.",
         "Planned generation uses BIP-39 with 24 words and an empty passphrase. Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Watch-only derivation is restricted to BTC, ETH and TRX; on-device derivation is not implemented (no AAR); verification is through CLI tools and the web boundary tests, not Android derivation.",
-        "TON is generation-only at m/44'/607'/0': a single address, wallet V4 R2, wallet ID 698983191. TON has no xpub and no watch-only route.",
+        "TON is generation-only in this repo, with a public-key-only watch-only route (one deposit address from m/44'/607'/0', using Wallet V4 R2 and wallet ID 698983191; no TON xpub; TON watch-only derivation is tools/hdwallet-gen/derive-ton.js, producing a single V4 R2 address from a 32-byte Ed25519 public key, no index).",
         "Send, sign and broadcast are DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*; TON 1 masterchain seqno after inclusion plus an outgoing-message outcome check."
       ]
     },
@@ -449,7 +449,7 @@
         "14-screen contract coverage checked against docs/14 section 5.1",
         "the Tether WDK Starter foundation completes Phase 5 inspection before adoption and remains limited to the UI layer",
         "an Android binding to Trust Wallet Core 4.9.3 is established and verified before Android generation or derivation is described as verified; Android AAR availability is not presumed",
-        "the fixed derivation policy is preserved, including BTC/ETH/TRX-only watch-only derivation and TON single-address generation-only",
+        "the fixed derivation policy is preserved, including BTC/ETH/TRX xpub watch-only derivation and TON public-key-only watch-only derivation (single V4 R2 address, no index)",
         "any future transaction construction, send, sign, broadcast or confirmation-policy enforcement has separate implementation and verification evidence on testnet"
       ],
       "status": "PROPOSED"
@@ -466,7 +466,7 @@
       "M-38"
     ],
     "implemented": [
-      "14-screen watch-only UI with honest states",
+      "14-screen watch-only UI with honest states (all 14 contract screens verified by first-hand count in apps/android, 2026-11-20)",
       "extended-public-key import (validator 10/10, policy 7/7 in unit tests)",
       "R-01 point validation mirrored in pure Kotlin",
       "receive-QR display"
@@ -527,7 +527,7 @@
         "Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Address derivation uses the corresponding extended public keys, not private key material.",
         "TON is excluded because it has no xpub; its generation-only route is not part of this watch-only profile.",
         "Send, sign and broadcast are outside this profile and remain DOCUMENTED_NOT_TESTED. This profile does not implement transaction construction, signing or broadcast; signing exists in the web profile (offline, wallet-core AnySigner) and as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only), and broadcast is not implemented anywhere.",
-        "Testnet is the default; mainnet is out of scope by default.",
+        "Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.",
         "M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining \"12\" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*.",
         "No graphical UI foundation applies to this CLI profile. Verified derivation does not establish a built monitoring interface or enforced confirmation policies."
       ]

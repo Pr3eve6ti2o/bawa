@@ -5,27 +5,34 @@ Begin with one plain-language sentence stating the requested product, platform, 
 The network direction defaults to mainnet-first; a request that names testnet uses testnet; missing network facts stay OPEN. Never silently change fixed policy. Mark other missing facts OPEN. Describe the user's goal, not an already-implemented capability.
 
 ## Classify to a profile
-The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitcoin-wallet`, `evm-wallet`, `multichain-wallet` and `watch-only-wallet` are `DOCUMENTED_NOT_TESTED` (derivation primitives verified, wallet products not built); `web-wallet` and `android-wallet` are `STARTER_IMPLEMENTED_AND_VERIFIED` (starter scope only, not complete wallets). Use the plan to resolve overlaps; unresolved fit is OPEN.
+The profiles are validated and carry individual statuses: `hd-wallet-cli`, `bitcoin-wallet`, `evm-wallet`, `multichain-wallet`, `multichain-extended-wallet` and `watch-only-wallet` are `DOCUMENTED_NOT_TESTED` (derivation primitives verified, wallet products not built); `web-wallet` and `android-wallet` are `STARTER_IMPLEMENTED_AND_VERIFIED` (starter scope only, not complete wallets). Use the plan to resolve overlaps; unresolved fit is OPEN.
 
 - `hd-wallet-cli` — CLI generation/derivation requests under the fixed engine policy.
 - `bitcoin-wallet` — Bitcoin-focused wallet requests; transaction support must not be assumed.
 - `evm-wallet` — ETH/EVM-oriented requests; support beyond the specified ETH policy is OPEN.
 - `multichain-wallet` — Combined BTC, ETH, TRX and TON requests; TON remains generation-only and single-address.
+- `multichain-extended-wallet` — Combined 13-chain requests (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) with create/derive/restore/receive for all 13; network operations (balance, history, fee quote, plan-transfer, local-sign, verify-signature, send, sign, broadcast, confirm) are implemented-and-verified for btc, eth, trx, ton only.
 - `web-wallet` — Browser-wallet requests; token-ui foundation inspected in Phase 5 and adopted in Phase 6 (vendored in `apps/web/src/ui/`).
 - `android-wallet` — Android-wallet requests; the approved Android starter is for its UI layer only (inspected in Phase 5, adopted in Phase 7).
 - `watch-only-wallet` — Public-data-only observation requests, without secret intake or signing; monitoring support still requires evidence.
 
-Profile selection is routing, not a capability claim. Do not invent an eighth profile or assume profiles can be combined without plan support.
+Profile selection is routing, not a capability claim. There are eight validated profiles. Do not invent a ninth profile or assume profiles can be combined without plan support.
 
 ## Select authoritative sources
 - **Plan:** `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`; read front matter for post-draft updates. It governs architecture, phases, templates, gates and decisions.
 - **Canonical guides:** `README.md` and Docs 01–16. Resolve actual numbered-guide filenames by inspection, not naming guesses.
-- **Doc 2:** `docs/web-wallet/WEB-GUIDE.md` for Web guidance.
-- **Doc 3:** `docs/android-wallet/ANDROID-GUIDE.md` for Android guidance.
-- **Doc 4:** `docs/mainnet/MAINNET-GUIDE.md`, with 22 sections and the 32-row register in section 21. Consulting its policy/gates does not authorise mainnet use.
+- **Web wallet:** `docs/web-wallet/WEB-GUIDE.md` for Web guidance.
+- **Android wallet:** `docs/android-wallet/ANDROID-GUIDE.md` for Android guidance.
+- **Mainnet:** `docs/mainnet/MAINNET-GUIDE.md`, with 22 sections and the 46-row register in section 21. Consulting its policy/gates does not authorise mainnet use.
 - **UI contract:** Doc 14 §5.1.
 - **Registries and assets:** registries are installed in `registry/` (`profiles.json`, `capabilities.json`, `engines.json`, `ui.json`, `schemas/`); template and starter paths are in `AGENTS.md`. Profile files are installed in `ai/profiles/` (one per profile, derived from `registry/profiles.json`).
 - **Prompts:** installed in `ai/prompts/` (`create-*.md`); inspect actual files rather than inventing filenames.
+
+Profiles: 8
+Chains: 13 (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge) — see registry/capabilities.json
+
+ADR reference: ADR-0007 (docs/adr/0007-price-feed-provider.md)
+ADR reference: ADR-0008 (docs/adr/0008-ecdsa-residual-risk.md)
 
 If a required source is unavailable or conflicting, record the issue as OPEN and stop the affected decision rather than guess.
 
@@ -35,11 +42,11 @@ Examples inherit the mainnet-first direction; a request that explicitly names te
 | Request example | Profile | Key sources |
 | --- | --- | --- |
 | Generate fresh test wallets from the CLI | `hd-wallet-cli` | Plan; `tools/hdwallet-gen`; Docs 01–16 |
-| Build a Bitcoin testnet wallet | `bitcoin-wallet` | Plan; Docs 01–16; Doc 4 policy/gates |
-| Build an Ethereum testnet wallet | `evm-wallet` | Plan; Docs 01–16; Doc 4 policy/gates |
+| Build a Bitcoin testnet wallet | `bitcoin-wallet` | Plan; Docs 01–16; Mainnet guide policy/gates |
+| Build an Ethereum testnet wallet | `evm-wallet` | Plan; Docs 01–16; Mainnet guide policy/gates |
 | Build a BTC/ETH/TRX/TON wallet | `multichain-wallet` | Plan; Docs 01–16; fixed TON restriction |
-| Build a browser wallet | `web-wallet` | Plan; Doc 2; Doc 14 §5.1 |
-| Build an Android wallet | `android-wallet` | Plan; Doc 3; Doc 14 §5.1 |
+| Build a browser wallet | `web-wallet` | Plan; Web wallet; Doc 14 §5.1 |
+| Build an Android wallet | `android-wallet` | Plan; Android wallet; Doc 14 §5.1 |
 | Show public-address balances without holding keys | `watch-only-wallet` | Plan; Docs 01–16; registries if present |
 
 ## Execute the 12 steps
@@ -59,6 +66,12 @@ Examples inherit the mainnet-first direction; a request that explicitly names te
 Inspection must precede scaffolding. Do not skip a blocked step silently or turn a requested capability into an implementation claim.
 
 ## Fixed engine and chain policy
+
+Any optional vault-lock restoration must follow this locking and key-storage policy.
+
+The vault stays unlocked by default. Auto-lock is an optional setting on the /security page: a toggle plus a duration — Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period and unlocking needs the password. Key-storage invariant: while auto-lock is on, the raw derived key is NOT stored (the lock must be real); while auto-lock is off, the raw derived key IS stored under `bawa-vault-key` so the vault can auto-unlock.
+
+Current implementation at 5e7eb1d: no lock exists; the optional restoration is not yet implemented.
 Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**; Node range **>=22 <23**.
 Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` **10.6.0**, `dinero.js` **2.0.2**, and `mnemonic-words` **2.0.0**, with `bip39` **3.1.2** as a devDependency used only as a test oracle.
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
@@ -109,3 +122,10 @@ A successful build proves only its build scope; a tested mock proves only mock b
 - Stop the affected work when a required source, interface, approval, secret boundary or gate cannot be satisfied. State unsupported scope explicitly; do not fabricate substitutes or successful outcomes.
 - Never claim a build, a test pass or mainnet readiness without scoped evidence.
 - Never route mainnet use without separate approval. Approval does not replace applicable plan gates or mandatory real-funds gates; without approval, route the request as planning/documentation work only and do not execute mainnet use.
+
+## Repo-study pattern input
+
+- Before planning or implementing rebuild changes, please consult `/home/boxd/workspace/bawa-repo-study-consolidation/APPLY-PLAN.md` and the lane `FINDINGS.md` files. The study covers 60 repositories, 381 patterns, and a 36-item application plan.
+- For each adopted pattern, cite its source repository and supporting study entry.
+- Explain any deferral of a relevant pattern or application-plan item.
+- These records live outside this repo. If unavailable, request them rather than assuming access or contents.

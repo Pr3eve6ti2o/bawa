@@ -1,6 +1,6 @@
 ---
 title: Wallet App Implementation
-description: Implement the wallet app module by module, key, derivation, storage, network, signing and UI, with a fixture gate, typed errors and a build-from-scratch checklist; testnet only, with published vectors.
+description: Implement the wallet app module by module, key, derivation, storage, network, signing and UI, with a fixture gate, typed errors and a build-from-scratch checklist; mainnet-only web starter, with published vectors.
 last-updated: 2026-11-08
 ---
 
@@ -21,7 +21,7 @@ How-to guide.
 
 Keep `@bawa/hdwallet-gen` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 is superseded: the pin moved to 4.9.3 (E02, 2026-11-13), which is newer than 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06); do not present 4.9.2 as the installed pin. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
 
-Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
+Treat the paths below as a conceptual layout. Use mainnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 
 ### Project structure
 
@@ -45,7 +45,7 @@ Keep gate status specific to the platform:
 
 **Web:** Fixture gate enforced in-engine and covered by offline engine tests; no live-network gate run exists.
 
-**Android:** Fixture gate defined (section I.4) and pure-logic half checked (7 checks, part of 55/55); the on-device gate has never run.
+**Android:** Fixture gate defined (section I.4); the on-device gate has never run. For the fixture gate’s Android side, see `docs/index.md` for the overall Android test inventory and execution status: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Android SDK). This annotation count is not a passing test-run result.
 
 The on-device gate has never run: no Core AAR has been built and no device run has happened. The gate's requirements are acceptance criteria, not results.
 
@@ -83,7 +83,7 @@ Show a mnemonic only on the one-time offline backup screen. Keep import entry ma
 
 Apply this ownership contract to every native object: assign one explicit owner, identify an explicit release point and establish destruction on every exit path through the ownership-contract review.
 
-Require each native owner to be reviewed against the ownership contract in this section, with the review recorded. Require source-level ownership and destruction findings to be source-verified against the Trust Wallet Core 4.9.2 tag. Do not treat source evidence as device evidence.
+Require each native owner to be reviewed against the ownership contract in this section, with the review recorded. Require source-level ownership and destruction findings to be source-verified against the Trust Wallet Core 4.9.3 tag (the installed pin recorded in E02, 2026-11-13). Do not treat source evidence as device evidence.
 
 Until the recorded ownership-contract review establishes explicit ownership and destruction on every exit path, do not claim "native objects deleted on every exit path", and do not allow the fixture gate to report READY.
 
@@ -142,7 +142,7 @@ Keep standard-input read failures in the CLI adapter. Match `derive.js`: exit wi
 
 Use each published vector’s matching public fixture and documented index from the [Trust Wallet Core repository](https://github.com/trustwallet/wallet-core) and the [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/) (links checked live on 8 November 2026), rather than an arbitrary xpub. Treat these as conceptual regression assertions, not payment destinations. Treat the BTC path and `bc1` vector as mainnet-formatted references, and use separate configuration for testnet integration.
 
-Record source-check results as “source-verified against the Trust Wallet Core 4.9.2 tag” only when the checks were made against that tag. Reserve “device-proven” for results backed by a device run.
+Record source-check results as “source-verified against the Trust Wallet Core 4.9.3 tag (the installed pin recorded in E02, 2026-11-13)” only when the checks were made against that tag. Reserve “device-proven” for results backed by a device run.
 
 > **Expected result:**
 >
@@ -187,11 +187,13 @@ Use versioned migrations for storage changes, preserving authenticated encryptio
 
 ### 3.3 Platform protection and memory
 
-Set the shared application inactivity timeout to 10 minutes. This explicitly adopts the Web validation draft's ten-minute auto-lock interval as shared policy. At 754721cd, that interval is evidenced for the Web draft, and no inactivity timeout was found in the Android draft. Both platforms must meet the shared timeout; this policy statement does not establish that both drafts already comply. Never present a value as repository-defined. Treat the Web validation draft’s use of 10 minutes as draft evidence of its own implementation choice, not as a repository rule. Provide immediate locking as well as timeout-based locking.
+Target policy: Make auto-lock an OPTIONAL setting, OFF by default, on `/security`, with a toggle and a duration selector: Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day. When enabled, the vault locks after the chosen period, and unlocking requires the password. While auto-lock is on, the raw derived key must NOT be stored—the lock must be real. While auto-lock is off, the raw derived key IS stored under `bawa-vault-key` in `localStorage` next to the vault envelope so the vault can auto-unlock.
+
+Current implementation at `adopt-proper` HEAD `5e7eb1d` (2026-11-20): the lock was removed, there is no lock screen, and `createVault()` stores the raw derived key as base64 under `bawa-vault-key` in `localStorage` so the vault auto-unlocks. The optional auto-lock restoration described above is NOT yet implemented.
 
 Include an acceptance test that leaves an unlocked session inactive and verifies locking at the chosen timeout. Exercise immediate locking separately.
 
-> **Expected result:** The application locks at the chosen, recorded inactivity timeout. Immediate locking locks it without waiting for that timeout.
+> **Expected result:** The vault stays unlocked by default. When auto-lock is enabled on /security, the vault locks after the chosen period and unlocking needs the password.
 
 Implement lock-time clearing within this bound: buffers are cleared on lock where the platform allows it, and clearing is best-effort, not guaranteed. Do not promise erasure of garbage-collected strings or native copies.
 
@@ -302,15 +304,15 @@ Use the following as the single canonical screen list. Allow ordinary screens to
 - **Transaction details:** Show the selected transaction record, transaction hash and RPC/indexer status, including inclusion and confirmations.
 - **Network selection:** Show the selected chain/network and available network choices, identifying testnets explicitly.
 - **Wallet management:** Show accounts, chains, full addresses and optional public keys. Require explicit confirmation for local-wallet deletion, and never offer private-key export.
-- **Security and backup settings:** Show privacy, authentication, auto-lock and backup controls. Provide immediate locking, but do not display the mnemonic here.
+- **Security and backup settings:** Show privacy, authentication and backup controls; the target auto-lock setting on `/security` is optional and OFF by default, with a toggle and duration selector (Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day), password-required unlocking when enabled, and the key-storage invariant specified in §3.3; do not display the mnemonic here.
 
 Implement **Review** as a required state of the **Send** flow, not as a separate screen. Implement **Lock** as a required app state, not as a separate screen.
 
-Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft states that QR codes are not offered: no QR image service is used and no QR encoder is bundled. The Web guide contains a testnet QR payment-request scanning specification under "QR payment-request scanning — testnet only" (Section F, line 442), naming qr-scanner@1.4.2 as the decoder. Scanning is implemented in neither draft. Add the web encoder and the Android verification half before treating either half as implemented.
+Receive-QR and scanning both stay in scope (user decision, 8 November 2026). The Android draft Receive screen currently encodes the bare derived address as a QR using ZXing core 3.5.3 with default error correction L, not the required M. It has no decode-verification step or payment-request fields. The Web draft implements QR receive: `receive.tsx` renders the derived address as a QR code, as documented in `docs/web-wallet/WEB-GUIDE.md`, section J. `registry/profiles.json` lists receive-QR display as `IMPLEMENTED_AND_VERIFIED`. QR payment-request scanning is implemented at the decode level through `qr-scanner.tsx`, which is wired into send; URI parsing is not implemented. `qr-scanner.test.tsx` exists. Add the Android verification half before treating it as implemented.
 
 ### 5.2 Confirmation and send flow
 
-Take Send through Compose, Review, the platform-appropriate authentication or vault-session unlock gate, Sign, Broadcast and Confirm, in that order. In the Web draft, `approveAndSign()` calls `S.session.requireMnemonic()` before signing. On Android, use the biometric/device-credential gate. This is the required flow; it is not a claim that the complete sequence has been verified in both drafts.
+Take Send through Compose, Review, the platform-appropriate authentication or vault-session unlock gate, Sign, Broadcast and Confirm, in that order. In the Web draft, the send flow is implemented in `apps/web/src/wallet/send.ts`. Neither `approveAndSign()` nor `S.session.requireMnemonic()` occurs in `apps/web/src`. On Android, use the biometric/device-credential gate. This is the required flow; it is not a claim that the complete sequence has been verified in both drafts.
 
 Before any signature, show the sender, **full recipient address**, amount and asset, chain/network, fee estimate and maximum authorised fee.
 
@@ -389,8 +391,8 @@ Keep offline tests separate from disposable local-node and testnet runs. Never u
 Keep the reported test results separate and retain their stated limits:
 
 - 31 offline unit tests pass (mocked transport; no live-network coverage), run by the author against the validation draft, not shipped in any repo.
-- 55 pure-module checks passed in the author's kotlinc 2.1.0 harness run; the harness was not re-run for this guide and covers pure Kotlin logic only - no JNI binding, signing, UI or Gradle build.
-- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0.
+- See `docs/index.md` for the Android test count: 57 `@Test` annotations across 5 files; executed count `NOT-RUN` (no Android SDK). This is a source annotation count, not an executed or passing test count.
+- The repository at 754721cd contains 28 smoke tests in test/smoke.test.js, and CI runs npm test. The recorded phase-1 repair result was 28 ok, 0 fail, exit 0. At adopt-proper HEAD 5e7eb1d (2026-11-20), test/smoke.test.js contains 114 check() assertions, counted directly. This assertion count is not a current test-run result.
 
 Do not combine these counts or use them as evidence of a build, device run or live-network validation.
 
@@ -408,7 +410,7 @@ Block release for any of the following:
 - Unsigned or non-reproducible builds.
 - Unsafe updates or migration failures.
 
-Treat the result as a testnet app. Never use it to hold real funds on mainnet without an independent security review. Enforce that review as a gate, not an optional extra.
+Treat the shipped web starter result as a mainnet-only app. Never use it to hold real funds on mainnet without an independent security review. Enforce that review as a gate, not an optional extra.
 
 ### 6.3 Build-from-scratch checklist
 
@@ -420,7 +422,7 @@ Live validation so far: wallet creation and recovery were verified end to end in
 
 Use this nine-step checklist as work to complete, not as evidence of completion. Do not pass any release gate without its own evidence.
 
-1. **Establish the security scope.** Keep the app scoped to testnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
+1. **Establish the security scope.** Keep the starter scoped to mainnet. Apply the MASVS requirements, maintain the threat model and commission the external penetration test.
 
 2. **Pin dependencies and commit lockfiles.** Pin Trust Wallet Core to `4.9.3`, matching the repository tools and both platform drafts, and independently pin `bip_utils` for comparison. Commit lockfiles before making any release claim.
 

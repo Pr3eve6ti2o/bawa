@@ -271,7 +271,7 @@ Read §5 before §6, then the applicable procedures in §§7–9. The tool names
 | What you want to do | Read in this order and follow this route |
 |---|---|
 | **Create a new mainnet wallet** | §5 → §6 → §§7–9: generation with `tools/hdwallet-gen/generate.js` and `tools/make_wallet.py`, then backup and recovery requirements before funding. |
-| **Build a watch-only view** | §5 → §6 → §§7–9: derivation with `tools/hdwallet-gen/derive.js`. Under `bawa-derivation-policy-v1`, TON is generation-only: one deposit address, no xpub. |
+| **Build a watch-only view** | §5 → §6 → §§7–9: derivation with `tools/hdwallet-gen/derive.js`. Under `bawa-derivation-policy-v1`, TON is generation-only in this repo, with a public-key-only watch-only route (one deposit address from `m/44'/607'/0'`, using Wallet V4 R2 and wallet ID 698983191; no TON xpub; TON watch-only derivation is `tools/hdwallet-gen/derive-ton.js`, producing a single V4 R2 address from a 32-byte Ed25519 public key, no index). |
 | **Compare derivations against an independent reference** | §5 → §6 → §§7–9: derivation, then comparison with `tools/hdwallet-gen/compare.js` against that reference. |
 | **Recover from a backup** | §5 → §6 → §§7–9: backup dependencies, decryption with `tools/decrypt_seed.py`, then recovery rehearsal. Decryption is not import; Bawa supplies no import tool. [M16-F09] |
 | **Track balances** | §5 → §6 → §§7–9: watch-only setup and tracking prerequisites, using `tools/hdwallet-gen/daemon.js` as the tracking entry point. |
@@ -409,7 +409,7 @@ At main head `56396a20` (evidence baseline 2026-11-09), the shared derivation co
 - **BTC:** `m/84'/0'/0'/0/i`
 - **ETH:** `m/44'/60'/0'/0/i`
 - **TRX:** `m/44'/195'/0'/0/i` (coin type `195`: SLIP-0044).
-- **TON:** `m/44'/607'/0'` — generation-only, a single deposit address and no xpub.
+- **TON:** `m/44'/607'/0'` — generation-only in this repo, with a public-key-only watch-only route (one deposit address from `m/44'/607'/0'`, using Wallet V4 R2 and wallet ID 698983191; no TON xpub; TON watch-only derivation is `tools/hdwallet-gen/derive-ton.js`, producing a single V4 R2 address from a 32-byte Ed25519 public key, no index).
 
 Here, `i` is the receiving address index. Do not extend these contracts to other accounts or branches. [M02, M01]
 
@@ -499,7 +499,7 @@ On Bitcoin mainnet, Bawa uses the standard BIP-84 native-SegWit account `m/84'/0
 | BTC | `m/84'/0'/0'/0/i` | `bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd` |
 | ETH | `m/44'/60'/0'/0/i` | `0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7` |
 | TRX | `m/44'/195'/0'/0/i` | `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` |
-| TON | `m/44'/607'/0'` — generation-only | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
+| TON | `m/44'/607'/0'` — generation-only in this repo, with a public-key-only watch-only route (one deposit address from `m/44'/607'/0'`, using Wallet V4 R2 and wallet ID 698983191; no TON xpub; TON watch-only derivation is `tools/hdwallet-gen/derive-ton.js`, producing a single V4 R2 address from a 32-byte Ed25519 public key, no index) | `UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn` |
 
 The TRON docs glossary states that all TRON networks use the `0x41` address prefix; the fixture `TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c` is a well-formed 34-character `T`-address consistent with the `0x41` + 20-byte hash + checksum Base58 construction.
 
@@ -3868,7 +3868,7 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Gate/source links:** Re-checked register (2026-11-09), M-20; M24 K21–K26, covering proposed Doc 3 rows OI-097–OI-102.
 
-### M-21 — 4.9.1 is the upgrade candidate; 4.9.2 is a prerelease; neither carries an Android AAR
+### M-21 — 4.9.3 is the pin (R08 qualified 2026-11-12; E02 applied 2026-11-13); historical: 4.9.1 was the upgrade candidate, 4.9.2 was a prerelease, and neither carried an Android AAR
 
 **Question/risk:** The guide may prescribe `4.9.2` as the default because npm calls it `latest`, treat `4.9.1` and `4.9.2` as interchangeable, or promise an Android AAR that does not exist.
 
@@ -3915,7 +3915,9 @@ The audit also records 103 exclusions: 26 testnet, 18 refchain, 40 Android, 7 De
 
 **Status:** OPEN.
 
-**Operational restriction:** Describe the Web default as a 10-minute timer re-armed by unlocking or by an operation that calls `requireMnemonic()`, not as a general inactivity timer. Tell readers to lock explicitly before leaving the wallet. State plainly that Android has no inactivity auto-lock and requires manual locking.
+At `5e7eb1d`, the lock has been removed: there is no lock screen and no auto-lock code. The Web-timer description above is historical, not current behavior. The owner order of 2026-11-20 at approximately 23:11 IST calls for restoring auto-lock as **OPTIONAL, OFF by default**, on `/security`, with a toggle and duration choices of **Immediately / 1 minute / 5 minutes / 15 minutes / 1 hour / 1 day**. Once implemented and enabled, the vault will lock after the chosen period, and unlocking will require the password. The ordered restoration is not yet implemented; M-22 remains **OPEN**.
+
+**Operational restriction:** Describe auto-lock as optional and OFF by default (toggle plus duration on /security). At 5e7eb1d no auto-lock exists: the vault stays unlocked by default, and no lock screen exists. Do not describe a 10-minute timer as the current default.
 
 **Blocks writing completion:** No.
 
