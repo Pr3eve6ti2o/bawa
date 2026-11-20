@@ -176,9 +176,9 @@ flowchart RL
   accDescr: These three files are direct children of tools/ in the overview. Its fourth direct child, hdwallet-gen/, is shown in the next diagram.
 
   tools["tools/"]
-  tools --> t1["bawa_cli.py"]
-  tools --> t2["make_wallet.py"]
-  tools --> t3["decrypt_seed.py"]
+  tools --> t1["bawa_cli<br/>.py"]
+  tools --> t2["make_wallet<br/>.py"]
+  tools --> t3["decrypt_seed<br/>.py"]
 ```
 
 ### tools/ - hdwallet-gen/
