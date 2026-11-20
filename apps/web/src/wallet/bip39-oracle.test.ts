@@ -60,6 +60,27 @@ const VECTORS = [
     seed:
       'f2b94508732bcbacbcc020faefecfc89feafa6649a5491b8c952cede496c214a0c7b3c392d168748f2d4a612bada0753b52a1c7ac53c1e93abd5c6320b9e95dd',
   },
+  {
+    entropy: '808080808080808080808080808080808080808080808080',
+    mnemonic:
+      'letter advice cage absurd amount doctor acoustic avoid letter advice cage absurd amount doctor acoustic avoid letter always',
+    seed:
+      '107d7c02a5aa6f38c58083ff74f04c607c2d2c0ecc55501dadd72d025b751bc27fe913ffb796f841c49b1d33b610cf0e91d3aa239027f5e99fe4ce9e5088cd65',
+  },
+  {
+    entropy: 'ffffffffffffffffffffffffffffffffffffffffffffffff',
+    mnemonic:
+      'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo when',
+    seed:
+      '0cd6e5d827bb62eb8fc1e262254223817fd068a74b5b449cc2f667c3f1f985a76379b43348d952e2265b4cd129090758b3e3c2c49103b5051aac2eaeb890a528',
+  },
+  {
+    entropy: '0000000000000000000000000000000000000000000000000000000000000000',
+    mnemonic:
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art',
+    seed:
+      'bda85446c68413707090a52022edd26a1c9462295029f2e60cd7c4f2bbd3097170af7a4d73245cafa9c3cca8d561a7c3de6f5d4a10be8ed2a5e608d68f92fcc8',
+  },
 ] as const;
 
 function hexToBytes(hex: string): Uint8Array {
