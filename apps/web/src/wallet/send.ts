@@ -1,9 +1,15 @@
 import Long from 'long';
 import { TW } from '@trustwallet/wallet-core';
-import { bytesToHex, keccak256 } from 'viem';
+import { bytesToHex, keccak256, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
-import { deriveAddresses, withSigningKey } from './core';
+import {
+  assertIntentMatchesTransaction,
+  createPartialSigner,
+  createTransactionIntent,
+  deriveAddresses,
+  withSigningKey,
+} from './core';
 import { getAdapter } from './adapters';
 import {
   BROADCAST_DISABLED_MESSAGE,
@@ -637,6 +643,10 @@ export function tronAddressToBytes(address: string): Uint8Array {
  * copy-then-delete-first attempt failed with invalid-key error 15).
  * The encoded protobuf input (which contains a key copy) is zero-filled
  * after use. Nothing here broadcasts.
+ * S6a (2026-11-20): the signing core now uses the PartialSigner facade
+ * (createPartialSigner + signDigest) with viem reassembly; the
+ * withSigningKey/AnySigner path is gone. Output is byte-identical to the
+ * old path (probe-verified against the pre-facade signer).
  */
 export async function signEthOffline(
   mnemonic: string,
@@ -676,69 +686,65 @@ export async function signEthOffline(
     };
   }
 
-  const core = await loadCore();
+  const intent = createTransactionIntent('eth', to, amountBaseUnits, nonce);
   try {
-    return await withSigningKey(
-      mnemonic,
-      passphrase,
-      core.CoinType.ethereum,
-      "m/44'/60'/0'/0/0",
-      async (keyBytes) => {
-        if (keyBytes.length !== 32) {
-          return {
-            ok: false as const,
-            code: 'signer-empty',
-            reason: 'Invalid Ethereum signing key length.',
-          };
-        }
-
-        const input = TW.Ethereum.Proto.SigningInput.create({
-          chainId: new Uint8Array([1]),
-          nonce: minimalBigEndian(nonce),
-          gasPrice: minimalBigEndian(gasPriceBaseUnits),
-          gasLimit: minimalBigEndian('21000'),
-          toAddress: to,
-          transaction: {
-            transfer: { amount: minimalBigEndian(amountBaseUnits) },
-          },
-          privateKey: keyBytes,
-        });
-
-        const encoded =
-          TW.Ethereum.Proto.SigningInput.encode(input).finish();
-        try {
-          const output = TW.Ethereum.Proto.SigningOutput.decode(
-            core.AnySigner.sign(encoded, core.CoinType.ethereum),
-          );
-
-          if (output.error !== TW.Common.Proto.SigningError.OK) {
-            return signingFailure(output.errorMessage || 'Signing failed.', output.error);
-          }
-
-          const signedBytes = output.encoded;
-          if (signedBytes.length === 0) {
-            return {
-              ok: false as const,
-              code: 'signing-failed',
-              reason: 'Signer returned an empty transaction.',
-            };
-          }
-
-          // Finish all byte access before the disposable key is freed.
-          return {
-            ok: true as const,
-            signedTxHex: bytesToHex(signedBytes),
-            txHash: keccak256(signedBytes),
-            from,
-          };
-        } finally {
-          // The protobuf input contains a copy of the private key.
-          encoded.fill(0);
-        }
-      },
-    );
+    assertIntentMatchesTransaction(intent, {
+      chain: 'eth',
+      to,
+      amountBaseUnits,
+      sequence: nonce,
+    });
   } catch {
-    return { ok: false, code: 'unknown', reason: 'Failed to sign ETH transaction offline.' };
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
+    };
+  }
+
+  const unsigned = {
+    chainId: 1,
+    // viem types nonce as number, but its serializer accepts bigint losslessly.
+    nonce: BigInt(nonce) as unknown as number,
+    gasPrice: BigInt(gasPriceBaseUnits),
+    gas: 21000n,
+    to: to as `0x${string}`,
+    value: BigInt(amountBaseUnits),
+    data: '0x' as const,
+  };
+
+  let unsignedHex: `0x${string}`;
+  try {
+    unsignedHex = serializeTransaction(unsigned);
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Ethereum transaction input.',
+    };
+  }
+
+  const digest = hexToBytes(keccak256(unsignedHex));
+  const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
+  const sig = await signer.signDigest(digest);
+  const r = bytesToHex(sig.slice(0, 32));
+  const s = bytesToHex(sig.slice(32, 64));
+  const v = BigInt(sig[64]! + 35 + 2 * 1);
+
+  try {
+    const signed = serializeTransaction(unsigned, { r, s, v });
+    return {
+      ok: true,
+      signedTxHex: signed,
+      txHash: keccak256(signed),
+      from,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Ethereum transaction input.',
+    };
   }
 }
 
