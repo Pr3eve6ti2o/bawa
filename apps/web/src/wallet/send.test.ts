@@ -18,6 +18,7 @@ import {
   broadcastSigned,
   isBroadcastAllowedFor,
   markBroadcastUnknown,
+  simulateSend,
 } from './send';
 import { createWallet, deriveAddresses } from './core';
 import { createVault, deleteVault, TEST_PROVENANCE } from './vault';
@@ -27,6 +28,7 @@ import type {
   AdapterResult,
   ChainAdapter,
   FeeEstimate,
+  TxInput,
 } from './adapters/types';
 
 describe('validateRecipient (Sol p1, assembled hands-on)', () => {
@@ -692,5 +694,86 @@ describe('item 36 broadcast guard with real vaults (S6b-2)', () => {
         holder.localStorage = previousStorage;
       }
     }
+  });
+});
+
+describe('simulateSend BTC', () => {
+  function simStub(chain: 'btc', balance: string, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals: 8, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  const from = 'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu';
+  const to = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+
+  const fee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'btc',
+      networkId: 'test',
+      feeBaseUnits: '10',
+      unit: 'sat/vB',
+      note: 'stub fee rate',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const utxos = [
+    {
+      txid: createHash('sha256')
+        .update('lane3-btc-test-utxo')
+        .digest('hex'),
+      vout: 0,
+      valueBaseUnits: '100000',
+    },
+  ];
+
+  const inputs: AdapterResult<TxInput> = {
+    status: 'ok',
+    data: { kind: 'utxo', utxos },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  it('returns the amount and calculated BTC fee in base units', async () => {
+    registerAdapter(simStub('btc', '100000', fee, inputs));
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '1410',
+    });
+  });
+
+  it('returns fee-unavailable when getTxInputs is unavailable', async () => {
+    registerAdapter(
+      simStub('btc', '100000', fee, {
+        status: 'unavailable',
+        reason: 'down',
+      }),
+    );
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
+  });
+
+  it('returns fee-unavailable when estimateFee is unavailable', async () => {
+    registerAdapter(
+      simStub(
+        'btc',
+        '100000',
+        { status: 'unavailable', reason: 'down' },
+        inputs,
+      ),
+    );
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
   });
 });
