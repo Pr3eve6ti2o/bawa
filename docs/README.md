@@ -1,5 +1,7 @@
 # Bawa Documentation
 
+The single entry point for Bawa documentation is [index.md](index.md); this guide remains the Docs 01–16 map.
+
 Each README is organized around a job. Read only what you need, then follow the links when you need to go deeper.
 
 ## Guide map

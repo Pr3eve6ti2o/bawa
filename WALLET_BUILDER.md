@@ -1,5 +1,7 @@
 # WALLET_BUILDER.md
 
+The single entry point for Bawa documentation is [docs/index.md](docs/index.md).
+
 ## Identify the request
 Begin with one plain-language sentence stating the requested product, platform, chains, operations and network.
 The network direction defaults to mainnet-first; a request that names testnet uses testnet; missing network facts stay OPEN. Never silently change fixed policy. Mark other missing facts OPEN. Describe the user's goal, not an already-implemented capability.
