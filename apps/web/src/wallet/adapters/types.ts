@@ -1,5 +1,4 @@
 import type { ChainId } from '../../engine/boundary';
-import type { BalanceProvider } from '../balance-providers';
 import { BawaError, WalletErrorCodes } from '../errors';
 
 /**
@@ -195,37 +194,4 @@ export function assertNetworkId(
       `Network identity mismatch from ${source}: expected ${expected}, got ${actual}.`,
     );
   }
-}
-
-/**
- * Legacy BalanceProvider view of an adapter, for wallet-context's
- * getBalanceProvider path. Ok maps to {value}; unavailable/error throw, so
- * the caller reports them as error (use getAdapter for the full
- * unavailable/error distinction).
- *
- * @deprecated Legacy shim (item 2 deprecation notice). Production consumers:
- * exactly 1 — `registerAdapter` in `adapters/index.ts`, which registers the
- * shim for every adapter. `getBalanceProvider` / `hasBalanceProvider` have
- * no production call sites: `state/wallet-context.tsx` reads balances via
- * `getAdapter` directly. Do NOT remove before P5 item 28 migrates the
- * refresh path off this shim; removal date: TBD by the Phase 3 coordinator
- * (no date is set by this lane).
- */
-export function toBalanceProvider(adapter: ChainAdapter): BalanceProvider {
-  return {
-    getBalance: async (_chain: ChainId, address: string) => {
-      const result = await adapter.getBalance(address);
-      if (result.status !== 'ok') {
-        throw new Error(result.reason);
-      }
-      return { value: result.data.valueBaseUnits };
-    },
-    getHistory: async (_chain: ChainId, address: string) => {
-      const result = await adapter.getHistory(address);
-      if (result.status !== 'ok') {
-        return [];
-      }
-      return result.data;
-    },
-  };
 }

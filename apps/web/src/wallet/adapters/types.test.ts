@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ChainId } from '../../engine/boundary';
 import { BawaError, WalletErrorCodes, walletErrorCodeOf } from '../errors';
 import {
   assertNetworkId,
@@ -8,7 +7,6 @@ import {
   DEFAULT_TON_WALLET_VERSION,
   fetchJson,
   httpFetchTransport,
-  toBalanceProvider,
   TON_WALLET_VERSIONS,
   type AdapterResult,
   type AdapterBalance,
@@ -149,23 +147,6 @@ describe('broadcast disabled', () => {
   });
 });
 
-describe('toBalanceProvider', () => {
-  it('returns {value} on ok', async () => {
-    const provider = toBalanceProvider(stubAdapter(okBalance('123')));
-    await expect(provider.getBalance('eth' as ChainId, '0x0')).resolves.toEqual({
-      value: '123',
-    });
-  });
-
-  it('throws the adapter reason on unavailable/error', async () => {
-    const provider = toBalanceProvider(
-      stubAdapter({ status: 'unavailable', reason: 'no-adapter' }),
-    );
-    await expect(provider.getBalance('eth' as ChainId, '0x0')).rejects.toThrow(
-      'no-adapter',
-    );
-  });
-});
 
 describe('httpFetchTransport', () => {
   it('returns parsed JSON and forwards the init through to fetch', async () => {
