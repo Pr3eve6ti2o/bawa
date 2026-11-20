@@ -113,6 +113,8 @@ Verified routing result: your request routes to the build command; exit status `
 | Capability map | [docs/CAPABILITY-MAP.md](docs/CAPABILITY-MAP.md) |
 | Mainnet gap assessment | [docs/MAINNET-GAP-ASSESSMENT.md](docs/MAINNET-GAP-ASSESSMENT.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Quality bar | [CONSTRAINTS.md](CONSTRAINTS.md) |
+| Wallet lifecycle | [docs/wallet-lifecycle.md](docs/wallet-lifecycle.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Licence | [LICENSE](LICENSE) |
@@ -122,6 +124,28 @@ Verified routing result: your request routes to the build command; exit status `
 Use Bawa as a reference for [HD-wallet workflows](docs/README-FULL.md) and as a [builder](WALLET_BUILDER.md) that turns one plain request into a real, buildable project. It is **not** a hosted wallet, custody service, or exchange.
 
 Mainnet send/broadcast is not implemented; broadcast stays disabled. The repository is mainnet-first in direction but testnet-safe in behaviour; read the [mainnet gap assessment](docs/MAINNET-GAP-ASSESSMENT.md). If you want a ready-made wallet to hold funds, use a production wallet instead.
+
+## If you want a wallet to use (product-user route)
+
+Bawa is builder material: a reference and a starter kit, not a wallet
+product. If you arrived looking for a wallet to hold funds, the route
+is:
+
+1. **Do not use this repository as your wallet.** The web starter is a
+   reference implementation; it has never sent a transaction on any
+   network, has no backup store for the vault, and recovery rehearsal
+   has never been executed.
+2. **Use a production wallet** (for example Trust Wallet, whose engine
+   this repo's starter is built on) for real funds.
+3. **If you want to try the starter**, cold-test it with a disposable
+   wallet: create a fresh wallet in `apps/web`, write the phrase down
+   on paper, lock and unlock it, import it watch-only, and delete the
+   vault afterwards. Never fund it, and never import a phrase that
+   holds real funds. The lifecycle is documented in
+   [docs/wallet-lifecycle.md](docs/wallet-lifecycle.md).
+
+Builder material and the product route are different things, and this
+repository is the first one.
 
 ## Passphrase policy
 

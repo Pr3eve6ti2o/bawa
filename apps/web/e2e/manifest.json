@@ -1,0 +1,84 @@
+{
+  "$schema": "E2E harness manifest \u2014 repo-study Phase 3, item 27. The harness is the critical-path check for the web wallet: it runs the built app in Chromium and its verdict is machine-enforced (CI fails unless every case passes). This file is the contract the specs implement; a spec that contradicts it is wrong, not the manifest.",
+  "browserCheckProcedure": {
+    "reconThenAction": "before acting on a page, the spec reads the page first (waits for the expected heading / state) and only then interacts; a spec never clicks a selector it has not seen rendered",
+    "stableSelectors": "prefer role/text selectors (getByRole, getByText) over CSS classes; the app has no data-testid attributes, so specs must not invent them"
+  },
+  "cases": [
+    {
+      "asserts": [
+        "wallet-ready screen renders",
+        "all four chain addresses are shown",
+        "phrase is cleared from the screen after creation"
+      ],
+      "covers": "vault password step, phrase generation and write-down, confirm-words step, wallet-ready screen with all four chain addresses",
+      "file": "e2e/create-wallet.spec.ts",
+      "id": "E2E-01",
+      "phase": "create",
+      "title": "Create a wallet end to end"
+    },
+    {
+      "asserts": [
+        "lock returns to the unlock screen",
+        "correct password unlocks",
+        "wrong password shows an error and stays locked"
+      ],
+      "covers": "lock from the dashboard, unlock with the disposable vault password, wrong-password rejection",
+      "file": "e2e/unlock-lock.spec.ts",
+      "id": "E2E-02",
+      "phase": "unlock",
+      "title": "Lock and unlock the vault"
+    },
+    {
+      "asserts": [
+        "each chain shows zero balance or an honest unavailable state with a reason",
+        "no invented balance or price is ever shown"
+      ],
+      "covers": "dashboard refresh after unlock, per-chain balance states",
+      "file": "e2e/balances.spec.ts",
+      "id": "E2E-03",
+      "phase": "balance",
+      "title": "Dashboard balances load honestly"
+    },
+    {
+      "asserts": [
+        "send flow states broadcast is disabled",
+        "no transaction is signed, built, or broadcast"
+      ],
+      "covers": "opening the send flow shows broadcast disabled",
+      "file": "e2e/send-disabled.spec.ts",
+      "id": "E2E-04",
+      "phase": "send-disabled",
+      "title": "Send is disabled, not attempted"
+    },
+    {
+      "asserts": [
+        "a blocked refresh shows a failure state with a reason",
+        "the previous balances are marked stale, not presented as current",
+        "Retry re-attempts the refresh"
+      ],
+      "covers": "refresh with the network blocked, sanitised failure state, Retry button",
+      "file": "e2e/refresh-failure.spec.ts",
+      "id": "E2E-05",
+      "phase": "refresh-failure",
+      "requires": "item 28 (refresh failure state) \u2014 this case is skipped until wallet-refresh.ts lands; the skip is recorded in the case file with the reason",
+      "title": "A failed refresh is visible, not silent"
+    }
+  ],
+  "harness": {
+    "command": "npm run test:e2e (apps/web), after npm run build",
+    "config": "apps/web/playwright.config.ts",
+    "continueAfterFailure": true,
+    "runner": "Playwright (@playwright/test), Chromium only",
+    "server": "vite preview of dist/ on http://127.0.0.1:4173 \u2014 started by the config's webServer block, never by hand",
+    "verdict": "exit 0 only when every case passes; any failure fails the CI e2e job",
+    "workers": 1
+  },
+  "securityBoundaries": {
+    "disposableWalletsOnly": "every wallet is created by the app under test during the run, with a fresh disposable vault password; never a production or existing phrase, never funded, never a real-funds key",
+    "failureScreenshotsMaskSecrets": "the config sets screenshot 'off' because Playwright cannot mask regions in automatic failure shots, and a shot of the create flow would capture the recovery phrase. Instead every spec registers the shared afterEach helper from e2e/helpers.ts, which on failure takes a screenshot masked over every secret-bearing region: the phrase word grid (the section headed 'Write down your recovery phrase'), the confirm-words inputs, and every input[type=password]. If a secret-bearing region cannot be located precisely, the helper masks the whole main element \u2014 a useless screenshot beats a leaked phrase",
+    "noNetworkSecrets": "specs never read or print the mnemonic, the password, or any derived key; assertions are on visible state (screen headings, button states, address presence) only",
+    "noTracing": "trace is 'off' in the config and no spec may enable it \u2014 a trace would record the recovery phrase and vault password as typed",
+    "noVideo": "video is 'off' for the same reason"
+  }
+}
