@@ -62,8 +62,9 @@ export function AssetDetailScreen() {
 
   function refreshAll() {
     void refreshChain(chain as ChainId);
-    void refreshBalances();
-    void refreshHistory();
+    void refreshBalances().finally(() => {
+      void refreshHistory();
+    });
   }
 
   return (

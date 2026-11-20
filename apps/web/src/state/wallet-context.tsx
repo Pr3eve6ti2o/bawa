@@ -458,8 +458,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // immediately. A failed background refresh leaves the per-chain
     // error/unavailable state (or the previous state) and the dashboard
     // Retry button re-runs it; it never throws here.
-    void refreshBalances().catch(() => {});
-    void refreshHistory().catch(() => {});
+    void refreshBalances()
+      .finally(() => refreshHistory())
+      .catch(() => {});
   }, [update, refreshBalances, refreshHistory]);
 
   // Switch the derived vault account. Validates like deriveAddressesAt
