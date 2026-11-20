@@ -9,6 +9,7 @@ import {
   PRICE_IDS,
   fetchPrices,
   fiatValueForBalance,
+  formatUnitPriceUsd,
   isFreshQuote,
   loadCachedPrices,
   parsePriceResponse,
@@ -16,6 +17,7 @@ import {
   quoteFreshnessLabel,
   saveCachedPrices,
   usePrices,
+  unitPriceForChain,
   usdPriceToMinorUnitsPerWhole,
 } from './prices';
 import type { PriceQuote } from './prices';
@@ -644,6 +646,72 @@ describe('fiatValueForBalance', () => {
     expect(fresh.btc.status).toBe('fresh');
     expect(fiatValueForBalance('btc', btc, fresh.btc, NOW_MS + 11 * 60 * 1000))
       .toEqual({ kind: 'expired' });
+  });
+});
+
+describe('formatUnitPriceUsd', () => {
+  it('formats whole-dollar prices with two decimals and separators', () => {
+    expect(formatUnitPriceUsd('62683')).toBe('$62,683.00');
+    expect(formatUnitPriceUsd('1774.93')).toBe('$1,774.93');
+    expect(formatUnitPriceUsd('1000000')).toBe('$1,000,000.00');
+  });
+
+  it('rounds a price above one dollar half-up to two decimals', () => {
+    expect(formatUnitPriceUsd('1.028')).toBe('$1.03');
+  });
+
+  it('keeps up to six decimals below one dollar', () => {
+    expect(formatUnitPriceUsd('0.310229')).toBe('$0.310229');
+    expect(formatUnitPriceUsd('0.073494')).toBe('$0.073494');
+  });
+
+  it('keeps at least two decimals when trimming trailing zeros', () => {
+    expect(formatUnitPriceUsd('0.5')).toBe('$0.50');
+    expect(formatUnitPriceUsd('0.310200')).toBe('$0.3102');
+  });
+
+  it('throws for zero, negative, and invalid input', () => {
+    for (const price of ['0', '-1', 'not-a-number', '']) {
+      expect(() => formatUnitPriceUsd(price)).toThrow();
+    }
+  });
+});
+
+describe('unitPriceForChain', () => {
+  const fresh = parsePriceResponse(freshPayload(), NOW_MS);
+  const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
+
+  it('returns the formatted unit price for a fresh quote', () => {
+    expect(unitPriceForChain(fresh.btc, NOW_MS)).toEqual({
+      kind: 'fresh', text: '$62,683.00',
+    });
+    expect(unitPriceForChain(fresh.trx, NOW_MS)).toEqual({
+      kind: 'fresh', text: '$0.310229',
+    });
+  });
+
+  it('returns missing when no price entry was passed', () => {
+    expect(unitPriceForChain(undefined, NOW_MS)).toEqual({ kind: 'missing' });
+  });
+
+  it('returns expired for an expired entry', () => {
+    expect(unitPriceForChain(expired.btc, NOW_MS)).toEqual({ kind: 'expired' });
+  });
+
+  it('expires a fresh entry as time advances', () => {
+    expect(unitPriceForChain(fresh.btc, NOW_MS + 11 * 60 * 1000)).toEqual({ kind: 'expired' });
+  });
+
+  it('returns unavailable when the coin is absent', () => {
+    const payload: Record<string, unknown> = { ...freshPayload() };
+    delete payload.bitcoin;
+    const entries = parsePriceResponse(payload, NOW_MS);
+    expect(unitPriceForChain(entries.btc, NOW_MS)).toEqual({ kind: 'unavailable' });
+  });
+
+  it('preserves a rate-limited error', () => {
+    expect(unitPriceForChain({ status: 'error', reason: 'rate-limited' }, NOW_MS))
+      .toEqual({ kind: 'error', reason: 'rate-limited' });
   });
 });
 

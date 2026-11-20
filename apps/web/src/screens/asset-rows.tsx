@@ -2,8 +2,8 @@ import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/format';
-import { fiatValueForBalance, quoteFreshnessLabel } from '../wallet/prices';
-import type { PriceEntry, PriceMap } from '../wallet/prices';
+import { fiatValueForBalance, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
+import type { PriceEntry, PriceMap, UnitPrice } from '../wallet/prices';
 import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
@@ -30,12 +30,17 @@ export const CHAIN_CHIP_COLORS: Record<string, string> = {
 /**
  * Real-balance asset rows, shared by the dashboard and the asset list.
  * A row appears only for a chain whose balance capability is verified
- * (availableFor('balance')). Rows show a fiat value only when the caller
- * passes a fresh price; otherwise they show the native balance only and
- * an honest price state, never a fabricated number. A failed fetch shows
- * "unavailable", never zero.
+ * (availableFor('balance')). A non-zero balance shows its fiat value
+ * when the caller passes a fresh price. Every row also shows the
+ * per-unit price ("$61,706.00", labelled "per BTC") whenever a fresh
+ * price is available — including zero balances and locked/unavailable
+ * balances — so a working feed is visible and a failed one says so
+ * ("Price unavailable" / "Price error" / "Price expired"), never a
+ * silent empty and never a fabricated number. While the first fetch is
+ * still in flight, idle entries read as unavailable, so no price state
+ * is shown rather than a premature failure.
  */
-export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZero: boolean; onShowAll?: () => void; prices?: PriceMap; pricesNowMs?: number }) {
+export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoading }: { hideZero: boolean; onShowAll?: () => void; prices?: PriceMap; pricesNowMs?: number; pricesLoading?: boolean }) {
   const { balances, refreshBalances, vaultState, vaultAddresses, addresses } =
     useWallet();
   const chains = availableFor('balance');
@@ -75,6 +80,16 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
         const config = chainConfig(chain);
         const balance = balances[chain];
         const avatar = <ChainLogo chain={chain} />;
+        const nowMs = pricesNowMs ?? Date.now();
+        const entry: PriceEntry | undefined = prices?.[chain];
+        const unit = unitPriceForChain(entry, nowMs);
+        // While the first fetch is still in flight, idle entries read as
+        // 'unavailable' — show nothing rather than a premature failure.
+        // A refetch keeps the last settled entries, so those still show.
+        const displayUnit: UnitPrice =
+          pricesLoading === true && unit.kind === 'unavailable'
+            ? { kind: 'missing' }
+            : unit;
 
         if (balance.status === 'loading') {
           return (
@@ -109,6 +124,22 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
                       : 'Could not load balance'}
                 </span>
               </span>
+              {displayUnit.kind === 'fresh' ? (
+                <span className="text-right">
+                  <span className="block text-[15px] font-bold text-foreground">
+                    {displayUnit.text}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {`per ${config.symbol}`}
+                  </span>
+                </span>
+              ) : displayUnit.kind === 'expired' ? (
+                <span className="shrink-0 text-xs text-muted-foreground">Price expired</span>
+              ) : displayUnit.kind === 'unavailable' ? (
+                <span className="shrink-0 text-xs text-muted-foreground">Price unavailable</span>
+              ) : displayUnit.kind === 'error' ? (
+                <span className="shrink-0 text-xs text-muted-foreground">Price error</span>
+              ) : null}
               {!lockedNoAddress && (
                 <Button
                   type="button"
@@ -130,8 +161,6 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
                 CHAIN_DECIMALS[chain],
                 config.symbol,
               );
-        const nowMs = pricesNowMs ?? Date.now();
-        const entry: PriceEntry | undefined = prices?.[chain];
         let fiatText: string | undefined;
         let detail = `${config.displayName} mainnet`;
 
@@ -146,6 +175,19 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
               break;
             case 'zero':
             case 'balance-unavailable':
+              // No fiat value exists for a zero or unknown balance, so
+              // the row shows the per-unit price instead — the feed's
+              // state stays visible instead of a silent empty.
+              if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
+                fiatText = displayUnit.text;
+                detail = `per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+              } else if (displayUnit.kind === 'expired') {
+                detail = 'Price expired';
+              } else if (displayUnit.kind === 'unavailable') {
+                detail = 'Price unavailable';
+              } else if (displayUnit.kind === 'error') {
+                detail = 'Price error';
+              }
               break;
             case 'expired':
               detail = 'Price expired';

@@ -207,7 +207,7 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('never renders a fabricated portfolio total', async () => {
+  it('shows real unit prices on failed balances without fabricating a total', async () => {
     window.localStorage.clear();
     setWallet(balancesFor({}));
     stubPriceFetch({
@@ -217,12 +217,81 @@ describe('dashboard screen', () => {
     });
     const mounted = await mountScreen();
     try {
-      // Even with fresh prices available, failed balances must not be
-      // blamed on the price feed: no price note at all, no fiat total.
+      await clickRefreshPrices(mounted);
+      // Failed balances must not be blamed on the price feed and no
+      // fiat total may be fabricated: the hero stays Unavailable.
       expect(mounted.div.textContent).toContain('Unavailable');
       expect(mounted.div.textContent).not.toContain('No prices loaded yet');
       expect(mounted.div.textContent).not.toContain('No fresh prices');
-      expect(mounted.div.textContent).not.toContain('$');
+      expect(mounted.div.textContent).not.toContain('$0.00');
+      // But the live market price per unit IS real public data, not a
+      // balance value: each row shows it, labelled "per <symbol>".
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('per BTC');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the real unit price on a zero balance, never a silent empty', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      // The portfolio total is honestly $0.00 (every balance is zero),
+      // but each row still shows the live market price per unit.
+      expect(mounted.div.textContent).toContain('$0.00');
+      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('per BTC');
+      expect(mounted.div.textContent).toContain('$1,774.93');
+      expect(mounted.div.textContent).toContain('per ETH');
+      expect(mounted.div.textContent).toContain('Updated just now');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows Price error on zero balances when the feed is rate-limited', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    // No Retry-After header, so the hook's back-off is 1000 ms then
+    // 2000 ms and the auto-fetch settles within the 4 s wait below.
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain('Price error');
+      expect(mounted.div.textContent).toContain('$0.00');
+      expect(mounted.div.textContent).not.toContain('$62,683.00');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

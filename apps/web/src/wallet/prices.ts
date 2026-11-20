@@ -449,6 +449,86 @@ export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {
     .toFixed(0, Decimal.ROUND_HALF_UP);
 }
 
+// Per-unit price for display (Lane A): the price of one whole unit of the
+// chain's native asset, e.g. "$61,706.00" for BTC. Shown on every asset
+// row regardless of balance, so the feed is observable even on a
+// zero-balance or locked wallet — previously no surface rendered a
+// per-unit price at all, and a working feed looked identical to a dead
+// one. Never a balance value: it is labelled "per <symbol>" at the call
+// site, and it is never used in totals.
+export type UnitPrice =
+  | { kind: 'fresh'; text: string }
+  | { kind: 'expired' }
+  | { kind: 'unavailable' }
+  | {
+      kind: 'error';
+      reason: 'rate-limited' | 'network' | 'provider' | 'timeout';
+    }
+  | { kind: 'missing' };
+
+export function formatUnitPriceUsd(usdPrice: string): string {
+  const invalidPriceMessage =
+    'Invalid USD price: expected a finite decimal string greater than zero.';
+
+  if (
+    typeof usdPrice !== 'string' ||
+    !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(usdPrice)
+  ) {
+    throw new Error(invalidPriceMessage);
+  }
+
+  const PriceDecimal = Decimal.clone({
+    precision: Math.max(40, usdPrice.length + 8),
+    rounding: Decimal.ROUND_HALF_UP,
+  });
+
+  let price: Decimal;
+  try {
+    price = new PriceDecimal(usdPrice);
+  } catch {
+    throw new Error(invalidPriceMessage);
+  }
+
+  if (!price.isFinite() || !price.gt(0)) {
+    throw new Error(invalidPriceMessage);
+  }
+
+  const fixed = price.toFixed(
+    price.gte(1) ? 2 : 6,
+    PriceDecimal.ROUND_HALF_UP,
+  );
+  const [whole = '0', fraction = ''] = fixed.split('.');
+  const groupedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const trimmedFraction = fraction.replace(/0+$/, '').padEnd(2, '0');
+
+  return `$${groupedWhole}.${trimmedFraction}`;
+}
+
+export function unitPriceForChain(
+  entry: PriceEntry | undefined,
+  nowMs: number,
+): UnitPrice {
+  if (entry === undefined) {
+    return { kind: 'missing' };
+  }
+
+  switch (entry.status) {
+    case 'error':
+      return { kind: 'error', reason: entry.reason };
+    case 'unavailable':
+      return { kind: 'unavailable' };
+    case 'expired':
+      return { kind: 'expired' };
+    case 'fresh':
+      return isFreshQuote(entry.quote, nowMs)
+        ? {
+            kind: 'fresh',
+            text: formatUnitPriceUsd(entry.quote.usdPrice),
+          }
+        : { kind: 'expired' };
+  }
+}
+
 export function fiatValueForBalance(
   chain: ChainId,
   balance: BalanceState,

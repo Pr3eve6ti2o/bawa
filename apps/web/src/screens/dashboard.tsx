@@ -295,7 +295,7 @@ export function DashboardScreen() {
               </Button>
             </div>
             <Card className="mt-4">
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} />
             </Card>
           </section>
             <div className="hidden lg:block">
