@@ -81,7 +81,72 @@ export type SendPreview =
       totalBaseUnits: string;
       feeNote: string;
     }
-  | { ok: false; reason: string };
+  | {
+      ok: false;
+      code: SendFailureCode;
+      reason: string;
+      signingErrorCode?: number;
+    };
+
+export type SendFailureCode =
+  | 'invalid-input'
+  | 'invalid-mnemonic'
+  | 'insufficient-funds'
+  | 'insufficient-gas'
+  | 'bad-nonce'
+  | 'bad-seqno'
+  | 'plan-failed'
+  | 'simulation-failed'
+  | 'signing-failed'
+  | 'submit-failed'
+  | 'adapter-unavailable'
+  | 'signer-empty'
+  | 'intent-mismatch'
+  | 'unsupported-version'
+  | 'unknown';
+
+/** Unknown broadcast state remains separate from send failures. */
+export type SendFailure = {
+  ok: false;
+  code: SendFailureCode;
+  reason: string;
+  signingErrorCode?: number;
+};
+
+/** 'submitted' is unreachable while broadcast stays disabled. */
+export type SendProgressStage =
+  | 'building'
+  | 'simulating'
+  | 'signing'
+  | 'signed'
+  | 'submitted';
+
+export function signingFailure(
+  reason: string,
+  signingErrorCode: number,
+): SendFailure {
+  return {
+    ok: false,
+    code: 'signing-failed',
+    reason,
+    signingErrorCode,
+  };
+}
+
+export function planFailure(
+  errorCode: number,
+  errorMessage: string,
+): SendFailure {
+  return {
+    ok: false,
+    code: 'plan-failed',
+    reason: errorMessage
+      ? `Transaction plan failed (SigningError ${errorCode}): ${errorMessage}`
+      : `Transaction plan failed (SigningError ${errorCode}).`,
+    signingErrorCode: errorCode,
+  };
+}
+
 
 /**
  * BTC fee plan without any private key (hands-on, probe-proven
@@ -97,7 +162,7 @@ async function planBtcFee(
   feeRateSatPerVB: string,
   utxos: UtxoInput[],
 ): Promise<
-  { ok: true; feeBaseUnits: string } | { ok: false; reason: string }
+  { ok: true; feeBaseUnits: string } | SendFailure
 > {
   const feeRate = toSafeInt(feeRateSatPerVB);
   const amountInt = toSafeInt(amount);
@@ -112,7 +177,7 @@ async function planBtcFee(
         toSafeInt(u.valueBaseUnits) === null,
     )
   ) {
-    return { ok: false, reason: 'Invalid BTC fee-planning inputs.' };
+    return { ok: false, code: 'invalid-input', reason: 'Invalid BTC fee-planning inputs.' };
   }
   try {
     const core = await loadCore();
@@ -147,11 +212,11 @@ async function planBtcFee(
       core.AnySigner.plan(encoded, core.CoinType.bitcoin),
     );
     if (plan.error !== TW.Common.Proto.SigningError.OK) {
-      return { ok: false, reason: 'Transaction plan failed.' };
+      return planFailure(plan.error, '');
     }
     return { ok: true, feeBaseUnits: String(plan.fee) };
   } catch {
-    return { ok: false, reason: 'BTC fee planning failed.' };
+    return { ok: false, code: 'plan-failed', reason: 'BTC fee planning failed.' };
   }
 }
 
@@ -174,34 +239,34 @@ export async function previewSendAmount(
 ): Promise<SendPreview> {
   const amount = decimalToBaseUnits(amountDecimal, CHAIN_DECIMALS[chain]);
   if (amount === null || BigInt(amount) <= 0n) {
-    return { ok: false, reason: 'Enter a valid amount.' };
+    return { ok: false, code: 'invalid-input', reason: 'Enter a valid amount.' };
   }
 
   const adapter = getAdapter(chain);
   if (!adapter) {
-    return { ok: false, reason: 'No adapter available for this chain.' };
+    return { ok: false, code: 'adapter-unavailable', reason: 'No adapter available for this chain.' };
   }
 
   const balance = await adapter.getBalance(fromAddress);
   if (balance.status !== 'ok') {
-    return { ok: false, reason: balance.reason };
+    return { ok: false, code: 'adapter-unavailable', reason: balance.reason };
   }
   if (BigInt(amount) > BigInt(balance.data.valueBaseUnits)) {
-    return { ok: false, reason: 'Amount exceeds available balance.' };
+    return { ok: false, code: 'insufficient-funds', reason: 'Amount exceeds available balance.' };
   }
 
   const fee = await adapter.estimateFee();
   if (fee.status !== 'ok') {
-    return { ok: false, reason: fee.reason };
+    return { ok: false, code: 'adapter-unavailable', reason: fee.reason };
   }
 
   if (chain === 'btc') {
     const inputs = await adapter.getTxInputs(fromAddress);
     if (inputs.status !== 'ok') {
-      return { ok: false, reason: inputs.reason };
+      return { ok: false, code: 'adapter-unavailable', reason: inputs.reason };
     }
     if (inputs.data.kind !== 'utxo') {
-      return { ok: false, reason: 'BTC adapter did not return UTXOs.' };
+      return { ok: false, code: 'adapter-unavailable', reason: 'BTC adapter did not return UTXOs.' };
     }
     const planned = await planBtcFee(
       fromAddress,
@@ -233,9 +298,160 @@ export async function previewSendAmount(
   };
 }
 
+export type SimulationError = {
+  code: string;
+  message: string;
+  chain: ChainId;
+};
+
+export type SimulateSendResult =
+  | { ok: true; amountBaseUnits: string; feeBaseUnits: string }
+  | {
+      ok: false;
+      error: SimulationError;
+      code: SendFailureCode;
+      reason: string;
+    };
+
+function simulationRecord(
+  value: unknown,
+): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function simulationText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
+function simulationExecutionCode(code: string): string {
+  if (code === 'bad-nonce') return 'stale-nonce';
+  if (code === 'bad-seqno') return 'stale-seqno';
+  return code;
+}
+
+function simulationFailed(
+  chain: ChainId,
+  cause: unknown,
+  fallbackCode: string,
+  fallbackReason: string,
+): Extract<SimulateSendResult, { ok: false }> {
+  const source = simulationRecord(cause);
+  const detail = simulationRecord(source?.error);
+
+  const executionCode = simulationExecutionCode(
+    simulationText(detail?.code) ??
+      simulationText(source?.code) ??
+      fallbackCode,
+  );
+
+  const message =
+    simulationText(source?.reason) ??
+    simulationText(detail?.message) ??
+    simulationText(detail?.reason) ??
+    simulationText(source?.message) ??
+    simulationText(source?.error) ??
+    simulationText(cause) ??
+    fallbackReason;
+
+  // Keep execution codes separate from the existing send failure vocabulary.
+  const publicCode = simulationExecutionCode(
+    simulationText(source?.code) ?? executionCode,
+  );
+  let code: SendFailureCode = 'simulation-failed';
+
+  if (
+    publicCode === 'insufficient-funds' ||
+    publicCode === 'adapter-unavailable'
+  ) {
+    code = publicCode;
+  } else if (publicCode === 'stale-nonce') {
+    code = 'bad-nonce';
+  } else if (publicCode === 'stale-seqno') {
+    code = 'bad-seqno';
+  }
+
+  return {
+    ok: false,
+    error: { code: executionCode, message, chain },
+    code,
+    reason: message,
+  };
+}
+
+/**
+ * Offline executability pre-check, not an execution simulation RPC.
+ * Success is neither a broadcast nor a confirmation. A simulation failure
+ * BLOCKS signing: the UI must run simulateSend after review and before
+ * signing, and must not call any sign function when simulation fails.
+ */
+export async function simulateSend(
+  chain: ChainId,
+  from: string,
+  to: string,
+  amountDecimal: string,
+): Promise<SimulateSendResult> {
+  const preview = await previewSendAmount(chain, from, to, amountDecimal);
+
+  if (!preview.ok) {
+    return {
+      ...preview,
+      error: {
+        code: simulationExecutionCode(preview.code),
+        message: preview.reason,
+        chain,
+      },
+    };
+  }
+
+  // BTC/TRX retain the successful preview object and its fees unchanged;
+  // their freshness checks (UTXO coverage, account inputs) arrive in a
+  // follow-up piece.
+  if (chain !== 'eth' && chain !== 'ton') {
+    return preview;
+  }
+
+  const kind = chain === 'eth' ? 'nonce' : 'seqno';
+  const fallbackCode = kind === 'nonce' ? 'stale-nonce' : 'stale-seqno';
+  const fallbackReason = `The ${chain} adapter did not return a live ${kind}.`;
+
+  // Reuse the same adapter resolver as previewSendAmount. getTxInputs
+  // returns the AdapterResult discriminated union ({status, data|reason});
+  // its data is a TxInput ({kind:'nonce', nonce} or {kind:'seqno', seqno}).
+  const adapter = getAdapter(chain);
+  if (!adapter) {
+    return simulationFailed(chain, undefined, 'adapter-unavailable', fallbackReason);
+  }
+
+  const inputs = await adapter.getTxInputs(from);
+  if (inputs.status !== 'ok') {
+    return simulationFailed(chain, inputs, fallbackCode, fallbackReason);
+  }
+
+  const data = inputs.data;
+  const live =
+    chain === 'eth'
+      ? data.kind === 'nonce' &&
+        Number.isSafeInteger(data.nonce) &&
+        data.nonce >= 0
+      : data.kind === 'seqno' &&
+        Number.isSafeInteger(data.seqno) &&
+        data.seqno >= 0;
+
+  // Zero is valid for both nonce and seqno.
+  if (!live) {
+    return simulationFailed(chain, undefined, fallbackCode, fallbackReason);
+  }
+
+  return preview;
+}
+
 export type EthSignedTx =
   | { ok: true; signedTxHex: `0x${string}`; txHash: string; from: string }
-  | { ok: false; reason: string };
+  | SendFailure;
 
 /**
  * Minimal big-endian byte encoding of a decimal integer string.
@@ -337,6 +553,7 @@ export async function signEthOffline(
   ) {
     return {
       ok: false,
+      code: 'invalid-input',
       reason:
         'Amount, nonce and gas price must be unsigned decimal integer strings.',
     };
@@ -348,6 +565,10 @@ export async function signEthOffline(
   } catch (error: unknown) {
     return {
       ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
@@ -366,6 +587,7 @@ export async function signEthOffline(
         if (keyBytes.length !== 32) {
           return {
             ok: false as const,
+            code: 'signer-empty',
             reason: 'Invalid Ethereum signing key length.',
           };
         }
@@ -390,16 +612,14 @@ export async function signEthOffline(
           );
 
           if (output.error !== TW.Common.Proto.SigningError.OK) {
-            return {
-              ok: false as const,
-              reason: output.errorMessage || 'Signing failed.',
-            };
+            return signingFailure(output.errorMessage || 'Signing failed.', output.error);
           }
 
           const signedBytes = output.encoded;
           if (signedBytes.length === 0) {
             return {
               ok: false as const,
+              code: 'signing-failed',
               reason: 'Signer returned an empty transaction.',
             };
           }
@@ -418,7 +638,7 @@ export async function signEthOffline(
       },
     );
   } catch {
-    return { ok: false, reason: 'Failed to sign ETH transaction offline.' };
+    return { ok: false, code: 'unknown', reason: 'Failed to sign ETH transaction offline.' };
   }
 }
 
@@ -470,7 +690,7 @@ export type BtcSignedTx =
       from: string;
       feeBaseUnits: string;
     }
-  | { ok: false; reason: string };
+  | SendFailure;
 
 /**
  * Offline BTC signing (hands-on, probe-proven 2026-11-19). The plan and the
@@ -509,6 +729,7 @@ export async function signBtcOffline(
   ) {
     return {
       ok: false,
+      code: 'invalid-input',
       reason: 'Invalid BTC signing inputs.',
     };
   }
@@ -519,6 +740,10 @@ export async function signBtcOffline(
   } catch (error: unknown) {
     return {
       ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
@@ -537,6 +762,7 @@ export async function signBtcOffline(
         if (keyBytes.length !== 32) {
           return {
             ok: false as const,
+            code: 'signer-empty',
             reason: 'Invalid Bitcoin signing key length.',
           };
         }
@@ -569,23 +795,18 @@ export async function signBtcOffline(
               core.AnySigner.plan(encodedInput, core.CoinType.bitcoin),
             );
             if (plan.error !== TW.Common.Proto.SigningError.OK) {
-              return {
-                ok: false as const,
-                reason: 'Transaction plan failed.',
-              };
+              return planFailure(plan.error, '');
             }
             const output = TW.Bitcoin.Proto.SigningOutput.decode(
               core.AnySigner.sign(encodedInput, core.CoinType.bitcoin),
             );
             if (output.error !== TW.Common.Proto.SigningError.OK) {
-              return {
-                ok: false as const,
-                reason: output.errorMessage || 'Signing failed.',
-              };
+              return signingFailure(output.errorMessage || 'Signing failed.', output.error);
             }
             if (output.encoded.length === 0 || !output.transactionId) {
               return {
                 ok: false as const,
+                code: 'signing-failed',
                 reason: 'Signer returned an empty transaction.',
               };
             }
@@ -625,6 +846,7 @@ export async function signBtcOffline(
               if (!destOut || !changeOut) {
                 return {
                   ok: false as const,
+                  code: 'signing-failed',
                   reason: 'Signed outputs do not match the plan.',
                 };
               }
@@ -648,7 +870,7 @@ export async function signBtcOffline(
       },
     );
   } catch {
-    return { ok: false, reason: 'Failed to sign BTC transaction offline.' };
+    return { ok: false, code: 'unknown', reason: 'Failed to sign BTC transaction offline.' };
   }
 }
 
@@ -663,7 +885,7 @@ export interface TrxBlockHeader {
 
 export type TrxSignedTx =
   | { ok: true; signedTxJson: string; txId: string; from: string }
-  | { ok: false; reason: string };
+  | SendFailure;
 
 /**
  * Offline TRX signing (hands-on, probe-proven 2026-11-19). The block
@@ -692,7 +914,7 @@ export async function signTrxOffline(
       !Number.isSafeInteger(blockHeader.timestamp) ||
       !Number.isSafeInteger(blockHeader.number)
     ) {
-      return { ok: false, reason: 'Invalid TRX signing inputs.' };
+      return { ok: false, code: 'invalid-input', reason: 'Invalid TRX signing inputs.' };
     }
     headerBytes = {
       txTrieRoot: hexToBytes(blockHeader.txTrieRoot),
@@ -703,10 +925,10 @@ export async function signTrxOffline(
       headerBytes.txTrieRoot.length !== 32 ||
       headerBytes.parentHash.length !== 32
     ) {
-      return { ok: false, reason: 'Invalid TRX signing inputs.' };
+      return { ok: false, code: 'invalid-input', reason: 'Invalid TRX signing inputs.' };
     }
   } catch {
-    return { ok: false, reason: 'Invalid TRX signing inputs.' };
+    return { ok: false, code: 'invalid-input', reason: 'Invalid TRX signing inputs.' };
   }
 
   let from: string;
@@ -715,6 +937,10 @@ export async function signTrxOffline(
   } catch (error: unknown) {
     return {
       ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
@@ -733,6 +959,7 @@ export async function signTrxOffline(
         if (keyBytes.length !== 32) {
           return {
             ok: false as const,
+            code: 'signer-empty',
             reason: 'Invalid TRON signing key length.',
           };
         }
@@ -764,14 +991,12 @@ export async function signTrxOffline(
             core.AnySigner.sign(encoded, core.CoinType.tron),
           );
           if (output.error !== TW.Common.Proto.SigningError.OK) {
-            return {
-              ok: false as const,
-              reason: output.errorMessage || 'Signing failed.',
-            };
+            return signingFailure(output.errorMessage || 'Signing failed.', output.error);
           }
           if (!output.json || output.id.length !== 32) {
             return {
               ok: false as const,
+              code: 'signing-failed',
               reason: 'Signer returned an empty transaction.',
             };
           }
@@ -787,13 +1012,13 @@ export async function signTrxOffline(
       },
     );
   } catch {
-    return { ok: false, reason: 'Failed to sign TRX transaction offline.' };
+    return { ok: false, code: 'unknown', reason: 'Failed to sign TRX transaction offline.' };
   }
 }
 
 export type TonSignedTx =
   | { ok: true; signedBocBase64: string; messageHash: string; from: string }
-  | { ok: false; reason: string };
+  | SendFailure;
 
 /**
  * Offline TON signing (hands-on, probe-proven 2026-11-19; V4R2 wallet,
@@ -819,7 +1044,7 @@ export async function signTonOffline(
     !Number.isSafeInteger(seqno) ||
     seqno < 0
   ) {
-    return { ok: false, reason: 'Invalid TON signing inputs.' };
+    return { ok: false, code: 'invalid-input', reason: 'Invalid TON signing inputs.' };
   }
 
   let from: string;
@@ -828,6 +1053,10 @@ export async function signTonOffline(
   } catch (error: unknown) {
     return {
       ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
@@ -873,14 +1102,12 @@ export async function signTonOffline(
           core.AnySigner.sign(encoded, core.CoinType.ton),
         );
         if (output.error !== TW.Common.Proto.SigningError.OK) {
-          return {
-            ok: false,
-            reason: output.errorMessage || 'Signing failed.',
-          };
+          return signingFailure(output.errorMessage || 'Signing failed.', output.error);
         }
         if (!output.encoded || output.hash.length !== 32) {
           return {
             ok: false,
+            code: 'signing-failed',
             reason: 'Signer returned an empty transaction.',
           };
         }
@@ -900,6 +1127,10 @@ export async function signTonOffline(
   } catch (error: unknown) {
     return {
       ok: false,
+      code:
+        error instanceof Error && error.message === 'Invalid mnemonic.'
+          ? 'invalid-mnemonic'
+          : 'unknown',
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'

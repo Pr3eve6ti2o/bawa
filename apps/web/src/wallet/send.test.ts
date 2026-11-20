@@ -261,7 +261,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
         '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
         '2',
       ),
-    ).toEqual({ ok: false, reason: 'Amount exceeds available balance.' });
+    ).toEqual({ ok: false, code: 'insufficient-funds', reason: 'Amount exceeds available balance.' });
   });
 
   it('rejects invalid and zero amounts', async () => {
@@ -273,7 +273,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
           '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
           bad,
         ),
-      ).toEqual({ ok: false, reason: 'Enter a valid amount.' });
+      ).toEqual({ ok: false, code: 'invalid-input', reason: 'Enter a valid amount.' });
     }
   });
 
@@ -287,6 +287,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
       ),
     ).toEqual({
       ok: false,
+      code: 'adapter-unavailable',
       reason:
         'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
     });
@@ -300,7 +301,7 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
         'TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B',
         '1',
       ),
-    ).toEqual({ ok: false, reason: 'No adapter available for this chain.' });
+    ).toEqual({ ok: false, code: 'adapter-unavailable', reason: 'No adapter available for this chain.' });
   });
 });
 
@@ -354,7 +355,7 @@ describe('signEthOffline (Sol p4, corrected hands-on)', () => {
   it('rejects an invalid mnemonic', async () => {
     expect(
       await signEthOffline('abandon abandon', '', TO, '1000', '0', '1'),
-    ).toEqual({ ok: false, reason: 'Invalid mnemonic.' });
+    ).toEqual({ ok: false, code: 'invalid-mnemonic', reason: 'Invalid mnemonic.' });
   });
 
   it('rejects non-integer inputs', async () => {
@@ -363,6 +364,7 @@ describe('signEthOffline (Sol p4, corrected hands-on)', () => {
       await signEthOffline(mnemonic, '', TO, '0.5', '0', '1'),
     ).toEqual({
       ok: false,
+      code: 'invalid-input',
       reason:
         'Amount, nonce and gas price must be unsigned decimal integer strings.',
     });
@@ -514,7 +516,7 @@ describe('signBtcOffline (hands-on, probe-proven)', () => {
   it('rejects an invalid mnemonic', async () => {
     expect(
       await signBtcOffline('abandon abandon', '', 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd', '50000', [{ txid: '00'.repeat(32), vout: 0, valueBaseUnits: '100000' }], '10', 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd'),
-    ).toEqual({ ok: false, reason: 'Invalid mnemonic.' });
+    ).toEqual({ ok: false, code: 'invalid-mnemonic', reason: 'Invalid mnemonic.' });
   });
 });
 
