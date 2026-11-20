@@ -80,7 +80,7 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
           return (
             <li key={chain} role="status" className="py-3">
               <Skeleton className="h-[68px] w-full" />
-              <span className="sr-only">Loading {config.displayName} balance…</span>
+              <span className="sr-only">{`Loading ${config.displayName} balance…`}</span>
             </li>
           );
         }
@@ -100,6 +100,7 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZe
                 <span className="block text-[15px] font-bold text-foreground">
                   {config.displayName}
                 </span>
+                {' '}
                 <span className="block text-xs text-muted-foreground">
                   {lockedNoAddress
                     ? 'Unlock your wallet to see balances'

@@ -400,7 +400,7 @@ export function SendScreen() {
               ))}
             </ol>
             <p className="text-body-sm font-medium text-foreground">
-              Step {activeIndex + 1} of 6: {steps[activeIndex]}
+              {`Step ${activeIndex + 1} of 6: ${steps[activeIndex]}`}
             </p>
           </div>
         );
@@ -436,10 +436,10 @@ export function SendScreen() {
       {step === 'recipient' && (
         <section aria-labelledby="send-recipient-heading" className="space-y-4">
           <h2 id="send-recipient-heading" className="text-lg font-semibold">
-            Recipient · {config.displayName}
+            {`Recipient · ${config.displayName}`}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Sending from <span className="break-all font-mono">{from}</span>
+            Sending from{' '}<span className="break-all font-mono">{from}</span>
           </p>
           <p className="text-sm text-muted-foreground">
             Check the full address and network carefully — a transaction, if
@@ -497,7 +497,7 @@ export function SendScreen() {
       {step === 'amount' && (
         <section aria-labelledby="send-amount-heading" className="space-y-4">
           <h2 id="send-amount-heading" className="text-lg font-semibold">
-            Amount · {config.displayName}
+            {`Amount · ${config.displayName}`}
           </h2>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
@@ -511,7 +511,7 @@ export function SendScreen() {
           </dl>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="send-amount">Amount ({config.symbol})</Label>
+              <Label htmlFor="send-amount">{`Amount (${config.symbol})`}</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -545,7 +545,7 @@ export function SendScreen() {
             )}
             {feeEstimate && !feeEstimate.ok && (
               <p className="text-sm text-muted-foreground">
-                Fee estimate unavailable: {feeEstimate.reason}
+                {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
             {!maxInfo.enabled && (

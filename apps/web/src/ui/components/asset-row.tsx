@@ -30,12 +30,15 @@ function AssetRow({
         {avatar}
         <div>
           <div className="text-base font-semibold">{symbol}</div>
+          {' '}
           <div className="text-sm text-muted-foreground">{amount}</div>
         </div>
       </div>
+      {' '}
       {(value || detail) && (
         <div className="text-right">
           {value ? <div className="text-base font-semibold">{value}</div> : null}
+          {' '}
           {detail ? (
             <div
               data-design-audit-allow="dynamic-token-color"

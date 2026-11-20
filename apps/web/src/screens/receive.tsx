@@ -198,7 +198,7 @@ export function ReceiveScreen() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Mainnet only — this address is for the {config.displayName} mainnet. Funds sent on another network cannot be recovered.
+        {`Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`}
       </p>
 
       {chain === 'ton' && (

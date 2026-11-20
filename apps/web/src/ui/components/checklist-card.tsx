@@ -36,6 +36,7 @@ function ChecklistCard({
       {...props}
     >
       <div className="text-sm font-semibold">{title}</div>
+      {' '}
       <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</div>
       {action ? <div className="mt-3">{action}</div> : null}
     </div>

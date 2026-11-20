@@ -316,7 +316,9 @@ export function TrackTransactionScreen() {
                   className='flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm hover:bg-panel-hover'
                 >
                   <span className='font-medium'>{directionLabel(tx.direction)}</span>
+                  {' '}
                   <span>{amountLabel(tx.amountBaseUnits, chain)}</span>
+                  {' '}
                   <span className='text-muted-foreground'>{dateLabel(tx.timestamp, true)}</span>
                 </Link>
               </li>

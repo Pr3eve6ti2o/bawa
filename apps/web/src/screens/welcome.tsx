@@ -40,6 +40,7 @@ export function WelcomeScreen() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               1
             </span>
+            {' '}
             <span className="font-semibold text-panel-text">
               Set a vault password
             </span>
@@ -48,6 +49,7 @@ export function WelcomeScreen() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               2
             </span>
+            {' '}
             <span className="font-semibold text-panel-text">
               Write down 24 words
             </span>
@@ -56,6 +58,7 @@ export function WelcomeScreen() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               3
             </span>
+            {' '}
             <span className="font-semibold text-panel-text">
               Confirm 3 words
             </span>
@@ -64,6 +67,7 @@ export function WelcomeScreen() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-blue-dim font-semibold text-foreground">
               4
             </span>
+            {' '}
             <span className="font-semibold text-panel-text">
               See your addresses
             </span>
