@@ -19,6 +19,8 @@ import {
   isBroadcastAllowedFor,
   markBroadcastUnknown,
   simulateSend,
+  signingFailure,
+  planFailure,
 } from './send';
 import { createWallet, deriveAddresses } from './core';
 import { createVault, deleteVault, TEST_PROVENANCE } from './vault';
@@ -774,6 +776,119 @@ describe('simulateSend BTC', () => {
       ok: false,
       error: { code: 'adapter-unavailable' },
       code: 'adapter-unavailable',
+    });
+  });
+});
+
+describe('simulateSend failures and failure helpers', () => {
+  function simStub(chain: 'btc' | 'trx', balance: string, decimals: number, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  it('returns inner and outer insufficient-funds codes for BTC', async () => {
+    const from = 'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu';
+    const to = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+
+    registerAdapter(
+      simStub(
+        'btc',
+        '100000',
+        8,
+        {
+          status: 'ok',
+          data: {
+            chain: 'btc',
+            networkId: 'test',
+            feeBaseUnits: '10',
+            unit: 'sat/vB',
+            note: 'stub',
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        {
+          status: 'ok',
+          data: {
+            kind: 'utxo',
+            utxos: [
+              {
+                txid: createHash('sha256')
+                  .update('lane3-btc-test-utxo')
+                  .digest('hex'),
+                vout: 0,
+                valueBaseUnits: '100000',
+              },
+            ],
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+      ),
+    );
+
+    const result = await simulateSend('btc', from, to, '0.00101');
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'insufficient-funds' },
+      code: 'insufficient-funds',
+    });
+  });
+
+  it('returns inner and outer adapter-unavailable codes for TRX with seqno inputs', async () => {
+    const from = 'TAyDUYP5rcf56xFwrg8cU1qQwvnWpkeapM';
+    const to = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
+
+    registerAdapter(
+      simStub(
+        'trx',
+        '10000000',
+        6,
+        {
+          status: 'ok',
+          data: {
+            chain: 'trx',
+            networkId: 'test',
+            feeBaseUnits: '100000',
+            unit: 'sun',
+            note: 'stub',
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        {
+          status: 'ok',
+          data: { kind: 'seqno', seqno: 1 },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+      ),
+    );
+
+    const result = await simulateSend('trx', from, to, '1');
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
+  });
+
+  it('constructs signing and plan failure results', () => {
+    expect(signingFailure('Signing failed.', 7)).toEqual({
+      ok: false,
+      code: 'signing-failed',
+      reason: 'Signing failed.',
+      signingErrorCode: 7,
+    });
+
+    expect(planFailure(7, 'plan boom')).toEqual({
+      ok: false,
+      code: 'plan-failed',
+      reason: 'Transaction plan failed (SigningError 7): plan boom',
+      signingErrorCode: 7,
     });
   });
 });
