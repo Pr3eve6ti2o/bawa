@@ -182,7 +182,7 @@ export function createTonAdapter(
     if (result.status !== 'ok') return result;
     try {
       parseTonMasterchainSeqno(result.data);
-    } catch (error: unknown) {
+    } catch {
       return {
         status: 'error',
         reason:
