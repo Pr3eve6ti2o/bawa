@@ -4,6 +4,8 @@
  * tests/tooling where a lightweight wordlist is needed without pulling in wallet-core.
  * wallet-core WASM (@trustwallet/wallet-core 4.9.3) owns production mnemonic handling.
  */
+import { createHash } from 'node:crypto';
+
 import { generateMnemonic } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import mnemonicWords from 'mnemonic-words';
@@ -27,5 +29,18 @@ describe('mnemonic-words BIP39 English wordlist', () => {
 
     expect(mnemonic.split(' ')).toHaveLength(24);
     expect(validateBip39Mnemonic(mnemonic)).toBe(true);
+  });
+
+  it('pins the SHA-256 of the @scure English wordlist', () => {
+    expect.assertions(1);
+
+    // @scure/bip39 2.4.0: UTF-8 words joined with '\n', no trailing newline.
+    const hash = createHash('sha256')
+      .update(wordlist.join('\n'), 'utf8')
+      .digest('hex');
+
+    expect(hash).toBe(
+      '187db04a869dd9bc7be80d21a86497d692c0db6abd3aa8cb6be5d618ff757fae',
+    );
   });
 });
