@@ -1,14 +1,16 @@
 import {
   BROADCAST_DISABLED_MESSAGE,
   assertNetworkId,
-  fetchJson,
+  httpFetchTransport,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
   type FeeEstimate,
+  type FetchTransport,
   type TxInput,
 } from './types';
+import { withRetry } from '../retry';
 
 const NETWORK_ID = 'bip122:000000000019d6689c085ae165831e93';
 const GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
@@ -18,6 +20,11 @@ const DECIMALS = 8;
 
 export interface BtcAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Injectable transport (item 2). Defaults to the single-attempt HTTP
+   * transport; tests inject a fake instead of stubbing the global fetch.
+   */
+  transport?: FetchTransport;
 }
 
 const messageOf = (error: unknown): string =>
@@ -41,6 +48,11 @@ export function createBtcAdapter(
   overrides: BtcAdapterOverrides = {},
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
+  // Idempotent reads only: every network read below is bounded-retry via
+  // withRetry (item 2). Broadcast is never retried — it stays disabled.
+  const readJson = (url: string, operation: string): Promise<unknown> =>
+    withRetry(() => transport.request(url), { operation });
   // Chain-identity check result, cached per instance: the genesis block
   // hash proves the endpoint serves Bitcoin mainnet. The endpoint URL is
   // fixed at construction, so one check per instance is enough.
@@ -50,7 +62,7 @@ export function createBtcAdapter(
     if (identityChecked) return null;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/v1/blocks/0`);
+      raw = await readJson(`${baseUrl}/v1/blocks/0`, 'btc.identity');
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
     }
@@ -81,7 +93,7 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}`);
+      raw = await readJson(`${baseUrl}/address/${address}`, 'btc.getBalance');
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
     }
@@ -124,7 +136,7 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}/txs`);
+      raw = await readJson(`${baseUrl}/address/${address}/txs`, 'btc.getHistory');
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
     }
@@ -209,7 +221,7 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/v1/fees/recommended`);
+      raw = await readJson(`${baseUrl}/v1/fees/recommended`, 'btc.estimateFee');
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
     }
@@ -243,7 +255,7 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}/utxo`);
+      raw = await readJson(`${baseUrl}/address/${address}/utxo`, 'btc.getTxInputs');
     } catch (error: unknown) {
       return { status: 'error', reason: messageOf(error) };
     }

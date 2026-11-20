@@ -27,6 +27,28 @@ function mockFetchJson(result: unknown, status = '1', message = 'OK'): void {
   );
 }
 
+type RawResponse = { ok: boolean; status: number; body: unknown };
+
+/** Raw HTTP responses (ok/status), for retry tests where fetch must fail. */
+function mockFetchRawSequence(responses: RawResponse[]): ReturnType<typeof vi.fn> {
+  const queue = [...responses];
+  const fetchMock = vi.fn(async () => {
+    const next = queue.shift();
+    if (!next) throw new Error('fetch queue exhausted');
+    return { ok: next.ok, status: next.status, json: async () => next.body };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+const okBlockscout = (result: unknown): RawResponse => ({
+  ok: true,
+  status: 200,
+  body: { status: '1', message: 'OK', result },
+});
+const http503 = (): RawResponse => ({ ok: false, status: 503, body: {} });
+const http404 = (): RawResponse => ({ ok: false, status: 404, body: {} });
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -135,6 +157,47 @@ describe('eth adapter — history', () => {
     expect(result).toEqual(
       expect.objectContaining({ status: 'ok', data: [] }),
     );
+  });
+});
+
+describe('eth adapter — history retry (item 2)', () => {
+  // Only the Blockscout history read is retried. The viem client calls
+  // (balance, nonce, fee) keep viem's own retry policy and are untouched.
+  const ONE_TX = [
+    {
+      hash: '0xout',
+      from: ADDRESS,
+      to: OTHER,
+      value: '1000',
+      timeStamp: '1700000000',
+      txreceipt_status: '1',
+      isError: '0',
+    },
+  ];
+
+  it('retries a transient 503 and then succeeds', async () => {
+    const fetchMock = mockFetchRawSequence([
+      http503(),
+      http503(),
+      okBlockscout(ONE_TX),
+    ]);
+    const adapter = createEthAdapter({ client: mockClient() });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.hash).toBe('0xout');
+    }
+    // 3 attempts: the two 503s were retried, not lost.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry a terminal 404', async () => {
+    const fetchMock = mockFetchRawSequence([http404()]);
+    const adapter = createEthAdapter({ client: mockClient() });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('error');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
