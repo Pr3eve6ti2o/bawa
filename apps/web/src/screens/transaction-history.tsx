@@ -54,7 +54,7 @@ export function TransactionHistoryScreen() {
         <div className="space-y-3 rounded-[20px] border border-panel-border bg-panel-surface-raised p-6 text-panel-text">
           <h2 className="text-lg font-bold text-panel-text">No transactions yet</h2>
           <p className="text-sm leading-relaxed text-panel-text-muted">
-            No transaction history — no history adapter is verified yet.
+            Transaction history isn't available for this network yet.
           </p>
           <p className="text-sm leading-relaxed text-panel-text-muted">
             Import a watch-only wallet to see its derived addresses, or open

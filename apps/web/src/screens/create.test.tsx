@@ -66,8 +66,8 @@ describe('CreateScreen', () => {
       'Web wallet',
       'Android wallet',
       'Smart contract creator',
-      'Multi-Sig Wallet v2',
-      'Web3 Wallet Kit',
+      'Multi-signature wallet',
+      'Connect an existing wallet',
     ];
     const cards = Array.from(
       container.querySelectorAll('section > ul > li'),
@@ -80,8 +80,8 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('shows exactly five Build brief badges', () => {
-    expect(elementsWithExactText('Build brief')).toHaveLength(5);
+  it('shows exactly five Coming soon badges', () => {
+    expect(elementsWithExactText('Coming soon')).toHaveLength(5);
   });
 
   it('shows exactly two Available badges', () => {
@@ -106,57 +106,36 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('shows the required SDK references and the GPLv3 restriction', () => {
-    const referenceNames = [
-      'BitGo eth-multisig-v2',
-      'Safe Core SDK',
-      'RabbyKit',
-      'OpenZeppelin Contracts',
-      'Via web3-wallets',
-      'Rabby Mobile',
-    ];
+  it('shows no developer references', () => {
+    // The Create screen is for normal wallet users: no repository links,
+    // commit hashes, licence notes or implementation references render.
     const links = Array.from(container.querySelectorAll('a'));
 
-    referenceNames.forEach((name) => {
-      expect(
-        links.some((link) =>
-          (link.textContent ?? '').startsWith(`${name} (`),
-        ),
-      ).toBe(true);
+    expect(links).toHaveLength(2);
+    links.forEach((link) => {
+      expect(link.getAttribute('href')).toBe('/create-wallet');
     });
-
-    const kitBrief = container.querySelector(
-      'article[aria-label="Web3 Wallet Kit build brief"]',
-    );
-    const safeWalletReference = Array.from(
-      kitBrief?.querySelectorAll('a') ?? [],
-    ).find((link) =>
-      (link.textContent ?? '').startsWith('Safe Wallet monorepo ('),
-    );
-
-    expect(safeWalletReference).toBeDefined();
-    expect(safeWalletReference?.closest('li')?.textContent).toContain(
-      'GPLv3: no copying into this MIT app.',
-    );
+    expect(container.textContent).not.toContain('github.com');
+    expect(container.textContent).not.toContain('References');
   });
 
-  it('states that every brief card is not implemented yet', () => {
+  it('states that every coming-soon card is not available yet', () => {
     const briefs = container.querySelectorAll(
-      'article[aria-label$=" build brief"]',
+      'article[aria-label$=" coming soon"]',
     );
 
     expect(briefs).toHaveLength(5);
     briefs.forEach((card) => {
       expect(card.textContent).toContain(
-        'Not implemented yet. This is a build brief, not a working feature.',
+        "Coming soon. This isn't available yet.",
       );
     });
   });
 
-  it('shows the separate dashboard workspace note', () => {
+  it('shows the separate dashboard note', () => {
     expect(
       elementsWithExactText(
-        'The wallet dashboard stays a separate workspace. Creating a wallet here does not replace it.',
+        'Your wallet dashboard stays separate. Creating a wallet here does not replace it.',
       ),
     ).toHaveLength(1);
   });

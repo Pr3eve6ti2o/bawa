@@ -70,8 +70,8 @@ describe('security settings screen', () => {
       expect(text).not.toContain('What this starter does not do');
       expect(text).not.toContain('UI state only');
       expect(text).not.toContain('watch-only starter does not create');
-      expect(text).toContain('stored encrypted in the vault');
-      expect(text).toContain('Broadcast is disabled');
+      expect(text).toContain('kept encrypted in the vault');
+      expect(text).toContain('Sending funds is switched off');
     } finally {
       await mounted.cleanup();
     }

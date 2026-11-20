@@ -115,7 +115,7 @@ export function SendScreen() {
       try {
         await ensureAdapters();
       } catch {
-        setPreview({ ok: false, reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+        setPreview({ ok: false, reason: "We couldn't load this network's balance. Please retry." });
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount);
@@ -138,7 +138,7 @@ export function SendScreen() {
     try {
       await ensureAdapters();
     } catch {
-      setSignState({ status: 'error', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+      setSignState({ status: 'error', reason: "We couldn't load this network's balance. Please retry." });
       return;
     }
     const previewOk = preview;
@@ -146,12 +146,12 @@ export function SendScreen() {
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
         const adapter = getAdapter(chain);
-        if (!adapter) throw new Error('No adapter available for this chain.');
+        if (!adapter) throw new Error("Sending isn't available for this network.");
         if (chain === 'eth') {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'nonce') {
-            throw new Error('ETH adapter did not return a nonce.');
+            throw new Error("We couldn't prepare your Ethereum transaction. Please retry.");
           }
           const fee = BigInt(previewOk.feeBaseUnits);
           // The ETH fee quote is gasPrice * 21000 (see adapters/eth.ts);
@@ -180,7 +180,7 @@ export function SendScreen() {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'utxo') {
-            throw new Error('BTC adapter did not return UTXOs.');
+            throw new Error("We couldn't prepare your Bitcoin transaction. Please retry.");
           }
           const fee = await adapter.estimateFee();
           if (fee.status !== 'ok') throw new Error(fee.reason);
@@ -222,7 +222,7 @@ export function SendScreen() {
         const inputs = await adapter.getTxInputs(from);
         if (inputs.status !== 'ok') throw new Error(inputs.reason);
         if (inputs.data.kind !== 'seqno') {
-          throw new Error('TON adapter did not return a seqno.');
+          throw new Error("We couldn't prepare your TON transaction. Please retry.");
         }
         const result = await signTonOffline(
           mnemonic,
@@ -283,7 +283,7 @@ export function SendScreen() {
     void (async () => {
       const adapter = getAdapter(chain);
       if (!adapter) {
-        if (!cancelled) setFeeEstimate({ ok: false, reason: 'No adapter available for this chain.' });
+        if (!cancelled) setFeeEstimate({ ok: false, reason: "A fee estimate isn't available for this network." });
         return;
       }
       const result = await adapter.estimateFee();
