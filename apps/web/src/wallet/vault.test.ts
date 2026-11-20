@@ -16,11 +16,7 @@ import {
   TEST_PROVENANCE,
   unlock,
   VAULT_BACKUP_STORAGE_KEY,
-  VAULT_CORRUPTED,
-  VAULT_ERROR_CODES,
   VAULT_STORAGE_KEY,
-  VAULT_WRONG_PASSWORD,
-  VaultError,
   vaultProfiles,
   vaultProvenance,
   verifyVaultPassword,
@@ -28,6 +24,7 @@ import {
   withMnemonicAsync,
   writeVaultBackup,
 } from './vault';
+import { BawaError, ERROR_MESSAGES, WalletErrorCodes } from './errors';
 
 // Standard public BIP-39 test vector — disposable test data, never a real secret.
 const TEST_MNEMONIC =
@@ -105,7 +102,7 @@ describe('vault', () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     lock();
     await expect(unlock('wrong password')).rejects.toThrow(
-      VAULT_WRONG_PASSWORD,
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
     );
     expect(isLocked()).toBe(true);
     expect(() => withMnemonic((m) => m)).toThrow('Vault is locked.');
@@ -131,7 +128,7 @@ describe('vault', () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     await changePassword(TEST_PASSWORD, 'new password here');
     expect(vaultProfiles()).toEqual(TEST_PROFILES);
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_WRONG_PASSWORD);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD]);
     await unlock('new password here');
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
@@ -147,7 +144,7 @@ describe('vault', () => {
       VAULT_STORAGE_KEY,
       JSON.stringify({ ...envelope, ciphertextB64: flipped }),
     );
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_WRONG_PASSWORD);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD]);
     expect(isLocked()).toBe(true);
   });
 
@@ -158,7 +155,7 @@ describe('vault', () => {
       VAULT_STORAGE_KEY,
       JSON.stringify({ ...envelope, version: 'not-a-number' }),
     );
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_CORRUPTED);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED]);
     expect(hasVault()).toBe(true);
   });
 
@@ -176,9 +173,9 @@ describe('vault', () => {
     } catch (error) {
       caught = error;
     }
-    expect(caught).toBeInstanceOf(VaultError);
-    expect((caught as VaultError).code).toBe(
-      VAULT_ERROR_CODES.UNKNOWN_VERSION,
+    expect(caught).toBeInstanceOf(BawaError);
+    expect((caught as BawaError).code).toBe(
+      WalletErrorCodes.VAULT_UNKNOWN_VERSION,
     );
     expect((caught as Error).message).toBe('Vault version is not supported.');
     expect(isLocked()).toBe(true);
@@ -259,7 +256,7 @@ describe('vault backup', () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     lock();
     localStorage.setItem(VAULT_STORAGE_KEY, '{"version":1,"kdf":}');
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_CORRUPTED);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED]);
     await restoreVaultFromBackup(TEST_PASSWORD);
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
   });
@@ -269,7 +266,7 @@ describe('vault backup', () => {
     lock();
     localStorage.removeItem(VAULT_STORAGE_KEY);
     await expect(restoreVaultFromBackup('wrong password')).rejects.toThrow(
-      VAULT_WRONG_PASSWORD,
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
     );
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
     expect(isLocked()).toBe(true);
@@ -293,7 +290,7 @@ describe('vault backup', () => {
     localStorage.removeItem(VAULT_STORAGE_KEY);
     localStorage.setItem(VAULT_BACKUP_STORAGE_KEY, 'not json at all');
     await expect(restoreVaultFromBackup(TEST_PASSWORD)).rejects.toThrow(
-      VAULT_CORRUPTED,
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
     );
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
   });
@@ -303,7 +300,7 @@ describe('vault backup', () => {
     await changePassword(TEST_PASSWORD, 'new password here');
     localStorage.removeItem(VAULT_STORAGE_KEY);
     await expect(restoreVaultFromBackup(TEST_PASSWORD)).rejects.toThrow(
-      VAULT_WRONG_PASSWORD,
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
     );
     await restoreVaultFromBackup('new password here');
     expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
@@ -337,9 +334,9 @@ describe('vault migration', () => {
       } catch (error) {
         caught = error;
       }
-      expect(caught).toBeInstanceOf(VaultError);
-      expect((caught as VaultError).code).toBe(
-        VAULT_ERROR_CODES.UNKNOWN_VERSION,
+      expect(caught).toBeInstanceOf(BawaError);
+      expect((caught as BawaError).code).toBe(
+        WalletErrorCodes.VAULT_UNKNOWN_VERSION,
       );
     }
   });
@@ -347,9 +344,9 @@ describe('vault migration', () => {
   it('rejects a non-object envelope as corrupted', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     localStorage.setItem(VAULT_STORAGE_KEY, '"just a string"');
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_CORRUPTED);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED]);
     localStorage.setItem(VAULT_STORAGE_KEY, 'null');
-    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(VAULT_CORRUPTED);
+    await expect(unlock(TEST_PASSWORD)).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED]);
   });
 
   it('migrates a version-1 envelope without provenance to unknown provenance', async () => {
@@ -363,7 +360,7 @@ describe('vault migration', () => {
 });
 
 describe('vault errors', () => {
-  it('rejects a wrong password with a VaultError carrying code 1001', async () => {
+  it('rejects a wrong password with a BawaError carrying code 1001', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     lock();
     let caught: unknown;
@@ -372,14 +369,14 @@ describe('vault errors', () => {
     } catch (error) {
       caught = error;
     }
-    expect(caught).toBeInstanceOf(VaultError);
-    expect((caught as VaultError).code).toBe(
-      VAULT_ERROR_CODES.WRONG_PASSWORD,
+    expect(caught).toBeInstanceOf(BawaError);
+    expect((caught as BawaError).code).toBe(
+      WalletErrorCodes.VAULT_WRONG_PASSWORD,
     );
-    expect((caught as Error).message).toBe(VAULT_WRONG_PASSWORD);
+    expect((caught as Error).message).toBe(ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD]);
   });
 
-  it('throws a VaultError with code 1004 when locked', async () => {
+  it('throws a BawaError with code 1004 when locked', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     lock();
     let caught: unknown;
@@ -388,8 +385,8 @@ describe('vault errors', () => {
     } catch (error) {
       caught = error;
     }
-    expect(caught).toBeInstanceOf(VaultError);
-    expect((caught as VaultError).code).toBe(VAULT_ERROR_CODES.LOCKED);
+    expect(caught).toBeInstanceOf(BawaError);
+    expect((caught as BawaError).code).toBe(WalletErrorCodes.VAULT_LOCKED);
     await expect(withMnemonicAsync(async () => 'never')).rejects.toThrow(
       'Vault is locked.',
     );
@@ -446,7 +443,7 @@ describe('vault provenance', () => {
         provenance: { source: 'hardware', isTesting: 'yes' },
       }),
     );
-    expect(() => vaultProvenance()).toThrow(VAULT_CORRUPTED);
+    expect(() => vaultProvenance()).toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED]);
   });
 });
 

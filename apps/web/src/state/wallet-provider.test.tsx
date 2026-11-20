@@ -9,8 +9,8 @@ import {
   createVault,
   deleteVault,
   lock,
-  VAULT_WRONG_PASSWORD,
 } from '../wallet/vault';
+import { ERROR_MESSAGES, WalletErrorCodes } from '../wallet/errors';
 import { SUPPORTED_CHAINS } from '../wallet/chains';
 
 // No adapter is registered in this file: the adapters module is mocked so
@@ -137,7 +137,7 @@ describe('wallet context — vault-backed accounts', () => {
         act(async () => {
           await latest?.unlockVault('wrong password');
         }),
-      ).rejects.toThrow(VAULT_WRONG_PASSWORD);
+      ).rejects.toThrow(ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD]);
       expect(latest?.vaultState).toBe('locked');
     } finally {
       await mounted.cleanup();

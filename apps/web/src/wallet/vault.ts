@@ -13,6 +13,12 @@
  * as it is no longer needed; no copy is retained anywhere after lock().
  */
 
+import {
+  BawaError,
+  WalletErrorCodes,
+  createWalletError,
+} from './errors';
+
 export const VAULT_STORAGE_KEY = 'bawa-vault';
 export const VAULT_BACKUP_STORAGE_KEY = 'bawa-vault-backup';
 export const VAULT_VERSION = 1;
@@ -23,56 +29,10 @@ export const IV_BYTES = 12;
 export const VAULT_CIPHER = 'AES-GCM';
 export const VAULT_KEY_BITS = 256;
 
-export const VAULT_WRONG_PASSWORD = 'Incorrect password.';
-export const VAULT_CORRUPTED = 'Vault is corrupted.';
 
-/**
- * Typed vault failure. The numeric `code` is the contract; the message
- * text is kept separate in VAULT_ERROR_MESSAGES. Codes 1001–1005 match
- * the shared error catalogue (`wallet/errors.ts`, P1 lane) exactly;
- * 1006–1008 are proposed additions for that catalogue to adopt. The
- * merge swaps this local definition for an import of `BawaError` and
- * `WalletErrorCodes` — the numbers and messages do not change.
- */
-export class VaultError extends Error {
-  readonly code: number;
+// Vault failures are BawaError values from the shared catalogue
+// (wallet/errors.ts); the numeric codes and messages do not change.
 
-  constructor(code: number, message: string) {
-    super(message);
-    this.name = 'VaultError';
-    this.code = code;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
-export const VAULT_ERROR_CODES = {
-  WRONG_PASSWORD: 1001,
-  CORRUPTED: 1002,
-  NOT_FOUND: 1003,
-  LOCKED: 1004,
-  EXISTS: 1005,
-  UNKNOWN_VERSION: 1006,
-  BACKUP_MISSING: 1007,
-  BACKUP_CORRUPTED: 1008,
-} as const;
-
-export type VaultErrorCode =
-  (typeof VAULT_ERROR_CODES)[keyof typeof VAULT_ERROR_CODES];
-
-export const VAULT_ERROR_MESSAGES: Record<VaultErrorCode, string> = {
-  [VAULT_ERROR_CODES.WRONG_PASSWORD]: VAULT_WRONG_PASSWORD,
-  [VAULT_ERROR_CODES.CORRUPTED]: VAULT_CORRUPTED,
-  [VAULT_ERROR_CODES.NOT_FOUND]: 'No vault exists.',
-  [VAULT_ERROR_CODES.LOCKED]: 'Vault is locked.',
-  [VAULT_ERROR_CODES.EXISTS]: 'A vault already exists.',
-  [VAULT_ERROR_CODES.UNKNOWN_VERSION]: 'Vault version is not supported.',
-  [VAULT_ERROR_CODES.BACKUP_MISSING]: 'No vault backup exists.',
-  [VAULT_ERROR_CODES.BACKUP_CORRUPTED]: 'Vault backup is corrupted.',
-};
-
-function vaultError(code: VaultErrorCode): VaultError {
-  return new VaultError(code, VAULT_ERROR_MESSAGES[code]);
-}
 
 interface VaultEnvelope {
   version: number;
@@ -185,8 +145,8 @@ async function deriveKey(
   );
 }
 
-function corruptError(): VaultError {
-  return vaultError(VAULT_ERROR_CODES.CORRUPTED);
+function corruptError(): BawaError {
+  return createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
 }
 
 /** Validates a version-1 envelope's shape; throws CORRUPTED otherwise. */
@@ -236,7 +196,7 @@ export function migrateEnvelope(parsed: unknown): VaultEnvelope {
   }
   const migrator = VAULT_MIGRATORS[version];
   if (!migrator) {
-    throw vaultError(VAULT_ERROR_CODES.UNKNOWN_VERSION);
+    throw createWalletError(WalletErrorCodes.VAULT_UNKNOWN_VERSION);
   }
   return migrator(parsed);
 }
@@ -311,7 +271,7 @@ export async function createVault(
     throw new Error('Invalid key provenance.');
   }
   if (hasVault()) {
-    throw vaultError(VAULT_ERROR_CODES.EXISTS);
+    throw createWalletError(WalletErrorCodes.VAULT_EXISTS);
   }
   const storedProvenance: KeyProvenance = {
     source: provenance.source,
@@ -380,13 +340,13 @@ export function isLocked(): boolean {
 }
 
 /**
- * Unlocks the vault. Throws VAULT_WRONG_PASSWORD on a wrong password and
- * VAULT_CORRUPTED on a structurally invalid envelope.
+ * Unlocks the vault. Throws BawaError (code 1001) on a wrong password and
+ * BawaError (code 1002) on a structurally invalid envelope.
  */
 export async function unlock(password: string, passphrase = ''): Promise<void> {
   const envelope = readEnvelope();
   if (envelope === null) {
-    throw vaultError(VAULT_ERROR_CODES.NOT_FOUND);
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
   }
   const { text, key } = await decryptEnvelopeText(envelope, password);
   unlockedKey = key;
@@ -403,8 +363,8 @@ export function lock(): void {
 
 /**
  * Trial-decrypts an envelope without touching unlocked state. Returns the
- * plaintext and the derived key. Throws VAULT_WRONG_PASSWORD when
- * decryption fails and VAULT_CORRUPTED on undecodable base64.
+ * plaintext and the derived key. Throws BawaError (code 1001) when
+ * decryption fails and BawaError (code 1002) on undecodable base64.
  */
 async function decryptEnvelopeText(
   envelope: VaultEnvelope,
@@ -418,7 +378,7 @@ async function decryptEnvelopeText(
     iv = fromBase64(envelope.ivB64);
     ciphertext = fromBase64(envelope.ciphertextB64);
   } catch {
-    throw vaultError(VAULT_ERROR_CODES.CORRUPTED);
+    throw createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
   }
   const key = await deriveKey(password, salt, envelope.kdf.iterations);
   let plaintext: ArrayBuffer;
@@ -431,7 +391,7 @@ async function decryptEnvelopeText(
   } catch {
     // Wrong password and tampered ciphertext are indistinguishable by design;
     // both fail authentication. One fixed message, no oracle.
-    throw vaultError(VAULT_ERROR_CODES.WRONG_PASSWORD);
+    throw createWalletError(WalletErrorCodes.VAULT_WRONG_PASSWORD);
   }
   return { text: new TextDecoder().decode(plaintext), key };
 }
@@ -445,7 +405,7 @@ async function decryptEnvelopeText(
 export async function restoreVaultFromBackup(password: string): Promise<void> {
   const backupText = getStorage().getItem(VAULT_BACKUP_STORAGE_KEY);
   if (backupText === null) {
-    throw vaultError(VAULT_ERROR_CODES.BACKUP_MISSING);
+    throw createWalletError(WalletErrorCodes.VAULT_BACKUP_MISSING);
   }
   let parsed: unknown;
   try {
@@ -474,7 +434,7 @@ export function getSessionPassphrase(): string {
  */
 export function withMnemonic<T>(fn: (mnemonic: string) => T): T {
   if (unlockedMnemonic === null) {
-    throw vaultError(VAULT_ERROR_CODES.LOCKED);
+    throw createWalletError(WalletErrorCodes.VAULT_LOCKED);
   }
   return fn(unlockedMnemonic);
 }
@@ -489,7 +449,7 @@ export async function withMnemonicAsync<T>(
   fn: (mnemonic: string) => Promise<T>,
 ): Promise<T> {
   if (unlockedMnemonic === null) {
-    throw vaultError(VAULT_ERROR_CODES.LOCKED);
+    throw createWalletError(WalletErrorCodes.VAULT_LOCKED);
   }
   return fn(unlockedMnemonic);
 }
@@ -508,7 +468,7 @@ export async function changePassword(
   }
   const envelope = readEnvelope();
   if (envelope === null) {
-    throw vaultError(VAULT_ERROR_CODES.NOT_FOUND);
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
   }
   const wasLocked = isLocked();
   await unlock(oldPassword);
@@ -563,11 +523,11 @@ export function hasVaultBackup(): boolean {
 export function writeVaultBackup(): void {
   const envelope = readEnvelope();
   if (envelope === null) {
-    throw vaultError(VAULT_ERROR_CODES.NOT_FOUND);
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
   }
   const raw = getStorage().getItem(VAULT_STORAGE_KEY);
   if (raw === null) {
-    throw vaultError(VAULT_ERROR_CODES.NOT_FOUND);
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
   }
   getStorage().setItem(VAULT_BACKUP_STORAGE_KEY, raw);
 }

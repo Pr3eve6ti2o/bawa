@@ -15,23 +15,14 @@
 //   success, the previous value (balances) / transactions (history)
 //   and its lastOkAt are kept, and the status becomes error/unavailable
 //   with the new reason. A failure is never presented as zero/empty.
-// - Retry: Lane P1 owns apps/web/src/wallet/retry.ts (withRetry +
-//   classifyRetryableError). Until it lands, this module carries its
-//   own small retry loop (retryResult / retryThrowing below) with the
-//   SAME semantics as P1's actual module (verified 2026-11-20 against
-//   P1's retry.ts: 224 lines): max 3 attempts, 30 s total budget,
-//   200 ms base delay doubling with full jitter, 5 s cap, retryable =
-//   `Network error:` prefix or exact `HTTP 429|502|503|504`, terminal =
-//   everything else, never attempt once the budget is spent (the delay
-//   must fit inside it). At merge, delete the local loop and import
-//   withRetry + classifyRetryableError from '../wallet/retry', passing
-//   operation 'refreshBalances' / 'refreshHistory' (required there).
-//   Two deltas remain for the merge: (1) P1 honours Retry-After only
-//   for BawaError 2003 throws, which never surface as adapter-result
-//   reason strings — the swap must throw adapter failures to get it;
-//   (2) P1 reports via onEvent / setDefaultRetryEventListener, while
-//   this loop reports attempts/exhausted in the RefreshReport only.
-//   (Coordinator: verify the import against P1's actual module.)
+// - Retry: P1's apps/web/src/wallet/retry.ts (withRetry +
+//   classifyRetryableError). retryThrowing / retryResult below are thin
+//   wrappers over withRetry (3 attempts, 30 s budget, full jitter;
+//   Retry-After honoured only for BawaError 2003 throws). Adapter
+//   failures are thrown as Errors carrying the reason string so
+//   withRetry classifies them by message. Attempts/exhausted are
+//   reported in the RefreshReport; withRetry events are available via
+//   onEvent / setDefaultRetryEventListener for telemetry.
 // - Coalescing: a second refresh for the same addresses while one is
 //   in flight joins the in-flight promise instead of starting a
 //   second fetch. A refresh for different addresses starts fresh, and
@@ -43,6 +34,7 @@ import type {
   AdapterTx,
 } from '../wallet/adapters/types';
 import { availableFor } from '../wallet/chains';
+import { classifyRetryableError, withRetry } from '../wallet/retry';
 
 export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
 
@@ -107,21 +99,8 @@ export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
   return promise;
 }
 
-const RETRY_MAX_ATTEMPTS = 3;
-const RETRY_TOTAL_BUDGET_MS = 30000;
-const RETRY_BASE_DELAY_MS = 200;
-const RETRY_MAX_DELAY_MS = 5000;
-
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
-
-/** P1's message-based classification, mirrored until retry.ts lands. */
-function isRetryableMessage(message: string): boolean {
-  return (
-    message.startsWith('Network error:') ||
-    /^HTTP (?:429|502|503|504)$/.test(message)
-  );
-}
 
 /** Map a raw error message to a sanitised code (no addresses, URLs or payloads). */
 function sanitiseReason(message: string): string {
@@ -151,87 +130,78 @@ function sanitiseReason(message: string): string {
   return 'unknown';
 }
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Jittered backoff before attempt n+1 (n is the attempt just failed, 1-based). */
-function delayMsForAttempt(attempt: number): number {
-  return (
-    Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1)) *
-    Math.random()
-  );
-}
-
 type RetryOutcome<T> =
   | { ok: true; value: T; attempts: number }
   | { ok: false; error: unknown; attempts: number; exhausted: boolean };
 
-/** Retry a throwing read; never throws — the outcome carries the last failure. */
+/** Retry a throwing read via withRetry; never throws — the outcome carries the last failure. */
 async function retryThrowing<T>(
-  fn: (attempt: number) => Promise<T>,
+  fn: () => Promise<T>,
+  operation: string,
 ): Promise<RetryOutcome<T>> {
-  const startedAt = Date.now();
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      const value = await fn(attempt);
-      return { ok: true, value, attempts: attempt };
-    } catch (error) {
-      if (!isRetryableMessage(messageOf(error))) {
-        return { ok: false, error, attempts: attempt, exhausted: false };
-      }
-      if (
-        attempt >= RETRY_MAX_ATTEMPTS ||
-        Date.now() - startedAt >= RETRY_TOTAL_BUDGET_MS
-      ) {
-        return { ok: false, error, attempts: attempt, exhausted: true };
-      }
-      // Never attempt once the budget is spent: the delay must fit
-      // inside what is left, exactly as P1's withRetry does.
-      const delayMs = delayMsForAttempt(attempt);
-      if (Date.now() - startedAt + delayMs > RETRY_TOTAL_BUDGET_MS) {
-        return { ok: false, error, attempts: attempt, exhausted: true };
-      }
-      await sleep(delayMs);
-      if (Date.now() - startedAt >= RETRY_TOTAL_BUDGET_MS) {
-        return { ok: false, error, attempts: attempt, exhausted: true };
-      }
-    }
+  let attempts = 0;
+  try {
+    const value = await withRetry(fn, {
+      operation,
+      onEvent: (event) => {
+        attempts = Math.max(attempts, event.attempt);
+      },
+    });
+    return { ok: true, value, attempts: Math.max(attempts, 1) };
+  } catch (error) {
+    // withRetry gives up at once on a terminal refusal (exhausted false)
+    // and only after the budget/attempts are spent on a retryable failure.
+    return {
+      ok: false,
+      error,
+      attempts: Math.max(attempts, 1),
+      exhausted: classifyRetryableError(error),
+    };
   }
 }
 
 /**
  * Retry an adapter read while it returns a retryable error. 'unavailable'
- * is structural, never retried; 'ok' ends the loop at once.
+ * is structural, never retried; 'ok' ends the loop at once. Adapter
+ * failures are thrown as Errors carrying the reason string so withRetry
+ * classifies them by message; Retry-After is honoured only when the
+ * failure is a BawaError 2003, which adapter results never are.
  */
 async function retryResult<T>(
-  fn: (attempt: number) => Promise<AdapterResult<T>>,
+  fn: () => Promise<AdapterResult<T>>,
+  operation: string,
 ): Promise<{
   result: AdapterResult<T>;
   attempts: number;
   exhausted: boolean;
 }> {
-  const startedAt = Date.now();
-  for (let attempt = 1; ; attempt += 1) {
-    const result = await fn(attempt);
-    if (result.status !== 'error' || !isRetryableMessage(result.reason)) {
-      return { result, attempts: attempt, exhausted: false };
-    }
-    if (
-      attempt >= RETRY_MAX_ATTEMPTS ||
-      Date.now() - startedAt >= RETRY_TOTAL_BUDGET_MS
-    ) {
-      return { result, attempts: attempt, exhausted: true };
-    }
-    // Never attempt once the budget is spent: the delay must fit
-    // inside what is left, exactly as P1's withRetry does.
-    const delayMs = delayMsForAttempt(attempt);
-    if (Date.now() - startedAt + delayMs > RETRY_TOTAL_BUDGET_MS) {
-      return { result, attempts: attempt, exhausted: true };
-    }
-    await sleep(delayMs);
-    if (Date.now() - startedAt >= RETRY_TOTAL_BUDGET_MS) {
-      return { result, attempts: attempt, exhausted: true };
-    }
+  let lastResult: AdapterResult<T> | undefined;
+  let attempts = 0;
+  try {
+    const result = await withRetry(async () => {
+      const r = await fn();
+      lastResult = r;
+      if (r.status === 'error') {
+        throw new Error(r.reason);
+      }
+      return r;
+    }, {
+      operation,
+      onEvent: (event) => {
+        attempts = Math.max(attempts, event.attempt);
+      },
+    });
+    return { result, attempts: Math.max(attempts, 1), exhausted: false };
+  } catch (error) {
+    const result: AdapterResult<T> = lastResult ?? {
+      status: 'error',
+      reason: messageOf(error),
+    };
+    return {
+      result,
+      attempts: Math.max(attempts, 1),
+      exhausted: classifyRetryableError(error),
+    };
   }
 }
 
@@ -276,7 +246,7 @@ export function createRefresh(deps: RefreshDeps): {
   async function runRefreshBalances(): Promise<RefreshReport> {
     const at = Date.now();
     const failures: RefreshFailure[] = [];
-    const loaded = await retryThrowing(() => ensureAdapters());
+    const loaded = await retryThrowing(() => ensureAdapters(), 'refreshBalances');
     if (!loaded.ok) {
       // The chunk itself failed to load: no chain could be read. The
       // per-chain state is left untouched; the report is the outcome.
@@ -324,7 +294,7 @@ export function createRefresh(deps: RefreshDeps): {
               reason: messageOf(error),
             } satisfies AdapterResult<AdapterBalance>;
           }
-        });
+        }, 'refreshBalances');
         if (request !== balanceRequests[chain]) return;
         const now = Date.now();
         if (result.status === 'ok') {
@@ -365,7 +335,7 @@ export function createRefresh(deps: RefreshDeps): {
   async function runRefreshHistory(): Promise<RefreshReport> {
     const at = Date.now();
     const failures: RefreshFailure[] = [];
-    const loaded = await retryThrowing(() => ensureAdapters());
+    const loaded = await retryThrowing(() => ensureAdapters(), 'refreshHistory');
     if (!loaded.ok) {
       for (const chain of CHAINS) {
         failures.push({
@@ -411,7 +381,7 @@ export function createRefresh(deps: RefreshDeps): {
               reason: messageOf(error),
             } satisfies AdapterResult<AdapterTx[]>;
           }
-        });
+        }, 'refreshHistory');
         if (request !== historyRequests[chain]) return;
         const now = Date.now();
         if (result.status === 'ok') {

@@ -1,8 +1,8 @@
 # Docs inventory
 
 One home per fact. This file is the inventory of `docs/`: 66 Markdown
-files before this lane, 76 with this lane's 10 new files (ADR-0007 and
-the 9 process docs below). Who owns each doc and how fresh it is. A doc
+files before Lane P5, 78 with Lane P5's 10 new files (ADR-0007 and
+the 9 process docs below) plus Lane P2's 2 new files (vault-design, custody). Who owns each doc and how fresh it is. A doc
 without an owner here defaults to the repository owner
 (**Pr3eve6ti2o**); a doc that needs a different owner must name one in
 the table. "Last changed" is the last commit touching the file on this
@@ -117,6 +117,8 @@ Staleness is decided by the drift check (below), not by this table.
 | `docs/BRANCH-AUDIT.md` | Pr3eve6ti2o | 2026-11-14 | |
 | `docs/BRANCH-DOC-STATUS.md` | Pr3eve6ti2o | 2026-11-20 | |
 | `docs/MULTIBRANCH-REPORT.md` | Pr3eve6ti2o | 2026-11-14 | |
+| `docs/vault-design.md` | Lane P2 | 2026-11-20 | Vault envelope, backup/migration, error table, KDF evaluation. |
+| `docs/custody.md` | Lane P2 | 2026-11-20 | Custody guarantees/non-guarantees, unlock behaviour, test identities. |
 
 ### Security
 
@@ -156,7 +158,6 @@ Staleness is decided by the drift check (below), not by this table.
 
 ### Out of this lane's scope (named so nobody re-invents them)
 
-- `docs/vault-design.md` and `docs/custody.md` — P2 (vault and custody).
 - `docs/02-chains/README.md` and `docs/12-chain-registry-and-assets/README.md`
   — P4 (registry and pin table).
 - `apps/web/src/engine/confirmation-policy.md` — P3 (engine).
