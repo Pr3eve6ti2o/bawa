@@ -624,7 +624,7 @@
     "sources": [
       "apps/web/src/wallet/chains.ts",
       "apps/web/src/wallet/core.ts",
-      "lane/evidence/probe-2026-11-20.jsonl"
+      "docs/archive/lane-evidence-2026-11-20/evidence/probe-2026-11-20.jsonl"
     ],
     "implemented": [
       "in-browser HD wallet creation (BIP-39 24 words, empty passphrase) with password-protected encrypted local vault (AES-256-GCM, PBKDF2 600k) and recovery confirmation reproducing identical addresses for the nine extended chains",

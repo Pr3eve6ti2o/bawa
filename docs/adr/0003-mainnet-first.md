@@ -4,7 +4,7 @@
 
 On 2026-11-14, the owner ordered a mainnet-first direction. The repository is primarily built for mainnet, not testnet; testnet code remains secondary and for testing.
 
-`docs/MAINNET-GAP-ASSESSMENT.md` marks all four chains NOT ready. No broadcast exists; all send, broadcast, token, and contract functions throw. The owner declined M-35 funding on 2026-11-13, so no live-send verification exists. TON is receive-only under the owner's scope.
+`docs/archive/mainnet-gap-assessment.md` marks all four chains NOT ready. No broadcast exists; all send, broadcast, token, and contract functions throw. The owner declined M-35 funding on 2026-11-13, so no live-send verification exists. TON is receive-only under the owner's scope.
 
 ## Decision
 

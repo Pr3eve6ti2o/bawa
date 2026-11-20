@@ -13,7 +13,7 @@ A Nova Shop install's variables with these same names would silently redirect Ba
 
 The namespace is already mixed: `BAWA_ENV_FILE` and `BAWA_BACKUP_DIR` already exist and are used by the launcher tools. This rename completes the Bawa namespace; it does not introduce it.
 
-`docs/security-release-gates.md` already requires a rename to `BAWA_*` with guarded migration. `docs/14` formerly called `NOVA_ENV` a frozen legacy identifier pending a code change and a migration note; that change is now executed (F-15, 2026-11-11).
+`docs/SECURITY-RELEASE-GATES.md` already requires a rename to `BAWA_*` with guarded migration. `docs/14` formerly called `NOVA_ENV` a frozen legacy identifier pending a code change and a migration note; that change is now executed (F-15, 2026-11-11).
 
 ## Target names
 

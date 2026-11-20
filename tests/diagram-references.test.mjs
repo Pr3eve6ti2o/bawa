@@ -139,16 +139,16 @@ test("Web Send signs offline with broadcast disabled and ChainId includes TON", 
     "send.tsx must wire offline signing",
   );
   assert.ok(
-    send.includes("not sent anywhere: broadcast is disabled until separately"),
+    send.includes("not sent anywhere: sending funds is switched off until it is separately"),
     "send.tsx must state signed transactions are not sent anywhere",
   );
   assert.ok(
-    send.includes("Broadcast is disabled until separately authorised"),
-    "send.tsx must retain the warning that broadcast requires separate authorisation",
+    send.includes("Sending funds is switched off until it is separately approved"),
+    "send.tsx must retain the warning that sending requires separate authorisation",
   );
   assert.ok(
-    send.includes("Send signed — not broadcast"),
-    "send.tsx must describe the result as signed, not broadcast",
+    send.includes("Send signed — not sent"),
+    "send.tsx must describe the result as signed, not sent",
   );
 
   for (const signer of [
@@ -170,11 +170,16 @@ test("Web Send signs offline with broadcast disabled and ChainId includes TON", 
     path.join(ROOT, "apps/web/src/engine/boundary.ts"),
     "utf8",
   );
-  assert.match(
-    boundary,
-    /export\s+type\s+ChainId\s*=\s*'btc'\s*\|\s*'eth'\s*\|\s*'trx'\s*\|\s*'ton'\s*;/,
-    "boundary.ts ChainId must not omit TON or remove BTC, ETH or TRX",
+  const chainIdMatch = boundary.match(
+    /export\s+type\s+ChainId\s*=\s*([^;]+);/,
   );
+  assert.ok(chainIdMatch, "boundary.ts must export a ChainId type");
+  for (const chain of ["'btc'", "'eth'", "'trx'", "'ton'"]) {
+    assert.ok(
+      chainIdMatch[1].includes(chain),
+      `boundary.ts ChainId must not omit ${chain} (13-chain registry keeps the four core chains)`,
+    );
+  }
   const android = fs.readFileSync(
     path.join(
       ROOT,

@@ -50,7 +50,10 @@ as true of this branch.
   our tools reaches them. A Minerva timing attack needs timed signatures;
   we produce none. The advisory as recorded is P-256-specific, so the
   curve mismatch is the exposure boundary — not a proof that no ecdsa
-  code anywhere in the tree could ever execute.
+  code anywhere in the tree could ever execute. Load-vs-execute:
+  `ecdsa` is loaded at `bip_utils` import time via the `nist256p1`
+  module, but no signing path executes it — loading is not execution of
+  the vulnerable operation.
 - Scope limit (Sol review 2026-11-20): this adjudication covers our
   tools' direct call paths. It does not audit every transitive import
   inside `bip_utils`, and it is a residual-risk acceptance, not a proof
@@ -58,9 +61,13 @@ as true of this branch.
   `bip_utils` would select the ecdsa backend — but the lockfile pins
   `coincurve` 21.0.0, so a lockfile install always has it. A
   non-lockfile install without `coincurve` would change the backend.
-- Risk acceptance: a lane verdict (diagnostics 2026-11-19, re-verified
-  by Lane D 2026-11-20). No owner acceptance order is on record; the
-  acceptance is a documented lane verdict, not an owner decision.
+- Risk acceptance: accepted 2026-11-20 by Orion/coordinator under
+  owner delegation (2026-11-20, all pending Bawa decisions delegated to
+  Orion). Recorded in ADR-0008 (`docs/adr/0008-ecdsa-residual-risk.md`).
+  Guarded by a fail-closed test (`test/test_ecdsa_guard.py`) that fails
+  the gate if the safety facts change. The acceptance was a lane verdict
+  before this decision (diagnostics 2026-11-19, re-verified by Lane D
+  2026-11-20); it is a delegated decision now.
 - Correction to the earlier record: `docs/security-AUDIT-TOOLCHAIN.md`
   §6 said reachability was "TBD" and "T40+ must adjudicate", and named
   `bip-utils` 2.12.2 (the pinned version is 2.12.3). The adjudication
@@ -71,11 +78,12 @@ as true of this branch.
   lockfile"; `requirements.lock` now exists (pip-compile style, hashed).
 - Full audit record: `docs/security-AUDIT-TOOLCHAIN.md` §6. Canonical
   summary: `docs/SECURITY.md` ("Dependency and supply chain").
-- **Re-review if** crypto usage or dependencies change (new signing
-  path, `coincurve` dropped, `ecdsa` bumped). The scan stays
-  report-only in `scripts/quality-gates.mjs` (R02-F10) until the
-  pre-existing findings are addressed; promoting it to a hard gate is a
-  separate decision.
+- **Re-review by 2027-05-20, or sooner if** crypto usage or
+  dependencies change (new signing path, `coincurve` dropped, `ecdsa`
+  bumped, a fix version appears in OSV, or `bip-utils` ships a build
+  without the `ecdsa` requirement). The scan stays report-only in
+  `scripts/quality-gates.mjs` (R02-F10) until the pre-existing findings
+  are addressed; promoting it to a hard gate is a separate decision.
 
 ## 2. formatFeePreview DoS — display-decimals cap (100)
 

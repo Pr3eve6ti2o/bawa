@@ -111,7 +111,7 @@ Verified routing result: your request routes to the build command; exit status `
 | Builder routing | [WALLET_BUILDER.md](WALLET_BUILDER.md) |
 | Repository instructions | [AGENTS.md](AGENTS.md) |
 | Capability map | [docs/CAPABILITY-MAP.md](docs/CAPABILITY-MAP.md) |
-| Mainnet gap assessment | [docs/MAINNET-GAP-ASSESSMENT.md](docs/MAINNET-GAP-ASSESSMENT.md) |
+| Mainnet gap assessment | [docs/archive/mainnet-gap-assessment.md](docs/archive/mainnet-gap-assessment.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Security | [SECURITY.md](SECURITY.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
@@ -121,7 +121,7 @@ Verified routing result: your request routes to the build command; exit status `
 
 Use Bawa as a reference for [HD-wallet workflows](docs/README-FULL.md) and as a [builder](WALLET_BUILDER.md) that turns one plain request into a real, buildable project. It is **not** a hosted wallet, custody service, or exchange.
 
-Mainnet send/broadcast is not implemented; broadcast stays disabled. The repository is mainnet-first in direction but testnet-safe in behaviour; read the [mainnet gap assessment](docs/MAINNET-GAP-ASSESSMENT.md). If you want a ready-made wallet to hold funds, use a production wallet instead.
+Mainnet send/broadcast is not implemented; broadcast stays disabled. The repository is mainnet-first in direction but testnet-safe in behaviour; read the [mainnet gap assessment](docs/archive/mainnet-gap-assessment.md). If you want a ready-made wallet to hold funds, use a production wallet instead.
 
 ## Passphrase policy
 

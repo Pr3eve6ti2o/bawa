@@ -8,7 +8,7 @@ Secrets never leave the browser.
 
 ## Install, develop, build and test
 
-Use Node.js `>=22 <23`. The range is enforced: `apps/web/.npmrc` sets `engine-strict=true`, so `npm ci` fails with `EBADENGINE` on any other Node release. The package is `bawa-web` and is private. Run these commands from the
+Use Node.js `>=22 <23`. The range is enforced: `apps/web/.npmrc` sets `engine-strict=true`, so `npm ci` fails with `EBADENGINE` on any other Node release. The package is `@bawa/web` and is private. Run these commands from the
 repository root:
 
     cd apps/web

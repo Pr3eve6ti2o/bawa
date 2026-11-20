@@ -316,7 +316,7 @@ function makeRepoFixture(t, { pin = '4.9.3' } = {}) {
   fs.mkdirSync(toolDir, { recursive: true });
   fs.writeFileSync(
     path.join(toolDir, 'package.json'),
-    `${JSON.stringify({ name: 'bawa-hd-wallet-core-tools', dependencies: { '@trustwallet/wallet-core': pin } }, null, 2)}\n`,
+    `${JSON.stringify({ name: '@bawa/hdwallet-gen', dependencies: { '@trustwallet/wallet-core': pin } }, null, 2)}\n`,
     'utf8',
   );
   for (const id of PROFILE_IDS) {

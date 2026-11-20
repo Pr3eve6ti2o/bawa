@@ -75,11 +75,14 @@ jobs:
       - name: Run make-wallet tests
         run: python test/test_make_wallet.py 2>&1 | tee test_make_wallet.log
 
+      - name: Run ecdsa guard tests
+        run: python test/test_ecdsa_guard.py 2>&1 | tee test_ecdsa_guard.log
+
       - name: Compile Python tools
         run: python -m py_compile tools/make_wallet.py tools/decrypt_seed.py
 
       - name: Require test output
-        run: test -s differential_test.log && test -s test_decrypt_seed.log && test -s test_make_wallet.log
+        run: test -s differential_test.log && test -s test_decrypt_seed.log && test -s test_make_wallet.log && test -s test_ecdsa_guard.log
 
   docs-checks:
     runs-on: ubuntu-24.04

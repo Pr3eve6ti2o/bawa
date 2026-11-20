@@ -47,4 +47,4 @@
 
 - apps/web/src/wallet/chains.ts
 - apps/web/src/wallet/core.ts
-- lane/evidence/probe-2026-11-20.jsonl
+- docs/archive/lane-evidence-2026-11-20/evidence/probe-2026-11-20.jsonl

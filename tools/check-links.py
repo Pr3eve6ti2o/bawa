@@ -18,6 +18,14 @@ import urllib.parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Verbatim-preserved historical snapshots: frozen at capture time and
+# must not be edited, so their internal links rot as files move. Excluded
+# from the link check; the rename map (docs/RENAME-MAP.md) records where
+# the targets went. Add a file here only with a recorded reason.
+EXCLUDED = {
+    "docs/README-FULL.md",
+}
+
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 REF_LINK_RE = re.compile(r"!?\[[^\]]*\]\[([^\]]+)\]")
 REF_DEF_RE = re.compile(r"^\s*\[([^\]]+)\]:\s*(\S+)")
@@ -50,7 +58,10 @@ def markdown_files():
                        if d not in (".git", "node_modules", ".venv", "__pycache__")]
         for name in filenames:
             if name.endswith(".md"):
-                found.append(os.path.join(dirpath, name))
+                path = os.path.join(dirpath, name)
+                if os.path.relpath(path, ROOT) in EXCLUDED:
+                    continue
+                found.append(path)
     return sorted(found)
 
 

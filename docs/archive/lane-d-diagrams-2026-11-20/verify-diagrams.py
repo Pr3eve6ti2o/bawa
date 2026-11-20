@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Lane D verification: extract the mermaid blocks from the four edited docs,
-diff them against the verified lane-d .mmd files, and render each with mmdc."""
+diff them against the verified archived .mmd files, and render each with mmdc."""
 import re
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 MMDC = "/tmp/mmd/node_modules/.bin/mmdc"
 CASES = [
-    ("ARCHITECTURE.md", "lane-d/sol1.mmd"),
-    ("docs/13-wallet-app-architecture/README.md", "lane-d/sol2.mmd"),
-    ("docs/12-chain-registry-and-assets/README.md", "lane-d/sol3.mmd"),
-    ("ai/request-routing.md", "lane-d/sol4.mmd"),
+    ("ARCHITECTURE.md", "docs/archive/lane-d-diagrams-2026-11-20/repository-architecture-diagram-1.mmd"),
+    ("docs/13-wallet-app-architecture/README.md", "docs/archive/lane-d-diagrams-2026-11-20/web-wallet-components-diagram-2.mmd"),
+    ("docs/12-chain-registry-and-assets/README.md", "docs/archive/lane-d-diagrams-2026-11-20/chain-support-overview-diagram-3.mmd"),
+    ("ai/request-routing.md", "docs/archive/lane-d-diagrams-2026-11-20/one-prompt-wallet-build-workflow-diagram-4.mmd"),
 ]
 
 fence = re.compile(r"^```mermaid\s*$", re.M)

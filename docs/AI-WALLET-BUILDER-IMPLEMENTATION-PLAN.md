@@ -491,7 +491,7 @@ The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3,
 ### Phase 8 — Complete the one-prompt build workflow
 
 - **Objective:** connect request parsing through routing, registries, starter generation, setup, build and test to the final report.
-- **Files:** OPEN allocations: `scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/test.mjs`, `docs/sample-requests.md` and `tests/clean-checkout.test.mjs`.
+- **Files:** OPEN allocations: `scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/run-test-suites.mjs`, `docs/sample-requests.md` and `tests/clean-checkout.test.mjs`.
 - **Dependencies:** the entry, registry, engine and adoption contracts must be settled. End-to-end execution can only begin after at least one Phase 6–7 starter builds.
 - **Exit gate:** clean-checkout tests exercise at least two materially different wallet requests through the complete workflow. Sample identities remain OPEN until supported by validated profiles. Reports must distinguish verified outcomes, mocks and unresolved limitations. Success on one platform must not imply success on another.
 - **Not included:** unsupported profile promises, mainnet activation, independent security approval or execution of the separate rehearsal programme.
@@ -499,7 +499,7 @@ The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3,
 ### Phase 9 — Security, quality and release gates
 
 - **Objective:** run full tests; dependency, secret, licence and static scans; per-chain fixture validation; failure-mode and stale-data tests; and accessibility review.
-- **Files:** OPEN allocations: `scripts/quality-gates.mjs`, `tests/chain-fixtures.test.mjs`, `tests/failure-modes.test.mjs`, `tests/stale-data.test.mjs`, `docs/accessibility-review.md` and `docs/security-release-gates.md`. The existing CI workflow’s exact filename is OPEN; extending it must not imply registry or Android coverage already exists.
+- **Files:** OPEN allocations: `scripts/quality-gates.mjs`, `tests/chain-fixtures.test.mjs`, `tests/failure-modes.test.mjs`, `tests/stale-data.test.mjs`, `docs/accessibility-review.md` and `docs/SECURITY-RELEASE-GATES.md`. The existing CI workflow’s exact filename is OPEN; extending it must not imply registry or Android coverage already exists.
 - **Dependencies:** Phase 6–8 evidence for the platforms and capabilities claimed.
 - **Exit gate:** internal checks must pass for the declared handoff scope, with results recorded rather than inferred from the baseline. Real-value use requires independent external review; the maintainer must designate the M-31/M-15 reviewer, currently OPEN. Mainnet activation requires separate approval.
   
@@ -509,7 +509,7 @@ The repository contains 27 documentation files, `tools/` with wallet-core 4.9.3,
 ### Phase 10 — Documentation, handoff and maintenance
 
 - **Objective:** rewrite the README around one-prompt use, provide a documentation map, define registry maintenance and complete handoff.
-- **Files:** OPEN allocations: `README.md`, `docs/index.md`, `docs/registry-maintenance.md` and `docs/handoff.md`.
+- **Files:** OPEN allocations: `README.md`, `docs/index.md`, `docs/registry-maintenance.md` and `docs/archive/handoff-2026-11-10.md`.
 - **Dependencies:** Phase 9 outcomes and an explicit account of outstanding external restrictions.
 - **Exit gate:** instructions match the verified workflow and available starters; the documentation map resolves to delivered material; registry maintenance describes how entries and evidence are kept current. Maintenance ownership and cadence remain OPEN until agreed. Handoff distinguishes verified coverage, untested documentation and external blockers.
 - **Not included:** retrospective claims that planned checks passed, invented maintenance dates, or release authorisation through documentation alone.

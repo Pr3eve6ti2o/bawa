@@ -83,7 +83,7 @@ These registries provide the builder’s allowed choices. The builder selects fr
 
 Build, setup, test and validation entry points live here:
 
-`scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/test.mjs`, `scripts/validate-registry.mjs` and `scripts/quality-gates.mjs`.
+`scripts/build-wallet.mjs`, `scripts/setup.mjs`, `scripts/build-platforms.mjs`, `scripts/run-test-suites.mjs`, `scripts/validate-registry.mjs` and `scripts/quality-gates.mjs`.
 
 ### `packages/contracts`
 
@@ -95,7 +95,7 @@ It has one consumer today, not two. It is not a contract layer shared by the web
 
 `docs/` contains guides 01–16 and the `web-wallet`, `android-wallet` and `mainnet` documentation.
 
-Other named documents are `docs/CAPABILITY-MAP.md`, `docs/BRANCH-AUDIT.md`, `docs/EXTERNAL-TOOLS.md` and `docs/MAINNET-GAP-ASSESSMENT.md`.
+Other named documents are `docs/CAPABILITY-MAP.md`, `docs/archive/branch-audit.md`, `docs/EXTERNAL-TOOLS.md` and `docs/archive/mainnet-gap-assessment.md`.
 
 ### `ai/`
 

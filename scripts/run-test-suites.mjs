@@ -59,7 +59,7 @@ const platform = argv[1] ?? 'all';
 let ok = validArguments;
 
 if (!validArguments) {
-  console.error('Usage: node scripts/test.mjs [--platform web|android|all]');
+  console.error('Usage: node scripts/run-test-suites.mjs [--platform web|android|all]');
 }
 
 for (const suite of suites) {

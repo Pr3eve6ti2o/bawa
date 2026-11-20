@@ -17,7 +17,7 @@ import { WelcomeScreen } from '../screens/welcome';
 // navigation renders immediately; every other route stays code-split
 // below.
 import { AssetDetailScreen } from '../screens/asset-detail';
-import { CreateScreen } from '../screens/create';
+import { CreateScreen } from '../screens/create-hub';
 import { CreateWalletScreen } from '../screens/create-wallet';
 import { SecuritySettingsScreen } from '../screens/security-settings';
 

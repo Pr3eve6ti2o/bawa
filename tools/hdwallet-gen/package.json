@@ -1,5 +1,5 @@
 {
-  "name": "bawa-hd-wallet-core-tools",
+  "name": "@bawa/hdwallet-gen",
   "version": "1.1.0",
   "private": true,
   "description": "Bawa HD wallet generation and watch-only address derivation tools backed by Trust Wallet Core WebAssembly.",

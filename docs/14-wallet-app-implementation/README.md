@@ -19,7 +19,7 @@ How-to guide.
 
 ## Project structure and key module
 
-Keep `bawa-hd-wallet-core-tools` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 is superseded: the pin moved to 4.9.3 (E02, 2026-11-13), which is newer than 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06); do not present 4.9.2 as the installed pin. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
+Keep `@bawa/hdwallet-gen` private, pin `@trustwallet/wallet-core` to `4.9.3`, matching the repository tools and both platform drafts, and require Node.js `>=22 <23` for the repository tools and Web app. Upgrading the pin to 4.9.2 is superseded: the pin moved to 4.9.3 (E02, 2026-11-13), which is newer than 4.9.2 (tag commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, published 2026-11-06); do not present 4.9.2 as the installed pin. At base commit `754721cd`, the tools declare the Node range `>=22 <23`, but the Web draft declares `>=20`.
 
 Treat the paths below as a conceptual layout. Use testnet configuration and endpoints for connected exercises; keep published vectors and mainnet-format export checks offline.
 

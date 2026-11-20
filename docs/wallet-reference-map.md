@@ -95,7 +95,7 @@ Repo-verified test vectors (public fixtures, not secrets):
   MetaMask keyring-controller's unlock/lock lifecycle; do not invent crypto).
 - Parameters (iterations, salt length, IV length) are recorded in
   `apps/web/src/wallet/vault.ts` next to the implementation and in
-  `apps/web/REBUILD-EVIDENCE.md`; the vault stores only the encrypted envelope
+  `docs/archive/web-verification-2026-11-20/rebuild-evidence.md`; the vault stores only the encrypted envelope
   in localStorage. Keys/mnemonic are NEVER in localStorage plaintext, NEVER in
   React state, NEVER in logs.
 
@@ -193,7 +193,7 @@ local-sign, post-sign-verify. Statuses: `verified` (evidence exists),
 `blocked` (missing adapter/infrastructure), `unsupported` (out of scope),
 `candidate` (unreviewed). A capability with no evidence is never `verified`.
 
-Current evidence in this lane (see `apps/web/REBUILD-EVIDENCE.md`):
+Current evidence in this lane (see `docs/archive/web-verification-2026-11-20/rebuild-evidence.md`):
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify |
 |---|---|---|---|---|---|---|---|---|---|
