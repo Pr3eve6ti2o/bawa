@@ -5,6 +5,15 @@ export const CHAIN_DECIMALS: Record<ChainId, number> = {
   eth: 18,
   trx: 6,
   ton: 9,
+  sol: 9,
+  bsc: 18,
+  matic: 18,
+  arb: 18,
+  op: 18,
+  base: 18,
+  avax: 18,
+  ltc: 8,
+  doge: 8,
 };
 
 /**

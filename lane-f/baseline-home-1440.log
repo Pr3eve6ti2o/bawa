@@ -1,0 +1,148 @@
+{
+  "url": "http://127.0.0.1:8087/",
+  "width": 1440,
+  "height": 900,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nNo wallet ›\nMainnet\n\nBAWA\n\nWelcome to Bawa Web Wallet\n\nA self-custodial multi-chain wallet. Create a wallet in the browser — your recovery phrase is encrypted on this device with your ",
+  "innerWidth": 1440,
+  "innerHeight": 900,
+  "scrollWidth": 1425,
+  "scrollHeight": 1621,
+  "hOverflow": false,
+  "domContentLoaded": 87,
+  "loadEvent": 87,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 64,
+    "first-contentful-paint": 288
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 40
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 14
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 169
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 171
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 172
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 169
+    },
+    {
+      "name": "index-CXIH8MAG.js",
+      "kb": 0,
+      "ms": 7
+    },
+    {
+      "name": "rolldown-runtime-COiEfhsA.js",
+      "kb": 0,
+      "ms": 6
+    },
+    {
+      "name": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "kb": 0,
+      "ms": 6
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 0,
+      "ms": 6
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 0,
+      "ms": 7
+    },
+    {
+      "name": "index-NnJOO_Jn.css",
+      "kb": 0,
+      "ms": 7
+    }
+  ],
+  "networkRequests": 12,
+  "totalNetworkKB": 13167,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    },
+    {
+      "url": "vault-DuAhvQgY.js",
+      "status": 200,
+      "kb": 3
+    },
+    {
+      "url": "",
+      "status": 200,
+      "kb": 1
+    },
+    {
+      "url": "rolldown-runtime-COiEfhsA.js",
+      "status": 200,
+      "kb": 1
+    },
+    {
+      "url": "favicon.ico",
+      "status": 404,
+      "kb": 0
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "baseline-home-1440.png"
+}

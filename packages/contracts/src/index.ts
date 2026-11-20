@@ -1,6 +1,7 @@
-// Chains supported for watch-only import by the Web starter: xpub
-// derivation for btc/eth/trx, TON public-address import only.
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton';
+// Chains in the registry: xpub derivation for btc/eth/trx, the six EVM
+// chains, ltc and doge; public-address import only for TON and SOL
+// (no xpub: fully hardened Ed25519, one address per wallet).
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge';
 
 // Alias for chains supported by the watch-only starter.
 export type SupportedChain = ChainId;
@@ -68,7 +69,7 @@ export type TonAddressValidation =
 export interface WatchOnlyWallet {
   chain: ChainId;
   // Public extended key, including BTC zpub; this field must never hold a private extended key.
-  // For ton it holds the validated TON public address instead (TON has no xpub).
+  // For ton and sol it holds the validated public address instead (neither has an xpub).
   xpub: string;
   label: string;
   derivedCount: number;

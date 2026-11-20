@@ -27,6 +27,15 @@ const CHAIN_NAMES: Record<ChainId, string> = {
   eth: 'Ethereum',
   trx: 'TRON',
   ton: 'TON',
+  sol: 'Solana',
+  bsc: 'BNB Smart Chain',
+  matic: 'Polygon',
+  arb: 'Arbitrum One',
+  op: 'OP Mainnet',
+  base: 'Base',
+  avax: 'Avalanche C-Chain',
+  ltc: 'Litecoin',
+  doge: 'Dogecoin',
 };
 
 /**
@@ -63,6 +72,15 @@ export async function validateRecipient(
       eth: core.CoinType.ethereum,
       trx: core.CoinType.tron,
       ton: core.CoinType.ton,
+      sol: core.CoinType.solana,
+      ltc: core.CoinType.litecoin,
+      doge: core.CoinType.dogecoin,
+      bsc: core.CoinType.smartChain,
+      matic: core.CoinType.polygon,
+      arb: core.CoinType.arbitrum,
+      op: core.CoinType.optimism,
+      base: core.CoinType.base,
+      avax: core.CoinType.avalancheCChain,
     };
 
     return core.CoinTypeExt.validate(coinTypes[chain], recipient)

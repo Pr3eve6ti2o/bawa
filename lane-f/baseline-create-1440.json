@@ -1,0 +1,148 @@
+{
+  "url": "http://127.0.0.1:8087/create",
+  "width": 1440,
+  "height": 900,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nNo wallet ›\nMainnet\nCreate\n\nChoose what to create. Two tools work today; the rest are build briefs, not working features.\n\nMultichain wallet\nAvailable\nCreate one wallet covering Bitcoi",
+  "innerWidth": 1440,
+  "innerHeight": 900,
+  "scrollWidth": 1425,
+  "scrollHeight": 3429,
+  "hOverflow": false,
+  "domContentLoaded": 48,
+  "loadEvent": 64,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 68,
+    "first-contentful-paint": 88
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 42
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 16
+    },
+    {
+      "name": "index-NnJOO_Jn.css",
+      "kb": 466,
+      "ms": 18
+    },
+    {
+      "name": "index-CXIH8MAG.js",
+      "kb": 330,
+      "ms": 17
+    },
+    {
+      "name": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "kb": 45,
+      "ms": 15
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 4
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 4
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 4
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 3
+    },
+    {
+      "name": "create-ClVjFQp6.js",
+      "kb": 10,
+      "ms": 4
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 15
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 3,
+      "ms": 11
+    }
+  ],
+  "networkRequests": 17,
+  "totalNetworkKB": 13987,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-NnJOO_Jn.css",
+      "status": 200,
+      "kb": 466
+    },
+    {
+      "url": "index-CXIH8MAG.js",
+      "status": 200,
+      "kb": 330
+    },
+    {
+      "url": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "create-ClVjFQp6.js",
+      "status": 200,
+      "kb": 10
+    },
+    {
+      "url": "create-ClVjFQp6.js",
+      "status": 200,
+      "kb": 10
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "baseline-create-1440.png"
+}

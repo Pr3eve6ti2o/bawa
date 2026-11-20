@@ -156,7 +156,7 @@ export function CreateWalletScreen() {
     try {
       setProgress('Encrypting vault…');
       await yieldFrame();
-      const profileIds = SUPPORTED_CHAINS.map((chain) => profileFor(chain));
+      const profileIds = [...new Set(SUPPORTED_CHAINS.map((chain) => profileFor(chain)))];
       await createVault(mnemonic, password, profileIds, passphrase);
       setMnemonic(null);
       setPassword('');
@@ -229,8 +229,8 @@ export function CreateWalletScreen() {
                     progressStep < step
                       ? "bg-success text-primary-foreground"
                       : progressStep === step
-                        ? "bg-primary font-bold text-primary-foreground"
-                        : "bg-surface-blue-dim text-primary"
+                        ? "bg-primary-solid font-bold text-primary-foreground"
+                        : "bg-surface-blue-dim text-step-pending-text"
                   }`}
                 >
                   {progressStep < step ? (
@@ -251,16 +251,20 @@ export function CreateWalletScreen() {
               </li>
             ))}
           </ol>
+          {/* One text node on purpose: the counter used to render as
+              separate JSX text/expression nodes ("Step " + {step} + " of 4:"),
+              which some text extraction reads back joined as "Step2of 4".
+              A single template string keeps the spaces for copy-paste and
+              screen readers. */}
           <p className="mb-5 text-body-sm font-medium text-foreground">
-            Step {step} of 4:{" "}
-            {
+            {`Step ${step} of 4: ${
               {
-                1: "Set a vault password",
-                2: "Write down 24 words",
-                3: "Confirm 3 words",
-                4: "Wallet ready",
+                1: 'Set a vault password',
+                2: 'Write down 24 words',
+                3: 'Confirm 3 words',
+                4: 'Wallet ready',
               }[step]
-            }
+            }`}
           </p>
           <ol aria-label="Wallet creation steps" className="space-y-5">
             <li>

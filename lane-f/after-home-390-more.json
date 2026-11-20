@@ -1,0 +1,161 @@
+{
+  "url": "http://127.0.0.1:8087/",
+  "width": 390,
+  "height": 844,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nAccount 01 ›\nMainnet\nPortfolio\n\nPortfolio balance\n\nUnavailable\n\nNo prices loaded yet — refresh prices to see the portfolio total. Balances below are exact native amounts from the mainn",
+  "innerWidth": 390,
+  "innerHeight": 844,
+  "scrollWidth": 390,
+  "scrollHeight": 1370,
+  "hOverflow": false,
+  "sidebar": {
+    "visible": false,
+    "width": 0
+  },
+  "bottomNav": {
+    "visible": true
+  },
+  "hasText": {
+    "portfolio": true,
+    "createTitle": false,
+    "trackTitle": true,
+    "recentActivity": false
+  },
+  "domContentLoaded": 34,
+  "loadEvent": 48,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 52,
+    "first-contentful-paint": 208
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 40
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 9
+    },
+    {
+      "name": "index-oWtvFz6u.css",
+      "kb": 416,
+      "ms": 10
+    },
+    {
+      "name": "index-Dc8VolR7.js",
+      "kb": 331,
+      "ms": 10
+    },
+    {
+      "name": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "kb": 45,
+      "ms": 9
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 6
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 6
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 6
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 6
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 9
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 3,
+      "ms": 8
+    },
+    {
+      "name": "bitcoin-B-w4JoX7.webp",
+      "kb": 3,
+      "ms": 6
+    }
+  ],
+  "networkRequests": 21,
+  "totalNetworkKB": 13933,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-oWtvFz6u.css",
+      "status": 200,
+      "kb": 416
+    },
+    {
+      "url": "index-Dc8VolR7.js",
+      "status": 200,
+      "kb": 331
+    },
+    {
+      "url": "chunk-6KYCQHYJ-C0gxAyja.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    },
+    {
+      "url": "tron-DIIqeLRO.webp",
+      "status": 200,
+      "kb": 3
+    },
+    {
+      "url": "tron-DIIqeLRO.webp",
+      "status": 200,
+      "kb": 3
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "after-home-390-more.png"
+}

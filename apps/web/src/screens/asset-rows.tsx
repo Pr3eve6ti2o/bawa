@@ -2,38 +2,22 @@ import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { fiatValueForBalance, quoteFreshnessLabel } from '../wallet/prices';
+import type { PriceEntry, PriceMap } from '../wallet/prices';
 import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import type { ChainId } from '../engine/boundary';
+import { TokenLogo } from './token-logo';
 
-// Chain logos: Trust Wallet asset registry (trustwallet/assets, MIT,
-// Copyright (c) 2019-2023 Trust Wallet) — blockchains/<chain>/info/logo.png.
-// Full licence note: apps/web/README.md "Chain logos".
-import bitcoinLogo from '../assets/chains/bitcoin.png';
-import ethereumLogo from '../assets/chains/ethereum.png';
-import tronLogo from '../assets/chains/tron.png';
-import tonLogo from '../assets/chains/ton.png';
-
-const CHAIN_LOGOS: Record<ChainId, string> = {
-  btc: bitcoinLogo,
-  eth: ethereumLogo,
-  trx: tronLogo,
-  ton: tonLogo,
-};
-
-/** Native chain logo (40px default). Decorative: the chain name is adjacent text, so alt is empty. */
+/**
+ * Native chain logo (40px default), rendered through TokenLogo so the
+ * asset rows, asset detail and wallet management all share one logo
+ * path: a real Trust Wallet logo when registered, a readable ticker
+ * badge otherwise. See ./token-logo for the source and attribution.
+ */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
-  return (
-    <img
-      src={CHAIN_LOGOS[chain]}
-      alt=""
-      width={size}
-      height={size}
-      className="size-10 shrink-0 rounded-full"
-      style={size !== 40 ? { width: size, height: size } : undefined}
-    />
-  );
+  return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
 }
 
 export const CHAIN_CHIP_COLORS: Record<string, string> = {
@@ -46,17 +30,18 @@ export const CHAIN_CHIP_COLORS: Record<string, string> = {
 /**
  * Real-balance asset rows, shared by the dashboard and the asset list.
  * A row appears only for a chain whose balance capability is verified
- * (availableFor('balance')). No price feed exists in this lane, so rows
- * show the native token balance only — never a fiat value or a fabricated
- * number. A failed fetch shows "unavailable", never zero.
+ * (availableFor('balance')). Rows show a fiat value only when the caller
+ * passes a fresh price; otherwise they show the native balance only and
+ * an honest price state, never a fabricated number. A failed fetch shows
+ * "unavailable", never zero.
  */
-export function AssetRows({ hideZero, onShowAll }: { hideZero: boolean; onShowAll?: () => void }) {
+export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs }: { hideZero: boolean; onShowAll?: () => void; prices?: PriceMap; pricesNowMs?: number }) {
   const { balances, refreshBalances, vaultState, vaultAddresses, addresses } =
     useWallet();
   const chains = availableFor('balance');
 
   if (chains.length === 0) {
-    return <p className="p-4 text-sm text-muted-foreground">No balance adapters verified yet.</p>;
+    return <p className="p-4 text-sm text-muted-foreground">Balances are not available right now.</p>;
   }
 
   const visible = chains.filter((chain) => {
@@ -101,10 +86,6 @@ export function AssetRows({ hideZero, onShowAll }: { hideZero: boolean; onShowAl
         }
 
         if (balance.status === 'unavailable' || balance.status === 'error') {
-          // Locked vault, no address for this chain: the balance is not
-          // "unavailable", it is hidden until unlock. Say so honestly and
-          // hide Retry (it cannot fetch without an address). A locked vault
-          // WITH a watch-only address still shows the real failure + Retry.
           const hasAddress =
             (vaultAddresses?.[chain]?.length ?? 0) > 0 ||
             (addresses?.[chain]?.length ?? 0) > 0;
@@ -148,6 +129,35 @@ export function AssetRows({ hideZero, onShowAll }: { hideZero: boolean; onShowAl
                 CHAIN_DECIMALS[chain],
                 config.symbol,
               );
+        const nowMs = pricesNowMs ?? Date.now();
+        const entry: PriceEntry | undefined = prices?.[chain];
+        let fiatText: string | undefined;
+        let detail = `${config.displayName} mainnet`;
+
+        if (entry !== undefined) {
+          const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
+          switch (fiat.kind) {
+            case 'fiat':
+              if (entry.status === 'fresh') {
+                fiatText = fiat.text;
+                detail = `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+              }
+              break;
+            case 'zero':
+            case 'balance-unavailable':
+              break;
+            case 'expired':
+              detail = 'Price expired';
+              break;
+            case 'unavailable':
+              detail = 'Price unavailable';
+              break;
+            case 'error':
+              detail = 'Price error';
+              break;
+          }
+        }
+
         return (
           <li key={chain}>
             <Link
@@ -158,7 +168,8 @@ export function AssetRows({ hideZero, onShowAll }: { hideZero: boolean; onShowAl
                 avatar={avatar}
                 symbol={config.symbol}
                 amount={balance.status === 'zero' ? 'Zero balance' : value}
-                detail={`${config.displayName} mainnet`}
+                {...(fiatText === undefined ? {} : { value: fiatText })}
+                detail={detail}
               />
             </Link>
           </li>

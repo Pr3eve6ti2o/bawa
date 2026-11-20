@@ -1,0 +1,148 @@
+{
+  "url": "http://127.0.0.1:8087/",
+  "width": 390,
+  "height": 844,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nNo wallet ›\nMainnet\n\nBAWA\n\nWelcome to Bawa Web Wallet\n\nA self-custodial multi-chain wallet. Create a wallet in the browser — your recovery phrase is encrypted on this device with your ",
+  "innerWidth": 390,
+  "innerHeight": 844,
+  "scrollWidth": 390,
+  "scrollHeight": 1597,
+  "hOverflow": false,
+  "domContentLoaded": 52,
+  "loadEvent": 65,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 68,
+    "first-contentful-paint": 196
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 33
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 14
+    },
+    {
+      "name": "index-NnJOO_Jn.css",
+      "kb": 466,
+      "ms": 12
+    },
+    {
+      "name": "index-CXIH8MAG.js",
+      "kb": 330,
+      "ms": 15
+    },
+    {
+      "name": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "kb": 45,
+      "ms": 10
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 10
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 10
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 10
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 10
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 11
+    },
+    {
+      "name": "vault-DuAhvQgY.js",
+      "kb": 3,
+      "ms": 11
+    },
+    {
+      "name": "rolldown-runtime-COiEfhsA.js",
+      "kb": 1,
+      "ms": 7
+    }
+  ],
+  "networkRequests": 13,
+  "totalNetworkKB": 13963,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-NnJOO_Jn.css",
+      "status": 200,
+      "kb": 466
+    },
+    {
+      "url": "index-CXIH8MAG.js",
+      "status": 200,
+      "kb": 330
+    },
+    {
+      "url": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    },
+    {
+      "url": "vault-DuAhvQgY.js",
+      "status": 200,
+      "kb": 3
+    },
+    {
+      "url": "",
+      "status": 200,
+      "kb": 1
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "baseline-home-390.png"
+}

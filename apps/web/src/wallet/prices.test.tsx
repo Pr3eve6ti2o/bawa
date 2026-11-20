@@ -1,0 +1,633 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRoot } from 'react-dom/client';
+import { act } from 'react-dom/test-utils';
+import {
+  MAX_QUOTE_AGE_MS,
+  PRICE_ASSET_IDS,
+  PRICE_IDS,
+  fetchPrices,
+  fiatValueForBalance,
+  isFreshQuote,
+  parsePriceResponse,
+  portfolioTotal,
+  quoteFreshnessLabel,
+  usePrices,
+  usdPriceToMinorUnitsPerWhole,
+} from './prices';
+import type { PriceQuote } from './prices';
+
+const NOW_MS = Date.UTC(2026, 10, 19, 19, 15, 0);
+const secondsBefore = (ms: number): number => Math.floor((NOW_MS - ms) / 1000);
+
+function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_updated_at: number }> {
+  return {
+    bitcoin: { usd: 62683, last_updated_at: secondsBefore(ageMs) },
+    ethereum: { usd: 1774.93, last_updated_at: secondsBefore(ageMs) },
+    tron: { usd: 0.310229, last_updated_at: secondsBefore(ageMs) },
+    'the-open-network': { usd: 1.028, last_updated_at: secondsBefore(ageMs) },
+    solana: { usd: 150, last_updated_at: secondsBefore(ageMs) },
+    binancecoin: { usd: 600, last_updated_at: secondsBefore(ageMs) },
+    'matic-network': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
+    arbitrum: { usd: 1.0, last_updated_at: secondsBefore(ageMs) },
+    optimism: { usd: 2.0, last_updated_at: secondsBefore(ageMs) },
+    'avalanche-2': { usd: 25, last_updated_at: secondsBefore(ageMs) },
+    litecoin: { usd: 80, last_updated_at: secondsBefore(ageMs) },
+    dogecoin: { usd: 0.15, last_updated_at: secondsBefore(ageMs) },
+  };
+}
+
+function quoteAt(ageMs: number): PriceQuote {
+  return {
+    chain: 'btc',
+    assetId: PRICE_ASSET_IDS.btc,
+    providerAssetId: 'bitcoin',
+    usdPrice: '62683',
+    providerUpdatedAtMs: NOW_MS - ageMs,
+    fetchedAtMs: NOW_MS,
+    source: 'CoinGecko',
+  };
+}
+
+describe('parsePriceResponse', () => {
+  const expectedUsd = {
+    btc: '62683',
+    eth: '1774.93',
+    trx: '0.310229',
+    ton: '1.028',
+  };
+
+  it('returns fresh quotes with exact prices, identities, and timestamps', () => {
+    const prices = parsePriceResponse(freshPayload(), NOW_MS);
+
+    for (const chain of ['btc', 'eth', 'trx', 'ton'] as const) {
+      expect(prices[chain]).toMatchObject({
+        status: 'fresh',
+        quote: {
+          chain,
+          assetId: PRICE_ASSET_IDS[chain],
+          providerAssetId: PRICE_IDS[chain],
+          usdPrice: expectedUsd[chain],
+          providerUpdatedAtMs: secondsBefore(30_000) * 1000,
+          fetchedAtMs: NOW_MS,
+          source: 'CoinGecko',
+        },
+      });
+    }
+  });
+
+  it('retains quotes when provider timestamps have expired', () => {
+    const ageMs = 11 * 60 * 1000;
+    const prices = parsePriceResponse(freshPayload(ageMs), NOW_MS);
+
+    for (const chain of ['btc', 'eth', 'trx', 'ton'] as const) {
+      expect(prices[chain]).toMatchObject({
+        status: 'expired',
+        quote: {
+          chain,
+          assetId: PRICE_ASSET_IDS[chain],
+          providerAssetId: PRICE_IDS[chain],
+          usdPrice: expectedUsd[chain],
+          providerUpdatedAtMs: secondsBefore(ageMs) * 1000,
+          fetchedAtMs: NOW_MS,
+          source: 'CoinGecko',
+        },
+      });
+    }
+  });
+
+  it('includes the freshness boundary and expires the next second', () => {
+    const atLimit = parsePriceResponse(freshPayload(MAX_QUOTE_AGE_MS), NOW_MS);
+    const pastLimit = parsePriceResponse(freshPayload(MAX_QUOTE_AGE_MS + 1000), NOW_MS);
+
+    for (const chain of ['btc', 'eth', 'trx', 'ton'] as const) {
+      expect(atLimit[chain]).toMatchObject({ status: 'fresh' });
+      expect(pastLimit[chain]).toMatchObject({ status: 'expired' });
+    }
+  });
+
+  it('marks a missing coin unavailable without affecting other coins', () => {
+    const payload = freshPayload();
+    delete payload['the-open-network'];
+    const prices = parsePriceResponse(payload, NOW_MS);
+
+    expect(prices.ton).toEqual({ status: 'unavailable', reason: 'missing' });
+    for (const chain of ['btc', 'eth', 'trx'] as const) {
+      expect(prices[chain]).toMatchObject({ status: 'fresh' });
+    }
+  });
+
+  it('does not accept toncoin instead of the-open-network', () => {
+    const payload = freshPayload();
+    delete payload['the-open-network'];
+    payload.toncoin = { usd: 1.028, last_updated_at: secondsBefore(30_000) };
+
+    expect(parsePriceResponse(payload, NOW_MS).ton).toEqual({
+      status: 'unavailable',
+      reason: 'missing',
+    });
+  });
+
+  it('marks a price without a provider timestamp unavailable', () => {
+    const prices = parsePriceResponse(
+      { ...freshPayload(), bitcoin: { usd: 62683 } },
+      NOW_MS,
+    );
+
+    expect(prices.btc).toEqual({
+      status: 'unavailable',
+      reason: 'missing-timestamp',
+    });
+  });
+
+  it('rejects zero, negative, string, and missing USD prices', () => {
+    for (const entry of [{ usd: 0 }, { usd: -5 }, { usd: '62683' }, {}]) {
+      const payload = {
+        ...freshPayload(),
+        bitcoin: { ...entry, last_updated_at: secondsBefore(30_000) },
+      };
+
+      expect(parsePriceResponse(payload, NOW_MS).btc).toEqual({
+        status: 'unavailable',
+        reason: 'invalid-price',
+      });
+    }
+  });
+
+  it('returns provider errors for malformed top-level payloads', () => {
+    for (const payload of [null, [], 'x']) {
+      const prices = parsePriceResponse(payload, NOW_MS);
+
+      for (const chain of ['btc', 'eth', 'trx', 'ton'] as const) {
+        expect(prices[chain]).toEqual({ status: 'error', reason: 'provider' });
+      }
+    }
+  });
+});
+
+describe('isFreshQuote', () => {
+  it('accepts a quote exactly MAX_QUOTE_AGE_MS old', () => {
+    expect(isFreshQuote(quoteAt(MAX_QUOTE_AGE_MS), NOW_MS)).toBe(true);
+  });
+
+  it('rejects a quote one millisecond beyond MAX_QUOTE_AGE_MS', () => {
+    expect(isFreshQuote(quoteAt(MAX_QUOTE_AGE_MS + 1), NOW_MS)).toBe(false);
+  });
+
+  it('allows a provider timestamp thirty seconds in the future', () => {
+    const quote = {
+      ...quoteAt(0),
+      providerUpdatedAtMs: NOW_MS + 30_000,
+    };
+
+    expect(isFreshQuote(quote, NOW_MS)).toBe(true);
+  });
+
+  it('rejects a fetchedAtMs in the future', () => {
+    const quote = {
+      ...quoteAt(30_000),
+      fetchedAtMs: NOW_MS + 1,
+    };
+
+    expect(isFreshQuote(quote, NOW_MS)).toBe(false);
+  });
+});
+
+describe('usdPriceToMinorUnitsPerWhole', () => {
+  it('converts the BTC price to minor units', () => {
+    expect(usdPriceToMinorUnitsPerWhole('62683')).toBe('6268300');
+  });
+
+  it('converts the ETH price exactly', () => {
+    expect(usdPriceToMinorUnitsPerWhole('1774.93')).toBe('177493');
+  });
+
+  it('rounds the TRX price down to the nearest minor unit', () => {
+    expect(usdPriceToMinorUnitsPerWhole('0.310229')).toBe('31');
+  });
+
+  it('rounds the TON price up to the nearest minor unit', () => {
+    expect(usdPriceToMinorUnitsPerWhole('1.028')).toBe('103');
+  });
+
+  it('throws for zero, negative, and invalid input', () => {
+    for (const price of ['0', '-1', 'not-a-number']) {
+      expect(() => usdPriceToMinorUnitsPerWhole(price)).toThrow();
+    }
+  });
+});
+
+
+describe('fetchPrices', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('fetches all thirteen fresh prices in one batch without a demo key', async () => {
+    vi.stubEnv('VITE_COINGECKO_DEMO_KEY', '');
+    try {
+      const calls: Array<{ url: string; init: unknown }> = [];
+      const fetchFn = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        calls.push({ url: String(url), init });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => freshPayload(),
+          headers: { get: () => null },
+        };
+      });
+      const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+      expect(calls).toHaveLength(1);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(calls[0]!.url).toBe(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,matic-network,arbitrum,optimism,avalanche-2,litecoin,dogecoin&vs_currencies=usd&include_last_updated_at=true',
+      );
+      const headers = (
+        calls[0]!.init as { headers: Record<string, string> }
+      ).headers;
+      expect(headers['Accept']).toBe('application/json');
+      expect(headers).not.toHaveProperty('x-cg-demo-api-key');
+      expect(Object.values(prices)).toHaveLength(13);
+      for (const price of Object.values(prices)) {
+        expect(price).toMatchObject({ status: 'fresh' });
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('reads and sends the demo key at call time', async () => {
+    vi.stubEnv('VITE_COINGECKO_DEMO_KEY', 'demo-key-123');
+    try {
+      const fetchFn = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => ({
+        ok: true,
+        status: 200,
+        json: async () => freshPayload(),
+        headers: { get: () => null },
+      }));
+      await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+      const headers = fetchFn.mock.calls[0]![1]!.headers as Record<string, string>;
+      expect(headers['x-cg-demo-api-key']).toBe('demo-key-123');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('maps 429 with Retry-After seconds without retrying', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      headers: { get: (name: string) => (name === 'Retry-After' ? '120' : null) },
+    }));
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'rate-limited',
+        retryAfterMs: 120_000,
+      });
+    }
+  });
+
+  it('maps 429 without Retry-After to an undefined retry delay', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    }));
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'rate-limited',
+      });
+      expect((price as { retryAfterMs?: number }).retryAfterMs).toBeUndefined();
+    }
+  });
+
+  it('maps HTTP 500 to provider errors', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      headers: { get: () => null },
+    }));
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'provider',
+      });
+    }
+  });
+
+  it('maps a thrown fetch to network errors', async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new Error('down');
+    });
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'network',
+      });
+    }
+  });
+
+  it('maps an AbortError to timeout errors', async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new DOMException('aborted', 'AbortError');
+    });
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'timeout',
+      });
+    }
+  });
+
+  it('maps a successful response with invalid JSON to provider errors', async () => {
+    const fetchFn = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new Error('bad json');
+      },
+      headers: { get: () => null },
+    }));
+    const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(Object.values(prices)).toHaveLength(13);
+    for (const price of Object.values(prices)) {
+      expect(price).toMatchObject({
+        status: 'error',
+        reason: 'provider',
+      });
+    }
+  });
+});
+
+describe('fiatValueForBalance', () => {
+  const fresh = parsePriceResponse(freshPayload(), NOW_MS);
+  const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
+  const btc = { status: 'available', value: '100000000' } as const;
+
+  it('values 1 BTC using a fresh quote', () => {
+    expect(fiatValueForBalance('btc', btc, fresh.btc, NOW_MS)).toMatchObject({
+      kind: 'fiat', text: '$62,683.00',
+    });
+  });
+
+  it('returns zero for a zero balance', () => {
+    expect(fiatValueForBalance('btc', { status: 'zero' }, fresh.btc, NOW_MS)).toEqual({ kind: 'zero' });
+  });
+
+  it('returns zero for an available balance of 0', () => {
+    expect(fiatValueForBalance('btc', { status: 'available', value: '0' }, fresh.btc, NOW_MS))
+      .toEqual({ kind: 'zero' });
+  });
+
+  it('returns expired for an expired entry', () => {
+    expect(fiatValueForBalance('btc', btc, expired.btc, NOW_MS)).toEqual({ kind: 'expired' });
+  });
+
+  it('returns unavailable when the coin is absent', () => {
+    const payload: Record<string, unknown> = { ...freshPayload() };
+    delete payload.bitcoin;
+    const entries = parsePriceResponse(payload, NOW_MS);
+    expect(fiatValueForBalance('btc', btc, entries.btc, NOW_MS)).toEqual({ kind: 'unavailable' });
+  });
+
+  it('preserves a rate-limited error', () => {
+    expect(fiatValueForBalance('btc', btc, { status: 'error', reason: 'rate-limited' }, NOW_MS))
+      .toEqual({ kind: 'error', reason: 'rate-limited' });
+  });
+
+  it('returns balance-unavailable for an error balance', () => {
+    expect(fiatValueForBalance('btc', { status: 'error' }, fresh.btc, NOW_MS))
+      .toEqual({ kind: 'balance-unavailable' });
+  });
+
+  it('returns balance-unavailable when an available balance has no value', () => {
+    expect(fiatValueForBalance('btc', { status: 'available' }, fresh.btc, NOW_MS))
+      .toEqual({ kind: 'balance-unavailable' });
+  });
+
+  it('expires a fresh entry as time advances', () => {
+    expect(fresh.btc.status).toBe('fresh');
+    expect(fiatValueForBalance('btc', btc, fresh.btc, NOW_MS + 11 * 60 * 1000))
+      .toEqual({ kind: 'expired' });
+  });
+});
+
+describe('portfolioTotal', () => {
+  const fresh = parsePriceResponse(freshPayload(), NOW_MS);
+  const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
+  const zero = { status: 'zero' } as const;
+  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero, sol: zero, bsc: zero, matic: zero, arb: zero, op: zero, base: zero, avax: zero, ltc: zero, doge: zero };
+  const btc = { status: 'available', value: '100000000' } as const;
+  const eth = { status: 'available', value: '1500000000000000000' } as const;
+
+  it('returns zero when all balances are zero', () => {
+    expect(portfolioTotal(zeros, fresh, NOW_MS)).toEqual({
+      status: 'zero', text: '$0.00', partial: false,
+    });
+  });
+
+  it('totals 1 BTC alongside three zero balances', () => {
+    expect(portfolioTotal({ ...zeros, btc }, fresh, NOW_MS)).toMatchObject({
+      status: 'total', text: '$62,683.00',
+    });
+  });
+
+  it('excludes expired ETH from the partial subtotal', () => {
+    const entries = { ...fresh, eth: expired.eth };
+    expect(portfolioTotal({ ...zeros, btc, eth }, entries, NOW_MS)).toEqual({
+      status: 'partial', text: '$62,683.00', partial: true,
+    });
+  });
+
+  it('returns unavailable when all nonzero balances have expired quotes', () => {
+    const balances = {
+      ...zeros,
+      btc, eth,
+      trx: { status: 'available', value: '1000000' },
+      ton: { status: 'available', value: '1000000000' },
+    } as const;
+    expect(portfolioTotal(balances, expired, NOW_MS)).toMatchObject({
+      status: 'unavailable', text: 'Unavailable',
+    });
+  });
+
+  it('never produces a partial total over an unavailable balance', () => {
+    const balances = { ...zeros, btc, eth: { status: 'unavailable' } } as const;
+    expect(portfolioTotal(balances, fresh, NOW_MS)).toMatchObject({
+      status: 'unavailable', text: 'Unavailable',
+    });
+  });
+
+  it('returns unavailable while any balance is loading', () => {
+    const balances = { ...zeros, btc, eth: { status: 'loading' } } as const;
+    expect(portfolioTotal(balances, fresh, NOW_MS).status).toBe('unavailable');
+  });
+});
+
+describe('quoteFreshnessLabel', () => {
+  function freshQuote() {
+    const entry = parsePriceResponse(freshPayload(), NOW_MS).btc;
+    expect(entry.status).toBe('fresh');
+    if (entry.status !== 'fresh') throw new Error('Expected a fresh BTC quote');
+    return entry.quote;
+  }
+
+  it('labels a 10-second-old quote as just updated', () => {
+    const quote = { ...freshQuote(), providerUpdatedAtMs: NOW_MS - 10_000 };
+    expect(quoteFreshnessLabel(quote, NOW_MS)).toBe('Updated just now');
+  });
+
+  it('labels a two-minute-old quote in minutes', () => {
+    const quote = { ...freshQuote(), providerUpdatedAtMs: NOW_MS - 2 * 60 * 1000 };
+    expect(quoteFreshnessLabel(quote, NOW_MS)).toBe('Updated 2 min ago');
+  });
+
+  it('labels a 90-minute-old quote with its provider time', () => {
+    const providerUpdatedAtMs = NOW_MS - 90 * 60 * 1000;
+    const quote = { ...freshQuote(), providerUpdatedAtMs };
+    const time = new Date(providerUpdatedAtMs).toLocaleTimeString('en-GB', {
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+    expect(quoteFreshnessLabel(quote, NOW_MS)).toBe(`Updated ${time}`);
+  });
+
+  it('labels a provider timestamp 30 seconds in the future as just updated', () => {
+    const quote = { ...freshQuote(), providerUpdatedAtMs: NOW_MS + 30_000 };
+    expect(quoteFreshnessLabel(quote, NOW_MS)).toBe('Updated just now');
+  });
+});
+
+describe('usePrices', () => {
+  let originalFetch: typeof globalThis.fetch;
+  let latest: ReturnType<typeof usePrices> | null = null;
+  function Probe(): null { latest = usePrices(); return null; }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalFetch = globalThis.fetch;
+    latest = null;
+    vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  async function mount() {
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(div);
+    await act(async () => { root.render(<Probe />); });
+    return {
+      div, root,
+      cleanup: async () => {
+        await act(async () => { root.unmount(); });
+        div.remove();
+      },
+    };
+  }
+
+  it('stays idle on mount and loads fresh prices on refresh', async () => {
+    const stub = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => freshPayload(),
+      headers: { get: () => null },
+    }));
+    vi.stubGlobal('fetch', stub);
+    const { cleanup } = await mount();
+    try {
+      expect(latest!.state).toMatchObject({ status: 'idle', lastFetchedAtMs: null });
+      expect(stub).not.toHaveBeenCalled();
+      await act(async () => {
+        latest?.refresh();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(latest!.state.status).toBe('ready');
+      const entries = Object.values(latest!.state.entries);
+      expect(entries).toHaveLength(13);
+      for (const entry of entries) expect(entry).toMatchObject({ status: 'fresh' });
+      expect(Number.isFinite(latest!.state.lastFetchedAtMs)).toBe(true);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('reports network errors when fetch throws', async () => {
+    const stub = vi.fn(async () => { throw new Error('down'); });
+    vi.stubGlobal('fetch', stub);
+    const { cleanup } = await mount();
+    try {
+      await act(async () => {
+        latest?.refresh();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(latest!.state.status).toBe('ready');
+      const entries = Object.values(latest!.state.entries);
+      expect(entries).toHaveLength(13);
+      for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('ignores duplicate refresh calls while loading', async () => {
+    const stub = vi.fn(() => new Promise(() => {}));
+    vi.stubGlobal('fetch', stub);
+    const { cleanup } = await mount();
+    try {
+      await act(async () => {
+        latest?.refresh();
+        latest?.refresh();
+      });
+      expect(stub).toHaveBeenCalledTimes(1);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('reports network errors when fetch is unavailable', async () => {
+    vi.stubGlobal('fetch', undefined);
+    delete (globalThis as Record<string, unknown>).fetch;
+    const { cleanup } = await mount();
+    try {
+      await act(async () => { latest?.refresh(); });
+      expect(latest!.state.status).toBe('ready');
+      const entries = Object.values(latest!.state.entries);
+      expect(entries).toHaveLength(13);
+      for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
+    } finally {
+      await cleanup();
+    }
+  });
+});

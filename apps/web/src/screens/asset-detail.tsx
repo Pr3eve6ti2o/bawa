@@ -110,8 +110,15 @@ export function AssetDetailScreen() {
             <p className="text-sm text-panel-text-muted">
               {balance.status === 'error'
                 ? 'Could not load the balance.'
-                : 'No balance adapter is available for this chain.'}
-              {balance.reason ? ` (${balance.reason})` : ''}
+                : 'Balances are not available for this chain right now.'}
+              {/* Machine-readable reason codes (no-adapter, no-address)
+                  are not shown to users; a provider's own error detail
+                  still is. */}
+              {balance.reason &&
+              balance.reason !== 'no-adapter' &&
+              balance.reason !== 'no-address'
+                ? ` (${balance.reason})`
+                : ''}
             </p>
             <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
               Retry
@@ -172,9 +179,17 @@ export function AssetDetailScreen() {
       </Card>
 
       <section aria-labelledby="recent-transactions-heading" className="space-y-3">
-        <h2 id="recent-transactions-heading" className="text-lg font-semibold">
-          Recent transactions
-        </h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="recent-transactions-heading" className="text-lg font-semibold">
+            Recent transactions
+          </h2>
+          <Link
+            to={`/track?chain=${chain}`}
+            className="text-sm text-panel-accent underline underline-offset-4"
+          >
+            Track a transaction
+          </Link>
+        </div>
         {chainHistory.status === 'loading' ? (
           <div role="status">
             <Skeleton className="h-24 w-full" />

@@ -43,9 +43,20 @@ export function LockScreen() {
     }
   }
 
+  // This screen renders INSIDE the app shell's <main> (it is a route, not
+  // a gate), so it must not render its own full-screen <main>: the old
+  // min-h-screen wrapper stretched the desktop content column far past
+  // the viewport and left a vast empty dark area under the card. At lg
+  // the card now centres in exactly the shell's content area (viewport
+  // minus the 72px desktop header and the main's 48px vertical padding);
+  // below lg the screen is unchanged (full-screen, as designed). No
+  // background of its own: the shell gradient is the backdrop, as on
+  // every other screen — a solid fill here read as a heavy empty
+  // rectangle around the card. The brand header is hidden at lg where
+  // the sidebar and desktop header already carry the brand.
   return (
-    <main className="flex min-h-screen flex-col bg-panel-surface px-4 py-8 text-panel-text">
-      <header className="flex items-center justify-center gap-3 text-lg font-semibold">
+    <div className="flex min-h-screen flex-col px-4 py-8 text-panel-text lg:min-h-[calc(100dvh-120px)]">
+      <header className="flex items-center justify-center gap-3 text-lg font-semibold lg:hidden">
         <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-primary-foreground">
           <Wallet className="size-5" aria-hidden="true" />
         </div>
@@ -157,6 +168,6 @@ export function LockScreen() {
           </div>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }

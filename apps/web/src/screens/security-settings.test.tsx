@@ -71,7 +71,7 @@ describe('security settings screen', () => {
       expect(text).not.toContain('UI state only');
       expect(text).not.toContain('watch-only starter does not create');
       expect(text).toContain('stored encrypted in the vault');
-      expect(text).toContain('Broadcast is disabled');
+      expect(text).toContain('Sending is not turned on yet');
     } finally {
       await mounted.cleanup();
     }

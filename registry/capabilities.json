@@ -1,7 +1,7 @@
 {
   "registry": "capabilities",
   "version": 2,
-  "updated": "2026-11-19",
+  "updated": "2026-11-20",
   "chainSupport": {
     "btc": {
       "profiles": [
@@ -86,6 +86,159 @@
         "plan-transfer": "IMPLEMENTED_AND_VERIFIED",
         "local-sign": "IMPLEMENTED_AND_VERIFIED",
         "verify-signature": "DOCUMENTED_NOT_TESTED"
+      }
+    },
+    "sol": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "bsc": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "matic": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "arb": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "op": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "base": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "avax": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "ltc": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "doge": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "NOT_SUPPORTED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
       }
     }
   },

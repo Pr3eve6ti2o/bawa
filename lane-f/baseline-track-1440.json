@@ -1,0 +1,148 @@
+{
+  "url": "http://127.0.0.1:8087/track",
+  "width": 1440,
+  "height": 900,
+  "title": "Bawa Web Wallet",
+  "bodyTextStart": "Bawa Web Wallet\nNo wallet ›\nMainnet\nTrack a transaction\n\nLook up any transaction by its hash, or see recent activity for an address. Results come from public indexers and may lag behind the chain.\n\nBi",
+  "innerWidth": 1440,
+  "innerHeight": 900,
+  "scrollWidth": 1440,
+  "scrollHeight": 900,
+  "hOverflow": false,
+  "domContentLoaded": 44,
+  "loadEvent": 56,
+  "transferKB": 2,
+  "paints": {
+    "first-paint": 80,
+    "first-contentful-paint": 80
+  },
+  "resources": [
+    {
+      "name": "wallet-core.wasm",
+      "kb": 10178,
+      "ms": 32
+    },
+    {
+      "name": "boundary-BApXMZJn.js",
+      "kb": 2834,
+      "ms": 14
+    },
+    {
+      "name": "index-NnJOO_Jn.css",
+      "kb": 466,
+      "ms": 9
+    },
+    {
+      "name": "index-CXIH8MAG.js",
+      "kb": 330,
+      "ms": 10
+    },
+    {
+      "name": "adapters-BIwqCtJC.js",
+      "kb": 289,
+      "ms": 8
+    },
+    {
+      "name": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "kb": 45,
+      "ms": 8
+    },
+    {
+      "name": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-600-normal-LgqL8muc.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-500-normal-Cerq10X2.woff2",
+      "kb": 24,
+      "ms": 5
+    },
+    {
+      "name": "inter-latin-400-normal-C38fXH4l.woff2",
+      "kb": 23,
+      "ms": 5
+    },
+    {
+      "name": "track-transaction-7pi3vLol.js",
+      "kb": 15,
+      "ms": 6
+    },
+    {
+      "name": "chains-egYoZppu.js",
+      "kb": 7,
+      "ms": 8
+    }
+  ],
+  "networkRequests": 18,
+  "totalNetworkKB": 14273,
+  "largestRequests": [
+    {
+      "url": "wallet-core.wasm",
+      "status": 200,
+      "kb": 10180
+    },
+    {
+      "url": "boundary-BApXMZJn.js",
+      "status": 200,
+      "kb": 2834
+    },
+    {
+      "url": "index-NnJOO_Jn.css",
+      "status": 200,
+      "kb": 466
+    },
+    {
+      "url": "index-CXIH8MAG.js",
+      "status": 200,
+      "kb": 330
+    },
+    {
+      "url": "adapters-BIwqCtJC.js",
+      "status": 200,
+      "kb": 289
+    },
+    {
+      "url": "chunk-6KYCQHYJ-BCrNfqU6.js",
+      "status": 200,
+      "kb": 45
+    },
+    {
+      "url": "inter-latin-600-normal-LgqL8muc.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-700-normal-Yt3aPRUw.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-500-normal-Cerq10X2.woff2",
+      "status": 200,
+      "kb": 24
+    },
+    {
+      "url": "inter-latin-400-normal-C38fXH4l.woff2",
+      "status": 200,
+      "kb": 23
+    },
+    {
+      "url": "track-transaction-7pi3vLol.js",
+      "status": 200,
+      "kb": 15
+    },
+    {
+      "url": "chains-egYoZppu.js",
+      "status": 200,
+      "kb": 7
+    }
+  ],
+  "consoleErrors": [],
+  "exceptions": [],
+  "screenshot": "baseline-track-1440.png"
+}

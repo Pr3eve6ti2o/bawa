@@ -45,6 +45,15 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   eth: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   trx: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   ton: { label: 'TON public address', placeholder: 'UQ… or 0:…' },
+  sol: { label: 'Solana public address', placeholder: 'GjJy…' },
+  bsc: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  matic: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  arb: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  op: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  base: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  avax: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  ltc: { label: 'Account public key (Ltub)', placeholder: 'Ltub…' },
+  doge: { label: 'Account public key (dgub)', placeholder: 'dgub…' },
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -147,7 +156,7 @@ export function ImportWalletScreen() {
     }
     setIsSaving(true);
     try {
-      const profileIds = SUPPORTED_CHAINS.map((chainId) => profileFor(chainId));
+      const profileIds = [...new Set(SUPPORTED_CHAINS.map((chainId) => profileFor(chainId)))];
       const mnemonic = normalizedMnemonic;
       await createVault(mnemonic, vaultPassword, profileIds, passphrase);
       setNormalizedMnemonic(null);
@@ -449,7 +458,7 @@ export function ImportWalletScreen() {
                     onClick={() => setChain(option)}
                        className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                          chain === option
-                           ? 'bg-primary text-primary-foreground'
+                           ? 'bg-primary-solid text-primary-foreground'
                            : 'border border-border bg-card text-muted-foreground hover:text-foreground'
                        }`}
                   >

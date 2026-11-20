@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
@@ -26,6 +26,15 @@ const CHAINS = {
   eth: { displayName: 'Ethereum', symbol: 'ETH' },
   trx: { displayName: 'TRON', symbol: 'TRX' },
   ton: { displayName: 'TON', symbol: 'TON' },
+  sol: { displayName: 'Solana', symbol: 'SOL' },
+  bsc: { displayName: 'BNB Smart Chain', symbol: 'BNB' },
+  matic: { displayName: 'Polygon', symbol: 'POL' },
+  arb: { displayName: 'Arbitrum One', symbol: 'ETH' },
+  op: { displayName: 'OP Mainnet', symbol: 'ETH' },
+  base: { displayName: 'Base', symbol: 'ETH' },
+  avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  ltc: { displayName: 'Litecoin', symbol: 'LTC' },
+  doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
 
 type ChainKey = keyof typeof CHAINS;
@@ -38,6 +47,15 @@ function balancesFor(
     eth: { status: 'unavailable', reason: 'no-adapter' },
     trx: { status: 'unavailable', reason: 'no-adapter' },
     ton: { status: 'unavailable', reason: 'no-adapter' },
+    sol: { status: 'unavailable', reason: 'no-adapter' },
+    bsc: { status: 'unavailable', reason: 'no-adapter' },
+    matic: { status: 'unavailable', reason: 'no-adapter' },
+    arb: { status: 'unavailable', reason: 'no-adapter' },
+    op: { status: 'unavailable', reason: 'no-adapter' },
+    base: { status: 'unavailable', reason: 'no-adapter' },
+    avax: { status: 'unavailable', reason: 'no-adapter' },
+    ltc: { status: 'unavailable', reason: 'no-adapter' },
+    doge: { status: 'unavailable', reason: 'no-adapter' },
   };
   return { ...base, ...overrides };
 }
@@ -97,6 +115,17 @@ beforeEach(() => {
 });
 
 describe('dashboard screen', () => {
+  // The dashboard fetches prices on mount now, so every test stubs the
+  // price feed with fresh prices by default — no test ever hits the real
+  // CoinGecko API. Tests that need a different feed re-stub it themselves.
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = stubPriceFetch({ ok: true, status: 200, json: async () => freshPayload() });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('shows skeletons while balances load', async () => {
     setWallet(balancesFor({ btc: { status: 'loading' } }));
     const mounted = await mountScreen();
@@ -154,7 +183,7 @@ describe('dashboard screen', () => {
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No balance adapters verified yet.');
+      expect(mounted.div.textContent).toContain('Balances are not available right now.');
     } finally {
       await mounted.cleanup();
     }
@@ -184,6 +213,14 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).toContain('Unlock your wallet');
       const link = mounted.div.querySelector('a[href="/lock"]');
       expect(link).not.toBeNull();
+      // A locked vault is not a load failure: the hero must say the
+      // total needs an unlock, not that balances "could not be loaded".
+      expect(mounted.div.textContent).toContain(
+        'Unlock your wallet to see your portfolio total.',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'Balances could not be loaded',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -195,8 +232,196 @@ describe('dashboard screen', () => {
     try {
       // No fiat amount anywhere: no fabricated portfolio total.
       expect(mounted.div.textContent).not.toContain('$');
-      expect(mounted.div.textContent).toContain('No price feed connected');
+      // Balances failed, not prices: the hero says so (prices load on
+      // mount now, so "No prices loaded yet" no longer applies here).
+      expect(mounted.div.textContent).toContain('Balances could not be loaded');
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('fetches prices on mount without waiting for the Refresh button', async () => {
+    setWallet(balancesFor({}));
+    const mounted = await mountScreen();
+    try {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(String(fetchMock.mock.calls[0]![0])).toContain('api.coingecko.com');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  function stubPriceFetch(response: {
+    ok: boolean;
+    status: number;
+    json?: () => Promise<unknown>;
+    headers?: { get: (name: string) => string | null };
+  }): ReturnType<typeof vi.fn> {
+    const mock = vi.fn(async () => ({
+      ok: response.ok,
+      status: response.status,
+      json: response.json ?? (async () => ({})),
+      headers: response.headers ?? { get: () => null },
+    }));
+    vi.stubGlobal('fetch', mock);
+    return mock;
+  }
+  function freshPayload(ageSeconds = 30): Record<string, { usd: number; last_updated_at: number }> {
+    const lastUpdatedAt = Math.floor(Date.now() / 1000) - ageSeconds;
+    return {
+      bitcoin: { usd: 62683, last_updated_at: lastUpdatedAt },
+      ethereum: { usd: 1774.93, last_updated_at: lastUpdatedAt },
+      tron: { usd: 0.310229, last_updated_at: lastUpdatedAt },
+      'the-open-network': { usd: 1.028, last_updated_at: lastUpdatedAt },
+    };
+  }
+  async function clickRefreshPrices(mounted: { div: HTMLDivElement }): Promise<void> {
+    const button = [...mounted.div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === 'Refresh prices',
+    ) as HTMLButtonElement;
+    expect(button).not.toBeUndefined();
+    await act(async () => {
+      button.click();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  it('shows the live portfolio total with source and freshness after refreshing prices', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('Powered by CoinGecko');
+      expect(mounted.div.textContent).toContain('Updated just now');
+      expect(mounted.div.textContent).toContain('· CoinGecko');
+      expect(mounted.div.textContent).not.toContain('(Partial)');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a Partial total when one price is expired', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '1500000000000000000' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    const payload = freshPayload(11 * 60);
+    payload.bitcoin!.last_updated_at = Math.floor(Date.now() / 1000) - 30;
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('$62,683.00 (Partial)');
+      expect(mounted.div.textContent).toContain('Partial total');
+      expect(mounted.div.textContent).toContain('Powered by CoinGecko');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows expired prices as expired, never as current', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(11 * 60),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('Price expired');
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('$62,683.00');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows an honest error on a rate-limited price feed, never $0.00', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: {
+        get: (name: string) => (name === 'Retry-After' ? '120' : null),
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('Price feed rate-limited');
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('$');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a missing price as unavailable, never $0.00', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '1000000000' },
+      }),
+    );
+    const payload = freshPayload();
+    delete payload['the-open-network'];
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      expect(mounted.div.textContent).toContain('Price unavailable');
+      expect(mounted.div.textContent).toContain('$62,683.00 (Partial)');
+    } finally {
+      vi.unstubAllGlobals();
       await mounted.cleanup();
     }
   });

@@ -373,11 +373,11 @@ describe('broadcastSigned / markBroadcastUnknown (Sol p5)', () => {
   it('always returns disabled and never broadcasts', async () => {
     expect(await broadcastSigned('eth', '0x1234')).toEqual({
       status: 'disabled',
-      reason: 'Broadcast is disabled until separately authorised.',
+      reason: 'Sending is not turned on yet. It needs to be enabled separately.',
     });
     expect(await broadcastSigned('btc', '0x1234')).toEqual({
       status: 'disabled',
-      reason: 'Broadcast is disabled until separately authorised.',
+      reason: 'Sending is not turned on yet. It needs to be enabled separately.',
     });
   });
 

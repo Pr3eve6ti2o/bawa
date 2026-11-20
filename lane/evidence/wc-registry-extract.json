@@ -1,0 +1,441 @@
+[
+ {
+  "id": "bitcoin",
+  "name": "Bitcoin",
+  "coinId": 0,
+  "symbol": "BTC",
+  "decimals": 8,
+  "blockchain": "Bitcoin",
+  "derivation": [
+   {
+    "name": "segwit",
+    "path": "m/84'/0'/0'/0/0",
+    "xpub": "zpub",
+    "xprv": "zprv"
+   },
+   {
+    "name": "legacy",
+    "path": "m/44'/0'/0'/0/0",
+    "xpub": "xpub",
+    "xprv": "xprv"
+   },
+   {
+    "name": "testnet",
+    "path": "m/84'/1'/0'/0/0",
+    "xpub": "zpub",
+    "xprv": "zprv"
+   },
+   {
+    "name": "taproot",
+    "path": "m/86'/0'/0'/0/0",
+    "xpub": "zpub",
+    "xprv": "zprv"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1",
+  "p2pkhPrefix": 0,
+  "p2shPrefix": 5,
+  "hrp": "bc",
+  "publicKeyHasher": "sha256ripemd",
+  "base58Hasher": "sha256d",
+  "explorer": {
+   "url": "https://mempool.space",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0607f62530b68cfcc91c57a1702841dd399a899d0eecda8e31ecca3f52f01df2",
+   "sampleAccount": "17A16QmavnUfCW11DAApiJxp7ARnxN5pGX"
+  },
+  "info": {
+   "url": "https://bitcoin.org",
+   "source": "https://github.com/trezor/blockbook",
+   "rpc": "",
+   "documentation": "https://github.com/trezor/blockbook/blob/master/docs/api.md"
+  }
+ },
+ {
+  "id": "litecoin",
+  "name": "Litecoin",
+  "coinId": 2,
+  "symbol": "LTC",
+  "decimals": 8,
+  "blockchain": "Bitcoin",
+  "derivation": [
+   {
+    "path": "m/84'/2'/0'/0/0",
+    "xpub": "zpub",
+    "xprv": "zprv"
+   },
+   {
+    "name": "legacy",
+    "path": "m/44'/2'/0'/0/0",
+    "xpub": "xpub",
+    "xprv": "xprv"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1",
+  "p2pkhPrefix": 48,
+  "p2shPrefix": 50,
+  "hrp": "ltc",
+  "publicKeyHasher": "sha256ripemd",
+  "base58Hasher": "sha256d",
+  "explorer": {
+   "url": "https://blockchair.com",
+   "txPath": "/litecoin/transaction/",
+   "accountPath": "/litecoin/address/"
+  },
+  "info": {
+   "url": "https://litecoin.org",
+   "source": "https://github.com/trezor/blockbook",
+   "rpc": "",
+   "documentation": "https://github.com/trezor/blockbook/blob/master/docs/api.md"
+  }
+ },
+ {
+  "id": "doge",
+  "name": "Dogecoin",
+  "coinId": 3,
+  "symbol": "DOGE",
+  "decimals": 8,
+  "blockchain": "Bitcoin",
+  "derivation": [
+   {
+    "path": "m/44'/3'/0'/0/0",
+    "xpub": "dgub",
+    "xprv": "dgpv"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1",
+  "p2pkhPrefix": 30,
+  "p2shPrefix": 22,
+  "publicKeyHasher": "sha256ripemd",
+  "base58Hasher": "sha256d",
+  "explorer": {
+   "url": "https://blockchair.com",
+   "txPath": "/dogecoin/transaction/",
+   "accountPath": "/dogecoin/address/"
+  },
+  "info": {
+   "url": "https://dogecoin.com",
+   "source": "https://github.com/trezor/blockbook",
+   "rpc": "",
+   "documentation": "https://github.com/trezor/blockbook/blob/master/docs/api.md"
+  }
+ },
+ {
+  "id": "base",
+  "name": "Base",
+  "nativeTokenName": "Ethereum",
+  "coinId": 8453,
+  "symbol": "ETH",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "8453",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://basescan.org",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0x4acb15506b7696a2dfac4258f3f86392b4b2b717a3f316a8aa78509b2c3b6ab4",
+   "sampleAccount": "0xb8ff877ed78ba520ece21b1de7843a8a57ca47cb"
+  },
+  "info": {
+   "url": "https://base.mirror.xyz/",
+   "source": "https://github.com/base-org",
+   "rpc": "https://mainnet.base.org",
+   "documentation": "https://docs.base.org/"
+  }
+ },
+ {
+  "id": "ethereum",
+  "name": "Ethereum",
+  "coinId": 60,
+  "symbol": "ETH",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "1",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://etherscan.io",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0x9edaf0f7d9c6629c31bbf0471fc07d696c73b566b93783f7e25d8d5d2b62fa4f",
+   "sampleAccount": "0x5bb497e8d9fe26e92dd1be01e32076c8e024d167"
+  },
+  "info": {
+   "url": "https://ethereum.org",
+   "source": "https://github.com/ethereum/go-ethereum",
+   "rpc": "https://mainnet.infura.io",
+   "documentation": "https://eth.wiki/json-rpc/API"
+  }
+ },
+ {
+  "id": "tron",
+  "name": "Tron",
+  "coinId": 195,
+  "symbol": "TRX",
+  "decimals": 6,
+  "blockchain": "Tron",
+  "derivation": [
+   {
+    "path": "m/44'/195'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "explorer": {
+   "url": "https://tronscan.org",
+   "txPath": "/#/transaction/",
+   "accountPath": "/#/address/"
+  },
+  "info": {
+   "url": "https://tron.network",
+   "source": "https://github.com/tronprotocol/java-tron",
+   "rpc": "https://api.trongrid.io",
+   "documentation": "https://developers.tron.network/docs/tron-wallet-rpc-api"
+  }
+ },
+ {
+  "id": "solana",
+  "name": "Solana",
+  "coinId": 501,
+  "symbol": "SOL",
+  "decimals": 9,
+  "blockchain": "Solana",
+  "derivation": [
+   {
+    "path": "m/44'/501'/0'"
+   },
+   {
+    "name": "solana",
+    "path": "m/44'/501'/0'/0'"
+   }
+  ],
+  "curve": "ed25519",
+  "publicKeyType": "ed25519",
+  "explorer": {
+   "url": "https://solscan.io",
+   "txPath": "/tx/",
+   "accountPath": "/account/",
+   "sampleTx": "5LmxrEKGchhMuYfw6Qut6CbsvE9pVfb8YvwZKvWssSesDVjHioBCmWKSJQh1WhvcM6CpemhpHNmEMA2a36rzwTa8",
+   "sampleAccount": "Bxp8yhH9zNwxyE4UqxP7a7hgJ5xTZfxNNft7YJJ2VRjT"
+  },
+  "info": {
+   "url": "https://solana.com",
+   "source": "https://github.com/solana-labs/solana",
+   "rpc": "https://api.mainnet-beta.solana.com",
+   "documentation": "https://docs.solana.com"
+  }
+ },
+ {
+  "id": "smartchain",
+  "name": "Smart Chain",
+  "displayName": "BNB Smart Chain",
+  "nativeTokenName": "BNB",
+  "coinId": 20000714,
+  "slip44": 714,
+  "symbol": "BNB",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   },
+   {
+    "name": "stable_account",
+    "path": "m/44'/60'/9172'/3604/9999",
+    "description": "TrustWallet's specific derivation path for Stable Account wallets"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "56",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://bscscan.com",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0xb9ae2e808fe8e57171f303ad8f6e3fd17d949b0bfc7b4db6e8e30a71cc517d7e",
+   "sampleAccount": "0x35552c16704d214347f29Fa77f77DA6d75d7C752"
+  },
+  "info": {
+   "url": "https://www.binance.org/en/smartChain",
+   "source": "https://github.com/binance-chain/bsc",
+   "rpc": "https://bsc-dataseed1.binance.org",
+   "documentation": "https://eth.wiki/json-rpc/API"
+  },
+  "testFolderName": "Binance"
+ },
+ {
+  "id": "polygon",
+  "name": "Polygon",
+  "coinId": 966,
+  "symbol": "POL",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "137",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://polygonscan.com",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0xe26ed1470d5bf99a53d687843e7acdf7e4ba6620af93b4d672e714de90476e8e",
+   "sampleAccount": "0x720E1fa107A1Df39Db4E78A3633121ac36Bec132"
+  },
+  "info": {
+   "url": "https://polygon.technology",
+   "source": "https://github.com/maticnetwork",
+   "rpc": "https://polygon-rpc.com",
+   "documentation": "https://docs.polygon.technology"
+  }
+ },
+ {
+  "id": "optimism",
+  "name": "Optimism",
+  "displayName": "OP Mainnet",
+  "nativeTokenName": "Ethereum",
+  "coinId": 10000070,
+  "slip44": 60,
+  "symbol": "ETH",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "10",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://optimistic.etherscan.io",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0x6fd99288be9bf71eb002bb31da10a4fb0fbbb3c45ae73693b212f49c9db7df8f",
+   "sampleAccount": "0x1f932361e31d206b4f6b2478123a9d0f8c761031"
+  },
+  "info": {
+   "url": "https://optimism.io/",
+   "source": "https://github.com/ethereum-optimism/optimism",
+   "rpc": "https://mainnet.optimism.io",
+   "documentation": "https://eth.wiki/json-rpc/API"
+  }
+ },
+ {
+  "id": "arbitrum",
+  "name": "Arbitrum",
+  "nativeTokenName": "Ethereum",
+  "coinId": 10042221,
+  "slip44": 60,
+  "symbol": "ETH",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "42161",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://arbiscan.io",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0xa1e319be22c08155e5904aa211fb87df5f4ade48de79c6578b1cf3dfda9e498c",
+   "sampleAccount": "0xecf9ffa7f51e1194f89c25ad8c484f6bfd04e1ac"
+  },
+  "info": {
+   "url": "https://arbitrum.io",
+   "source": "https://github.com/OffchainLabs/arbitrum",
+   "rpc": "https://arb1.arbitrum.io/rpc",
+   "documentation": "https://docs.arbitrum.io/"
+  }
+ },
+ {
+  "id": "avalanchec",
+  "name": "Avalanche C-Chain",
+  "nativeTokenName": "Avalanche",
+  "coinId": 10009000,
+  "symbol": "AVAX",
+  "decimals": 18,
+  "blockchain": "Ethereum",
+  "derivation": [
+   {
+    "path": "m/44'/60'/0'/0/0"
+   }
+  ],
+  "curve": "secp256k1",
+  "publicKeyType": "secp256k1Extended",
+  "chainId": "43114",
+  "addressHasher": "keccak256",
+  "explorer": {
+   "url": "https://snowtrace.io",
+   "txPath": "/tx/",
+   "accountPath": "/address/",
+   "sampleTx": "0x9243890b844219accefd8798271052f5a056453ec18984a56e81c92921330d54",
+   "sampleAccount": "0xa664325f36Ec33E66323fe2620AF3f2294b2Ef3A"
+  },
+  "info": {
+   "url": "https://www.avalabs.org/",
+   "client": "https://github.com/ava-labs/avalanchego",
+   "clientPublic": "https://api.avax.network/ext/bc/C/rpc",
+   "clientDocs": "https://docs.avax.network/"
+  },
+  "testFolderName": "Avalanche"
+ },
+ {
+  "id": "ton",
+  "name": "TON",
+  "nativeTokenName": "Gram",
+  "coinId": 607,
+  "symbol": "GRAM",
+  "decimals": 9,
+  "blockchain": "TheOpenNetwork",
+  "derivation": [
+   {
+    "path": "m/44'/607'/0'"
+   }
+  ],
+  "curve": "ed25519",
+  "publicKeyType": "ed25519",
+  "explorer": {
+   "url": "https://tonviewer.com",
+   "txPath": "/transaction/",
+   "accountPath": "/",
+   "sampleTx": "fJXfn0EVhV09HFuEgUHu4Cchb24nUQtIMwSzmzk2tLs=",
+   "sampleAccount": "EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N"
+  },
+  "info": {
+   "url": "https://ton.org",
+   "source": "https://github.com/ton-blockchain",
+   "rpc": "https://toncenter.com/api/v2/jsonRPC",
+   "documentation": "https://ton.org/docs"
+  }
+ }
+]

@@ -4,9 +4,11 @@ import { Activity, ArrowDownToLine, Send } from 'lucide-react';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { portfolioTotal, usePrices, PRICE_ATTRIBUTION_TEXT } from '../wallet/prices';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import { AssetRows } from './asset-rows';
+import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 
 const ACTIONS = [
@@ -16,58 +18,143 @@ const ACTIONS = [
 ] as const;
 
 /**
- * Panel home — real balances only. There is no price feed in this lane, so
- * no fiat portfolio total is shown (and none is fabricated): the hero states
- * that plainly. Asset rows come from the verified balance adapters.
+ * Panel home — real balances plus the live CoinGecko price feed. The hero
+ * total includes ONLY fresh-quoted balances and reads Partial when incomplete.
+ * Missing, expired, or failed prices are shown as unavailable or an error,
+ * never as $0.00 and never as fabricated prices.
  */
 export function DashboardScreen() {
   const {
     balances,
-    history,
     refreshBalances,
-    refreshHistory,
     vaultState,
   } = useWallet();
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
 
-  // Balance hero (Phase 5, Sol p8, landed 2026-11-19 in 367.2s). The hero
-  // holds its last settled text in a ref while a refresh is loading, so it
-  // never flashes Unavailable mid-refresh. No price feed exists, so the
-  // only fiat figure ever shown is the honest $0.00 of zero holdings; an
-  // error is never rendered as zero. Sol's JSX used new slate classes;
-  // assembly keeps the existing dark-navy hero markup instead.
-  const lastHeroRef = useRef({
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const pricesLoading = pricesState.status === 'loading';
+
+  // Prices load on mount and refresh every 60 seconds (the documented
+  // CoinGecko refresh cadence in wallet/prices.ts). Before this fix the
+  // feed stayed idle until the user pressed "Refresh prices", so a fresh
+  // session showed "No prices loaded yet" and an Unavailable total even
+  // though the feed itself was healthy. The ref always calls the latest
+  // refresh so the interval never goes stale; usePrices still guards
+  // against overlapping fetches, and a failed fetch keeps the honest
+  // error state — prices are never fabricated.
+  const refreshPricesRef = useRef(refreshPrices);
+  refreshPricesRef.current = refreshPrices;
+  useEffect(() => {
+    refreshPricesRef.current();
+    const timer = window.setInterval(() => {
+      refreshPricesRef.current();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // Hold the last settled hero text while balances refresh so it never flashes
+  // Unavailable mid-refresh. Missing, expired, or failed prices are never $0.00.
+  const lastHeroRef = useRef<{
+    text: string;
+    noPriceFeed: boolean;
+    retry: boolean;
+    partialNote: boolean;
+    showAttribution: boolean;
+    priceError: 'rate-limited' | 'network' | 'provider' | 'timeout' | null;
+    balancesFailed: boolean;
+  }>({
     text: 'Unavailable',
     noPriceFeed: false,
     retry: false,
+    partialNote: false,
+    showAttribution: false,
+    priceError: null,
+    balancesFailed: false,
   });
 
-  const heroBalances = Object.values(balances);
+  // Only chains with a verified balance adapter count toward the hero.
+  // The multichain-extension chains have no balance adapter yet, so their
+  // 'unavailable' status must not fail the hero.
+  const heroBalances = availableFor('balance').map((chain) => balances[chain]);
   const heroLoading = heroBalances.some((b) => b?.status === 'loading');
   const heroFailed = heroBalances.some(
     (b) => b?.status === 'unavailable' || b?.status === 'error',
   );
-  const heroAllZero =
-    heroBalances.length === 4 &&
-    heroBalances.every(
-      (b) =>
-        b?.status === 'zero' ||
-        (b?.status === 'available' && b.value === '0'),
-    );
 
-  // Known failures override a cached $0.00, even during a partial refresh.
-  // The no-price-feed line still shows: the feed is missing as well as the
-  // balances, and the hero must keep explaining why no fiat total exists.
-  const nextHero = heroFailed
-    ? { text: 'Unavailable', noPriceFeed: true, retry: true }
+  const priceEntries = Object.values(pricesState.entries);
+  const priceErrorReasons = priceEntries.flatMap(
+    (entry) => (entry?.status === 'error' ? [entry.reason] : []),
+  );
+  const sharedPriceError =
+    priceEntries.length > 0 &&
+    priceErrorReasons.length === priceEntries.length &&
+    priceErrorReasons.every((reason) => reason === priceErrorReasons[0])
+      ? (priceErrorReasons[0] ?? null)
+      : null;
+
+  const nextHero: typeof lastHeroRef.current | null = heroFailed
+    ? {
+        text: 'Unavailable',
+        noPriceFeed: true,
+        retry: true,
+        partialNote: false,
+        showAttribution: false,
+        priceError: null,
+        // Balances failed, not prices: the message below must say so.
+        // (Before the price auto-fetch this branch could only be reached
+        // with idle prices, so it blamed the feed; now the feed loads on
+        // mount and the honest cause is the balances.)
+        balancesFailed: true,
+      }
     : heroLoading
       ? null
-      : {
-          text: heroAllZero ? '$0.00' : 'Unavailable',
-          noPriceFeed: !heroAllZero,
-          retry: false,
-        };
+      : (() => {
+          const total = portfolioTotal(balances, pricesState.entries, Date.now());
+
+          switch (total.status) {
+            case 'zero':
+              return {
+                text: '$0.00',
+                noPriceFeed: false,
+                retry: false,
+                partialNote: false,
+                showAttribution: false,
+                priceError: null,
+                balancesFailed: false,
+              };
+            case 'total':
+              return {
+                text: total.text,
+                noPriceFeed: false,
+                retry: false,
+                partialNote: false,
+                showAttribution: true,
+                priceError: null,
+                balancesFailed: false,
+              };
+            case 'partial':
+              return {
+                text: `${total.text} (Partial)`,
+                noPriceFeed: false,
+                retry: false,
+                partialNote: true,
+                showAttribution: true,
+                priceError: null,
+                balancesFailed: false,
+              };
+            case 'unavailable':
+              return {
+                text: 'Unavailable',
+                noPriceFeed: true,
+                retry: false,
+                partialNote: false,
+                showAttribution: false,
+                priceError: sharedPriceError,
+                balancesFailed: false,
+              };
+          }
+        })();
 
   const hero = nextHero ?? lastHeroRef.current;
 
@@ -78,16 +165,38 @@ export function DashboardScreen() {
   }, [nextHero]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
       <h1 className="sr-only">Portfolio</h1>
 
       <div className="space-y-1 rounded-2xl bg-panel-surface-raised p-5">
         <p className="text-[13px] leading-[18px] font-medium text-panel-text-muted">Portfolio balance</p>
         <p className="text-display-lg font-bold tracking-tight text-panel-text">{hero.text}</p>
+        {hero.showAttribution && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
+        )}
+        {hero.partialNote && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total — only balances with a fresh price are included.</p>
+        )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
-            No price feed connected — portfolio total unavailable. Balances below
-            are exact native amounts from the mainnet adapters.
+            {hero.balancesFailed
+              ? vaultState === 'locked'
+                ? 'Unlock your wallet to see your portfolio total.'
+                : 'Balances could not be loaded, so the portfolio total is unavailable.'
+              : pricesState.status === 'idle'
+                ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
+                : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
+          </p>
+        )}
+        {hero.priceError !== null && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">
+            {hero.priceError === 'rate-limited'
+              ? 'Price feed rate-limited — try again shortly.'
+              : hero.priceError === 'network'
+                ? 'Could not reach the price feed — check your connection and retry.'
+                : hero.priceError === 'timeout'
+                  ? 'Price feed timed out — retry.'
+                  : 'Price feed error — retry.'}
           </p>
         )}
         {vaultState === 'locked' && (
@@ -103,9 +212,9 @@ export function DashboardScreen() {
         >
           {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
         </Button>
+        <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
-
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 lg:self-center">
         {ACTIONS.map(({ to, icon: Icon, label }) => (
           <Link
             key={to}
@@ -130,7 +239,7 @@ export function DashboardScreen() {
       <div
         role="tablist"
         aria-label="Wallet views"
-        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1"
+        className="mb-4 flex w-fit gap-1 rounded-xl border border-panel-border bg-panel-surface p-1 lg:col-span-2"
       >
         {(['tokens', 'activity'] as const).map((tab) => (
           <button
@@ -173,8 +282,10 @@ export function DashboardScreen() {
         id="dashboard-assets-panel"
         role="tabpanel"
         aria-labelledby={`dashboard-assets-${assetsTab}-tab`}
+        className="lg:col-span-2"
       >
         {assetsTab === 'tokens' ? (
+          <div className="lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 xl:grid-cols-[2fr_1fr]">
           <section aria-label="Assets">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-panel-text">Assets</h2>
@@ -189,128 +300,15 @@ export function DashboardScreen() {
               </Button>
             </div>
             <Card className="mt-4">
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} />
             </Card>
           </section>
+            <div className="hidden lg:block">
+              <RecentActivity />
+            </div>
+          </div>
         ) : (
-          <section aria-label="Activity" className="space-y-3">
-            <h2 className="text-lg font-semibold text-panel-text">Recent activity</h2>
-
-            {(() => {
-              const chains = availableFor('history');
-
-              const timestampMs = (timestamp: number | string | null | undefined) => {
-                if (timestamp == null) return null;
-
-                const value =
-                  typeof timestamp === 'number' && timestamp < 1_000_000_000_000
-                    ? timestamp * 1000
-                    : timestamp;
-                const time = new Date(value).getTime();
-
-                return Number.isFinite(time) ? time : null;
-              };
-
-              const rows = chains
-                .flatMap((chain) =>
-                  (history[chain]?.txs ?? []).map((tx) => ({ chain, tx })),
-                )
-                .sort(
-                  (a, b) =>
-                    (timestampMs(b.tx.timestamp) ?? 0) -
-                    (timestampMs(a.tx.timestamp) ?? 0),
-                );
-
-              const loading = chains.some(
-                (chain) => history[chain]?.status === 'loading',
-              );
-
-              const unavailableChains = chains.filter(
-                (chain) =>
-                  history[chain]?.status === 'unavailable' ||
-                  history[chain]?.status === 'error',
-              );
-
-              return (
-                <>
-                  {rows.length > 0 ? (
-                    <ul className="divide-y divide-panel-border overflow-hidden rounded-xl border border-panel-border bg-panel-surface">
-                      {rows.map(({ chain, tx }) => {
-                        const config = chainConfig(chain);
-                        const time = timestampMs(tx.timestamp);
-                        const direction =
-                          tx.direction === 'in'
-                            ? 'Received'
-                            : tx.direction === 'out'
-                              ? 'Sent'
-                              : 'Self transfer';
-
-                        return (
-                          <li key={`${chain}:${tx.hash}`}>
-                            <Link
-                              to={`/transactions/${tx.hash}`}
-                              className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-panel-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-panel-accent"
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-panel-text">
-                                  {direction}
-                                  <span className="font-normal text-panel-text-soft">
-                                    {' · '}{config.symbol}
-                                  </span>
-                                </span>
-                                <span className="mt-1 block text-xs text-panel-text-muted">
-                                  {time == null
-                                    ? 'Pending'
-                                    : new Date(time).toLocaleDateString('en-GB', {
-                                        dateStyle: 'short',
-                                      })}
-                                  {tx.status === 'failed'
-                                    ? ' · Failed'
-                                    : tx.status === 'pending'
-                                      ? ' · Pending'
-                                      : ''}
-                                </span>
-                              </span>
-                              <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
-                                {formatNativeWithSymbol(
-                                  tx.amountBaseUnits,
-                                  CHAIN_DECIMALS[chain],
-                                  config.symbol,
-                                )}
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : loading ? (
-                    <Skeleton className="h-20 w-full rounded-xl" />
-                  ) : (
-                    <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
-                  )}
-
-                  {unavailableChains.map((chain) => (
-                    <div
-                      key={`history-unavailable:${chain}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"
-                    >
-                      <p className="text-sm text-panel-text-soft">
-                        {chainConfig(chain).displayName} history unavailable
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void refreshHistory()}
-                        className="h-11 shrink-0"
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
-          </section>
+          <RecentActivity />
         )}
       </div>
 

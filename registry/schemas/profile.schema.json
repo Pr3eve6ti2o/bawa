@@ -36,7 +36,8 @@
         "multichain-wallet",
         "web-wallet",
         "android-wallet",
-        "watch-only-wallet"
+        "watch-only-wallet",
+        "multichain-extended-wallet"
       ]
     },
     "platform": {
@@ -56,7 +57,16 @@
           "btc",
           "eth",
           "trx",
-          "ton"
+          "ton",
+          "sol",
+          "bsc",
+          "matic",
+          "arb",
+          "op",
+          "base",
+          "avax",
+          "ltc",
+          "doge"
         ]
       }
     },

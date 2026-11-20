@@ -70,7 +70,7 @@ export type TxInput =
   | { kind: 'seqno'; seqno: number };
 
 export const BROADCAST_DISABLED_MESSAGE =
-  'Broadcast is disabled until separately authorised.';
+  'Sending is not turned on yet. It needs to be enabled separately.';
 
 export interface ChainAdapter {
   chain: ChainId;
