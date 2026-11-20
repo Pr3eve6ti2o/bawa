@@ -4,6 +4,7 @@
 // and the broadcast-disabled reason. The only action is "Sign offline";
 // there is no broadcast button.
 import { Button } from '../ui/components/button';
+import type { SendApprovalStage } from './send';
 
 export type SendReviewProps = {
   chainName: string;
@@ -14,9 +15,36 @@ export type SendReviewProps = {
   total: string;
   feeNote: string;
   disabledReason: string;
+  stage: SendApprovalStage;
   onBack: () => void;
   onSign: () => void;
 };
+
+const approvalStageCopy = {
+  review: {
+    heading: 'Review your send',
+    helper: 'Review the recipient, amount and fee before signing offline.',
+  },
+  simulating: {
+    heading: 'Checking the send can go ahead…',
+    helper: 'Simulating the send to check it can go ahead before signing.',
+  },
+  signing: {
+    heading: 'Signing offline…',
+    helper: 'Signing the send offline. Nothing will be broadcast.',
+  },
+  signed: {
+    heading: 'Signed — broadcast disabled',
+    helper: 'The send has been signed offline. Broadcasting is disabled.',
+  },
+  'broadcast-disabled': {
+    heading: 'Signed — broadcast disabled',
+    helper: 'The send is signed offline. Broadcasting remains disabled.',
+  },
+} satisfies Record<
+  SendApprovalStage,
+  { heading: string; helper: string }
+>;
 
 export function SendReview({
   chainName,
@@ -27,9 +55,12 @@ export function SendReview({
   total,
   feeNote,
   disabledReason,
+  stage,
   onBack,
   onSign,
 }: SendReviewProps) {
+  const { heading, helper } = approvalStageCopy[stage];
+
   return (
     <section
       aria-labelledby="send-review-heading"
@@ -37,11 +68,12 @@ export function SendReview({
     >
       <header className="space-y-2">
         <h1 id="send-review-heading" className="text-2xl font-semibold">
-          Review send
+          {heading}
         </h1>
         <p className="text-sm text-muted-foreground">
           {chainName} · {symbol}
         </p>
+        <p className="text-sm text-muted-foreground">{helper}</p>
       </header>
 
       <div className="rounded-xl border border-border p-4">
@@ -90,7 +122,12 @@ export function SendReview({
         <Button type="button" onClick={onBack} className="min-h-11">
           Back
         </Button>
-        <Button type="button" onClick={onSign} className="min-h-11">
+        <Button
+          type="button"
+          onClick={onSign}
+          disabled={stage !== 'review'}
+          className="min-h-11"
+        >
           Sign offline
         </Button>
       </div>

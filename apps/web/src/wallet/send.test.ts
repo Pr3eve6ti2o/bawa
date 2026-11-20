@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   bytesToHex,
   keccak256,
@@ -16,15 +16,21 @@ import {
   signTonOffline,
   tronAddressToBytes,
   broadcastSigned,
+  isBroadcastAllowedFor,
   markBroadcastUnknown,
+  simulateSend,
+  signingFailure,
+  planFailure,
 } from './send';
 import { createWallet, deriveAddresses } from './core';
+import { createVault, deleteVault, TEST_PROVENANCE } from './vault';
 import { loadCore } from '../engine/boundary';
 import { registerAdapter } from './adapters';
 import type {
   AdapterResult,
   ChainAdapter,
   FeeEstimate,
+  TxInput,
 } from './adapters/types';
 
 describe('validateRecipient (Sol p1, assembled hands-on)', () => {
@@ -612,5 +618,664 @@ describe('tronAddressToBytes', () => {
     expect(() =>
       tronAddressToBytes('0x27Ef5cDBe01777D62438AfFeb695e33fC2335979'),
     ).toThrow('Invalid TRON address.');
+  });
+});
+
+describe('isBroadcastAllowedFor (S6b, item 36)', () => {
+  it('rejects TEST_PROVENANCE', () => {
+    expect(isBroadcastAllowedFor(TEST_PROVENANCE)).toBe(false);
+  });
+
+  it('allows created, non-test provenance', () => {
+    expect(
+      isBroadcastAllowedFor({ source: 'created', isTesting: false }),
+    ).toBe(true);
+  });
+
+  it('allows unknown, non-test provenance', () => {
+    expect(
+      isBroadcastAllowedFor({ source: 'unknown', isTesting: false }),
+    ).toBe(true);
+  });
+});
+
+describe('item 36 broadcast guard with real vaults (S6b-2)', () => {
+  it('blocks test provenance and keeps default provenance disabled', async () => {
+    // send.test.ts runs in the node environment (no localStorage), so
+    // install a minimal in-memory Storage for this test only. vault.ts
+    // reads storage at call time, so a test-time shim works.
+    const holder = globalThis as Record<string, unknown>;
+    const previousStorage = holder.localStorage;
+    const store = new Map<string, string>();
+    const shim = {
+      get length() {
+        return store.size;
+      },
+      clear: () => {
+        store.clear();
+      },
+      getItem: (key: string) => store.get(key) ?? null,
+      key: (index: number) => [...store.keys()][index] ?? null,
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    } as Storage;
+    holder.localStorage = shim;
+
+    try {
+      const mnemonic = await createWallet();
+      const password = 'test-only-password';
+
+      await createVault(
+        mnemonic,
+        password,
+        ['bawa-evm-bip44-v1'],
+        '',
+        TEST_PROVENANCE,
+      );
+
+      await expect(broadcastSigned('eth', '0x1234')).rejects.toThrow(
+        'Broadcast blocked: account has test provenance.',
+      );
+
+      // createVault refuses when a vault already exists.
+      deleteVault();
+      await createVault(mnemonic, password, ['bawa-evm-bip44-v1'], '');
+
+      await expect(broadcastSigned('eth', '0x1234')).resolves.toEqual({
+        status: 'disabled',
+        reason: 'Broadcast is disabled until separately authorised.',
+      });
+    } finally {
+      if (previousStorage === undefined) {
+        delete holder.localStorage;
+      } else {
+        holder.localStorage = previousStorage;
+      }
+    }
+  });
+});
+
+describe('simulateSend BTC', () => {
+  function simStub(chain: 'btc', balance: string, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals: 8, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  const from = 'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu';
+  const to = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+
+  const fee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'btc',
+      networkId: 'test',
+      feeBaseUnits: '10',
+      unit: 'sat/vB',
+      note: 'stub fee rate',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const utxos = [
+    {
+      txid: createHash('sha256')
+        .update('lane3-btc-test-utxo')
+        .digest('hex'),
+      vout: 0,
+      valueBaseUnits: '100000',
+    },
+  ];
+
+  const inputs: AdapterResult<TxInput> = {
+    status: 'ok',
+    data: { kind: 'utxo', utxos },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  it('returns the amount and calculated BTC fee in base units', async () => {
+    registerAdapter(simStub('btc', '100000', fee, inputs));
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '1410',
+    });
+  });
+
+  it('returns fee-unavailable when getTxInputs is unavailable', async () => {
+    registerAdapter(
+      simStub('btc', '100000', fee, {
+        status: 'unavailable',
+        reason: 'down',
+      }),
+    );
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
+  });
+
+  it('returns fee-unavailable when estimateFee is unavailable', async () => {
+    registerAdapter(
+      simStub(
+        'btc',
+        '100000',
+        { status: 'unavailable', reason: 'down' },
+        inputs,
+      ),
+    );
+
+    expect(await simulateSend('btc', from, to, '0.0005')).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
+  });
+});
+
+describe('simulateSend failures and failure helpers', () => {
+  function simStub(chain: 'btc' | 'trx', balance: string, decimals: number, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  it('returns inner and outer insufficient-funds codes for BTC', async () => {
+    const from = 'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu';
+    const to = 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd';
+
+    registerAdapter(
+      simStub(
+        'btc',
+        '100000',
+        8,
+        {
+          status: 'ok',
+          data: {
+            chain: 'btc',
+            networkId: 'test',
+            feeBaseUnits: '10',
+            unit: 'sat/vB',
+            note: 'stub',
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        {
+          status: 'ok',
+          data: {
+            kind: 'utxo',
+            utxos: [
+              {
+                txid: createHash('sha256')
+                  .update('lane3-btc-test-utxo')
+                  .digest('hex'),
+                vout: 0,
+                valueBaseUnits: '100000',
+              },
+            ],
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+      ),
+    );
+
+    const result = await simulateSend('btc', from, to, '0.00101');
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'insufficient-funds' },
+      code: 'insufficient-funds',
+    });
+  });
+
+  it('returns inner and outer adapter-unavailable codes for TRX with seqno inputs', async () => {
+    const from = 'TAyDUYP5rcf56xFwrg8cU1qQwvnWpkeapM';
+    const to = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
+
+    registerAdapter(
+      simStub(
+        'trx',
+        '10000000',
+        6,
+        {
+          status: 'ok',
+          data: {
+            chain: 'trx',
+            networkId: 'test',
+            feeBaseUnits: '100000',
+            unit: 'sun',
+            note: 'stub',
+            source: 'stub',
+            fetchedAt: 0,
+          },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        {
+          status: 'ok',
+          data: { kind: 'seqno', seqno: 1 },
+          source: 'stub',
+          fetchedAt: 0,
+        },
+      ),
+    );
+
+    const result = await simulateSend('trx', from, to, '1');
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'adapter-unavailable' },
+      code: 'adapter-unavailable',
+    });
+  });
+
+  it('constructs signing and plan failure results', () => {
+    expect(signingFailure('Signing failed.', 7)).toEqual({
+      ok: false,
+      code: 'signing-failed',
+      reason: 'Signing failed.',
+      signingErrorCode: 7,
+    });
+
+    expect(planFailure(7, 'plan boom')).toEqual({
+      ok: false,
+      code: 'plan-failed',
+      reason: 'Transaction plan failed (SigningError 7): plan boom',
+      signingErrorCode: 7,
+    });
+  });
+});
+
+describe('simulateSend ETH and TON', () => {
+  const ethFrom = '0x7ef5cdbe01777d62438affeb695e33fc233597987';
+  const ethTo = '0x1111111111111111111111111111111111111111';
+  const tonAddress = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
+  const ethBalance = '1000000000000000000';
+  const tonBalance = '1000000000';
+
+  const ethFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'eth',
+      networkId: 'test',
+      feeBaseUnits: '420000000000000',
+      unit: 'wei',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  const tonFee: AdapterResult<FeeEstimate> = {
+    status: 'ok',
+    data: {
+      chain: 'ton',
+      networkId: 'test',
+      feeBaseUnits: '1000000',
+      unit: 'nanoton',
+      note: 'stub',
+      source: 'stub',
+      fetchedAt: 0,
+    },
+    source: 'stub',
+    fetchedAt: 0,
+  };
+
+  function simStub(chain: 'eth' | 'ton', balance: string, decimals: number, fee: AdapterResult<FeeEstimate>, inputs: AdapterResult<TxInput>): ChainAdapter { return { chain, networkId: 'test', getBalance: async () => ({ status: 'ok', data: { chain, address: 'stub', networkId: 'test', valueBaseUnits: balance, decimals, source: 'stub', fetchedAt: 0 }, source: 'stub', fetchedAt: 0 }), getHistory: async () => ({ status: 'ok', data: [], source: 'stub', fetchedAt: 0 }), estimateFee: async () => fee, getTxInputs: async () => inputs, broadcast: async () => { throw new Error('disabled'); } }; }
+
+  function okInputs(data: TxInput): AdapterResult<TxInput> {
+    return { status: 'ok', data, source: 'stub', fetchedAt: 0 };
+  }
+
+  it('simulates an ETH send with nonce inputs', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, okInputs({ kind: 'nonce', nonce: 5 })),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '500000000000000000',
+      feeBaseUnits: '420000000000000',
+    });
+  });
+
+  it('rejects unavailable ETH nonce inputs', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, {
+        status: 'unavailable',
+        reason: 'stub unavailable',
+      }),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-nonce', chain: 'eth' },
+      code: 'bad-nonce',
+    });
+  });
+
+  it('rejects seqno inputs for ETH', async () => {
+    registerAdapter(
+      simStub('eth', ethBalance, 18, ethFee, okInputs({ kind: 'seqno', seqno: 1 })),
+    );
+
+    expect(await simulateSend('eth', ethFrom, ethTo, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-nonce', chain: 'eth' },
+      code: 'bad-nonce',
+    });
+  });
+
+  it('simulates a TON send with seqno inputs', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, okInputs({ kind: 'seqno', seqno: 3 })),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: true,
+      amountBaseUnits: '500000000',
+      feeBaseUnits: '1000000',
+    });
+  });
+
+  it('rejects unavailable TON seqno inputs', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, {
+        status: 'unavailable',
+        reason: 'stub unavailable',
+      }),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-seqno', chain: 'ton' },
+      code: 'bad-seqno',
+    });
+  });
+
+  it('rejects nonce inputs for TON', async () => {
+    registerAdapter(
+      simStub('ton', tonBalance, 9, tonFee, okInputs({ kind: 'nonce', nonce: 1 })),
+    );
+
+    expect(await simulateSend('ton', tonAddress, tonAddress, '0.5')).toMatchObject({
+      ok: false,
+      error: { code: 'stale-seqno', chain: 'ton' },
+      code: 'bad-seqno',
+    });
+  });
+});
+
+describe('offline signing — determinism and TON external signer', () => {
+  const mnemonic = 'abandon '.repeat(11) + 'about';
+  const passphrase = 'TREZOR';
+
+  const expected = {
+    btc: {
+      txHash: 'e1fedbc2b7d283348895200e9cffe882728d1934b61e17da6a42d341fc73e2da',
+      feeBaseUnits: '1410',
+    },
+    eth: {
+      txHash: '0x08bbd8cf9baad0ff45e1220c95a205bd47f1506fa91312fde4247b01b551f578',
+    },
+    trx: {
+      txId: 'c7c6843bafc655cd226f1fcf0e049bbbddfaf931bb90344ca70c6c7d30550f52',
+    },
+    ton: {
+      messageHash: '0x9b098e9a691c990951e4c0c1b6a453be43790440952307dc91603a69868bacbf',
+    },
+  } as const;
+
+  const btc = () =>
+    signBtcOffline(
+      mnemonic,
+      passphrase,
+      'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+      '50000',
+      [{
+        txid: createHash('sha256').update('lane3-btc-test-utxo').digest('hex'),
+        vout: 0,
+        valueBaseUnits: '100000',
+      }],
+      '10',
+      'bc1qv5rmq0kt9yz3pm36wvzct7p3x6mtgehjul0feu',
+    );
+
+  const eth = () =>
+    signEthOffline(
+      mnemonic,
+      passphrase,
+      '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+
+  const trx = () =>
+    signTrxOffline(
+      mnemonic,
+      passphrase,
+      'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c',
+      '1000000',
+      {
+        timestamp: 1_700_000_000_000,
+        number: 1,
+        txTrieRoot: '00'.repeat(32),
+        parentHash: '00'.repeat(32),
+        witnessAddress: 'TAyDUYP5rcf56xFwrg8cU1qQwvnWpkeapM',
+      },
+    );
+
+  const tonArgs = [
+    mnemonic,
+    passphrase,
+    'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+    '1000000000',
+    0,
+  ] as const;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Strict deep equality compares the serialized transaction/BOC strings exactly.
+  it('BTC signs the same transfer twice with byte-identical output', async () => {
+    const first = await btc();
+    const second = await btc();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.btc });
+  });
+
+  it('ETH signs the same transfer twice with byte-identical output', async () => {
+    const first = await eth();
+    const second = await eth();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.eth });
+  });
+
+  // TRX timestamp comes from Date.now(), so the txId below is pinned only because this suite freezes time; the probe txId was recorded at an unrecorded wall-clock time and is not reproducible.
+  it('TRX signs the same transfer twice with byte-identical output', async () => {
+    const first = await trx();
+    const second = await trx();
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.trx });
+  });
+
+  it('TON signs the same transfer twice with byte-identical output when time is frozen', async () => {
+    const first = await signTonOffline(...tonArgs);
+    const second = await signTonOffline(...tonArgs);
+
+    expect(second).toStrictEqual(first);
+    expect(first).toMatchObject({ ok: true, ...expected.ton });
+  });
+
+  it('TON accepts the external signer\u2019s local-path BOC and hash verbatim', async () => {
+    // Omitting options exercises the default walletVersion, v4r2.
+    const local = await signTonOffline(...tonArgs);
+    if (!local.ok) {
+      throw new Error('Local TON fixture signing failed');
+    }
+
+    const signer = vi.fn(async () => ({
+      signedBocBase64: local.signedBocBase64,
+      messageHash: local.messageHash,
+    }));
+
+    const external = await signTonOffline(...tonArgs, {
+      walletVersion: 'v4r2',
+      signer,
+    });
+
+    expect(signer).toHaveBeenCalledTimes(1);
+    if (!external.ok) {
+      throw new Error('External TON fixture signing failed');
+    }
+
+    expect(external.signedBocBase64).toBe(local.signedBocBase64);
+    expect(external.messageHash).toBe(local.messageHash);
+  });
+
+  it('TON rejects a garbage external-signer BOC with signing-failed', async () => {
+    const signer = vi.fn(async () => ({
+      signedBocBase64: 'garbage',
+      messageHash: expected.ton.messageHash,
+    }));
+
+    const result = await signTonOffline(...tonArgs, { signer });
+
+    expect(signer).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ ok: false, code: 'signing-failed' });
+  });
+
+  it('TON rejects v3r2 without a signer with unsupported-version', async () => {
+    const result = await signTonOffline(...tonArgs, {
+      walletVersion: 'v3r2',
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'unsupported-version' });
+  });
+
+  it('BTC signedTxHex matches the full expected transaction', async () => {
+    const result = await btc();
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('BTC offline signing failed');
+    }
+
+    expect(result.signedTxHex).toBe(
+      '0x0100000000010160ef5293b6ab415f141e54745288c9c494e7db842f7a3962b042e168f22435f90000000000000000000250c30000000000001600140c03e507f38033aca9ac5c32b32dce56051d097bcebd0000000000001600146507b03ecb290510ee3a730585f83136b6b466f2024730440220527995e5eb1e623f25929299fd8a24824c5cfff74f077cac98a77854140a36f9022071bddaa1feb9b46461ac03ad785e48398eaa7ac5f1183e07bdbf82253d42be06012102a0f073d11f80811fb4e6d2b0299695c866a0988c1acf9f82a96ebb925524f32800000000',
+    );
+  });
+
+  it('ETH signedTxHex matches the full expected transaction', async () => {
+    const result = await eth();
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('ETH offline signing failed');
+    }
+
+    expect(result.signedTxHex).toBe(
+      '0xf86b808504a817c8008252089427ef5cdbe01777d62438affeb695e33fc2335979872386f26fc100008026a02424e6dfd3460ce80faa99dd7ddc7a263ea1746fe5597cebe4bae8d16b86b47ca02a997cb91efe84498f836566ae0cf000a50903353672940ffc3142dbc4903dc9',
+    );
+  });
+
+  it('pins the frozen-time TON signed BOC hash', async () => {
+    const result = await signTonOffline(...tonArgs);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('Expected TON offline signing to succeed');
+    }
+
+    const decoded = Buffer.from(result.signedBocBase64, 'base64');
+    expect(decoded.subarray(0, 4).toString('hex')).toBe('b5ee9c72');
+    expect(createHash('sha256').update(decoded).digest('hex')).toBe(
+      '63f00fb7de318a1bd06644760ea3dca504af953457345e37787885d0a754dab7',
+    );
+  });
+});
+
+describe.skip('mainnet qualification (item 23) — manual step, never in routine runs', () => {
+  /*
+   * Item 23 is a SEPARATE manual qualification, not proved by offline tests.
+   *
+   * Procedure, entirely outside Vitest:
+   * 1. Generate disposable one-time keys; never use a funded key or the public
+   *    regression-fixture key. Never print a mnemonic or put one in evidence.
+   * 2. Record the intended chain inputs and sign those recorded inputs offline
+   *    using the disposable keys. Keep secret material out of the record.
+   * 3. Broadcast once per chain by hand, only if a valid mainnet transaction
+   *    can be constructed without violating those constraints.
+   * 4. Verify the real receipt manually, paste its explorer URL and txid below,
+   *    then replace describe.skip with describe.
+   *
+   * Leave this skipped if the constraints cannot be met or no receipt exists.
+   * No test broadcasts, including after un-skipping.
+   *
+   * expectedOffline contains the preceding suite's golden expected values,
+   * NOT mainnet receipt IDs for different disposable keys/network inputs.
+   * Never broadcast golden-vector payloads: the BTC outpoint is synthetic,
+   * the TON expiry is frozen, and the fixture mnemonic is public.
+   * TON messageHash is not a mainnet transaction ID.
+   * Do not copy a reference hash into a receipt slot as fabricated evidence.
+   */
+  const records = [
+    {
+      chain: 'BTC',
+      expectedOffline: {
+        txHash: 'e1fedbc2b7d283348895200e9cffe882728d1934b61e17da6a42d341fc73e2da',
+        feeBaseUnits: '1410',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'ETH',
+      expectedOffline: {
+        txHash: '0x08bbd8cf9baad0ff45e1220c95a205bd47f1506fa91312fde4247b01b551f578',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'TRX',
+      expectedOffline: {
+        txId: 'c7c6843bafc655cd226f1fcf0e049bbbddfaf931bb90344ca70c6c7d30550f52',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+    {
+      chain: 'TON',
+      expectedOffline: {
+        messageHash: '0x9b098e9a691c990951e4c0c1b6a453be43790440952307dc91603a69868bacbf',
+      },
+      explorerUrl: '',
+      txid: '',
+    },
+  ];
+
+  // Evidence-presence gate only; authenticity/inclusion verification is manual.
+  it.each(records)('$chain — manually verified receipt is recorded', ({ explorerUrl, txid }) => {
+    expect(txid.trim(), 'Paste the actual manually confirmed mainnet txid').not.toBe('');
+    expect(explorerUrl.trim(), 'Paste the actual explorer URL').not.toBe('');
+    expect(new URL(explorerUrl.trim()).protocol).toBe('https:');
   });
 });

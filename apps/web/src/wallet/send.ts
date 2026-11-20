@@ -1,15 +1,23 @@
 import Long from 'long';
 import { TW } from '@trustwallet/wallet-core';
-import { bytesToHex, keccak256 } from 'viem';
+import { bytesToHex, keccak256, serializeTransaction } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
-import { deriveAddresses, withSigningKey } from './core';
+import {
+  assertIntentMatchesTransaction,
+  createPartialSigner,
+  createTransactionIntent,
+  deriveAddresses,
+  withSigningKey,
+} from './core';
 import { getAdapter } from './adapters';
 import {
   BROADCAST_DISABLED_MESSAGE,
   type UtxoInput,
 } from './adapters/types';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from './chain-amount-format';
+import { isTestVault } from './vault';
+import type { KeyProvenance } from './vault';
 
 /**
  * Send flow (Fix Lane 3, Phase 4). Pure send-domain helpers on top of the
@@ -407,11 +415,111 @@ export async function simulateSend(
     };
   }
 
-  // BTC/TRX retain the successful preview object and its fees unchanged;
-  // their freshness checks (UTXO coverage, account inputs) arrive in a
-  // follow-up piece.
+  // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
   if (chain !== 'eth' && chain !== 'ton') {
-    return preview;
+    const adapter = getAdapter(chain);
+    if (!adapter) {
+      return simulationFailed(
+        chain,
+        undefined,
+        'adapter-unavailable',
+        `No adapter available for ${chain}.`,
+      );
+    }
+
+    try {
+      if (chain === 'btc') {
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok' || inputs.data.kind !== 'utxo') {
+          const reason = 'BTC UTXO inputs are unavailable.';
+          return simulationFailed(
+            chain,
+            inputs.status === 'ok'
+              ? { status: 'unavailable', reason }
+              : inputs,
+            'fee-unavailable',
+            reason,
+          );
+        }
+
+        const feeEstimate = await adapter.estimateFee();
+        if (feeEstimate.status !== 'ok') {
+          return simulationFailed(
+            chain,
+            feeEstimate,
+            'fee-unavailable',
+            'The live BTC sat/vB fee rate is unavailable.',
+          );
+        }
+
+        // The BTC fee quote is a sat/vB RATE in feeBaseUnits (see
+        // previewSendAmount); planBtcFee turns it into the real fee.
+        const plan = await planBtcFee(
+          from,
+          to,
+          preview.amountBaseUnits,
+          feeEstimate.data.feeBaseUnits,
+          inputs.data.utxos,
+        );
+        if (!plan.ok) {
+          return simulationFailed(
+            chain,
+            plan,
+            'fee-unavailable',
+            'Unable to plan a fee using the live BTC inputs and rate.',
+          );
+        }
+
+        const amount = BigInt(preview.amountBaseUnits);
+        const available = inputs.data.utxos.reduce(
+          (total, utxo) => total + BigInt(utxo.valueBaseUnits),
+          BigInt(0),
+        );
+        if (available < amount + BigInt(plan.feeBaseUnits)) {
+          return simulationFailed(
+            chain,
+            undefined,
+            'insufficient-funds',
+            'BTC UTXOs no longer cover the amount plus the planned fee.',
+          );
+        }
+
+        return { ...preview, feeBaseUnits: plan.feeBaseUnits };
+      }
+
+      if (chain === 'trx') {
+        const inputs = await adapter.getTxInputs(from);
+        if (inputs.status !== 'ok' || inputs.data.kind !== 'account') {
+          const reason = 'TRX account inputs are unavailable.';
+          return simulationFailed(
+            chain,
+            inputs.status === 'ok'
+              ? { status: 'unavailable', reason }
+              : inputs,
+            'adapter-unavailable',
+            reason,
+          );
+        }
+      }
+
+      return preview;
+    } catch (cause: unknown) {
+      const code =
+        chain === 'btc' ? 'fee-unavailable' : 'adapter-unavailable';
+      const reason =
+        chain === 'btc'
+          ? 'Unable to refresh BTC inputs and fees.'
+          : 'Unable to refresh TRX account inputs.';
+      return simulationFailed(
+        chain,
+        {
+          status: 'error',
+          reason: cause instanceof Error ? cause.message : reason,
+        },
+        code,
+        reason,
+      );
+    }
   }
 
   const kind = chain === 'eth' ? 'nonce' : 'seqno';
@@ -537,6 +645,10 @@ export function tronAddressToBytes(address: string): Uint8Array {
  * copy-then-delete-first attempt failed with invalid-key error 15).
  * The encoded protobuf input (which contains a key copy) is zero-filled
  * after use. Nothing here broadcasts.
+ * S6a (2026-11-20): the signing core now uses the PartialSigner facade
+ * (createPartialSigner + signDigest) with viem reassembly; the
+ * withSigningKey/AnySigner path is gone. Output is byte-identical to the
+ * old path (probe-verified against the pre-facade signer).
  */
 export async function signEthOffline(
   mnemonic: string,
@@ -576,69 +688,89 @@ export async function signEthOffline(
     };
   }
 
-  const core = await loadCore();
+  const intent = createTransactionIntent('eth', to, amountBaseUnits, nonce);
   try {
-    return await withSigningKey(
-      mnemonic,
-      passphrase,
-      core.CoinType.ethereum,
-      "m/44'/60'/0'/0/0",
-      async (keyBytes) => {
-        if (keyBytes.length !== 32) {
-          return {
-            ok: false as const,
-            code: 'signer-empty',
-            reason: 'Invalid Ethereum signing key length.',
-          };
-        }
-
-        const input = TW.Ethereum.Proto.SigningInput.create({
-          chainId: new Uint8Array([1]),
-          nonce: minimalBigEndian(nonce),
-          gasPrice: minimalBigEndian(gasPriceBaseUnits),
-          gasLimit: minimalBigEndian('21000'),
-          toAddress: to,
-          transaction: {
-            transfer: { amount: minimalBigEndian(amountBaseUnits) },
-          },
-          privateKey: keyBytes,
-        });
-
-        const encoded =
-          TW.Ethereum.Proto.SigningInput.encode(input).finish();
-        try {
-          const output = TW.Ethereum.Proto.SigningOutput.decode(
-            core.AnySigner.sign(encoded, core.CoinType.ethereum),
-          );
-
-          if (output.error !== TW.Common.Proto.SigningError.OK) {
-            return signingFailure(output.errorMessage || 'Signing failed.', output.error);
-          }
-
-          const signedBytes = output.encoded;
-          if (signedBytes.length === 0) {
-            return {
-              ok: false as const,
-              code: 'signing-failed',
-              reason: 'Signer returned an empty transaction.',
-            };
-          }
-
-          // Finish all byte access before the disposable key is freed.
-          return {
-            ok: true as const,
-            signedTxHex: bytesToHex(signedBytes),
-            txHash: keccak256(signedBytes),
-            from,
-          };
-        } finally {
-          // The protobuf input contains a copy of the private key.
-          encoded.fill(0);
-        }
-      },
-    );
+    assertIntentMatchesTransaction(intent, {
+      chain: 'eth',
+      to,
+      amountBaseUnits,
+      sequence: nonce,
+    });
   } catch {
-    return { ok: false, code: 'unknown', reason: 'Failed to sign ETH transaction offline.' };
+    return {
+      ok: false,
+      code: 'intent-mismatch',
+      reason: 'Transaction does not match the approved intent.',
+    };
+  }
+
+  const unsigned = {
+    chainId: 1,
+    // viem types nonce as number, but its serializer accepts bigint losslessly.
+    nonce: BigInt(nonce) as unknown as number,
+    gasPrice: BigInt(gasPriceBaseUnits),
+    gas: 21000n,
+    to: to as `0x${string}`,
+    value: BigInt(amountBaseUnits),
+    data: '0x' as const,
+  };
+
+  let unsignedHex: `0x${string}`;
+  try {
+    unsignedHex = serializeTransaction(unsigned);
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Ethereum transaction input.',
+    };
+  }
+
+  const digest = hexToBytes(keccak256(unsignedHex));
+  const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
+  const sig = await signer.signDigest(digest);
+  const r = bytesToHex(sig.slice(0, 32));
+  const s = bytesToHex(sig.slice(32, 64));
+  const v = BigInt(sig[64]! + 35 + 2 * 1);
+
+  try {
+    const signed = serializeTransaction(unsigned, { r, s, v });
+    return {
+      ok: true,
+      signedTxHex: signed,
+      txHash: keccak256(signed),
+      from,
+    };
+  } catch {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid Ethereum transaction input.',
+    };
+  }
+}
+
+/**
+ * Item 36 enforcement (S6b): a test-marked account must never reach a
+ * broadcast path. Broadcast itself stays DISABLED until separately
+ * authorised; this guard is the second line of defence.
+ */
+export function isBroadcastAllowedFor(provenance: KeyProvenance): boolean {
+  return provenance.isTesting !== true;
+}
+
+export function assertNotTestAccount(): void {
+  let testing = false;
+  try {
+    testing = isTestVault();
+  } catch {
+    // No readable vault (for example, no storage in this environment):
+    // there is provably no test-marked account to bar, and broadcast is
+    // disabled regardless, so fall through to the disabled result.
+    testing = false;
+  }
+  if (testing) {
+    throw new Error('Broadcast blocked: account has test provenance.');
   }
 }
 
@@ -651,6 +783,7 @@ export async function broadcastSigned(
   chain: ChainId,
   signedTxHex: string,
 ): Promise<{ status: 'disabled'; reason: string }> {
+  assertNotTestAccount();
   void chain;
   void signedTxHex;
 
@@ -1020,6 +1153,84 @@ export type TonSignedTx =
   | { ok: true; signedBocBase64: string; messageHash: string; from: string }
   | SendFailure;
 
+export type TonWalletVersion = 'v4r2' | 'v3r2' | 'v4' | 'v5r1';
+
+/** Domain-binding context handed to the external signer. */
+export type SignatureDomain = {
+  purpose: 'ton-transfer';
+  walletVersion: TonWalletVersion;
+};
+
+export type TonExternalSignRequest = {
+  chain: 'ton';
+  from: string;
+  to: string;
+  amountNano: string;
+  seqno: number;
+  expireAt: number;
+  walletVersion: TonWalletVersion;
+  domain: SignatureDomain;
+};
+
+export type TonExternalSignResult = {
+  signedBocBase64: string;
+  messageHash: string;
+};
+
+/**
+ * Delegated whole-transfer signer. Wallet Core's TON output.hash depends
+ * on the signing key and no TON TransactionPlan type exists, so an
+ * external signer cannot be handed a hash to sign — it signs the whole
+ * transfer and returns the signed BOC.
+ */
+export type TonExternalSigner = (
+  request: TonExternalSignRequest,
+) => Promise<TonExternalSignResult>;
+
+function isValidTonExternalResult(
+  value: unknown,
+): value is TonExternalSignResult {
+  try {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const result = value as Record<string, unknown>;
+    const boc = result.signedBocBase64;
+    const hash = result.messageHash;
+
+    if (
+      typeof boc !== 'string' ||
+      typeof hash !== 'string' ||
+      hash.length !== 66 ||
+      !/^0x[0-9a-f]{64}$/.test(hash)
+    ) {
+      return false;
+    }
+
+    // Require canonical standard base64, without whitespace or URL-safe aliases.
+    if (
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+        boc,
+      )
+    ) {
+      return false;
+    }
+
+    const bytes = atob(boc);
+    return (
+      btoa(bytes) === boc &&
+      bytes.length >= 4 &&
+      bytes.charCodeAt(0) === 0xb5 &&
+      bytes.charCodeAt(1) === 0xee &&
+      bytes.charCodeAt(2) === 0x9c &&
+      bytes.charCodeAt(3) === 0x72
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Offline TON signing (hands-on, probe-proven 2026-11-19; V4R2 wallet,
  * mode 3 = pay-fees-separately + ignore-action-phase-errors). Uses the
@@ -1037,7 +1248,27 @@ export async function signTonOffline(
   to: string,
   amountNano: string,
   seqno: number,
+  options?: {
+    walletVersion?: TonWalletVersion;
+    signer?: TonExternalSigner;
+    domain?: SignatureDomain;
+  },
 ): Promise<TonSignedTx> {
+  // Version dispatch (S5): only V4R2 is supported because derivation is
+  // V4R2-only. Any other value fails loudly naming the version, before
+  // either signing path runs.
+  const walletVersion = options?.walletVersion ?? 'v4r2';
+  const coreWalletVersion =
+    walletVersion === 'v4r2'
+      ? TW.TheOpenNetwork.Proto.WalletVersion.WALLET_V4_R2
+      : undefined;
+  if (coreWalletVersion === undefined) {
+    return {
+      ok: false,
+      code: 'unsupported-version',
+      reason: `Unsupported TON wallet version "${walletVersion}": address derivation supports v4r2 only.`,
+    };
+  }
   if (
     !/^[0-9]+$/.test(amountNano) ||
     BigInt(amountNano) <= 0n ||
@@ -1061,6 +1292,49 @@ export async function signTonOffline(
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
           : 'Failed to sign TON transaction offline.',
+    };
+  }
+
+  // External signer seam (S5): a delegated whole-transfer signer. The
+  // signer never sees the mnemonic or any key — only the transfer request.
+  const domain: SignatureDomain = options?.domain ?? {
+    purpose: 'ton-transfer',
+    walletVersion,
+  };
+  if (
+    domain.purpose !== 'ton-transfer' ||
+    domain.walletVersion !== walletVersion
+  ) {
+    return {
+      ok: false,
+      code: 'signing-failed',
+      reason: `Signature domain does not match TON wallet version "${walletVersion}".`,
+    };
+  }
+  if (options?.signer) {
+    const expireAt = Math.floor(Date.now() / 1000) + 600;
+    const result = await options.signer({
+      chain: 'ton',
+      from,
+      to,
+      amountNano,
+      seqno,
+      expireAt,
+      walletVersion,
+      domain,
+    });
+    if (!isValidTonExternalResult(result)) {
+      return {
+        ok: false,
+        code: 'signing-failed',
+        reason: 'External signer returned an invalid signed message.',
+      };
+    }
+    return {
+      ok: true,
+      signedBocBase64: result.signedBocBase64,
+      messageHash: result.messageHash,
+      from,
     };
   }
 
@@ -1092,8 +1366,7 @@ export async function signTonOffline(
         ],
         sequenceNumber: seqno,
         expireAt: Math.floor(Date.now() / 1000) + 600,
-        walletVersion:
-          TW.TheOpenNetwork.Proto.WalletVersion.WALLET_V4_R2,
+        walletVersion: coreWalletVersion,
       });
       const encoded =
         TW.TheOpenNetwork.Proto.SigningInput.encode(input).finish();

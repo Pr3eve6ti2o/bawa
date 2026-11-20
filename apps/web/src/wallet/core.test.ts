@@ -1,12 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { loadCore } from '../engine/boundary';
 import {
+  bytesToHex,
+  hashMessage,
+  hexToBytes,
+  recoverAddress,
+  sha256,
+} from 'viem';
+import {
+  assertIntentMatchesTransaction,
+  assertPartialSigner,
+  createNoopSigner,
+  createPartialSigner,
+  createTransactionIntent,
   createWallet,
   deriveAddresses,
   deriveAddressesAt,
   deriveFromXpub,
+  intentFingerprint,
+  isPartialSigner,
   restoreWallet,
   withSigningKey,
+  type AddressOnlyAccount,
+  type LocalAccount,
 } from './core';
 
 // Public fixtures already in the repo (apps/web/src/engine/boundary.test.ts).
@@ -22,6 +38,10 @@ const btcZpub =
 const ETH_VECTOR_MNEMONIC =
   'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
 const ETH_VECTOR_ADDRESS = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+// BIP-39 seed of ETH_VECTOR_MNEMONIC with passphrase "TREZOR"
+// (PBKDF2-HMAC-SHA512, 2048 rounds, salt "mnemonicTREZOR").
+const ETH_VECTOR_SEED_HEX =
+  '7ae6f661157bda6492f6162701e570097fc726b6235011ea5ad09bf04986731ed4d92bc43cbdee047b60ea0dd1b1fa4274377c9bf5bd14ab1982c272d8076f29';
 
 describe('wallet/core', () => {
   it('creates a fresh 24-word mnemonic from CSPRNG entropy', async () => {
@@ -242,5 +262,285 @@ describe('wallet/core', () => {
     expect(length).toBe(32);
     expect(captured).toBeDefined();
     expect(captured!.every((value) => value === 0)).toBe(true);
+  });
+});
+
+describe('seed-to-xprv: Bitcoin BIP-44 account keys, not master keys', () => {
+  const vectors = [
+    {
+      // Public test vector: Trezor python-mnemonic, vectors.json, English[0] (MIT).
+      // https://github.com/trezor/python-mnemonic/blob/master/vectors.json
+      name: 'Trezor English[0]',
+      mnemonic:
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+      seedHex:
+        'c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04',
+      accountXprv:
+        'xprv9z3rKW6EbJfnxwVmsXBRWABiT5Zfh37GsqTXrcdaMssUntP2wumTtqKxSkZsytaxQZknwAhb3U8UR5cc3cxoMxdo4871tPPCTmeqckJyrWL',
+      masterXprv:
+        'xprv9s21ZrQH143K3h3fDYiay8mocZ3afhfULfb5GX8kCBdno77K4HiA15Tg23wpbeF1pLfs1c5SPmYHrEpTuuRhxMwvKDwqdKiGJS9XFKzUsAF',
+    },
+    {
+      name: 'existing public ETH vector',
+      mnemonic: ETH_VECTOR_MNEMONIC,
+      seedHex: ETH_VECTOR_SEED_HEX,
+      accountXprv:
+        'xprv9yxpr2jZR35N6RHqgKAv2HCg1FnBvnSEgTi6ywrQSXkpVdUC2PmDLUMyK8GcEK2ca6i9ujqmnh5coVg9Mu9in194c5KYsG1KJzspxBYTmds',
+      masterXprv:
+        'xprv9s21ZrQH143K3Z5LVjLkoHSa1bsnRiMAGwPBwcL45YuU98ku7wcsaq72fC15FHnZRuZm1QY6r3azFttpb2CZxwJZqS3fZz5TerqqT7DvnBv',
+    },
+  ] as const;
+
+  for (const vector of vectors) {
+    it(
+      `${vector.name}: seed matches; account xprv at m/44'/0'/0' matches and is not the master xprv`,
+      async () => {
+        const core = await loadCore();
+        const wallet = core.HDWallet.createWithMnemonic(
+          vector.mnemonic,
+          'TREZOR',
+        );
+
+        try {
+          expect(Buffer.from(wallet.seed()).toString('hex')).toBe(
+            vector.seedHex,
+          );
+
+          // Wallet Core 4.9.3 returns the account key, not the master key.
+          const accountXprv = wallet.getExtendedPrivateKey(
+            core.Purpose.bip44,
+            core.CoinType.bitcoin,
+            core.HDVersion.xprv,
+          );
+
+          expect(accountXprv).toBe(vector.accountXprv);
+          expect(accountXprv).not.toBe(vector.masterXprv);
+        } finally {
+          wallet.delete();
+        }
+      },
+    );
+  }
+});
+
+describe('createPartialSigner facade', () => {
+  const chains = [
+    { chain: 'eth', signatureLength: 65 },
+    { chain: 'btc', signatureLength: 65 },
+    { chain: 'trx', signatureLength: 65 },
+    { chain: 'ton', signatureLength: 64 },
+  ] as const;
+
+  it('matches deriveAddresses on every chain for the ETH vector and a fresh mnemonic', async () => {
+    const mnemonic = await createWallet();
+    const fixtures = [
+      { mnemonic: ETH_VECTOR_MNEMONIC, passphrase: 'TREZOR' },
+      { mnemonic, passphrase: '' },
+    ];
+
+    for (const fixture of fixtures) {
+      const addresses = await deriveAddresses(
+        fixture.mnemonic,
+        fixture.passphrase,
+      );
+
+      for (const { chain } of chains) {
+        const signer = await createPartialSigner(
+          fixture.mnemonic,
+          fixture.passphrase,
+          chain,
+        );
+
+        expect(signer.chain).toBe(chain);
+        expect(signer.address).toBe(addresses[chain]);
+      }
+    }
+  });
+
+  it('rejects a 31-byte digest on every chain', async () => {
+    const mnemonic = await createWallet();
+    const digest = new Uint8Array(31);
+
+    for (const { chain } of chains) {
+      const signer = await createPartialSigner(mnemonic, '', chain);
+
+      await expect(signer.signDigest(digest)).rejects.toThrow(
+        /^signDigest requires exactly 32 bytes$/,
+      );
+    }
+  });
+
+  it('returns 65-byte ETH/BTC/TRX signatures and 64-byte TON signatures', async () => {
+    const mnemonic = await createWallet();
+    const digest = new Uint8Array(32).fill(0x42);
+
+    for (const { chain, signatureLength } of chains) {
+      const signer = await createPartialSigner(mnemonic, '', chain);
+      const signature = await signer.signDigest(digest);
+
+      expect(signature).toBeInstanceOf(Uint8Array);
+      expect(signature).toHaveLength(signatureLength);
+    }
+  });
+
+  it('signs the same ETH digest deterministically', async () => {
+    const mnemonic = await createWallet();
+    const signer = await createPartialSigner(mnemonic, '', 'eth');
+    const digest = new Uint8Array(32).fill(0x42);
+
+    const first = (await signer.signDigest(digest)).slice();
+    const second = await signer.signDigest(digest);
+
+    expect(second).toEqual(first);
+  });
+});
+
+describe('wallet core message signing, signer guards, and intents', () => {
+  const message = new Uint8Array([0x00, 0x01, 0x7f, 0x80, 0xff]);
+  const to = '0x1111111111111111111111111111111111111111';
+  const otherTo = '0x2222222222222222222222222222222222222222';
+  const amountBaseUnits = '1000';
+  const sequence = '1';
+
+  const signerFor = async (chain: 'eth' | 'btc' | 'trx' | 'ton') =>
+    createPartialSigner(await createWallet(), '', chain);
+
+  it('ETH signs the EIP-191 message hash and recovers its address', async () => {
+    const signer = await signerFor('eth');
+    const hash = hashMessage({ raw: message });
+    const signature = await signer.signMessage(message);
+
+    expect(signature).toEqual(await signer.signDigest(hexToBytes(hash)));
+
+    const recovered = await recoverAddress({
+      hash,
+      signature: bytesToHex(signature),
+    });
+
+    expect(recovered.toLowerCase()).toBe(signer.address.toLowerCase());
+  });
+
+  it.each(['btc', 'trx'] as const)(
+    '%s signs the SHA-256 message hash',
+    async (chain) => {
+      const signer = await signerFor(chain);
+      const signature = await signer.signMessage(message);
+
+      expect(signature).toEqual(
+        await signer.signDigest(hexToBytes(sha256(message))),
+      );
+    },
+  );
+
+  it('TON returns 64 deterministic message-signature bytes', async () => {
+    const signer = await signerFor('ton');
+    const first = await signer.signMessage(message);
+    const second = await signer.signMessage(message);
+
+    expect(first).toBeInstanceOf(Uint8Array);
+    expect(first).toHaveLength(64);
+    expect(second).toHaveLength(64);
+    expect(second).toEqual(first);
+  });
+
+  it('the ETH noop signer returns 65 zero bytes for digests and messages', async () => {
+    const signer = createNoopSigner('eth', to);
+    const zeros = new Uint8Array(65);
+
+    expect(
+      await signer.signDigest(hexToBytes(sha256(message))),
+    ).toEqual(zeros);
+    expect(await signer.signMessage(message)).toEqual(zeros);
+  });
+
+  it('recognizes signers but not address-only or local account wrappers', async () => {
+    const signer = await signerFor('eth');
+
+    const addressOnly: AddressOnlyAccount = {
+      kind: 'address-only',
+      chain: 'eth',
+      address: signer.address,
+    };
+    const local: LocalAccount = {
+      kind: 'local',
+      chain: 'eth',
+      address: signer.address,
+      signer,
+    };
+
+    expect(isPartialSigner(signer)).toBe(true);
+    expect(isPartialSigner(addressOnly)).toBe(false);
+    expect(isPartialSigner(local)).toBe(false);
+    expect(isPartialSigner(local.signer)).toBe(true);
+
+    expect(() => assertPartialSigner(signer)).not.toThrow();
+    expect(() => assertPartialSigner(addressOnly)).toThrow(
+      new Error('Expected PartialSigner; bad kind: address-only'),
+    );
+  });
+
+  it('rejects an empty recipient and a non-numeric amount', () => {
+    expect(() =>
+      createTransactionIntent('eth', '', amountBaseUnits, sequence),
+    ).toThrow(Error);
+
+    expect(() =>
+      createTransactionIntent('eth', to, 'not-a-number', sequence),
+    ).toThrow(Error);
+  });
+
+  it('produces a stable SHA-256 fingerprint sensitive to every intent field', () => {
+    const intent = createTransactionIntent(
+      'eth',
+      to,
+      amountBaseUnits,
+      sequence,
+    );
+    const fingerprint = intentFingerprint(intent);
+
+    expect(fingerprint).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(intentFingerprint(intent)).toBe(fingerprint);
+    expect(
+      intentFingerprint(
+        createTransactionIntent('eth', to, amountBaseUnits, sequence),
+      ),
+    ).toBe(fingerprint);
+
+    const changedIntents = [
+      createTransactionIntent('btc', to, amountBaseUnits, sequence),
+      createTransactionIntent('eth', otherTo, amountBaseUnits, sequence),
+      createTransactionIntent('eth', to, '1001', sequence),
+      createTransactionIntent('eth', to, amountBaseUnits, '2'),
+    ];
+
+    for (const changedIntent of changedIntents) {
+      expect(intentFingerprint(changedIntent)).not.toBe(fingerprint);
+    }
+  });
+
+  it('names to when only the transaction recipient differs', () => {
+    const intent = createTransactionIntent(
+      'eth',
+      to,
+      amountBaseUnits,
+      sequence,
+    );
+    const transaction = {
+      chain: "eth" as const,
+      to,
+      amountBaseUnits,
+      sequence,
+    };
+
+    expect(() =>
+      assertIntentMatchesTransaction(intent, transaction),
+    ).not.toThrow();
+
+    expect(() =>
+      assertIntentMatchesTransaction(intent, {
+        ...transaction,
+        to: otherTo,
+      }),
+    ).toThrow(new Error('Signing intent mismatch: to.'));
   });
 });
