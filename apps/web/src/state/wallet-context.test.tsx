@@ -5,8 +5,16 @@ import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
 import { getAdapter } from '../wallet/adapters';
 import { deriveAddressesAt } from '../wallet/core';
-import { createVault, lock } from '../wallet/vault';
+import { createVault, deleteVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
+
+// Vault-lock removal (owner order 2026-11-20): unlockVault/lockVault,
+// the auto-lock timer and autoLockMinutes/setAutoLockMinutes no longer
+// exist. The whole "auto-lock (Lane C, spec §9)" describe was deleted
+// with the timer (5 tests: default, stored preference, persist/ignore,
+// inactivity lock, pagehide lock). The passphrase tests below now pass
+// the passphrase to createVault — the session passphrase is set at
+// creation — and derivation runs through refreshVaultAccounts.
 
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
@@ -68,40 +76,38 @@ async function mountProvider() {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  lock();
+  deleteVault();
   setPassphraseUsed(false);
   exposed = undefined;
 });
 
-describe('wallet context — passphrase unlock', () => {
-  it('refuses to unlock without the passphrase when the flag is set', async () => {
+describe('wallet context — passphrase', () => {
+  it('does not derive addresses without the session passphrase when the flag is set', async () => {
     await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    // createVault leaves the vault unlocked; this test's premise is a
-    // locked vault whose unlock is refused.
-    lock();
+    // No passphrase was given at creation, so the session passphrase is
+    // unknown; the flag only records that one was used. Deriving with ''
+    // would produce (and persist) the wrong addresses, so no derivation
+    // happens at all.
     setPassphraseUsed(true);
     const mounted = await mountProvider();
     try {
-      await expect(
-        act(async () => {
-          await exposed!.unlockVault(TEST_PASSWORD);
-        }),
-      ).rejects.toThrow(
-        'This wallet uses a passphrase. Enter it to unlock.',
-      );
-      expect(exposed!.vaultState).toBe('locked');
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      expect(exposed!.vaultState).toBe('unlocked');
+      expect(exposed!.vaultAddresses.eth).toEqual([]);
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('derives with the passphrase when it is given', async () => {
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+  it('derives with the passphrase when it is given at creation', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
     setPassphraseUsed(true);
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+        await exposed!.refreshVaultAccounts();
       });
       expect(exposed!.vaultState).toBe('unlocked');
       expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
@@ -111,12 +117,12 @@ describe('wallet context — passphrase unlock', () => {
   });
 
   it('derives different addresses with a wrong passphrase', async () => {
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'WRONG');
     setPassphraseUsed(true);
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await exposed!.unlockVault(TEST_PASSWORD, 'WRONG');
+        await exposed!.refreshVaultAccounts();
       });
       expect(exposed!.vaultState).toBe('unlocked');
       expect(exposed!.vaultAddresses.eth[0]).not.toBe(VECTOR_ETH);
@@ -128,12 +134,12 @@ describe('wallet context — passphrase unlock', () => {
 
 describe('wallet context — vault account selection', () => {
   it('derives the selected account/index on setVaultAccount', async () => {
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
     const mounted = await mountProvider();
     try {
       await act(async () => {
         // The vector mnemonic only derives VECTOR_ETH with passphrase TREZOR.
-        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+        await exposed!.refreshVaultAccounts();
       });
       expect(exposed!.vaultAccount).toEqual({ account: 0, index: 0 });
       expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
@@ -159,11 +165,11 @@ describe('wallet context — vault account selection', () => {
   });
 
   it('rejects out-of-range account/index without changing the selection', async () => {
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+        await exposed!.refreshVaultAccounts();
       });
       await expect(
         act(async () => {
@@ -178,108 +184,11 @@ describe('wallet context — vault account selection', () => {
   });
 });
 
-describe('wallet context — auto-lock (Lane C, spec §9)', () => {
-  it('defaults to 5 minutes', async () => {
-    const mounted = await mountProvider();
-    try {
-      expect(exposed!.autoLockMinutes).toBe(5);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('reads a stored preference on mount', async () => {
-    window.localStorage.setItem('bawa-auto-lock-minutes', '60');
-    const mounted = await mountProvider();
-    try {
-      expect(exposed!.autoLockMinutes).toBe(60);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('persists the preference and ignores values outside the options', async () => {
-    const mounted = await mountProvider();
-    try {
-      await act(async () => {
-        exposed!.setAutoLockMinutes(15);
-      });
-      expect(exposed!.autoLockMinutes).toBe(15);
-      expect(window.localStorage.getItem('bawa-auto-lock-minutes')).toBe(
-        '15',
-      );
-      await act(async () => {
-        exposed!.setAutoLockMinutes(7);
-      });
-      expect(exposed!.autoLockMinutes).toBe(15);
-      expect(window.localStorage.getItem('bawa-auto-lock-minutes')).toBe(
-        '15',
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('locks after the inactivity interval and resets the timer on activity', async () => {
-    vi.useFakeTimers();
-    try {
-      await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-      const mounted = await mountProvider();
-      try {
-        await act(async () => {
-          await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
-        });
-        expect(exposed!.vaultState).toBe('unlocked');
-        // 1 minute of inactivity: still unlocked (default 5 min).
-        await act(async () => {
-          vi.advanceTimersByTime(60_000);
-        });
-        expect(exposed!.vaultState).toBe('unlocked');
-        // Activity resets the deadline: 4 more minutes pass, still unlocked.
-        await act(async () => {
-          window.dispatchEvent(new Event('pointerdown'));
-          vi.advanceTimersByTime(4 * 60_000);
-        });
-        expect(exposed!.vaultState).toBe('unlocked');
-        // 1 more minute without activity: the 5-minute deadline passes.
-        await act(async () => {
-          vi.advanceTimersByTime(60_000);
-        });
-        expect(exposed!.vaultState).toBe('locked');
-      } finally {
-        await mounted.cleanup();
-      }
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('locks on pagehide when set to Immediately', async () => {
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-    const mounted = await mountProvider();
-    try {
-      await act(async () => {
-        exposed!.setAutoLockMinutes(0);
-      });
-      await act(async () => {
-        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
-      });
-      expect(exposed!.vaultState).toBe('unlocked');
-      await act(async () => {
-        window.dispatchEvent(new Event('pagehide'));
-      });
-      expect(exposed!.vaultState).toBe('locked');
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-});
-
 describe('wallet context — balance before history (Lane B)', () => {
   // Recording adapters: balance takes 50ms, so a parallel history call
-  // would observably start before the balance settles. The unlock path
-  // must start history only after balances settle, so the TON balance
-  // does not race the TON history for TonCenter's ~1 req/s token.
+  // would observably start before the balance settles. The vault-accounts
+  // refresh path must start history only after balances settle, so the
+  // TON balance does not race the TON history for TonCenter's ~1 req/s token.
   const calls: string[] = [];
   const recordingAdapter = (chain: string) => ({
     chain,
@@ -316,18 +225,18 @@ describe('wallet context — balance before history (Lane B)', () => {
     },
   });
 
-  it('starts history only after balances settle on unlock', async () => {
+  it('starts history only after balances settle on vault accounts refresh', async () => {
     calls.length = 0;
     vi.mocked(getAdapter).mockImplementation(
       ((chain: string) => recordingAdapter(chain)) as unknown as typeof getAdapter,
     );
-    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+        await exposed!.refreshVaultAccounts();
       });
-      // Balances/history load in the background after unlock.
+      // Balances/history load in the background after the refresh.
       await act(async () => {
         for (let i = 0; i < 100; i += 1) {
           if (

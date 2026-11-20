@@ -9,10 +9,16 @@ import { deriveAddresses } from '../wallet/core';
 import {
   createVault,
   deleteVault,
-  lock,
-  VAULT_WRONG_PASSWORD,
 } from '../wallet/vault';
 import { SUPPORTED_CHAINS } from '../wallet/chains';
+
+// Vault-lock removal (owner order 2026-11-20): unlockVault/lockVault no
+// longer exist. "rejects a wrong vault password" was deleted with them —
+// there is no password check any more, so there is nothing to reject; a
+// stored key that does not match the envelope is covered by autoUnlock
+// returning false in wallet/vault.test.ts. Creation leaves the vault open,
+// so the tests below drive derivation through refreshVaultAccounts instead
+// of an unlock step.
 
 // No adapter is registered in this file: the adapters module is mocked so
 // lazy registration (ensureAdapters) cannot bring the real adapters in.
@@ -80,13 +86,12 @@ async function mountProvider() {
 
 beforeEach(() => {
   localStorage.clear();
-  lock();
   deleteVault();
   latest = undefined;
 });
 
 describe('wallet context — vault-backed accounts', () => {
-  it('derives vault addresses on unlock and clears them on lock', async () => {
+  it('derives vault addresses after creation and reports no-vault after delete', async () => {
     const mounted = await mountProvider();
     try {
       expect(latest?.vaultState).toBe('no-vault');
@@ -94,52 +99,26 @@ describe('wallet context — vault-backed accounts', () => {
 
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        // createVault leaves the vault unlocked; these tests' premise is
-        // a locked vault.
-        lock();
         await latest?.refreshVaultAccounts();
       });
-      expect(latest?.vaultState).toBe('locked');
+      expect(latest?.vaultState).toBe('unlocked');
       expect(latest?.vaultProfileIds).toEqual(TEST_PROFILES);
-      expect(latest?.vaultAddresses.eth).toEqual([]);
 
       const expected = await deriveAddresses(TEST_MNEMONIC);
-      await act(async () => {
-        await latest?.unlockVault(TEST_PASSWORD);
-      });
-      expect(latest?.vaultState).toBe('unlocked');
       expect(latest?.vaultAddresses.btc).toEqual([expected.btc]);
       expect(latest?.vaultAddresses.eth).toEqual([expected.eth]);
       expect(latest?.vaultAddresses.trx).toEqual([expected.trx]);
       expect(latest?.vaultAddresses.ton).toEqual([expected.ton]);
 
       await act(async () => {
-        latest?.lockVault();
-      });
-      expect(latest?.vaultState).toBe('locked');
-      expect(latest?.vaultAddresses.eth).toEqual([]);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it('rejects a wrong vault password', async () => {
-    const mounted = await mountProvider();
-    try {
-      await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        // createVault leaves the vault unlocked; these tests' premise is
-        // a locked vault.
-        lock();
+        deleteVault();
         await latest?.refreshVaultAccounts();
       });
-      expect(latest?.vaultState).toBe('locked');
-      await expect(
-        act(async () => {
-          await latest?.unlockVault('wrong password');
-        }),
-      ).rejects.toThrow(VAULT_WRONG_PASSWORD);
-      expect(latest?.vaultState).toBe('locked');
+      expect(latest?.vaultState).toBe('no-vault');
+      expect(latest?.vaultProfileIds).toBeNull();
+      // The persisted public addresses are NOT deleted with the vault
+      // (pre-existing behaviour, unchanged by the lock removal); only the
+      // vault state and profiles are asserted here.
     } finally {
       await mounted.cleanup();
     }
@@ -150,7 +129,7 @@ describe('wallet context — vault-backed accounts', () => {
     try {
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
+        await latest?.refreshVaultAccounts();
         await latest?.refreshBalances();
       });
       for (const chain of SUPPORTED_CHAINS) {

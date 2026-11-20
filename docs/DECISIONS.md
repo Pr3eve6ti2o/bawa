@@ -154,6 +154,73 @@ clean, Python 119 passed). Per item:
 - (h) TON 429s: serial gate around `rpc()` (~1100 ms from the previous
   attempt's start, covering the identity check and retries).
 
+## 7. Vault lock removal — remove the lock; auto-unlock via a stored key
+
+**Decision: remove the vault lock entirely; the vault stays unlocked once
+a wallet is created or imported.**
+
+Evidence: the owner ordered the lock removed (2026-11-20 ~22:39 IST) after
+the live browser found the vault auto-locking in ~1 minute, not the stated
+5 minutes. The lock (auto-lock timer + inactivity detection, lock state,
+lock screen, manual lock) is deleted, not made optional.
+
+What was done (Lane 1, state):
+
+- `apps/web/src/wallet/vault.ts`: `isLocked()`, `lock()` and `unlock()`
+  removed. New `autoUnlock(): Promise<boolean>` — reads the stored key +
+  envelope, decrypts, puts the mnemonic/key in the closure; returns false
+  (never throws) when there is no vault, no stored key, or decryption
+  fails. `createVault()` also stores the derived key (raw bytes, base64,
+  `bawa-vault-key`) alongside the envelope, so a later boot auto-unlocks;
+  `deleteVault()` deletes the stored key too and clears the closure
+  directly. `changePassword()` now takes only the new password (no old
+  password to verify against — the mnemonic is already in the closure)
+  and re-stores the newly derived key. `withMnemonic`/`withMnemonicAsync`
+  now throw `Vault is not unlocked.` when no mnemonic is available.
+  Kept: `hasVault()`, `vaultProfiles()`, `getSessionPassphrase()`, the
+  envelope format, PBKDF2 600k, AES-GCM-256. `VAULT_WRONG_PASSWORD`
+  removed with `unlock()` (no password check remains).
+- `apps/web/src/state/wallet-context.tsx`: lock state, auto-lock timer,
+  inactivity detection and the unlock flow removed. The context no longer
+  exposes `isLocked`, `lock`, `unlock`, `unlockVault`, `lockVault`,
+  `autoLockMinutes` or `setAutoLockMinutes`. `VaultState` is now
+  `'no-vault' | 'unlocked'`. On mount the provider calls `autoUnlock()`.
+  `refreshVaultAccounts()` re-derives only when the mnemonic is available
+  AND the session passphrase is known (a passphrase wallet whose
+  passphrase is unknown after a reload must not derive with `''` — that
+  would produce and persist the wrong addresses; it falls back to the
+  persisted public addresses instead). Balance/history/price refresh
+  logic unchanged.
+- Tests: lock-asserting tests removed or rewritten in
+  `wallet/vault.test.ts` (22 tests, incl. new autoUnlock success /
+  no-vault / no-key / wrong-key / tampered-ciphertext / corrupt-envelope
+  cases and a key-stored-at-creation test) and the four state test files
+  (17 tests). Deleted tests and why are recorded in a header comment in
+  each test file. (The lock screen and `/security` copy are the UI lane's.)
+
+SECURITY TRADEOFF (owner decision, recorded in `vault.ts` and here): the
+raw vault key sits in localStorage next to the ciphertext it decrypts, so
+anyone who can read this origin's localStorage can decrypt the vault
+without the password. The mnemonic itself is still never stored in
+plaintext, and the envelope stays AES-GCM-256 / PBKDF2 600k. This is the
+standard "stay unlocked" pattern and the owner's explicit choice; the
+vault must never be described as locked.
+
+Known gaps (not fixed here, flagged to the coordinator):
+
+- Legacy vaults: a vault created before this change has no stored key, so
+  `autoUnlock()` returns false and signing is unavailable for it until
+  the vault is deleted and recreated (or a one-time password migration is
+  built). Balances still show from the persisted public addresses.
+- Passphrase wallets: the session passphrase was never persisted, so a
+  reload loses it. Derivation is blocked in `refreshVaultAccounts` until
+  the passphrase is in the session again (set at creation/import) —
+  deriving with `''` would produce and persist the wrong addresses.
+  Persisted addresses keep balances visible after a reload, but the
+  addresses cannot be re-derived, and the send path's behaviour with an
+  unknown passphrase was not verified by this lane (send screen is the
+  UI lane's scope).
+
 ## Coordinator calls made during the programme
 
 - **Doc 4 scope (Phase 4):** kept Lane I's "Doc 4 — Mainnet" → "Mainnet"

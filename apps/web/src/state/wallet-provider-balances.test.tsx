@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
 import type { WalletContextValue } from './wallet-context';
-import { createVault, deleteVault, lock } from '../wallet/vault';
+import { createVault, deleteVault } from '../wallet/vault';
 import { registerAdapter } from '../wallet/adapters';
 import type { AdapterResult, AdapterTx, ChainAdapter } from '../wallet/adapters/types';
 
@@ -125,7 +125,6 @@ const okTxs = (txs: AdapterTx[]) =>
 
 beforeEach(() => {
   localStorage.clear();
-  lock();
   deleteVault();
   latest = undefined;
 });
@@ -148,7 +147,7 @@ describe('wallet context — adapter-backed balances and history', () => {
       );
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
+        await latest?.refreshVaultAccounts();
       });
       await act(async () => {
         await latest?.refreshBalances();
@@ -190,9 +189,9 @@ describe('wallet context — adapter-backed balances and history', () => {
       );
       await act(async () => {
         await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
+        await latest?.refreshVaultAccounts();
       });
-      // Unlock already refreshed history via refreshVaultAccounts; verify.
+      // Refresh already refreshed history via refreshVaultAccounts; verify.
       expect(latest?.history.eth.status).toBe('loaded');
       expect(latest?.history.eth.txs).toHaveLength(1);
       expect(latest?.history.eth.txs[0]?.hash).toBe('0xabc');
@@ -209,23 +208,7 @@ describe('wallet context — adapter-backed balances and history', () => {
     }
   });
 
-  it('clears balances and history on vault lock', async () => {
-    const mounted = await mountProvider();
-    try {
-      registerAdapter(stubAdapter('eth', okBalance('5'), okTxs([])));
-      await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
-      });
-      expect(latest?.balances.eth.status).toBe('available');
-      await act(async () => {
-        latest?.lockVault();
-      });
-      expect(latest?.balances.eth.status).toBe('unavailable');
-      expect(latest?.history.eth.status).toBe('unavailable');
-      expect(latest?.history.eth.txs).toEqual([]);
-    } finally {
-      await mounted.cleanup();
-    }
-  });
+  // 'clears balances and history on vault lock' was deleted with the lock
+  // (owner order 2026-11-20): lockVault no longer exists, so there is no
+  // lock that clears balances or history any more.
 });

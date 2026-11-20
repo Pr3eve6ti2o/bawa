@@ -74,19 +74,12 @@ const ALL_CHAIN_IDS = [
   'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
 ] as const;
 
-export type VaultState = 'no-vault' | 'locked' | 'unlocked';
-
-// Auto-lock (UI-UX spec §9; Phantom Immediately–1 day range, Rabby minutes
-// preference + activity reset + restart-persisted deadline). 0 = Immediately:
-// lock when the page is hidden. Minutes > 0: lock after that long without
-// activity. The preference and the deadline persist in localStorage; the
-// deadline is re-armed on unlock, on activity, and when the preference
-// changes. Locking only clears in-memory vault access (same as lockVault);
-// watch-only stays usable.
-export const AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 60, 1440] as const;
-export const AUTO_LOCK_DEFAULT_MINUTES = 5;
-const AUTO_LOCK_MINUTES_KEY = 'bawa-auto-lock-minutes';
-const AUTO_LOCK_DEADLINE_KEY = 'bawa-auto-lock-deadline';
+// The vault has no lock state (owner order 2026-11-20): a vault that
+// exists is always unlocked — autoUnlock() restores the mnemonic into the
+// vault closure on boot, so 'unlocked' is the only state a stored vault
+// can be in. There is no auto-lock timer, no inactivity detection and no
+// password re-prompt. See vault.ts for the stored-key tradeoff.
+export type VaultState = 'no-vault' | 'unlocked';
 
 // Lane G, Phase 3 — boot rehydration (Safe's persistStore + useHydrateStore
 // pattern, Rabby's pending-guard pattern). Only PUBLIC derived addresses are
@@ -101,30 +94,6 @@ const VAULT_ADDRESSES_KEY = 'bawa-vault-addresses:v1';
 // another account's balance. Entries older than this are ignored.
 const BALANCE_CACHE_KEY = 'bawa:balances-cache:v1';
 export const BALANCE_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
-
-function readAutoLockMinutes(): number {
-  try {
-    if (typeof window === 'undefined') return AUTO_LOCK_DEFAULT_MINUTES;
-    const raw = window.localStorage.getItem(AUTO_LOCK_MINUTES_KEY);
-    const minutes = raw === null ? NaN : Number(raw);
-    return (AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)
-      ? minutes
-      : AUTO_LOCK_DEFAULT_MINUTES;
-  } catch {
-    return AUTO_LOCK_DEFAULT_MINUTES;
-  }
-}
-
-function readAutoLockDeadline(): number | null {
-  try {
-    if (typeof window === 'undefined') return null;
-    const raw = window.localStorage.getItem(AUTO_LOCK_DEADLINE_KEY);
-    const deadline = raw === null ? NaN : Number(raw);
-    return Number.isFinite(deadline) ? deadline : null;
-  } catch {
-    return null;
-  }
-}
 
 export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
 
@@ -167,8 +136,8 @@ const initialBalances = (): PerChain<BalanceState> =>
 const initialHistory = (): PerChain<HistoryState> =>
   perChain<HistoryState>(() => ({ status: 'loading', txs: [] }));
 
-// Locking hides the vault: balances/history go back to unavailable with no
-// address in memory (never to 'loading' — no fetch will run while locked).
+// No-fetch initial state: balances/history start unavailable with no
+// address in memory (no fetch can run at all — see initialWalletState).
 const clearedBalances = (): PerChain<BalanceState> =>
   perChain<BalanceState>(() => ({ status: 'unavailable', reason: 'no-address' }));
 
@@ -180,7 +149,6 @@ interface WalletState {
   addresses: PerChain<DerivedAddress[]>;
   uiState: PerChain<UiState>;
   errors: PerChain<string | null>;
-  locked: boolean;
   // Vault-backed accounts. vaultAddresses are public derived addresses
   // (the selected vaultAccount, default account 0, index 0), safe in state.
   // The mnemonic never enters state. TON has one address per wallet and
@@ -203,12 +171,6 @@ export interface WalletContextValue extends WalletState {
   removeXpub(chain: ChainId): void;
   refreshChain(chain: ChainId): Promise<void>;
   setSelectedChain(chain: ChainId): void;
-  lock(): void;
-  unlock(): Promise<void>;
-  unlockVault(password: string, passphrase?: string): Promise<void>;
-  lockVault(): void;
-  autoLockMinutes: number;
-  setAutoLockMinutes(minutes: number): void;
   setVaultAccount(account: number, index: number): Promise<void>;
   refreshVaultAccounts(selection?: {
     account: number;
@@ -236,8 +198,11 @@ const messageOf = (error: unknown): string =>
     isRecord(error) && typeof error.message === 'string' ? error.message : String(error);
 
 function computeVaultState(): VaultState {
-  if (!vault.hasVault()) return 'no-vault';
-  return vault.isLocked() ? 'locked' : 'unlocked';
+  // No lock state: a stored vault is unlocked (autoUnlock restores the
+  // mnemonic; see the mount effect). A vault that cannot auto-unlock
+  // (legacy vault without a stored key) still reports 'unlocked' here;
+  // derivation falls back to persisted addresses in refreshVaultAccounts.
+  return vault.hasVault() ? 'unlocked' : 'no-vault';
 }
 
 // --- Lane G: central reason → human sentence map (Safe's cgw-errors.ts
@@ -463,8 +428,7 @@ function initialWalletState(): WalletState {
     addresses: perChain<DerivedAddress[]>(() => []),
     uiState: perChain<UiState>(() => 'empty'),
     errors: perChain<string | null>(() => null),
-    locked: false,
-    vaultState: 'no-vault',
+    vaultState: vault.hasVault() ? 'unlocked' : 'no-vault',
     vaultAccount: persisted === null
       ? { account: 0, index: 0 }
       : { account: persisted.account, index: persisted.index },
@@ -485,9 +449,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>(() => initialWalletState());
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
-  const [autoLockMinutes, setAutoLockMinutesState] = useState<number>(() => readAutoLockMinutes());
-  const autoLockTimer = useRef<number | null>(null);
-  const prevAutoLockMinutes = useRef<number>(autoLockMinutes);
   const current = useRef(state);
   const additions = useRef(perChain(() => 0));
   const changed = useRef(perChain(() => false));
@@ -518,7 +479,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const refreshChain = useCallback(async (chain: ChainId) => {
     const request = ++derivations.current[chain];
     const wallet = current.current.xpubs[chain];
-    if (!wallet || current.current.locked) {
+    if (!wallet) {
       setChain(chain, 'empty');
       return;
     }
@@ -712,11 +673,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const vaultState = computeVaultState();
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
     const selected = selection ?? current.current.vaultAccount;
-    if (vaultState !== 'unlocked') {
-      // Locked: no re-derivation is possible, but the persisted public
-      // addresses for this selection are still usable for public balance
-      // reads (see VAULT_ADDRESSES_KEY). Any other selection has no
-      // addresses in memory.
+    // Derivation needs the mnemonic in the vault closure. autoUnlock()
+    // restores it from the stored key when it is not there yet (e.g. after
+    // a reload); it returns false for a vault that cannot auto-unlock
+    // (legacy vault without a stored key). The BIP-39 session passphrase
+    // is never persisted, so a passphrase wallet whose passphrase is
+    // unknown must not re-derive: deriving with '' would produce (and
+    // persist) the wrong addresses. In all of those cases the persisted
+    // public addresses for this selection are still usable for public
+    // balance reads (see VAULT_ADDRESSES_KEY). Any other selection has no
+    // addresses in memory.
+    const passphraseKnown =
+      !isPassphraseUsed() || vault.getSessionPassphrase() !== '';
+    if (
+      vaultState !== 'unlocked' ||
+      !passphraseKnown ||
+      !(await vault.autoUnlock())
+    ) {
       const persisted = readPersistedVaultAddresses();
       const restored =
         persisted !== null
@@ -807,150 +780,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await refreshVaultAccounts(selection);
   }, [update, refreshVaultAccounts]);
 
-  const unlockVault = useCallback(async (password: string, passphrase = '') => {
-    if (isPassphraseUsed() && !passphrase) {
-      throw new Error('This wallet uses a passphrase. Enter it to unlock.');
-    }
+  // No lock/unlock API (owner order 2026-11-20): the vault is always
+  // unlocked — autoUnlock() restores the mnemonic on boot (see the
+  // mount effect) and refreshVaultAccounts re-derives from it. The
+  // lock screen, lockVault/unlockVault, the watch-only lock/unlock
+  // and the auto-lock timer were removed with it.
 
-    await vault.unlock(password, passphrase);
-    await refreshVaultAccounts();
-  }, [refreshVaultAccounts]);
-
-  const lockVault = useCallback(() => {
-    ++vaultDerivations.current;
-    vault.lock();
-    update(previous => ({
-      ...previous,
-      vaultState: computeVaultState(),
-      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
-      vaultAddresses: perChain<string[]>(() => []),
-      // Vault addresses are hidden: drop their balances/history too.
-      balances: clearedBalances(),
-      history: clearedHistory(),
-    }));
-  }, [update]);
-
-  const clearAutoLockTimer = useCallback(() => {
-    if (autoLockTimer.current !== null) {
-      window.clearTimeout(autoLockTimer.current);
-      autoLockTimer.current = null;
-    }
-  }, []);
-
-  const setAutoLockMinutes = useCallback((minutes: number) => {
-    if (!(AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)) return;
-    try {
-      window.localStorage.setItem(AUTO_LOCK_MINUTES_KEY, String(minutes));
-    } catch {
-      // Storage may be unavailable; keep the preference in memory.
-    }
-    setAutoLockMinutesState(minutes);
-  }, []);
-
-  // Auto-lock arming (spec §9). Runs only when the vault is unlocked or the
-  // preference changes. A stored deadline that already passed (e.g. the
-  // page was closed and reopened) locks immediately instead of re-arming.
-  // Changing the preference re-arms from now; otherwise the stored
-  // (activity-extended) deadline is honoured so a restart resumes the
-  // remaining time. Activity resets the deadline; "Immediately" (0) locks
-  // when the page is hidden instead of using a timer.
-  useEffect(() => {
-    if (state.vaultState !== 'unlocked') {
-      clearAutoLockTimer();
-      try {
-        window.localStorage.removeItem(AUTO_LOCK_DEADLINE_KEY);
-      } catch {
-        // Storage may be unavailable; nothing to clear.
-      }
-      return;
-    }
-    if (autoLockMinutes === 0) {
-      try {
-        window.localStorage.removeItem(AUTO_LOCK_DEADLINE_KEY);
-      } catch {
-        // Storage may be unavailable; nothing to clear.
-      }
-      const onHidden = () => {
-        if (document.visibilityState === 'hidden') lockVault();
-      };
-      const onPageHide = () => lockVault();
-      document.addEventListener('visibilitychange', onHidden);
-      window.addEventListener('pagehide', onPageHide);
-      return () => {
-        document.removeEventListener('visibilitychange', onHidden);
-        window.removeEventListener('pagehide', onPageHide);
-      };
-    }
-    const now = Date.now();
-    const stored = readAutoLockDeadline();
-    if (stored !== null && stored <= now) {
-      lockVault();
-      return;
-    }
-    const minutesChanged = prevAutoLockMinutes.current !== autoLockMinutes;
-    prevAutoLockMinutes.current = autoLockMinutes;
-    const deadline =
-      minutesChanged || stored === null
-        ? now + autoLockMinutes * 60_000
-        : stored;
-    try {
-      window.localStorage.setItem(AUTO_LOCK_DEADLINE_KEY, String(deadline));
-    } catch {
-      // Storage may be unavailable; the in-memory timer still applies.
-    }
-    clearAutoLockTimer();
-    autoLockTimer.current = window.setTimeout(() => {
-      lockVault();
-    }, deadline - now);
-    const resetDeadline = () => {
-      const next = Date.now() + autoLockMinutes * 60_000;
-      try {
-        window.localStorage.setItem(AUTO_LOCK_DEADLINE_KEY, String(next));
-      } catch {
-        // Storage may be unavailable; the in-memory timer still applies.
-      }
-      clearAutoLockTimer();
-      autoLockTimer.current = window.setTimeout(() => {
-        lockVault();
-      }, autoLockMinutes * 60_000);
-    };
-    const activityEvents = ['pointerdown', 'keydown', 'wheel'] as const;
-    activityEvents.forEach((event) =>
-      window.addEventListener(event, resetDeadline, { passive: true }),
-    );
-    return () => {
-      activityEvents.forEach((event) =>
-        window.removeEventListener(event, resetDeadline),
-      );
-      clearAutoLockTimer();
-    };
-  }, [state.vaultState, autoLockMinutes, lockVault, clearAutoLockTimer]);
-
-  // Locking only clears in-memory derived addresses; it is NOT a security boundary.
-  // Public xpubs remain in state and storage. Unlocking re-derives their addresses.
-  // Locking also locks the vault and clears vault-derived addresses.
-  const lock = useCallback(() => {
-    CHAINS.forEach(chain => { ++derivations.current[chain]; });
-    ++vaultDerivations.current;
-    vault.lock();
-    update(previous => ({
-      ...previous,
-      locked: true,
-      addresses: perChain<DerivedAddress[]>(() => []),
-      uiState: perChain<UiState>(() => 'empty'),
-      errors: perChain<string | null>(() => null),
-      vaultState: computeVaultState(),
-      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
-      vaultAddresses: perChain<string[]>(() => []),
-      balances: clearedBalances(),
-      history: clearedHistory(),
-    }));
-  }, [update]);
-
-  const unlock = useCallback(async () => {
-    update(previous => ({ ...previous, locked: false }));
-    await Promise.all(CHAINS.map(chain => refreshChain(chain)));
-  }, [refreshChain, update]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1001,16 +836,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
   }, [putWallet, update]);
 
-  // Vault state is read from storage on mount (no vault -> 'no-vault').
-  // Addresses are derived only after an explicit unlockVault(password) —
-  // except for the public addresses rehydrated from storage in
-  // initialWalletState, which need no unlock to be read.
+  // Vault auto-unlock on mount: a stored vault's mnemonic is restored
+  // into the vault closure (no password prompt), so the vault is open
+  // from boot. vaultState/vaultProfileIds are read from storage at the
+  // same time (no vault -> 'no-vault'). The public addresses rehydrated
+  // from storage in initialWalletState need no unlock to be read; fresh
+  // derivation happens in refreshVaultAccounts (e.g. setVaultAccount).
   useEffect(() => {
-    update(previous => ({
-      ...previous,
-      vaultState: computeVaultState(),
-      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
-    }));
+    let cancelled = false;
+    void vault.autoUnlock().then(() => {
+      if (cancelled) return;
+      update(previous => ({
+        ...previous,
+        vaultState: computeVaultState(),
+        vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+      }));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [update]);
 
   useEffect(() => {
@@ -1032,9 +876,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [hydrated, refreshBalances, refreshHistory]);
 
   const value = useMemo<WalletContextValue>(() => ({
-    ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain, lock, unlock,
-    unlockVault, lockVault, autoLockMinutes, setAutoLockMinutes, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, lock, unlock, unlockVault, lockVault, autoLockMinutes, setAutoLockMinutes, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
+    ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
+    setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, humanReasonMessage, isTransientReason, useWallet } from './wallet-context';
 import type { WalletContextValue } from './wallet-context';
-import { createVault, deleteVault, lock } from '../wallet/vault';
+import { createVault, deleteVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { registerAdapter } from '../wallet/adapters';
 import type { AdapterBalance, AdapterResult, AdapterTx, ChainAdapter } from '../wallet/adapters/types';
@@ -151,7 +151,6 @@ function registerOkStubs(): void {
 
 beforeEach(() => {
   localStorage.clear();
-  lock();
   deleteVault();
   setPassphraseUsed(false);
   latest = undefined;
@@ -226,9 +225,9 @@ describe('wallet context — boot rehydration (Lane G)', () => {
     try {
       setPassphraseUsed(true);
       await act(async () => {
-        await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        lock();
-        await latest?.unlockVault(TEST_PASSWORD, 'TREZOR');
+        // The passphrase is given at creation (no unlock step any more).
+        await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+        await latest?.refreshVaultAccounts();
       });
       await waitFor(() => latest?.vaultAddresses.eth[0] === VECTOR_ETH);
       expect(latest?.vaultAddresses.eth).toEqual([VECTOR_ETH]);
@@ -285,7 +284,7 @@ describe('wallet context — last-good retention and retries (Lane G)', () => {
     try {
       await act(async () => {
         await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
+        await latest?.refreshVaultAccounts();
       });
       await waitFor(() => latest?.balances.eth.status === 'available');
       expect(latest?.balances.eth.value).toBe('5');
@@ -337,7 +336,7 @@ describe('wallet context — last-good retention and retries (Lane G)', () => {
     try {
       await act(async () => {
         await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
-        await latest?.unlockVault(TEST_PASSWORD);
+        await latest?.refreshVaultAccounts();
       });
       await waitFor(() => latest?.balances.eth.status === 'available');
       expect(latest?.balances.eth.value).toBe('7');
