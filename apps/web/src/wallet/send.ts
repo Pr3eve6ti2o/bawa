@@ -1120,6 +1120,84 @@ export type TonSignedTx =
   | { ok: true; signedBocBase64: string; messageHash: string; from: string }
   | SendFailure;
 
+export type TonWalletVersion = 'v4r2' | 'v3r2' | 'v4' | 'v5r1';
+
+/** Domain-binding context handed to the external signer. */
+export type SignatureDomain = {
+  purpose: 'ton-transfer';
+  walletVersion: TonWalletVersion;
+};
+
+export type TonExternalSignRequest = {
+  chain: 'ton';
+  from: string;
+  to: string;
+  amountNano: string;
+  seqno: number;
+  expireAt: number;
+  walletVersion: TonWalletVersion;
+  domain: SignatureDomain;
+};
+
+export type TonExternalSignResult = {
+  signedBocBase64: string;
+  messageHash: string;
+};
+
+/**
+ * Delegated whole-transfer signer. Wallet Core's TON output.hash depends
+ * on the signing key and no TON TransactionPlan type exists, so an
+ * external signer cannot be handed a hash to sign — it signs the whole
+ * transfer and returns the signed BOC.
+ */
+export type TonExternalSigner = (
+  request: TonExternalSignRequest,
+) => Promise<TonExternalSignResult>;
+
+function isValidTonExternalResult(
+  value: unknown,
+): value is TonExternalSignResult {
+  try {
+    if (typeof value !== 'object' || value === null) {
+      return false;
+    }
+
+    const result = value as Record<string, unknown>;
+    const boc = result.signedBocBase64;
+    const hash = result.messageHash;
+
+    if (
+      typeof boc !== 'string' ||
+      typeof hash !== 'string' ||
+      hash.length !== 66 ||
+      !/^0x[0-9a-f]{64}$/.test(hash)
+    ) {
+      return false;
+    }
+
+    // Require canonical standard base64, without whitespace or URL-safe aliases.
+    if (
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+        boc,
+      )
+    ) {
+      return false;
+    }
+
+    const bytes = atob(boc);
+    return (
+      btoa(bytes) === boc &&
+      bytes.length >= 4 &&
+      bytes.charCodeAt(0) === 0xb5 &&
+      bytes.charCodeAt(1) === 0xee &&
+      bytes.charCodeAt(2) === 0x9c &&
+      bytes.charCodeAt(3) === 0x72
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Offline TON signing (hands-on, probe-proven 2026-11-19; V4R2 wallet,
  * mode 3 = pay-fees-separately + ignore-action-phase-errors). Uses the
@@ -1137,7 +1215,27 @@ export async function signTonOffline(
   to: string,
   amountNano: string,
   seqno: number,
+  options?: {
+    walletVersion?: TonWalletVersion;
+    signer?: TonExternalSigner;
+    domain?: SignatureDomain;
+  },
 ): Promise<TonSignedTx> {
+  // Version dispatch (S5): only V4R2 is supported because derivation is
+  // V4R2-only. Any other value fails loudly naming the version, before
+  // either signing path runs.
+  const walletVersion = options?.walletVersion ?? 'v4r2';
+  const coreWalletVersion =
+    walletVersion === 'v4r2'
+      ? TW.TheOpenNetwork.Proto.WalletVersion.WALLET_V4_R2
+      : undefined;
+  if (coreWalletVersion === undefined) {
+    return {
+      ok: false,
+      code: 'unsupported-version',
+      reason: `Unsupported TON wallet version "${walletVersion}": address derivation supports v4r2 only.`,
+    };
+  }
   if (
     !/^[0-9]+$/.test(amountNano) ||
     BigInt(amountNano) <= 0n ||
@@ -1161,6 +1259,49 @@ export async function signTonOffline(
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
           : 'Failed to sign TON transaction offline.',
+    };
+  }
+
+  // External signer seam (S5): a delegated whole-transfer signer. The
+  // signer never sees the mnemonic or any key — only the transfer request.
+  const domain: SignatureDomain = options?.domain ?? {
+    purpose: 'ton-transfer',
+    walletVersion,
+  };
+  if (
+    domain.purpose !== 'ton-transfer' ||
+    domain.walletVersion !== walletVersion
+  ) {
+    return {
+      ok: false,
+      code: 'signing-failed',
+      reason: `Signature domain does not match TON wallet version "${walletVersion}".`,
+    };
+  }
+  if (options?.signer) {
+    const expireAt = Math.floor(Date.now() / 1000) + 600;
+    const result = await options.signer({
+      chain: 'ton',
+      from,
+      to,
+      amountNano,
+      seqno,
+      expireAt,
+      walletVersion,
+      domain,
+    });
+    if (!isValidTonExternalResult(result)) {
+      return {
+        ok: false,
+        code: 'signing-failed',
+        reason: 'External signer returned an invalid signed message.',
+      };
+    }
+    return {
+      ok: true,
+      signedBocBase64: result.signedBocBase64,
+      messageHash: result.messageHash,
+      from,
     };
   }
 
@@ -1192,8 +1333,7 @@ export async function signTonOffline(
         ],
         sequenceNumber: seqno,
         expireAt: Math.floor(Date.now() / 1000) + 600,
-        walletVersion:
-          TW.TheOpenNetwork.Proto.WalletVersion.WALLET_V4_R2,
+        walletVersion: coreWalletVersion,
       });
       const encoded =
         TW.TheOpenNetwork.Proto.SigningInput.encode(input).finish();
