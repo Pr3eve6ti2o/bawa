@@ -243,4 +243,24 @@ describe('TrackTransactionScreen', () => {
     expect(div.textContent).toMatch(/could not be loaded/i);
     expect(div.textContent).toContain('Indexer unavailable');
   });
+
+  it('fills the bottom of the page with honest guidance and a real example', async () => {
+    vi.mocked(lookupTransaction).mockResolvedValue({
+      status: 'ok',
+      data: btcTx,
+    });
+    mounted = mount();
+    const { div } = mounted;
+
+    expect(div.textContent).toContain('How tracking works');
+    expect(div.textContent).toContain('What a result shows');
+    expect(div.textContent).toContain('may lag behind the chain');
+    expect(div.textContent).toContain(btcHash);
+
+    await clickButton(div, 'Look up this example');
+
+    expect(lookupTransaction).toHaveBeenCalledTimes(1);
+    expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined });
+    expect(div.textContent).toContain('50 BTC');
+  });
 });
