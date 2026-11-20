@@ -523,6 +523,7 @@ export function ImportWalletScreen() {
                   <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-xl border bg-card p-4 text-foreground">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
+                      {' '}
                       <span>{wallet.label || 'Unlabelled wallet'}</span>
                     </div>
                     <code className="block break-all text-sm">

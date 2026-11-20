@@ -239,22 +239,22 @@ describe('send screen', () => {
     }
   });
 
-  it('walks the ETH flow to a signed, not-broadcast result', async () => {
+  it('walks the ETH flow to a signed, not-sent result', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Sending is not turned on yet');
+      expect(mounted.div.textContent).toContain('Sending funds is switched off');
       await reachReview(mounted.div);
       expect(mounted.div.textContent).toContain('Review send');
       expect(mounted.div.textContent).toContain('0.5 ETH');
       expect(mounted.div.textContent).toContain('0.00042 ETH');
       expect(mounted.div.textContent).toContain('0.50042 ETH');
       expect(mounted.div.textContent).toContain('stub fee');
-      expect(mounted.div.textContent).toContain('Sending is not turned on yet');
+      expect(mounted.div.textContent).toContain('Sending is switched off');
       await click(mounted.div, 'Sign offline');
-      await waitForText(mounted.div, 'Send signed — not broadcast');
+      await waitForText(mounted.div, 'Send signed — not sent');
       expect(mounted.div.textContent).toContain(
-        'Send signed — not broadcast',
+        'Send signed — not sent',
       );
       expect(mounted.div.textContent).toContain('0xhash1234');
       expect(mounted.div.textContent).toContain('0xdeadbeef');

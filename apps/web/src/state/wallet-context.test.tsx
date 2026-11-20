@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
+import { getAdapter } from '../wallet/adapters';
 import { deriveAddressesAt } from '../wallet/core';
 import { createVault, lock } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
@@ -268,6 +269,83 @@ describe('wallet context — auto-lock (Lane C, spec §9)', () => {
         window.dispatchEvent(new Event('pagehide'));
       });
       expect(exposed!.vaultState).toBe('locked');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet context — balance before history (Lane B)', () => {
+  // Recording adapters: balance takes 50ms, so a parallel history call
+  // would observably start before the balance settles. The unlock path
+  // must start history only after balances settle, so the TON balance
+  // does not race the TON history for TonCenter's ~1 req/s token.
+  const calls: string[] = [];
+  const recordingAdapter = (chain: string) => ({
+    chain,
+    networkId: `test:${chain}`,
+    getBalance: async () => {
+      calls.push(`balance-start:${chain}`);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      calls.push(`balance-end:${chain}`);
+      return {
+        status: 'ok' as const,
+        data: {
+          chain,
+          address: 'test-address',
+          networkId: `test:${chain}`,
+          valueBaseUnits: '0',
+          decimals: 9,
+          source: 'test',
+          fetchedAt: 0,
+        },
+        source: 'test',
+        fetchedAt: 0,
+      };
+    },
+    getHistory: async () => {
+      calls.push(`history-start:${chain}`);
+      return { status: 'ok' as const, data: [], source: 'test', fetchedAt: 0 };
+    },
+    estimateFee: async () => ({ status: 'unavailable' as const, reason: 'test' }),
+    getTxInputs: async () => ({ status: 'unavailable' as const, reason: 'test' }),
+    broadcast: async () => {
+      throw new Error('disabled');
+    },
+  });
+
+  it('starts history only after balances settle on unlock', async () => {
+    calls.length = 0;
+    vi.mocked(getAdapter).mockImplementation(
+      ((chain: string) => recordingAdapter(chain)) as unknown as typeof getAdapter,
+    );
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.unlockVault(TEST_PASSWORD, 'TREZOR');
+      });
+      // Balances/history load in the background after unlock.
+      await act(async () => {
+        for (let i = 0; i < 100; i += 1) {
+          if (
+            calls.includes('balance-end:ton') &&
+            calls.includes('history-start:ton')
+          ) {
+            break;
+          }
+          await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+          });
+        }
+      });
+      expect(calls).toContain('balance-end:ton');
+      expect(calls).toContain('history-start:ton');
+      expect(calls.indexOf('balance-end:ton')).toBeLessThan(
+        calls.indexOf('history-start:ton'),
+      );
     } finally {
       await mounted.cleanup();
     }

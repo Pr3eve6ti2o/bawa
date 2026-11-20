@@ -78,6 +78,83 @@ describe('ton adapter — balance', () => {
   });
 });
 
+describe('ton adapter — rate limiting', () => {
+  it('concurrent balance and history share one identity check', async () => {
+    mockRpcSequence([MASTERCHAIN, '123456789', []]);
+    const adapter = createTonAdapter();
+
+    const [balance, history] = await Promise.all([
+      adapter.getBalance(ADDRESS),
+      adapter.getHistory(ADDRESS),
+    ]);
+
+    expect(balance.status).toBe('ok');
+    expect(history.status).toBe('ok');
+    expect(
+      (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.length,
+    ).toBe(3);
+  });
+
+  it('a 429 then a 200 returns the balance', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          json: async () => ({
+            ok: false,
+            result: 'Ratelimit exceed',
+            code: 429,
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, result: MASTERCHAIN }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, result: '456' }),
+        }),
+    );
+    const adapter = createTonAdapter({ retryDelaysMs: [1, 1] });
+
+    const result = await adapter.getBalance(ADDRESS);
+
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('456');
+    }
+  });
+
+  it('a persistent 429 returns an honest error, never zero', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 429,
+        json: async () => ({
+          ok: false,
+          result: 'Ratelimit exceed',
+          code: 429,
+        }),
+      })),
+    );
+    const adapter = createTonAdapter({ retryDelaysMs: [1, 1] });
+
+    const result = await adapter.getBalance(ADDRESS);
+
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/rate limit/i);
+    }
+    expect(result.status).not.toBe('ok');
+  });
+});
+
 describe('ton adapter — history', () => {
   it('maps in/out with base64→hex hashes', async () => {
     mockRpcSequence([

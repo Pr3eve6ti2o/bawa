@@ -123,7 +123,7 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the send screen (offline signing; broadcast disabled)', async () => {
+  it('renders the send screen (offline signing; sending switched off)', async () => {
     await withRenderedApp('/send', (div) => {
       // No vault in the default app state, so the send screen shows its
       // no-wallet state; the placeholder copy is gone with Phase 4.
@@ -153,8 +153,8 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Web wallet');
       expect(div.textContent).toContain('Android wallet');
       expect(div.textContent).toContain('Smart contract creator');
-      expect(div.textContent).toContain('Multi-Sig Wallet v2');
-      expect(div.textContent).toContain('Web3 Wallet Kit');
+      expect(div.textContent).toContain('Multi-signature wallet');
+      expect(div.textContent).toContain('Connect an existing wallet');
       expect(div.textContent).toContain('Coming soon');
     });
   });

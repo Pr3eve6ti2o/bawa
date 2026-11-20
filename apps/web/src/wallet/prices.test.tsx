@@ -5,14 +5,19 @@ import { act } from 'react-dom/test-utils';
 import {
   MAX_QUOTE_AGE_MS,
   PRICE_ASSET_IDS,
+  PRICE_CACHE_KEY,
   PRICE_IDS,
   fetchPrices,
   fiatValueForBalance,
+  formatUnitPriceUsd,
   isFreshQuote,
+  loadCachedPrices,
   parsePriceResponse,
   portfolioTotal,
   quoteFreshnessLabel,
+  saveCachedPrices,
   usePrices,
+  unitPriceForChain,
   usdPriceToMinorUnitsPerWhole,
 } from './prices';
 import type { PriceQuote } from './prices';
@@ -217,6 +222,212 @@ describe('usdPriceToMinorUnitsPerWhole', () => {
   });
 });
 
+
+describe('price cache', () => {
+  const makeStore = (initialCache?: string) => {
+    const data: Record<string, string> =
+      initialCache === undefined ? {} : { [PRICE_CACHE_KEY]: initialCache };
+
+    return {
+      data,
+      getItem(key: string): string | null {
+        return data[key] ?? null;
+      },
+      setItem(key: string, value: string): void {
+        data[key] = value;
+      },
+    };
+  };
+
+  const cacheRecord = (ageMs = 30_000) => {
+    const quote = quoteAt(ageMs);
+    return {
+      chain: 'btc',
+      usdPrice: quote.usdPrice,
+      providerUpdatedAtMs: quote.providerUpdatedAtMs,
+      fetchedAtMs: quote.fetchedAtMs,
+    };
+  };
+
+  const storeWithQuotes = (...quotes: unknown[]) =>
+    makeStore(JSON.stringify({ version: 1, quotes }));
+
+  const chains = Object.keys(PRICE_IDS) as Array<keyof typeof PRICE_IDS>;
+
+  it('round-trips fresh quotes with exact prices and ids', () => {
+    const entries = parsePriceResponse(freshPayload(), NOW_MS);
+    const store = makeStore();
+
+    saveCachedPrices(entries, NOW_MS, store);
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded).toEqual(entries);
+    for (const chain of chains) {
+      expect(loaded?.[chain]).toMatchObject({
+        status: 'fresh',
+        quote: {
+          assetId: PRICE_ASSET_IDS[chain],
+          providerAssetId: PRICE_IDS[chain],
+          source: 'CoinGecko',
+        },
+      });
+    }
+  });
+
+  it('loads a 20-minute-old cache as expired quotes', () => {
+    const entries = parsePriceResponse(freshPayload(), NOW_MS);
+    const store = makeStore();
+
+    saveCachedPrices(entries, NOW_MS, store);
+    const loaded = loadCachedPrices(NOW_MS + 20 * 60_000, store);
+
+    for (const chain of chains) {
+      expect(loaded?.[chain]).toEqual({
+        ...entries[chain],
+        status: 'expired',
+      });
+    }
+  });
+
+  it.each([
+    { name: 'an absent cache', value: undefined },
+    { name: 'corrupt JSON', value: '{broken' },
+    {
+      name: 'a wrong version',
+      value: JSON.stringify({ version: 2, quotes: [cacheRecord()] }),
+    },
+    {
+      name: 'an empty cache',
+      value: JSON.stringify({ version: 1, quotes: [] }),
+    },
+    {
+      name: 'no usable records',
+      value: JSON.stringify({
+        version: 1,
+        quotes: [{ ...cacheRecord(), usdPrice: '0' }],
+      }),
+    },
+  ])('returns null for $name', ({ value }) => {
+    expect(loadCachedPrices(NOW_MS, makeStore(value))).toBeNull();
+  });
+
+  it.each([
+    { usdPrice: 0 },
+    { usdPrice: -1 },
+    { usdPrice: 1 },
+    { usdPrice: '0' },
+    { usdPrice: '-1' },
+    { usdPrice: 'not-a-price' },
+    { usdPrice: 'Infinity' },
+    { usdPrice: '1e309' },
+    { providerUpdatedAtMs: 'bad' },
+    { fetchedAtMs: 'bad' },
+    { chain: undefined },
+    { usdPrice: undefined },
+    { providerUpdatedAtMs: undefined },
+    { fetchedAtMs: undefined },
+  ])('drops invalid fields (%j) while keeping a good record', (patch) => {
+    const store = storeWithQuotes(
+      cacheRecord(),
+      { ...cacheRecord(), chain: 'eth', ...patch },
+    );
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded?.btc).toEqual({ status: 'fresh', quote: quoteAt(30_000) });
+    expect(loaded?.eth).toEqual({ status: 'unavailable', reason: 'missing' });
+  });
+
+  it('ignores unknown chains and marks missing chains unavailable', () => {
+    const store = storeWithQuotes(
+      cacheRecord(),
+      { ...cacheRecord(), chain: 'unknown' },
+    );
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded?.btc).toEqual({ status: 'fresh', quote: quoteAt(30_000) });
+    expect(loaded).not.toHaveProperty('unknown');
+    for (const chain of chains.filter((chain) => chain !== 'btc')) {
+      expect(loaded?.[chain]).toEqual({ status: 'unavailable', reason: 'missing' });
+    }
+  });
+
+  it('round-trips an exponent-form price as a usable quote', () => {
+    const entries = parsePriceResponse(freshPayload(), NOW_MS);
+    const btc = {
+      status: 'fresh' as const,
+      quote: { ...quoteAt(30_000), usdPrice: '1e-7' },
+    };
+    const store = makeStore();
+
+    saveCachedPrices({ ...entries, btc }, NOW_MS, store);
+
+    expect(loadCachedPrices(NOW_MS, store)?.btc).toEqual(btc);
+  });
+
+  it('leaves the store untouched when there are no fresh quotes', () => {
+    const entries = parsePriceResponse(
+      freshPayload(MAX_QUOTE_AGE_MS + 60_000),
+      NOW_MS,
+    );
+    const store = makeStore('existing cache');
+
+    saveCachedPrices(entries, NOW_MS, store);
+
+    expect(store.data).toEqual({ [PRICE_CACHE_KEY]: 'existing cache' });
+  });
+
+  it.each([
+    { ...quoteAt(30_000), usdPrice: '0' },
+    { ...quoteAt(30_000), usdPrice: '-1' },
+    { ...quoteAt(30_000), usdPrice: 'not-a-price' },
+    { ...quoteAt(30_000), usdPrice: '1e309' },
+    quoteAt(MAX_QUOTE_AGE_MS + 1),
+    quoteAt(-60_001),
+    { ...quoteAt(30_000), fetchedAtMs: NOW_MS + 1 },
+  ])('does not save invalid or stale quotes labelled fresh (%j)', (quote) => {
+    const entries = {
+      ...parsePriceResponse({}, NOW_MS),
+      btc: { status: 'fresh' as const, quote },
+    };
+    const store = makeStore('existing cache');
+
+    saveCachedPrices(entries, NOW_MS, store);
+
+    expect(store.data).toEqual({ [PRICE_CACHE_KEY]: 'existing cache' });
+  });
+
+  it('never throws when the store throws', () => {
+    const store = {
+      ...makeStore(),
+      getItem(): string | null {
+        throw new Error('read blocked');
+      },
+      setItem(): void {
+        throw new Error('write blocked');
+      },
+    };
+    const entries = parsePriceResponse(freshPayload(), NOW_MS);
+
+    expect(() => saveCachedPrices(entries, NOW_MS, store)).not.toThrow();
+    expect(() => loadCachedPrices(NOW_MS, store)).not.toThrow();
+    expect(loadCachedPrices(NOW_MS, store)).toBeNull();
+  });
+
+  it.each([
+    { field: 'providerUpdatedAtMs', futureByMs: 60_001 },
+    { field: 'fetchedAtMs', futureByMs: 1 },
+  ])('loads a quote with future $field as expired', ({ field, futureByMs }) => {
+    const store = storeWithQuotes({
+      ...cacheRecord(),
+      [field]: NOW_MS + futureByMs,
+    });
+
+    expect(loadCachedPrices(NOW_MS, store)?.btc).toEqual({
+      status: 'expired',
+      quote: { ...quoteAt(30_000), [field]: NOW_MS + futureByMs },
+    });
+  });
+});
 
 describe('fetchPrices', () => {
   afterEach(() => {
@@ -438,6 +649,72 @@ describe('fiatValueForBalance', () => {
   });
 });
 
+describe('formatUnitPriceUsd', () => {
+  it('formats whole-dollar prices with two decimals and separators', () => {
+    expect(formatUnitPriceUsd('62683')).toBe('$62,683.00');
+    expect(formatUnitPriceUsd('1774.93')).toBe('$1,774.93');
+    expect(formatUnitPriceUsd('1000000')).toBe('$1,000,000.00');
+  });
+
+  it('rounds a price above one dollar half-up to two decimals', () => {
+    expect(formatUnitPriceUsd('1.028')).toBe('$1.03');
+  });
+
+  it('keeps up to six decimals below one dollar', () => {
+    expect(formatUnitPriceUsd('0.310229')).toBe('$0.310229');
+    expect(formatUnitPriceUsd('0.073494')).toBe('$0.073494');
+  });
+
+  it('keeps at least two decimals when trimming trailing zeros', () => {
+    expect(formatUnitPriceUsd('0.5')).toBe('$0.50');
+    expect(formatUnitPriceUsd('0.310200')).toBe('$0.3102');
+  });
+
+  it('throws for zero, negative, and invalid input', () => {
+    for (const price of ['0', '-1', 'not-a-number', '']) {
+      expect(() => formatUnitPriceUsd(price)).toThrow();
+    }
+  });
+});
+
+describe('unitPriceForChain', () => {
+  const fresh = parsePriceResponse(freshPayload(), NOW_MS);
+  const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
+
+  it('returns the formatted unit price for a fresh quote', () => {
+    expect(unitPriceForChain(fresh.btc, NOW_MS)).toEqual({
+      kind: 'fresh', text: '$62,683.00',
+    });
+    expect(unitPriceForChain(fresh.trx, NOW_MS)).toEqual({
+      kind: 'fresh', text: '$0.310229',
+    });
+  });
+
+  it('returns missing when no price entry was passed', () => {
+    expect(unitPriceForChain(undefined, NOW_MS)).toEqual({ kind: 'missing' });
+  });
+
+  it('returns expired for an expired entry', () => {
+    expect(unitPriceForChain(expired.btc, NOW_MS)).toEqual({ kind: 'expired' });
+  });
+
+  it('expires a fresh entry as time advances', () => {
+    expect(unitPriceForChain(fresh.btc, NOW_MS + 11 * 60 * 1000)).toEqual({ kind: 'expired' });
+  });
+
+  it('returns unavailable when the coin is absent', () => {
+    const payload: Record<string, unknown> = { ...freshPayload() };
+    delete payload.bitcoin;
+    const entries = parsePriceResponse(payload, NOW_MS);
+    expect(unitPriceForChain(entries.btc, NOW_MS)).toEqual({ kind: 'unavailable' });
+  });
+
+  it('preserves a rate-limited error', () => {
+    expect(unitPriceForChain({ status: 'error', reason: 'rate-limited' }, NOW_MS))
+      .toEqual({ kind: 'error', reason: 'rate-limited' });
+  });
+});
+
 describe('portfolioTotal', () => {
   const fresh = parsePriceResponse(freshPayload(), NOW_MS);
   const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
@@ -554,6 +831,37 @@ describe('usePrices', () => {
     };
   }
 
+  function ProbeWithSleep({
+    sleep,
+  }: {
+    sleep: (ms: number) => Promise<void>;
+  }) {
+    latest = usePrices({ sleep });
+    return null;
+  }
+
+  async function mountWithSleep(sleep: (ms: number) => Promise<void>) {
+    const { createElement } = await import('react');
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+
+    await act(async () => {
+      root.render(createElement(ProbeWithSleep, { sleep }));
+    });
+
+    return {
+      div,
+      root,
+      cleanup: async () => {
+        await act(async () => {
+          root.unmount();
+        });
+        div.remove();
+      },
+    };
+  }
+
   it('stays idle on mount and loads fresh prices on refresh', async () => {
     const stub = vi.fn(async () => ({
       ok: true, status: 200,
@@ -588,14 +896,15 @@ describe('usePrices', () => {
     try {
       await act(async () => {
         latest?.refresh();
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
+        // The hook retries transient failures twice (1000 ms + 2000 ms
+        // back-off) before settling on network errors; wait it out.
+        await new Promise((resolve) => setTimeout(resolve, 4000));
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
       expect(entries).toHaveLength(13);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
+      expect(stub).toHaveBeenCalledTimes(3);
     } finally {
       await cleanup();
     }
@@ -628,6 +937,235 @@ describe('usePrices', () => {
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
+    }
+  });
+
+  it('seeds fresh entries from cache on mount without fetching', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const cached = parsePriceResponse(freshPayload(), NOW_MS);
+      saveCachedPrices(cached, NOW_MS);
+      expect(loadCachedPrices(NOW_MS)).toEqual(cached);
+
+      const fetchStub = vi.fn();
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mount());
+
+      expect(latest!.state.status).toBe('idle');
+      expect(latest!.state.entries).toEqual(cached);
+      for (const entry of Object.values(latest!.state.entries)) {
+        expect(entry.status).toBe('fresh');
+      }
+      expect(fetchStub).not.toHaveBeenCalled();
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('retries a 429 after Retry-After and settles with fresh entries', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshPayload();
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: () => '30' },
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => payload,
+        });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(
+        parsePriceResponse(payload, NOW_MS),
+      );
+      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([30_000]);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('retries a thrown fetch after 1000 ms and settles with fresh entries', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshPayload();
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError('Network request failed'))
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => payload,
+        });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(
+        parsePriceResponse(payload, NOW_MS),
+      );
+      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([1000]);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('stops after three 429 attempts and settles with rate-limited errors', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        headers: { get: () => '30' },
+      });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      expect(Object.values(latest!.state.entries)).toHaveLength(13);
+      for (const entry of Object.values(latest!.state.entries)) {
+        expect(entry).toMatchObject({
+          status: 'error',
+          reason: 'rate-limited',
+        });
+      }
+      expect(fetchStub).toHaveBeenCalledTimes(3);
+      expect(sleep).toHaveBeenCalledTimes(2);
+      expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([
+        30_000,
+        30_000,
+      ]);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('accepts a mixed fresh/unavailable result without retrying', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(freshPayload()).slice(1),
+      );
+      const mixed = parsePriceResponse(payload, NOW_MS);
+      expect(
+        Object.values(mixed).filter((entry) => entry.status === 'fresh'),
+      ).toHaveLength(12);
+      expect(
+        Object.values(mixed).filter(
+          (entry) => entry.status === 'unavailable',
+        ),
+      ).toHaveLength(1);
+
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => payload,
+      });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(mixed);
+      expect(fetchStub).toHaveBeenCalledTimes(1);
+      expect(sleep).not.toHaveBeenCalled();
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('writes successful refresh results to localStorage', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshPayload();
+      const expected = parsePriceResponse(payload, NOW_MS);
+      const fetchStub = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => payload,
+      });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mount());
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+      expect(localStorage.getItem(PRICE_CACHE_KEY)).not.toBeNull();
+      expect(loadCachedPrices(NOW_MS)).toEqual(expected);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
     }
   });
 });

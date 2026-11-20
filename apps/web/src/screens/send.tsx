@@ -115,7 +115,7 @@ export function SendScreen() {
       try {
         await ensureAdapters();
       } catch {
-        setPreview({ ok: false, reason: 'Balances could not be loaded. Check your connection and retry.' });
+        setPreview({ ok: false, reason: "We couldn't load this network's balance. Please retry." });
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount);
@@ -138,7 +138,7 @@ export function SendScreen() {
     try {
       await ensureAdapters();
     } catch {
-      setSignState({ status: 'error', reason: 'Balances could not be loaded. Check your connection and retry.' });
+      setSignState({ status: 'error', reason: "We couldn't load this network's balance. Please retry." });
       return;
     }
     const previewOk = preview;
@@ -146,12 +146,12 @@ export function SendScreen() {
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
         const adapter = getAdapter(chain);
-        if (!adapter) throw new Error('No adapter available for this chain.');
+        if (!adapter) throw new Error("Sending isn't available for this network.");
         if (chain === 'eth') {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'nonce') {
-            throw new Error('ETH adapter did not return a nonce.');
+            throw new Error("We couldn't prepare your Ethereum transaction. Please retry.");
           }
           const fee = BigInt(previewOk.feeBaseUnits);
           // The ETH fee quote is gasPrice * 21000 (see adapters/eth.ts);
@@ -180,7 +180,7 @@ export function SendScreen() {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'utxo') {
-            throw new Error('BTC adapter did not return UTXOs.');
+            throw new Error("We couldn't prepare your Bitcoin transaction. Please retry.");
           }
           const fee = await adapter.estimateFee();
           if (fee.status !== 'ok') throw new Error(fee.reason);
@@ -222,7 +222,7 @@ export function SendScreen() {
         const inputs = await adapter.getTxInputs(from);
         if (inputs.status !== 'ok') throw new Error(inputs.reason);
         if (inputs.data.kind !== 'seqno') {
-          throw new Error('TON adapter did not return a seqno.');
+          throw new Error("We couldn't prepare your TON transaction. Please retry.");
         }
         const result = await signTonOffline(
           mnemonic,
@@ -283,7 +283,7 @@ export function SendScreen() {
     void (async () => {
       const adapter = getAdapter(chain);
       if (!adapter) {
-        if (!cancelled) setFeeEstimate({ ok: false, reason: 'No adapter available for this chain.' });
+        if (!cancelled) setFeeEstimate({ ok: false, reason: "A fee estimate isn't available for this network." });
         return;
       }
       const result = await adapter.estimateFee();
@@ -358,8 +358,8 @@ export function SendScreen() {
           role="note"
           className="rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
         >
-          Sending is not turned on yet. This flow signs offline only —
-          nothing here sends cryptocurrency anywhere.
+          Sending funds is switched off until it is separately approved. This flow signs
+          offline only — nothing here sends cryptocurrency anywhere.
         </p>
       </header>
 
@@ -385,7 +385,7 @@ export function SendScreen() {
                   <span
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm ${
                       index < activeIndex
-                        ? 'bg-success text-success-foreground'
+                        ? 'bg-success-surface text-success-text'
                         : index === activeIndex
                           ? 'bg-primary-solid font-bold text-primary-foreground'
                           : 'bg-surface-blue-dim text-step-pending-text'
@@ -399,8 +399,8 @@ export function SendScreen() {
                 </li>
               ))}
             </ol>
-            <p className="text-body-sm font-medium text-foreground">
-              Step {activeIndex + 1} of 6: {steps[activeIndex]}
+            <p className="text-body-sm font-medium text-panel-text-muted">
+              {`Step ${activeIndex + 1} of 6: ${steps[activeIndex]}`}
             </p>
           </div>
         );
@@ -436,14 +436,13 @@ export function SendScreen() {
       {step === 'recipient' && (
         <section aria-labelledby="send-recipient-heading" className="space-y-4">
           <h2 id="send-recipient-heading" className="text-lg font-semibold">
-            Recipient · {config.displayName}
+            {`Recipient · ${config.displayName}`}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Sending from <span className="break-all font-mono">{from}</span>
+            Sending from{' '}<span className="break-all font-mono">{from}</span>
           </p>
           <p className="text-sm text-muted-foreground">
-            Check the full address and network carefully — a transaction, if
-            later broadcast, cannot be reversed.
+            Check the full address and network carefully — a transaction, once sent, cannot be reversed.
           </p>
           <div className="space-y-2">
             <Label htmlFor="send-recipient">Recipient address</Label>
@@ -497,7 +496,7 @@ export function SendScreen() {
       {step === 'amount' && (
         <section aria-labelledby="send-amount-heading" className="space-y-4">
           <h2 id="send-amount-heading" className="text-lg font-semibold">
-            Amount · {config.displayName}
+            {`Amount · ${config.displayName}`}
           </h2>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
@@ -511,7 +510,7 @@ export function SendScreen() {
           </dl>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="send-amount">Amount ({config.symbol})</Label>
+              <Label htmlFor="send-amount">{`Amount (${config.symbol})`}</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -545,7 +544,7 @@ export function SendScreen() {
             )}
             {feeEstimate && !feeEstimate.ok && (
               <p className="text-sm text-muted-foreground">
-                Fee estimate unavailable: {feeEstimate.reason}
+                {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
             {!maxInfo.enabled && (
@@ -628,12 +627,12 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            Send signed — not broadcast
+            Send signed — not sent
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             The transaction was signed offline with your vault key. It was
-            not sent anywhere: broadcast is disabled until separately
-            authorised.
+            not sent anywhere: sending funds is switched off until it is separately
+            approved.
           </p>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
@@ -658,9 +657,9 @@ export function SendScreen() {
             </Button>
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            If a broadcast outcome is ever unknown, it stays unresolved —
-            never resend it and never compose a replacement without
-            independent reconciliation.
+            If it is ever unclear whether a transaction was sent, it stays unresolved —
+            never resend it and never create a replacement without
+            checking the network first.
           </p>
           <Link
             to="/"

@@ -178,12 +178,12 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows the empty state when no balance adapter is verified', async () => {
+  it('shows the empty state when no balances are available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Balances are not available right now.');
+      expect(mounted.div.textContent).toContain("Balances aren't available yet.");
     } finally {
       await mounted.cleanup();
     }
@@ -226,16 +226,29 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('never renders a fabricated portfolio total', async () => {
+  it('shows real unit prices on failed balances without fabricating a total', async () => {
+    window.localStorage.clear();
     setWallet(balancesFor({}));
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
     const mounted = await mountScreen();
     try {
-      // No fiat amount anywhere: no fabricated portfolio total.
-      expect(mounted.div.textContent).not.toContain('$');
-      // Balances failed, not prices: the hero says so (prices load on
-      // mount now, so "No prices loaded yet" no longer applies here).
-      expect(mounted.div.textContent).toContain('Balances could not be loaded');
+      await clickRefreshPrices(mounted);
+      // Failed balances must not be blamed on the price feed and no
+      // fiat total may be fabricated: the hero stays Unavailable.
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('No prices loaded yet');
+      expect(mounted.div.textContent).not.toContain('No fresh prices');
+      expect(mounted.div.textContent).not.toContain('$0.00');
+      // But the live market price per unit IS real public data, not a
+      // balance value: each row shows it, labelled "per <symbol>".
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('per BTC');
     } finally {
+      vi.unstubAllGlobals();
       await mounted.cleanup();
     }
   });
@@ -247,6 +260,71 @@ describe('dashboard screen', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(String(fetchMock.mock.calls[0]![0])).toContain('api.coingecko.com');
     } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the real unit price on a zero balance, never a silent empty', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      // The portfolio total is honestly $0.00 (every balance is zero),
+      // but each row still shows the live market price per unit.
+      expect(mounted.div.textContent).toContain('$0.00');
+      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('per BTC');
+      expect(mounted.div.textContent).toContain('$1,774.93');
+      expect(mounted.div.textContent).toContain('per ETH');
+      expect(mounted.div.textContent).toContain('Updated just now');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows Price error on zero balances when the feed is rate-limited', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    // No Retry-After header, so the hook's back-off is 1000 ms then
+    // 2000 ms and the auto-fetch settles within the 4 s wait below.
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain('Price error');
+      expect(mounted.div.textContent).toContain('$0.00');
+      expect(mounted.div.textContent).not.toContain('$62,683.00');
+    } finally {
+      vi.unstubAllGlobals();
       await mounted.cleanup();
     }
   });
@@ -372,6 +450,39 @@ describe('dashboard screen', () => {
   });
 
   it('shows an honest error on a rate-limited price feed, never $0.00', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    // No Retry-After header, so the hook's back-off is 1000 ms then
+    // 2000 ms and the auto-fetch settles within the 4 s wait below.
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      // The auto-fetch on mount produces the error state; no click needed.
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain('Price feed rate-limited');
+      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).not.toContain('$');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('loads the portfolio total on mount without clicking', async () => {
+    window.localStorage.clear();
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -381,18 +492,84 @@ describe('dashboard screen', () => {
       }),
     );
     stubPriceFetch({
-      ok: false,
-      status: 429,
-      headers: {
-        get: (name: string) => (name === 'Retry-After' ? '120' : null),
-      },
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
     });
     const mounted = await mountScreen();
     try {
-      await clickRefreshPrices(mounted);
-      expect(mounted.div.textContent).toContain('Price feed rate-limited');
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(mounted.div.textContent).toContain('$62,683.00');
+      expect(mounted.div.textContent).toContain('Powered by CoinGecko');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('retries the price fetch about every minute while mounted', async () => {
+    window.localStorage.clear();
+    vi.useFakeTimers();
+    try {
+      setWallet(
+        balancesFor({
+          btc: { status: 'available', value: '100000000' },
+          eth: { status: 'available', value: '0' },
+          trx: { status: 'available', value: '0' },
+          ton: { status: 'available', value: '0' },
+        }),
+      );
+      stubPriceFetch({
+        ok: true,
+        status: 200,
+        json: async () => freshPayload(),
+      });
+      const mounted = await mountScreen();
+      try {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(60_000);
+        });
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      } finally {
+        await mounted.cleanup();
+      }
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows the rate-limited line even when a balance has failed', async () => {
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'error', reason: 'rpc-error' },
+      }),
+    );
+    stubPriceFetch({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    const mounted = await mountScreen();
+    try {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 4_000));
+      });
+      expect(mounted.div.textContent).toContain(
+        'Price feed rate-limited — try again shortly.',
+      );
       expect(mounted.div.textContent).toContain('Unavailable');
-      expect(mounted.div.textContent).not.toContain('$');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();

@@ -114,7 +114,7 @@ function stubAdapter(
       reason: 'stub',
     }),
     broadcast: async () => {
-      throw new Error('Sending is not turned on yet. It needs to be enabled separately.');
+      throw new Error('Sending funds is switched off until it is separately approved.');
     },
   };
 }

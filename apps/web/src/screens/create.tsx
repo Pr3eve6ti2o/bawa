@@ -37,7 +37,7 @@ const tools: readonly Tool[] = [
   {
     name: 'HD wallet',
     description:
-      'Create every account and address from one recovery phrase. This opens the same wallet setup as Multichain wallet.',
+      'One recovery phrase covers every account and address. Opens the same creation flow as Multichain wallet.',
     status: 'working',
     href: '/create-wallet',
     icon: KeyRound,
@@ -50,8 +50,7 @@ const tools: readonly Tool[] = [
   },
   {
     name: 'Android wallet',
-    description:
-      'An Android app with device-backed storage for your wallet.',
+    description: 'An Android wallet app. Your keys stay on your phone.',
     status: 'brief',
     icon: Smartphone,
   },
@@ -63,16 +62,16 @@ const tools: readonly Tool[] = [
     icon: FileCode2,
   },
   {
-    name: 'Multi-Sig Wallet v2',
+    name: 'Multi-signature wallet',
     description:
       'A shared wallet where several owners must approve each transaction.',
     status: 'brief',
     icon: Users,
   },
   {
-    name: 'Web3 Wallet Kit',
+    name: 'Connect an existing wallet',
     description:
-      'A way to connect an existing wallet to an app without importing its keys.',
+      'Connect a wallet you already have to an app, without importing its keys.',
     status: 'brief',
     icon: Plug,
   },
@@ -108,7 +107,7 @@ function ToolContents({ tool }: { tool: Tool }) {
       <CardContent className="min-w-0 space-y-4 p-0">
         {tool.status === 'brief' ? (
           <p className="text-sm text-panel-text-muted">
-            Not available yet — planned for a later version.
+            Coming soon. This isn't available yet.
           </p>
         ) : null}
       </CardContent>
@@ -123,7 +122,7 @@ function ToolCard({ tool }: { tool: Tool }) {
         <ToolContents tool={tool} />
         <Button asChild className="mt-auto h-auto w-full whitespace-normal py-3 text-center">
           <Link to={tool.href} aria-label={`Open ${tool.name} creation`}>
-            Open {tool.name} creation
+            {`Open ${tool.name} creation`}
           </Link>
         </Button>
       </div>
@@ -150,8 +149,8 @@ export function CreateScreen() {
         Create
       </h1>
       <p className="text-sm text-panel-text-muted">
-        Choose what you want to create. Two tools are ready to use; the other
-        five are coming soon.
+        Choose what to create. Two options are ready today; the rest are coming
+        soon.
       </p>
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tools.map((tool) => (
@@ -161,7 +160,7 @@ export function CreateScreen() {
         ))}
       </ul>
       <p className="text-sm text-panel-text-muted">
-        Your wallet dashboard stays separate. Creating a wallet here won&apos;t
+        Your wallet dashboard stays separate. Creating a wallet here does not
         replace it.
       </p>
     </section>

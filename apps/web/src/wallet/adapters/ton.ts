@@ -16,7 +16,13 @@ const DECIMALS = 9;
 
 export interface TonAdapterOverrides {
   baseUrl?: string;
+  retryDelaysMs?: number[];
 }
+
+const sleep = (delayMs: number): Promise<void> =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -47,53 +53,86 @@ export function createTonAdapter(
   // on the pinned mainnet host (testnet lives on testnet.toncenter.com).
   // The host is fixed at construction, so one check per instance is enough.
   let identityChecked = false;
+  let identityCheckInFlight: Promise<AdapterResult<never> | null> | null = null;
 
   const rpc = async (
     method: string,
     params: Record<string, unknown>,
   ): Promise<AdapterResult<unknown>> => {
-    let raw: unknown;
-    try {
-      raw = await fetchJson(baseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }),
-      });
-    } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+    const retryDelaysMs = (overrides.retryDelaysMs ?? [1200, 2400]).slice(0, 2);
+
+    for (let attempt = 0; ; attempt += 1) {
+      let raw: unknown = undefined;
+      let rateLimited = false;
+
+      try {
+        raw = await fetchJson(baseUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }),
+        });
+      } catch (error: unknown) {
+        const reason = messageOf(error);
+        if (reason !== 'HTTP 429') {
+          return { status: 'error', reason };
+        }
+        rateLimited = true;
+      }
+
+      if (rateLimited || (isRecord(raw) && raw['ok'] === false && raw['code'] === 429)) {
+        const delayMs = retryDelaysMs[attempt];
+        if (delayMs === undefined) {
+          return {
+            status: 'error',
+            reason: 'TonCenter rate limit exceeded (HTTP 429); please retry.',
+          };
+        }
+        await sleep(delayMs);
+        continue;
+      }
+
+      if (!isRecord(raw)) {
+        return { status: 'error', reason: 'Invalid response: expected an object' };
+      }
+      if (raw['ok'] !== true) {
+        const error = raw['error'];
+        return {
+          status: 'error',
+          reason:
+            typeof error === 'string'
+              ? error
+              : isRecord(error) && typeof error['message'] === 'string'
+                ? error['message']
+                : `TonCenter request failed (${method})`,
+        };
+      }
+      return { status: 'ok', data: raw['result'], source: SOURCE, fetchedAt: Date.now() };
     }
-    if (!isRecord(raw)) {
-      return { status: 'error', reason: 'Invalid response: expected an object' };
-    }
-    if (raw['ok'] !== true) {
-      const error = raw['error'];
-      return {
-        status: 'error',
-        reason:
-          typeof error === 'string'
-            ? error
-            : isRecord(error) && typeof error['message'] === 'string'
-              ? error['message']
-              : `TonCenter request failed (${method})`,
-      };
-    }
-    return { status: 'ok', data: raw['result'], source: SOURCE, fetchedAt: Date.now() };
   };
 
   const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
-    const result = await rpc('getMasterchainInfo', {});
-    if (result.status !== 'ok') return result;
-    const last = isRecord(result.data) ? result.data['last'] : undefined;
-    const seqno = isRecord(last) ? last['seqno'] : undefined;
-    if (typeof seqno !== 'number') {
-      return {
-        status: 'error',
-        reason: 'Network identity check failed: TonCenter did not return masterchain info.',
-      };
+
+    if (identityCheckInFlight === null) {
+      identityCheckInFlight = (async (): Promise<AdapterResult<never> | null> => {
+        const result = await rpc('getMasterchainInfo', {});
+        if (result.status !== 'ok') return result;
+        const last = isRecord(result.data) ? result.data['last'] : undefined;
+        const seqno = isRecord(last) ? last['seqno'] : undefined;
+        if (typeof seqno !== 'number') {
+          return {
+            status: 'error',
+            reason: 'Network identity check failed: TonCenter did not return masterchain info.',
+          };
+        }
+        identityChecked = true;
+        return null;
+      })().finally(() => {
+        identityCheckInFlight = null;
+      });
     }
-    identityChecked = true;
-    return null;
+
+    return await identityCheckInFlight;
   };
 
   const getBalance = async (

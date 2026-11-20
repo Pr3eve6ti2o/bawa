@@ -85,7 +85,7 @@ export function ReceiveScreen() {
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">Receive</h1>
         <p className="text-sm text-muted-foreground">
-          Receive is not available right now.
+          Receive isn't available for this network yet.
         </p>
       </div>
     );
@@ -198,7 +198,7 @@ export function ReceiveScreen() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Mainnet only — this address is for the {config.displayName} mainnet. Funds sent on another network cannot be recovered.
+        {`Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`}
       </p>
 
       {chain === 'ton' && (

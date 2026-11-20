@@ -182,7 +182,7 @@ export function CreateWalletScreen() {
 
   if (vaultExists) {
     return (
-      <section aria-labelledby="create-wallet-title" className="space-y-6">
+      <section aria-labelledby="create-wallet-title" className="space-y-6 lg:mx-auto lg:max-w-2xl">
         <Card className="rounded-xl">
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
@@ -207,8 +207,8 @@ export function CreateWalletScreen() {
   }
 
   return (
-    <section aria-labelledby="create-wallet-title" className="space-y-6">
-      <Card className="rounded-xl">
+    <section aria-labelledby="create-wallet-title" className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
+      <Card className="rounded-xl lg:col-span-2 lg:sticky lg:top-6">
         <CardHeader>
           <CardTitle id="create-wallet-title">Create a wallet</CardTitle>
           <CardDescription>
@@ -227,7 +227,7 @@ export function CreateWalletScreen() {
                 <span
                   className={`flex size-10 shrink-0 items-center justify-center rounded-full text-body-md ${
                     progressStep < step
-                      ? "bg-success text-primary-foreground"
+                      ? "bg-success-surface text-success-text"
                       : progressStep === step
                         ? "bg-primary-solid font-bold text-primary-foreground"
                         : "bg-surface-blue-dim text-step-pending-text"
@@ -303,6 +303,7 @@ export function CreateWalletScreen() {
         </CardContent>
       </Card>
 
+      <div className="space-y-6 lg:col-span-3">
       {error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -392,7 +393,7 @@ export function CreateWalletScreen() {
                 or website.
               </AlertDescription>
             </Alert>
-            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2">
+            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2 lg:grid-cols-4">
               {words.map((word, index) => (
                 <li
                   key={index}
@@ -401,6 +402,7 @@ export function CreateWalletScreen() {
                   <span className="text-body-sm font-medium text-muted-foreground">
                     {index + 1}.
                   </span>
+                  {' '}
                   <span className="text-body-md font-semibold">{word}</span>
                 </li>
               ))}
@@ -430,7 +432,7 @@ export function CreateWalletScreen() {
                 {confirmPositions.map((position) => (
                   <div key={position} className="space-y-2">
                     <Label htmlFor={`confirm-word-${position}`}>
-                      Word {position + 1}
+                      {`Word ${position + 1}`}
                     </Label>
                     <Input
                       id={`confirm-word-${position}`}
@@ -484,6 +486,7 @@ export function CreateWalletScreen() {
           </CardContent>
         </Card>
       )}
+      </div>
     </section>
   );
 }

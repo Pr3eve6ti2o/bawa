@@ -469,7 +469,7 @@ export function markBroadcastUnknown(txHash: string): {
     txHash,
     status: 'unknown',
     message:
-      'Broadcast outcome unknown — the transaction stays unresolved. Do not resend it and do not compose a replacement without independent reconciliation.',
+      'It is unclear whether the transaction was sent — it stays unresolved. Do not resend it and do not create a replacement without checking the network first.',
   };
 }
 

@@ -104,20 +104,19 @@ function AppLayout() {
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
+  // /create-wallet, /lock and /security keep the 480px cap below lg only:
+  // at lg they go full content width so the screens can lay out in two
+  // columns (create-wallet, security) or as a centred card in the
+  // workspace (lock).
   const isNarrow =
-    [
-      '/send',
-      '/receive',
-      '/security',
-      '/lock',
-      '/import-wallet',
-      '/create-wallet',
-      '/mnemonic-backup',
-    ].includes(pathname) || pathname.startsWith('/assets/');
+    ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
+      pathname,
+    ) || pathname.startsWith('/assets/');
+  const isWideAtLg = ['/create-wallet', '/lock', '/security'].includes(pathname);
 
   return (
     <div className="min-h-screen bg-background sm:py-6 lg:py-0">
-      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none">
+      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none lg:min-h-screen">
         <aside className="hidden shrink-0 lg:block lg:w-[224px] lg:border-r lg:border-panel-border lg:bg-panel-surface">
           <div className="sticky top-0 flex max-h-screen flex-col overflow-y-auto">
             <SidebarNav />
@@ -166,8 +165,14 @@ function AppLayout() {
               pb-24 leaves ~30px clear at max scroll. Desktop is
               unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
           <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
-            {isNarrow ? (
-              <div className="mx-auto w-full max-w-[480px]">
+            {isNarrow || isWideAtLg ? (
+              <div
+                className={
+                  isWideAtLg
+                    ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
+                    : 'mx-auto w-full max-w-[480px]'
+                }
+              >
                 <Outlet />
               </div>
             ) : (

@@ -41,8 +41,7 @@ export function NetworkSelectionScreen() {
       </Card>
 
       <p className="text-sm text-muted-foreground">
-        Balances and history come from the live mainnet networks. This wallet
-        never connects to a test network.
+        Your balances and history come from public blockchain networks.
       </p>
     </section>
   );

@@ -35,22 +35,30 @@ export function DashboardScreen() {
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
 
-  // Prices load on mount and refresh every 60 seconds (the documented
-  // CoinGecko refresh cadence in wallet/prices.ts). Before this fix the
-  // feed stayed idle until the user pressed "Refresh prices", so a fresh
-  // session showed "No prices loaded yet" and an Unavailable total even
-  // though the feed itself was healthy. The ref always calls the latest
-  // refresh so the interval never goes stale; usePrices still guards
-  // against overlapping fetches, and a failed fetch keeps the honest
-  // error state — prices are never fabricated.
-  const refreshPricesRef = useRef(refreshPrices);
-  refreshPricesRef.current = refreshPrices;
+  // Auto-fetch on mount: prices previously loaded only after a manual
+  // click, so the first paint never showed any price. The hook's own
+  // guard prevents starting another fetch while one is in flight.
   useEffect(() => {
-    refreshPricesRef.current();
-    const timer = window.setInterval(() => {
+    if (pricesState.status === 'idle') {
+      refreshPrices();
+    }
+  }, [pricesState.status, refreshPrices]);
+
+  // Refresh about every 60 seconds while mounted (the price module
+  // documents "Refresh ~60s"). The ref always holds the latest refresh
+  // callback, so the interval is set once and never resets on status
+  // changes. One call/minute per tab fits the keyless ~5 calls/min
+  // budget; several open tabs share it.
+  const refreshPricesRef = useRef(refreshPrices);
+  useEffect(() => {
+    refreshPricesRef.current = refreshPrices;
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
       refreshPricesRef.current();
     }, 60_000);
-    return () => window.clearInterval(timer);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Hold the last settled hero text while balances refresh so it never flashes
@@ -83,6 +91,9 @@ export function DashboardScreen() {
   );
 
   const priceEntries = Object.values(pricesState.entries);
+  const hasCachedPrices = priceEntries.some(
+    (entry) => entry?.status === 'fresh' || entry?.status === 'expired',
+  );
   const priceErrorReasons = priceEntries.flatMap(
     (entry) => (entry?.status === 'error' ? [entry.reason] : []),
   );
@@ -100,11 +111,11 @@ export function DashboardScreen() {
         retry: true,
         partialNote: false,
         showAttribution: false,
-        priceError: null,
-        // Balances failed, not prices: the message below must say so.
-        // (Before the price auto-fetch this branch could only be reached
-        // with idle prices, so it blamed the feed; now the feed loads on
-        // mount and the honest cause is the balances.)
+        priceError: sharedPriceError,
+        // Balances failed, not (only) prices: the message below names the
+        // balances as the cause of the missing total. The price error is
+        // still surfaced when the feed itself failed too, so a
+        // rate-limited feed is never hidden behind the balances failure.
         balancesFailed: true,
       }
     : heroLoading
@@ -230,11 +241,11 @@ export function DashboardScreen() {
       </div>
 
       {/*
-        Tokens/Activity tabs (Phase 5, Sol p11b, landed 2026-11-19 in 445.6s).
-        Two Sol errors corrected hands-on: tx.amount -> tx.amountBaseUnits
-        (the real AdapterTx field) and chainConfig[chain] -> chainConfig(chain)
-        (chainConfig is a function, not a record). No NFTs tab: no NFT support
-        exists, and unimplemented features stay absent.
+        Tokens/Activity tabs. Two errors corrected hands-on: tx.amount ->
+        tx.amountBaseUnits (the real transaction field) and
+        chainConfig[chain] -> chainConfig(chain) (chainConfig is a function,
+        not a record). No NFTs tab: no NFT support exists, and unimplemented
+        features stay absent.
       */}
       <div
         role="tablist"
@@ -300,7 +311,7 @@ export function DashboardScreen() {
               </Button>
             </div>
             <Card className="mt-4">
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} />
             </Card>
           </section>
             <div className="hidden lg:block">

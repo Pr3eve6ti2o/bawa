@@ -66,8 +66,8 @@ describe('CreateScreen', () => {
       'Web wallet',
       'Android wallet',
       'Smart contract creator',
-      'Multi-Sig Wallet v2',
-      'Web3 Wallet Kit',
+      'Multi-signature wallet',
+      'Connect an existing wallet',
     ];
     const cards = Array.from(
       container.querySelectorAll('section > ul > li'),
@@ -106,35 +106,36 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('shows no developer references on any card', () => {
-    // Lane C finalisation: the build catalogue (repository names, commit
-    // hashes, licences, WASM/JNI notes) was removed from this screen.
-    // A wallet user sees what each tool does and whether it works yet.
+  it('shows no developer references', () => {
+    // The Create screen is for normal wallet users: no repository links,
+    // commit hashes, licence notes or implementation references render.
+    const links = Array.from(container.querySelectorAll('a'));
+
+    expect(links).toHaveLength(2);
+    links.forEach((link) => {
+      expect(link.getAttribute('href')).toBe('/create-wallet');
+    });
     expect(container.textContent).not.toContain('github.com');
     expect(container.textContent).not.toContain('References');
-    expect(container.textContent).not.toContain('build brief');
-    expect(container.textContent).not.toContain('WASM');
-    expect(container.textContent).not.toContain('JNI');
-    expect(container.querySelectorAll('article')).toHaveLength(5);
   });
 
-  it('states that every planned card is not available yet', () => {
-    const planned = container.querySelectorAll(
+  it('states that every coming-soon card is not available yet', () => {
+    const briefs = container.querySelectorAll(
       'article[aria-label$=" coming soon"]',
     );
 
-    expect(planned).toHaveLength(5);
-    planned.forEach((card) => {
+    expect(briefs).toHaveLength(5);
+    briefs.forEach((card) => {
       expect(card.textContent).toContain(
-        'Not available yet — planned for a later version.',
+        "Coming soon. This isn't available yet.",
       );
     });
   });
 
-  it('shows the separate dashboard workspace note', () => {
+  it('shows the separate dashboard note', () => {
     expect(
       elementsWithExactText(
-        "Your wallet dashboard stays separate. Creating a wallet here won't replace it.",
+        'Your wallet dashboard stays separate. Creating a wallet here does not replace it.',
       ),
     ).toHaveLength(1);
   });

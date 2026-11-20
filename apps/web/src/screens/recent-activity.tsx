@@ -100,6 +100,7 @@ export function RecentActivity() {
                                 : ''}
                           </span>
                         </span>
+                        {' '}
                         <span className="shrink-0 text-right text-sm font-semibold text-panel-text">
                           {formatNativeWithSymbol(
                             tx.amountBaseUnits,

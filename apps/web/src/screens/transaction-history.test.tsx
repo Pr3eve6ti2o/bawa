@@ -190,12 +190,12 @@ describe('transaction history screen', () => {
     }
   });
 
-  it('shows the empty state when no history is available', async () => {
+  it('shows the empty state when no transaction history is available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(perChainEmpty());
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No transaction history is available right now');
+      expect(mounted.div.textContent).toContain("Transaction history isn't available for this network yet.");
     } finally {
       await mounted.cleanup();
     }

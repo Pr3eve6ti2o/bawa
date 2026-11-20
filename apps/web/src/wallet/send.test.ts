@@ -373,11 +373,11 @@ describe('broadcastSigned / markBroadcastUnknown (Sol p5)', () => {
   it('always returns disabled and never broadcasts', async () => {
     expect(await broadcastSigned('eth', '0x1234')).toEqual({
       status: 'disabled',
-      reason: 'Sending is not turned on yet. It needs to be enabled separately.',
+      reason: 'Sending funds is switched off until it is separately approved.',
     });
     expect(await broadcastSigned('btc', '0x1234')).toEqual({
       status: 'disabled',
-      reason: 'Sending is not turned on yet. It needs to be enabled separately.',
+      reason: 'Sending funds is switched off until it is separately approved.',
     });
   });
 
@@ -387,7 +387,7 @@ describe('broadcastSigned / markBroadcastUnknown (Sol p5)', () => {
       txHash: '0xabc',
       status: 'unknown',
       message:
-        'Broadcast outcome unknown — the transaction stays unresolved. Do not resend it and do not compose a replacement without independent reconciliation.',
+        'It is unclear whether the transaction was sent — it stays unresolved. Do not resend it and do not create a replacement without checking the network first.',
     });
   });
 });

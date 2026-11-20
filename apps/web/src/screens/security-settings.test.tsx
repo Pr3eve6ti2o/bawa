@@ -70,8 +70,8 @@ describe('security settings screen', () => {
       expect(text).not.toContain('What this starter does not do');
       expect(text).not.toContain('UI state only');
       expect(text).not.toContain('watch-only starter does not create');
-      expect(text).toContain('stored encrypted in the vault');
-      expect(text).toContain('Sending is not turned on yet');
+      expect(text).toContain('kept encrypted in the vault');
+      expect(text).toContain('Sending funds is switched off');
     } finally {
       await mounted.cleanup();
     }
@@ -189,6 +189,30 @@ describe('security settings screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('No vault yet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('lays out in two desktop columns with the reading panels spanning both', async () => {
+    // Lane C: at lg the heading and the two reading panels span both
+    // columns while the two locking cards sit side by side.
+    setWallet('locked', vi.fn());
+    const mounted = await mountScreen();
+    try {
+      const section = mounted.div.querySelector('section') as HTMLElement;
+      expect(section.className).toContain('lg:grid-cols-2');
+      const heading = mounted.div.querySelector('#security-heading') as HTMLElement;
+      expect(heading.className).toContain('lg:col-span-2');
+      const intro = [...mounted.div.querySelectorAll('div')].find((el) =>
+        el.textContent?.includes('What this wallet does'),
+      ) as HTMLElement;
+      expect(intro.className).toContain('lg:col-span-2');
+      const backup = [...mounted.div.querySelectorAll('div')].find((el) =>
+        el.textContent?.includes('Backup procedure') &&
+        el.className.includes('rounded-xl'),
+      ) as HTMLElement;
+      expect(backup.className).toContain('lg:col-span-2');
     } finally {
       await mounted.cleanup();
     }
