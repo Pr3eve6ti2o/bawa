@@ -44,15 +44,15 @@ export function LockScreen() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-panel-surface px-4 py-8 text-panel-text">
-      <header className="flex items-center justify-center gap-3 text-lg font-semibold">
+    <main className="flex min-h-screen flex-col bg-panel-surface px-4 py-8 text-panel-text lg:min-h-[calc(100dvh-72px-3rem)] lg:bg-transparent lg:px-0 lg:py-0">
+      <header className="flex items-center justify-center gap-3 text-lg font-semibold lg:hidden">
         <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-primary-foreground">
           <Wallet className="size-5" aria-hidden="true" />
         </div>
         <span>Bawa Web Wallet</span>
       </header>
 
-      <div className="flex flex-1 items-center justify-center py-8">
+      <div className="flex flex-1 items-center justify-center py-8 lg:py-0">
         <Card
           aria-labelledby="lock-heading"
           className="w-full max-w-md p-6"
