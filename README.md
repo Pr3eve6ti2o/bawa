@@ -110,10 +110,12 @@ For the detailed design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Repository structure
 
+### Overview
+
 ```mermaid
 flowchart TB
   accTitle: Bawa main structure at commit 667527e
-  accDescr: Layout verified at commit 667527e, with grouped documentation. captcha is vendored third-party reference code, not Bawa code or a feature.
+  accDescr: Layout verified at commit 667527e, with grouped documentation.
 
   repo["Bawa main: 667527e"]
   repo --> root["Root files"]
@@ -121,7 +123,16 @@ flowchart TB
   repo --> tests["test/"]
   repo --> docs["docs/"]
   repo --> captcha["captcha/<br/>Vendored third-party reference code<br/>Not Bawa code or a feature"]
+```
 
+### Root files (1 of 2)
+
+```mermaid
+flowchart TB
+  accTitle: Bawa Root files at commit 667527e, part 1 of 2
+  accDescr: These seven files are direct children of Root files in the overview. The remaining seven files are shown in part 2.
+
+  root["Root files"]
   root --> r1["AGENTS.md"]
   root --> r2["ARCHITECTURE.md"]
   root --> r3["CHANGELOG.md"]
@@ -129,6 +140,16 @@ flowchart TB
   root --> r5["IMPLEMENTATION.md"]
   root --> r6["LICENSE"]
   root --> r7["README.md"]
+```
+
+### Root files (2 of 2)
+
+```mermaid
+flowchart TB
+  accTitle: Bawa Root files at commit 667527e, part 2 of 2
+  accDescr: These seven files are the remaining direct children of Root files in the overview, continuing part 1.
+
+  root["Root files"]
   root --> r8["SECURITY.md"]
   root --> r9["package.json"]
   root --> r10["requirements.txt"]
@@ -136,11 +157,29 @@ flowchart TB
   root --> r12[".editorconfig"]
   root --> r13[".gitignore"]
   root --> r14[".github/workflows/ci.yml"]
+```
 
+### tools/ - files
+
+```mermaid
+flowchart TB
+  accTitle: Bawa tools/ files at commit 667527e
+  accDescr: These three files are direct children of tools/ in the overview. Its fourth direct child, hdwallet-gen/, is shown in the next diagram.
+
+  tools["tools/"]
   tools --> t1["bawa_cli.py"]
   tools --> t2["make_wallet.py"]
   tools --> t3["decrypt_seed.py"]
-  tools --> hd["hdwallet-gen/"]
+```
+
+### tools/ - hdwallet-gen/
+
+```mermaid
+flowchart TB
+  accTitle: Bawa tools/ hdwallet-gen/ at commit 667527e
+  accDescr: hdwallet-gen/ is a direct child of tools/ in the overview. Arrows show its seven direct child files.
+
+  hd["hdwallet-gen/"]
   hd --> h1["derive.js"]
   hd --> h2["derive_daemon.js"]
   hd --> h3["compare.js"]
@@ -148,19 +187,46 @@ flowchart TB
   hd --> h5["extended-key.js"]
   hd --> h6["package.json"]
   hd --> h7["package-lock.json"]
+```
 
+### test/
+
+```mermaid
+flowchart TB
+  accTitle: Bawa main structure at commit 667527e - test/
+  accDescr: Layout of test/ verified at commit 667527e.
+
+  tests["test/"]
   tests --> s1["differential_test.py"]
   tests --> s2["test_bawa_cli.py"]
   tests --> s3["test_make_wallet.py"]
   tests --> s4["smoke.test.js"]
   tests --> s5["fixture-oracle-vectors.json"]
+```
 
+### docs/
+
+```mermaid
+flowchart TB
+  accTitle: Bawa main structure at commit 667527e - docs/
+  accDescr: Layout verified at commit 667527e, with grouped documentation under docs/.
+
+  docs["docs/"]
   docs --> guides["Numbered guides<br/>docs/01 to docs/16<br/>README.md in each"]
   docs --> loose["Loose docs files<br/>FAQ.md<br/>GLOSSARY.md<br/>REFERENCES.md<br/>RECOVERY.md<br/>SECURITY.md<br/>TESTING.md<br/>FURTHER-READING.md<br/>README.md<br/>README-FULL.md"]
   docs --> web["web-wallet/WEB-GUIDE.md"]
   docs --> android["android-wallet/ANDROID-GUIDE.md"]
   docs --> mainnet["mainnet/MAINNET-GUIDE.md"]
+```
 
+### captcha/
+
+```mermaid
+flowchart TB
+  accTitle: Bawa main structure at commit 667527e - captcha/
+  accDescr: Layout verified at commit 667527e. captcha is vendored third-party reference code, not Bawa code or a feature.
+
+  captcha["captcha/<br/>Vendored third-party reference code<br/>Not Bawa code or a feature"]
   captcha --> c1["README.md"]
   captcha --> c2["run-tronscan-check"]
   captcha --> c3["vendors"]
@@ -168,6 +234,7 @@ flowchart TB
   captcha --> c5["licenses"]
   captcha --> c6["package-lock.json"]
 ```
+
 
 ## Why this exists
 
