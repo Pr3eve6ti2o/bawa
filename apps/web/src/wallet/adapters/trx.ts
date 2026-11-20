@@ -2,6 +2,7 @@ import { hexToBytes, sha256 } from 'viem';
 import {
   BROADCAST_DISABLED_MESSAGE,
   httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -27,8 +28,6 @@ export interface TronAdapterOverrides {
   transport?: FetchTransport;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** One bounded-retry read through the given transport (item 2). */
 function readWithRetry(
@@ -117,7 +116,7 @@ export function createTronAdapter(
     try {
       raw = await readJson(`${baseUrl}/wallet/getnowblock`, 'trx.identity');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const header = isRecord(raw) ? raw['block_header'] : undefined;
     const number = isRecord(header) && isRecord(header['raw_data'])
@@ -147,7 +146,7 @@ export function createTronAdapter(
     try {
       raw = await readJson(`${baseUrl}/v1/accounts/${address}`, 'trx.getBalance');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const data = isRecord(raw) && Array.isArray(raw['data']) ? raw['data'] : undefined;
     if (!data) {
@@ -193,7 +192,7 @@ export function createTronAdapter(
         'trx.getHistory',
       );
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const data = isRecord(raw) && Array.isArray(raw['data']) ? raw['data'] : undefined;
     if (!data) {
@@ -255,7 +254,7 @@ export function createTronAdapter(
     try {
       raw = await readJson(`${baseUrl}/wallet/getchainparameters`, 'trx.estimateFee');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const params =
       isRecord(raw) && Array.isArray(raw['chainParameter']) ? raw['chainParameter'] : [];
@@ -334,7 +333,7 @@ export async function getLatestBlockHeader(
       'trx.getLatestBlockHeader',
     );
   } catch (error: unknown) {
-    return { status: 'error', reason: messageOf(error) };
+    return toAdapterError(error);
   }
   const data = isRecord(raw) ? raw['block_header'] : undefined;
   const rawData = isRecord(data) ? data['raw_data'] : undefined;

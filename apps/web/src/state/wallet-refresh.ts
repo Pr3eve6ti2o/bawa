@@ -33,6 +33,7 @@ import type {
   AdapterResult,
   AdapterTx,
 } from '../wallet/adapters/types';
+import { messageOf } from '../wallet/adapters/types';
 import { availableFor } from '../wallet/chains';
 import { classifyRetryableError, withRetry } from '../wallet/retry';
 
@@ -99,8 +100,6 @@ export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
   return promise;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** Map a raw error message to a sanitised code (no addresses, URLs or payloads). */
 function sanitiseReason(message: string): string {

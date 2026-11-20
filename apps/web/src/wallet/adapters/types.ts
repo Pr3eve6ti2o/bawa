@@ -195,3 +195,27 @@ export function assertNetworkId(
     );
   }
 }
+
+// Single shared error-message helper for adapters and state.
+export function messageOf(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+export function toAdapterError(
+  error: unknown,
+): { status: 'error'; reason: string } {
+  return { status: 'error', reason: messageOf(error) };
+}

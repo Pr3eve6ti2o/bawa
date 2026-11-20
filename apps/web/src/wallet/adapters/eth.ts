@@ -10,6 +10,7 @@ import {
   assertNetworkId,
   BROADCAST_DISABLED_MESSAGE,
   httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -37,8 +38,6 @@ export interface EthAdapterOverrides {
   transport?: FetchTransport;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** True when `value` is a record with the given string key. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,7 +71,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     try {
       chainId = await client.getChainId();
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (chainId !== 1) {
       return {
@@ -110,7 +109,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 
@@ -130,7 +129,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     try {
       raw = await readJson(url, 'eth.getHistory');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (!isRecord(raw)) {
       return { status: 'error', reason: 'Invalid response: expected an object' };
@@ -198,7 +197,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 
@@ -219,7 +218,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 
