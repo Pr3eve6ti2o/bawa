@@ -115,7 +115,7 @@ export function SendScreen() {
       try {
         await ensureAdapters();
       } catch {
-        setPreview({ ok: false, reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
+        setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount);
