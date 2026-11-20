@@ -144,7 +144,7 @@ describe('stale data', () => {
     }
 
     assert.ok(row('M-30', 'M-31').includes('**Status:** OPEN'), 'M-30 must stay OPEN');
-    assert.ok(row('M-31', 'M-32').includes('**Status:** OPEN'), 'M-31 must stay OPEN');
+    assert.ok(row('M-31', 'M-32').includes('**Status:** CLOSED'), 'M-31 must stay CLOSED');
     assert.ok(row('M-33', 'M-34').includes('RESOLVED'), 'M-33 must stay RESOLVED');
     assert.ok(row('M-34', 'M-35').includes('RESOLVED'), 'M-34 must stay RESOLVED');
 
