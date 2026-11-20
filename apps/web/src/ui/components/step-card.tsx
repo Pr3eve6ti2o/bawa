@@ -30,14 +30,25 @@ function StepCard({ icon, label, detail, state = 'pending', className, ...props 
           'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
           state === 'completed'
             ? 'bg-success text-success-foreground'
-            : 'bg-surface-blue-dim text-primary',
+            : 'bg-surface-blue-dim text-step-pending-text',
         )}
       >
         {state === 'completed' ? <Check className="h-5 w-5" /> : icon}
       </div>
       <div>
         <div className="text-sm-plus font-bold">{label}</div>
-        <div className="mt-1 text-xs-plus leading-relaxed text-muted-foreground">{detail}</div>
+        {/* The active card sits on the pale blue tint (light) / deep
+            blue (dark), where muted-foreground drops to 4.32:1 — below
+            AA. The active detail therefore uses the standard body text
+            colour; hierarchy is kept by size and weight, not colour. */}
+        <div
+          className={cn(
+            'mt-1 text-xs-plus leading-relaxed',
+            state === 'active' ? 'text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          {detail}
+        </div>
       </div>
     </div>
   )

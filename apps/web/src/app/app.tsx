@@ -159,7 +159,13 @@ function AppLayout() {
             </span>
           </header>
 
-          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-6 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
+          {/* Mobile bottom padding must clear the sticky bottom nav
+              (~65px + safe-area): with only pb-6 the last ~40px of a
+              long page — e.g. the "Show recent activity" button on
+              /track — scrolled under the nav and was half-untappable.
+              pb-24 leaves ~30px clear at max scroll. Desktop is
+              unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
+          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
             {isNarrow ? (
               <div className="mx-auto w-full max-w-[480px]">
                 <Outlet />

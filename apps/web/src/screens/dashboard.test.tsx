@@ -213,6 +213,14 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).toContain('Unlock your wallet');
       const link = mounted.div.querySelector('a[href="/lock"]');
       expect(link).not.toBeNull();
+      // A locked vault is not a load failure: the hero must say the
+      // total needs an unlock, not that balances "could not be loaded".
+      expect(mounted.div.textContent).toContain(
+        'Unlock your wallet to see your portfolio total.',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'Balances could not be loaded',
+      );
     } finally {
       await mounted.cleanup();
     }

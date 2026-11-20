@@ -132,6 +132,19 @@ describe.sequential('App', () => {
     });
   });
 
+  it('gives the main content bottom clearance above the sticky mobile nav', async () => {
+    // Lane C gap 7: with only pb-6, the last ~40px of a long mobile
+    // page (e.g. the "Show recent activity" button on /track) scrolled
+    // under the sticky bottom nav and was half-untappable. The main
+    // needs bottom padding that clears the ~65px nav + safe-area.
+    await withRenderedApp('/track', (div) => {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      expect(main?.className).toContain('pb-24');
+      expect(main?.className).toContain('lg:py-6');
+    });
+  });
+
   it('renders the Create screen with all seven tools', async () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');

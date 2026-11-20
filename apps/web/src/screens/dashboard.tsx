@@ -179,7 +179,9 @@ export function DashboardScreen() {
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
             {hero.balancesFailed
-              ? 'Balances could not be loaded, so the portfolio total is unavailable.'
+              ? vaultState === 'locked'
+                ? 'Unlock your wallet to see your portfolio total.'
+                : 'Balances could not be loaded, so the portfolio total is unavailable.'
               : pricesState.status === 'idle'
                 ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
                 : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
