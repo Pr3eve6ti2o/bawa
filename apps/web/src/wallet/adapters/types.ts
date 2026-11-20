@@ -1,5 +1,6 @@
 import type { ChainId } from '../../engine/boundary';
 import type { BalanceProvider } from '../balance-providers';
+import { BawaError, WalletErrorCodes } from '../errors';
 
 /**
  * Shared adapter contract (Fix Lane 2, Phase 2). Adapters are read-only
@@ -67,7 +68,67 @@ export type TxInput =
   | { kind: 'utxo'; utxos: UtxoInput[] }
   | { kind: 'nonce'; nonce: number }
   | { kind: 'account'; balanceSun: string }
-  | { kind: 'seqno'; seqno: number };
+  | {
+      kind: 'seqno';
+      seqno: number;
+      /**
+       * TON wallet contract version the seqno was read for (item 4).
+       * Present when the adapter was configured with a version; `send.ts`
+       * (P3, item 8) must dispatch on this value instead of assuming V4R2.
+       */
+      walletVersion?: TonWalletVersion;
+    };
+
+/**
+ * TON wallet contract versions the adapter understands (item 4, adapter
+ * half). V4R2 is the default and the only version `send.ts` pins today;
+ * V3R2 and V5R1 are the other versioned contracts in ton-org/ton
+ * (`WalletContractV3R2`, `WalletContractV4`, `WalletContractV5R1`).
+ * Unknown versions fail loudly at adapter construction — the wallet must
+ * never silently disagree with itself about which contract an address
+ * belongs to. The send-side dispatch is P3's (item 8); this lane only
+ * records the version here and in the adapter.
+ */
+export type TonWalletVersion = 'v3r2' | 'v4r2' | 'v5r1';
+
+export const TON_WALLET_VERSIONS: readonly TonWalletVersion[] = [
+  'v3r2',
+  'v4r2',
+  'v5r1',
+];
+
+export const DEFAULT_TON_WALLET_VERSION: TonWalletVersion = 'v4r2';
+
+/** Returns the version, or throws INVALID_INPUT on an unknown version. */
+export function assertTonWalletVersion(version: string): TonWalletVersion {
+  if (
+    version === 'v3r2' ||
+    version === 'v4r2' ||
+    version === 'v5r1'
+  ) {
+    return version;
+  }
+  throw new BawaError(WalletErrorCodes.INVALID_INPUT, {
+    operation: 'ton.version',
+  });
+}
+
+/**
+ * Shared transport interface (item 2, viem V3, small form). One interface
+ * plus a registry-free default: http today, ws/fallback tomorrow, without
+ * a client-composition rewrite. A transport performs one single-attempt
+ * request; retry lives above it in `wallet/retry.ts` (`withRetry`), never
+ * inside the transport. Adapters accept an optional `transport` override
+ * so tests can inject a fake without stubbing the global `fetch`.
+ */
+export interface FetchTransport {
+  request(url: string, init?: RequestInit, timeoutMs?: number): Promise<unknown>;
+}
+
+/** Default transport: one single-attempt `fetchJson` call, no retries. */
+export const httpFetchTransport: FetchTransport = {
+  request: (url, init, timeoutMs) => fetchJson(url, init, timeoutMs),
+};
 
 export const BROADCAST_DISABLED_MESSAGE =
   'Broadcast is disabled until separately authorised.';
@@ -141,6 +202,14 @@ export function assertNetworkId(
  * getBalanceProvider path. Ok maps to {value}; unavailable/error throw, so
  * the caller reports them as error (use getAdapter for the full
  * unavailable/error distinction).
+ *
+ * @deprecated Legacy shim (item 2 deprecation notice). Production consumers:
+ * exactly 1 — `registerAdapter` in `adapters/index.ts`, which registers the
+ * shim for every adapter. `getBalanceProvider` / `hasBalanceProvider` have
+ * no production call sites: `state/wallet-context.tsx` reads balances via
+ * `getAdapter` directly. Do NOT remove before P5 item 28 migrates the
+ * refresh path off this shim; removal date: TBD by the Phase 3 coordinator
+ * (no date is set by this lane).
  */
 export function toBalanceProvider(adapter: ChainAdapter): BalanceProvider {
   return {

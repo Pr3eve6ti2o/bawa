@@ -8,6 +8,13 @@ import type { ChainId } from '../engine/boundary';
  * adapter registers, balances stay `unavailable` with reason `no-adapter`
  * (see wallet-context refreshBalances). No provider implementation lives in
  * this lane, and no balance is ever fabricated.
+ *
+ * Retry contract (P1 item 2): providers are idempotent reads. Adapters
+ * registered here retry transient failures internally (bounded, abort-aware,
+ * error-classified — see `wallet/retry.ts`); the registry itself never
+ * retries, never coalesces, and never substitutes a value. A provider whose
+ * reads are not safe to repeat must not be registered. `toBalanceProvider`
+ * (adapters/types.ts) is a deprecated legacy shim — see its notice.
  */
 
 export interface BalanceResult {

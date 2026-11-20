@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { base64ToHex, createTonAdapter } from './ton';
-import { BROADCAST_DISABLED_MESSAGE } from './types';
+import { BROADCAST_DISABLED_MESSAGE, type TonWalletVersion } from './types';
 
 const ADDRESS = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
 const OTHER = 'UQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJKZ';
@@ -19,6 +19,28 @@ function mockRpcSequence(results: unknown[]): void {
     })),
   );
 }
+
+type RawResponse = { ok: boolean; status: number; body: unknown };
+
+/** Raw HTTP responses (ok/status), for retry tests where fetch must fail. */
+function mockFetchRawSequence(responses: RawResponse[]): ReturnType<typeof vi.fn> {
+  const queue = [...responses];
+  const fetchMock = vi.fn(async () => {
+    const next = queue.shift();
+    if (!next) throw new Error('fetch queue exhausted');
+    return { ok: next.ok, status: next.status, json: async () => next.body };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+const okRpc = (result: unknown): RawResponse => ({
+  ok: true,
+  status: 200,
+  body: { ok: true, result },
+});
+const http503 = (): RawResponse => ({ ok: false, status: 503, body: {} });
+const http404 = (): RawResponse => ({ ok: false, status: 404, body: {} });
 
 const MASTERCHAIN = { last: { seqno: 12345678 } };
 
@@ -136,7 +158,19 @@ describe('ton adapter — fee, seqno, broadcast', () => {
     const result = await adapter.getTxInputs(ADDRESS);
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
-      expect(result.data).toEqual({ kind: 'seqno', seqno: 26 });
+      expect(result.data).toEqual({ kind: 'seqno', seqno: 26, walletVersion: 'v4r2' });
+    }
+  });
+
+  it('seqno 0 is a valid seqno, never a missing value (item 3 regression)', async () => {
+    // A fresh wallet has seqno 0. The ton 16.3.0 validUntil regression was
+    // exactly this: seqno 0 treated as absent/bogus. It must parse to 0.
+    mockRpcSequence([MASTERCHAIN, { stack: [['num', '0x0']] }]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toEqual({ kind: 'seqno', seqno: 0, walletVersion: 'v4r2' });
     }
   });
 
@@ -145,5 +179,90 @@ describe('ton adapter — fee, seqno, broadcast', () => {
     await expect(adapter.broadcast('deadbeef')).rejects.toThrow(
       BROADCAST_DISABLED_MESSAGE,
     );
+  });
+});
+
+describe('ton adapter — schema validation (item 3)', () => {
+  it('rejects a non-string balance instead of passing it on', async () => {
+    mockRpcSequence([MASTERCHAIN, 12345]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/Invalid response/);
+    }
+  });
+
+  it('rejects a masterchain response without a seqno', async () => {
+    mockRpcSequence([{ last: {} }]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') expect(result.reason).toMatch(/identity/i);
+  });
+
+  it('rejects a malformed seqno stack', async () => {
+    mockRpcSequence([MASTERCHAIN, { stack: [['num', 'not-hex']] }]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/Invalid response/);
+    }
+  });
+
+  it('rejects a non-list transaction response', async () => {
+    mockRpcSequence([MASTERCHAIN, { not: 'a list' }]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/Invalid response/);
+    }
+  });
+});
+
+describe('ton adapter — wallet version (item 4)', () => {
+  it('carries the configured version in the tx inputs', async () => {
+    mockRpcSequence([MASTERCHAIN, { stack: [['num', '0x1a']] }]);
+    const adapter = createTonAdapter({ version: 'v5r1' });
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toEqual({ kind: 'seqno', seqno: 26, walletVersion: 'v5r1' });
+    }
+  });
+
+  it('throws at construction on an unknown version', () => {
+    // assertTonWalletVersion throws BawaError INVALID_INPUT ('Invalid input.').
+    expect(
+      () => createTonAdapter({ version: 'v9' as unknown as TonWalletVersion }),
+    ).toThrow('Invalid input.');
+  });
+});
+
+describe('ton adapter — retry (item 2)', () => {
+  it('retries a transient 503 and then succeeds', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okRpc(MASTERCHAIN),
+      http503(),
+      http503(),
+      okRpc('123456789'),
+    ]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.valueBaseUnits).toBe('123456789');
+    // 1 identity + 3 balance attempts: the two 503s were retried, not lost.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not retry a terminal 404', async () => {
+    const fetchMock = mockFetchRawSequence([okRpc(MASTERCHAIN), http404()]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
