@@ -1195,6 +1195,21 @@ describe('offline signing — determinism and TON external signer', () => {
       '0xf86b808504a817c8008252089427ef5cdbe01777d62438affeb695e33fc2335979872386f26fc100008026a02424e6dfd3460ce80faa99dd7ddc7a263ea1746fe5597cebe4bae8d16b86b47ca02a997cb91efe84498f836566ae0cf000a50903353672940ffc3142dbc4903dc9',
     );
   });
+
+  it('pins the frozen-time TON signed BOC hash', async () => {
+    const result = await signTonOffline(...tonArgs);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('Expected TON offline signing to succeed');
+    }
+
+    const decoded = Buffer.from(result.signedBocBase64, 'base64');
+    expect(decoded.subarray(0, 4).toString('hex')).toBe('b5ee9c72');
+    expect(createHash('sha256').update(decoded).digest('hex')).toBe(
+      '63f00fb7de318a1bd06644760ea3dca504af953457345e37787885d0a754dab7',
+    );
+  });
 });
 
 describe.skip('mainnet qualification (item 23) — manual step, never in routine runs', () => {
