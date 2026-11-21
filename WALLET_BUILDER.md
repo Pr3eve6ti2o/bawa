@@ -115,20 +115,20 @@ ever run on any network, and broadcast stays disabled.
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-20 from chains.ts at 0fd3a2e. -->
+     Generated 2026-11-22 from chains.ts at 7202040. -->
 
-| Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Bitcoin (BTC) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
-| Ethereum (ETH) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
-| TRON (TRX) | verified | verified | verified | verified | verified | verified | verified | verified | verified |
-| TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked |
+| Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bitcoin (BTC) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| Ethereum (ETH) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| TRON (TRX) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked | candidate |
 
 TON `fee-quote` is blocked: a TON fee depends on the unsigned message,
 which is Phase 4 work — no fee number is ever invented. TON
 `post-sign-verify` is blocked: the signed BOC is not re-parsed (no BOC
 parser vendored); verification is no-error + 32-byte hash + BOC magic
-only. Listing a chain never implies it can do an operation; a chain is
+only. `simulate` is candidate on all four chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. Listing a chain never implies it can do an operation; a chain is
 available for an operation only when `availableFor(capability)` in
 `apps/web/src/wallet/chains.ts` returns it. The nine prospective chains
 in the registry are recovery profiles only, not implemented `CHAINS`
