@@ -11,7 +11,8 @@ export type CapabilityName =
   | 'fee-quote'
   | 'unsigned-plan'
   | 'local-sign'
-  | 'post-sign-verify';
+  | 'post-sign-verify'
+  | 'simulate';
 
 export type CapabilityStatus =
   | 'verified'
@@ -19,10 +20,20 @@ export type CapabilityStatus =
   | 'unsupported'
   | 'candidate';
 
+/**
+ * How a capability's status was established. Only a live mainnet cross-check
+ * justifies 'mainnet-confirmed'; anything the offline tests and probes
+ * established — and every blocked or candidate entry — is 'probe-only'.
+ * Never claim mainnet confirmation for anything the offline probes
+ * established.
+ */
+export type EvidenceLevel = 'mainnet-confirmed' | 'probe-only';
+
 export interface CapabilityEntry {
   status: CapabilityStatus;
   /** Short evidence reference. A capability with no evidence is never verified. */
   evidence: string;
+  evidenceLevel: EvidenceLevel;
 }
 
 export type Capabilities = Record<CapabilityName, CapabilityEntry>;
@@ -57,6 +68,7 @@ export interface ChainConfig {
  */
 const verifiedBySendTests = (capability: CapabilityName): CapabilityEntry => ({
   status: 'verified',
+  evidenceLevel: 'probe-only',
   evidence:
     `Verified by apps/web/src/wallet/send.test.ts offline signing checks + ` +
     `AnySigner probe runs 2026-11-19 for ${capability} (no broadcast).`,
@@ -64,6 +76,7 @@ const verifiedBySendTests = (capability: CapabilityName): CapabilityEntry => ({
 
 const verifiedByCoreTests = (capability: CapabilityName): CapabilityEntry => ({
   status: 'verified',
+  evidenceLevel: 'probe-only',
   evidence: `Verified by apps/web/src/wallet/core.test.ts ${capability} checks (2026-11-18).`,
 });
 
@@ -80,6 +93,7 @@ function capabilitiesForAdapterChain(
 ): Capabilities {
   const verifiedByAdapters = (capability: CapabilityName): CapabilityEntry => ({
     status: 'verified',
+    evidenceLevel: 'mainnet-confirmed',
     evidence:
       `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
       `mainnet cross-check 2026-11-19 (second source) for ${capability}.`,
@@ -94,6 +108,7 @@ function capabilitiesForAdapterChain(
       ? verifiedByAdapters('fee-quote')
       : {
           status: 'blocked',
+          evidenceLevel: 'probe-only',
           evidence:
             'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
         },
@@ -103,10 +118,22 @@ function capabilitiesForAdapterChain(
       chain === 'ton'
         ? {
             status: 'blocked',
+            evidenceLevel: 'probe-only',
             evidence:
               'TON signed BOC is not re-parsed (no BOC parser vendored); verification is no-error + 32-byte hash + BOC magic only.',
           }
         : verifiedBySendTests('post-sign-verify'),
+    // Item 9 (chains half): declared only. The simulate-before-send phase
+    // is owned by the send lane in send.ts; no simulation runs yet.
+    // Simulation is a pre-check, never confirmation.
+    simulate: {
+      status: 'candidate',
+      evidenceLevel: 'probe-only',
+      evidence:
+        'Candidate for item 9: the simulate-before-send phase is owned by ' +
+        'the send lane in send.ts; no simulation runs yet. Simulation is ' +
+        'a pre-check, never confirmation.',
+    },
   };
 }
 

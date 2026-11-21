@@ -816,3 +816,70 @@ describe('generated chain facts and ed25519 paths (S6b, item 22)', () => {
     }
   });
 });
+
+describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => {
+  it.each(SUPPORTED_CHAINS)(
+    'declares simulate as a candidate on %s, owned by the send lane',
+    (chain) => {
+      expect.assertions(4);
+      const entry = capabilitiesFor(chain).simulate;
+      expect(entry.status).toBe('candidate');
+      expect(entry.evidence).toContain('item 9');
+      expect(entry.evidence).toContain('send.ts');
+      expect(entry.evidence).toContain('never confirmation');
+    },
+  );
+
+  it('lists no chain for simulate and throws naming the combination', () => {
+    expect.assertions(2);
+    expect(availableFor('simulate')).toEqual([]);
+    expect(() => assertSupported('eth', 'simulate')).toThrow(
+      /cannot do simulate/,
+    );
+  });
+
+  it.each(SUPPORTED_CHAINS)(
+    'sets honest evidence levels for every capability on %s',
+    (chain) => {
+      expect.assertions(21);
+      const caps = capabilitiesFor(chain);
+      expect(Object.keys(caps).sort()).toEqual(
+        [
+          'derive',
+          'restore',
+          'receive',
+          'balance',
+          'history',
+          'fee-quote',
+          'unsigned-plan',
+          'local-sign',
+          'post-sign-verify',
+          'simulate',
+        ].sort(),
+      );
+      for (const name of Object.keys(caps) as Array<keyof typeof caps>) {
+        const entry = caps[name];
+        // Only a live mainnet cross-check justifies mainnet-confirmed:
+        // balance, history and fee-quote where verified. Everything else
+        // the offline tests and probes established is probe-only, and every
+        // blocked or candidate entry is probe-only too.
+        const expected =
+          entry.status === 'verified' &&
+          (name === 'balance' || name === 'history' || name === 'fee-quote')
+            ? 'mainnet-confirmed'
+            : 'probe-only';
+        expect(entry.evidenceLevel).toBe(expected);
+        // Cross-check the level against the evidence text itself.
+        if (expected === 'mainnet-confirmed') {
+          expect(entry.evidence).toContain(
+            'live mainnet cross-check 2026-11-19',
+          );
+        } else if (entry.status === 'verified') {
+          expect(entry.evidence).toMatch(/send\.test\.ts|core\.test\.ts/);
+        } else {
+          expect(entry.evidence).not.toContain('live mainnet cross-check');
+        }
+      }
+    },
+  );
+});
