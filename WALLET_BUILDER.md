@@ -115,7 +115,7 @@ ever run on any network, and broadcast stays disabled.
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-22 from chains.ts at 7202040. -->
+     Generated 2026-11-22 from chains.ts at 6092dce. -->
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
