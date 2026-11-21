@@ -108,11 +108,17 @@ describe('security settings screen', () => {
     }
   });
 
-  it('says no vault yet when there is none', async () => {
+  it('shows the auto-lock setting with a no-vault notice when there is no vault', async () => {
+    // Merge resolution: Lane D2 left an empty mount point here and asserted
+    // it stayed empty; Lane D0 mounts the real AutoLockSetting at this
+    // point, which renders a no-vault notice instead of the off copy.
     setWallet('no-vault');
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No vault yet');
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('Auto-lock');
+      expect(text).toContain('No vault yet');
+      expect(text).not.toContain('Vault stays unlocked');
     } finally {
       await mounted.cleanup();
     }

@@ -114,4 +114,23 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       await cleanup();
     }
   });
+
+  it('shows only the four wallet chains, never a duplicate Ethereum or an extended chain', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const text = div.textContent ?? '';
+      expect((text.match(/Ethereum/g) ?? []).length).toBe(1);
+      expect(text).not.toContain('Solana');
+      expect(text).not.toContain('Litecoin');
+      expect(text).not.toContain('Dogecoin');
+      expect(text).not.toContain('bawa-sol');
+      expect(text).not.toContain('bawa-ltc');
+      expect(text).not.toContain('bawa-doge');
+      const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
+      expect(profiles?.querySelectorAll('li').length).toBe(4);
+    } finally {
+      await cleanup();
+    }
+  });
 });
