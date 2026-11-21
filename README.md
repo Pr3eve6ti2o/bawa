@@ -65,7 +65,7 @@ On `main` at HEAD `667527e` (verified 2026-11-20), Bawa's launcher prints routes
 
 *Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
 
-![Bawa main at 667527e: route-only architecture](docs/diagrams/architecture.svg)
+<img src="docs/diagrams/architecture.svg" alt="Bawa main at 667527e: route-only architecture" width="686">
 
 ### Inside the trust boundary
 
@@ -87,35 +87,35 @@ For the detailed design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 *Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
 
-![Bawa main structure at commit 667527e](docs/diagrams/structure-overview.svg)
+<img src="docs/diagrams/structure-overview.svg" alt="Bawa main structure at commit 667527e" width="400">
 
 ### Root files (1 of 2)
 
-![Bawa Root files at commit 667527e, part 1 of 2](docs/diagrams/root-files-1.svg)
+<img src="docs/diagrams/root-files-1.svg" alt="Bawa Root files at commit 667527e, part 1 of 2" width="451">
 
 ### Root files (2 of 2)
 
-![Bawa Root files at commit 667527e, part 2 of 2](docs/diagrams/root-files-2.svg)
+<img src="docs/diagrams/root-files-2.svg" alt="Bawa Root files at commit 667527e, part 2 of 2" width="475">
 
 ### tools/ - files
 
-![Bawa tools/ files at commit 667527e](docs/diagrams/tools-files.svg)
+<img src="docs/diagrams/tools-files.svg" alt="Bawa tools/ files at commit 667527e" width="360">
 
 ### tools/ - hdwallet-gen/
 
-![Bawa tools/ hdwallet-gen/ at commit 667527e](docs/diagrams/tools-hdwallet-gen.svg)
+<img src="docs/diagrams/tools-hdwallet-gen.svg" alt="Bawa tools/ hdwallet-gen/ at commit 667527e" width="422">
 
 ### test/
 
-![Bawa main structure at commit 667527e - test/](docs/diagrams/test.svg)
+<img src="docs/diagrams/test.svg" alt="Bawa main structure at commit 667527e - test/" width="423">
 
 ### docs/
 
-![Bawa main structure at commit 667527e - docs/](docs/diagrams/docs.svg)
+<img src="docs/diagrams/docs.svg" alt="Bawa main structure at commit 667527e - docs/" width="444">
 
 ### captcha/
 
-![Bawa main structure at commit 667527e - captcha/](docs/diagrams/captcha.svg)
+<img src="docs/diagrams/captcha.svg" alt="Bawa main structure at commit 667527e - captcha/" width="400">
 
 
 ## Why this exists
