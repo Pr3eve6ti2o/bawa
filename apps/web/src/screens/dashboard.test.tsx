@@ -805,4 +805,148 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('retries a failed asset row while unlocked', async () => {
+    // The hero is a Partial total here, so its button reads
+    // "Refresh balances" — the only Retry on the page is the failed
+    // ETH row's, and clicking it refreshes balances.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'error', reason: 'rpc-error' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Could not load balance');
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, failed asset rows offer Unlock instead of a dead Retry', async () => {
+    // While the vault is locked there is no derived address in state,
+    // so a balance refetch can only fail again with no-address: the
+    // per-row Retry must not be offered, and the page must point at
+    // the unlock screen instead. The hero already swaps its own
+    // Retry for Unlock while locked; this covers the asset rows.
+    setWallet(
+      balancesFor({
+        btc: { status: 'error', reason: 'no-address' },
+        eth: { status: 'error', reason: 'no-address' },
+        trx: { status: 'error', reason: 'no-address' },
+        ton: { status: 'error', reason: 'no-address' },
+      }),
+      { vaultState: 'locked' },
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Could not load balance');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mockRefreshBalances).not.toHaveBeenCalled();
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('retries unavailable history while unlocked', async () => {
+    // Zero balances, so no balance Retry exists: the only Retry on
+    // the page is the failed history's.
+    const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        history: {
+          btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+          eth: { status: 'empty', txs: [] },
+          trx: { status: 'empty', txs: [] },
+          ton: { status: 'empty', txs: [] },
+        },
+        refreshHistory: mockRefreshHistory,
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshHistory).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, unavailable history offers Unlock instead of a dead Retry', async () => {
+    // History refresh needs a derived address too, so while locked
+    // it fails the same way balances do: no Retry, an Unlock prompt.
+    const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        vaultState: 'locked',
+        history: {
+          btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+          eth: { status: 'empty', txs: [] },
+          trx: { status: 'empty', txs: [] },
+          ton: { status: 'empty', txs: [] },
+        },
+        refreshHistory: mockRefreshHistory,
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mockRefreshHistory).not.toHaveBeenCalled();
+      expect(mounted.div.textContent).toContain('Locked — unlock to see activity.');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

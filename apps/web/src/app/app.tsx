@@ -184,15 +184,31 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
+      {/* Desktop shell is full-bleed at lg: below lg the app is a centred
+          430px phone frame, but at lg the frame used to cap at 1440px, so
+          on a 1919px viewport the content column sat in the left ~1230px
+          with dead paper on the right. The content column itself still
+          caps for readability (see <main>); it just grows with the
+          window now. At 1440px and below nothing changes: the cap never
+          bound there. */}
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
         {!isFocusedFlow && (
           <aside
             className={
-              'hidden shrink-0 lg:block lg:border-r-2 lg:border-ink lg:bg-paper ' +
+              // The shell owns the sidebar width (and its transition);
+              // SidebarNav fills it with w-full. No border here:
+              // SidebarNav draws the single border-r-2 itself, and a
+              // duplicate shell border would shrink this aside's content
+              // box by 2px and re-overflow the inner sidebar.
+              'hidden shrink-0 transition-[width] duration-200 lg:block lg:bg-paper ' +
               (sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[224px]')
             }
           >
-            <div className="sticky top-0 flex h-screen flex-col overflow-y-auto">
+            {/* overflow-x-hidden is the guard: overflow-y-auto alone
+                computes overflow-x to auto, so any child a pixel wider
+                than the sidebar would bring back the horizontal
+                scrollbar. Vertical scrolling is unchanged. */}
+            <div className="sticky top-0 flex h-screen flex-col overflow-x-hidden overflow-y-auto">
               <SidebarNav
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() =>
@@ -249,7 +265,13 @@ function AppLayout() {
               /track — scrolled under the nav and was half-untappable.
               pb-24 leaves ~30px clear at max scroll. Desktop is
               unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
-          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
+          {/* Wide-window content cap: the column steps 1024px -> 1152px
+              at xl -> 1440px at 2xl, so on a 1919px viewport it uses the
+              window instead of freezing at 1152px. 1440px reuses the old
+              frame cap as the widest the column ever gets, keeping line
+              lengths readable; the narrow task screens keep their own
+              480px cap above. */}
+          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
             {isNarrow || isWideAtLg ? (
               <div
                 className={

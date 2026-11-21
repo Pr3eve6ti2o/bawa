@@ -46,13 +46,13 @@ export function SidebarNav({
   const collapseLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
-    <aside
-      className={[
-        "flex h-full shrink-0 flex-col border-r-2 border-ink bg-paper text-ink",
-        "transition-[width] duration-200",
-        collapsed ? "w-20" : "w-64",
-      ].join(" ")}
-    >
+    // Width is owned by the shell in app.tsx (lg:w-[224px] / lg:w-[72px]);
+    // this aside fills it exactly. A fixed width here drifted from the
+    // shell — w-64 is 256px against the shell's 224px (w-20 is 80px
+    // against 72px) — and overflowed the shell's sticky wrapper, whose
+    // overflow-y-auto computes overflow-x to auto: a permanent
+    // horizontal scrollbar on every desktop page.
+    <aside className="flex h-full w-full shrink-0 flex-col border-r-2 border-ink bg-paper text-ink">
       <div
         className={[
           "flex shrink-0 items-center p-4",

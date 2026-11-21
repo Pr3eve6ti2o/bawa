@@ -45,16 +45,28 @@ export function PopularChainsStrip({
 
   const chains = availableFor("balance");
 
+  // The strip sits in a parent grid on both screens (dashboard 2-col,
+  // welcome 5-col). lg:col-span-full keeps it on a full-width row so all
+  // five cards fit at desktop widths instead of being squeezed into one
+  // column and scrolling; below lg the parents are block layout and the
+  // class is inert.
   return (
     <section
       aria-labelledby="popular-chains-title"
-      className="min-w-0 bg-paper text-ink"
+      className="min-w-0 bg-paper text-ink lg:col-span-full"
     >
       <h2 id="popular-chains-title" className="text-xl font-semibold text-ink">
         Popular chains
       </h2>
 
-      <ul className="mt-3 flex gap-3 overflow-x-auto px-1 py-2">
+      {/* When the strip is narrower than the five cards (mobile, narrow
+          desktop) it scrolls; mandatory snap lands every card fully in
+          view so a label is never left cut off mid-word. */}
+      <ul
+        tabIndex={0}
+        aria-label="Popular chains"
+        className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-1 px-1 py-2"
+      >
         {chains.map((chain) => {
           const config = chainConfig(chain);
           const display = chainStripDisplay(
@@ -84,7 +96,7 @@ export function PopularChainsStrip({
                 : "bg-paper";
 
           return (
-            <li key={chain} className="min-w-36 flex-1">
+            <li key={chain} className="min-w-36 flex-1 snap-start">
               <NavLink
                 to={`/assets/${chain}`}
                 aria-current="page"
@@ -158,7 +170,7 @@ export function PopularChainsStrip({
           );
         })}
 
-        <li className="min-w-36 flex-1">
+        <li className="min-w-36 flex-1 snap-start">
           <Link to="/networks" className={TILE_CLASS_NAME}>
             <span
               aria-hidden="true"

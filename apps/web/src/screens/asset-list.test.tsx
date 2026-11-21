@@ -222,4 +222,67 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('retries a failed balance while unlocked', async () => {
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mockRefreshBalances = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: mockRefreshBalances,
+      vaultState: 'unlocked',
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, failed balances offer Unlock instead of a dead Retry', async () => {
+    // While the vault is locked there is no derived address in state,
+    // so a balance refetch can only fail again with no-address: the
+    // per-row Retry must not be offered, and the page must point at
+    // the unlock screen instead.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mockRefreshBalances = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: mockRefreshBalances,
+      vaultState: 'locked',
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mockRefreshBalances).not.toHaveBeenCalled();
+      const unlock = mounted.div.querySelector('a[href="/lock"]');
+      expect(unlock).not.toBeNull();
+      expect(unlock?.textContent).toContain('Unlock');
+      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

@@ -76,6 +76,7 @@ function getRowModel(
   prices: PriceMap | undefined,
   nowMs: number,
   pricesLoading: boolean | undefined,
+  isLocked: boolean,
 ): AssetRowModel {
   const { balances } = wallet;
   const config = chainConfig(chain);
@@ -105,7 +106,11 @@ function getRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
-      showRetry: true,
+      // No Retry while locked: a refetch needs a derived address and
+      // there is none in state while locked (refreshBalances resolves
+      // to no-address), so Retry could only fail again. AssetRows
+      // shows one Unlock prompt for the list instead.
+      showRetry: !isLocked,
     };
   }
 
@@ -362,7 +367,9 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
  * ("Price unavailable" / "Price error" / "Price expired"), never a
  * silent empty and never a fabricated number. While the first fetch is
  * still in flight, idle entries read as unavailable, so no price state
- * is shown rather than a premature failure.
+ * is shown rather than a premature failure. While the vault is locked,
+ * a failed row shows no Retry — a refetch cannot succeed without a
+ * derived address — and the list shows one Unlock prompt instead.
  *
  * Variants: 'list' (default) is the compact row the dashboard uses.
  * 'table' is the asset list's wide layout (MetaMask's
@@ -409,9 +416,35 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
   };
   const nowMs = pricesNowMs ?? Date.now();
 
+  // While the vault is locked there is no derived address in state, so
+  // a balance refetch can only fail again with no-address (see
+  // refreshBalances in state/wallet-context). The per-row Retry is
+  // suppressed while locked (showRetry in getRowModel) and this one
+  // Unlock prompt replaces it for the whole list, using the same copy
+  // as the dashboard hero's locked message. It shows only when a row
+  // actually failed — a locked vault with nothing to retry gets no
+  // prompt. 'no-vault' keeps its Retry: a watch-only xpub address can
+  // still load, so a refetch there may succeed.
+  const isLocked = wallet.vaultState === 'locked';
+  const hasFailedRow = visible.some((chain) => {
+    const balance = balances[chain];
+    return balance.status === 'unavailable' || balance.status === 'error';
+  });
+  const lockedNotice =
+    isLocked && hasFailedRow ? (
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <p className="text-sm text-muted-foreground">Locked — unlock to see balances.</p>
+        <Button type="button" variant="outline" asChild>
+          <Link to="/lock">Unlock</Link>
+        </Button>
+      </div>
+    ) : null;
+
   if (variant === 'table') {
     return (
-      <div className="@container">
+      <>
+        {lockedNotice}
+        <div className="@container">
         <div
           aria-hidden="true"
           className="hidden gap-x-4 border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground @md:grid @md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]"
@@ -425,24 +458,28 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
           {visible.map((chain) => (
             <TableRow
               key={chain}
-              model={getRowModel(chain, wallet, prices, nowMs, pricesLoading)}
+              model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
               onRetry={onRetry}
             />
           ))}
         </ul>
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <ul className="divide-y divide-border">
-      {visible.map((chain) => (
-        <ListRow
-          key={chain}
-          model={getRowModel(chain, wallet, prices, nowMs, pricesLoading)}
-          onRetry={onRetry}
-        />
-      ))}
-    </ul>
+    <>
+      {lockedNotice}
+      <ul className="divide-y divide-border">
+        {visible.map((chain) => (
+          <ListRow
+            key={chain}
+            model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
+            onRetry={onRetry}
+          />
+        ))}
+      </ul>
+    </>
   );
 }

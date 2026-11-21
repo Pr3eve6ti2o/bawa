@@ -28,6 +28,7 @@ export function AssetDetailScreen() {
     errors,
     balances,
     history,
+    vaultState,
     refreshChain,
     refreshBalances,
     refreshHistory,
@@ -185,9 +186,18 @@ export function AssetDetailScreen() {
                 : 'Balance unavailable for this network.'}
               {balance.reason ? ` ${humanReasonMessage(balance.reason, 'balance')}` : ''}
             </p>
-            <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
-              Retry
-            </Button>
+            {vaultState === 'locked' ? (
+              <>
+                <p className="text-sm text-panel-text-muted">Locked — unlock to see balances.</p>
+                <Button type="button" variant="outline" asChild>
+                  <Link to="/lock">Unlock</Link>
+                </Button>
+              </>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
+                Retry
+              </Button>
+            )}
           </>
         )}
         {(balance.status === 'available' || balance.status === 'zero') && balance.stale === true ? (
@@ -348,9 +358,18 @@ export function AssetDetailScreen() {
                 : 'Transaction history is unavailable for this chain.'}
               {chainHistory.reason ? ` ${humanReasonMessage(chainHistory.reason, 'history')}` : ''}
             </p>
-            <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
-              Retry
-            </Button>
+            {vaultState === 'locked' ? (
+              <>
+                <p className="text-sm text-panel-text-muted">Locked — unlock to see activity.</p>
+                <Button type="button" variant="outline" asChild>
+                  <Link to="/lock">Unlock</Link>
+                </Button>
+              </>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
+                Retry
+              </Button>
+            )}
           </div>
         )}
       </section>

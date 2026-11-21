@@ -112,6 +112,33 @@ describe("PopularChainsStrip", () => {
     expect(linkTo("/networks").textContent).toContain("All networks");
   });
 
+  it("spans the full grid row and snaps cards fully into view when scrolling", async () => {
+    await renderStrip();
+
+    // Full-width row: without lg:col-span-full the strip lands in one
+    // parent-grid column (dashboard 7fr/2fr, welcome 1 of 5) and the
+    // "All networks" card is cut off at desktop widths where all five
+    // cards would otherwise fit.
+    const section = container.querySelector("section");
+    expect(section?.className).toContain("lg:col-span-full");
+
+    const list = container.querySelector("ul");
+    expect(list).not.toBeNull();
+    expect(list?.className).toContain("snap-x");
+    expect(list?.className).toContain("snap-mandatory");
+    expect(list?.className).toContain("scroll-px-1");
+    // Keyboard users can scroll the strip with arrow keys when it overflows.
+    expect(list?.getAttribute("tabindex")).toBe("0");
+
+    // Every card is a snap point, so a scroll never rests with a card
+    // cut off mid-word.
+    const items = container.querySelectorAll("li");
+    expect(items).toHaveLength(5);
+    for (const item of items) {
+      expect(item.className).toContain("snap-start");
+    }
+  });
+
   it("shows an SVG coin doodle and display name for every chain, without images", async () => {
     await renderStrip();
 

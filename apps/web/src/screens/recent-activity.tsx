@@ -14,7 +14,14 @@ import { Skeleton } from '../ui/components/skeleton';
  * only one instance is ever visible at a time.
  */
 export function RecentActivity() {
-  const { history, refreshHistory } = useWallet();
+  const { history, refreshHistory, vaultState } = useWallet();
+  // While the vault is locked there is no derived address in state, so
+  // a history refetch can only fail again with no-address (see
+  // refreshHistory in state/wallet-context) — the same dead-Retry
+  // mechanism as the balance rows. The per-chain Retry is suppressed
+  // while locked and one Unlock prompt replaces it. 'no-vault' keeps
+  // its Retry: a watch-only xpub address can still load history.
+  const isLocked = vaultState === 'locked';
 
   // `history` is optional-chained throughout: the dashboard tests mock a
   // wallet without history for the Tokens view, and the old dashboard
@@ -130,16 +137,26 @@ export function RecentActivity() {
                 <p className="text-sm text-panel-text-soft">
                   {`${chainConfig(chain).displayName} history unavailable`}
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void refreshHistory()}
-                  className="h-11 shrink-0"
-                >
-                  Retry
-                </Button>
+                {!isLocked && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void refreshHistory()}
+                    className="h-11 shrink-0"
+                  >
+                    Retry
+                  </Button>
+                )}
               </div>
             ))}
+            {isLocked && unavailableChains.length > 0 && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3">
+                <p className="text-sm text-panel-text-soft">Locked — unlock to see activity.</p>
+                <Button type="button" variant="outline" asChild className="h-11 shrink-0">
+                  <Link to="/lock">Unlock</Link>
+                </Button>
+              </div>
+            )}
           </>
         );
       })()}
