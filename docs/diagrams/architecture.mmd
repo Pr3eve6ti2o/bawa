@@ -1,0 +1,36 @@
+flowchart TB
+  accTitle: Bawa main at 667527e: route-only architecture
+  accDescr: The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and three launcher targets are unavailable.
+
+  U1["Executable tool route: UNAVAILABLE<br/>scripts/build-wallet.mjs<br/>Missing on main; not working"]
+  U2["Executable tool route: UNAVAILABLE<br/>scripts/generate-project.mjs<br/>Missing on main; not working"]
+  U3["Executable tool route: UNAVAILABLE<br/>tools/hdwallet-gen/derive-ton.js<br/>Missing on main; not working"]
+
+  R["CLI tool<br/>tools/bawa_cli.py<br/>5 menu options<br/>--route: one match<br/>Prints routes only<br/>Never runs routes"]
+
+  H["Opt 2: public roots only<br/>derive.js: BTC/ETH/TRX<br/>derive_daemon.js: JSONL<br/>compare.js: addr<br/>extended-key.js"]
+
+  A["Docs 3/4: AI build guides 01-16<br/>Main: no wallet/apps/web<br/>No WALLET_BUILDER.md<br/>No sign/broadcast/balance fetch"]
+
+  subgraph secrets["Trust boundary<br/>Secret-handling tools"]
+    M["Executable tool<br/>Option 1: make_wallet.py<br/>24-word BIP-39<br/>Interactive generator<br/>AES-256-GCM seed.enc.json"]
+    G["Executable tool<br/>Option 2: generate.js<br/>TON m/44'/607'/0'<br/>Single address; no xpub"]
+    D["Executable tool<br/>Option 5: decrypt_seed.py<br/>Decrypt check<br/>Not a completed<br/>recovery rehearsal"]
+  end
+
+  %% Invisible layout constraints; the eight architecture edges remain below.
+  U1 ~~~ U2
+  U2 ~~~ U3
+  U3 ~~~ R
+  H ~~~ A
+  A ~~~ D
+  D ~~~ M
+
+  R -.->|"1: printed route"| M
+  R -.->|"2: printed route"| H
+  R -.->|"3 and 4: printed routes"| A
+  R -.->|"5: printed route"| D
+  R -.->|"unavailable printed route"| U1
+  R -.->|"unavailable printed route"| U2
+  R -.->|"unavailable printed route"| U3
+  M -->|"Data key over inherited pipe<br/>BAWA_DATA_KEY_FD"| G

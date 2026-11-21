@@ -63,44 +63,9 @@ Do not treat these checks as a mainnet or production-readiness claim.
 
 On `main` at HEAD `667527e` (verified 2026-11-20), Bawa's launcher prints routes and never executes them. Secret-handling tools sit inside a trust boundary; public-roots-only tools, documentation routes and unavailable printed routes sit outside it.
 
-```mermaid
-flowchart TB
-  accTitle: Bawa main at 667527e: route-only architecture
-  accDescr: The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and three launcher targets are unavailable.
+*Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
 
-  U1["Executable tool route: UNAVAILABLE<br/>scripts/build-wallet.mjs<br/>Missing on main; not working"]
-  U2["Executable tool route: UNAVAILABLE<br/>scripts/generate-project.mjs<br/>Missing on main; not working"]
-  U3["Executable tool route: UNAVAILABLE<br/>tools/hdwallet-gen/derive-ton.js<br/>Missing on main; not working"]
-
-  R["CLI tool<br/>tools/bawa_cli.py<br/>5 menu options<br/>--route: one match<br/>Prints routes only<br/>Never runs routes"]
-
-  H["Opt 2: public roots only<br/>derive.js: BTC/ETH/TRX<br/>derive_daemon.js: JSONL<br/>compare.js: addr<br/>extended-key.js"]
-
-  A["Docs 3/4: AI build guides 01-16<br/>Main: no wallet/apps/web<br/>No WALLET_BUILDER.md<br/>No sign/broadcast/balance fetch"]
-
-  subgraph secrets["Trust boundary<br/>Secret-handling tools"]
-    M["Executable tool<br/>Option 1: make_wallet.py<br/>24-word BIP-39<br/>Interactive generator<br/>AES-256-GCM seed.enc.json"]
-    G["Executable tool<br/>Option 2: generate.js<br/>TON m/44'/607'/0'<br/>Single address; no xpub"]
-    D["Executable tool<br/>Option 5: decrypt_seed.py<br/>Decrypt check<br/>Not a completed<br/>recovery rehearsal"]
-  end
-
-  %% Invisible layout constraints; the eight architecture edges remain below.
-  U1 ~~~ U2
-  U2 ~~~ U3
-  U3 ~~~ R
-  H ~~~ A
-  A ~~~ D
-  D ~~~ M
-
-  R -.->|"1: printed route"| M
-  R -.->|"2: printed route"| H
-  R -.->|"3 and 4: printed routes"| A
-  R -.->|"5: printed route"| D
-  R -.->|"unavailable printed route"| U1
-  R -.->|"unavailable printed route"| U2
-  R -.->|"unavailable printed route"| U3
-  M -->|"Data key over inherited pipe<br/>BAWA_DATA_KEY_FD"| G
-```
+![Bawa main at 667527e: route-only architecture](docs/diagrams/architecture.svg)
 
 ### Inside the trust boundary
 
@@ -120,129 +85,37 @@ For the detailed design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Overview
 
-```mermaid
-flowchart RL
-  accTitle: Bawa main structure at commit 667527e
-  accDescr: Layout verified at commit 667527e, with grouped documentation.
+*Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
 
-  repo["Bawa main: 667527e"]
-  repo --> root["Root files"]
-  repo --> github[".github/"]
-  repo --> tools["tools/"]
-  repo --> tests["test/"]
-  repo --> docs["docs/"]
-  repo --> captcha["captcha/<br/>Vendored third-party reference code<br/>Not Bawa code or a feature"]
-```
+![Bawa main structure at commit 667527e](docs/diagrams/structure-overview.svg)
 
 ### Root files (1 of 2)
 
-```mermaid
-flowchart RL
-  accTitle: Bawa Root files at commit 667527e, part 1 of 2
-  accDescr: These seven files are direct children of Root files in the overview. The remaining seven files are shown in part 2.
-
-  root["Root files"]
-  root --> r1["AGENTS.md"]
-  root --> r2["ARCHITECTURE.md"]
-  root --> r3["CHANGELOG.md"]
-  root --> r4["CONTRIBUTING.md"]
-  root --> r5["IMPLEMENTATION.md"]
-  root --> r6["LICENSE"]
-  root --> r7["README.md"]
-```
+![Bawa Root files at commit 667527e, part 1 of 2](docs/diagrams/root-files-1.svg)
 
 ### Root files (2 of 2)
 
-```mermaid
-flowchart RL
-  accTitle: Bawa Root files at commit 667527e, part 2 of 2
-  accDescr: Six of these seven files continue part 1 as the remaining direct children of Root files in the overview. The seventh file, ci.yml, lives under .github/ and is shown there in the overview.
-
-  root["Root files"]
-  root --> r8["SECURITY.md"]
-  root --> r9["package.json"]
-  root --> r10["requirements.txt"]
-  root --> r11[".env.example"]
-  root --> r12[".editorconfig"]
-  root --> r13[".gitignore"]
-  root --> r14[".github/workflows/ci.yml"]
-```
+![Bawa Root files at commit 667527e, part 2 of 2](docs/diagrams/root-files-2.svg)
 
 ### tools/ - files
 
-```mermaid
-flowchart RL
-  accTitle: Bawa tools/ files at commit 667527e
-  accDescr: These three files are direct children of tools/ in the overview. Its fourth direct child, hdwallet-gen/, is shown in the next diagram.
-
-  tools["tools/"]
-  tools --> t1["bawa_cli<br/>.py"]
-  tools --> t2["make_wallet<br/>.py"]
-  tools --> t3["decrypt_seed<br/>.py"]
-```
+![Bawa tools/ files at commit 667527e](docs/diagrams/tools-files.svg)
 
 ### tools/ - hdwallet-gen/
 
-```mermaid
-flowchart RL
-  accTitle: Bawa tools/ hdwallet-gen/ at commit 667527e
-  accDescr: hdwallet-gen/ is a direct child of tools/ in the overview. Arrows show its seven direct child files.
-
-  hd["hdwallet-gen/"]
-  hd --> h1["derive.js"]
-  hd --> h2["derive_daemon.js"]
-  hd --> h3["compare.js"]
-  hd --> h4["generate.js"]
-  hd --> h5["extended-key.js"]
-  hd --> h6["package.json"]
-  hd --> h7["package-lock.json"]
-```
+![Bawa tools/ hdwallet-gen/ at commit 667527e](docs/diagrams/tools-hdwallet-gen.svg)
 
 ### test/
 
-```mermaid
-flowchart RL
-  accTitle: Bawa main structure at commit 667527e - test/
-  accDescr: Layout of test/ verified at commit 667527e.
-
-  tests["test/"]
-  tests --> s1["differential_test.py"]
-  tests --> s2["test_bawa_cli.py"]
-  tests --> s3["test_make_wallet.py"]
-  tests --> s4["smoke.test.js"]
-  tests --> s5["fixture-oracle-vectors.json"]
-```
+![Bawa main structure at commit 667527e - test/](docs/diagrams/test.svg)
 
 ### docs/
 
-```mermaid
-flowchart RL
-  accTitle: Bawa main structure at commit 667527e - docs/
-  accDescr: Layout verified at commit 667527e, with grouped documentation under docs/.
-
-  docs["docs/"]
-  docs --> guides["Numbered guides<br/>docs/01 to docs/16<br/>README.md in each<br/>docs/06-tracking/providers.json"]
-  docs --> loose["Loose docs files<br/>FAQ.md<br/>GLOSSARY.md<br/>REFERENCES.md<br/>RECOVERY.md<br/>SECURITY.md<br/>TESTING.md<br/>FURTHER-READING.md<br/>README.md<br/>README-FULL.md"]
-  docs --> web["web-wallet/WEB-GUIDE.md"]
-  docs --> android["android-wallet/ANDROID-GUIDE.md"]
-  docs --> mainnet["mainnet/MAINNET-GUIDE.md"]
-```
+![Bawa main structure at commit 667527e - docs/](docs/diagrams/docs.svg)
 
 ### captcha/
 
-```mermaid
-flowchart RL
-  accTitle: Bawa main structure at commit 667527e - captcha/
-  accDescr: Layout verified at commit 667527e. captcha is vendored third-party reference code, not Bawa code or a feature.
-
-  captcha["captcha/<br/>Vendored third-party reference code<br/>Not Bawa code or a feature"]
-  captcha --> c1["README.md"]
-  captcha --> c2["run-tronscan-check"]
-  captcha --> c3["vendors"]
-  captcha --> c4["package.json"]
-  captcha --> c5["licenses"]
-  captcha --> c6["package-lock.json"]
-```
+![Bawa main structure at commit 667527e - captcha/](docs/diagrams/captcha.svg)
 
 
 ## Why this exists
