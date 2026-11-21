@@ -312,3 +312,130 @@ describe('formatFeePreview display-decimal bound', () => {
     expect(() => formatFeePreview('1', 18, 'ETH', 20_000_000)).toThrow(message);
   });
 });
+
+describe('money rounding boundaries and Decimal config isolation', () => {
+  // Synthetic test data only; expected values are hand-rounded.
+  it('keeps fee and fiat results unchanged after global Decimal config mutation', () => {
+    expect.assertions(6);
+
+    const originalConfig = {
+      rounding: Decimal.rounding,
+      precision: Decimal.precision,
+    };
+
+    try {
+      // 123456789 / 10^8 = 1.23456789 -> 1.235 at three places.
+      // (25 / 10) * 5 = 12.5 -> 13 integer minor units.
+      const feeBefore = formatFeePreview('123456789', 8, 'TOK', 3);
+      const fiatBefore = fiatMinorUnits('25', 1, '5');
+
+      expect(feeBefore).toBe('1.235 TOK');
+      expect(fiatBefore).toBe(13);
+
+      Decimal.set({ rounding: Decimal.ROUND_DOWN, precision: 1 });
+
+      const feeAfter = formatFeePreview('123456789', 8, 'TOK', 3);
+      const fiatAfter = fiatMinorUnits('25', 1, '5');
+
+      expect(feeAfter).toBe(feeBefore);
+      expect(fiatAfter).toBe(fiatBefore);
+
+      // Isolation must not overwrite the caller's global settings.
+      expect(Decimal.rounding).toBe(Decimal.ROUND_DOWN);
+      expect(Decimal.precision).toBe(1);
+    } finally {
+      Decimal.set(originalConfig);
+    }
+  });
+
+  // Dividing by 10^30 gives 1.2345675 - 10^-30, the tie itself,
+  // and 1.2345675 + 10^-30. Six-place half-up gives 1.234567
+  // below the tie and 1.234568 at or above it.
+  it.each([
+    {
+      position: 'just below',
+      valueBaseUnits: '1234567499999999999999999999999',
+      expected: '1.234567 TOK',
+    },
+    {
+      position: 'at',
+      valueBaseUnits: '1234567500000000000000000000000',
+      expected: '1.234568 TOK',
+    },
+    {
+      position: 'just above',
+      valueBaseUnits: '1234567500000000000000000000001',
+      expected: '1.234568 TOK',
+    },
+  ])(
+    'rounds an exact long fee decimal $position a six-place tie',
+    ({ valueBaseUnits, expected }) => {
+      expect(formatFeePreview(valueBaseUnits, 30, 'TOK', 6)).toBe(
+        expected,
+      );
+    },
+  );
+
+  // Dividing by 10^30 and multiplying by 5 gives 12.5 - 5 * 10^-30,
+  // 12.5, and 12.5 + 5 * 10^-30. Integer half-up gives 12 below
+  // the tie and 13 at or above it.
+  it.each([
+    {
+      position: 'just below',
+      balanceBaseUnits: '2499999999999999999999999999999',
+      expected: 12,
+    },
+    {
+      position: 'at',
+      balanceBaseUnits: '2500000000000000000000000000000',
+      expected: 13,
+    },
+    {
+      position: 'just above',
+      balanceBaseUnits: '2500000000000000000000000000001',
+      expected: 13,
+    },
+  ])(
+    'rounds exact long fiat arithmetic $position an integer tie',
+    ({ balanceBaseUnits, expected }) => {
+      expect(fiatMinorUnits(balanceBaseUnits, 30, '5')).toBe(expected);
+    },
+  );
+
+  it('preserves a fee rounding carry across the safe-integer boundary', () => {
+    // 90071992547409919999995 / 10^7 = 9007199254740991.9999995.
+    // Six-place half-up carries to 9007199254740992.000000.
+    // A fee preview remains an exact string beyond MAX_SAFE_INTEGER.
+    expect(
+      formatFeePreview('90071992547409919999995', 7, 'TOK'),
+    ).toBe('9007199254740992 TOK');
+  });
+
+  // 123456789 / 10^8 = 1.23456789: hand rounding gives 1.235
+  // at three places and 1.2346 at four; all eight places are exact.
+  // Currency symbols here are display labels for synthetic amounts.
+  it.each([
+    {
+      symbol: 'KWD',
+      displayDecimals: 3,
+      expected: '1.235 KWD',
+    },
+    {
+      symbol: 'CLF',
+      displayDecimals: 4,
+      expected: '1.2346 CLF',
+    },
+    {
+      symbol: 'BTC',
+      displayDecimals: 8,
+      expected: '1.23456789 BTC',
+    },
+  ])(
+    'supports the $displayDecimals-decimal currency display scale for $symbol',
+    ({ symbol, displayDecimals, expected }) => {
+      expect(
+        formatFeePreview('123456789', 8, symbol, displayDecimals),
+      ).toBe(expected);
+    },
+  );
+});
