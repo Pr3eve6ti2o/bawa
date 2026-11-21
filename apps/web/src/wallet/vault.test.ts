@@ -1,31 +1,32 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { writeAutoLockEnabled } from './auto-lock';
 import {
   autoUnlock,
   changePassword,
   createVault,
+  deleteStoredKey,
   deleteVault,
   getSessionPassphrase,
+  hasStoredKey,
   hasVault,
+  isLocked,
+  lock,
   PBKDF2_ITERATIONS,
+  storeCurrentKey,
+  unlock,
   VAULT_CORRUPTED,
   VAULT_KEY_STORAGE_KEY,
   VAULT_STORAGE_KEY,
+  VAULT_WRONG_PASSWORD,
   vaultProfiles,
   withMnemonic,
   withMnemonicAsync,
 } from './vault';
 
-// Vault-lock removal (owner order 2026-11-20): isLocked/lock/unlock no
-// longer exist, so every test that asserted lock behaviour was removed:
-// - "unlocks with the right password..." (unlock + lock cycle)
-// - "rejects a wrong password..." — there is no password check any more;
-//   a wrong stored key / tampered ciphertext is covered by autoUnlock
-//   returning false (see 'autoUnlock' below), not by a rejection.
-// - "throws when locked" (withMnemonicAsync) — replaced by the
-//   not-unlocked case below.
-// The auto-lock timer tests lived in state/wallet-context.test.tsx and
-// were removed with the timer itself.
+// Lock tests were restored by the optional-auto-lock order (owner order
+// 2026-11-20 ~23:11 IST), which also added stored-key invariant tests.
+// Auto-lock timer tests live in state/wallet-context.test.tsx.
 
 function decodeB64(value: string): Uint8Array {
   const binary = atob(value);
@@ -298,5 +299,199 @@ describe('session passphrase', () => {
   it('defaults to an empty session passphrase', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     expect(getSessionPassphrase()).toBe('');
+  });
+});
+
+// Lock tests were deleted with lock removal (owner order 2026-11-20);
+// they are now restored by the optional-auto-lock order.
+describe('vault locking', () => {
+  beforeEach(() => {
+    writeAutoLockEnabled(true);
+  });
+
+  it('is locked before creation', () => {
+    expect(isLocked()).toBe(true);
+  });
+
+  it('is locked after lock()', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(isLocked()).toBe(false);
+
+    lock();
+
+    expect(isLocked()).toBe(true);
+  });
+
+  it('restores the mnemonic when unlocked with the correct password', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+
+    await unlock(TEST_PASSWORD);
+
+    expect(isLocked()).toBe(false);
+    expect(withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+    await expect(
+      withMnemonicAsync(async (mnemonic) => mnemonic),
+    ).resolves.toBe(TEST_MNEMONIC);
+  });
+
+  it('throws Incorrect password. for a wrong password and remains locked', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+
+    expect(VAULT_WRONG_PASSWORD).toBe('Incorrect password.');
+    await expect(unlock(`${TEST_PASSWORD}-wrong`)).rejects.toThrow(
+      VAULT_WRONG_PASSWORD,
+    );
+
+    expect(isLocked()).toBe(true);
+  });
+
+  it('rejects synchronous and asynchronous mnemonic access while locked', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+
+    expect(() => withMnemonic((mnemonic) => mnemonic)).toThrow(
+      'Vault is not unlocked.',
+    );
+    await expect(
+      Promise.resolve().then(() =>
+        withMnemonicAsync(async (mnemonic) => mnemonic),
+      ),
+    ).rejects.toThrow('Vault is not unlocked.');
+  });
+
+  it('drops the mnemonic again when locked after unlocking', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+    await unlock(TEST_PASSWORD);
+
+    expect(withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+
+    lock();
+
+    expect(isLocked()).toBe(true);
+    expect(() => withMnemonic((mnemonic) => mnemonic)).toThrow(
+      'Vault is not unlocked.',
+    );
+  });
+});
+
+describe('auto-lock stored-key invariant', () => {
+  beforeEach(() => {
+    writeAutoLockEnabled(true);
+  });
+
+  it('creates no stored key with auto-lock ON and cannot auto-unlock after reload', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+
+    expect(hasStoredKey()).toBe(false);
+
+    lock();
+    await autoUnlock();
+    expect(isLocked()).toBe(true);
+
+    const fresh = await freshVaultModule();
+    await fresh.autoUnlock();
+
+    expect(fresh.hasStoredKey()).toBe(false);
+    expect(fresh.isLocked()).toBe(true);
+    expect(() => fresh.withMnemonic((mnemonic) => mnemonic)).toThrow(
+      'Vault is not unlocked.',
+    );
+  });
+
+  it('stores the key with auto-lock OFF and auto-unlocks after reload', async () => {
+    writeAutoLockEnabled(false);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+
+    expect(hasStoredKey()).toBe(true);
+
+    const fresh = await freshVaultModule();
+    await fresh.autoUnlock();
+
+    expect(fresh.hasStoredKey()).toBe(true);
+    expect(fresh.isLocked()).toBe(false);
+    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+  });
+
+  it('stores no key when unlocking with auto-lock ON', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+    expect(hasStoredKey()).toBe(false);
+
+    await unlock(TEST_PASSWORD);
+
+    expect(isLocked()).toBe(false);
+    expect(hasStoredKey()).toBe(false);
+  });
+
+  it('stores the key when unlocking with auto-lock OFF', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+    expect(hasStoredKey()).toBe(false);
+
+    writeAutoLockEnabled(false);
+    await unlock(TEST_PASSWORD);
+
+    expect(isLocked()).toBe(false);
+    expect(hasStoredKey()).toBe(true);
+  });
+
+  it('leaves no stored key when changing the password with auto-lock ON', async () => {
+    writeAutoLockEnabled(false);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(hasStoredKey()).toBe(true);
+
+    writeAutoLockEnabled(true);
+    const newPassword = `${TEST_PASSWORD}-changed`;
+    await changePassword(newPassword);
+
+    expect(hasStoredKey()).toBe(false);
+
+    const fresh = await freshVaultModule();
+    await fresh.autoUnlock();
+    expect(fresh.isLocked()).toBe(true);
+
+    await fresh.unlock(newPassword);
+
+    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+    expect(fresh.hasStoredKey()).toBe(false);
+  });
+
+  it('returns false from storeCurrentKey() while locked and true while unlocked', async () => {
+    await expect(storeCurrentKey()).resolves.toBe(false);
+
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    lock();
+
+    await expect(storeCurrentKey()).resolves.toBe(false);
+    expect(hasStoredKey()).toBe(false);
+
+    await unlock(TEST_PASSWORD);
+    writeAutoLockEnabled(false);
+
+    await expect(storeCurrentKey()).resolves.toBe(true);
+    expect(hasStoredKey()).toBe(true);
+  });
+
+  it('deletes the stored key without deleting the vault', async () => {
+    writeAutoLockEnabled(false);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(hasStoredKey()).toBe(true);
+
+    deleteStoredKey();
+
+    expect(hasStoredKey()).toBe(false);
+    expect(hasVault()).toBe(true);
+
+    const fresh = await freshVaultModule();
+    expect(fresh.hasVault()).toBe(true);
+
+    await fresh.autoUnlock();
+    expect(fresh.isLocked()).toBe(true);
+
+    await fresh.unlock(TEST_PASSWORD);
+    expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
   });
 });

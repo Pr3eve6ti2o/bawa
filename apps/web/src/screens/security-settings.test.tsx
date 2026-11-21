@@ -14,9 +14,23 @@ const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
-function setWallet(vaultState: string): void {
+vi.mock('../wallet/vault', () => ({
+  deleteVault: vi.fn(),
+}));
+
+function setWallet(
+  vaultState: string,
+  extra: Partial<ReturnType<typeof useWallet>> = {},
+): void {
   vi.mocked(useWallet).mockReturnValue({
     vaultState,
+    autoLockEnabled: false,
+    autoLockMinutes: 5,
+    setAutoLockMinutes: vi.fn(),
+    setAutoLockEnabled: vi.fn(async () => {}),
+    unlockVault: vi.fn(async () => {}),
+    refreshVaultAccounts: vi.fn(async () => {}),
+    ...extra,
   } as unknown as ReturnType<typeof useWallet>);
 }
 
@@ -68,27 +82,29 @@ describe('security settings screen', () => {
     }
   });
 
-  it('says the vault stays unlocked on this device', async () => {
-    // Vault-lock removal: the Vault lock card, the auto-lock selector
-    // and the "Lock now" / "Lock vault" buttons are gone. The page
-    // says plainly that the wallet stays unlocked.
+  it('shows the auto-lock setting instead of a stays-unlocked claim', async () => {
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Vault stays unlocked');
-      expect(text).toContain(
-        'Your wallet stays unlocked on this device. Anyone with access to this device can open it.',
-      );
-      expect(text).not.toContain('Vault lock');
-      expect(text).not.toContain('Lock after inactivity');
-      expect(text).not.toContain('Lock vault');
-      expect(text).not.toContain('Lock now');
-      expect(text).not.toContain('locks after');
-      expect(mounted.div.querySelector('#auto-lock')).toBeNull();
-      expect(mounted.div.querySelector('a[href="/lock"]')).toBeNull();
+      expect(text).toContain('Auto-lock off');
+      expect(text).not.toContain('Vault stays unlocked');
+      expect(mounted.div.querySelector('select#auto-lock')).toBeNull();
     } finally {
       await mounted.cleanup();
+    }
+
+    setWallet('unlocked', { autoLockEnabled: true });
+    const autoLockMounted = await mountScreen();
+    try {
+      const select = autoLockMounted.div.querySelector('select#auto-lock');
+      expect(select).not.toBeNull();
+      expect(select?.querySelectorAll('option')).toHaveLength(6);
+      expect(autoLockMounted.div.textContent ?? '').toContain(
+        'locks after 5 minutes without activity',
+      );
+    } finally {
+      await autoLockMounted.cleanup();
     }
   });
 
@@ -99,6 +115,43 @@ describe('security settings screen', () => {
       expect(mounted.div.textContent).toContain('No vault yet');
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it('requires two taps to delete a locked vault and refreshes accounts', async () => {
+    const { deleteVault } = await import('../wallet/vault');
+    vi.mocked(deleteVault).mockClear();
+    const refreshVaultAccounts = vi.fn(async () => {});
+    setWallet('locked', { refreshVaultAccounts });
+    const { div, cleanup } = await mountScreen();
+
+    try {
+      expect(div.textContent).toContain('Delete vault');
+      const firstButton = div.querySelector('button');
+      const deleteButton =
+        firstButton?.textContent === 'Delete vault'
+          ? firstButton
+          : Array.from(div.querySelectorAll('button')).find(
+              (button) => button.textContent === 'Delete vault',
+            );
+      expect(deleteButton?.textContent).toBe('Delete vault');
+
+      await act(async () => {
+        deleteButton!.click();
+      });
+
+      expect(deleteButton?.textContent).toBe('Tap again to confirm delete');
+      expect(deleteVault).not.toHaveBeenCalled();
+      expect(refreshVaultAccounts).not.toHaveBeenCalled();
+
+      await act(async () => {
+        deleteButton!.click();
+      });
+
+      expect(deleteVault).toHaveBeenCalledTimes(1);
+      expect(refreshVaultAccounts).toHaveBeenCalledTimes(1);
+    } finally {
+      await cleanup();
     }
   });
 

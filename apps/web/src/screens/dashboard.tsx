@@ -31,7 +31,9 @@ export function DashboardScreen() {
   const {
     balances,
     refreshBalances,
+    vaultState,
   } = useWallet();
+  const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
   // Hide-balance toggle (Rabby's DashboardPanel): masks the hero total
@@ -203,7 +205,7 @@ export function DashboardScreen() {
 
   // The toggle masks a real total only; "Unavailable" stays visible so
   // a missing total is never disguised as a hidden one.
-  const heroText = hideBalance && hero.text !== 'Unavailable' ? '••••••' : hero.text;
+  const heroText = isLocked ? 'Locked' : hideBalance && hero.text !== 'Unavailable' ? '••••••' : hero.text;
 
   return (
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
@@ -236,8 +238,10 @@ export function DashboardScreen() {
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
-            {hero.balancesFailed
-              ? 'Balances could not be loaded, so the portfolio total is unavailable.'
+            {isLocked
+              ? 'Locked — unlock to see balances.'
+              : hero.balancesFailed
+                ? 'Balances could not be loaded, so the portfolio total is unavailable.'
               : pricesState.status === 'idle'
                 ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
                 : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
@@ -248,14 +252,20 @@ export function DashboardScreen() {
             {humanReasonMessage(hero.priceError, 'price')}
           </p>
         )}
-        <Button
-          type="button"
-          variant="outline"
-          disabled={heroLoading}
-          onClick={() => void refreshBalances()}
-        >
-          {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
-        </Button>
+        {isLocked ? (
+          <Button type="button" variant="outline" asChild>
+            <Link to="/lock">Unlock</Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={heroLoading}
+            onClick={() => void refreshBalances()}
+          >
+            {heroLoading ? 'Refreshing…' : hero.retry ? 'Retry' : 'Refresh balances'}
+          </Button>
+        )}
         <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
       <div className="grid grid-cols-3 gap-2 lg:self-center">

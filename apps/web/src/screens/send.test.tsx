@@ -102,6 +102,7 @@ const RECIPIENT = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
 
 function setWallet(overrides: Record<string, unknown> = {}): void {
   vi.mocked(useWallet).mockReturnValue({
+    vaultState: 'unlocked',
     vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [] },
     balances: {
       btc: { status: 'unavailable', reason: 'no-adapter' },
@@ -259,6 +260,20 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0xdeadbeef');
       expect(mounted.div.textContent).toContain('Signed transaction (hex)');
       expect(mounted.div.textContent).toContain('not sent anywhere');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('refuses to sign while the vault is locked', async () => {
+    setWallet({ vaultState: 'locked' });
+    const mounted = await mountScreen();
+    try {
+      await reachReview(mounted.div);
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Your vault is locked. Unlock it in Security settings to sign.');
+      expect(mounted.div.textContent).toContain('Your vault is locked. Unlock it in Security settings to sign.');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

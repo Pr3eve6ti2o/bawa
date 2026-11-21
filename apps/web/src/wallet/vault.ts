@@ -1,33 +1,17 @@
 /**
- * Password-protected encrypted local vault, always unlocked (no lock).
+ * Password-protected encrypted vault (AES-GCM-256, PBKDF2 with 600,000 iterations).
  *
- * Follows OneKey's secret-envelope layering as a pattern only. The envelope
- * in localStorage holds only version, KDF parameters, salt, IV, ciphertext
- * and recovery profileIds — never a mnemonic, seed or password.
+ * Auto-lock is OPTIONAL and OFF by default. When off, the derived key is stored
+ * in this origin's localStorage under bawa-vault-key, and the vault auto-unlocks.
+ * When on, no key is stored in localStorage, and unlocking requires the password.
+ * Key persistence is owned by the auto-lock setting; unlock() stores the key only when auto-lock is off.
  *
- * There is no lock state, no auto-lock timer and no password re-prompt:
- * the password is set once at creation (or import) and never asked again.
- * The vault stays unlocked by AUTO-UNLOCK: at creation the PBKDF2-derived
- * key is exported (raw bytes, base64) and stored in localStorage under
- * VAULT_KEY_STORAGE_KEY next to the envelope; on boot autoUnlock() reads
- * that stored key, decrypts the envelope and puts the mnemonic back in
- * this module's closure. No password is needed after creation.
- *
- * SECURITY TRADEOFF (owner decision, 2026-11-20): the raw vault key sits
- * in localStorage next to the ciphertext it decrypts, so anyone who can
- * read this origin's localStorage can decrypt the vault without the
- * password. The mnemonic itself is still never stored in plaintext, and
- * the envelope stays AES-GCM-256 / PBKDF2 600k. This is the standard
- * "stay unlocked" pattern and the owner's explicit choice; it is NOT a
- * locked vault and must never be described as one.
- *
- * The decrypted mnemonic lives only transiently in this module's closure
- * while the vault is open. It is never held in React state, component
- * refs, localStorage or logs. JavaScript strings are immutable, so
- * "zeroing" means dropping every reference to the value (and to the
- * CryptoKey) as soon as it is no longer needed; no copy is retained
- * anywhere after deleteVault().
+ * Tradeoff: with auto-lock off, anyone who can read this origin's localStorage
+ * can decrypt the vault without the password. The mnemonic itself is never
+ * stored in plaintext.
  */
+
+import { readAutoLockEnabled } from './auto-lock';
 
 export const VAULT_STORAGE_KEY = 'bawa-vault';
 /** localStorage key for the raw vault key (base64) that auto-unlock uses. */
@@ -41,6 +25,8 @@ export const VAULT_CIPHER = 'AES-GCM';
 export const VAULT_KEY_BITS = 256;
 
 export const VAULT_CORRUPTED = 'Vault is corrupted.';
+
+export const VAULT_WRONG_PASSWORD = 'Incorrect password.';
 
 interface VaultEnvelope {
   version: number;
@@ -149,6 +135,27 @@ async function storeKey(key: CryptoKey): Promise<void> {
   );
 }
 
+export async function storeCurrentKey(): Promise<boolean> {
+  if (unlockedKey === null) {
+    return false;
+  }
+
+  await storeKey(unlockedKey);
+  return true;
+}
+
+export function deleteStoredKey(): void {
+  localStorage.removeItem(VAULT_KEY_STORAGE_KEY);
+}
+
+export function hasStoredKey(): boolean {
+  try {
+    return localStorage.getItem(VAULT_KEY_STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 async function encryptEnvelope(
   mnemonic: string,
   password: string,
@@ -203,7 +210,9 @@ export async function createVault(
   const { envelope, key } = await encryptEnvelope(mnemonic, password, profileIds);
   // Store the key before the envelope: a failure here leaves no half-made
   // vault behind.
-  await storeKey(key);
+  if (!readAutoLockEnabled()) {
+    await storeKey(key);
+  }
   writeEnvelope(envelope);
   unlockedKey = key;
   unlockedMnemonic = mnemonic;
@@ -300,6 +309,54 @@ export async function autoUnlock(): Promise<boolean> {
   return true;
 }
 
+
+export function isLocked(): boolean {
+  return unlockedKey === null;
+}
+
+export async function unlock(password: string, passphrase = ''): Promise<void> {
+  const envelope = readEnvelope();
+  if (envelope === null) throw new Error('No vault exists.');
+
+  let salt: Uint8Array;
+  let iv: Uint8Array;
+  let ciphertext: Uint8Array;
+
+  try {
+    salt = fromBase64(envelope.kdf.saltB64);
+    iv = fromBase64(envelope.ivB64);
+    ciphertext = fromBase64(envelope.ciphertextB64);
+  } catch {
+    throw new Error(VAULT_CORRUPTED);
+  }
+
+  const key = await deriveKey(password, salt, envelope.kdf.iterations);
+
+  let plaintext: ArrayBuffer;
+  try {
+    plaintext = await globalThis.crypto.subtle.decrypt(
+      { name: VAULT_CIPHER, iv: iv as BufferSource },
+      key,
+      ciphertext as BufferSource,
+    );
+  } catch {
+    throw new Error(VAULT_WRONG_PASSWORD);
+  }
+
+  unlockedKey = key;
+  unlockedMnemonic = new TextDecoder().decode(plaintext);
+  unlockedPassphrase = passphrase;
+  if (!readAutoLockEnabled()) {
+    await storeKey(key);
+  }
+}
+
+export function lock(): void {
+  unlockedKey = null;
+  unlockedMnemonic = null;
+  unlockedPassphrase = null;
+}
+
 /** The BIP-39 passphrase for the current session ('' if none). */
 export function getSessionPassphrase(): string {
   return unlockedPassphrase ?? '';
@@ -355,7 +412,11 @@ export async function changePassword(newPassword: string): Promise<void> {
     newPassword,
     envelope.profileIds,
   );
-  await storeKey(key);
+  if (readAutoLockEnabled()) {
+    deleteStoredKey();
+  } else {
+    await storeKey(key);
+  }
   writeEnvelope(next);
   unlockedKey = key;
 }
@@ -363,7 +424,7 @@ export async function changePassword(newPassword: string): Promise<void> {
 /** Deletes the vault and its stored key, dropping every closure reference. */
 export function deleteVault(): void {
   getStorage().removeItem(VAULT_STORAGE_KEY);
-  getStorage().removeItem(VAULT_KEY_STORAGE_KEY);
+  deleteStoredKey();
   unlockedKey = null;
   unlockedMnemonic = null;
   unlockedPassphrase = null;
