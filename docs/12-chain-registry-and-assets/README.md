@@ -97,7 +97,7 @@ In `registry.json` at 4.9.2, the `explorer` object is present on 168/168 entries
 **Registry caveats**
 
 - `chainId`: "Please note the chain id might not be always latest in registry. In transaction building current value has to be supplied each time."
-- `coinId`: "In most cases" it is the BIP-44 derivation ID. Shared IDs get `10000000` added; Ethereum-clone chains with no BIP-44 ID of their own use `10000000 + chainId` as `coinId`. Optimism has `coinId` `10000070` and `slip44` `60`.
+- `coinId`: "In most cases" it is the BIP-44 derivation ID; shared IDs get `10000000` added and Ethereum-clone chains with no BIP-44 ID of their own generally use `10000000 + chainId`, but Optimism's `coinId` `10000070` (`slip44` `60`) is correct per the registry and is a legacy exception to that formula, while Arbitrum's `coinId` `10042221` (`slip44` `60`) is likewise not `10000000 + 42161`.
 - `id`: "Lowercase letters only. Should be never changed."
 - `explorer`: "the sample values should include existing IDs, so that the resulting full URL is valid."
 - The field reference's Bitcoin example lists only segwit and legacy derivations; it does not cover the testnet derivation. Do not read that example as the complete derivation set.
@@ -111,6 +111,26 @@ In `registry.json` at 4.9.2, the `explorer` object is present on 168/168 entries
 Pin for both sources: tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. The Core 4.8.4 comparison commit is `d40d24a63d92619167903369308bf0e2f7eb3a59`. Re-pin and re-verify whenever the Core pin moves.
 
 Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
+
+### Prospective nine-chain pins (Core 4.9.3)
+
+The following mainnet metadata pins were verified against [Wallet Core 4.9.3 `registry.json`](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json) and the `registry/capabilities.json` catalog. All nine rows are **prospective** metadata, not implemented Bawa `CHAINS` entries; they do not change the branch-specific capability snapshot below. This 4.9.3 check is separate from the existing four-chain 4.9.2 pin.
+
+| Registry id | `coinId` | `slip44` | EVM `chainId` | Derivation path | Status |
+| --- | --- | --- | --- | --- | --- |
+| `solana` | `501` | — | — | `m/44'/501'/0'` | prospective |
+| `smartchain` | `20000714` | `714` | `56` | `m/44'/60'/0'/0/0` | prospective |
+| `polygon` | `966` | — | `137` | `m/44'/60'/0'/0/0` | prospective |
+| `arbitrum` | `10042221` | `60` | `42161` | `m/44'/60'/0'/0/0` | prospective |
+| `optimism` | `10000070` | `60` | `10` | `m/44'/60'/0'/0/0` | prospective |
+| `base` | `8453` | — | `8453` | `m/44'/60'/0'/0/0` | prospective |
+| `avalanchec` | `10009000` | — | `43114` | `m/44'/60'/0'/0/0` | prospective |
+| `litecoin` | `2` | — | — | `m/84'/2'/0'/0/0` | prospective |
+| `doge` | `3` | — | — | `m/44'/3'/0'/0/0` | prospective |
+
+`—` under `slip44` means the registry does not carry that key, not that no SLIP-44 assignment exists; do not fill it by inference. `—` under EVM `chainId` marks a non-EVM chain. EVM chain IDs are shown in decimal.
+
+Keep `coinId`, optional `slip44`, EVM `chainId` and the literal derivation path separate. Every EVM chain in this table derives on `60'`, regardless of `coinId` or `slip44`. SLIP-44 row `137` is Rootstock and row `10` is Blackcoin, so a chain ID must never be read as a coin type.
 
 ## Bawa's four chains in the registry
 
