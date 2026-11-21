@@ -175,3 +175,474 @@ describe('chains registry', () => {
     expect(() => chainConfig('solana' as never)).toThrow(/Unsupported chain/);
   });
 });
+
+describe('capabilities.json registry shape and identity', () => {
+  type RegistryCoin = {
+    registryId: string;
+    bawaChainId: 'btc' | 'eth' | 'trx' | 'ton' | null;
+    coinTypeName: string;
+    coinId: number;
+    slip44: number | null;
+    symbol: string;
+    registrySymbol: string;
+    decimals: number;
+    curve: 'secp256k1' | 'ed25519';
+    derivationTemplate: string;
+    xpubVersion: string | null;
+    evmChainId: number | null;
+    status: 'supported' | 'prospective';
+    displayName: string;
+    networkId: string | null;
+    assetId: string | null;
+    profileId: string | null;
+    rpcEndpoints: string[] | null;
+  };
+
+  const coinFields = [
+    'registryId',
+    'bawaChainId',
+    'coinTypeName',
+    'coinId',
+    'slip44',
+    'symbol',
+    'registrySymbol',
+    'decimals',
+    'curve',
+    'derivationTemplate',
+    'xpubVersion',
+    'evmChainId',
+    'status',
+    'displayName',
+    'networkId',
+    'assetId',
+    'profileId',
+    'rpcEndpoints',
+  ] as const;
+
+  const expectedSupportedCoins = {
+    bitcoin: {
+      registryId: 'bitcoin',
+      bawaChainId: 'btc',
+      coinTypeName: 'bitcoin',
+      coinId: 0,
+      slip44: null,
+      symbol: 'BTC',
+      registrySymbol: 'BTC',
+      decimals: 8,
+      curve: 'secp256k1',
+      derivationTemplate: "m/84'/0'/{account}'/0/{index}",
+      xpubVersion: '0x04b24746',
+      evmChainId: null,
+      status: 'supported',
+      displayName: 'Bitcoin',
+      networkId: 'bip122:000000000019d6689c085ae165831e93',
+      assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
+      profileId: 'bawa-btc-bip84-v1',
+      rpcEndpoints: ['https://mempool.space/api'],
+    },
+    ethereum: {
+      registryId: 'ethereum',
+      bawaChainId: 'eth',
+      coinTypeName: 'ethereum',
+      coinId: 60,
+      slip44: null,
+      symbol: 'ETH',
+      registrySymbol: 'ETH',
+      decimals: 18,
+      curve: 'secp256k1',
+      derivationTemplate: "m/44'/60'/{account}'/0/{index}",
+      xpubVersion: '0x0488b21e',
+      evmChainId: 1,
+      status: 'supported',
+      displayName: 'Ethereum',
+      networkId: 'eip155:1',
+      assetId: 'eip155:1/slip44:60',
+      profileId: 'bawa-evm-bip44-v1',
+      rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
+    },
+    tron: {
+      registryId: 'tron',
+      bawaChainId: 'trx',
+      coinTypeName: 'tron',
+      coinId: 195,
+      slip44: null,
+      symbol: 'TRX',
+      registrySymbol: 'TRX',
+      decimals: 6,
+      curve: 'secp256k1',
+      derivationTemplate: "m/44'/195'/{account}'/0/{index}",
+      xpubVersion: '0x0488b21e',
+      evmChainId: null,
+      status: 'supported',
+      displayName: 'TRON',
+      networkId: 'tron:0x2b6653dc',
+      assetId: 'tron:0x2b6653dc/slip44:195',
+      profileId: 'bawa-trx-bip44-v1',
+      rpcEndpoints: ['https://api.trongrid.io'],
+    },
+    ton: {
+      registryId: 'ton',
+      bawaChainId: 'ton',
+      coinTypeName: 'ton',
+      coinId: 607,
+      slip44: null,
+      symbol: 'TON',
+      registrySymbol: 'GRAM',
+      decimals: 9,
+      curve: 'ed25519',
+      derivationTemplate: "m/44'/607'/0'",
+      xpubVersion: null,
+      evmChainId: null,
+      status: 'supported',
+      displayName: 'TON',
+      networkId: 'ton:-239',
+      assetId: 'ton:-239/slip44:607',
+      profileId: 'bawa-ton-v4r2-v1',
+      rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
+    },
+  } as const;
+
+  const implementedCoins = Object.entries(expectedSupportedCoins);
+  const prospectiveCoinNames = [
+    'solana',
+    'smartchain',
+    'polygon',
+    'arbitrum',
+    'optimism',
+    'base',
+    'avalanchec',
+    'litecoin',
+    'doge',
+  ] as const;
+  const coinNames = [
+    ...Object.keys(expectedSupportedCoins),
+    ...prospectiveCoinNames,
+  ];
+
+  // An explicit allowlist, independent of the forbidden-words check.
+  const mainnetNetworkIds = [
+    'bip122:000000000019d6689c085ae165831e93',
+    'eip155:1',
+    'tron:0x2b6653dc',
+    'ton:-239',
+  ] as const;
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  function isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
+  }
+
+  function isNonNegativeInteger(value: unknown): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+  }
+
+  function isHttpsUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    try {
+      return new URL(value).protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  function hasCoinShape(
+    coinName: string,
+    value: unknown,
+  ): value is RegistryCoin {
+    if (!isRecord(value)) return false;
+
+    // All listed fields are required; no additional fields are permitted.
+    if (
+      Object.keys(value).length !== coinFields.length ||
+      !coinFields.every((field) =>
+        Object.prototype.hasOwnProperty.call(value, field),
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      value.registryId !== coinName ||
+      !isNonEmptyString(value.coinTypeName) ||
+      !isNonEmptyString(value.displayName) ||
+      !isNonNegativeInteger(value.coinId) ||
+      (value.slip44 !== null && !isNonNegativeInteger(value.slip44)) ||
+      !isNonNegativeInteger(value.decimals) ||
+      typeof value.symbol !== 'string' ||
+      !/^[A-Z]+$/.test(value.symbol) ||
+      typeof value.registrySymbol !== 'string' ||
+      !/^[A-Z]+$/.test(value.registrySymbol) ||
+      (value.curve !== 'secp256k1' && value.curve !== 'ed25519') ||
+      !isNonEmptyString(value.derivationTemplate) ||
+      !/^m(?:\/(?:\d+|\{account\}|\{index\})'?)+$/.test(
+        value.derivationTemplate,
+      ) ||
+      (value.xpubVersion !== null &&
+        (typeof value.xpubVersion !== 'string' ||
+          !/^0x[0-9a-fA-F]{8}$/.test(value.xpubVersion))) ||
+      (value.evmChainId !== null && !isNonNegativeInteger(value.evmChainId))
+    ) {
+      return false;
+    }
+
+    if (value.status === 'prospective') {
+      return (
+        value.bawaChainId === null &&
+        value.networkId === null &&
+        value.assetId === null &&
+        value.profileId === null &&
+        value.rpcEndpoints === null &&
+        value.xpubVersion === null &&
+        value.registrySymbol === value.symbol
+      );
+    }
+
+    if (value.status !== 'supported') return false;
+
+    return (
+      typeof value.bawaChainId === 'string' &&
+      ['btc', 'eth', 'trx', 'ton'].includes(value.bawaChainId) &&
+      isNonEmptyString(value.networkId) &&
+      /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$/.test(value.networkId) &&
+      isNonEmptyString(value.assetId) &&
+      /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/slip44:\d+$/.test(
+        value.assetId,
+      ) &&
+      isNonEmptyString(value.profileId) &&
+      Array.isArray(value.rpcEndpoints) &&
+      value.rpcEndpoints.length > 0 &&
+      value.rpcEndpoints.every(isHttpsUrl) &&
+      (value.curve === 'ed25519'
+        ? value.xpubVersion === null
+        : typeof value.xpubVersion === 'string') &&
+      (value.bawaChainId === 'eth'
+        ? isNonNegativeInteger(value.evmChainId)
+        : value.evmChainId === null)
+    );
+  }
+
+  function checkedCoin(coinName: string, value: unknown): RegistryCoin {
+    if (!hasCoinShape(coinName, value)) {
+      throw new Error(`Invalid registry coin: ${coinName}`);
+    }
+    return value;
+  }
+
+  async function readRegistryCoins(): Promise<Record<string, unknown>> {
+    const { readFileSync } = await import('node:fs');
+    // Resolve from this test file, not from the Vitest working directory.
+    const registryUrl = new URL(
+      '../../../../registry/capabilities.json',
+      import.meta.url,
+    );
+    const registry: unknown = JSON.parse(readFileSync(registryUrl, 'utf8'));
+    if (!isRecord(registry) || !isRecord(registry.coins)) {
+      throw new Error('Registry must contain a coins object');
+    }
+    return registry.coins;
+  }
+
+  function supportedRegistryCoins(
+    coins: Record<string, unknown>,
+  ): RegistryCoin[] {
+    return Object.entries(coins)
+      .map(([coinName, value]) => checkedCoin(coinName, value))
+      .filter((coin) => coin.status === 'supported');
+  }
+
+  function pathAtOrigin(template: string): string {
+    return template
+      .replace(/\{account\}/g, '0')
+      .replace(/\{index\}/g, '0');
+  }
+
+  it('contains exactly the thirteen known coin entries', async () => {
+    expect.assertions(1);
+    const coins = await readRegistryCoins();
+    expect(Object.keys(coins).sort()).toEqual([...coinNames].sort());
+  });
+
+  it.each(coinNames)(
+    'validates required/permitted fields, symbols and decimals for %s',
+    async (coinName) => {
+      expect.assertions(5);
+      const coins = await readRegistryCoins();
+      const coin = checkedCoin(coinName, coins[coinName]);
+
+      expect(Object.keys(coin).sort()).toEqual([...coinFields].sort());
+      expect(coin.symbol).toMatch(/^[A-Z]+$/);
+      expect(coin.registrySymbol).toMatch(/^[A-Z]+$/);
+      expect(Number.isInteger(coin.decimals)).toBe(true);
+      expect(coin.decimals).toBeGreaterThanOrEqual(0);
+    },
+  );
+
+  it('rejects missing required fields and unpermitted fields', () => {
+    expect.assertions(3);
+    const validConfig = expectedSupportedCoins.ethereum;
+    const missingConfig: Record<string, unknown> = { ...validConfig };
+    delete missingConfig.decimals;
+    const extraConfig = { ...validConfig, unexpectedField: true };
+
+    expect(() => checkedCoin('ethereum', validConfig)).not.toThrow();
+    expect(() => checkedCoin('ethereum', missingConfig)).toThrow(
+      /Invalid registry coin: ethereum/,
+    );
+    expect(() => checkedCoin('ethereum', extraConfig)).toThrow(
+      /Invalid registry coin: ethereum/,
+    );
+  });
+
+  it.each([
+    ['a lowercase symbol', { symbol: 'Eth' }],
+    ['fractional decimals', { decimals: 1.5 }],
+    ['negative decimals', { decimals: -1 }],
+    ['an HTTP RPC URL', { rpcEndpoints: ['http://example.com'] }],
+    ['a malformed RPC URL', { rpcEndpoints: ['https://['] }],
+  ] as const)(
+    'rejects a locally built config with %s',
+    (_reason, changes) => {
+      expect.assertions(2);
+      const validConfig = expectedSupportedCoins.ethereum;
+      const badConfig = { ...validConfig, ...changes };
+
+      expect(() => checkedCoin('ethereum', validConfig)).not.toThrow();
+      expect(() => checkedCoin('ethereum', badConfig)).toThrow(
+        /Invalid registry coin: ethereum/,
+      );
+    },
+  );
+
+  it.each(implementedCoins)(
+    'pins all supported %s fields and aligns them with the live chain',
+    async (coinName, expectedCoin) => {
+      expect.assertions(5);
+      const coins = await readRegistryCoins();
+      const coin = checkedCoin(coinName, coins[coinName]);
+      const live = CHAINS[expectedCoin.bawaChainId];
+
+      expect(coin).toEqual(expectedCoin);
+      expect(live).toMatchObject({
+        id: expectedCoin.bawaChainId,
+        displayName: coin.displayName,
+        symbol: coin.symbol,
+        coinTypeName: coin.coinTypeName,
+        networkId: coin.networkId,
+        assetId: coin.assetId,
+        profileId: coin.profileId,
+        rpcEndpoints: coin.rpcEndpoints,
+        evmChainId: coin.evmChainId,
+      });
+      expect(live).toHaveProperty(
+        'symbol',
+        expect.stringMatching(/^[A-Z]+$/),
+      );
+      expect(profileFor(expectedCoin.bawaChainId)).toBe(coin.profileId);
+      expect(pathFor(expectedCoin.bawaChainId, 0, 0)).toBe(
+        pathAtOrigin(coin.derivationTemplate),
+      );
+    },
+  );
+
+  it('allows only the four explicitly listed mainnet network IDs', async () => {
+    expect.assertions(2);
+    const coins = await readRegistryCoins();
+
+    expect(
+      Object.values(CHAINS).map((chain) => chain.networkId).sort(),
+    ).toEqual([...mainnetNetworkIds].sort());
+    expect(
+      supportedRegistryCoins(coins).map((coin) => coin.networkId).sort(),
+    ).toEqual([...mainnetNetworkIds].sort());
+  });
+
+  it('matches the EIP-155 numeric reference to evmChainId in both registries', async () => {
+    expect.assertions(4);
+    const coins = await readRegistryCoins();
+    const ethereum = checkedCoin('ethereum', coins.ethereum);
+
+    for (const config of [ethereum, CHAINS.eth]) {
+      expect(config.networkId).toMatch(/^eip155:(0|[1-9]\d*)$/);
+      expect(Number(config.networkId?.split(':')[1])).toBe(config.evmChainId);
+    }
+  });
+
+  it.each(implementedCoins)(
+    'keeps the %s asset network component identical to its CAIP-2 ID',
+    async (coinName, expectedCoin) => {
+      expect.assertions(3);
+      const coins = await readRegistryCoins();
+      const coin = checkedCoin(coinName, coins[coinName]);
+      const live = CHAINS[expectedCoin.bawaChainId];
+
+      expect(coin.assetId?.split('/')[0]).toBe(coin.networkId);
+      expect(live.assetId.split('/')[0]).toBe(live.networkId);
+      expect(coin.assetId).toBe(`${coin.networkId}/slip44:${coin.coinId}`);
+    },
+  );
+
+  it('has unique network IDs across the four implemented chains', async () => {
+    expect.assertions(2);
+    const coins = await readRegistryCoins();
+    const liveIds = Object.values(CHAINS).map((chain) => chain.networkId);
+    const registryIds = supportedRegistryCoins(coins).map(
+      (coin) => coin.networkId,
+    );
+
+    expect(new Set(liveIds).size).toBe(4);
+    expect(new Set(registryIds).size).toBe(4);
+  });
+
+  it('has unique account 0 index 0 derivation paths across the four chains', async () => {
+    expect.assertions(2);
+    const coins = await readRegistryCoins();
+    const livePaths = SUPPORTED_CHAINS.map((chain) => pathFor(chain, 0, 0));
+    const registryPaths = supportedRegistryCoins(coins).map((coin) =>
+      pathAtOrigin(coin.derivationTemplate),
+    );
+
+    expect(new Set(livePaths).size).toBe(4);
+    expect(new Set(registryPaths).size).toBe(4);
+  });
+
+  it.each(implementedCoins)(
+    'parses every %s RPC URL and permits only HTTPS',
+    async (coinName, expectedCoin) => {
+      expect.assertions(4);
+      const coins = await readRegistryCoins();
+      const coin = checkedCoin(coinName, coins[coinName]);
+      const live = CHAINS[expectedCoin.bawaChainId];
+
+      for (const endpoints of [coin.rpcEndpoints ?? [], live.rpcEndpoints]) {
+        expect(endpoints.length).toBeGreaterThan(0);
+        expect(endpoints.map((endpoint) => new URL(endpoint).protocol)).toEqual(
+          endpoints.map(() => 'https:'),
+        );
+      }
+    },
+  );
+
+  it.each(prospectiveCoinNames)(
+    'keeps %s as prospective registry-only metadata, not a live chain',
+    async (coinName) => {
+      expect.assertions(5);
+      const coins = await readRegistryCoins();
+      const coin = checkedCoin(coinName, coins[coinName]);
+
+      expect(coin.status).toBe('prospective');
+      expect(coin.bawaChainId).toBeNull();
+      expect(coin).toMatchObject({
+        networkId: null,
+        assetId: null,
+        profileId: null,
+        rpcEndpoints: null,
+        xpubVersion: null,
+      });
+      expect(coin.registrySymbol).toBe(coin.symbol);
+      expect(() => chainConfig(coinName as never)).toThrow(/Unsupported chain/);
+    },
+  );
+});
