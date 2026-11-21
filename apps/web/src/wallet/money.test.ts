@@ -439,3 +439,544 @@ describe('money rounding boundaries and Decimal config isolation', () => {
     },
   );
 });
+
+describe('money seeded BigInt oracle (synthetic inputs only)', () => {
+  // No wallet state or real balances: all inputs are synthetic decimal strings.
+  // Expected values use only decimal-string parsing and exact BigInt arithmetic.
+  const seed = 0xba7a2025;
+  const caseCount = 256;
+  const maxSafeMinorUnits = BigInt(Number.MAX_SAFE_INTEGER);
+  const chainScales = [
+    0, 1, 2, 3, 4, 6, 8, 9, 12, 18, 20, 30, 36, 100,
+  ] as const;
+  const displayScales = [
+    0, 1, 2, 3, 4, 6, 8, 12, 18, 30, 100,
+  ] as const;
+
+  type Random = () => number;
+
+  function mulberry32(initialSeed: number): Random {
+    let state = initialSeed >>> 0;
+
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let value = state;
+      value = Math.imul(value ^ (value >>> 15), value | 1);
+      value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+      return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+    };
+  }
+
+  function randomDigits(random: Random, length: number): string {
+    let result = '';
+    for (let index = 0; index < length; index += 1) {
+      result += Math.floor(random() * 10).toString();
+    }
+    return result;
+  }
+
+  function randomDecimalString(random: Random, maxDigits: number): string {
+    return randomDigits(random, 1 + Math.floor(random() * maxDigits));
+  }
+
+  function unsignedInteger(value: string): bigint {
+    if (!/^[0-9]+$/.test(value)) {
+      throw new Error(`Invalid oracle integer input: ${JSON.stringify(value)}`);
+    }
+    return BigInt(value);
+  }
+
+  function tenTo(decimals: number): bigint {
+    return 10n ** BigInt(decimals);
+  }
+
+  function roundHalfAwayFromZero(
+    numerator: bigint,
+    denominator: bigint,
+  ): bigint {
+    // All generated amounts are non-negative, so ties away from zero round up.
+    if (numerator < 0n || denominator <= 0n) {
+      throw new Error(`Invalid oracle rounding input: ${numerator}/${denominator}`);
+    }
+
+    const quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+    return quotient + (remainder * 2n >= denominator ? 1n : 0n);
+  }
+
+  function formatAtScale(units: bigint, decimals: number): string {
+    if (decimals === 0) {
+      return units.toString();
+    }
+
+    const digits = units.toString().padStart(decimals + 1, '0');
+    const whole = digits.slice(0, -decimals);
+    const fraction = digits.slice(-decimals).replace(/0+$/, '');
+    return fraction === '' ? whole : `${whole}.${fraction}`;
+  }
+
+  function parseAtScale(value: string, decimals: number): bigint {
+    const match = /^([0-9]+)(?:\.([0-9]+))?$/.exec(value);
+    const fraction = match?.[2] ?? '';
+
+    if (!match || fraction.length > decimals) {
+      throw new Error(
+        `Invalid oracle decimal input: ${JSON.stringify({ value, decimals })}`,
+      );
+    }
+
+    return unsignedInteger(`${match[1]}${fraction.padEnd(decimals, '0')}`);
+  }
+
+  function fiatReference(
+    balanceBaseUnits: string,
+    chainDecimals: number,
+    priceMinorUnitsPerWhole: string,
+  ): bigint {
+    return roundHalfAwayFromZero(
+      unsignedInteger(balanceBaseUnits) *
+        unsignedInteger(priceMinorUnitsPerWhole),
+      tenTo(chainDecimals),
+    );
+  }
+
+  function feeReference(
+    valueBaseUnits: string,
+    chainDecimals: number,
+    symbol: string,
+    displayDecimals: number,
+  ): string {
+    const rounded = roundHalfAwayFromZero(
+      unsignedInteger(valueBaseUnits) * tenTo(displayDecimals),
+      tenTo(chainDecimals),
+    );
+    return `${formatAtScale(rounded, displayDecimals)} ${symbol}`;
+  }
+
+  function usdReference(minorUnits: bigint): string {
+    const dollars = (minorUnits / 100n)
+      .toString()
+      .replace(/\B(?=([0-9]{3})+(?![0-9]))/g, ',');
+    const cents = (minorUnits % 100n).toString().padStart(2, '0');
+    return `$${dollars}.${cents}`;
+  }
+
+  function sumReference(values: readonly number[]): bigint {
+    return values.reduce(
+      (total, value) => total + unsignedInteger(value.toString()),
+      0n,
+    );
+  }
+
+  function parseUSD(value: string): bigint {
+    return parseAtScale(value.replace(/^\$/, '').replace(/,/g, ''), 2);
+  }
+
+  function generateCase(random: Random, index: number) {
+    // Cycling guarantees coverage of every selected chain/display scale pair.
+    // Powers of ten and input lengths remain bounded, including display 100.
+    const chainDecimals = chainScales[index % chainScales.length]!;
+    const displayDecimals =
+      displayScales[
+        Math.floor(index / chainScales.length) % displayScales.length
+      ]!;
+    const scale = tenTo(chainDecimals);
+    const mode = index % 5;
+
+    let feeValue =
+      index % 17 === 0 ? '0' : randomDecimalString(random, 128);
+
+    // Exercise long values immediately below, at, and above display ties.
+    if (
+      index % 17 !== 0 &&
+      chainDecimals > displayDecimals &&
+      mode < 3
+    ) {
+      const discardedScale = tenTo(chainDecimals - displayDecimals);
+      const half = discardedScale / 2n;
+      const remainder =
+        mode === 0 ? half - 1n : mode === 1 ? half : half + 1n;
+      feeValue = (
+        unsignedInteger(randomDecimalString(random, 24)) * discardedScale +
+        remainder
+      ).toString();
+    }
+
+    const whole = unsignedInteger(randomDecimalString(random, 9));
+    let fraction =
+      chainDecimals === 0
+        ? 0n
+        : unsignedInteger(randomDigits(random, chainDecimals));
+    let price =
+      index % 19 === 0
+        ? 0n
+        : unsignedInteger(randomDecimalString(random, 6));
+
+    // An odd price times a half-whole fractional balance gives an exact tie.
+    if (chainDecimals > 0 && mode < 3 && price !== 0n) {
+      const half = scale / 2n;
+      fraction = mode === 0 ? half - 1n : mode === 1 ? half : half + 1n;
+      if (price % 2n === 0n) {
+        price += 1n;
+      }
+    }
+
+    // Nine whole digits and six price digits keep these fiat results and
+    // their larger neighbours safe, despite potentially long base-unit strings.
+    const balance = index % 23 === 0 ? 0n : whole * scale + fraction;
+    const balanceIncrement =
+      1n +
+      (chainDecimals === 0
+        ? 0n
+        : unsignedInteger(randomDigits(random, chainDecimals)));
+    const incrementMinorUnits =
+      Number(unsignedInteger(randomDecimalString(random, 9))) + 1;
+
+    // At most five fifteen-digit entries, plus the increment, stay safely
+    // below MAX_SAFE_INTEGER. Empty and singleton lists are generated too.
+    const minorUnitsList = Array.from({ length: index % 6 }, () =>
+      Number(unsignedInteger(randomDecimalString(random, 15))),
+    );
+
+    return {
+      chainDecimals,
+      displayDecimals,
+      symbol: 'TOK',
+      valueBaseUnits: '0'.repeat(index % 3) + feeValue,
+      largerValueBaseUnits: (
+        unsignedInteger(feeValue) +
+        unsignedInteger(randomDecimalString(random, 24)) +
+        1n
+      ).toString(),
+      balanceBaseUnits: '0'.repeat(index % 3) + balance.toString(),
+      largerBalanceBaseUnits: (balance + balanceIncrement).toString(),
+      priceMinorUnitsPerWhole: '0'.repeat(index % 2) + price.toString(),
+      largerPriceMinorUnitsPerWhole: (price + 1n).toString(),
+      incrementMinorUnits,
+      minorUnitsList,
+    };
+  }
+
+  it('agrees exactly with the seeded oracle and is idempotent and monotone', () => {
+    // Four fee, six fiat, four USD, and four sum assertions per case.
+    expect.assertions(caseCount * 18);
+
+    const random = mulberry32(seed);
+
+    for (let index = 0; index < caseCount; index += 1) {
+      const input = generateCase(random, index);
+      const { chainDecimals, displayDecimals, symbol } = input;
+      const context =
+        `seed=0x${seed.toString(16)}; case=${index}; ` +
+        `input=${JSON.stringify(input)}`;
+      const suffix = ` ${symbol}`;
+
+      const fee = formatFeePreview(
+        input.valueBaseUnits,
+        chainDecimals,
+        symbol,
+        displayDecimals,
+      );
+      expect(fee, `${context}; fee oracle agreement`).toBe(
+        feeReference(
+          input.valueBaseUnits,
+          chainDecimals,
+          symbol,
+          displayDecimals,
+        ),
+      );
+
+      const largerFee = formatFeePreview(
+        input.largerValueBaseUnits,
+        chainDecimals,
+        symbol,
+        displayDecimals,
+      );
+      expect(largerFee, `${context}; larger fee oracle agreement`).toBe(
+        feeReference(
+          input.largerValueBaseUnits,
+          chainDecimals,
+          symbol,
+          displayDecimals,
+        ),
+      );
+
+      const roundedFee = parseAtScale(
+        fee.slice(0, -suffix.length),
+        displayDecimals,
+      );
+      expect(
+        formatFeePreview(
+          roundedFee.toString(),
+          displayDecimals,
+          symbol,
+          displayDecimals,
+        ),
+        `${context}; fee idempotence input: valueBaseUnits=${roundedFee}, ` +
+          `decimals=${displayDecimals}, displayDecimals=${displayDecimals}`,
+      ).toBe(fee);
+
+      expect(
+        parseAtScale(largerFee.slice(0, -suffix.length), displayDecimals),
+        `${context}; fee monotonicity`,
+      ).toBeGreaterThanOrEqual(roundedFee);
+
+      const expectedFiat = fiatReference(
+        input.balanceBaseUnits,
+        chainDecimals,
+        input.priceMinorUnitsPerWhole,
+      );
+      const fiat = fiatMinorUnits(
+        input.balanceBaseUnits,
+        chainDecimals,
+        input.priceMinorUnitsPerWhole,
+      );
+      expect(fiat, `${context}; fiat oracle agreement`).toBe(
+        Number(expectedFiat),
+      );
+
+      const expectedLargerBalance = fiatReference(
+        input.largerBalanceBaseUnits,
+        chainDecimals,
+        input.priceMinorUnitsPerWhole,
+      );
+      const largerBalanceFiat = fiatMinorUnits(
+        input.largerBalanceBaseUnits,
+        chainDecimals,
+        input.priceMinorUnitsPerWhole,
+      );
+      expect(
+        largerBalanceFiat,
+        `${context}; larger balance fiat oracle agreement`,
+      ).toBe(Number(expectedLargerBalance));
+
+      const expectedLargerPrice = fiatReference(
+        input.balanceBaseUnits,
+        chainDecimals,
+        input.largerPriceMinorUnitsPerWhole,
+      );
+      const largerPriceFiat = fiatMinorUnits(
+        input.balanceBaseUnits,
+        chainDecimals,
+        input.largerPriceMinorUnitsPerWhole,
+      );
+      expect(
+        largerPriceFiat,
+        `${context}; larger price fiat oracle agreement`,
+      ).toBe(Number(expectedLargerPrice));
+
+      // Re-embed the rounded integer at the original chain scale with price 1.
+      // This repeats integer rounding, rather than converting currency twice.
+      const roundedBalanceBaseUnits = (
+        unsignedInteger(fiat.toString()) * tenTo(chainDecimals)
+      ).toString();
+      expect(
+        fiatMinorUnits(roundedBalanceBaseUnits, chainDecimals, '1'),
+        `${context}; fiat idempotence input: ` +
+          `balanceBaseUnits=${roundedBalanceBaseUnits}, ` +
+          `chainDecimals=${chainDecimals}, priceMinorUnitsPerWhole=1`,
+      ).toBe(fiat);
+
+      expect(
+        largerBalanceFiat,
+        `${context}; fiat balance monotonicity`,
+      ).toBeGreaterThanOrEqual(fiat);
+      expect(
+        largerPriceFiat,
+        `${context}; fiat price monotonicity`,
+      ).toBeGreaterThanOrEqual(fiat);
+
+      // USD inputs come from the independent oracle, not the helper's output.
+      const minorUnits = Number(expectedFiat);
+      const largerMinorUnits = minorUnits + input.incrementMinorUnits;
+      const usdContext =
+        `${context}; USD input: minorUnits=${minorUnits}, ` +
+        `largerMinorUnits=${largerMinorUnits}`;
+      const usd = formatFiatUSD(minorUnits);
+      const largerUSD = formatFiatUSD(largerMinorUnits);
+
+      expect(usd, `${usdContext}; USD oracle agreement`).toBe(
+        usdReference(expectedFiat),
+      );
+      expect(largerUSD, `${usdContext}; larger USD oracle agreement`).toBe(
+        usdReference(
+          expectedFiat + unsignedInteger(input.incrementMinorUnits.toString()),
+        ),
+      );
+
+      const roundedUSD = parseUSD(usd);
+      expect(
+        formatFiatUSD(Number(roundedUSD)),
+        `${usdContext}; USD idempotence input: minorUnits=${roundedUSD}`,
+      ).toBe(usd);
+      expect(
+        parseUSD(largerUSD),
+        `${usdContext}; USD monotonicity`,
+      ).toBeGreaterThanOrEqual(roundedUSD);
+
+      const values = [...input.minorUnitsList];
+      const largerValues = [...values, input.incrementMinorUnits];
+      const expectedSum = sumReference(values);
+      const expectedLargerSum = sumReference(largerValues);
+      const sumContext =
+        `${context}; sum input=${JSON.stringify({ values, largerValues })}`;
+      const sum = sumFiatUSD(values);
+      const largerSum = sumFiatUSD(largerValues);
+
+      expect(sum, `${sumContext}; sum oracle agreement`).toBe(
+        usdReference(expectedSum),
+      );
+      expect(largerSum, `${sumContext}; larger sum oracle agreement`).toBe(
+        usdReference(expectedLargerSum),
+      );
+
+      const roundedSum = parseUSD(sum);
+      expect(
+        sumFiatUSD([Number(roundedSum)]),
+        `${sumContext}; sum idempotence input: minorUnitsList=[${roundedSum}]`,
+      ).toBe(sum);
+      expect(
+        parseUSD(largerSum),
+        `${sumContext}; sum monotonicity`,
+      ).toBeGreaterThanOrEqual(roundedSum);
+    }
+  });
+
+  it('matches safe-boundary rounding and rejects fiat overflow across scales', () => {
+    const boundaryCases: Array<{
+      balanceBaseUnits: string;
+      chainDecimals: number;
+      priceMinorUnitsPerWhole: string;
+    }> = [];
+
+    for (const chainDecimals of chainScales) {
+      const scale = tenTo(chainDecimals);
+
+      // Exactly one minor unit below, at, and above the safe boundary.
+      // Exercise the large operand as both the balance and the price.
+      for (const target of [
+        maxSafeMinorUnits - 1n,
+        maxSafeMinorUnits,
+        maxSafeMinorUnits + 1n,
+      ]) {
+        boundaryCases.push({
+          balanceBaseUnits: (target * scale).toString(),
+          chainDecimals,
+          priceMinorUnitsPerWhole: '1',
+        });
+        boundaryCases.push({
+          balanceBaseUnits: scale.toString(),
+          chainDecimals,
+          priceMinorUnitsPerWhole: target.toString(),
+        });
+      }
+
+      if (chainDecimals > 0) {
+        // The rounding-overflow threshold is MAX_SAFE_INTEGER + 0.5.
+        // These differ by one base unit, even at the longest selected scale.
+        const tie = maxSafeMinorUnits * scale + scale / 2n;
+        for (const balance of [tie - 1n, tie, tie + 1n]) {
+          boundaryCases.push({
+            balanceBaseUnits: balance.toString(),
+            chainDecimals,
+            priceMinorUnitsPerWhole: '1',
+          });
+        }
+      }
+    }
+
+    // The deterministic table has two assertions per entry, in either branch.
+    expect.assertions(boundaryCases.length * 2);
+
+    for (const input of boundaryCases) {
+      const expected = fiatReference(
+        input.balanceBaseUnits,
+        input.chainDecimals,
+        input.priceMinorUnitsPerWhole,
+      );
+      const context =
+        `targeted safe-boundary input=${JSON.stringify(input)}; ` +
+        `referenceMinorUnits=${expected}`;
+
+      if (expected <= maxSafeMinorUnits) {
+        expect(
+          fiatMinorUnits(
+            input.balanceBaseUnits,
+            input.chainDecimals,
+            input.priceMinorUnitsPerWhole,
+          ),
+          `${context}; safe fiat oracle agreement`,
+        ).toBe(Number(expected));
+      } else {
+        expect(
+          () =>
+            fiatMinorUnits(
+              input.balanceBaseUnits,
+              input.chainDecimals,
+              input.priceMinorUnitsPerWhole,
+            ),
+          `${context}; fiat overflow rejection`,
+        ).toThrow(/safe.*integer/);
+      }
+
+      // The same rational amount remains an exact fee display string:
+      // fee previews must not inherit the numeric fiat safe-integer limit.
+      const feeBaseUnits = (
+        unsignedInteger(input.balanceBaseUnits) *
+        unsignedInteger(input.priceMinorUnitsPerWhole)
+      ).toString();
+      expect(
+        formatFeePreview(feeBaseUnits, input.chainDecimals, 'TOK', 0),
+        `${context}; fee input: valueBaseUnits=${feeBaseUnits}, ` +
+          `decimals=${input.chainDecimals}, symbol=TOK, displayDecimals=0`,
+      ).toBe(feeReference(feeBaseUnits, input.chainDecimals, 'TOK', 0));
+    }
+  });
+
+  it('matches USD and sum boundary references and rejects unsafe minor units', () => {
+    const targets = [
+      maxSafeMinorUnits - 1n,
+      maxSafeMinorUnits,
+      maxSafeMinorUnits + 1n,
+    ];
+
+    expect.assertions(targets.length * 2);
+
+    for (const target of targets) {
+      // MAX_SAFE_INTEGER + 1 is exactly representable, but is not safe.
+      const minorUnits = Number(target);
+      // Every entry is individually safe, including the overflowing total.
+      const values = [
+        Number(maxSafeMinorUnits - 1n),
+        Number(target - (maxSafeMinorUnits - 1n)),
+      ];
+      const expectedSum = sumReference(values);
+      const context =
+        `targeted USD/sum input=${JSON.stringify({
+          minorUnitsString: target.toString(),
+          minorUnits,
+          minorUnitsList: values,
+        })}`;
+
+      if (target <= maxSafeMinorUnits) {
+        expect(
+          formatFiatUSD(minorUnits),
+          `${context}; USD boundary oracle agreement`,
+        ).toBe(usdReference(target));
+        expect(
+          sumFiatUSD(values),
+          `${context}; sum boundary oracle agreement`,
+        ).toBe(usdReference(expectedSum));
+      } else {
+        expect(
+          () => formatFiatUSD(minorUnits),
+          `${context}; USD overflow rejection`,
+        ).toThrow(/safe.*integer/);
+        expect(
+          () => sumFiatUSD(values),
+          `${context}; sum overflow rejection with individually safe entries`,
+        ).toThrow(/safe.*integer/);
+      }
+    }
+  });
+});
