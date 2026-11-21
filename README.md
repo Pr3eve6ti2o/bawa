@@ -65,7 +65,9 @@ On `main` at HEAD `667527e` (verified 2026-11-20), Bawa's launcher prints routes
 
 *Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
 
-<img src="docs/diagrams/architecture.svg" alt="Bawa main at 667527e: route-only architecture" width="686">
+<img src="docs/diagrams/architecture.svg" alt="Bawa main at 667527e: route-only architecture" width="571">
+
+The CLI prints routes without executing them; secret-handling tools sit inside a trust boundary: M uses Trust Wallet Core 4.9.3 WASM and writes encrypted seed.enc.json using AES-256-GCM with AAD nova-shop-seed-v1 and file mode 0600; G exports verifySeedBundle and readDataKeyFromFd; D defaults to secrets/seed.enc.json. Outside the boundary, H lives in tools/hdwallet-gen/ and holds public-roots-only tools: derive_daemon.js is a JSONL daemon; compare.js compares addresses from public roots; the paths are BTC m/84'/0'/0'/0'/i, ETH m/44'/60'/0'/0'/i and TRX m/44'/195'/0'/0'/i; extended-key.js validates extended keys before WASM. Also outside the boundary, the AI-guided documentation route covers guides 01 to 16, and three launcher targets are unavailable.
 
 ### Inside the trust boundary
 
