@@ -37,8 +37,8 @@
 - BTC, ETH and TRX watch-only derivation through the repository tools is IMPLEMENTED_AND_VERIFIED. The engine status covers those derivation primitives only. The watch-only wallet product has not been built and remains DOCUMENTED_NOT_TESTED.
 - Fixed derivation policy: BTC m/84'/0'/0'/0/i; ETH m/44'/60'/0'/0/i; TRX m/44'/195'/0'/0/i. Account 0 and receiving branch 0 are fixed. Address derivation uses the corresponding extended public keys, not private key material.
 - TON is excluded because it has no xpub; its generation-only route is not part of this watch-only profile.
-- Send, sign and broadcast are outside this profile and remain DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.
-- Testnet is the default; mainnet is out of scope by default.
+- The end-to-end send/sign/broadcast/confirm flow is outside this profile and remains DOCUMENTED_NOT_TESTED; transaction construction (plan-transfer) and local signing exist in apps/web, but broadcast is not implemented anywhere in the repository.
+- Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.
 - M-38 confirmation policies are not enforced in code: BTC 6 confirmations as a customary recommendation; ETH finalised, retaining "12" only as an unsourced extra minimum, never as a substitute for finality; TRX 19 distinct SRs of 27 via /walletsolidity/*.
 - No graphical UI foundation applies to this CLI profile. Verified derivation does not establish a built monitoring interface or enforced confirmation policies.
 

@@ -13,3 +13,4 @@ Decisions that shape the repository, recorded so a later reader knows what was d
 | [0007](0007-price-feed-provider.md) | CoinGecko as the default (and only) live price provider for the native assets; missing/stale/failed prices shown as unavailable, never as $0.00. |
 | [0008](0008-ecdsa-residual-risk.md) | Accept the `ecdsa` 0.19.2 residual risk (PYSEC-2026-1325 / CVE-2024-23342, no fix version); do not replace or remove it; guard test fails the gate if the safety facts change; re-review by 2027-05-20. |
 | [0009](0009-fetchjson-no-retry.md) | `fetchJson` stays single-attempt; retries live in callers under a budget, reads only. |
+| [0010](0010-guide-scope-extension.md) | Guide scope extension beyond ten sections: docs/01–16 plus the Web, Android and mainnet guides and the implementation plan; supersedes ADR-0006's ten-section scope. |

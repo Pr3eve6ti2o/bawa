@@ -7,6 +7,14 @@ import { availableFor } from '../wallet/chains';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
 import { messageOf } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
+import {
+  AUTO_LOCK_OPTIONS,
+  autoLockDurationMs,
+  readAutoLockEnabled,
+  readAutoLockMinutes,
+  writeAutoLockEnabled,
+  writeAutoLockMinutes,
+} from '../wallet/auto-lock';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import type { BalanceState } from '../wallet/balance-state';
 
@@ -78,12 +86,9 @@ const ALL_CHAIN_IDS = [
   'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
 ] as const;
 
-// The vault has no lock state (owner order 2026-11-20): a vault that
-// exists is always unlocked — autoUnlock() restores the mnemonic into the
-// vault closure on boot, so 'unlocked' is the only state a stored vault
-// can be in. There is no auto-lock timer, no inactivity detection and no
-// password re-prompt. See vault.ts for the stored-key tradeoff.
-export type VaultState = 'no-vault' | 'unlocked';
+// 'locked' is reachable only with auto-lock enabled or before the first
+// unlock of a vault with no stored key.
+export type VaultState = 'no-vault' | 'locked' | 'unlocked';
 
 // Lane G, Phase 3 — boot rehydration (Safe's persistStore + useHydrateStore
 // pattern, Rabby's pending-guard pattern). Only PUBLIC derived addresses are
@@ -161,6 +166,12 @@ export interface WalletContextValue extends WalletState {
   removeXpub(chain: ChainId): void;
   refreshChain(chain: ChainId): Promise<void>;
   setSelectedChain(chain: ChainId): void;
+  lockVault(): void;
+  unlockVault(password: string, passphrase?: string): Promise<void>;
+  autoLockEnabled: boolean;
+  autoLockMinutes: number;
+  setAutoLockMinutes(minutes: number): void;
+  setAutoLockEnabled(enabled: boolean): Promise<void>;
   setVaultAccount(account: number, index: number): Promise<void>;
   refreshVaultAccounts(selection?: {
     account: number;
@@ -186,32 +197,99 @@ function readStored(): Record<string, unknown> {
 // messageOf comes from ../wallet/adapters/types (repo-study's single
 // shared error-message helper); the local duplicate is removed.
 function computeVaultState(): VaultState {
-  // No lock state: a stored vault is unlocked (autoUnlock restores the
-  // mnemonic; see the mount effect). A vault that cannot auto-unlock
-  // (legacy vault without a stored key) still reports 'unlocked' here;
-  // derivation falls back to persisted addresses in refreshVaultAccounts.
-  return vault.hasVault() ? 'unlocked' : 'no-vault';
+  if (!vault.hasVault()) return 'no-vault';
+  if (vault.isLocked()) return 'locked';
+  return 'unlocked';
+}
+
+function computeBootVaultState(): VaultState {
+  if (!vault.hasVault()) return 'no-vault';
+  if (vault.hasStoredKey() && !readAutoLockEnabled()) return 'unlocked';
+  return 'locked';
 }
 
 // --- Lane G: central reason → human sentence map (Safe's cgw-errors.ts
 // rule: "the status is never shown to the user"). No screen may render a
 // raw reason: call this instead. Unknown provider reasons fall back to a
 // generic sentence, never to the raw string. Kept in state and logs only.
-export function humanReasonMessage(reason: string | undefined, kind: 'balance' | 'history'): string {
-  if (reason === undefined || reason === '') return '';
-  const lower = reason.toLowerCase();
-  if (lower === 'no-adapter') {
-    return kind === 'history'
-      ? 'Transaction history is not connected for this chain yet.'
-      : 'This chain is not connected yet.';
+export function humanReasonMessage(
+  reason?: string,
+  kind: 'balance' | 'history' | 'price' | 'track' | 'general' = 'balance',
+): string {
+  if (!reason) return '';
+
+  const normalized = reason.toLowerCase();
+
+  if (normalized.includes('no-adapter')) {
+    switch (kind) {
+      case 'history':
+        return 'Transaction history is not connected for this chain yet.';
+      case 'price':
+        return 'Prices are not connected for this chain yet.';
+      case 'track':
+        return 'Tracking is not connected for this chain yet.';
+      case 'general':
+        return 'This feature is not connected yet.';
+      default:
+        return 'This chain is not connected yet.';
+    }
   }
-  if (lower === 'no-address') return 'No address is available for this chain yet.';
-  if (lower.includes('invalid') && lower.includes('address')) {
+
+  if (normalized.includes('no-address')) {
+    return 'No address is available for this chain yet.';
+  }
+
+  switch (normalized) {
+    case 'unsupported':
+    case 'unsupported-version':
+    case 'version-not-allowed':
+      return 'This is not supported for this chain yet.';
+    case 'unavailable-chain-data':
+      return 'Data for this chain is unavailable right now.';
+    case 'stub':
+      return 'This feature is not available yet.';
+    case 'invalid-length':
+    case 'invalid-checksum':
+    case 'invalid-character':
+    case 'invalid-base58':
+    case 'invalid-point':
+      return 'The address for this chain looks invalid.';
+    case 'secret-like':
+    case 'private-key':
+      return 'That looks like a secret. Please check what you entered.';
+  }
+
+  if (normalized.includes('invalid') && normalized.includes('address')) {
     return 'The address for this chain looks invalid.';
   }
+
+  if (kind === 'price') {
+    switch (normalized) {
+      case 'rate-limited':
+        return 'Price feed rate-limited — try again shortly.';
+      case 'network':
+        return 'Could not reach the price feed — check your connection and retry.';
+      case 'timeout':
+        return 'Price feed timed out — retry.';
+      case 'provider':
+        return 'Price feed error — retry.';
+    }
+  }
+
+  if (kind === 'track' && normalized === 'not-included') {
+    return 'This transaction is not included in a block yet.';
+  }
+
   if (isTransientReason(reason)) {
     return 'The network is busy or unreachable. Please try again in a moment.';
   }
+
+  // A reason that already reads as a human sentence is shown as-is; the
+  // map translates machine codes, it must not mangle informative messages.
+  if (reason.includes(' ')) {
+    return reason;
+  }
+
   return 'Please try again later.';
 }
 
@@ -383,7 +461,9 @@ function saveCachedBalances(entries: Partial<Record<ChainId, CachedBalance>>): v
 // no-vault first paint keeps showing 'Balance unavailable', not a
 // skeleton that never resolves.
 function initialWalletState(): WalletState {
-  const persisted = readPersistedVaultAddresses();
+  // A locked boot never rehydrates persisted addresses into state.
+  const persisted =
+    computeBootVaultState() === 'unlocked' ? readPersistedVaultAddresses() : null;
   const stored = readStored();
   const hasPersistedAddress =
     persisted !== null
@@ -416,7 +496,7 @@ function initialWalletState(): WalletState {
     addresses: perChain<DerivedAddress[]>(() => []),
     uiState: perChain<UiState>(() => 'empty'),
     errors: perChain<string | null>(() => null),
-    vaultState: vault.hasVault() ? 'unlocked' : 'no-vault',
+    vaultState: computeBootVaultState(),
     vaultAccount: persisted === null
       ? { account: 0, index: 0 }
       : { account: persisted.account, index: persisted.index },
@@ -437,6 +517,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WalletState>(() => initialWalletState());
   const [selectedChain, setSelectedChain] = useState<ChainId>('btc');
   const [hydrated, setHydrated] = useState(false);
+
+  const [autoLockEnabled, setAutoLockEnabledState] = useState<boolean>(() => readAutoLockEnabled());
+  const [autoLockMinutes, setAutoLockMinutesState] = useState<number>(() => readAutoLockMinutes());
   const current = useRef(state);
   const additions = useRef(perChain(() => 0));
   const changed = useRef(perChain(() => false));
@@ -679,8 +762,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       !(await vault.autoUnlock())
     ) {
       const persisted = readPersistedVaultAddresses();
+      // While locked, derived addresses must remain hidden.
       const restored =
-        persisted !== null
+        vaultState === 'unlocked'
+          && persisted !== null
           && persisted.account === selected.account
           && persisted.index === selected.index
           ? persisted.addresses
@@ -768,11 +853,100 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await refreshVaultAccounts(selection);
   }, [update, refreshVaultAccounts]);
 
-  // No lock/unlock API (owner order 2026-11-20): the vault is always
-  // unlocked — autoUnlock() restores the mnemonic on boot (see the
-  // mount effect) and refreshVaultAccounts re-derives from it. The
-  // lock screen, lockVault/unlockVault, the watch-only lock/unlock
-  // and the auto-lock timer were removed with it.
+  const unlockVault = useCallback(async (password: string, passphrase = '') => {
+    if (isPassphraseUsed() && !passphrase) {
+      throw new Error('This wallet uses a passphrase. Enter it to unlock.');
+    }
+    await vault.unlock(password, passphrase);
+    await refreshVaultAccounts();
+  }, [refreshVaultAccounts]);
+
+  const lockVault = useCallback(() => {
+    ++vaultDerivations.current;
+    vault.lock();
+    update(previous => ({
+      ...previous,
+      vaultState: computeVaultState(),
+      vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+      vaultAddresses: perChain<string[]>(() => []),
+      balances: clearedBalances(),
+      history: clearedHistory(),
+    }));
+  }, [update]);
+
+  const setAutoLockMinutes = useCallback((minutes: number) => {
+    if (!(AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)) return;
+    writeAutoLockMinutes(minutes);
+    setAutoLockMinutesState(minutes);
+  }, []);
+
+  // Toggling handles the key-storage invariant: enabling deletes the
+  // stored key at once (the vault stays unlocked in memory until the
+  // timer fires or the page reloads); disabling stores the key when the
+  // vault is unlocked in memory. When the vault is locked, disabling
+  // stores nothing here — the caller unlocks with the password
+  // afterwards, and unlock() stores the key because the preference is
+  // already off by then.
+  const setAutoLockEnabled = useCallback(async (enabled: boolean) => {
+    writeAutoLockEnabled(enabled);
+    if (enabled) {
+      vault.deleteStoredKey();
+    } else {
+      await vault.storeCurrentKey();
+    }
+    setAutoLockEnabledState(enabled);
+  }, []);
+
+  // NO persisted deadline: the removed timer honored a stored deadline across
+  // reloads, so an earlier-session deadline could fire minutes early even though
+  // the setting said 5 minutes. Always count the FULL chosen duration from the
+  // last unlock or activity, in the live session only.
+  useEffect(() => {
+    if (state.vaultState !== "unlocked" || !autoLockEnabled) {
+      return;
+    }
+
+    if (autoLockMinutes === 0) {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "hidden") {
+          lockVault();
+        }
+      };
+
+      const handlePageHide = () => {
+        lockVault();
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("pagehide", handlePageHide);
+
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener("pagehide", handlePageHide);
+      };
+    }
+
+    const armAutoLockTimer = () =>
+      window.setTimeout(lockVault, autoLockDurationMs(autoLockMinutes));
+
+    let autoLockTimerId = armAutoLockTimer();
+
+    const handleActivity = () => {
+      window.clearTimeout(autoLockTimerId);
+      autoLockTimerId = armAutoLockTimer();
+    };
+
+    window.addEventListener("pointerdown", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity, { passive: true });
+    window.addEventListener("wheel", handleActivity, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("wheel", handleActivity);
+      window.clearTimeout(autoLockTimerId);
+    };
+  }, [state.vaultState, autoLockEnabled, autoLockMinutes, lockVault]);
 
 
   useEffect(() => {
@@ -866,7 +1040,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
     setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory]);
+    lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

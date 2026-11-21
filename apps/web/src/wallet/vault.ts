@@ -1,50 +1,72 @@
 /**
- * Password-protected encrypted local vault, always unlocked (no lock).
+ * Password-protected encrypted vault (AES-GCM-256, PBKDF2 with 600,000 iterations).
  *
- * Merge 1 (repo-study into adopt-proper) resolution — Lane A: the no-lock
- * architecture from adopt-proper (owner decision 2026-11-20) is kept, and
- * repo-study's lock-independent additions are ported in: versioned
- * envelope migration (migrateEnvelope), key provenance
- * (vaultProvenance/isTestVault/TEST_PROVENANCE), backup/restore
- * (hasVaultBackup/writeVaultBackup/deleteVaultBackup/
- * restoreVaultFromBackup) and verifyVaultPassword. Vault failures use the
- * shared BawaError catalogue (wallet/errors.ts); the messages are the
- * same strings adopt-proper used as plain Errors.
+ * Merge 2 (layout-rebuild into adopt-proper) resolution - Lane A2: the
+ * Merge 1 vault (versioned envelope migration via migrateEnvelope, key
+ * provenance via vaultProvenance/isTestVault/TEST_PROVENANCE,
+ * backup/restore via hasVaultBackup/writeVaultBackup/deleteVaultBackup/
+ * restoreVaultFromBackup, and verifyVaultPassword) is merged with the
+ * optional auto-lock vault (owner order 2026-11-20 ~23:11 IST,
+ * docs/DECISIONS.md section 8, which supersedes the lock-removal
+ * decision in section 7): lock()/unlock()/isLocked(), VaultState
+ * 'locked' in the wallet context, and the auto-lock timer there.
+ *
+ * Auto-lock is OPTIONAL and OFF by default. Key persistence is owned by
+ * the auto-lock setting (the key-storage invariant):
+ * - OFF: the PBKDF2-derived key is exported (raw bytes, base64) and
+ *   stored in localStorage under VAULT_KEY_STORAGE_KEY next to the
+ *   envelope; on boot autoUnlock() reads it and the vault opens with no
+ *   password prompt. createVault, unlock, changePassword and
+ *   restoreVaultFromBackup all store the key this way while OFF.
+ * - ON: no key is stored (enabling deletes it; changePassword deletes
+ *   it too), so a reload or a lock leaves the vault genuinely locked and
+ *   unlocking requires the password. The vault is still open in memory
+ *   until the timer fires, lock() is called, or the page reloads.
+ * Disabling auto-lock stores the in-memory key when unlocked
+ * (storeCurrentKey); when locked it stores nothing - the next unlock()
+ * stores the key because the preference is already off by then.
  *
  * Follows OneKey's secret-envelope layering as a pattern only. The envelope
  * in localStorage holds only version, KDF parameters, salt, IV, ciphertext,
- * recovery profileIds and provenance metadata — never a mnemonic, seed, key
+ * recovery profileIds and provenance metadata - never a mnemonic, seed, key
  * or password.
  *
- * There is no lock state, no auto-lock timer and no password re-prompt:
- * the password is set once at creation (or import) and never asked again.
- * The vault stays unlocked by AUTO-UNLOCK: at creation the PBKDF2-derived
- * key is exported (raw bytes, base64) and stored in localStorage under
- * VAULT_KEY_STORAGE_KEY next to the envelope; on boot autoUnlock() reads
- * that stored key, decrypts the envelope and puts the mnemonic back in
- * this module's closure. No password is needed after creation.
- *
- * SECURITY TRADEOFF (owner decision, 2026-11-20): the raw vault key sits
- * in localStorage next to the ciphertext it decrypts, so anyone who can
- * read this origin's localStorage can decrypt the vault without the
- * password. The mnemonic itself is still never stored in plaintext, and
- * the envelope stays AES-GCM-256 / PBKDF2 600k. This is the standard
- * "stay unlocked" pattern and the owner's explicit choice; it is NOT a
- * locked vault and must never be described as one.
+ * SECURITY TRADEOFF (owner decision, 2026-11-20): with auto-lock OFF the
+ * raw vault key sits in localStorage next to the ciphertext it decrypts,
+ * so anyone who can read this origin's localStorage can decrypt the vault
+ * without the password. The mnemonic itself is still never stored in
+ * plaintext, and the envelope stays AES-GCM-256 / PBKDF2 600k. This is the
+ * standard "stay unlocked" pattern and the owner's explicit choice; with
+ * auto-lock OFF the vault must never be described as locked. With
+ * auto-lock ON there is no stored key while locked, so the lock is real.
  *
  * The backup (VAULT_BACKUP_STORAGE_KEY) is a verbatim copy of the primary
- * envelope — the same ciphertext, never plaintext. Restoring from it
- * re-derives the key from the password and stores it the auto-unlock way,
- * so a restored vault auto-unlocks on later boots. Deleting the vault
- * deletes the backup too: a deleted vault must not be resurrectable from
- * a copy the user asked to delete.
+ * envelope - the same ciphertext, never plaintext. Restoring from it
+ * re-derives the key from the password and stores it the auto-unlock way
+ * ONLY when auto-lock is off (the key-storage invariant); with auto-lock
+ * on, the restored vault is open in memory but locks on the next boot.
+ * Deleting the vault deletes the backup too: a deleted vault must not be
+ * resurrectable from a copy the user asked to delete.
  *
- * The decrypted mnemonic lives only transiently in this module's closure
- * while the vault is open. It is never held in React state, component
- * refs, localStorage or logs. JavaScript strings are immutable, so
- * "zeroing" means dropping every reference to the value (and to the
+ * The decrypted mnemonic and key live only transiently in this module's
+ * closure while the vault is open. They are never held in React state,
+ * component refs, localStorage or logs. JavaScript strings are immutable,
+ * so "zeroing" means dropping every reference to the value (and to the
  * CryptoKey) as soon as it is no longer needed; no copy is retained
- * anywhere after deleteVault().
+ * anywhere after lock() or deleteVault(). The in-memory key
+ * (unlockedKey) is what isLocked() reads: it is set by createVault,
+ * autoUnlock, unlock, changePassword and restoreVaultFromBackup, and
+ * cleared by lock() and deleteVault().
+ *
+ * Vault failures use the shared BawaError catalogue (wallet/errors.ts);
+ * the messages are the same strings adopt-proper used as plain Errors.
+ * One deliberate exception: withMnemonic / withMnemonicAsync throw a
+ * plain Error ('Vault is not unlocked.') - the same throw covers the
+ * no-vault and the locked cases, and no caller switches on the code for
+ * this path. unlock() reuses decryptEnvelopeText, so a wrong password
+ * throws the catalogue VAULT_WRONG_PASSWORD (1001) and a corrupt
+ * envelope VAULT_CORRUPTED (1002), with the same messages the
+ * layout-rebuild vault threw as plain Errors.
  */
 
 import {
@@ -52,6 +74,7 @@ import {
   ERROR_MESSAGES,
   WalletErrorCodes,
 } from './errors';
+import { readAutoLockEnabled } from './auto-lock';
 
 export const VAULT_STORAGE_KEY = 'bawa-vault';
 export const VAULT_BACKUP_STORAGE_KEY = 'bawa-vault-backup';
@@ -68,6 +91,8 @@ export const VAULT_KEY_BITS = 256;
 /** 'Vault is corrupted.' — the catalogue message for VAULT_CORRUPTED. */
 export const VAULT_CORRUPTED: string =
   ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED];
+
+export const VAULT_WRONG_PASSWORD = 'Incorrect password.';
 
 interface VaultEnvelope {
   version: number;
@@ -129,6 +154,15 @@ function provenanceFromEnvelope(envelope: VaultEnvelope): KeyProvenance {
   return { source: provenance.source, isTesting: provenance.isTesting };
 }
 
+/**
+ * The derived key for the open vault, held in memory only. This is what
+ * isLocked() reads and what storeCurrentKey() stores when auto-lock is
+ * turned off. Set by createVault, autoUnlock, unlock, changePassword and
+ * restoreVaultFromBackup; cleared by lock() and deleteVault(). Merge 1
+ * removed it as dead (the no-lock vault never read it); Merge 2 restores
+ * it because lock/unlock need the in-memory key.
+ */
+let unlockedKey: CryptoKey | null = null;
 let unlockedMnemonic: string | null = null;
 let unlockedPassphrase: string | null = null;
 
@@ -267,6 +301,27 @@ async function storeKey(key: CryptoKey): Promise<void> {
   );
 }
 
+export async function storeCurrentKey(): Promise<boolean> {
+  if (unlockedKey === null) {
+    return false;
+  }
+
+  await storeKey(unlockedKey);
+  return true;
+}
+
+export function deleteStoredKey(): void {
+  localStorage.removeItem(VAULT_KEY_STORAGE_KEY);
+}
+
+export function hasStoredKey(): boolean {
+  try {
+    return localStorage.getItem(VAULT_KEY_STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 async function encryptEnvelope(
   mnemonic: string,
   password: string,
@@ -336,10 +391,12 @@ async function decryptEnvelopeText(
 
 /**
  * Creates a vault. Throws if a vault already exists or the mnemonic is empty.
- * The derived key is stored (see the module doc comment) so the vault
- * auto-unlocks on later boots; the mnemonic stays in the closure and is
- * never written to storage. The vault is open immediately after creation.
- * A verbatim backup of the envelope is written at creation.
+ * The derived key is stored only when auto-lock is off (see the module doc
+ * comment), so the vault auto-unlocks on later boots; with auto-lock on no
+ * key is stored and the vault locks on the next boot. Either way the vault
+ * is open immediately after creation: the mnemonic and key stay in the
+ * closure and are never written to storage. A verbatim backup of the
+ * envelope is written at creation.
  */
 export async function createVault(
   mnemonic: string,
@@ -372,9 +429,12 @@ export async function createVault(
   );
   // Store the key before the envelope: a failure here leaves no half-made
   // vault behind.
-  await storeKey(key);
+  if (!readAutoLockEnabled()) {
+    await storeKey(key);
+  }
   writeEnvelope(envelope);
   writeVaultBackup();
+  unlockedKey = key;
   unlockedMnemonic = mnemonic;
   unlockedPassphrase = passphrase;
 }
@@ -493,9 +553,46 @@ export async function autoUnlock(): Promise<boolean> {
     // design; both fail authentication. Fail closed, no oracle.
     return false;
   }
+  unlockedKey = key;
   unlockedMnemonic = new TextDecoder().decode(plaintext);
   unlockedPassphrase = '';
   return true;
+}
+
+
+export function isLocked(): boolean {
+  return unlockedKey === null;
+}
+
+/**
+ * Unlocks the vault with the password. Reuses decryptEnvelopeText, so a
+ * wrong password throws the catalogue VAULT_WRONG_PASSWORD (1001) and a
+ * corrupt envelope VAULT_CORRUPTED (1002) - the same messages the
+ * layout-rebuild vault threw as plain Errors. No vault throws catalogue
+ * VAULT_NOT_FOUND (1003, 'No vault exists.'). The derived key is stored
+ * only when auto-lock is off (the key-storage invariant); with auto-lock
+ * on the vault is open in memory only, and a reload locks it again.
+ * The session passphrase is set from the argument ('', the default, when
+ * the wallet does not use one).
+ */
+export async function unlock(password: string, passphrase = ''): Promise<void> {
+  const envelope = readEnvelope();
+  if (envelope === null) {
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
+  }
+  const { text, key } = await decryptEnvelopeText(envelope, password);
+  unlockedKey = key;
+  unlockedMnemonic = text;
+  unlockedPassphrase = passphrase;
+  if (!readAutoLockEnabled()) {
+    await storeKey(key);
+  }
+}
+
+export function lock(): void {
+  unlockedKey = null;
+  unlockedMnemonic = null;
+  unlockedPassphrase = null;
 }
 
 /** The BIP-39 passphrase for the current session ('' if none). */
@@ -510,9 +607,9 @@ export function getSessionPassphrase(): string {
  * returns; callers must not retain or log it.
  *
  * The throw is a plain Error ('Vault is not unlocked.'), deliberately
- * NOT the catalogue's VAULT_LOCKED ('Vault is locked.'): this vault is
- * never locked, so the locked message would be wrong. No caller switches
- * on the code for this path.
+ * NOT the catalogue's VAULT_LOCKED ('Vault is locked.'): the same throw
+ * covers the no-vault case, where the locked message would be wrong.
+ * No caller switches on the code for this path.
  */
 export function withMnemonic<T>(fn: (mnemonic: string) => T): T {
   if (unlockedMnemonic === null) {
@@ -539,8 +636,10 @@ export async function withMnemonicAsync<T>(
 /**
  * Re-encrypts the vault under a new password. There is no lock to verify
  * against, so only the new password is needed: the mnemonic is already
- * in the closure. The stored key is replaced with the newly derived one,
- * so auto-unlock keeps working, and the backup is refreshed so the new
+ * in the closure. The in-memory key is replaced with the newly derived
+ * one; the stored key follows the auto-lock setting - replaced when
+ * auto-lock is off so auto-unlock keeps working, deleted when on (a
+ * stale old key must not survive). The backup is refreshed so the new
  * password restores. The stored recovery profileIds and the key
  * provenance are never changed: a restore needing another profile must
  * delete and recreate the vault explicitly.
@@ -561,9 +660,14 @@ export async function changePassword(newPassword: string): Promise<void> {
     envelope.profileIds,
     preservedProvenance,
   );
-  await storeKey(key);
+  if (readAutoLockEnabled()) {
+    deleteStoredKey();
+  } else {
+    await storeKey(key);
+  }
   writeEnvelope(next);
   writeVaultBackup();
+  unlockedKey = key;
 }
 
 /**
@@ -571,8 +675,13 @@ export async function changePassword(newPassword: string): Promise<void> {
  * damage. The backup is proven to decrypt with the given password
  * BEFORE the primary is touched; a wrong password, missing backup or
  * corrupt backup leaves the primary exactly as it was. The derived key
- * is stored the auto-unlock way and the mnemonic is put in the closure,
- * so the restored vault is open and auto-unlocks on later boots.
+ * is stored the auto-unlock way ONLY when auto-lock is off (the
+ * key-storage invariant - Merge 2 decision: a restore follows the same
+ * rule as createVault/unlock/changePassword, since the layout-rebuild
+ * side had no restore to contradict it); with auto-lock on, no key is
+ * stored and the restored vault locks on the next boot. Either way the
+ * mnemonic and key are put in the closure, so the restored vault is
+ * open immediately.
  */
 export async function restoreVaultFromBackup(password: string): Promise<void> {
   const backupText = getStorage().getItem(VAULT_BACKUP_STORAGE_KEY);
@@ -591,7 +700,10 @@ export async function restoreVaultFromBackup(password: string): Promise<void> {
   // Verify before changing either the primary envelope or unlocked state.
   const { text, key } = await decryptEnvelopeText(envelope, password);
   writeEnvelope(envelope);
-  await storeKey(key);
+  if (!readAutoLockEnabled()) {
+    await storeKey(key);
+  }
+  unlockedKey = key;
   unlockedMnemonic = text;
   unlockedPassphrase = '';
 }
@@ -603,8 +715,9 @@ export async function restoreVaultFromBackup(password: string): Promise<void> {
  */
 export function deleteVault(): void {
   getStorage().removeItem(VAULT_STORAGE_KEY);
-  getStorage().removeItem(VAULT_KEY_STORAGE_KEY);
+  deleteStoredKey();
   deleteVaultBackup();
+  unlockedKey = null;
   unlockedMnemonic = null;
   unlockedPassphrase = null;
 }

@@ -116,6 +116,8 @@ Use CoinGecko as the default (and only) price provider:
 
 accepted
 
+Amendment (2026-11-20): the live price feed now covers all 13 chains in the chain registry (apps/web/src/wallet/prices.ts), using 12 unique CoinGecko ids — Base shares Ethereum's id (ethereum). The 4-native-asset scope stated above is the scope at the time this ADR was written, not the current coverage. No other part of this record changes.
+
 ## Consequences
 
 - `apps/web/src/wallet/prices.ts` is the feed: one batched CoinGecko call per

@@ -90,7 +90,7 @@ export function QrScanner({ onScan, onCancel, onError }: QrScannerProps) {
         ref={videoRef}
         playsInline
         muted
-        className="w-full rounded-lg bg-black"
+        className="w-full rounded-bawa-sm bg-ink"
         aria-label="Camera preview"
       />
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />

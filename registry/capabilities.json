@@ -2,6 +2,7 @@
   "registry": "capabilities",
   "version": 3,
   "updated": "2026-11-22",
+  "iv-semantics": "IMPLEMENTED_AND_VERIFIED in chainSupport means verified in at least one explicitly identified profile in that chain's profiles list, not repo-wide verification. chainSupport covers 13 chains (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge); the 9 additional chains (sol, bsc, matic, arb, op, base, avax, ltc, doge) are scoped to the multichain-extended-wallet profile, with only create, derive, restore and receive IMPLEMENTED_AND_VERIFIED and the other six operations NOT_SUPPORTED. The entries array has 8 entries covering only the 4 chains (btc, eth, trx, ton). In entries, send/sign/broadcast/confirm mean the end-to-end flow including broadcast, which is not implemented anywhere; plan-transfer and local-sign in chainSupport are the implemented offline steps (transaction construction and local signing without broadcast).",
   "chainSupport": {
     "btc": {
       "profiles": [
@@ -543,7 +544,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/84'/0'/0'/0/i, not live-network flows. M-38 requires 6 confirmations as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/84'/0'/0'/0/i, not live-network flows. M-38 requires 6 confirmations as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "btc-testnet4",
@@ -607,7 +608,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i, not live-network flows. M-38 requires finalised status as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i, not live-network flows. M-38 requires finalised status as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "eth-testnet",
@@ -671,7 +672,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is out of scope by default; verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i, not live-network flows. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i, not live-network flows. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "trx-testnet",
@@ -735,7 +736,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is out of scope by default; verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub and no watch-only derivation. M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere."
+      "notes": "Mainnet is the default (ADR-0003); verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub; TON watch-only derivation is a public-key-only route via tools/hdwallet-gen/derive-ton.js (single V4 R2 address from a 32-byte Ed25519 public key, no index). M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "ton-testnet",
@@ -767,7 +768,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Testnet selection is OPEN; verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub and no watch-only derivation. M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere."
+      "notes": "Testnet selection is OPEN; verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub; TON watch-only derivation is a public-key-only route via tools/hdwallet-gen/derive-ton.js (single V4 R2 address from a 32-byte Ed25519 public key, no index). M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere."
     }
   ]
 }

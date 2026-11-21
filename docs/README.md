@@ -23,6 +23,12 @@ Each README is organized around a job. Read only what you need, then follow the 
 - [15 — Threat Model & Theft Prevention](15-threat-model-and-theft-prevention/README.md)
 - [16 — Security Decision Guide](16-security-decision-guide/README.md)
 
+## Additional documentation
+
+- [Mainnet guide](mainnet/MAINNET-GUIDE.md)
+- [Architecture decisions (ADRs)](adr/README.md)
+- [Implementation plan](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md)
+
 ## Recommended reading order
 
 Fundamentals → Chains → Tool Map → Generation → Watch-Only → Tracking → Payment Tracking → Security/Recovery → Signing → Operations/Testing → Trust Wallet Verification → Chain Registry → Wallet App Architecture → Wallet App Implementation → Threat Model → Security Decision Guide.
@@ -38,8 +44,11 @@ The order is deliberate: first understand the rule, then choose software, then r
 - [References](REFERENCES.md)
 - [Security](SECURITY.md)
 - [Testing](TESTING.md)
+- Registries: [Profiles](../registry/profiles.json) (8 profiles), [Capabilities](../registry/capabilities.json), [Engines](../registry/engines.json), [UI](../registry/ui.json)
 
 ## Platform guides
 
 - [Web wallet guide](web-wallet/WEB-GUIDE.md)
 - [Android wallet guide](android-wallet/ANDROID-GUIDE.md)
+
+[Full documentation map](index.md)

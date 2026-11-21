@@ -34,8 +34,8 @@
 - Trust Wallet Core 4.9.3 is the verified tool pin in tools/hdwallet-gen. 4.9.2 is the guides' reference engine only, never the tool pin.
 - BTC watch-only derivation from extended public keys is IMPLEMENTED_AND_VERIFIED through the repository tools. The engine status records derivation evidence, not verification of a complete Bitcoin wallet or every security boundary.
 - Key generation policy is BIP-39 with 24 words and an empty passphrase. BTC uses m/84'/0'/0'/0/i, with account 0 and receiving branch 0 fixed.
-- Send, sign and broadcast are DOCUMENTED_NOT_TESTED. No transaction-construction, signing or broadcast code exists in the repository.
-- Testnet is the default; mainnet is out of scope by default.
+- The end-to-end send/sign/broadcast/confirm flow remains DOCUMENTED_NOT_TESTED; transaction construction (plan-transfer) and local signing exist in apps/web, but broadcast is not implemented anywhere in the repository.
+- Mainnet is the default (ADR-0003); testnet is for demonstration/testing only.
 - M-38 confirmation policy: BTC 6 confirmations, a customary recommendation. This is a documented policy, not enforced code.
 - No graphical UI foundation applies to this CLI profile. Derivation evidence does not establish transaction operation.
 

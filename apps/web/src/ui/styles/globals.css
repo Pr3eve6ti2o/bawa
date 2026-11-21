@@ -1,173 +1,165 @@
 @import "tailwindcss";
+
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
-@import "@fontsource-variable/noto-sans";
+@import "@fontsource-variable/noto-sans/index.css";
 @import "@fontsource/noto-sans-sc/400.css";
 @import "@fontsource/noto-sans-sc/600.css";
 @import "@fontsource/noto-sans-sc/700.css";
+@import "@fontsource/caveat/500.css";
+@import "@fontsource/caveat/600.css";
+@import "@fontsource/caveat/700.css";
+
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
 :root {
-  /* Surfaces — Bawa Balanced (Direction 04) */
-  --background: rgb(244 246 251);
-  --foreground: rgb(27 39 66);
-  --card: rgb(255 255 255);
-  --card-foreground: rgb(27 39 66);
-  --popover: rgb(255 255 255);
-  --popover-foreground: rgb(27 39 66);
+  /* Paper, Ink, Coral, Sun; only Ink is text on Paper. */
+  --bawa-paper: #FFFDF7;
+  --bawa-ink: #2B2B2B;
+  --bawa-coral: #FF6B4A;
+  --bawa-sun: #FFD93B;
 
-  /* Actions */
-  --primary: rgb(98 88 217);
-  --primary-hover: rgb(82 72 192);
-  --primary-active: rgb(82 72 192);
-  --primary-disabled: rgb(196 192 245);
-  /* Solid action purple: the button / step-circle background that keeps
-     white text at WCAG AA in BOTH themes. --primary itself is lifted to
-     #8b7cff inside the dark panel (and in .dark) so it stays readable as
-     TEXT on navy — but white text on #8b7cff is only 3.27:1, so every
-     filled control with white text uses --primary-solid instead (white on
-     #6258d9 is 5.36:1, on hover #5248c0 6.89:1, on active #4a44a0 8.00:1).
-     The same #4a44a0 is the disabled-button text on the pale disabled
-     fill (4.65:1 on #c4c0f5; the old white-on-pale was 1.72:1) and the
-     pending step number on the pale step circle (4.65:1). In .dark the
-     disabled text stays white (12.03:1 on #2a3651) and the pending step
-     number is pale lavender #e6e4ff (6.15:1 on the dark #0052a5 fill). */
-  --primary-solid: rgb(98 88 217);
-  --primary-solid-hover: rgb(82 72 192);
-  --primary-solid-active: rgb(74 68 160);
-  --primary-disabled-foreground: rgb(74 68 160);
-  --step-pending-text: rgb(74 68 160);
-  --primary-soft: rgb(230 228 255);
-  --primary-foreground: rgb(255 255 255);
-  --secondary: rgb(238 240 252);
-  --secondary-foreground: rgb(27 39 66);
-  --accent: rgb(238 240 252);
-  --accent-foreground: rgb(27 39 66);
-  --muted: rgb(238 240 252);
-  --muted-foreground: rgb(100 113 140);
-  /* Deepened for WCAG AA as TEXT on white (4.83:1) and as a filled
-     button with white text (4.83:1). The old #f3636f was 3.08:1 both
-     ways, which failed every error message (lock, send, receive,
-     wallet management) and every destructive button. */
-  --destructive: rgb(220 38 38);
-  --destructive-hover: rgb(185 28 28);
-  --destructive-foreground: rgb(255 255 255);
+  --bawa-stroke: 2px;
+  --bawa-border: 2px solid var(--bawa-ink);
+  --bawa-border-dashed: 2px dashed var(--bawa-ink);
+  --bawa-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --bawa-radius-sm: 15px 225px 15px 255px / 255px 15px 225px 15px;
 
-  /* Borders & focus */
-  --border: rgb(214 222 237);
-  --border-strong: rgb(185 195 219);
-  --border-subtle: rgb(214 222 237);
-  --input: rgb(238 240 252);
-  --ring: rgb(139 124 255);
-  --input-background: rgb(238 240 252);
-  --switch-background: rgb(185 195 219);
+  --background: var(--bawa-paper);
+  --card: var(--bawa-paper);
+  --popover: var(--bawa-paper);
+  --secondary: var(--bawa-paper);
+  --muted: var(--bawa-paper);
+  --input: var(--bawa-paper);
+  --input-background: var(--bawa-paper);
+  --switch-background: var(--bawa-paper);
+  --surface-page: var(--bawa-paper);
+  --surface-blue: var(--bawa-paper);
+  --surface-blue-info: var(--bawa-paper);
+  --surface-cool: var(--bawa-paper);
+  --surface-light: var(--bawa-paper);
+  --surface-ai-tinted: var(--bawa-paper);
+  --surface-glass-page: var(--bawa-paper);
+  --surface-glass-elevated: var(--bawa-paper);
+  --surface-glass-modal: var(--bawa-paper);
+  --progress-track: var(--bawa-paper);
+  --info-surface: var(--bawa-paper);
+  --ai-subtle-bg: var(--bawa-paper);
+  --chart-4: var(--bawa-paper);
+  --primary-disabled: var(--bawa-paper);
+
+  --foreground: var(--bawa-ink);
+  --card-foreground: var(--bawa-ink);
+  --popover-foreground: var(--bawa-ink);
+  --secondary-foreground: var(--bawa-ink);
+  --primary-disabled-foreground: var(--bawa-ink);
+  --step-pending-text: var(--bawa-ink);
+  --muted-foreground: var(--bawa-ink);
+  --text-secondary-gray: var(--bawa-ink);
+  --placeholder: var(--bawa-ink);
+  --text-tertiary: var(--bawa-ink);
+  --text-disabled: var(--bawa-ink);
+  --ai-text: var(--bawa-ink);
+  --success-text: var(--bawa-ink);
+  --warning-text: var(--bawa-ink);
+  --error-text: var(--bawa-ink);
+  --info: var(--bawa-ink);
+  --positive: var(--bawa-ink);
+  --tx-dropped: var(--bawa-ink);
+  --chart-1: var(--bawa-ink);
+  --chart-5: var(--bawa-ink);
+  --brand-deep: var(--bawa-ink);
+  --border: var(--bawa-ink);
+  --border-strong: var(--bawa-ink);
+  --border-subtle: var(--bawa-ink);
+  --success-border: var(--bawa-ink);
+  --warning-border: var(--bawa-ink);
+  --info-border: var(--bawa-ink);
+  --ai-subtle-border: var(--bawa-ink);
+
+  --primary: var(--bawa-coral);
+  --primary-hover: var(--bawa-coral);
+  --primary-active: var(--bawa-coral);
+  --primary-solid: var(--bawa-coral);
+  --primary-solid-hover: var(--bawa-coral);
+  --primary-solid-active: var(--bawa-coral);
+  --destructive: var(--bawa-coral);
+  --destructive-hover: var(--bawa-coral);
+  --brand: var(--bawa-coral);
+  --brand-hover: var(--bawa-coral);
+  --ai-primary: var(--bawa-coral);
+  --ai-emphasis: var(--bawa-coral);
+  --chart-2: var(--bawa-coral);
+  --tx-failed: var(--bawa-coral);
+  --danger-border: var(--bawa-coral);
+  --ring: var(--bawa-coral);
+
+  --primary-foreground: var(--bawa-ink);
+  --destructive-foreground: var(--bawa-ink);
+
+  --accent: var(--bawa-sun);
+  --primary-soft: var(--bawa-sun);
+  --success: var(--bawa-sun);
+  --success-surface: var(--bawa-sun);
+  --success-surface-tint: var(--bawa-sun);
+  --warning: var(--bawa-sun);
+  --warning-surface: var(--bawa-sun);
+  --positive-surface: var(--bawa-sun);
+  --tx-pending: var(--bawa-sun);
+  --tx-confirmed: var(--bawa-sun);
+  --chart-3: var(--bawa-sun);
+  --brand-secondary: var(--bawa-sun);
+  --error-surface: var(--bawa-sun);
+  --surface-blue-light: var(--bawa-sun);
+  --surface-blue-dim: var(--bawa-sun);
+
+  --text-inverse: var(--bawa-paper);
+
+  --sidebar: var(--bawa-paper);
+  --sidebar-foreground: var(--bawa-ink);
+  --sidebar-primary: var(--bawa-coral);
+  --sidebar-primary-foreground: var(--bawa-ink);
+  --sidebar-accent: var(--bawa-sun);
+  --sidebar-accent-foreground: var(--bawa-ink);
+  --sidebar-border: var(--bawa-ink);
+  --sidebar-ring: var(--bawa-coral);
+
+  /*
+   * Deprecated panel shims: only so old screens keep rendering on Paper;
+   * new code uses --bawa-*; screen lanes delete them.
+   */
+  --panel-surface: var(--bawa-paper);
+  --panel-surface-raised: var(--bawa-paper);
+  --panel-border: var(--bawa-ink);
+  --panel-text: var(--bawa-ink);
+  --panel-text-muted: var(--bawa-ink);
+  --panel-text-soft: var(--bawa-ink);
+  --panel-accent: var(--bawa-coral);
+  --panel-accent-from: var(--bawa-coral);
+  --panel-accent-to: var(--bawa-sun);
+  --panel-success-pill-bg: var(--bawa-sun);
+  --panel-success-pill-text: var(--bawa-ink);
+  --panel-icon-tile: var(--bawa-sun);
+  --panel-shell-from: var(--bawa-paper);
+  --panel-shell-to: var(--bawa-paper);
+  --panel-hover: var(--bawa-paper);
+  --panel-active: var(--bawa-sun);
+  --panel-active-hover: var(--bawa-sun);
+  --panel-border-strong: var(--bawa-ink);
+  --panel-action-hover: var(--bawa-paper);
+
+  --dark-surface: var(--bawa-ink);
+}
+
+:root {
   --font-weight-medium: 500;
   --font-weight-normal: 400;
 
-  /* Brand aliases */
-  --brand: rgb(98 88 217);
-  --brand-secondary: rgb(139 124 255);
-  --brand-hover: rgb(82 72 192);
-  --brand-deep: rgb(20 29 52);
-
-  /* Surface aliases */
-  --surface-page: rgb(244 246 251);
-  --surface-blue: rgb(238 240 252);
-  --surface-blue-light: rgb(230 228 255);
-  --surface-blue-dim: rgb(196 192 245);
-  --surface-blue-info: rgb(208 240 250);
-  --surface-cool: rgb(238 240 252);
-  --surface-light: rgba(240, 241, 243, 0.96);
-  --surface-ai-tinted: rgb(245 243 254);
-  --surface-glass-page: rgba(255, 255, 255, 0.96);
-  --surface-glass-elevated: rgba(240, 241, 243, 0.96);
-  --surface-glass-modal: rgba(240, 241, 243, 0.96);
-  --dark-surface: rgba(17, 29, 74, 0.85);
-
-  /* Feedback */
-  --success: rgb(75 206 113);
-  --success-foreground: rgb(255 255 255);
-  /* Darkened for WCAG AA as text on white (5.40:1) and on the success
-     badge surface (4.54:1 on #daf1e1). The old #228e42 was 4.19:1 on
-     white and 3.52:1 on the badge surface. */
-  --success-text: rgb(27 122 56);
-  --success-surface: rgb(218 241 225);
-  --success-border: rgb(138 218 161);
-  --success-surface-tint: rgb(218 241 225);
-  --warning: rgb(252 140 77);
-  --warning-text: rgb(168 60 0);
-  --warning-surface: rgb(250 227 215);
-  --warning-border: rgb(246 168 124);
-  --danger-border: rgb(239 134 143);
-  --error-text: rgb(196 9 24);
-  --error-surface: rgb(248 218 220);
-  --info: rgb(12 197 255);
-  --info-surface: rgb(208 240 250);
-  --info-border: rgb(12 197 255);
-
-  /* Transaction states */
-  --positive: rgb(75 206 113);
-  --positive-surface: rgb(218 241 225);
-  --tx-pending: rgb(252 140 77);
-  --tx-confirmed: rgb(75 206 113);
-  --tx-failed: rgb(243 99 111);
-  --tx-dropped: rgb(153 161 175);
-
-  /* Text extras */
-  --text-secondary-gray: rgb(100 113 140);
-  /* Input placeholder text. The old placeholder used --muted-foreground,
-     which inside the dark panel is #aab5d1 — 1.75:1 on the pale input
-     fill #eeeefc — and outside it #64718c, 4.32:1 on #eeeefc. This token
-     is 5.21:1 on the input fill in light mode; in .dark it is #aab5d1
-     (9.31:1 on the dark input fill). */
-  --placeholder: rgb(88 100 128);
-  --text-tertiary: rgb(159 169 199);
-  --text-disabled: rgb(185 195 219);
-  --text-inverse: rgb(255 255 255);
-  --text-ai: rgb(98 88 217);
-
-  /* AI */
-  --ai-primary: rgb(139 124 255);
-  --ai-subtle-bg: rgb(238 240 252);
-  --ai-subtle-border: rgb(230 228 255);
-  --ai-emphasis: rgb(98 88 217);
-  --ai-text: rgb(82 72 192);
-  --ai-icon: rgb(139 124 255);
-
-  /* Track colors */
-  --progress-track: rgb(214 222 237);
-
-  /* Charts (brand-derived) */
-  --chart-1: rgb(98 88 217);
-  --chart-2: rgb(139 124 255);
-  --chart-3: rgb(79 124 255);
-  --chart-4: rgb(238 240 252);
-  --chart-5: rgb(20 29 52);
-
-  /* Radius */
-  --radius: 12px;
-
-  /* Shadows */
-  --shadow-card-color: rgba(11, 16, 32, 0.08);
-  --shadow-cta-color: rgba(98, 88, 217, 0.25);
-  --shadow-dialog-color: rgba(17, 29, 74, 0.16);
-  --shadow-card: 0 8px 24px color-mix(in srgb, var(--shadow-card-color) 55%, transparent);
-  --shadow-card-md: 0 12px 32px color-mix(in srgb, var(--shadow-card-color) 70%, transparent);
-  --shadow-card-lg: 0 24px 56px color-mix(in srgb, var(--shadow-card-color) 75%, transparent);
-  --shadow-cta-sm: 0 6px 16px color-mix(in srgb, var(--shadow-cta-color) 80%, transparent);
-  --shadow-cta: 0 12px 28px var(--shadow-cta-color);
-  --shadow-cta-lg: 0 20px 48px color-mix(in srgb, var(--shadow-cta-color) 120%, transparent);
-  --shadow-icon: 0 10px 28px color-mix(in srgb, var(--shadow-card-color) 70%, transparent);
-  --shadow-dialog: 0 24px 60px var(--shadow-dialog-color);
-  --shadow-nav-active: 0 10px 24px color-mix(in srgb, var(--shadow-cta-color) 90%, transparent);
-
-  /* Density */
   --density-compact-y: 8px;
   --density-compact-x: 12px;
   --density-comfortable-y: 16px;
@@ -177,227 +169,14 @@
   --density-airy-y: 32px;
   --density-airy-x: 48px;
 
-  /* Motion */
   --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 150ms;
   --duration-normal: 240ms;
   --duration-soft: 360ms;
   --duration-hero: 500ms;
-
-  /* Sidebar */
-  --sidebar: rgb(20 29 52);
-  --sidebar-foreground: rgb(243 245 255);
-  --sidebar-primary: rgb(98 88 217);
-  --sidebar-primary-foreground: rgb(255 255 255);
-  --sidebar-accent: rgb(38 52 81);
-  --sidebar-accent-foreground: rgb(243 245 255);
-  --sidebar-border: rgb(42 54 81);
-  --sidebar-ring: rgb(139 124 255);
-
-  /* Panel — ONE dark token set for the 430px wallet shell (UI-UX spec §1.1).
-     Values taken from the shell's own existing code, not invented. The
-     shell stays dark in both themes, so these live in :root, not .dark.
-     --panel-shell-from/to and the hover/active extras are the same method
-     applied to the shell gradient and dark hover states (§10: no hex left
-     in any screen). Chain colours stay data in asset-rows.tsx. */
-  --panel-surface: #0b1326;
-  --panel-surface-raised: #243454;
-  --panel-border: #263454;
-  --panel-text: #eff2fc;
-  --panel-text-muted: #aab5d1;
-  --panel-text-soft: #c8d0e8;
-  --panel-accent: #b4aaff;
-  --panel-accent-from: #8b7cff;
-  --panel-accent-to: #4f7cff;
-  --panel-success-pill-bg: #224f45;
-  --panel-success-pill-text: #94e1c3;
-  --panel-icon-tile: #263451;
-  --panel-shell-from: #11172b;
-  --panel-shell-to: #18264a;
-  --panel-hover: #14213b;
-  --panel-active: #1a2948;
-  --panel-active-hover: #223658;
-  --panel-border-strong: #334767;
-  --panel-action-hover: #2a3651;
-}
-
-/* Bawa panel: dark-first wallet shell. Muted text and primary are lifted
-   for navy surfaces; white cards inside the panel keep the darker muted. */
-.bawa-panel {
-  --muted-foreground: rgb(170 181 209);
-  --primary: rgb(139 124 255);
-  --primary-hover: rgb(98 88 217);
-}
-.bawa-panel .bg-card {
-  --muted-foreground: rgb(90 106 138);
-  --primary: rgb(98 88 217);
-}
-
-/* Panel primary as a background: --primary is lifted to #8b7cff so it reads
-   as text on navy (5.66:1), but as a background with white text it is only
-   3.27:1. Elements carrying bg-primary (default Buttons, nav pills, step
-   circles, tooltips) get the light primary back so white text stays
-   5.36:1. Verified in the built CSS: Tailwind emits
-   .bg-primary{background-color:var(--primary)}, so this per-element
-   override is what the utility reads. */
-.bawa-panel .bg-primary {
-  --primary: rgb(98 88 217);
-}
-
-/* Dark mode: cards inside the panel are dark (#18264a), so the light-mode
-   override above would render dark muted text (#5a6a8a) on a dark card —
-   2.73:1. On dark cards the muted text and primary return to their light
-   dark-theme values: #aab5d1 on #18264a is 7.24:1, #8b7cff on #18264a is
-   4.54:1. Light mode is unchanged: #5a6a8a on white is 5.44:1. */
-.dark .bawa-panel .bg-card {
-  --muted-foreground: rgb(170 181 209);
-  --primary: rgb(139 124 255);
-}
-
-.dark {
-  /* Surfaces */
-  --background: rgb(11 16 32);
-  --foreground: rgb(243 245 255);
-  --card: rgb(24 38 74);
-  --card-foreground: rgb(255 255 255);
-  --popover: rgb(24 38 74);
-  --popover-foreground: rgb(255 255 255);
-
-  /* Actions */
-  --primary: rgb(139 124 255);
-  --primary-hover: rgb(98 88 217);
-  --primary-active: rgb(98 88 217);
-  --primary-disabled: rgb(42 54 81);
-  /* Same AA-safe solid action purple as light mode, so filled controls
-     with white text pass in dark mode too (white on #8b7cff is 3.27:1). */
-  --primary-solid: rgb(98 88 217);
-  --primary-solid-hover: rgb(82 72 192);
-  --primary-solid-active: rgb(74 68 160);
-  --primary-disabled-foreground: rgb(255 255 255);
-  --step-pending-text: rgb(230 228 255);
-  --primary-soft: rgb(38 52 81);
-  --primary-foreground: rgb(255 255 255);
-  --secondary: rgb(24 38 74);
-  --secondary-foreground: rgb(255 255 255);
-  --accent: rgb(38 52 81);
-  --accent-foreground: rgb(255 255 255);
-  --muted: rgb(11 16 32);
-  --muted-foreground: rgb(170 181 209);
-  --destructive: rgb(239 98 110);
-  --destructive-hover: rgb(243 99 111);
-  --destructive-foreground: rgb(255 255 255);
-
-  /* Borders & focus */
-  --border: rgb(42 54 81);
-  --border-strong: rgb(159 169 199);
-  --border-subtle: rgb(20 29 52);
-  --input: rgb(8 14 37);
-  --ring: rgb(139 124 255);
-  --input-background: rgb(8 14 37);
-  --switch-background: rgb(77 86 119);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-
-  /* Brand aliases */
-  --brand: rgb(44 146 250);
-  --brand-secondary: rgb(50 202 250);
-  --brand-hover: rgb(0 127 255);
-  --brand-deep: rgb(136 142 164);
-
-  /* Surface aliases */
-  --surface-page: rgb(12 22 55);
-  --surface-blue: rgb(0 41 82);
-  --surface-blue-light: rgb(0 76 153);
-  --surface-blue-dim: rgb(0 82 165);
-  --surface-blue-info: rgb(0 96 126);
-  --surface-cool: rgb(12 22 55);
-  --surface-light: rgba(15, 26, 67, 0.85);
-  --surface-ai-tinted: rgb(76 29 149);
-  --surface-glass-page: rgba(17, 29, 74, 0.85);
-  --surface-glass-elevated: rgba(15, 26, 67, 0.85);
-  --surface-glass-modal: rgba(15, 26, 67, 0.85);
-  --dark-surface: rgba(17, 29, 74, 0.85);
-
-  /* Feedback */
-  --success: rgb(98 208 130);
-  --success-foreground: rgb(255 255 255);
-  --success-text: rgb(230 247 234);
-  --success-surface: rgb(45 124 68);
-  --success-border: rgb(48 187 88);
-  --success-surface-tint: rgb(45 124 68);
-  --warning: rgb(248 142 83);
-  --warning-text: rgb(255 228 209);
-  --warning-surface: rgb(151 84 46);
-  --warning-border: rgb(255 101 14);
-  --danger-border: rgb(242 36 53);
-  --error-text: rgb(255 201 205);
-  --error-surface: rgb(146 59 67);
-  --info: rgb(50 202 250);
-  --info-surface: rgb(0 96 126);
-  --info-border: rgb(50 202 250);
-
-  /* Transaction states */
-  --positive: rgb(98 208 130);
-  --positive-surface: rgb(45 124 68);
-  --tx-pending: rgb(248 142 83);
-  --tx-confirmed: rgb(98 208 130);
-  --tx-failed: rgb(239 98 110);
-  --tx-dropped: rgb(207 210 219);
-
-  /* Text extras */
-  --text-secondary-gray: rgb(221 222 234);
-  --placeholder: rgb(170 181 209);
-  --text-tertiary: rgb(207 210 219);
-  --text-disabled: rgb(170 181 209);
-  --text-inverse: rgb(17 29 74);
-  --text-ai: rgb(196 181 253);
-
-  /* AI */
-  --ai-primary: rgb(167 139 250);
-  --ai-subtle-bg: rgb(76 29 149);
-  --ai-subtle-border: rgb(91 33 182);
-  --ai-emphasis: rgb(143 92 241);
-  --ai-text: rgb(196 181 253);
-  --ai-icon: rgb(167 139 250);
-
-  /* Track colors */
-  --progress-track: rgb(17 29 74);
-
-  /* Charts */
-  --chart-1: rgb(44 146 250);
-  --chart-2: rgb(50 202 250);
-  --chart-3: rgb(0 127 255);
-  --chart-4: rgb(12 22 55);
-  --chart-5: rgb(136 142 164);
-
-  /* Shadows */
-  --shadow-card-color: rgba(0, 0, 0, 0.24);
-  --shadow-cta-color: rgba(0, 127, 255, 0.3);
-  --shadow-dialog-color: rgba(0, 0, 0, 0.4);
-
-  /* Density */
-  --density-compact-y: 8px;
-  --density-compact-x: 12px;
-  --density-comfortable-y: 16px;
-  --density-comfortable-x: 24px;
-  --density-spacious-y: 24px;
-  --density-spacious-x: 32px;
-  --density-airy-y: 32px;
-  --density-airy-x: 48px;
-
-  /* Sidebar */
-  --sidebar: rgb(12 22 55);
-  --sidebar-foreground: rgb(255 255 255);
-  --sidebar-primary: rgb(44 146 250);
-  --sidebar-primary-foreground: rgb(255 255 255);
-  --sidebar-accent: rgb(15 26 67);
-  --sidebar-accent-foreground: rgb(255 255 255);
-  --sidebar-border: rgb(77 86 119);
-  --sidebar-ring: rgb(44 146 250);
 }
 
 @theme inline {
-  /* Colors — semantic */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -431,13 +210,13 @@
   --color-ring: var(--ring);
   --color-input-background: var(--input-background);
   --color-switch-background: var(--switch-background);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  /* Colors — brand aliases */
   --color-brand: var(--brand);
   --color-brand-secondary: var(--brand-secondary);
   --color-brand-hover: var(--brand-hover);
@@ -450,8 +229,6 @@
   --color-surface-glass-modal: var(--surface-glass-modal);
   --color-dark-surface: var(--dark-surface);
 
-  /* Colors — panel tokens (§1.1): bg-panel-surface, text-panel-text-muted,
-     border-panel-border, from-panel-accent-from, etc. */
   --color-panel-surface: var(--panel-surface);
   --color-panel-surface-raised: var(--panel-surface-raised);
   --color-panel-border: var(--panel-border);
@@ -472,19 +249,18 @@
   --color-panel-border-strong: var(--panel-border-strong);
   --color-panel-action-hover: var(--panel-action-hover);
 
-  /* Colors — prototype surfaces */
   --color-surface-page: var(--surface-page);
   --color-surface-blue: var(--surface-blue);
   --color-surface-blue-light: var(--surface-blue-light);
   --color-surface-blue-dim: var(--surface-blue-dim);
   --color-surface-blue-info: var(--surface-blue-info);
 
-  /* Colors — success palette */
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-success-text: var(--success-text);
   --color-success-surface: var(--success-surface);
   --color-success-border: var(--success-border);
+  --color-success-surface-tint: var(--success-surface-tint);
   --color-warning: var(--warning);
   --color-warning-text: var(--warning-text);
   --color-warning-surface: var(--warning-surface);
@@ -494,8 +270,7 @@
   --color-error-surface: var(--error-surface);
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
-
-  /* Colors — positive (P&L) */
+  --color-info-border: var(--info-border);
   --color-positive: var(--positive);
   --color-positive-surface: var(--positive-surface);
   --color-tx-pending: var(--tx-pending);
@@ -503,28 +278,20 @@
   --color-tx-failed: var(--tx-failed);
   --color-tx-dropped: var(--tx-dropped);
 
-  /* Colors — text extras */
   --color-text-tertiary: var(--text-tertiary);
   --color-text-secondary-gray: var(--text-secondary-gray);
   --color-text-disabled: var(--text-disabled);
   --color-placeholder: var(--placeholder);
   --color-text-inverse: var(--text-inverse);
   --color-text-ai: var(--text-ai);
-
-  /* Colors — AI */
   --color-ai-primary: var(--ai-primary);
   --color-ai-subtle-bg: var(--ai-subtle-bg);
   --color-ai-subtle-border: var(--ai-subtle-border);
   --color-ai-emphasis: var(--ai-emphasis);
   --color-ai-text: var(--ai-text);
   --color-ai-icon: var(--ai-icon);
-
-  /* Colors — state surfaces & borders */
-  --color-success-surface-tint: var(--success-surface-tint);
-  --color-info-border: var(--info-border);
   --color-progress-track: var(--progress-track);
 
-  /* Colors — sidebar */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -534,38 +301,36 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Radius — explicit values from DESIGN.md §5 */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-2xl: 32px;
-  --radius-3xl: 32px;
-  --radius-4xl: 9999px;
-  --radius-pill: 9999px;
-  --radius-full-pill: 9999px;
+  --color-paper: var(--bawa-paper);
+  --color-ink: var(--bawa-ink);
+  --color-coral: var(--bawa-coral);
+  --color-sun: var(--bawa-sun);
 
-  /* Radius — extended intermediate values from prototype */
-  --radius-10: 10px;
-  --radius-18: 18px;
-  --radius-20: 20px;
-  --radius-28: 28px;
-  --radius-34: 34px;
+  --radius-bawa: var(--bawa-radius);
+  --radius-bawa-sm: var(--bawa-radius-sm);
+  --radius-xs: var(--bawa-radius-sm);
+  --radius-sm: var(--bawa-radius-sm);
+  --radius-10: var(--bawa-radius-sm);
+  --radius-md: var(--bawa-radius);
+  --radius-lg: var(--bawa-radius);
+  --radius-xl: var(--bawa-radius);
+  --radius-2xl: var(--bawa-radius);
+  --radius-3xl: var(--bawa-radius);
+  --radius-4xl: var(--bawa-radius);
+  --radius-pill: var(--bawa-radius);
+  --radius-full-pill: var(--bawa-radius);
+  --radius-18: var(--bawa-radius);
+  --radius-20: var(--bawa-radius);
+  --radius-28: var(--bawa-radius);
+  --radius-34: var(--bawa-radius);
 
-  /* Fonts */
   --font-sans: "Inter", "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-heading: "Inter", "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Caveat", "Segoe Print", cursive;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-prototype-sans: var(--font-sans);
   --font-chinese: "Noto Sans SC", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* Typography */
-  --tracking-tight: -0.4px;
-  --tracking-snug: -0.2px;
-  --tracking-normal: 0px;
-  --tracking-wide: 0.5px;
-  --tracking-wider: 0.8px;
   --text-display-lg: 2.5rem;
   --text-display-lg--line-height: 3rem;
   --text-title-lg: 1.75rem;
@@ -586,7 +351,13 @@
   --text-xs-plus: 0.8125rem;
   --text-sm-plus: 0.9375rem;
 
-  /* Density */
+  --tracking-tight: -0.4px;
+  --tracking-snug: -0.2px;
+  --tracking-normal: 0px;
+  --tracking-wide: 0.5px;
+  --tracking-wider: 0.8px;
+
+  --spacing: 0.25rem;
   --spacing-density-compact-y: var(--density-compact-y);
   --spacing-density-compact-x: var(--density-compact-x);
   --spacing-density-comfortable-y: var(--density-comfortable-y);
@@ -595,15 +366,13 @@
   --spacing-density-spacious-x: var(--density-spacious-x);
   --spacing-density-airy-y: var(--density-airy-y);
   --spacing-density-airy-x: var(--density-airy-x);
-
-  /* Spacing — Tailwind v4 default 4px grid */
-  --spacing: 0.25rem;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
@@ -612,136 +381,135 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  ::selection {
+    background-color: var(--bawa-sun);
+    color: var(--bawa-ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
   h1 {
-    font-size: var(--text-title-lg);
-    font-weight: 700;
-    letter-spacing: var(--tracking-tight);
+    font-size: calc(var(--text-title-lg) * 1.25);
     line-height: var(--text-title-lg--line-height);
+    letter-spacing: var(--tracking-tight);
   }
 
   h2 {
-    font-size: var(--text-title-md);
-    font-weight: 700;
-    letter-spacing: var(--tracking-snug);
+    font-size: calc(var(--text-title-md) * 1.25);
     line-height: var(--text-title-md--line-height);
+    letter-spacing: var(--tracking-snug);
   }
 
   h3 {
-    font-size: var(--text-title-sm);
-    font-weight: 600;
-    letter-spacing: var(--tracking-normal);
+    font-size: calc(var(--text-title-sm) * 1.25);
     line-height: var(--text-title-sm--line-height);
+    letter-spacing: var(--tracking-normal);
   }
 
   h4 {
     font-size: var(--text-body-lg);
-    font-weight: 600;
     line-height: var(--text-body-lg--line-height);
+    font-weight: 600;
   }
 
-  label {
+  label,
+  button,
+  input {
     font-size: var(--text-body-md);
-    font-weight: var(--font-weight-medium);
     line-height: var(--text-body-md--line-height);
   }
 
+  label,
   button {
-    font-size: var(--text-body-md);
     font-weight: var(--font-weight-medium);
-    line-height: var(--text-body-md--line-height);
   }
 
   input {
-    font-size: var(--text-body-md);
     font-weight: var(--font-weight-normal);
-    line-height: var(--text-body-md--line-height);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--bawa-ink);
+    outline-offset: 2px;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    text-decoration: underline wavy var(--bawa-coral);
+    text-underline-offset: 3px;
   }
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+@layer utilities {
+  .bawa-marker {
+    background-color: var(--bawa-sun);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    padding: 0 0.15em;
+  }
 
-@keyframes scan-shimmer {
-  from {
-    transform: translateX(-100%);
+  .bawa-squiggle-underline {
+    text-decoration: underline wavy var(--bawa-coral);
+    text-underline-offset: 3px;
   }
-  to {
-    transform: translateX(350%);
-  }
-}
 
-@keyframes identity-gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
+  @keyframes bawa-draw {
+    from {
+      stroke-dashoffset: 100;
+    }
 
-.identity-gradient {
-  font-weight: 700;
-  background: linear-gradient(
-    90deg,
-    rgb(0 127 255),
-    rgb(0 56 173),
-    rgb(13 148 136),
-    rgb(0 127 255)
-  );
-  background-size: 280% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: identity-gradient 3.6s ease-in-out infinite;
-}
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .identity-gradient {
-    animation: none;
-    background: none;
-    -webkit-text-fill-color: var(--primary);
-    color: var(--primary);
-  }
-}
+  @keyframes bawa-dot-hop {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
+    50% {
+      transform: translateY(-4px);
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-@keyframes softBloom {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
+  .bawa-draw-circle {
+    stroke-dasharray: 100;
+    animation: bawa-draw 1.2s ease-in-out infinite;
   }
-  50% {
-    transform: scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .bawa-dot {
+    animation: bawa-dot-hop 0.9s ease-in-out infinite;
   }
-  to {
-    opacity: 1;
+
+  .bawa-dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .bawa-dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bawa-draw-circle,
+    .bawa-dot {
+      animation: none;
+    }
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

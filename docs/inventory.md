@@ -2,7 +2,7 @@
 
 One home per fact. This file is the inventory of `docs/`: 66 Markdown
 files before Lane P5, 78 with Lane P5's 10 new files (ADR-0009 and
-the 9 process docs below) plus Lane P2's 2 new files (vault-design, custody), 106 after the repo-study merge into adopt-proper (2026-11-22) adds 36 adopt-proper-side docs: ADRs 0007–0008, DECISIONS.md, RENAME-MAP.md, SECURITY-RELEASE-GATES.md and 31 archive files — and drops 8 rows whose files moved into `docs/archive/` (7) or were renamed (lowercase `security-release-gates.md` → uppercase). Who owns each doc and how fresh it is. A doc
+the 9 process docs below) plus Lane P2's 2 new files (vault-design, custody), 106 after the repo-study merge into adopt-proper (2026-11-22) adds 36 adopt-proper-side docs: ADRs 0007–0008, DECISIONS.md, RENAME-MAP.md, SECURITY-RELEASE-GATES.md and 31 archive files — and drops 8 rows whose files moved into `docs/archive/` (7) or were renamed (lowercase `security-release-gates.md` → uppercase), 107 after the layout-rebuild merge (2026-11-22) adds ADR-0010 (renumbered from 0009). Who owns each doc and how fresh it is. A doc
 without an owner here defaults to the repository owner
 (**Pr3eve6ti2o**); a doc that needs a different owner must name one in
 the table. "Last changed" is the last commit touching the file on this
@@ -138,6 +138,7 @@ Staleness is decided by the drift check (below), not by this table.
 | `docs/adr/0007-price-feed-provider.md` | Pr3eve6ti2o | 2026-11-20 | CoinGecko keyless price feed provider. |
 | `docs/adr/0008-ecdsa-residual-risk.md` | Pr3eve6ti2o | 2026-11-20 | ECDSA residual-risk acceptance; review date 2027-05-20. |
 | `docs/adr/0009-fetchjson-no-retry.md` | Lane P5 | 2026-11-20 | New in this lane (item 29). Single-attempt transport. |
+| `docs/adr/0010-guide-scope-extension.md` | Pr3eve6ti2o | 2026-11-20 | Guide scope extension beyond ten sections; supersedes ADR-0006's ten-section scope. Renumbered from 0009 by the layout-rebuild merge (2026-11-22). |
 
 ### Process docs (this lane, item 25/26/29/32/34)
 

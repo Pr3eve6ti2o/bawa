@@ -28,6 +28,15 @@ const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
 
+// The four engine-chain profiles (layout-rebuild's local list): the
+// backup screen shows only these four chains.
+const TEST_PROFILES = [
+  'bawa-btc-bip84-v1',
+  'bawa-evm-bip44-v1',
+  'bawa-trx-bip44-v1',
+  'bawa-ton-v4r2-v1',
+];
+
 async function mountBackupScreen() {
   const previousUrl = window.location.href;
   const previousState = window.history.state;
@@ -173,6 +182,25 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     const { div, cleanup } = await mountBackupScreen();
     try {
       expect(div.textContent).not.toContain('Reveal recovery phrase');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('shows only the four wallet chains, never a duplicate Ethereum or an extended chain', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const text = div.textContent ?? '';
+      expect((text.match(/Ethereum/g) ?? []).length).toBe(1);
+      expect(text).not.toContain('Solana');
+      expect(text).not.toContain('Litecoin');
+      expect(text).not.toContain('Dogecoin');
+      expect(text).not.toContain('bawa-sol');
+      expect(text).not.toContain('bawa-ltc');
+      expect(text).not.toContain('bawa-doge');
+      const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
+      expect(profiles?.querySelectorAll('li').length).toBe(4);
     } finally {
       await cleanup();
     }

@@ -34,7 +34,8 @@ vi.mock('../engine/boundary', () => ({
 
 const mockRefreshVaultAccounts = vi.fn();
 
-vi.mock('../state/wallet-context', () => ({
+vi.mock('../state/wallet-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../state/wallet-context')>()),
   useWallet: vi.fn(),
 }));
 

@@ -1,6 +1,7 @@
 import type * as LabelPrimitive from '@radix-ui/react-label'
 import { Slot } from '@radix-ui/react-slot'
 import { Label } from './label'
+import { BawaIcon } from './icons'
 import { cn } from '../lib/utils'
 import * as React from 'react'
 import {
@@ -83,7 +84,7 @@ function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPri
     <Label
       data-slot="form-label"
       data-error={!!error}
-      className={cn('data-[error=true]:text-destructive', className)}
+      className={cn('data-[error=true]:text-coral', className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -111,7 +112,7 @@ function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-ink text-sm', className)}
       {...props}
     />
   )
@@ -129,10 +130,10 @@ function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn('text-destructive text-sm', className)}
+      className={cn('text-ink text-sm', className)}
       {...props}
     >
-      {body}
+      {error ? (<BawaIcon name="alert" aria-hidden="true" className="mr-1 inline-block size-4 text-coral" />) : null}{body}
     </p>
   )
 }

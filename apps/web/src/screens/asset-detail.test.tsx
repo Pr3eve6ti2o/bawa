@@ -69,6 +69,9 @@ function setWallet(
     addresses?: Record<ChainKey, { index: number; address: string }[]>;
     uiState?: Record<ChainKey, string>;
     xpubs?: Record<string, { xpub: string } | null>;
+    vaultState?: 'locked' | 'unlocked' | 'no-vault';
+    refreshBalances?: () => Promise<void>;
+    refreshHistory?: () => Promise<void>;
   },
 ): void {
   vi.mocked(useWallet).mockReturnValue({
@@ -80,14 +83,15 @@ function setWallet(
     },
     addresses: overrides?.addresses ?? perChain([{ index: 0, address: '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7' }]),
     vaultAddresses: overrides?.vaultAddresses ?? perChain([] as string[]),
+    vaultState: overrides?.vaultState ?? 'unlocked',
     hydrating: false,
     uiState: (overrides?.uiState ?? perChain('loaded')) as unknown as Record<ChainKey, never>,
     errors: perChain(null),
     balances,
     history,
     refreshChain: vi.fn(async () => {}),
-    refreshBalances: vi.fn(async () => {}),
-    refreshHistory: vi.fn(async () => {}),
+    refreshBalances: overrides?.refreshBalances ?? vi.fn(async () => {}),
+    refreshHistory: overrides?.refreshHistory ?? vi.fn(async () => {}),
     setSelectedChain: vi.fn(),
   } as unknown as ReturnType<typeof useWallet>);
 }
@@ -226,6 +230,30 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('shows a spaced zero TON heading and a Send button for TON', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        ton: { status: 'zero', value: '0' },
+      },
+      perChain(emptyHistory),
+    );
+    const mounted = await mountScreen('/assets/ton');
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('0 TON');
+      expect(text).not.toContain('0TON');
+      expect(text).not.toContain('0BTC');
+      const send = mounted.div.querySelector('a[href="/send"]');
+      expect(send).not.toBeNull();
+      expect(send?.textContent).toContain('Send');
+      const receive = mounted.div.querySelector('a[href="/receive"]');
+      expect(receive).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows unavailable, never zero, on a failed balance fetch', async () => {
     setWallet(
       {
@@ -289,6 +317,85 @@ describe('asset detail screen', () => {
       expect(mounted.div.textContent).not.toContain('No wallet imported for this chain');
       expect(mounted.div.textContent).toContain('0x27Ef5cDBe01777D62438AfFeb695e33fC2335979');
       expect(mounted.div.textContent).toContain('Vault address');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, an unavailable balance offers Unlock instead of a dead Retry', async () => {
+    // While the vault is locked there is no derived address in state,
+    // so a balance refetch can only fail again with no-address.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'error', reason: 'no-address' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'locked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('retries an unavailable balance while unlocked', async () => {
+    const mockRefreshBalances = vi.fn(async () => {});
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'error', reason: 'rpc-error' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'unlocked', refreshBalances: mockRefreshBalances },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      // The mount effect already called refreshBalances once; clear it
+      // so the click below is the only call counted.
+      mockRefreshBalances.mockClear();
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, unavailable history offers Unlock instead of a dead Retry', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: { status: 'error', reason: 'no-address', txs: [] },
+      },
+      { vaultState: 'locked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Could not load transactions.');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mounted.div.textContent).toContain('Locked — unlock to see activity.');
+      expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

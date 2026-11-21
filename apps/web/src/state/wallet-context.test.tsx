@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
@@ -9,13 +9,11 @@ import { createVault, deleteVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { BTC_PROFILE_ID, EVM_PROFILE_ID } from './test-helpers';
 
-// Vault-lock removal (owner order 2026-11-20): unlockVault/lockVault,
-// the auto-lock timer and autoLockMinutes/setAutoLockMinutes no longer
-// exist. The whole "auto-lock (Lane C, spec §9)" describe was deleted
-// with the timer (5 tests: default, stored preference, persist/ignore,
-// inactivity lock, pagehide lock). The passphrase tests below now pass
-// the passphrase to createVault — the session passphrase is set at
-// creation — and derivation runs through refreshVaultAccounts.
+// Auto-lock tests are restored for the optional auto-lock order.
+// The redesigned timer has no persisted deadline: the full duration is always
+// counted from the last unlock or activity.
+// The passphrase tests below pass the passphrase to createVault — the session
+// passphrase is set at creation — and derivation runs through refreshVaultAccounts.
 
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
@@ -260,4 +258,239 @@ describe('wallet context — balance before history (Lane B)', () => {
       await mounted.cleanup();
     }
   });
+});
+
+describe('wallet context — optional auto-lock', () => {
+  let cleanup: Awaited<ReturnType<typeof mountProvider>>['cleanup'] | undefined;
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+
+    const mounted = await mountProvider();
+    cleanup = mounted.cleanup;
+    await act(async () => {
+      await exposed!.refreshVaultAccounts();
+    });
+  });
+
+  afterEach(async () => {
+    await cleanup?.();
+    cleanup = undefined;
+    vi.useRealTimers();
+  });
+
+  it('defaults to off and preserves the unlocked vault for 10 minutes', async () => {
+    expect(exposed!.autoLockEnabled).toBe(false);
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+  });
+
+  it('deletes the stored key when enabled without locking the vault in memory', async () => {
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+
+    await act(async () => {
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    expect(exposed!.autoLockEnabled).toBe(true);
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+  });
+
+  it('locks at one minute and clears vault addresses and balance availability', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(1);
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(59_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(exposed!.vaultState).toBe('locked');
+    expect(Object.values(exposed!.vaultAddresses).every((addresses) => addresses.length === 0)).toBe(true);
+    expect(exposed!.balances.eth.status).toBe('unavailable');
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+  });
+
+  it('resets the timer on pointerdown activity', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(1);
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(59_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pointerdown'));
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(59_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(exposed!.vaultState).toBe('locked');
+  });
+
+  it('stores the key and cancels the timer when disabled while unlocked', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(1);
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(59_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+
+    await act(async () => {
+      await exposed!.setAutoLockEnabled(false);
+    });
+
+    expect(exposed!.autoLockEnabled).toBe(false);
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+
+    await act(async () => {
+      vi.advanceTimersByTime(10 * 60_000);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+  });
+
+  it('stores no key when disabled while locked, then stores it upon unlocking', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(1);
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(exposed!.vaultState).toBe('locked');
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+
+    await act(async () => {
+      await exposed!.setAutoLockEnabled(false);
+    });
+
+    expect(exposed!.autoLockEnabled).toBe(false);
+    expect(exposed!.vaultState).toBe('locked');
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+
+    await act(async () => {
+      await exposed!.unlockVault(TEST_PASSWORD);
+    });
+
+    expect(exposed!.vaultState).toBe('unlocked');
+    expect(exposed!.vaultAddresses.eth.length).toBeGreaterThan(0);
+    expect(localStorage.getItem('bawa-vault-key')).not.toBeNull();
+  });
+
+  it('locks on pagehide when Immediately (0 minutes) is enabled', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(0);
+      await exposed!.setAutoLockEnabled(true);
+    });
+
+    expect(exposed!.autoLockMinutes).toBe(0);
+    expect(exposed!.vaultState).toBe('unlocked');
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    expect(exposed!.vaultState).toBe('locked');
+    expect(Object.values(exposed!.vaultAddresses).every((addresses) => addresses.length === 0)).toBe(true);
+    expect(exposed!.balances.eth.status).toBe('unavailable');
+    expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+  });
+
+  it('reads the stored minutes preference after remounting', async () => {
+    await act(async () => {
+      exposed!.setAutoLockMinutes(15);
+    });
+
+    expect(exposed!.autoLockMinutes).toBe(15);
+
+    await cleanup!();
+    cleanup = undefined;
+
+    const remounted = await mountProvider();
+    cleanup = remounted.cleanup;
+    await act(async () => {
+      await exposed!.refreshVaultAccounts();
+    });
+
+    expect(exposed!.autoLockMinutes).toBe(15);
+  });
+});
+describe('wallet context — auto-lock real-time timer', () => {
+  it(
+    'locks after about one real minute of inactivity and leaves no stored key',
+    async () => {
+      vi.useRealTimers();
+
+      await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+      const mounted = await mountProvider();
+
+      try {
+        await act(async () => {
+          await exposed!.refreshVaultAccounts();
+        });
+        expect(exposed!.vaultState).toBe('unlocked');
+
+        const startedAt = Date.now();
+        await act(async () => {
+          await exposed!.setAutoLockMinutes(1);
+          await exposed!.setAutoLockEnabled(true);
+        });
+
+        const deadline = Date.now() + 70_000;
+        while (exposed!.vaultState !== 'locked' && Date.now() < deadline) {
+          await act(async () => {
+            await new Promise<void>((resolve) => setTimeout(resolve, 1_000));
+          });
+        }
+
+        expect(exposed!.vaultState).toBe('locked');
+        // Allow one second of timing tolerance, but reject premature locking.
+        expect(Date.now() - startedAt).toBeGreaterThanOrEqual(59_000);
+        expect(localStorage.getItem('bawa-vault-key')).toBeNull();
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+    120_000,
+  );
 });

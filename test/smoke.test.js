@@ -8,6 +8,10 @@
 //   mnemonic, seed, or private key appears in this file.
 // - Every expected address was verified against TWO independent
 //   implementations: Trust Wallet Core (WASM) and Python bip_utils 2.12.2.
+//
+// Pin note (2026-11-20): the current bip-utils pin in requirements.txt is 2.12.3.
+// Mentions of bip_utils 2.12.2 record the version the fixtures were verified
+// against on 2026-11-08.
 //   BTC/ETH index 0 match the repo's published fixtures; index 1 and both
 //   TRX addresses match bip_utils exactly.
 // - TON watch-only derivation is tools/hdwallet-gen/derive-ton.js: a

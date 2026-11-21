@@ -1,13 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import {
-  ArrowDownToLine,
-  ArrowUpRight,
-  Coins,
-  Ellipsis,
-  Home,
-  Wallet,
-} from 'lucide-react';
-import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router';
+import { BawaIcon, type BawaIconName } from '../ui/components/icons';
+import { BawaLoading } from '../ui/components/loading';
+import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
 // Hot routes are eager imports (Rabby pattern): the live browser showed
@@ -71,6 +65,10 @@ const WalletManagementScreen = lazy(loadWalletManagement);
 // itself renders at once. The desktop sidebar (sidebar-nav.tsx) can
 // reuse this export. A failed preload is swallowed — it must never
 // break navigation, and the click itself still loads the chunk.
+const loadLock = () =>
+  import('../screens/lock').then((m) => ({ default: m.LockScreen }));
+const LockScreen = lazy(loadLock);
+
 const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/import-wallet': loadImportWallet,
   '/mnemonic-backup': loadMnemonicBackup,
@@ -81,6 +79,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/track': loadTrackTransaction,
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
+  '/lock': loadLock,
 };
 
 const preloadedRoutes = new Set<string>();
@@ -101,12 +100,12 @@ import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
 
-const tabs = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/assets', label: 'Assets', icon: Coins },
-  { to: '/receive', label: 'Receive', icon: ArrowDownToLine },
-  { to: '/send', label: 'Send', icon: ArrowUpRight },
-] as const;
+const tabs: ReadonlyArray<{ to: string; label: string; icon: BawaIconName }> = [
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/assets', label: 'Assets', icon: 'coins' },
+  { to: '/receive', label: 'Receive', icon: 'receive' },
+  { to: '/send', label: 'Send', icon: 'arrow-up-right' },
+];
 
 function HomeScreen() {
   const { vaultState } = useWallet();
@@ -133,6 +132,37 @@ function AppLayout() {
   }, [moreOpen]);
   const location = useLocation();
   const pathname = location.pathname;
+  const navigate = useNavigate();
+  const prevVaultState = useRef(vaultState);
+  // Lock-with-return-to (Rabby `/unlock?from=`, MetaMask `state.from`).
+  // The key is duplicated in lock.tsx; keep the two in sync.
+  // Use sessionStorage, not localStorage, so the target dies with the tab.
+  useEffect(() => {
+    if (location.pathname === '/lock') return;
+
+    try {
+      sessionStorage.setItem(
+        'bawa-lock-return-to',
+        `${location.pathname}${location.search}`,
+      );
+    } catch {
+      // Private mode: the lock screen falls back to `/`.
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const wasUnlocked = prevVaultState.current === 'unlocked';
+    prevVaultState.current = vaultState;
+
+    // Focused and restore flows retain state and handle locks themselves.
+    if (
+      wasUnlocked &&
+      vaultState === 'locked' &&
+      !['/lock', '/send', '/create-wallet', '/import-wallet'].includes(pathname)
+    ) {
+      navigate('/lock');
+    }
+  }, [vaultState, pathname, navigate]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
   // the create-wallet flow and the send flow. Send review is a state
   // inside /send rather than its own route, so the whole /send flow
@@ -151,19 +181,35 @@ function AppLayout() {
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
-  const isWideAtLg = ['/create-wallet', '/security'].includes(pathname);
+  const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
 
   return (
-    <div className="min-h-screen bg-background sm:py-6 lg:py-0">
-      <div className="bawa-panel mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-gradient-to-br from-panel-shell-from to-panel-shell-to text-panel-text sm:min-h-[720px] sm:rounded-[30px] sm:border-2 sm:border-border sm:shadow-[var(--shadow-card)] lg:max-w-[1440px] lg:flex-row lg:rounded-none lg:border-0 lg:shadow-none lg:min-h-screen">
+    <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
+      {/* Desktop shell is full-bleed at lg: below lg the app is a centred
+          430px phone frame, but at lg the frame used to cap at 1440px, so
+          on a 1919px viewport the content column sat in the left ~1230px
+          with dead paper on the right. The content column itself still
+          caps for readability (see <main>); it just grows with the
+          window now. At 1440px and below nothing changes: the cap never
+          bound there. */}
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
         {!isFocusedFlow && (
           <aside
             className={
-              'hidden shrink-0 lg:block lg:border-r lg:border-panel-border lg:bg-panel-surface ' +
+              // The shell owns the sidebar width (and its transition);
+              // SidebarNav fills it with w-full. No border here:
+              // SidebarNav draws the single border-r-2 itself, and a
+              // duplicate shell border would shrink this aside's content
+              // box by 2px and re-overflow the inner sidebar.
+              'hidden shrink-0 transition-[width] duration-200 lg:block lg:bg-paper ' +
               (sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[224px]')
             }
           >
-            <div className="sticky top-0 flex h-screen flex-col overflow-y-auto">
+            {/* overflow-x-hidden is the guard: overflow-y-auto alone
+                computes overflow-x to auto, so any child a pixel wider
+                than the sidebar would bring back the horizontal
+                scrollbar. Vertical scrolling is unchanged. */}
+            <div className="sticky top-0 flex h-screen flex-col overflow-x-hidden overflow-y-auto">
               <SidebarNav
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() =>
@@ -176,40 +222,40 @@ function AppLayout() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b border-panel-border px-6 lg:flex xl:px-8">
+          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 lg:flex xl:px-8">
             <Link
               to="/wallets"
               onMouseEnter={() => preloadRoute('/wallets')}
               onFocus={() => preloadRoute('/wallets')}
-              className="truncate text-sm font-medium text-panel-text-muted hover:text-panel-text"
+              className="truncate text-sm font-medium text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
             >
               {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
             </Link>
-            <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
               Mainnet
             </span>
           </header>
 
           <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-lg font-bold text-primary-foreground">
-                <Wallet className="size-5" aria-hidden="true" />
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-[15px] font-bold leading-tight text-panel-text">
+                <h1 className="truncate text-[15px] font-bold leading-tight text-ink">
                   Bawa Web Wallet
                 </h1>
                 <Link
                   to="/wallets"
                   onMouseEnter={() => preloadRoute('/wallets')}
                   onFocus={() => preloadRoute('/wallets')}
-                  className="block truncate text-xs leading-tight text-panel-text-muted hover:text-panel-text"
+                  className="block truncate text-xs leading-tight text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
                 >
                   {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
                 </Link>
               </div>
             </div>
-            <span className="flex h-6 shrink-0 items-center rounded-[12px] bg-panel-success-pill-bg px-3 text-[10px] font-bold text-panel-success-pill-text">
+            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
               Mainnet
             </span>
           </header>
@@ -220,7 +266,13 @@ function AppLayout() {
               /track — scrolled under the nav and was half-untappable.
               pb-24 leaves ~30px clear at max scroll. Desktop is
               unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
-          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8">
+          {/* Wide-window content cap: the column steps 1024px -> 1152px
+              at xl -> 1440px at 2xl, so on a 1919px viewport it uses the
+              window instead of freezing at 1152px. 1440px reuses the old
+              frame cap as the widest the column ever gets, keeping line
+              lengths readable; the narrow task screens keep their own
+              480px cap above. */}
+          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
             {isNarrow || isWideAtLg ? (
               <div
                 className={
@@ -240,7 +292,7 @@ function AppLayout() {
             <div
               role="menu"
               aria-label="More"
-              className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-2 max-lg:fixed max-lg:bottom-[76px] max-lg:left-1/2 max-lg:z-20 max-lg:max-h-[60vh] max-lg:w-[calc(100%-2rem)] max-lg:max-w-[398px] max-lg:-translate-x-1/2 max-lg:overflow-y-auto lg:hidden"
+              className="rounded-bawa border-2 border-ink bg-paper p-2 max-lg:fixed max-lg:bottom-[76px] max-lg:left-1/2 max-lg:z-20 max-lg:max-h-[60vh] max-lg:w-[calc(100%-2rem)] max-lg:max-w-[398px] max-lg:-translate-x-1/2 max-lg:overflow-y-auto lg:hidden"
             >
               {MORE_LINKS.map(({ to, label }) => (
                 <Link
@@ -250,7 +302,7 @@ function AppLayout() {
                   onClick={() => setMoreOpen(false)}
                   onMouseEnter={() => preloadRoute(to)}
                   onFocus={() => preloadRoute(to)}
-                className="block rounded-[12px] px-3 py-2.5 text-sm font-medium text-panel-text hover:bg-panel-hover"
+                className="block rounded-bawa-sm px-3 py-2.5 text-sm font-medium text-ink hover:bg-sun"
               >
                 {label}
               </Link>
@@ -261,10 +313,10 @@ function AppLayout() {
           {!isFocusedFlow && (
             <nav
               aria-label="Main navigation"
-            className="sticky bottom-0 z-10 border-t border-panel-border bg-panel-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] lg:hidden"
           >
             <div className="grid grid-cols-5">
-              {tabs.map(({ to, label, icon: Icon }) => (
+              {tabs.map(({ to, label, icon }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -274,18 +326,18 @@ function AppLayout() {
                   onFocus={() => preloadRoute(to)}
                   className={({ isActive }) =>
                     `flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                      isActive ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
+                      isActive ? 'text-ink bawa-squiggle-underline' : 'text-ink'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <span
-                        className={`flex size-6 items-center justify-center rounded-full ${
-                          isActive ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
+                        className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
+                          isActive ? 'bg-sun text-ink' : 'bg-paper text-ink'
                         }`}
                       >
-                        <Icon className="size-4" aria-hidden="true" />
+                        <BawaIcon name={icon} className="size-4" aria-hidden="true" />
                       </span>
                       {label}
                     </>
@@ -299,15 +351,15 @@ function AppLayout() {
                 aria-label="More"
                 onClick={() => setMoreOpen((open) => !open)}
                 className={`flex flex-col items-center gap-1 py-3 text-[11px] font-semibold ${
-                  moreOpen ? 'text-panel-text' : 'text-panel-text-muted hover:text-panel-text'
+                  moreOpen ? 'text-ink bawa-squiggle-underline' : 'text-ink'
                 }`}
               >
                 <span
-                  className={`flex size-6 items-center justify-center rounded-full ${
-                    moreOpen ? 'bg-panel-icon-tile text-panel-accent' : 'bg-panel-hover text-panel-text-muted'
+                  className={`flex size-6 items-center justify-center rounded-bawa-sm border-2 border-ink ${
+                    moreOpen ? 'bg-sun text-ink' : 'bg-paper text-ink'
                   }`}
                 >
-                  <Ellipsis className="size-4" aria-hidden="true" />
+                  <BawaIcon name="more" className="size-4" aria-hidden="true" />
                 </span>
                 More
               </button>
@@ -324,8 +376,8 @@ function AppLayout() {
 function NotFound() {
   return (
     <section className="space-y-3">
-      <h2 className="text-2xl font-semibold text-panel-text">Page not found</h2>
-      <Link to="/" className="text-panel-accent underline underline-offset-4">
+      <h2 className="text-2xl font-semibold text-ink">Page not found</h2>
+      <Link to="/" className="text-ink bawa-squiggle-underline">
         Back to dashboard
       </Link>
     </section>
@@ -337,7 +389,7 @@ export function App() {
     <BrowserRouter>
       <ErrorBoundary fallbackTitle="Unable to show your wallet">
         <WalletProvider>
-        <Suspense fallback={<p>Loading…</p>}>
+        <Suspense fallback={<BawaLoading />}>
           <Routes>
           <Route path="/" element={<AppLayout />}>
             <Route index element={<HomeScreen />} />
@@ -356,6 +408,7 @@ export function App() {
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
+            <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
           </Routes>

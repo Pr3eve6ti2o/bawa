@@ -269,9 +269,9 @@ export function validateOperationsV2(files) {
     : (files.profiles?.profiles ?? []);
   const capabilities = files.capabilities;
 
-  if (capabilities?.version !== 2) {
+  if (capabilities?.version !== 3) {
     errors.push(
-      `ERROR capabilities.json.version: expected 2 (registry v2), found ${JSON.stringify(capabilities?.version)}`,
+      `ERROR capabilities.json.version: expected 3 (registry v3), found ${JSON.stringify(capabilities?.version)}`,
     );
   }
 

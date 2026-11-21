@@ -90,6 +90,22 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
     }
   });
 
+  it('fills its shell width instead of setting its own (no sidebar overflow)', async () => {
+    // The shell in app.tsx owns the sidebar width (224px expanded,
+    // 72px collapsed). A fixed w-64 (256px) / w-20 (80px) here
+    // overflowed the shell's sticky wrapper and produced a horizontal
+    // scrollbar on every desktop page.
+    const mounted = await mountNav({});
+    try {
+      const aside = mounted.div.querySelector('aside');
+      expect(aside?.className).toContain('w-full');
+      expect(aside?.className).not.toContain('w-64');
+      expect(aside?.className).not.toContain('w-20');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('calls onToggleCollapse when the toggle is clicked', async () => {
     const onToggleCollapse = vi.fn();
     const mounted = await mountNav({ onToggleCollapse });

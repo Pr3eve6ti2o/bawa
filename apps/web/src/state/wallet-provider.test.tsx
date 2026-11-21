@@ -12,13 +12,11 @@ import {
 import { SUPPORTED_CHAINS } from '../wallet/chains';
 import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
-// Vault-lock removal (owner order 2026-11-20): unlockVault/lockVault no
-// longer exist. "rejects a wrong vault password" was deleted with them —
-// there is no password check any more, so there is nothing to reject; a
-// stored key that does not match the envelope is covered by autoUnlock
-// returning false in wallet/vault.test.ts. Creation leaves the vault open,
-// so the tests below drive derivation through refreshVaultAccounts instead
-// of an unlock step.
+// Auto-lock is optional and OFF by default (owner order 2026-11-20):
+// unlockVault/lockVault exist again (merge 2 restored them), and unlock()
+// rejects a wrong password — that rejection is covered by
+// wallet/vault.test.ts. Creation leaves the vault open, so the tests below
+// drive derivation through refreshVaultAccounts instead of an unlock step.
 
 // No adapter is registered in this file: the adapters module is mocked so
 // lazy registration (ensureAdapters) cannot bring the real adapters in.

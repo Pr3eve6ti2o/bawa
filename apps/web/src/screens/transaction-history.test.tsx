@@ -9,7 +9,8 @@ import { availableFor, chainConfig } from '../wallet/chains';
 import type { HistoryState } from '../state/wallet-context';
 import type { AdapterTx } from '../wallet/adapters/types';
 
-vi.mock('../state/wallet-context', () => ({
+vi.mock('../state/wallet-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../state/wallet-context')>()),
   useWallet: vi.fn(),
 }));
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { hasVault, vaultProfiles, verifyVaultPassword, withMnemonic } from '../wallet/vault';
-import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
+import { profileFor } from '../wallet/chains';
 import { ChecklistCard } from '../ui/components/checklist-card';
 import { Button } from '../ui/components/button';
 import {
@@ -65,6 +65,12 @@ const REVEAL_QUIZ = [
 
 type RevealStage = 'idle' | 'password' | 'quiz' | 'revealed';
 
+// Only the four chains this wallet supports. SUPPORTED_CHAINS holds
+// thirteen chains and every EVM chain shares the bawa-evm-bip44-v1
+// profile, so mapping it showed duplicate "Ethereum" rows plus
+// Solana, Litecoin and Dogecoin profiles that this wallet never uses.
+const BACKUP_CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
+
 export function MnemonicBackupScreen() {
   const [profiles, setProfiles] = useState<string[] | null>(null);
   const [stage, setStage] = useState<RevealStage>('idle');
@@ -95,13 +101,11 @@ export function MnemonicBackupScreen() {
     setPasswordError(null);
     setIsVerifying(true);
     try {
-      // No-lock model (Merge 1): the vault is already open — it
-      // auto-unlocked at boot via the stored key, so there is nothing to
-      // unlock here. The password is verified (trial decrypt, no state
-      // change) only as a gate before the phrase may be shown. The
-      // recovery passphrase is not asked for: it never leaves the
-      // session, no vault API re-establishes it, and the phrase itself
-      // does not depend on it.
+      // The password is verified (trial decrypt, no state change) only
+      // as a gate before the phrase may be shown. The recovery
+      // passphrase is not asked for: it never leaves the session, no
+      // vault API re-establishes it, and the phrase itself does not
+      // depend on it.
       if (!(await verifyVaultPassword(password))) {
         setPasswordError('Incorrect password.');
         setPassword('');
@@ -142,11 +146,11 @@ export function MnemonicBackupScreen() {
   }
 
   function handleReveal() {
-    // The mnemonic is available only when the vault auto-unlocked at
-    // boot (or was created in this session). A vault that could not
-    // auto-unlock — e.g. created before the stored key existed — has a
-    // verifiable password but no mnemonic in the closure, so withMnemonic
-    // throws; report that instead of crashing the click.
+    // The mnemonic is available only while the vault is unlocked (or
+    // was created in this session). A vault that is locked — or that
+    // could not unlock, e.g. created before the stored key existed —
+    // has a verifiable password but no mnemonic in the closure, so
+    // withMnemonic throws; report that instead of crashing the click.
     try {
       setWords(withMnemonic((mnemonic) => mnemonic.split(' ')));
       setRevealError(null);
@@ -217,21 +221,21 @@ export function MnemonicBackupScreen() {
           <h2 id="backup-profiles" className="text-lg font-semibold">
             Recovery profiles
           </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="text-sm leading-relaxed text-ink">
             This vault was created with the recovery profiles below. Restoring
             with a different profile recovers different addresses — back up
             the profile names with the words.
           </p>
           <ul className="space-y-2">
-            {SUPPORTED_CHAINS.map((chain) => {
+            {BACKUP_CHAINS.map((chain) => {
               const profileId = profileFor(chain);
               const stored = profiles.includes(profileId);
               return (
-                <li key={chain} className="rounded-lg border border-border bg-card p-4">
-                  <div className="text-sm font-semibold">
+                <li key={chain} className="rounded-bawa-sm border-2 border-ink bg-paper p-4">
+                  <div className="text-sm font-semibold text-ink">
                     {PROFILE_LABELS[profileId] ?? profileId}
                   </div>
-                  <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  <div className="mt-1 text-xs leading-relaxed text-ink">
                     {stored
                       ? 'Stored with this vault.'
                       : 'Not stored with this vault — restoring with this profile would recover different addresses.'}
@@ -245,7 +249,7 @@ export function MnemonicBackupScreen() {
 
       {profiles !== null && (
         <section aria-label="Backup guidance" className="space-y-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink">
             These items are reminders, not a record of completed steps. This
             app cannot verify that you have followed them.
           </p>

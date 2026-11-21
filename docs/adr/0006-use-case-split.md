@@ -31,6 +31,8 @@ The branch history shows the split was built section by section, with one commit
 
 The branch contains only the guide: the root `README.md` and 10 section READMEs, totaling 3,265 lines. It has no code, tests, or CI. The decision was not measured or tested; this record describes what the artifact and branch history show.
 
+Superseded by ADR-0010 (2026-11-20): the guide scope is now docs/01–16 plus the Web, Android and mainnet guides and the implementation plan. This record is kept as history; its ten-section scope no longer describes the guide.
+
 ## Consequences
 
 - Each job has a clear entry point, and you can open only what you need.

@@ -145,6 +145,40 @@ describe.sequential('App', () => {
     });
   });
 
+  it('desktop shell is full-bleed with a widening content cap and no sidebar horizontal scroll', async () => {
+    // Issue (a): the sidebar's inner nav was w-64 (256px) inside a
+    // 224px shell, overflowing a wrapper whose overflow-y-auto computes
+    // overflow-x to auto — a horizontal scrollbar on every desktop
+    // page. Issue (c): the frame capped at 1440px, so on a 1919px
+    // viewport the content sat in the left ~1230px. The shell now owns
+    // the sidebar width, the nav fills it, the wrapper clips x, the
+    // frame is full-bleed at lg, and the content cap steps up at 2xl.
+    await withRenderedApp('/', (div) => {
+      const frame = Array.from(div.querySelectorAll('div')).find((el) =>
+        el.className.includes('lg:flex-row'),
+      );
+      expect(frame?.className).toContain('lg:max-w-none');
+      expect(frame?.className).not.toContain('lg:max-w-[1440px]');
+
+      const asides = div.querySelectorAll('aside');
+      expect(asides.length).toBeGreaterThanOrEqual(2);
+      const shellAside = asides[0] as Element;
+      expect(shellAside.className).toContain('lg:w-[224px]');
+      expect(shellAside.className).not.toContain('lg:border-r-2');
+      const stickyWrapper = shellAside.children[0] as Element;
+      expect(stickyWrapper?.className).toContain('overflow-x-hidden');
+      expect(stickyWrapper?.className).toContain('overflow-y-auto');
+      const innerAside = asides[1] as Element;
+      expect(innerAside.className).toContain('w-full');
+      expect(innerAside.className).not.toContain('w-64');
+      expect(innerAside.className).not.toContain('w-20');
+
+      const main = div.querySelector('main');
+      expect(main?.className).toContain('xl:max-w-[1152px]');
+      expect(main?.className).toContain('2xl:max-w-[1440px]');
+    });
+  });
+
   it('renders the Create screen with all seven tools', async () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');

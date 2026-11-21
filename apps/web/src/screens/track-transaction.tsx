@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { BawaIcon } from '../ui/components/icons';
+import { StepCard } from '../ui/components/step-card';
 import { Link, useSearchParams } from 'react-router';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
@@ -14,7 +16,8 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
-import { Skeleton } from '../ui/components/skeleton';
+import { BawaLoading } from '../ui/components/loading';
+import { humanReasonMessage } from '../state/wallet-context';
 
 type ChainId = (typeof SUPPORTED_CHAINS)[number];
 // Result states wrap the tracker result so the discriminant is always
@@ -73,21 +76,27 @@ const GENESIS_BTC_HASH =
 // with its live lookup button.
 function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
   return (
-    <details className="rounded-[20px] border border-panel-border bg-panel-surface-raised p-6">
-      <summary className="cursor-pointer text-xl font-semibold text-panel-text">
+    <section aria-labelledby="track-guide-heading" className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-6">
+      <h2 id="track-guide-heading" className="font-display text-2xl font-semibold text-ink">
         How tracking works
-      </summary>
+      </h2>
 
       <div className="mt-5 grid gap-6 md:grid-cols-2">
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-panel-text-muted">
-          <li>Pick a chain above.</li>
-          <li>Paste the transaction hash.</li>
-          <li>Look it up to see its status.</li>
+        <ol className="space-y-3">
+          <li>
+            <StepCard icon={<BawaIcon name="network" className="size-5" />} label="Pick a chain above." state="pending" />
+          </li>
+          <li>
+            <StepCard icon={<BawaIcon name="search" className="size-5" />} label="Paste the transaction hash." state="pending" />
+          </li>
+          <li>
+            <StepCard icon={<BawaIcon name="clock" className="size-5" />} label="Look it up to see its status." state="pending" />
+          </li>
         </ol>
 
         <div>
-          <h3 className="font-semibold text-panel-text">What a result shows</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-panel-text-muted">
+          <h3 className="font-semibold text-ink">What a result shows</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink">
             <li>Status and confirmations</li>
             <li>Block</li>
             <li>From and to addresses</li>
@@ -99,16 +108,16 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
         </div>
       </div>
 
-      <div className="mt-6 space-y-2 text-sm text-panel-text-muted">
+      <div className="mt-6 space-y-2 text-sm text-ink">
         <p>Results come from public indexers and may lag behind the chain.</p>
         <p>A TON lookup also needs the account address.</p>
       </div>
 
-      <div className="mt-6 rounded-xl border border-panel-border bg-panel-surface p-4">
-        <h3 className="font-semibold text-panel-text">
+      <div className="mt-6 rounded-bawa border-2 border-ink bg-paper p-4">
+        <h3 className="font-semibold text-ink">
           Try a real one — the first Bitcoin transaction
         </h3>
-        <p className="mt-2 text-sm text-panel-text-muted">
+        <p className="mt-2 text-sm text-ink">
           This is a real public Bitcoin transaction: the coinbase transaction
           of the genesis block. Looking it up fetches the live result from
           the indexer — nothing here is a pre-filled answer.
@@ -120,7 +129,7 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
           Look up this example
         </Button>
       </div>
-    </details>
+    </section>
   );
 }
 
@@ -309,10 +318,7 @@ export function TrackTransactionScreen() {
         </form>
 
         {lookup.kind === 'loading' && (
-          <div role='status' className='space-y-2'>
-            <Skeleton className='h-32 w-full' />
-            <p className='text-sm'>Looking up…</p>
-          </div>
+          <BawaLoading label="Looking up…" />
         )}
         {lookup.kind === 'result' && lookup.result.status === 'ok' && (
           <TransactionDetails
@@ -322,7 +328,7 @@ export function TrackTransactionScreen() {
           />
         )}
         {lookup.kind === 'result' && lookup.result.status === 'not-found' && (
-          <Alert className='border-amber-500/50 bg-amber-500/10'>
+          <Alert>
             <AlertDescription className='space-y-2'>
               <p>Transaction not found.</p>
               {lookup.result.note && <p>{lookup.result.note}</p>}
@@ -331,15 +337,15 @@ export function TrackTransactionScreen() {
           </Alert>
         )}
         {lookup.kind === 'result' && lookup.result.status === 'unsupported' && (
-          <Alert className='border-sky-500/50 bg-sky-500/10'>
-            <AlertDescription>{lookup.result.reason}</AlertDescription>
+          <Alert>
+            <AlertDescription>{humanReasonMessage(lookup.result.reason, 'track')}</AlertDescription>
           </Alert>
         )}
         {lookup.kind === 'result' && lookup.result.status === 'error' && (
-          <Alert className='border-red-500/50 bg-red-500/10'>
+          <Alert variant='destructive'>
             <AlertDescription className='space-y-2'>
               <p>Could not look up this transaction.</p>
-              <p>{lookup.result.reason}</p>
+              <p>{humanReasonMessage(lookup.result.reason, 'track')}</p>
               <Button type='button' variant='outline' disabled={!canLookup} onClick={() => void runLookup()}>
                 Retry
               </Button>
@@ -375,10 +381,7 @@ export function TrackTransactionScreen() {
         </form>
 
         {activity.kind === 'loading' && (
-          <div role='status'>
-            <Skeleton className='h-24 w-full' />
-            <span className='sr-only'>Loading recent activity…</span>
-          </div>
+          <BawaLoading label="Loading recent activity…" />
         )}
         {activity.kind === 'result' && activity.result.status === 'ok' && activity.result.data.length === 0 && (
           <div className='space-y-1 text-sm'>
@@ -405,9 +408,9 @@ export function TrackTransactionScreen() {
           </ul>
         )}
         {activity.kind === 'result' && (activity.result.status === 'unavailable' || activity.result.status === 'error') && (
-          <Alert className='border-red-500/50 bg-red-500/10'>
+          <Alert variant='destructive'>
             <AlertDescription className='space-y-2'>
-              <p>{activity.result.reason}</p>
+              <p>{humanReasonMessage(activity.result.reason, 'track')}</p>
               <p>Recent activity could not be loaded.</p>
             </AlertDescription>
           </Alert>

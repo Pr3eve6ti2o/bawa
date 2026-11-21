@@ -1,152 +1,151 @@
 import { Fragment } from "react";
 import { NavLink } from "react-router";
-import {
-  ArrowDownToLine,
-  Coins,
-  DoorOpen,
-  FileInput,
-  History,
-  House,
-  KeyRound,
-  Network,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Plus,
-  Search,
-  Send,
-  ShieldCheck,
-  Wallet,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+
+import { BawaIcon, type BawaIconName } from "../ui/components/icons";
+import { SquiggleDivider } from "../ui/components/squiggle-divider";
 
 export type NavItem = {
-  readonly to: string;
-  readonly label: string;
-  readonly icon: LucideIcon;
+  to: string;
+  label: string;
+  icon: BawaIconName;
+  end?: boolean;
 };
 
-export const MORE_LINKS: readonly NavItem[] = [
-  { to: "/wallets", label: "Wallets", icon: Wallet },
-  { to: "/transactions", label: "Transactions", icon: History },
-  { to: "/track", label: "Track a transaction", icon: Search },
-  { to: "/import-wallet", label: "Import wallet", icon: FileInput },
-  { to: "/create-wallet", label: "Create wallet", icon: Plus },
-  { to: "/create", label: "Create", icon: Wrench },
-  { to: "/security", label: "Security", icon: ShieldCheck },
-  { to: "/networks", label: "Networks", icon: Network },
-  { to: "/mnemonic-backup", label: "Mnemonic backup", icon: KeyRound },
-  { to: "/welcome", label: "Welcome", icon: DoorOpen },
+export type SidebarNavProps = {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onPreloadRoute?: (to: string) => void;
+};
+
+export const MORE_LINKS: NavItem[] = [
+  { to: "/wallets", label: "Wallets", icon: "wallet" },
+  { to: "/transactions", label: "Transactions", icon: "activity" },
+  { to: "/track", label: "Track a transaction", icon: "search" },
+  { to: "/import-wallet", label: "Import wallet", icon: "import" },
+  { to: "/create-wallet", label: "Create wallet", icon: "plus" },
+  { to: "/create", label: "Create", icon: "wrench" },
+  { to: "/security", label: "Security", icon: "shield" },
+  { to: "/networks", label: "Networks", icon: "network" },
+  { to: "/mnemonic-backup", label: "Mnemonic backup", icon: "key" },
+  { to: "/welcome", label: "Welcome", icon: "door" },
 ];
 
-export const SIDEBAR_LINKS: readonly NavItem[] = [
-  { to: "/", label: "Home", icon: House },
-  { to: "/assets", label: "Assets", icon: Coins },
-  { to: "/receive", label: "Receive", icon: ArrowDownToLine },
-  { to: "/send", label: "Send", icon: Send },
+export const SIDEBAR_LINKS: NavItem[] = [
+  { to: "/", label: "Home", icon: "home", end: true },
+  { to: "/assets", label: "Assets", icon: "coins" },
+  { to: "/receive", label: "Receive", icon: "receive" },
+  { to: "/send", label: "Send", icon: "send" },
   ...MORE_LINKS,
 ];
 
-export type SidebarNavProps = {
-  /** Icon-rail mode (Safe SideDrawer pattern): icons only, labels sr-only. */
-  readonly collapsed?: boolean;
-  /** Collapse toggle handler, owned by the app shell in app.tsx. */
-  readonly onToggleCollapse?: () => void;
-  /** Route-chunk preloader (MetaMask pattern), owned by app.tsx. */
-  readonly onPreloadRoute?: (to: string) => void;
-};
-
 export function SidebarNav({
   collapsed = false,
-  onToggleCollapse,
+  onToggleCollapse = () => {},
   onPreloadRoute,
 }: SidebarNavProps) {
+  const collapseLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
+
   return (
-    <>
+    // Width is owned by the shell in app.tsx (lg:w-[224px] / lg:w-[72px]);
+    // this aside fills it exactly. A fixed width here drifted from the
+    // shell — w-64 is 256px against the shell's 224px (w-20 is 80px
+    // against 72px) — and overflowed the shell's sticky wrapper, whose
+    // overflow-y-auto computes overflow-x to auto: a permanent
+    // horizontal scrollbar on every desktop page.
+    <aside className="flex h-full w-full shrink-0 flex-col border-r-2 border-ink bg-paper text-ink">
       <div
-        className={
-          "flex h-[72px] shrink-0 items-center gap-3 " +
-          (collapsed ? "justify-center px-2" : "px-4")
-        }
+        className={[
+          "flex shrink-0 items-center p-4",
+          collapsed ? "justify-center" : "",
+        ].join(" ")}
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-panel-accent-from to-panel-accent-to text-lg font-bold text-primary-foreground">
-          <Wallet className="size-5" aria-hidden="true" />
-        </div>
-        <span
-          className={
-            collapsed ? "sr-only" : "text-[15px] font-bold text-panel-text"
-          }
+        <div
+          aria-hidden="true"
+          className="flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink"
         >
-          Bawa Web Wallet
-        </span>
+          <BawaIcon name="wallet" className="size-6" />
+        </div>
       </div>
 
       <nav
         aria-label="Main navigation"
-        className="flex flex-col gap-1 px-3 pb-4"
+        className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-4"
       >
-        {SIDEBAR_LINKS.map(({ to, label, icon: Icon }) => (
-          <Fragment key={to}>
+        {SIDEBAR_LINKS.map((item) => (
+          <Fragment key={item.to}>
             <NavLink
-              to={to}
-              end={to === "/"}
-              title={collapsed ? label : undefined}
-              onMouseEnter={() => onPreloadRoute?.(to)}
-              onFocus={() => onPreloadRoute?.(to)}
+              to={item.to}
+              end={item.end}
+              title={collapsed ? item.label : undefined}
+              onMouseEnter={() => onPreloadRoute?.(item.to)}
+              onFocus={() => onPreloadRoute?.(item.to)}
               className={({ isActive }) =>
                 [
-                  "relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent",
-                  collapsed ? "justify-center px-2" : "",
+                  "flex w-full items-center gap-3 rounded-bawa px-3 py-2 text-sm transition-colors",
+                  collapsed ? "justify-center" : "",
                   isActive
-                    ? "bg-panel-active font-semibold text-panel-text"
-                    : "font-medium text-panel-text-muted hover:bg-panel-hover hover:text-panel-text",
+                    ? "bg-sun font-semibold text-ink"
+                    : "bg-paper text-ink hover:bg-sun",
                 ].join(" ")
               }
             >
               {({ isActive }) => (
                 <>
-                  {isActive && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-panel-accent"
-                    />
-                  )}
-                  <Icon className="size-5 shrink-0" aria-hidden="true" />
-                  <span className={collapsed ? "sr-only" : undefined}>
-                    {label}
+                  <span aria-hidden="true" className="shrink-0 text-ink">
+                    <BawaIcon name={item.icon} className="size-5" />
+                  </span>
+
+                  <span
+                    className={
+                      collapsed
+                        ? "sr-only"
+                        : "flex min-w-0 items-center gap-2"
+                    }
+                  >
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        className="size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink bg-coral"
+                      />
+                    )}
+                    <span className="truncate">{item.label}</span>
                   </span>
                 </>
               )}
             </NavLink>
 
-            {to === "/send" && (
-              <hr className="my-2 border-panel-border" />
+            {item.to === "/send" && (
+              <div aria-hidden="true" className="py-3 text-ink">
+                <SquiggleDivider className="w-full text-ink" />
+              </div>
             )}
           </Fragment>
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-panel-border px-3 py-2">
+      <footer className="mt-auto shrink-0 border-t-2 border-ink p-3">
         <button
           type="button"
           onClick={onToggleCollapse}
+          aria-label={collapseLabel}
           aria-expanded={!collapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className={
-            "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-panel-text-muted hover:bg-panel-hover hover:text-panel-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-panel-accent" +
-            (collapsed ? " justify-center px-2" : "")
-          }
+          title={collapseLabel}
+          className={[
+            "flex w-full items-center gap-3 rounded-bawa bg-paper px-3 py-2 text-sm text-ink transition-colors hover:bg-sun",
+            collapsed ? "justify-center" : "",
+          ].join(" ")}
         >
-          {collapsed ? (
-            <PanelLeftOpen className="size-5 shrink-0" aria-hidden="true" />
-          ) : (
-            <PanelLeftClose className="size-5 shrink-0" aria-hidden="true" />
-          )}
-          <span className={collapsed ? "sr-only" : undefined}>Collapse</span>
+          <span aria-hidden="true" className="shrink-0 text-ink">
+            <BawaIcon
+              name={collapsed ? "expand" : "collapse"}
+              className="size-5"
+            />
+          </span>
+          <span className={collapsed ? "sr-only" : "truncate"}>
+            {collapseLabel}
+          </span>
         </button>
-      </div>
-    </>
+      </footer>
+    </aside>
   );
 }

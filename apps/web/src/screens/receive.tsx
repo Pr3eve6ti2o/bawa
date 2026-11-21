@@ -9,7 +9,6 @@ import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-import { TokenLogo } from './token-logo';
 
 export function ReceiveScreen() {
   const { addresses, vaultAddresses, selectedChain, setSelectedChain } = useWallet();
@@ -115,8 +114,8 @@ export function ReceiveScreen() {
   if (!chain) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Receive</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold text-ink">Receive</h1>
+        <p className="text-sm text-ink">
           Receive isn't available for this network yet.
         </p>
       </div>
@@ -127,13 +126,14 @@ export function ReceiveScreen() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Receive</h1>
+      <h1 className="text-2xl font-semibold text-ink">Receive</h1>
+      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
 
       <section aria-labelledby="receive-addresses-heading" className="space-y-3">
-        <h2 id="receive-addresses-heading" className="text-lg font-semibold">
+        <h2 id="receive-addresses-heading" className="text-lg font-semibold text-ink">
           Your addresses
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink">
           One address per network. Choose a network to see its QR code.
         </p>
         <ul className="space-y-2">
@@ -144,30 +144,35 @@ export function ReceiveScreen() {
             return (
               <li
                 key={available}
-                className={`flex items-center gap-3 rounded-xl border p-3 ${
-                  selected ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                  selected ? 'bg-sun' : 'bg-paper'
                 }`}
               >
                 <button
                   type="button"
                   aria-pressed={selected}
                   onClick={() => selectChain(available)}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
-                  <TokenLogo symbol={listConfig.symbol} size={32} />
+                  <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                    <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                      <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
+                      <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={20}>{listConfig.symbol}</text>
+                    </svg>
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold">
                       {listConfig.displayName} · {listConfig.symbol}
                     </span>
                     {entry.address ? (
-                      <span className="block break-all font-mono text-sm text-muted-foreground">
+                      <span className="block break-all font-mono text-sm text-ink">
                         {entry.address}
                       </span>
                     ) : (
-                      <span className="block text-sm text-muted-foreground">No address yet</span>
+                      <span className="block text-sm text-ink">No address yet</span>
                     )}
                     {entry.watchOnly && (
-                      <span className="block text-sm text-muted-foreground">Watch-only</span>
+                      <span className="block text-sm text-ink">Watch-only</span>
                     )}
                   </span>
                 </button>
@@ -217,7 +222,7 @@ export function ReceiveScreen() {
             className="h-12"
           />
           {amountError ? (
-            <p role="alert" className="text-sm text-destructive">{amountError}</p>
+            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>
           ) : null}
         </div>
       )}
@@ -226,17 +231,19 @@ export function ReceiveScreen() {
         {address ? (
           <div className="flex flex-col items-center gap-4">
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* Keep the white QR surround for scannability, including in dark mode. */}
-              <div className="shrink-0 rounded-[20px] bg-white p-4">
+              {/* Paper surround keeps the QR scannable — Ink modules on Paper. */}
+              <div className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
                 <QRCodeSVG
                   value={qrValue}
                   size={192}
                   marginSize={4}
+                  fgColor="#2B2B2B"
+                  bgColor="#FFFDF7"
                   title={`${config.symbol} receiving address`}
                 />
               </div>
               {(chain === 'trx' || chain === 'ton') && amount.trim() !== '' && !amountError && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-ink">
                   Requested amount: {amount.trim()} {config.symbol} (shown as text — the QR
                   encodes the address only).
                 </p>
@@ -260,22 +267,22 @@ export function ReceiveScreen() {
             </Link>
           </div>
         )}
-        <p role="status" className="mt-4 text-center text-sm text-muted-foreground">
+        <p role="status" className="mt-4 text-center text-sm text-ink">
           {copyStatus}
         </p>
       </Card>
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-ink">
         {`Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`}
       </p>
 
       {chain === 'ton' && (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ink">
           This address can only receive TON. To send or withdraw TON, you need an external wallet.
         </p>
       )}
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-ink">
         Only share this address to receive funds. Check the address carefully before accepting funds.
       </p>
     </div>

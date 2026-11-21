@@ -1,60 +1,75 @@
-import { cn } from '../lib/utils'
-import { Check } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from "react";
 
-type StepState = 'pending' | 'active' | 'completed'
+import { cn } from "../lib/utils";
+import { BawaIcon } from "./icons";
 
-interface StepCardProps extends React.ComponentProps<'div'> {
-  icon: ReactNode
-  label: string
-  detail: string
-  state?: StepState
-}
+export type StepState = "pending" | "active" | "completed";
 
-function StepCard({ icon, label, detail, state = 'pending', className, ...props }: StepCardProps) {
+type StepCardProps = ComponentProps<"div"> & {
+  icon: ReactNode;
+  label: string;
+  detail?: string;
+  state?: StepState;
+};
+
+const stateClasses: Record<StepState, string> = {
+  pending: "border-ink bg-paper",
+  active: "border-coral bg-paper",
+  completed: "border-ink bg-sun/20",
+};
+
+function StepCard({
+  icon,
+  label,
+  detail,
+  state = "pending",
+  className,
+  ...props
+}: StepCardProps) {
   return (
     <div
+      {...props}
       data-slot="step-card"
       data-state={state}
       className={cn(
-        'flex items-start gap-3 rounded-xl border p-4',
-        state === 'completed' && 'border-success-border bg-success-surface-tint',
-        state === 'active' && 'border-info-border bg-surface-blue',
-        state === 'pending' && 'border-border bg-card',
+        "flex items-start gap-3 rounded-bawa border-2 p-4 text-ink",
+        stateClasses[state],
         className,
       )}
-      {...props}
     >
       <div
+        aria-hidden="true"
         className={cn(
-          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-          state === 'completed'
-            ? 'bg-success-surface text-success-text'
-            : 'bg-surface-blue-dim text-foreground',
+          "flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-ink [&_svg]:size-5",
+          state === "completed" ? "bg-sun" : "bg-paper",
         )}
       >
-        {state === 'completed' ? <Check className="h-5 w-5" /> : icon}
+        {state === "completed" ? (
+          <BawaIcon
+            name="check"
+            aria-hidden="true"
+            className="size-5 text-ink"
+          />
+        ) : (
+          icon
+        )}
       </div>
       {' '}
-      <div>
-        <div className="text-sm-plus font-bold">{label}</div>
-        {/* The active card sits on the pale blue tint (light) / deep
-            blue (dark), where muted-foreground drops to 4.32:1 — below
-            AA. The active detail therefore uses the standard body text
-            colour; hierarchy is kept by size and weight, not colour. */}
-        {' '}
-        <div
-          className={cn(
-            'mt-1 text-xs-plus leading-relaxed',
-            state === 'active' ? 'text-foreground' : 'text-muted-foreground',
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-ink">
+          {state === "active" ? (
+            <span className="bawa-marker">{label}</span>
+          ) : (
+            label
           )}
-        >
-          {detail}
-        </div>
+        </p>
+        {' '}
+        {detail != null && (
+          <p className="mt-1 text-sm text-ink">{detail}</p>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
-export type { StepState }
-export { StepCard }
+export { StepCard };
