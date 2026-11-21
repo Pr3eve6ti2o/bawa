@@ -1,13 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ChainId } from '../../engine/boundary';
+import { BawaError, WalletErrorCodes, walletErrorCodeOf } from '../errors';
 import {
   assertNetworkId,
+  assertTonWalletVersion,
   BROADCAST_DISABLED_MESSAGE,
+  DEFAULT_TON_WALLET_VERSION,
   fetchJson,
-  toBalanceProvider,
+  httpFetchTransport,
+  TON_WALLET_VERSIONS,
   type AdapterResult,
   type AdapterBalance,
   type ChainAdapter,
+  type TonWalletVersion,
+  type TxInput,
 } from './types';
 import { registerAdapter, getAdapter, registeredChains } from './index';
 
@@ -142,21 +147,71 @@ describe('broadcast disabled', () => {
   });
 });
 
-describe('toBalanceProvider', () => {
-  it('returns {value} on ok', async () => {
-    const provider = toBalanceProvider(stubAdapter(okBalance('123')));
-    await expect(provider.getBalance('eth' as ChainId, '0x0')).resolves.toEqual({
-      value: '123',
-    });
+
+describe('httpFetchTransport', () => {
+  it('returns parsed JSON and forwards the init through to fetch', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ a: 1 }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const init = { method: 'POST', body: '{}' };
+    await expect(
+      httpFetchTransport.request('https://example.invalid/x', init),
+    ).resolves.toEqual({ a: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // fetchJson forwards the init fields and adds its own abort signal.
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://example.invalid/x',
+      expect.objectContaining({
+        method: 'POST',
+        body: '{}',
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
-  it('throws the adapter reason on unavailable/error', async () => {
-    const provider = toBalanceProvider(
-      stubAdapter({ status: 'unavailable', reason: 'no-adapter' }),
-    );
-    await expect(provider.getBalance('eth' as ChainId, '0x0')).rejects.toThrow(
-      'no-adapter',
-    );
+  it('throws HTTP <status> on non-2xx, exactly once (no retry)', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(
+      httpFetchTransport.request('https://example.invalid/x'),
+    ).rejects.toThrow('HTTP 503');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TON wallet versions (item 4)', () => {
+  it('defaults to v4r2 and lists exactly the three supported versions', () => {
+    expect(DEFAULT_TON_WALLET_VERSION).toBe('v4r2');
+    expect([...TON_WALLET_VERSIONS]).toEqual(['v3r2', 'v4r2', 'v5r1']);
+  });
+
+  it('accepts each supported version', () => {
+    for (const version of TON_WALLET_VERSIONS) {
+      expect(assertTonWalletVersion(version)).toBe(version);
+    }
+  });
+
+  it('rejects an unknown version as a validation error (code 3002)', () => {
+    let thrown: unknown;
+    try {
+      assertTonWalletVersion('v9' as unknown as TonWalletVersion);
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(BawaError);
+    expect(walletErrorCodeOf(thrown)).toBe(WalletErrorCodes.INVALID_INPUT);
+  });
+
+  it('a seqno TxInput carries the wallet version (item 4)', () => {
+    const input: TxInput = { kind: 'seqno', seqno: 0, walletVersion: 'v4r2' };
+    expect(input).toEqual({ kind: 'seqno', seqno: 0, walletVersion: 'v4r2' });
   });
 });
 

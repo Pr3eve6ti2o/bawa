@@ -32,6 +32,24 @@ import {
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { toast } from '../ui/components/toast';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
+
+// Unique-prefix completion for the recovery-phrase input (repo-study
+// Phase 3, item 31): Tab completes the word being typed when exactly
+// one BIP-39 word has that prefix. Ambiguous prefixes and already
+// complete words are left alone, so Tab keeps its normal focus behaviour
+// when nothing expands.
+export function expandUniquePrefix(value: string): string {
+  const start = value.lastIndexOf(' ') + 1;
+  const prefix = value.slice(start).toLowerCase();
+
+  if (!prefix || wordlist.includes(prefix)) return value;
+
+  const matches = wordlist.filter((word) => word.startsWith(prefix));
+  return matches.length === 1
+    ? `${value.slice(0, start)}${matches[0]} `
+    : value;
+}
 
 const chains: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
@@ -157,7 +175,13 @@ export function ImportWalletScreen() {
     try {
       const profileIds = [...new Set(SUPPORTED_CHAINS.map((chainId) => profileFor(chainId)))];
       const mnemonic = normalizedMnemonic;
-      await createVault(mnemonic, vaultPassword, profileIds, passphrase);
+      // Merge 1 (Lane B): an imported mnemonic is recorded as
+      // 'imported', not 'created' — createVault's default provenance is
+      // 'created', which is only correct for the create-wallet flow.
+      await createVault(mnemonic, vaultPassword, profileIds, passphrase, {
+        source: 'imported',
+        isTesting: false,
+      });
       setNormalizedMnemonic(null);
       setVaultPassword('');
       setVaultPasswordConfirm('');
@@ -285,6 +309,14 @@ export function ImportWalletScreen() {
                       setPhrase(event.target.value);
                       setPhraseError(null);
                     }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Tab' || event.shiftKey) return;
+                      const expanded = expandUniquePrefix(phrase);
+                      if (expanded !== phrase) {
+                        event.preventDefault();
+                        setPhrase(expanded);
+                      }
+                    }}
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
@@ -294,6 +326,8 @@ export function ImportWalletScreen() {
                   <p className="text-sm text-muted-foreground">
                     Only enter a recovery phrase on this screen, on this
                     device. Never paste it into any other app or website.
+                    Press Tab to complete the word you are typing when it
+                    has only one possible completion.
                   </p>
                 </div>
                 <div className="space-y-2">

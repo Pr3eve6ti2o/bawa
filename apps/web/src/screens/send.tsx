@@ -17,6 +17,7 @@ import { formatFeePreview } from '../wallet/money';
 import {
   validateRecipient,
   previewSendAmount,
+  simulateSend,
   signEthOffline,
   signBtcOffline,
   signTrxOffline,
@@ -29,6 +30,7 @@ import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
+import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
@@ -65,6 +67,7 @@ export function SendScreen() {
   const [preview, setPreview] = useState<SendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
+  const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
   const [copied, setCopied] = useState(false);
 
   const from = vaultAddresses[chain][0] ?? '';
@@ -115,7 +118,7 @@ export function SendScreen() {
       try {
         await ensureAdapters();
       } catch {
-        setPreview({ ok: false, reason: "We couldn't load this network's balance. Please retry." });
+        setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
         return;
       }
       const result = await previewSendAmount(chain, from, recipient, amount);
@@ -127,6 +130,15 @@ export function SendScreen() {
   }
 
   async function handleSign(): Promise<void> {
+    // Merge 1 (Lane B): the double-submit guard is repo-study's; its
+    // vaultState lock guard is DROPPED, not adapted. Under the no-lock
+    // model (Lane A) VaultState is 'no-vault' | 'unlocked' — there is no
+    // locked state, and the guard's message ('Your vault is locked…')
+    // would be wrong for the only other state, 'no-vault'. Signing
+    // without a vault is already unreachable: the screen shows the
+    // no-wallet state when no vault address exists, and handleSign
+    // requires a successful preview first.
+    if (approvalStage === 'simulating' || approvalStage === 'signing') return;
     if (!preview || !preview.ok) return;
     try {
       await ensureAdapters();
@@ -135,6 +147,15 @@ export function SendScreen() {
       return;
     }
     const previewOk = preview;
+    setApprovalStage('simulating');
+    const simulation = await simulateSend(chain, from, recipient, amount);
+    if (!simulation.ok) {
+      setSignState({ status: 'error', reason: simulation.reason });
+      setApprovalStage('review');
+      return;
+    }
+
+    setApprovalStage('signing');
     setSignState({ status: 'signing' });
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
@@ -242,13 +263,16 @@ export function SendScreen() {
         payload: signed.payload,
         payloadLabel: signed.payloadLabel,
       });
+      setApprovalStage('signed');
       setStep('result');
+      setApprovalStage('broadcast-disabled');
     } catch (error: unknown) {
       setSignState({
         status: 'error',
         reason:
           error instanceof Error ? error.message : 'Signing failed.',
       });
+      setApprovalStage('review');
     }
   }
 
@@ -363,8 +387,14 @@ export function SendScreen() {
             ? 1
             : step === 'amount'
               ? 2
-              : step === 'review'
-                ? (signState.status === 'signing' ? 4 : 3)
+              : step === 'review' || step === 'result'
+                ? {
+                    review: 3,
+                    simulating: 3,
+                    signing: 4,
+                    signed: 5,
+                    'broadcast-disabled': 5,
+                  }[approvalStage]
                 : 5;
         return (
           <div className="space-y-2">
@@ -596,6 +626,7 @@ export function SendScreen() {
             )}
             feeNote={preview.feeNote}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
+            stage={approvalStage}
             onBack={() => setStep('amount')}
             onSign={() => void handleSign()}
           />

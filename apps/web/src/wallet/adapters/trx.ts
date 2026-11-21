@@ -1,14 +1,17 @@
 import { hexToBytes, sha256 } from 'viem';
 import {
   BROADCAST_DISABLED_MESSAGE,
-  fetchJson,
+  httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
   type FeeEstimate,
+  type FetchTransport,
   type TxInput,
 } from './types';
+import { withRetry } from '../retry';
 
 const NETWORK_ID = 'tron:0x2b6653dc';
 const BASE_URL = 'https://api.trongrid.io';
@@ -18,10 +21,22 @@ const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvw
 
 export interface TronAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Injectable transport (item 2). Defaults to the single-attempt HTTP
+   * transport; tests inject a fake instead of stubbing the global fetch.
+   */
+  transport?: FetchTransport;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
+
+/** One bounded-retry read through the given transport (item 2). */
+function readWithRetry(
+  transport: FetchTransport,
+  url: string,
+  operation: string,
+): Promise<unknown> {
+  return withRetry(() => transport.request(url), { operation });
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -84,6 +99,11 @@ export function createTronAdapter(
   overrides: TronAdapterOverrides = {},
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
+  // Idempotent reads only: every network read below is bounded-retry via
+  // withRetry (item 2). Broadcast is never retried — it stays disabled.
+  const readJson = (url: string, operation: string): Promise<unknown> =>
+    readWithRetry(transport, url, operation);
   // Chain-identity check result, cached per instance: TRON has no on-chain
   // chain-id, so identity rests on the pinned mainnet endpoint responding
   // with a well-formed mainnet block. The endpoint URL is fixed at
@@ -94,9 +114,9 @@ export function createTronAdapter(
     if (identityChecked) return null;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/wallet/getnowblock`);
+      raw = await readJson(`${baseUrl}/wallet/getnowblock`, 'trx.identity');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const header = isRecord(raw) ? raw['block_header'] : undefined;
     const number = isRecord(header) && isRecord(header['raw_data'])
@@ -124,9 +144,9 @@ export function createTronAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/v1/accounts/${address}`);
+      raw = await readJson(`${baseUrl}/v1/accounts/${address}`, 'trx.getBalance');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const data = isRecord(raw) && Array.isArray(raw['data']) ? raw['data'] : undefined;
     if (!data) {
@@ -167,11 +187,12 @@ export function createTronAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(
+      raw = await readJson(
         `${baseUrl}/v1/accounts/${address}/transactions?limit=${limit}&order_by=block_timestamp,desc`,
+        'trx.getHistory',
       );
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const data = isRecord(raw) && Array.isArray(raw['data']) ? raw['data'] : undefined;
     if (!data) {
@@ -231,9 +252,9 @@ export function createTronAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/wallet/getchainparameters`);
+      raw = await readJson(`${baseUrl}/wallet/getchainparameters`, 'trx.estimateFee');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const params =
       isRecord(raw) && Array.isArray(raw['chainParameter']) ? raw['chainParameter'] : [];
@@ -303,11 +324,16 @@ export async function getLatestBlockHeader(
   overrides: TronAdapterOverrides = {},
 ): Promise<AdapterResult<TronBlockHeader>> {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
   let raw: unknown;
   try {
-    raw = await fetchJson(`${baseUrl}/wallet/getnowblock`);
+    raw = await readWithRetry(
+      transport,
+      `${baseUrl}/wallet/getnowblock`,
+      'trx.getLatestBlockHeader',
+    );
   } catch (error: unknown) {
-    return { status: 'error', reason: messageOf(error) };
+    return toAdapterError(error);
   }
   const data = isRecord(raw) ? raw['block_header'] : undefined;
   const rawData = isRecord(data) ? data['raw_data'] : undefined;

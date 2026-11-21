@@ -1,5 +1,7 @@
 # WALLET_BUILDER.md
 
+The single entry point for Bawa documentation is [docs/index.md](docs/index.md).
+
 ## Identify the request
 Begin with one plain-language sentence stating the requested product, platform, chains, operations and network.
 The network direction defaults to mainnet-first; a request that names testnet uses testnet; missing network facts stay OPEN. Never silently change fixed policy. Mark other missing facts OPEN. Describe the user's goal, not an already-implemented capability.
@@ -63,6 +65,87 @@ Baseline engine: `tools/hdwallet-gen` pins `@trustwallet/wallet-core` **4.9.3**;
 Adopted `apps/web` libraries (ADR-0005): `@scure/bip39` **2.4.0**, `decimal.js` **10.6.0**, `dinero.js` **2.0.2**, and `mnemonic-words` **2.0.0**, with `bip39` **3.1.2** as a devDependency used only as a test oracle.
 Python tools use **Python >=3.11**, `cryptography` **50.0.2** and `bip-utils` **2.12.3**.
 Unspecified commands, interfaces or dependency versions are OPEN until inspected.
+
+## Verified 4.9.3 workflow (minimal)
+
+This is the minimal workflow verified against Trust Wallet Core 4.9.3.
+It is the smallest path that exercises the engine end to end in this
+repo; anything less is not a verification of the engine.
+
+**Pin.** `@trustwallet/wallet-core` is pinned to exactly **4.9.3** in
+`apps/web/package.json` and `tools/hdwallet-gen` (ADR-0001). The 4.9.3
+WASM is 10,422,325 bytes, SHA-256
+`13a18a380202879c6877bccd38621e1af58f65b923dbe4d438dbffdd32c77217`.
+Verify the hash on every upgrade; never use a version range. The
+prebuild step (`apps/web/scripts/copy-wasm.mjs`, run by `prebuild` /
+`predev` / `build`) copies the pinned WASM into the app — a stale WASM
+with new glue is how the 4.8.4/4.9.3 incident happened, and the
+dependency-version check (`scripts/check-pinned-dependencies.js`) now
+guards the pin.
+
+**Run.** From `apps/web`, after `npm ci`:
+
+```sh
+npm run typecheck   # tsc --noEmit, 0 errors
+npm run build       # copy-wasm + tsc + vite build, 0 errors
+npm run test        # vitest run — 40 files, 460 tests, all passing (2026-11-20)
+```
+
+**Upstream sources.** The engine is Apache-2.0, upstream
+[trustwallet/wallet-core](https://github.com/trustwallet/wallet-core)
+(default branch `master`): the WASM entry in
+[`wasm/`](https://github.com/trustwallet/wallet-core/tree/master/wasm),
+the C headers in
+[`include/TrustWalletCore/`](https://github.com/trustwallet/wallet-core/tree/master/include/TrustWalletCore)
+(including `TWHDWallet.h`), the WASM tests in
+[`wasm/tests/`](https://github.com/trustwallet/wallet-core/tree/master/wasm/tests),
+and the native tests in
+[`tests/`](https://github.com/trustwallet/wallet-core/tree/master/tests).
+Bawa's own engine checks are `apps/web/src/wallet/core.test.ts`
+(derivation), `apps/web/src/wallet/send.test.ts` (offline signing plus
+AnySigner probe runs, disposable keys, no broadcast), and
+`apps/web/src/engine/boundary-retry.test.ts` (WASM-init behaviour).
+
+**What this workflow does not prove.** A successful build and test run
+prove only their build scope. They do not demonstrate transaction
+handling, mainnet readiness, or a send on any network — no send has
+ever run on any network, and broadcast stays disabled.
+
+## Capability section (generated from `chains.ts`)
+
+<!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
+     Regenerate when chains.ts changes; the CI drift check fails otherwise.
+     Generated 2026-11-22 from chains.ts at 7202040. -->
+
+| Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Bitcoin (BTC) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| Ethereum (ETH) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| TRON (TRX) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
+| TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked | candidate |
+| Solana (SOL) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| BNB Smart Chain (BNB) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Polygon (POL) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Arbitrum One (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| OP Mainnet (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Base (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Avalanche C-Chain (AVAX) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Litecoin (LTC) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Dogecoin (DOGE) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+
+TON `fee-quote` is blocked: a TON fee depends on the unsigned message,
+which is Phase 4 work — no fee number is ever invented. TON
+`post-sign-verify` is blocked: the signed BOC is not re-parsed (no BOC
+parser vendored); verification is no-error + 32-byte hash + BOC magic
+only. `simulate` is candidate on all thirteen chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. The nine extended chains (Solana, BNB Smart Chain, Polygon, Arbitrum One, OP Mainnet, Base, Avalanche C-Chain, Litecoin, Dogecoin) are live listed chains with derive, restore and receive verified, but balance, history, fee-quote, unsigned-plan, local-sign and post-sign-verify are blocked — no adapter or send builder exists for them yet, and no capability is ever faked. Listing a chain never implies it can do an operation; a chain is
+available for an operation only when `availableFor(capability)` in
+`apps/web/src/wallet/chains.ts` returns it.
+
+<!-- END GENERATED: capabilities from apps/web/src/wallet/chains.ts. -->
+
+If you want to use a wallet to hold funds, see the product-user route
+in [README.md](README.md) ("If you want a wallet to use"). This
+document is builder material.
 
 Derivation is fixed: **BIP-39, 256-bit entropy, 24 words, empty passphrase, account 0, receiving branch 0 only**. Preserve the chain-specific paths below; do not invent alternate paths or index ranges.
 

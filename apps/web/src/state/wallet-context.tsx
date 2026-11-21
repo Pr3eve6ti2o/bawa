@@ -5,8 +5,12 @@ import {
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { availableFor } from '../wallet/chains';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
+import { messageOf } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
+import type { BalanceState } from '../wallet/balance-state';
+
+export type { BalanceState, BalanceStatus } from '../wallet/balance-state';
 
 let vaultCorePromise: Promise<typeof import('../wallet/core')> | undefined;
 
@@ -95,21 +99,7 @@ const VAULT_ADDRESSES_KEY = 'bawa-vault-addresses:v1';
 const BALANCE_CACHE_KEY = 'bawa:balances-cache:v1';
 export const BALANCE_CACHE_MAX_AGE_MS = 10 * 60 * 1000;
 
-export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
-
-export interface BalanceState {
-  status: BalanceStatus;
-  /** Raw native balance as a decimal string, when a provider returned one. */
-  value?: string;
-  /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
-  reason?: string;
-  /** True while a refetch is in flight and value is the last good one. */
-  refreshing?: boolean;
-  /** True when value is the last good one kept after a failed refetch, or from cache. */
-  stale?: boolean;
-  /** Epoch ms when the last good value was fetched (cache freshness). */
-  fetchedAtMs?: number;
-}
+// BalanceState / BalanceStatus live in ../wallet/balance-state (see above).
 
 export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
 export interface HistoryState {
@@ -193,10 +183,8 @@ function readStored(): Record<string, unknown> {
   }
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message :
-    isRecord(error) && typeof error.message === 'string' ? error.message : String(error);
-
+// messageOf comes from ../wallet/adapters/types (repo-study's single
+// shared error-message helper); the local duplicate is removed.
 function computeVaultState(): VaultState {
   // No lock state: a stored vault is unlocked (autoUnlock restores the
   // mnemonic; see the mount effect). A vault that cannot auto-unlock

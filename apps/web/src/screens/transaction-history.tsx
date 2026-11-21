@@ -22,6 +22,15 @@ function formatDate(timestamp: number): string {
   });
 }
 
+function formatLastOk(lastOkAt: number): string {
+  return new Date(lastOkAt).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function TransactionHistoryScreen() {
   const { history, refreshHistory } = useWallet();
   const [filter, setFilter] = useState<Filter>('all');
@@ -158,6 +167,16 @@ export function TransactionHistoryScreen() {
                     : ''
                 }.`}
               </p>
+              {failedChains.map((chain) => {
+                const lastOkAt = history[chain].fetchedAtMs;
+                if (history[chain].txs.length === 0 || lastOkAt === undefined) return null;
+                return (
+                  <p key={chain} className="text-sm text-muted-foreground">
+                    Showing last known {chainConfig(chain).displayName}{' '}
+                    transactions from {formatLastOk(lastOkAt)}.
+                  </p>
+                );
+              })}
               <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
                 Retry
               </Button>

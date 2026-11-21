@@ -7,6 +7,7 @@ import type { WalletContextValue } from './wallet-context';
 import { createVault, deleteVault } from '../wallet/vault';
 import { registerAdapter } from '../wallet/adapters';
 import type { AdapterResult, AdapterTx, ChainAdapter } from '../wallet/adapters/types';
+import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
 // The capability registry is mocked to verified so the adapter path is
 // exercised; the no-adapter gate itself is covered by wallet-context.test.tsx.
@@ -24,13 +25,6 @@ vi.mock('../wallet/chains', async (importOriginal) => {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
-
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
@@ -146,7 +140,7 @@ describe('wallet context — adapter-backed balances and history', () => {
         stubAdapter('ton', { status: 'error', reason: 'boom' }, okTxs([])),
       );
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.refreshVaultAccounts();
       });
       await act(async () => {
@@ -188,7 +182,7 @@ describe('wallet context — adapter-backed balances and history', () => {
         stubAdapter('ton', okBalance('0'), { status: 'error', reason: 'boom' }),
       );
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.refreshVaultAccounts();
       });
       // Refresh already refreshed history via refreshVaultAccounts; verify.

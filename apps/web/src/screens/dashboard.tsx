@@ -272,9 +272,6 @@ export function DashboardScreen() {
     );
 
   const priceEntries = Object.values(pricesState.entries);
-  const hasCachedPrices = priceEntries.some(
-    (entry) => entry?.status === 'fresh' || entry?.status === 'expired',
-  );
   const priceErrorReasons = priceEntries.flatMap(
     (entry) => (entry?.status === 'error' ? [entry.reason] : []),
   );

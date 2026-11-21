@@ -1,31 +1,51 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  autoUnlock,
   changePassword,
   createVault,
   deleteVault,
+  deleteVaultBackup,
   getSessionPassphrase,
   hasVault,
+  hasVaultBackup,
+  isTestVault,
+  migrateEnvelope,
   PBKDF2_ITERATIONS,
+  restoreVaultFromBackup,
+  TEST_PROVENANCE,
+  VAULT_BACKUP_STORAGE_KEY,
   VAULT_CORRUPTED,
   VAULT_KEY_STORAGE_KEY,
   VAULT_STORAGE_KEY,
   vaultProfiles,
+  vaultProvenance,
+  verifyVaultPassword,
   withMnemonic,
   withMnemonicAsync,
+  writeVaultBackup,
 } from './vault';
+import { BTC_PROFILE_ID, EVM_PROFILE_ID } from '../state/test-helpers';
+import { BawaError, ERROR_MESSAGES, WalletErrorCodes } from './errors';
 
 // Vault-lock removal (owner order 2026-11-20): isLocked/lock/unlock no
-// longer exist, so every test that asserted lock behaviour was removed:
-// - "unlocks with the right password..." (unlock + lock cycle)
-// - "rejects a wrong password..." — there is no password check any more;
-//   a wrong stored key / tampered ciphertext is covered by autoUnlock
-//   returning false (see 'autoUnlock' below), not by a rejection.
+// longer exist, so every test that asserted lock behaviour was removed
+// or rewritten:
+// - "unlocks with the right password..." (unlock + lock cycle) — removed.
+// - "rejects a wrong password..." — removed as an unlock test; a wrong
+//   password is covered by restoreVaultFromBackup rejecting with code
+//   1001 (see 'vault errors') and by autoUnlock returning false for a
+//   wrong stored key (see 'autoUnlock').
 // - "throws when locked" (withMnemonicAsync) — replaced by the
 //   not-unlocked case below.
+// - "throws a BawaError with code 1004 when locked" — removed:
+//   withMnemonic throws a plain Error ('Vault is not unlocked.'), not
+//   VAULT_LOCKED, because this vault is never locked (see vault.ts).
+//   The replacement assertion is in 'vault errors'.
 // The auto-lock timer tests lived in state/wallet-context.test.tsx and
 // were removed with the timer itself.
+// Merge 1: repo-study's backup, provenance, migration and
+// verifyVaultPassword tests are ported here with the lock steps removed
+// and changePassword called with its one-argument (no-lock) signature.
 
 function decodeB64(value: string): Uint8Array {
   const binary = atob(value);
@@ -48,7 +68,7 @@ function encodeB64(bytes: Uint8Array): string {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = ['bawa-evm-bip44-v1', 'bawa-btc-bip84-v1'];
+const TEST_PROFILES = [EVM_PROFILE_ID, BTC_PROFILE_ID];
 
 function readRawEnvelope(): Record<string, unknown> {
   const raw = localStorage.getItem(VAULT_STORAGE_KEY);
@@ -170,13 +190,16 @@ describe('vault', () => {
     );
   });
 
-  it('deletes the vault and its stored key', async () => {
+  it('deletes the vault, its stored key and its backup', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(hasVaultBackup()).toBe(true);
     deleteVault();
     expect(hasVault()).toBe(false);
     expect(vaultProfiles()).toBeNull();
     expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(VAULT_KEY_STORAGE_KEY)).toBeNull();
+    expect(hasVaultBackup()).toBe(false);
+    expect(localStorage.getItem(VAULT_BACKUP_STORAGE_KEY)).toBeNull();
     expect(() => withMnemonic((m) => m)).toThrow('Vault is not unlocked.');
   });
 });
@@ -252,6 +275,19 @@ describe('autoUnlock', () => {
     const envelope = readRawEnvelope();
     localStorage.setItem(
       VAULT_STORAGE_KEY,
+      JSON.stringify({ ...envelope, version: 'not-a-number' }),
+    );
+    const fresh = await freshVaultModule();
+    expect(await fresh.autoUnlock()).toBe(false);
+    expect(fresh.hasVault()).toBe(true);
+    expect(() => fresh.vaultProfiles()).toThrow(VAULT_CORRUPTED);
+  });
+
+  it('fails closed on an unknown-version envelope', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    localStorage.setItem(
+      VAULT_STORAGE_KEY,
       JSON.stringify({ ...envelope, version: 2 }),
     );
     const fresh = await freshVaultModule();
@@ -262,10 +298,10 @@ describe('autoUnlock', () => {
   it('throws VAULT_CORRUPTED only when the envelope is read directly', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     const envelope = readRawEnvelope();
-    localStorage.setItem(
-      VAULT_STORAGE_KEY,
-      JSON.stringify({ ...envelope, version: 2 }),
-    );
+    // A structurally malformed envelope (no KDF block) is corruption —
+    // unlike an unknown version number, which fails UNKNOWN_VERSION.
+    delete (envelope as Record<string, unknown>).kdf;
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(envelope));
     expect(() => vaultProfiles()).toThrow(VAULT_CORRUPTED);
   });
 });
@@ -298,5 +334,280 @@ describe('session passphrase', () => {
   it('defaults to an empty session passphrase', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     expect(getSessionPassphrase()).toBe('');
+  });
+});
+
+describe('vault backup', () => {
+  it('writes a backup equal to the primary envelope, with no plaintext', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(hasVaultBackup()).toBe(true);
+    const primary = localStorage.getItem(VAULT_STORAGE_KEY) as string;
+    const backup = localStorage.getItem(VAULT_BACKUP_STORAGE_KEY) as string;
+    expect(backup).toBe(primary);
+    expect(backup).not.toContain('abandon');
+    expect(backup).not.toContain('about');
+    expect(backup).not.toContain(TEST_PASSWORD);
+  });
+
+  it('restores the vault from backup after the primary is lost', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    expect(hasVault()).toBe(false);
+    await restoreVaultFromBackup(TEST_PASSWORD);
+    expect(hasVault()).toBe(true);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    expect(vaultProfiles()).toEqual(TEST_PROFILES);
+    // The restore stores the derived key, so the restored vault
+    // auto-unlocks after a reload too.
+    const fresh = await freshVaultModule();
+    expect(await fresh.autoUnlock()).toBe(true);
+    expect(fresh.withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('restores from backup after the primary is damaged', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.setItem(VAULT_STORAGE_KEY, '{"version":1,"kdf":}');
+    expect(() => vaultProfiles()).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+    await restoreVaultFromBackup(TEST_PASSWORD);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    const fresh = await freshVaultModule();
+    expect(await fresh.autoUnlock()).toBe(true);
+  });
+
+  it('refuses a restore with the wrong password and leaves the primary untouched', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    await expect(restoreVaultFromBackup('wrong password')).rejects.toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
+    );
+    expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
+    // The right password still restores afterwards.
+    await restoreVaultFromBackup(TEST_PASSWORD);
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('throws when there is no backup to restore from', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    deleteVaultBackup();
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    await expect(restoreVaultFromBackup(TEST_PASSWORD)).rejects.toThrow(
+      'No vault backup exists.',
+    );
+  });
+
+  it('throws when the backup itself is corrupt', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    localStorage.setItem(VAULT_BACKUP_STORAGE_KEY, 'not json at all');
+    await expect(restoreVaultFromBackup(TEST_PASSWORD)).rejects.toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+    expect(localStorage.getItem(VAULT_STORAGE_KEY)).toBeNull();
+  });
+
+  it('refreshes the backup on password change so the new password restores', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await changePassword('new password here');
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    await expect(restoreVaultFromBackup(TEST_PASSWORD)).rejects.toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
+    );
+    await restoreVaultFromBackup('new password here');
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('deletes the backup when the vault is deleted', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(hasVaultBackup()).toBe(true);
+    deleteVault();
+    expect(hasVaultBackup()).toBe(false);
+    expect(localStorage.getItem(VAULT_BACKUP_STORAGE_KEY)).toBeNull();
+  });
+
+  it('writeVaultBackup throws with no vault', () => {
+    expect(() => writeVaultBackup()).toThrow('No vault exists.');
+  });
+});
+
+describe('vault migration', () => {
+  it('rejects versions 0 and 99 with the unknown-version code', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    for (const version of [0, 99]) {
+      const envelope = readRawEnvelope();
+      localStorage.setItem(
+        VAULT_STORAGE_KEY,
+        JSON.stringify({ ...envelope, version }),
+      );
+      let caught: unknown;
+      try {
+        vaultProfiles();
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(BawaError);
+      expect((caught as BawaError).code).toBe(
+        WalletErrorCodes.VAULT_UNKNOWN_VERSION,
+      );
+      expect((caught as Error).message).toBe('Vault version is not supported.');
+    }
+  });
+
+  it('rejects a non-object envelope as corrupted', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.setItem(VAULT_STORAGE_KEY, '"just a string"');
+    expect(() => vaultProfiles()).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+    localStorage.setItem(VAULT_STORAGE_KEY, 'null');
+    expect(() => vaultProfiles()).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+  });
+
+  it('migrates a version-1 envelope without provenance to unknown provenance', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    delete (envelope as Record<string, unknown>).provenance;
+    localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(envelope));
+    expect(vaultProvenance()).toEqual({ source: 'unknown', isTesting: false });
+    expect(isTestVault()).toBe(false);
+  });
+
+  it('migrateEnvelope validates a version-1 envelope and rejects unknown versions directly', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const migrated = migrateEnvelope(readRawEnvelope());
+    expect(migrated.version).toBe(1);
+    expect(migrated.profileIds).toEqual(TEST_PROFILES);
+    let caught: unknown;
+    try {
+      migrateEnvelope({ version: 2 });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(BawaError);
+    expect((caught as BawaError).code).toBe(
+      WalletErrorCodes.VAULT_UNKNOWN_VERSION,
+    );
+    expect(() => migrateEnvelope('just a string')).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+  });
+});
+
+describe('vault errors', () => {
+  it('rejects a wrong password with a BawaError carrying code 1001', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    localStorage.removeItem(VAULT_STORAGE_KEY);
+    let caught: unknown;
+    try {
+      await restoreVaultFromBackup('wrong password');
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(BawaError);
+    expect((caught as BawaError).code).toBe(
+      WalletErrorCodes.VAULT_WRONG_PASSWORD,
+    );
+    expect((caught as Error).message).toBe(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_WRONG_PASSWORD],
+    );
+  });
+
+  it('throws a plain Error, not a BawaError, when no mnemonic is available', async () => {
+    // No vault at all: withMnemonic has nothing to run with. The throw is
+    // deliberately a plain Error ('Vault is not unlocked.') — this vault
+    // is never locked, so the catalogue's VAULT_LOCKED ('Vault is locked.')
+    // would be the wrong message. See vault.ts.
+    let caught: unknown;
+    try {
+      withMnemonic((m) => m);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught).not.toBeInstanceOf(BawaError);
+    expect((caught as Error).message).toBe('Vault is not unlocked.');
+    await expect(withMnemonicAsync(async () => 'never')).rejects.toThrow(
+      'Vault is not unlocked.',
+    );
+  });
+});
+
+describe('vault provenance', () => {
+  it('defaults to created, not testing', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(vaultProvenance()).toEqual({ source: 'created', isTesting: false });
+    expect(isTestVault()).toBe(false);
+    expect(vaultProfiles()).toEqual(TEST_PROFILES);
+  });
+
+  it('records test provenance and reports a test vault', async () => {
+    await createVault(
+      TEST_MNEMONIC,
+      TEST_PASSWORD,
+      TEST_PROFILES,
+      '',
+      TEST_PROVENANCE,
+    );
+    expect(vaultProvenance()).toEqual({ source: 'test', isTesting: true });
+    expect(isTestVault()).toBe(true);
+    const envelope = readRawEnvelope();
+    expect(envelope.provenance).toEqual({ source: 'test', isTesting: true });
+  });
+
+  it('preserves test provenance across a password change', async () => {
+    await createVault(
+      TEST_MNEMONIC,
+      TEST_PASSWORD,
+      TEST_PROFILES,
+      '',
+      TEST_PROVENANCE,
+    );
+    await changePassword('new password here');
+    expect(vaultProvenance()).toEqual({ source: 'test', isTesting: true });
+    expect(isTestVault()).toBe(true);
+  });
+
+  it('reports null provenance with no vault', () => {
+    expect(vaultProvenance()).toBeNull();
+    expect(isTestVault()).toBe(false);
+  });
+
+  it('rejects a malformed stored provenance as corrupted', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    const envelope = readRawEnvelope();
+    localStorage.setItem(
+      VAULT_STORAGE_KEY,
+      JSON.stringify({
+        ...envelope,
+        provenance: { source: 'hardware', isTesting: 'yes' },
+      }),
+    );
+    expect(() => vaultProvenance()).toThrow(
+      ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED],
+    );
+  });
+});
+
+describe('verifyVaultPassword', () => {
+  it('returns true for the right password without changing state', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(await verifyVaultPassword(TEST_PASSWORD)).toBe(true);
+    // State is untouched: the mnemonic is still available afterwards.
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+    expect(getSessionPassphrase()).toBe('');
+  });
+
+  it('returns false for a wrong password', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    expect(await verifyVaultPassword('wrong password')).toBe(false);
+    // State is untouched: the mnemonic is still available afterwards.
+    expect(withMnemonic((m) => m)).toBe(TEST_MNEMONIC);
+  });
+
+  it('returns false with no vault', async () => {
+    expect(await verifyVaultPassword(TEST_PASSWORD)).toBe(false);
   });
 });

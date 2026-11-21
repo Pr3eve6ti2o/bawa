@@ -190,6 +190,26 @@ describe('transaction history screen', () => {
     }
   });
 
+  it('shows the last-known time from fetchedAtMs for a failed chain with cached transactions', async () => {
+    setWallet({
+      ...perChainEmpty(),
+      trx: {
+        status: 'error',
+        reason: 'down',
+        txs: [tx('0xtrx1', 'trx', 'in', '1000000')],
+        stale: true,
+        fetchedAtMs: 1700000000000,
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('TRON history unavailable');
+      expect(mounted.div.textContent).toContain('Showing last known TRON transactions from');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the empty state when no transaction history is available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(perChainEmpty());

@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import type { ReactNode } from 'react';
 import { WalletProvider, useWallet } from './wallet-context';
 import type { WalletContextValue } from './wallet-context';
 import { deriveAddresses } from '../wallet/core';
@@ -11,6 +10,7 @@ import {
   deleteVault,
 } from '../wallet/vault';
 import { SUPPORTED_CHAINS } from '../wallet/chains';
+import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
 // Vault-lock removal (owner order 2026-11-20): unlockVault/lockVault no
 // longer exist. "rejects a wrong vault password" was deleted with them —
@@ -34,13 +34,6 @@ vi.mock('../wallet/adapters', () => ({
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
-
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
@@ -98,11 +91,11 @@ describe('wallet context — vault-backed accounts', () => {
       expect(latest?.vaultProfileIds).toBeNull();
 
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.refreshVaultAccounts();
       });
       expect(latest?.vaultState).toBe('unlocked');
-      expect(latest?.vaultProfileIds).toEqual(TEST_PROFILES);
+      expect(latest?.vaultProfileIds).toEqual(TEST_VAULT_PROFILE_IDS);
 
       const expected = await deriveAddresses(TEST_MNEMONIC);
       expect(latest?.vaultAddresses.btc).toEqual([expected.btc]);
@@ -128,7 +121,7 @@ describe('wallet context — vault-backed accounts', () => {
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.refreshVaultAccounts();
         await latest?.refreshBalances();
       });

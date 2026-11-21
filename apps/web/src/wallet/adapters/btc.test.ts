@@ -21,6 +21,24 @@ function mockFetchSequence(responses: unknown[]): void {
   );
 }
 
+type RawResponse = { ok: boolean; status: number; body: unknown };
+
+/** Raw HTTP responses (ok/status), for retry tests where fetch must fail. */
+function mockFetchRawSequence(responses: RawResponse[]): ReturnType<typeof vi.fn> {
+  const queue = [...responses];
+  const fetchMock = vi.fn(async () => {
+    const next = queue.shift();
+    if (!next) throw new Error('fetch queue exhausted');
+    return { ok: next.ok, status: next.status, json: async () => next.body };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+const okBody = (body: unknown): RawResponse => ({ ok: true, status: 200, body });
+const http503 = (): RawResponse => ({ ok: false, status: 503, body: {} });
+const http404 = (): RawResponse => ({ ok: false, status: 404, body: {} });
+
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -67,6 +85,40 @@ describe('btc adapter — balance', () => {
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
     if (result.status === 'error') expect(result.reason).toMatch(/identity/i);
+  });
+});
+
+describe('btc adapter — retry (item 2)', () => {
+  it('retries a transient 503 and then succeeds', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody([GENESIS]),
+      http503(),
+      http503(),
+      okBody({ chain_stats: { funded_txo_sum: 500000, spent_txo_sum: 123456 } }),
+    ]);
+    const adapter = createBtcAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.valueBaseUnits).toBe('376544');
+    // 1 identity + 3 balance attempts: the two 503s were retried, not lost.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not retry a terminal 404', async () => {
+    const fetchMock = mockFetchRawSequence([okBody([GENESIS]), http404()]);
+    const adapter = createBtcAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry an identity mismatch (a shape error, not a fetch failure)', async () => {
+    const fetchMock = mockFetchRawSequence([okBody([{ id: '00'.repeat(32), height: 0 }])]);
+    const adapter = createBtcAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

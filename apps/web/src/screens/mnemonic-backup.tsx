@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { hasVault, vaultProfiles } from '../wallet/vault';
+import { hasVault, vaultProfiles, verifyVaultPassword, withMnemonic } from '../wallet/vault';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { ChecklistCard } from '../ui/components/checklist-card';
 import { Button } from '../ui/components/button';
@@ -11,6 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from '../ui/components/card';
+import { Input } from '../ui/components/input';
+import { Label } from '../ui/components/label';
 
 const guidanceItems = [
   { id: 'paper', label: 'Words written on paper', description: 'Guidance — not verified by this app.' },
@@ -26,12 +28,142 @@ const PROFILE_LABELS: Record<string, string> = {
   'bawa-ton-v4r2-v1': 'TON (bawa-ton-v4r2-v1)',
 };
 
+/**
+ * Safety quiz asked before the recovery phrase is shown. These are
+ * knowledge questions about keeping the words safe — they do not ask for
+ * any word of the phrase itself. All three must be answered correctly.
+ */
+const REVEAL_QUIZ = [
+  {
+    question: 'If someone else learns your 24 words, what can they do?',
+    options: [
+      'Spend from this wallet',
+      'Only see your balances',
+      'Nothing without your password',
+    ],
+    correct: 0,
+  },
+  {
+    question: 'Where should the words be kept?',
+    options: [
+      'On paper, stored offline',
+      'In a cloud note',
+      'In a phone photo',
+    ],
+    correct: 0,
+  },
+  {
+    question: 'What should you never do with the words?',
+    options: [
+      'Paste them into any app or website',
+      'Write them on paper',
+      'Store the paper in two places',
+    ],
+    correct: 0,
+  },
+] as const;
+
+type RevealStage = 'idle' | 'password' | 'quiz' | 'revealed';
+
 export function MnemonicBackupScreen() {
   const [profiles, setProfiles] = useState<string[] | null>(null);
+  const [stage, setStage] = useState<RevealStage>('idle');
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [answers, setAnswers] = useState<(number | null)[]>([null, null, null]);
+  const [wrong, setWrong] = useState<boolean[]>([false, false, false]);
+  const [words, setWords] = useState<string[] | null>(null);
 
   useEffect(() => {
     setProfiles(hasVault() ? vaultProfiles() : null);
   }, []);
+
+  // The phrase lives in screen state only while revealed; clear it on unmount.
+  useEffect(() => () => {
+    setWords(null);
+  }, []);
+
+  const allCorrect = REVEAL_QUIZ.every(
+    (item, index) => answers[index] === item.correct,
+  );
+
+  async function handleVerifyPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isVerifying) return;
+    setPasswordError(null);
+    setIsVerifying(true);
+    try {
+      // No-lock model (Merge 1): the vault is already open — it
+      // auto-unlocked at boot via the stored key, so there is nothing to
+      // unlock here. The password is verified (trial decrypt, no state
+      // change) only as a gate before the phrase may be shown. The
+      // recovery passphrase is not asked for: it never leaves the
+      // session, no vault API re-establishes it, and the phrase itself
+      // does not depend on it.
+      if (!(await verifyVaultPassword(password))) {
+        setPasswordError('Incorrect password.');
+        setPassword('');
+        return;
+      }
+      setPassword('');
+      setStage('quiz');
+    } catch (cause) {
+      setPasswordError(cause instanceof Error ? cause.message : String(cause));
+      setPassword('');
+    } finally {
+      setIsVerifying(false);
+    }
+  }
+
+  function handleQuizPick(questionIndex: number, optionIndex: number) {
+    const item = REVEAL_QUIZ[questionIndex];
+    if (!item) return;
+    if (optionIndex === item.correct) {
+      setAnswers((previous) =>
+        previous.map((answer, index) =>
+          index === questionIndex ? optionIndex : answer,
+        ),
+      );
+      setWrong((previous) =>
+        previous.map((flag, index) =>
+          index === questionIndex ? false : flag,
+        ),
+      );
+    } else {
+      // A wrong pick marks only that question; the user retries it.
+      setWrong((previous) =>
+        previous.map((flag, index) =>
+          index === questionIndex ? true : flag,
+        ),
+      );
+    }
+  }
+
+  function handleReveal() {
+    // The mnemonic is available only when the vault auto-unlocked at
+    // boot (or was created in this session). A vault that could not
+    // auto-unlock — e.g. created before the stored key existed — has a
+    // verifiable password but no mnemonic in the closure, so withMnemonic
+    // throws; report that instead of crashing the click.
+    try {
+      setWords(withMnemonic((mnemonic) => mnemonic.split(' ')));
+      setRevealError(null);
+      setStage('revealed');
+    } catch (cause) {
+      setRevealError(
+        cause instanceof Error ? cause.message : String(cause),
+      );
+    }
+  }
+
+  function handleHide() {
+    setWords(null);
+    setStage('idle');
+    setAnswers([null, null, null]);
+    setWrong([false, false, false]);
+  }
 
   return (
     <div className="space-y-6">
@@ -124,6 +256,133 @@ export function MnemonicBackupScreen() {
               description={item.description}
             />
           ))}
+        </section>
+      )}
+
+      {profiles !== null && (
+        <section aria-labelledby="reveal-heading" className="space-y-3">
+          <h2 id="reveal-heading" className="text-lg font-semibold">
+            Reveal recovery phrase
+          </h2>
+          {stage === 'idle' && (
+            <>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Anyone who learns these 24 words can spend from this wallet.
+                Showing them requires your vault password and a short safety
+                quiz first.
+              </p>
+              <Button onClick={() => setStage('password')}>
+                Reveal recovery phrase
+              </Button>
+            </>
+          )}
+
+          {stage === 'password' && (
+            <form onSubmit={handleVerifyPassword} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="reveal-password">Vault password</Label>
+                <Input
+                  id="reveal-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={isVerifying}
+                  aria-invalid={passwordError !== null}
+                  aria-describedby={passwordError ? 'reveal-error' : undefined}
+                  className="h-12"
+                />
+              </div>
+
+              {passwordError && (
+                <p
+                  id="reveal-error"
+                  role="alert"
+                  className="text-sm text-destructive"
+                >
+                  {passwordError}
+                </p>
+              )}
+
+              <Button type="submit" disabled={isVerifying}>
+                {isVerifying ? 'Verifying…' : 'Verify password'}
+              </Button>
+            </form>
+          )}
+
+          {stage === 'quiz' && (
+            <div className="space-y-5">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Answer all three questions correctly to show the phrase.
+              </p>
+              {REVEAL_QUIZ.map((item, questionIndex) => (
+                <div key={item.question} className="space-y-2">
+                  <p className="text-sm font-semibold">{item.question}</p>
+                  <div className="flex flex-col gap-2">
+                    {item.options.map((option, optionIndex) => {
+                      const picked = answers[questionIndex] === optionIndex;
+                      const correct =
+                        picked && optionIndex === item.correct;
+                      return (
+                        <Button
+                          key={option}
+                          type="button"
+                          variant={correct ? 'default' : 'outline'}
+                          onClick={() =>
+                            handleQuizPick(questionIndex, optionIndex)
+                          }
+                          className="h-auto justify-start whitespace-normal py-3 text-left"
+                        >
+                          {option}
+                          {correct ? ' — Correct' : ''}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  {wrong[questionIndex] && (
+                    <p role="alert" className="text-sm text-destructive">
+                      Not quite — try again.
+                    </p>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                disabled={!allCorrect}
+                onClick={handleReveal}
+              >
+                Show recovery phrase
+              </Button>
+              {revealError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {revealError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {stage === 'revealed' && words !== null && (
+            <div className="space-y-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Write these words down in order, then hide them. Never
+                photograph, share, or paste them anywhere.
+              </p>
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {words.map((word, index) => (
+                  <li
+                    key={`${index}-${word}`}
+                    className="rounded-lg border border-border bg-card p-3 text-sm"
+                  >
+                    <span className="text-muted-foreground">{index + 1}. </span>
+                    {word}
+                  </li>
+                ))}
+              </ol>
+              <Button type="button" onClick={handleHide}>
+                Hide recovery phrase
+              </Button>
+            </div>
+          )}
         </section>
       )}
 

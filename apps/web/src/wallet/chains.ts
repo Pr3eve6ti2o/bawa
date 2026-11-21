@@ -11,7 +11,8 @@ export type CapabilityName =
   | 'fee-quote'
   | 'unsigned-plan'
   | 'local-sign'
-  | 'post-sign-verify';
+  | 'post-sign-verify'
+  | 'simulate';
 
 export type CapabilityStatus =
   | 'verified'
@@ -19,10 +20,20 @@ export type CapabilityStatus =
   | 'unsupported'
   | 'candidate';
 
+/**
+ * How a capability's status was established. Only a live mainnet cross-check
+ * justifies 'mainnet-confirmed'; anything the offline tests and probes
+ * established — and every blocked or candidate entry — is 'probe-only'.
+ * Never claim mainnet confirmation for anything the offline probes
+ * established.
+ */
+export type EvidenceLevel = 'mainnet-confirmed' | 'probe-only';
+
 export interface CapabilityEntry {
   status: CapabilityStatus;
   /** Short evidence reference. A capability with no evidence is never verified. */
   evidence: string;
+  evidenceLevel: EvidenceLevel;
 }
 
 export type Capabilities = Record<CapabilityName, CapabilityEntry>;
@@ -57,6 +68,7 @@ export interface ChainConfig {
  */
 const verifiedBySendTests = (capability: CapabilityName): CapabilityEntry => ({
   status: 'verified',
+  evidenceLevel: 'probe-only',
   evidence:
     `Verified by apps/web/src/wallet/send.test.ts offline signing checks + ` +
     `AnySigner probe runs 2026-11-19 for ${capability} (no broadcast).`,
@@ -64,6 +76,7 @@ const verifiedBySendTests = (capability: CapabilityName): CapabilityEntry => ({
 
 const verifiedByCoreTests = (capability: CapabilityName): CapabilityEntry => ({
   status: 'verified',
+  evidenceLevel: 'probe-only',
   evidence: `Verified by apps/web/src/wallet/core.test.ts ${capability} checks (2026-11-18).`,
 });
 
@@ -80,6 +93,7 @@ function capabilitiesForAdapterChain(
 ): Capabilities {
   const verifiedByAdapters = (capability: CapabilityName): CapabilityEntry => ({
     status: 'verified',
+    evidenceLevel: 'mainnet-confirmed',
     evidence:
       `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
       `mainnet cross-check 2026-11-19 (second source) for ${capability}.`,
@@ -94,6 +108,7 @@ function capabilitiesForAdapterChain(
       ? verifiedByAdapters('fee-quote')
       : {
           status: 'blocked',
+          evidenceLevel: 'probe-only',
           evidence:
             'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
         },
@@ -103,10 +118,22 @@ function capabilitiesForAdapterChain(
       chain === 'ton'
         ? {
             status: 'blocked',
+            evidenceLevel: 'probe-only',
             evidence:
               'TON signed BOC is not re-parsed (no BOC parser vendored); verification is no-error + 32-byte hash + BOC magic only.',
           }
         : verifiedBySendTests('post-sign-verify'),
+    // Item 9 (chains half): declared only. The simulate-before-send phase
+    // is owned by the send lane in send.ts; no simulation runs yet.
+    // Simulation is a pre-check, never confirmation.
+    simulate: {
+      status: 'candidate',
+      evidenceLevel: 'probe-only',
+      evidence:
+        'Candidate for item 9: the simulate-before-send phase is owned by ' +
+        'the send lane in send.ts; no simulation runs yet. Simulation is ' +
+        'a pre-check, never confirmation.',
+    },
   };
 }
 
@@ -114,39 +141,59 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
   return {
     derive: {
       status: 'verified',
+      evidenceLevel: 'probe-only',
       evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for derive.',
     },
     restore: {
       status: 'verified',
+      evidenceLevel: 'probe-only',
       evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for restore.',
     },
     receive: {
       status: 'verified',
+      evidenceLevel: 'probe-only',
       evidence: 'Verified by Wallet Core 4.9.3 derivation probe 2026-11-20 (BIP-39 test-vector mnemonic; getAddressForCoin, explicit-key path and xpub round-trip agree; CoinTypeExt.validate true) + apps/web/src/wallet/core.test.ts extended-chain checks for receive.',
     },
     balance: {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} adapter in this lane; balance is blocked, never faked.`,
     },
     history: {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} adapter in this lane; history is blocked, never faked.`,
     },
     'fee-quote': {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} adapter in this lane; fee-quote is blocked, never faked.`,
     },
     'unsigned-plan': {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} send builder in this lane; unsigned-plan is blocked, never faked.`,
     },
     'local-sign': {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} send builder in this lane; local-sign is blocked, never faked.`,
     },
     'post-sign-verify': {
       status: 'blocked',
+      evidenceLevel: 'probe-only',
       evidence: `No ${chain} send builder in this lane; post-sign-verify is blocked, never faked.`,
+    },
+    // Item 9 (chains half): declared only. The simulate-before-send phase
+    // is owned by the send lane in send.ts; no simulation runs yet.
+    // Simulation is a pre-check, never confirmation.
+    simulate: {
+      status: 'candidate',
+      evidenceLevel: 'probe-only',
+      evidence:
+        'Candidate for item 9: the simulate-before-send phase is owned by ' +
+        'the send lane in send.ts; no simulation runs yet. Simulation is ' +
+        'a pre-check, never confirmation.',
     },
   };
 }
@@ -167,72 +214,110 @@ function assertAccountIndex(account: number, index: number): void {
  * do an operation. A chain is available for an operation only when
  * availableFor(capability) returns it (status verified).
  */
-export const CHAINS: Record<ChainId, ChainConfig> = {
+
+// BEGIN GENERATED CHAIN FACTS — do not hand-edit. Regenerate with: node scripts/generate-chains.mjs
+// Drift check: from apps/web run `node scripts/generate-chains.mjs --check`;
+// it exits 1 when this block differs from registry/capabilities.json.
+// Capabilities, evidence, enablement and derivation behaviour stay
+// hand-written in chains.ts — only the eight static facts per chain below
+// are generated. The registry mixes upstream Wallet Core registry.json
+// values with Bawa-added fields (profileId, rpcEndpoints, xpubVersion
+// from SLIP-0132 version bytes — the upstream registry carries xpub
+// labels only).
+export const GENERATED_CHAIN_FACTS: Record<
+  'btc' | 'eth' | 'trx' | 'ton',
+  Pick<
+    ChainConfig,
+    | 'displayName'
+    | 'symbol'
+    | 'coinTypeName'
+    | 'networkId'
+    | 'assetId'
+    | 'profileId'
+    | 'rpcEndpoints'
+    | 'evmChainId'
+  >
+> = {
   btc: {
-    id: 'btc',
     displayName: 'Bitcoin',
     symbol: 'BTC',
     coinTypeName: 'bitcoin',
     networkId: 'bip122:000000000019d6689c085ae165831e93',
     assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
     profileId: 'bawa-btc-bip84-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/84'/0'/${account}'/0/${index}`;
-    },
     rpcEndpoints: ['https://mempool.space/api'],
     evmChainId: null,
-    capabilities: capabilitiesForAdapterChain('btc', true),
   },
   eth: {
-    id: 'eth',
     displayName: 'Ethereum',
     symbol: 'ETH',
     coinTypeName: 'ethereum',
     networkId: 'eip155:1',
     assetId: 'eip155:1/slip44:60',
     profileId: 'bawa-evm-bip44-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/44'/60'/${account}'/0/${index}`;
-    },
-    // ETH adapter: viem public client against the pinned mainnet RPC.
     rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
     evmChainId: 1,
-    capabilities: capabilitiesForAdapterChain('eth', true),
   },
   trx: {
-    id: 'trx',
     displayName: 'TRON',
     symbol: 'TRX',
     coinTypeName: 'tron',
     networkId: 'tron:0x2b6653dc',
     assetId: 'tron:0x2b6653dc/slip44:195',
     profileId: 'bawa-trx-bip44-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/44'/195'/${account}'/0/${index}`;
-    },
     rpcEndpoints: ['https://api.trongrid.io'],
     evmChainId: null,
-    capabilities: capabilitiesForAdapterChain('trx', true),
   },
   ton: {
-    id: 'ton',
     displayName: 'TON',
     symbol: 'TON',
     coinTypeName: 'ton',
     networkId: 'ton:-239',
     assetId: 'ton:-239/slip44:607',
     profileId: 'bawa-ton-v4r2-v1',
+    rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
+    evmChainId: null,
+  },
+};
+// END GENERATED CHAIN FACTS
+export const CHAINS: Record<ChainId, ChainConfig> = {
+  btc: {
+    ...GENERATED_CHAIN_FACTS.btc,
+    id: 'btc',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/84'/0'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('btc', true),
+  },
+  eth: {
+    // ETH adapter: viem public client against the pinned mainnet RPC.
+    ...GENERATED_CHAIN_FACTS.eth,
+    id: 'eth',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('eth', true),
+  },
+  trx: {
+    ...GENERATED_CHAIN_FACTS.trx,
+    id: 'trx',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/195'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('trx', true),
+  },
+  ton: {
+    ...GENERATED_CHAIN_FACTS.ton,
+    id: 'ton',
     pathFor: (account) => {
       assertAccountIndex(account, 0);
       // Fully hardened: one address per wallet, no index suffix.
       // Wallet V4 R2, workchain 0, wallet ID 698983191.
       return "m/44'/607'/0'";
     },
-    rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
-    evmChainId: null,
     capabilities: capabilitiesForAdapterChain('ton', false),
   },
   sol: {
@@ -401,6 +486,36 @@ export const SOLANA_PROFILES: Readonly<Record<string, UnsupportedProfile>> = {
     note: 'OKX / Phantom bip44Change profile. Unsupported in this lane.',
   },
 };
+
+/**
+ * SLIP-0010: Ed25519 allows hardened-only child derivation; a non-hardened
+ * suffix on an ed25519 path is invalid. Throws an Error naming the path when
+ * any component after m/ is non-hardened (no trailing apostrophe).
+ */
+export function assertHardenedEd25519Path(path: string): void {
+  const components = path.split('/');
+  if (components.length < 2 || components[0] !== 'm') {
+    throw new Error(
+      `Invalid Ed25519 derivation path (expected m/...): ${path}`,
+    );
+  }
+  for (const component of components.slice(1)) {
+    if (component.length === 0 || !component.endsWith("'")) {
+      throw new Error(
+        `Invalid Ed25519 derivation path ${path}: component ${component} ` +
+          `is not hardened (SLIP-0010 allows hardened-only child derivation).`,
+      );
+    }
+  }
+}
+
+// Module-load enforcement: a non-hardened ed25519 path fails import, never
+// derivation. The TON path and every Solana profile path ({i} expanded to 0)
+// are fully hardened; no existing path value is changed.
+assertHardenedEd25519Path(CHAINS.ton.pathFor(0, 0));
+for (const profile of Object.values(SOLANA_PROFILES)) {
+  assertHardenedEd25519Path(profile.path.replace('{i}', '0'));
+}
 
 export function chainConfig(chain: ChainId): ChainConfig {
   const config = CHAINS[chain];

@@ -1,14 +1,17 @@
 import {
   BROADCAST_DISABLED_MESSAGE,
   assertNetworkId,
-  fetchJson,
+  httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
   type FeeEstimate,
+  type FetchTransport,
   type TxInput,
 } from './types';
+import { withRetry } from '../retry';
 
 const NETWORK_ID = 'bip122:000000000019d6689c085ae165831e93';
 const GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
@@ -18,10 +21,13 @@ const DECIMALS = 8;
 
 export interface BtcAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Injectable transport (item 2). Defaults to the single-attempt HTTP
+   * transport; tests inject a fake instead of stubbing the global fetch.
+   */
+  transport?: FetchTransport;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -41,6 +47,11 @@ export function createBtcAdapter(
   overrides: BtcAdapterOverrides = {},
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
+  // Idempotent reads only: every network read below is bounded-retry via
+  // withRetry (item 2). Broadcast is never retried — it stays disabled.
+  const readJson = (url: string, operation: string): Promise<unknown> =>
+    withRetry(() => transport.request(url), { operation });
   // Chain-identity check result, cached per instance: the genesis block
   // hash proves the endpoint serves Bitcoin mainnet. The endpoint URL is
   // fixed at construction, so one check per instance is enough.
@@ -50,9 +61,9 @@ export function createBtcAdapter(
     if (identityChecked) return null;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/v1/blocks/0`);
+      raw = await readJson(`${baseUrl}/v1/blocks/0`, 'btc.identity');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const blocks = Array.isArray(raw) ? raw : [];
     const genesis = isRecord(blocks[0]) ? blocks[0]['id'] : undefined;
@@ -65,7 +76,7 @@ export function createBtcAdapter(
     try {
       assertNetworkId(genesis, GENESIS_HASH, SOURCE);
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     identityChecked = true;
     return null;
@@ -81,9 +92,9 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}`);
+      raw = await readJson(`${baseUrl}/address/${address}`, 'btc.getBalance');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const stats = isRecord(raw) ? raw['chain_stats'] : undefined;
     if (!isRecord(stats)) {
@@ -124,9 +135,9 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}/txs`);
+      raw = await readJson(`${baseUrl}/address/${address}/txs`, 'btc.getHistory');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (!Array.isArray(raw)) {
       return { status: 'error', reason: 'Invalid response: expected a transaction list' };
@@ -209,9 +220,9 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/v1/fees/recommended`);
+      raw = await readJson(`${baseUrl}/v1/fees/recommended`, 'btc.estimateFee');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const fastest = isRecord(raw) ? raw['fastestFee'] : undefined;
     if (typeof fastest !== 'number') {
@@ -243,9 +254,9 @@ export function createBtcAdapter(
     if (identity) return identity;
     let raw: unknown;
     try {
-      raw = await fetchJson(`${baseUrl}/address/${address}/utxo`);
+      raw = await readJson(`${baseUrl}/address/${address}/utxo`, 'btc.getTxInputs');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (!Array.isArray(raw)) {
       return { status: 'error', reason: 'Invalid response: expected a UTXO list' };

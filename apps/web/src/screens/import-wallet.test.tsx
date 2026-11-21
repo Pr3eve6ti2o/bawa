@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from '../app/app';
+import { expandUniquePrefix } from './import-wallet';
 import { deriveAddresses } from '../wallet/core';
-import { deleteVault, hasVault } from '../wallet/vault';
+import { deleteVault, hasVault, vaultProvenance } from '../wallet/vault';
 
 // jsdom has no matchMedia; the vendored theme toggle reads it on mount.
 if (typeof window.matchMedia !== 'function') {
@@ -473,9 +474,29 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
         (div.textContent ?? '').includes('Wallet restored'),
       );
       expect(hasVault()).toBe(true);
+      // Merge 1 (Lane B): an imported mnemonic is recorded as
+      // 'imported', not 'created'.
+      expect(vaultProvenance()).toEqual({
+        source: 'imported',
+        isTesting: false,
+      });
       expect(div.textContent).not.toContain(VALID_MNEMONIC);
     } finally {
       await cleanup();
     }
   }, 30_000);
+});
+
+describe('expandUniquePrefix', () => {
+  it.each([
+    ['aban', 'abandon '],
+    ['ab', 'ab'],
+    ['abandon', 'abandon'],
+    ['abandon aban', 'abandon abandon '],
+    ['aban ', 'aban '],
+    ['', ''],
+    ['ABAN', 'abandon '],
+  ])('expandUniquePrefix(%j) returns %j', (input, expected) => {
+    expect(expandUniquePrefix(input)).toBe(expected);
+  });
 });

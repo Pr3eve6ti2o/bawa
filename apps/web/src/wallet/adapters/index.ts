@@ -1,7 +1,5 @@
 import type { ChainId } from '../../engine/boundary';
-import { registerBalanceProvider } from '../balance-providers';
 import type { ChainAdapter } from './types';
-import { toBalanceProvider } from './types';
 import { createEthAdapter } from './eth';
 import { createTronAdapter } from './trx';
 import { createTonAdapter } from './ton';
@@ -11,7 +9,6 @@ const adapters = new Map<ChainId, ChainAdapter>();
 
 export function registerAdapter(adapter: ChainAdapter): void {
   adapters.set(adapter.chain, adapter);
-  registerBalanceProvider(adapter.chain, toBalanceProvider(adapter));
 }
 
 export function getAdapter(chain: ChainId): ChainAdapter | undefined {

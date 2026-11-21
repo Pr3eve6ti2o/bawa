@@ -1,0 +1,117 @@
+# Constraints
+
+Last reviewed: 2026-11-20 by Lane P5 (repo-study Phase 3, item 25).
+Base: `panel-rebuild/repo-study` at `0fd3a2e`.
+
+This is Bawa's written quality contract. It outlives any single session:
+a number here is a decision, not an aspiration. Every enforced row names
+the exact command that produces the verdict. A dimension with a number
+and no command is an aspiration, not a constraint.
+
+Read this file before writing code. **Do not weaken it to make a change
+pass.** Tightening the bar is silent; loosening it is loud (see
+"Guard the bar").
+
+## Floor (always enforced, no setup required)
+
+- No new suppression comments: `@ts-ignore`, `@ts-nocheck`,
+  `eslint-disable`, `biome-ignore`, `# noqa`, `# type: ignore`,
+  `istanbul ignore`, `nosemgrep`, `gitleaks:allow`, `Stryker disable`.
+- No unimplemented stubs: `throw new Error("Not implemented")`, empty
+  `catch {}`, `TODO` standing where the implementation should be.
+- No skipped or deleted tests without a reason in the commit message.
+- No secrets in source: no mnemonic, seed, private key, xprv, vault key,
+  password, or token in code, tests, logs, or fixtures. Test-only keys
+  are fresh, disposable, and never funded.
+- No fake data: no fabricated balances or prices. A missing value is
+  `unavailable` with a reason, never `$0.00`.
+- No broadcast path built or enabled (standing owner order).
+- This file does not get weakened to make a change pass.
+
+## Enforced with numbers
+
+| Dimension | Rule | Checked by | Runs at |
+| --- | --- | --- | --- |
+| Types (web) | Zero type errors | `npm run typecheck` in `apps/web` (`tsc --noEmit`) | every edit, CI |
+| Lint (web) | Zero errors from the repo config | `npm run lint` in `apps/web` (`eslint src vite.config.ts vitest.config.ts`) | every edit, CI |
+| Tests (web) | All pass; no skipped or deleted test without a reason in the commit message | `npm run test` in `apps/web` (`vitest run`) | every edit, CI |
+| Build (web) | Zero errors | `npm run build` in `apps/web` | CI |
+| Audit (web) | Zero vulnerabilities | `npm audit` in `apps/web` | CI |
+| Bundle size (web) | Total JS in `dist/assets` ≤ 4,040,000 bytes; largest single JS chunk ≤ 3,050,000 bytes | CI bundle-size step (sums `dist/assets/*.js` after `npm run build`; budgets in `PERF.md`) | CI |
+| E2E (web) | Critical-path harness green (create / unlock / balance / send-disabled / lock) | `npx playwright test` in `apps/web` (CI job) | CI |
+| Secrets | No secrets in the staged diff | `node scripts/secret-scan.mjs` (pre-commit); CI floor-guard job | pre-commit, CI |
+| Docs links | All internal documentation links resolve | `python tools/check-links.py` (CI `docs-checks` job) | CI |
+| Docs drift | No doc older than its code (see `docs/inventory.md`) | CI `docs-checks` drift step (code-versus-doc last-change comparison) | CI |
+| Root checks | Generator checks pass | `npm run check` and `npm test` at the repo root | CI |
+| Python | Reference tests pass | `python test/test_make_wallet.py`, `python test/test_decrypt_seed.py` | CI |
+
+## Measured, not yet enforced
+
+| Metric | Today (2026-11-20, this tree) | Direction |
+| --- | --- | --- |
+| Web vitest | 40 files, 460 tests, 0 failed, 0 skipped | must not fall |
+| Web bundle JS | 3,846,651 bytes total; largest chunk (boundary) 2,899,891 bytes | must not grow (ratchet: budgets above are today + ~5%) |
+| Web test duration | ~27 s (`vitest run`) | must not grow without a reason |
+| Root smoke checks | 217 checks pass, 0 fail | must not fall |
+
+When a number improves, update it here. When it drops, that is the
+finding — not a reason to edit this file.
+
+## Exceptions
+
+| ID | Rule | Path | Reason | Owner | Expires |
+| --- | --- | --- | --- | --- | --- |
+| (none) | — | — | No exceptions are in force. The first exception must be added here with an owner and an expiry no more than 90 days out. | — | — |
+
+An exception with no owner, or an expiry more than 90 days out, is not
+an exception — it is a deleted rule.
+
+## Shortcut markers and the debt ledger
+
+A deliberate deferral is marked in code with a greppable marker so it
+can be found again, and is recorded in the ledger below. The marker
+format is `DEFER(<id>): <what is deferred> — ceiling: <condition that
+forces the work> — trigger: <event that re-opens it>`.
+
+```sh
+# Find every recorded deferral:
+grep -rn "DEFER(" -- apps/web/src scripts tools | grep -v node_modules
+```
+
+### Ledger (known deferrals at 2026-11-20)
+
+| ID | Deferral | Ceiling / trigger |
+| --- | --- | --- |
+| D1 | Single-attempt `fetchJson` (ADR-0009). No retry in the transport; retries live in callers under a budget. | Ceiling: retries stay caller-side, bounded, reads-only. Trigger: a caller retries a broadcast, or an unbounded retry appears. |
+| D2 | Broadcast disabled (standing owner order). Send is built, signing is local, broadcast throws. | Ceiling: no broadcast path is enabled. Trigger: a separate owner authorisation to enable broadcast. |
+| D3 | Price-feed absence on this checkout. No CoinGecko client, no `prices.ts`; balances are native amounts only. | Ceiling: no fiat value is ever invented. Trigger: the multichain-create tracker/price merge (Prerequisite 0). |
+| D4 | `toBalanceProvider` legacy shim (`adapters/types.ts`) — REMOVED 2026-11-22 (P5 C1, merge 85ba72a). `balance-providers.ts` deleted; zero references to `toBalanceProvider`, `getBalanceProvider`, or `balance-providers` remain in the tree. Trigger met: last consumer removed. | Closed: shim and file deleted; new code uses `getAdapter`. |
+| D5 | ecdsa 0.19.2 accepted residual risk (PYSEC-2026-1325 / CVE-2024-23342). No owner acceptance order is on record. | Ceiling: the acceptance is a lane verdict, not an owner decision. Trigger: owner acceptance, a new signing path, `coincurve` dropped, or `ecdsa` bumped. See `SECURITY-FINDINGS.md`. |
+
+## Guard the bar
+
+A change that lowers the bar is reviewed as a bar change, not as a
+code change. Watch the diff for these five cheap roads to green
+(enforced by the CI `floor-guard` job, adapted from the
+constraint-driven-development skill's floor-guard reference):
+
+1. **The threshold moved.** A budget lowered, a severity dropped, a
+   check removed from the fast stage. Compare `CONSTRAINTS.md` against
+   its state at the branch point.
+2. **A test got easier.** `.skip` added, a test file deleted, assertions
+   pulled out of tests that stayed.
+3. **A checker got silenced.** A new suppression comment (see the Floor
+   list above).
+4. **Work is unfinished.** A stub that throws, an empty `catch` turning
+   a failure into silence, a `TODO` standing where the implementation
+   should be.
+5. **An exception appeared.** A new row in the Exceptions table nobody
+   discussed.
+
+Tightening the bar should be silent; loosening it should be loud. A
+loosening without a tracked exception is a failed check.
+
+The CI job checks roads 2–4 on code files only (`*.ts`, `*.tsx`,
+`*.js`, `*.mjs`, `*.py`, and the other compiled-language extensions):
+a document describing a suppression — this file names every marker —
+is not a suppression.

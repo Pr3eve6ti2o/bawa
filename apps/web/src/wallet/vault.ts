@@ -1,9 +1,20 @@
 /**
  * Password-protected encrypted local vault, always unlocked (no lock).
  *
+ * Merge 1 (repo-study into adopt-proper) resolution — Lane A: the no-lock
+ * architecture from adopt-proper (owner decision 2026-11-20) is kept, and
+ * repo-study's lock-independent additions are ported in: versioned
+ * envelope migration (migrateEnvelope), key provenance
+ * (vaultProvenance/isTestVault/TEST_PROVENANCE), backup/restore
+ * (hasVaultBackup/writeVaultBackup/deleteVaultBackup/
+ * restoreVaultFromBackup) and verifyVaultPassword. Vault failures use the
+ * shared BawaError catalogue (wallet/errors.ts); the messages are the
+ * same strings adopt-proper used as plain Errors.
+ *
  * Follows OneKey's secret-envelope layering as a pattern only. The envelope
- * in localStorage holds only version, KDF parameters, salt, IV, ciphertext
- * and recovery profileIds — never a mnemonic, seed or password.
+ * in localStorage holds only version, KDF parameters, salt, IV, ciphertext,
+ * recovery profileIds and provenance metadata — never a mnemonic, seed, key
+ * or password.
  *
  * There is no lock state, no auto-lock timer and no password re-prompt:
  * the password is set once at creation (or import) and never asked again.
@@ -21,6 +32,13 @@
  * "stay unlocked" pattern and the owner's explicit choice; it is NOT a
  * locked vault and must never be described as one.
  *
+ * The backup (VAULT_BACKUP_STORAGE_KEY) is a verbatim copy of the primary
+ * envelope — the same ciphertext, never plaintext. Restoring from it
+ * re-derives the key from the password and stores it the auto-unlock way,
+ * so a restored vault auto-unlocks on later boots. Deleting the vault
+ * deletes the backup too: a deleted vault must not be resurrectable from
+ * a copy the user asked to delete.
+ *
  * The decrypted mnemonic lives only transiently in this module's closure
  * while the vault is open. It is never held in React state, component
  * refs, localStorage or logs. JavaScript strings are immutable, so
@@ -29,7 +47,14 @@
  * anywhere after deleteVault().
  */
 
+import {
+  createWalletError,
+  ERROR_MESSAGES,
+  WalletErrorCodes,
+} from './errors';
+
 export const VAULT_STORAGE_KEY = 'bawa-vault';
+export const VAULT_BACKUP_STORAGE_KEY = 'bawa-vault-backup';
 /** localStorage key for the raw vault key (base64) that auto-unlock uses. */
 export const VAULT_KEY_STORAGE_KEY = 'bawa-vault-key';
 export const VAULT_VERSION = 1;
@@ -40,7 +65,9 @@ export const IV_BYTES = 12;
 export const VAULT_CIPHER = 'AES-GCM';
 export const VAULT_KEY_BITS = 256;
 
-export const VAULT_CORRUPTED = 'Vault is corrupted.';
+/** 'Vault is corrupted.' — the catalogue message for VAULT_CORRUPTED. */
+export const VAULT_CORRUPTED: string =
+  ERROR_MESSAGES[WalletErrorCodes.VAULT_CORRUPTED];
 
 interface VaultEnvelope {
   version: number;
@@ -53,9 +80,55 @@ interface VaultEnvelope {
   ivB64: string;
   ciphertextB64: string;
   profileIds: string[];
+  provenance?: KeyProvenance;
 }
 
-let unlockedKey: CryptoKey | null = null;
+/**
+ * Records where a vault's key came from. The flag alone is NOT
+ * enforcement — a test-marked account must still be blocked at the send
+ * boundary by other code.
+ */
+export interface KeyProvenance {
+  source: 'created' | 'imported' | 'test' | 'unknown';
+  isTesting: boolean;
+}
+
+/** Reusable test-identity fixture: marks a vault as test-only. */
+export const TEST_PROVENANCE: KeyProvenance = Object.freeze({
+  source: 'test',
+  isTesting: true,
+});
+
+function isKeyProvenance(value: unknown): value is KeyProvenance {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as { source?: unknown; isTesting?: unknown };
+  return (
+    (candidate.source === 'created' ||
+      candidate.source === 'imported' ||
+      candidate.source === 'test' ||
+      candidate.source === 'unknown') &&
+    typeof candidate.isTesting === 'boolean'
+  );
+}
+
+/**
+ * Provenance of a validated envelope. Envelopes written before provenance
+ * existed read as 'unknown'. A present-but-malformed provenance is
+ * corruption.
+ */
+function provenanceFromEnvelope(envelope: VaultEnvelope): KeyProvenance {
+  if (!Object.prototype.hasOwnProperty.call(envelope, 'provenance')) {
+    return { source: 'unknown', isTesting: false };
+  }
+  const provenance: unknown = envelope.provenance;
+  if (!isKeyProvenance(provenance)) {
+    throw corruptError();
+  }
+  return { source: provenance.source, isTesting: provenance.isTesting };
+}
+
 let unlockedMnemonic: string | null = null;
 let unlockedPassphrase: string | null = null;
 
@@ -102,11 +175,68 @@ async function deriveKey(
     passwordKey,
     { name: VAULT_CIPHER, length: VAULT_KEY_BITS },
     // Extractable so the raw key can be exported and stored for auto-unlock
-    // (owner decision — see the module doc comment). The derived key is
+    // (owner decision — see the module doc comment) and so a restore can
+    // store the key it derives from the password. The derived key is
     // never exposed outside this module except as stored key bytes.
     true,
     ['encrypt', 'decrypt'],
   );
+}
+
+function corruptError(): Error {
+  return createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
+}
+
+/** Validates a version-1 envelope's shape; throws CORRUPTED otherwise. */
+function validateV1Envelope(parsed: unknown): VaultEnvelope {
+  const envelope = parsed as Partial<VaultEnvelope>;
+  if (
+    typeof envelope !== 'object' ||
+    envelope === null ||
+    envelope.kdf?.name !== 'PBKDF2' ||
+    typeof envelope.kdf?.hash !== 'string' ||
+    typeof envelope.kdf?.iterations !== 'number' ||
+    typeof envelope.kdf?.saltB64 !== 'string' ||
+    typeof envelope.ivB64 !== 'string' ||
+    typeof envelope.ciphertextB64 !== 'string' ||
+    !Array.isArray(envelope.profileIds) ||
+    !envelope.profileIds.every((id) => typeof id === 'string')
+  ) {
+    throw corruptError();
+  }
+  // A present-but-malformed provenance is corruption; a missing one reads
+  // as 'unknown' (see provenanceFromEnvelope).
+  provenanceFromEnvelope(envelope as VaultEnvelope);
+  return envelope as VaultEnvelope;
+}
+
+type VaultMigrator = (parsed: unknown) => VaultEnvelope;
+
+// Future migrators convert their source version to the current envelope.
+// Version 1 passes through validation and has no migrator.
+const VAULT_MIGRATORS: Partial<Record<number, VaultMigrator>> = {};
+
+/**
+ * Migration dispatcher for the vault envelope. Version 1 passes through
+ * validation; any other version fails loudly with UNKNOWN_VERSION unless
+ * a migrator is registered for it. Malformed envelopes fail CORRUPTED.
+ */
+export function migrateEnvelope(parsed: unknown): VaultEnvelope {
+  if (parsed === null || typeof parsed !== 'object') {
+    throw corruptError();
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (typeof version !== 'number') {
+    throw corruptError();
+  }
+  if (version === VAULT_VERSION) {
+    return validateV1Envelope(parsed);
+  }
+  const migrator = VAULT_MIGRATORS[version];
+  if (!migrator) {
+    throw createWalletError(WalletErrorCodes.VAULT_UNKNOWN_VERSION);
+  }
+  return migrator(parsed);
 }
 
 function readEnvelope(): VaultEnvelope | null {
@@ -118,23 +248,11 @@ function readEnvelope(): VaultEnvelope | null {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(VAULT_CORRUPTED);
+    throw corruptError();
   }
-  const envelope = parsed as Partial<VaultEnvelope>;
-  if (
-    envelope.version !== VAULT_VERSION ||
-    envelope.kdf?.name !== 'PBKDF2' ||
-    typeof envelope.kdf?.hash !== 'string' ||
-    typeof envelope.kdf?.iterations !== 'number' ||
-    typeof envelope.kdf?.saltB64 !== 'string' ||
-    typeof envelope.ivB64 !== 'string' ||
-    typeof envelope.ciphertextB64 !== 'string' ||
-    !Array.isArray(envelope.profileIds) ||
-    !envelope.profileIds.every((id) => typeof id === 'string')
-  ) {
-    throw new Error(VAULT_CORRUPTED);
-  }
-  return envelope as VaultEnvelope;
+  // Outside the JSON-parse catch: an UNKNOWN_VERSION failure must not be
+  // turned into CORRUPTED.
+  return migrateEnvelope(parsed);
 }
 
 function writeEnvelope(envelope: VaultEnvelope): void {
@@ -153,6 +271,7 @@ async function encryptEnvelope(
   mnemonic: string,
   password: string,
   profileIds: string[],
+  provenance?: KeyProvenance,
 ): Promise<{ envelope: VaultEnvelope; key: CryptoKey }> {
   const salt = globalThis.crypto.getRandomValues(new Uint8Array(SALT_BYTES));
   const iv = globalThis.crypto.getRandomValues(new Uint8Array(IV_BYTES));
@@ -174,9 +293,45 @@ async function encryptEnvelope(
       ivB64: toBase64(iv),
       ciphertextB64: toBase64(new Uint8Array(ciphertext)),
       profileIds: [...profileIds],
+      ...(provenance === undefined ? {} : { provenance: { ...provenance } }),
     },
     key,
   };
+}
+
+/**
+ * Trial-decrypts an envelope without touching unlocked state. Returns the
+ * plaintext and the derived key. Throws BawaError (code 1001) when
+ * decryption fails and BawaError (code 1002) on undecodable base64.
+ */
+async function decryptEnvelopeText(
+  envelope: VaultEnvelope,
+  password: string,
+): Promise<{ text: string; key: CryptoKey }> {
+  let salt: Uint8Array;
+  let iv: Uint8Array;
+  let ciphertext: Uint8Array;
+  try {
+    salt = fromBase64(envelope.kdf.saltB64);
+    iv = fromBase64(envelope.ivB64);
+    ciphertext = fromBase64(envelope.ciphertextB64);
+  } catch {
+    throw createWalletError(WalletErrorCodes.VAULT_CORRUPTED);
+  }
+  const key = await deriveKey(password, salt, envelope.kdf.iterations);
+  let plaintext: ArrayBuffer;
+  try {
+    plaintext = await globalThis.crypto.subtle.decrypt(
+      { name: VAULT_CIPHER, iv: iv as BufferSource },
+      key,
+      ciphertext as BufferSource,
+    );
+  } catch {
+    // Wrong password and tampered ciphertext are indistinguishable by design;
+    // both fail authentication. One fixed message, no oracle.
+    throw createWalletError(WalletErrorCodes.VAULT_WRONG_PASSWORD);
+  }
+  return { text: new TextDecoder().decode(plaintext), key };
 }
 
 /**
@@ -184,12 +339,14 @@ async function encryptEnvelope(
  * The derived key is stored (see the module doc comment) so the vault
  * auto-unlocks on later boots; the mnemonic stays in the closure and is
  * never written to storage. The vault is open immediately after creation.
+ * A verbatim backup of the envelope is written at creation.
  */
 export async function createVault(
   mnemonic: string,
   password: string,
   profileIds: string[],
   passphrase = '',
+  provenance: KeyProvenance = { source: 'created', isTesting: false },
 ): Promise<void> {
   if (mnemonic.length === 0) {
     throw new Error('Mnemonic must not be empty.');
@@ -197,15 +354,27 @@ export async function createVault(
   if (password.length === 0) {
     throw new Error('Password must not be empty.');
   }
-  if (hasVault()) {
-    throw new Error('A vault already exists.');
+  if (!isKeyProvenance(provenance)) {
+    throw new Error('Invalid key provenance.');
   }
-  const { envelope, key } = await encryptEnvelope(mnemonic, password, profileIds);
+  if (hasVault()) {
+    throw createWalletError(WalletErrorCodes.VAULT_EXISTS);
+  }
+  const storedProvenance: KeyProvenance = {
+    source: provenance.source,
+    isTesting: provenance.isTesting,
+  };
+  const { envelope, key } = await encryptEnvelope(
+    mnemonic,
+    password,
+    profileIds,
+    storedProvenance,
+  );
   // Store the key before the envelope: a failure here leaves no half-made
   // vault behind.
   await storeKey(key);
   writeEnvelope(envelope);
-  unlockedKey = key;
+  writeVaultBackup();
   unlockedMnemonic = mnemonic;
   unlockedPassphrase = passphrase;
 }
@@ -223,6 +392,36 @@ export function hasVault(): boolean {
 export function vaultProfiles(): string[] | null {
   const envelope = readEnvelope();
   return envelope === null ? null : [...envelope.profileIds];
+}
+
+/** Stored key provenance, or null when there is no vault. */
+export function vaultProvenance(): KeyProvenance | null {
+  const envelope = readEnvelope();
+  return envelope === null ? null : provenanceFromEnvelope(envelope);
+}
+
+/** True only when a vault exists and is marked as a test-only identity. */
+export function isTestVault(): boolean {
+  return vaultProvenance()?.isTesting === true;
+}
+
+/**
+ * True when the password decrypts the stored envelope. Never changes
+ * unlocked state and never throws for a wrong password; false for a wrong
+ * password, a corrupt envelope, or no vault.
+ */
+export async function verifyVaultPassword(password: string): Promise<boolean> {
+  try {
+    const envelope = readEnvelope();
+    if (envelope === null) {
+      return false;
+    }
+    // Trial decrypt only: discard the result.
+    await decryptEnvelopeText(envelope, password);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -294,7 +493,6 @@ export async function autoUnlock(): Promise<boolean> {
     // design; both fail authentication. Fail closed, no oracle.
     return false;
   }
-  unlockedKey = key;
   unlockedMnemonic = new TextDecoder().decode(plaintext);
   unlockedPassphrase = '';
   return true;
@@ -310,6 +508,11 @@ export function getSessionPassphrase(): string {
  * Throws when no mnemonic is available (no vault, or a vault that could
  * not auto-unlock). The mnemonic reference is dropped when the callback
  * returns; callers must not retain or log it.
+ *
+ * The throw is a plain Error ('Vault is not unlocked.'), deliberately
+ * NOT the catalogue's VAULT_LOCKED ('Vault is locked.'): this vault is
+ * never locked, so the locked message would be wrong. No caller switches
+ * on the code for this path.
  */
 export function withMnemonic<T>(fn: (mnemonic: string) => T): T {
   if (unlockedMnemonic === null) {
@@ -337,9 +540,10 @@ export async function withMnemonicAsync<T>(
  * Re-encrypts the vault under a new password. There is no lock to verify
  * against, so only the new password is needed: the mnemonic is already
  * in the closure. The stored key is replaced with the newly derived one,
- * so auto-unlock keeps working. The stored recovery profileIds are never
- * changed: a restore needing another profile must delete and recreate the
- * vault explicitly.
+ * so auto-unlock keeps working, and the backup is refreshed so the new
+ * password restores. The stored recovery profileIds and the key
+ * provenance are never changed: a restore needing another profile must
+ * delete and recreate the vault explicitly.
  */
 export async function changePassword(newPassword: string): Promise<void> {
   if (newPassword.length === 0) {
@@ -347,24 +551,100 @@ export async function changePassword(newPassword: string): Promise<void> {
   }
   const envelope = readEnvelope();
   if (envelope === null) {
-    throw new Error('No vault exists.');
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
   }
   const mnemonic = withMnemonic((m) => m);
+  const preservedProvenance = provenanceFromEnvelope(envelope);
   const { envelope: next, key } = await encryptEnvelope(
     mnemonic,
     newPassword,
     envelope.profileIds,
+    preservedProvenance,
   );
   await storeKey(key);
   writeEnvelope(next);
-  unlockedKey = key;
+  writeVaultBackup();
 }
 
-/** Deletes the vault and its stored key, dropping every closure reference. */
+/**
+ * Restores the primary vault from the backup after primary loss or
+ * damage. The backup is proven to decrypt with the given password
+ * BEFORE the primary is touched; a wrong password, missing backup or
+ * corrupt backup leaves the primary exactly as it was. The derived key
+ * is stored the auto-unlock way and the mnemonic is put in the closure,
+ * so the restored vault is open and auto-unlocks on later boots.
+ */
+export async function restoreVaultFromBackup(password: string): Promise<void> {
+  const backupText = getStorage().getItem(VAULT_BACKUP_STORAGE_KEY);
+  if (backupText === null) {
+    throw createWalletError(WalletErrorCodes.VAULT_BACKUP_MISSING);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(backupText);
+  } catch {
+    throw corruptError();
+  }
+  // migrateEnvelope validates the shape and fails loudly (UNKNOWN_VERSION)
+  // on a version this code cannot read; a corrupt backup fails CORRUPTED.
+  const envelope = migrateEnvelope(parsed);
+  // Verify before changing either the primary envelope or unlocked state.
+  const { text, key } = await decryptEnvelopeText(envelope, password);
+  writeEnvelope(envelope);
+  await storeKey(key);
+  unlockedMnemonic = text;
+  unlockedPassphrase = '';
+}
+
+/**
+ * Deletes the vault, its stored key and its backup, dropping every
+ * closure reference. The backup goes with the vault: a deleted vault
+ * must not be resurrectable from a copy the user asked to delete.
+ */
 export function deleteVault(): void {
   getStorage().removeItem(VAULT_STORAGE_KEY);
   getStorage().removeItem(VAULT_KEY_STORAGE_KEY);
-  unlockedKey = null;
+  deleteVaultBackup();
   unlockedMnemonic = null;
   unlockedPassphrase = null;
+}
+
+/**
+ * True only when the backup key holds an envelope this version can read.
+ * A corrupt backup, or one with an unknown version, counts as absent
+ * and never throws.
+ */
+export function hasVaultBackup(): boolean {
+  try {
+    const raw = getStorage().getItem(VAULT_BACKUP_STORAGE_KEY);
+    if (raw === null) {
+      return false;
+    }
+    migrateEnvelope(JSON.parse(raw));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copies the current primary envelope verbatim to the backup key.
+ * The backup holds the same encrypted envelope, never plaintext.
+ * Throws when there is no primary vault or it is unreadable.
+ */
+export function writeVaultBackup(): void {
+  const envelope = readEnvelope();
+  if (envelope === null) {
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
+  }
+  const raw = getStorage().getItem(VAULT_STORAGE_KEY);
+  if (raw === null) {
+    throw createWalletError(WalletErrorCodes.VAULT_NOT_FOUND);
+  }
+  getStorage().setItem(VAULT_BACKUP_STORAGE_KEY, raw);
+}
+
+/** Removes the backup key. */
+export function deleteVaultBackup(): void {
+  getStorage().removeItem(VAULT_BACKUP_STORAGE_KEY);
 }

@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from '../app/app';
 import { createVault, deleteVault } from '../wallet/vault';
+import { TEST_VAULT_PROFILE_IDS } from '../state/test-helpers';
 
 // jsdom has no matchMedia; the vendored theme toggle reads it on mount.
 if (typeof window.matchMedia !== 'function') {
@@ -26,12 +27,6 @@ const testGlobal = globalThis as typeof globalThis & {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
 
 async function mountBackupScreen() {
   const previousUrl = window.location.href;
@@ -72,6 +67,66 @@ async function mountBackupScreen() {
   };
 }
 
+function setInputValue(input: HTMLInputElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value',
+  )?.set;
+  if (!setter) throw new Error('no input value setter');
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function findButton(div: HTMLDivElement, text: string): HTMLButtonElement {
+  const button = [...div.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent === text,
+  );
+  if (!button) throw new Error(`button not found: ${text}`);
+  return button as HTMLButtonElement;
+}
+
+async function waitForText(
+  div: HTMLDivElement,
+  text: string,
+  attempts = 160,
+): Promise<void> {
+  for (let i = 0; i < attempts; i += 1) {
+    if (div.textContent?.includes(text)) return;
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+  }
+  throw new Error(`timed out waiting for text: ${text}`);
+}
+
+async function openPasswordStage(
+  div: HTMLDivElement,
+): Promise<HTMLInputElement> {
+  await act(async () => {
+    findButton(div, 'Reveal recovery phrase').click();
+  });
+  const password = div.querySelector(
+    '#reveal-password',
+  ) as HTMLInputElement;
+  expect(password).not.toBeNull();
+  return password;
+}
+
+async function verifyPassword(
+  div: HTMLDivElement,
+  value: string,
+): Promise<void> {
+  const password = div.querySelector(
+    '#reveal-password',
+  ) as HTMLInputElement;
+  await act(async () => {
+    setInputValue(password, value);
+  });
+  await act(async () => {
+    findButton(div, 'Verify password').click();
+  });
+}
+
 describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -94,14 +149,13 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
   });
 
   it('lists the stored recovery profiles with a vault', async () => {
-    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
     const { div, cleanup } = await mountBackupScreen();
     try {
       expect(div.textContent).toContain('Recovery profiles');
-      expect(div.textContent).toContain('bawa-btc-bip84-v1');
-      expect(div.textContent).toContain('bawa-evm-bip44-v1');
-      expect(div.textContent).toContain('bawa-trx-bip44-v1');
-      expect(div.textContent).toContain('bawa-ton-v4r2-v1');
+      for (const profileId of TEST_VAULT_PROFILE_IDS) {
+        expect(div.textContent).toContain(profileId);
+      }
       expect(div.textContent).toContain(
         'Restoring with a different profile recovers different addresses',
       );
@@ -114,4 +168,79 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       await cleanup();
     }
   });
+
+  it('hides the reveal section without a vault', async () => {
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      expect(div.textContent).not.toContain('Reveal recovery phrase');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('requires the password before the quiz or the phrase', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      expect(div.textContent).toContain('Reveal recovery phrase');
+      expect(div.textContent).not.toContain('Vault password');
+      await openPasswordStage(div);
+      expect(div.textContent).toContain('Vault password');
+      expect(div.textContent).not.toContain('abandon');
+      await verifyPassword(div, 'wrong password');
+      await waitForText(div, 'Incorrect password.');
+      expect(div.textContent).not.toContain(
+        'Answer all three questions correctly',
+      );
+      expect(div.textContent).not.toContain('abandon');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  // Password verification runs a 600k-iteration PBKDF2 trial decrypt,
+  // which can take several seconds while the full suite runs in parallel
+  // workers.
+  it('reveals only after the password and all three quiz answers', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      await openPasswordStage(div);
+      await verifyPassword(div, TEST_PASSWORD);
+      await waitForText(div, 'Answer all three questions correctly');
+      expect(div.textContent).not.toContain('abandon');
+
+      // A wrong answer marks the question and does not enable the reveal.
+      await act(async () => {
+        findButton(div, 'Only see your balances').click();
+      });
+      await waitForText(div, 'Not quite — try again.');
+      expect(
+        findButton(div, 'Show recovery phrase').disabled,
+      ).toBe(true);
+
+      // All three correct answers enable the reveal.
+      await act(async () => {
+        findButton(div, 'Spend from this wallet').click();
+        findButton(div, 'On paper, stored offline').click();
+        findButton(div, 'Paste them into any app or website').click();
+      });
+      expect(findButton(div, 'Show recovery phrase').disabled).toBe(false);
+      await act(async () => {
+        findButton(div, 'Show recovery phrase').click();
+      });
+      await waitForText(div, 'Hide recovery phrase');
+      expect(div.textContent).toContain('abandon');
+      expect(div.textContent).toContain('about');
+
+      // Hiding clears the phrase from the screen.
+      await act(async () => {
+        findButton(div, 'Hide recovery phrase').click();
+      });
+      expect(div.textContent).not.toContain('abandon');
+      expect(div.textContent).toContain('Reveal recovery phrase');
+    } finally {
+      await cleanup();
+    }
+  }, 30000);
 });

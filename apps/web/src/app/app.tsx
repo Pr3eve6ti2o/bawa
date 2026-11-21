@@ -97,6 +97,7 @@ export function preloadRoute(to: string): void {
   });
 }
 import { WalletProvider, useWallet } from '../state/wallet-context';
+import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
 
@@ -334,7 +335,8 @@ function NotFound() {
 export function App() {
   return (
     <BrowserRouter>
-      <WalletProvider>
+      <ErrorBoundary fallbackTitle="Unable to show your wallet">
+        <WalletProvider>
         <Suspense fallback={<p>Loading…</p>}>
           <Routes>
           <Route path="/" element={<AppLayout />}>
@@ -359,6 +361,7 @@ export function App() {
           </Routes>
         </Suspense>
       </WalletProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

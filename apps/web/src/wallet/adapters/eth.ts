@@ -9,14 +9,17 @@ import { mainnet } from 'viem/chains';
 import {
   assertNetworkId,
   BROADCAST_DISABLED_MESSAGE,
-  fetchJson,
+  httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
   type FeeEstimate,
+  type FetchTransport,
   type TxInput,
 } from './types';
+import { withRetry } from '../retry';
 
 const NETWORK_ID = 'eip155:1';
 const RPC_URL = 'https://ethereum-rpc.publicnode.com';
@@ -28,10 +31,13 @@ export interface EthAdapterOverrides {
   client?: PublicClient;
   historyBaseUrl?: string;
   rpcUrl?: string;
+  /**
+   * Injectable transport for the Blockscout history read (item 2).
+   * Defaults to the single-attempt HTTP transport.
+   */
+  transport?: FetchTransport;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 /** True when `value` is a record with the given string key. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -46,6 +52,14 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
       transport: http(overrides.rpcUrl ?? RPC_URL),
     });
   const historyBaseUrl = overrides.historyBaseUrl ?? HISTORY_BASE_URL;
+  const transport = overrides.transport ?? httpFetchTransport;
+  // The Blockscout history read is a plain fetchJson call, so it gets the
+  // bounded retry (item 2). The viem client calls below are NOT wrapped:
+  // viem's http transport already retries transient RPC failures
+  // (createTransport defaults retryCount 3, retryDelay 150 — verified in
+  // node_modules/viem), so wrapping them would stack two retry loops.
+  const readJson = (url: string, operation: string): Promise<unknown> =>
+    withRetry(() => transport.request(url), { operation });
 
   /**
    * Chain identity, checked on every call: the RPC must report chain 1.
@@ -57,7 +71,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     try {
       chainId = await client.getChainId();
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (chainId !== 1) {
       return {
@@ -95,7 +109,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 
@@ -113,9 +127,9 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
       `&address=${address}&page=1&offset=${limit}&sort=desc`;
     let raw: unknown;
     try {
-      raw = await fetchJson(url);
+      raw = await readJson(url, 'eth.getHistory');
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (!isRecord(raw)) {
       return { status: 'error', reason: 'Invalid response: expected an object' };
@@ -183,7 +197,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 
@@ -204,7 +218,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
   };
 

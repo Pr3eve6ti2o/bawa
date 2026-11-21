@@ -18,6 +18,28 @@ updates:
       - dependency-name: "@trustwallet/wallet-core"
         update-types: ["version-update:semver-major"]
 
+  # The web wallet's own dependencies (React, Vite, wallet-core) had no
+  # Dependabot coverage; the wallet's audit and bundle gates live in CI,
+  # but its dependency updates were invisible. Added by repo-study
+  # Phase 3, item 26.
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+    # Never bump @trustwallet/wallet-core to a new major version without a qualification run (ADR-0001).
+    ignore:
+      - dependency-name: "@trustwallet/wallet-core"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    target-branch: main
+
   - package-ecosystem: pip
     directory: /
     schedule:

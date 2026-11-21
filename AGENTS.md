@@ -9,9 +9,15 @@ Bawa (`Pr3eve6ti2o/bawa`, `panel-rebuild/adopt-proper` line, base commit `e49372
 ## 2. Read order
 
 1. `AGENTS.md`.
-2. `WALLET_BUILDER.md`.
-3. `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
-4. `README.md`, then only the request-relevant documents below; use `docs/README.md` as the documentation map.
+2. `CONSTRAINTS.md` — the written quality bar. Read it before writing code. **Do not weaken it to make a change pass.**
+3. `WALLET_BUILDER.md`.
+4. `docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`.
+5. `README.md`, then only the request-relevant documents below; use `docs/README.md` as the documentation map.
+
+Before starting a phase of work, check for an applicable skill in §7
+below. A lane prompt that names no skill must say why none applies.
+Review rules, severity taxonomy, and report templates live in
+`docs/review-rules.md`.
 
 Follow: **parse → plan → profile → engine → chains → template → inspect → scaffold → implement → verify → audit claims → report**.
 
@@ -80,3 +86,38 @@ Every report must include:
 | … | … | PASS / FAIL / NOT-RUN | … | … | … |
 
 Use **PASS** only for a performed check with supporting evidence, **FAIL** for a performed check that failed, and **NOT-RUN** for anything not performed, including blocked checks. **NOT-RUN is never a pass.** Test counts and file presence are not proof that tests passed. Audit every capability claim against its evidence and scope before reporting.
+
+## 7. Skill routing (check before starting)
+
+| Phase | Check first |
+| --- | --- |
+| Any code change | `code-review-and-quality` (five axes); `test-driven-development` (failing test first) |
+| Setting or changing the quality bar | `constraint-driven-development` (`CONSTRAINTS.md`); never weaken it to pass |
+| CI / gates / releases | `ci-cd-and-automation`; `shipping-and-launch` (release procedure) |
+| Browser-facing change | `browser-testing-with-devtools` (verify in a real browser); `webapp-testing` (harness shape) |
+| A failure you cannot explain | `debugging-and-error-recovery` (triage checklist, root cause, guard) |
+| Adding logging, metrics, retries | `observability-and-instrumentation` (questions first, sanitised fields only) |
+| Docs or a decision | `documentation-and-adrs` (ADR for reversible-expensive decisions); `docs-governance` principles (one home per fact) |
+| Simplification | `simplify-codebase` (survey mode first: coverage map, proof record, no deletions without proof) |
+| Planning / splitting work | `planning-and-task-breakdown` (`tasks/plan.md`, `tasks/todo.md`) |
+| Commits, branches, releases | `git-workflow-and-versioning` (worktrees for parallel agents; `tasks/` discipline) |
+
+## 8. Definition of Done
+
+A change is done when all of these hold:
+
+- The checks in `CONSTRAINTS.md` pass on its files (types, lint,
+  tests, build, audit, bundle-size gate, E2E where applicable).
+- No test was skipped or deleted without a reason in the commit
+  message; no suppression comment was added; no threshold was moved.
+- Every code change lists its affected docs (`docs:affected`), and
+  those docs are current (drift check green).
+- The report states what was verified (with counts and commands),
+  what was not run, and what remains open. A green suite on an
+  unreviewed scope is not done.
+- No broadcast path was built or enabled; no real crypto was moved;
+  no fake data was introduced; no secret entered source, logs, or
+  fixtures.
+- The change is on a local-only branch until verified and the owner
+  gives the go-ahead (fix-review rule). Nothing is pushed on the
+  strength of this file alone.

@@ -20,7 +20,7 @@ import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
 import { fiatMinorUnits, formatFiatUSD, sumFiatUSD } from './money';
-import type { BalanceState } from '../state/wallet-context';
+import type { BalanceState } from './balance-state';
 
 export const PRICE_PROVIDER_NAME = 'CoinGecko';
 export const PRICE_PROVIDER_BASE_URL = 'https://api.coingecko.com/api/v3';

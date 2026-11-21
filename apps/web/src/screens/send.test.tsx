@@ -215,7 +215,7 @@ async function reachReview(div: HTMLDivElement): Promise<void> {
     setInputValue(amount, '0.5');
   });
   await click(div, 'Review');
-  await waitForText(div, 'Review send');
+  await waitForText(div, 'Review your send');
 }
 
 beforeEach(() => {
@@ -244,7 +244,7 @@ describe('send screen', () => {
     try {
       expect(mounted.div.textContent).toContain('Sending funds is switched off');
       await reachReview(mounted.div);
-      expect(mounted.div.textContent).toContain('Review send');
+      expect(mounted.div.textContent).toContain('Review your send');
       expect(mounted.div.textContent).toContain('0.5 ETH');
       expect(mounted.div.textContent).toContain('0.00042 ETH');
       expect(mounted.div.textContent).toContain('0.50042 ETH');
