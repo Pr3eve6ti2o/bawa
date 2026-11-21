@@ -349,7 +349,7 @@ export function SendScreen() {
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
         <p
           role="note"
-          className="rounded-xl border border-warning-border bg-warning-surface p-4 text-sm text-warning-text"
+          className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
         >
           Sending funds is switched off until it is separately approved. This flow signs
           offline only — nothing here sends cryptocurrency anywhere.
@@ -376,18 +376,18 @@ export function SendScreen() {
                   className="flex flex-1 items-center last:flex-none"
                 >
                   <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm ${
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-sm text-ink ${
                       index < activeIndex
-                        ? 'bg-success-surface text-success-text'
+                        ? 'bg-sun'
                         : index === activeIndex
-                          ? 'bg-primary-solid font-bold text-primary-foreground'
-                          : 'bg-surface-blue-dim text-step-pending-text'
+                          ? 'bg-coral font-bold'
+                          : 'bg-paper'
                     }`}
                   >
                     {index < activeIndex ? '✓' : index + 1}
                   </span>
                   {index < steps.length - 1 && (
-                    <span aria-hidden="true" className="mx-1 h-0.5 flex-1 bg-progress-track" />
+                    <span aria-hidden="true" className="mx-1 flex-1 border-t-2 border-dashed border-ink" />
                   )}
                 </li>
               ))}
@@ -448,7 +448,7 @@ export function SendScreen() {
               autoComplete="off"
             />
             {recipientError && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
                 {recipientError}
               </p>
             )}
@@ -479,7 +479,7 @@ export function SendScreen() {
             />
           )}
           {scannerError && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
               {scannerError}
             </p>
           )}
@@ -493,15 +493,15 @@ export function SendScreen() {
           </h2>
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">From</dt>
+              <dt className="text-ink">From</dt>
               <dd className="min-w-0 break-all font-mono">{from}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">To</dt>
+              <dt className="text-ink">To</dt>
               <dd className="min-w-0 break-all font-mono">{recipient}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">Balance</dt>
+              <dt className="text-ink">Balance</dt>
               <dd>{balanceText}</dd>
             </div>
           </dl>
@@ -548,7 +548,7 @@ export function SendScreen() {
               <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
             )}
             {preview && !preview.ok && (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
                 {preview.reason}
               </p>
             )}
@@ -606,7 +606,7 @@ export function SendScreen() {
           )}
           {signState.status === 'error' && (
             <div role="alert" className="space-y-2 text-sm">
-              <p className="text-destructive">
+              <p className="text-ink bawa-squiggle-underline">
                 {signState.reason}
               </p>
             </div>

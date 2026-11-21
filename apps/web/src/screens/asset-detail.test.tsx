@@ -226,6 +226,30 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('shows a spaced zero TON heading and a Send button for TON', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        ton: { status: 'zero', value: '0' },
+      },
+      perChain(emptyHistory),
+    );
+    const mounted = await mountScreen('/assets/ton');
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('0 TON');
+      expect(text).not.toContain('0TON');
+      expect(text).not.toContain('0BTC');
+      const send = mounted.div.querySelector('a[href="/send"]');
+      expect(send).not.toBeNull();
+      expect(send?.textContent).toContain('Send');
+      const receive = mounted.div.querySelector('a[href="/receive"]');
+      expect(receive).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows unavailable, never zero, on a failed balance fetch', async () => {
     setWallet(
       {

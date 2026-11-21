@@ -265,4 +265,18 @@ describe('TrackTransactionScreen', () => {
     expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined });
     expect(div.textContent).toContain('50 BTC');
   });
+
+  it('shows the guide expanded by default as step cards', () => {
+    mounted = mount();
+    const { div } = mounted;
+    expect(div.querySelector('details')).toBeNull();
+    const guide = div.querySelector('[aria-labelledby="track-guide-heading"]');
+    expect(guide).not.toBeNull();
+    expect(guide?.textContent).toContain('Pick a chain above.');
+    expect(guide?.textContent).toContain('Paste the transaction hash.');
+    expect(guide?.textContent).toContain('Look it up to see its status.');
+    expect(guide?.textContent).toContain('What a result shows');
+    const grey = guide?.querySelectorAll('[class*="text-muted-foreground"], [class*="text-gray"]');
+    expect(grey?.length).toBe(0);
+  });
 });

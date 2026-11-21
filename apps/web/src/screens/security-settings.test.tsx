@@ -68,18 +68,17 @@ describe('security settings screen', () => {
     }
   });
 
-  it('says the vault stays unlocked on this device', async () => {
-    // Vault-lock removal: the Vault lock card, the auto-lock selector
-    // and the "Lock now" / "Lock vault" buttons are gone. The page
-    // says plainly that the wallet stays unlocked.
+  it('leaves an empty, clearly-marked mount point for the auto-lock setting', async () => {
+    // Lane D2: the vault-lock card is gone; Lane D0 mounts its
+    // AutoLockSetting component at this mount point at merge time.
     setWallet('unlocked');
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Vault stays unlocked');
-      expect(text).toContain(
-        'Your wallet stays unlocked on this device. Anyone with access to this device can open it.',
-      );
+      const mount = mounted.div.querySelector('[data-d0-mount-point="auto-lock-setting"]');
+      expect(mount).not.toBeNull();
+      expect(mount?.textContent).toBe('');
+      expect(text).not.toContain('Vault stays unlocked');
       expect(text).not.toContain('Vault lock');
       expect(text).not.toContain('Lock after inactivity');
       expect(text).not.toContain('Lock vault');
@@ -92,11 +91,12 @@ describe('security settings screen', () => {
     }
   });
 
-  it('says no vault yet when there is none', async () => {
+  it('shows the same mount point when there is no vault', async () => {
     setWallet('no-vault');
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('No vault yet');
+      expect(mounted.div.querySelector('[data-d0-mount-point="auto-lock-setting"]')).not.toBeNull();
+      expect(mounted.div.textContent).not.toContain('No vault yet');
     } finally {
       await mounted.cleanup();
     }

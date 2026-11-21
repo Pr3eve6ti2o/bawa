@@ -3,8 +3,8 @@
 // unmount, on any error path, and immediately after the vault is created.
 // No secret is ever logged.
 import { useEffect, useState, type FormEvent } from 'react';
-import { Check } from 'lucide-react';
 import { Link } from 'react-router';
+import { BawaIcon } from '../ui/components/icons';
 import { loadCore } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
@@ -239,17 +239,17 @@ export function CreateWalletScreen() {
                 className="flex flex-1 items-center last:flex-none"
               >
                 <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-full text-body-md ${
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink text-body-md text-ink ${
                     progressStep < step
-                      ? "bg-success-surface text-success-text"
+                      ? "bg-sun"
                       : progressStep === step
-                        ? "bg-primary-solid font-bold text-primary-foreground"
-                        : "bg-surface-blue-dim text-step-pending-text"
+                        ? "bg-coral font-bold"
+                        : "bg-paper"
                   }`}
                 >
                   {progressStep < step ? (
                     <>
-                      <Check aria-hidden="true" className="size-5" />
+                      <BawaIcon name="check" className="size-5" />
                       <span className="sr-only">{progressStep}</span>
                     </>
                   ) : (
@@ -259,7 +259,7 @@ export function CreateWalletScreen() {
                 {progressStep < 4 && (
                   <span
                     aria-hidden="true"
-                    className="mx-2 h-0.5 flex-1 bg-progress-track"
+                    className="mx-2 flex-1 border-t-2 border-dashed border-ink"
                   />
                 )}
               </li>
@@ -368,7 +368,7 @@ export function CreateWalletScreen() {
                     value={passphrase}
                     onChange={(event) => setPassphrase(event.target.value)}
                   />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-ink">
                     Optional BIP-39 passphrase (25th word). It is never
                     stored — you will need it again if you restore this wallet
                     elsewhere. It is
@@ -428,7 +428,7 @@ export function CreateWalletScreen() {
               ))}
             </fieldset>
             {!allRisksChecked && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-ink">
                 Tick all three boxes to continue.
               </p>
             )}
@@ -460,7 +460,7 @@ export function CreateWalletScreen() {
       {step === 2 && mnemonic !== null && riskAcknowledged && (
         <Card className="rounded-xl">
           <CardHeader>
-            <CardTitle>Write down your recovery phrase</CardTitle>
+            <CardTitle><span className="bawa-marker">Write down</span> your recovery phrase</CardTitle>
             <CardDescription>
               Write these 24 words down on paper, in order. This is the only
               time they are shown.
@@ -478,13 +478,13 @@ export function CreateWalletScreen() {
               {words.map((word, index) => (
                 <li
                   key={index}
-                  className="flex h-12 items-center gap-2 rounded-md border bg-card px-3"
+                  className="flex h-12 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-3"
                 >
-                  <span className="text-body-sm font-medium text-muted-foreground">
+                  <span className="text-body-sm font-medium text-ink">
                     {index + 1}.
                   </span>
                   {' '}
-                  <span className="text-body-md font-semibold">{word}</span>
+                  <span className="font-display text-xl font-semibold text-ink">{word}</span>
                 </li>
               ))}
             </ol>
@@ -551,7 +551,7 @@ export function CreateWalletScreen() {
               {DISPLAY_ORDER.map((chain) => (
                 <li key={chain} className="space-y-1">
                   <div className="text-sm font-semibold">{CHAIN_LABELS[chain]}</div>
-                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                  <code className="block break-all rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
                     {vaultAddresses[chain][0] ?? 'Address unavailable.'}
                   </code>
                 </li>
