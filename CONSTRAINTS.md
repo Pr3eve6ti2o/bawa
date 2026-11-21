@@ -85,7 +85,7 @@ grep -rn "DEFER(" -- apps/web/src scripts tools | grep -v node_modules
 | D1 | Single-attempt `fetchJson` (ADR-0007). No retry in the transport; retries live in callers under a budget. | Ceiling: retries stay caller-side, bounded, reads-only. Trigger: a caller retries a broadcast, or an unbounded retry appears. |
 | D2 | Broadcast disabled (standing owner order). Send is built, signing is local, broadcast throws. | Ceiling: no broadcast path is enabled. Trigger: a separate owner authorisation to enable broadcast. |
 | D3 | Price-feed absence on this checkout. No CoinGecko client, no `prices.ts`; balances are native amounts only. | Ceiling: no fiat value is ever invented. Trigger: the multichain-create tracker/price merge (Prerequisite 0). |
-| D4 | `toBalanceProvider` legacy shim (`adapters/types.ts`). Kept for the wallet-context `getBalanceProvider` path; new code uses `getAdapter`. | Ceiling: no new consumer may be added. Trigger: the last consumer is removed, or P1 records a removal date. |
+| D4 | `toBalanceProvider` legacy shim (`adapters/types.ts`) — REMOVED 2026-11-22 (P5 C1, merge 85ba72a). `balance-providers.ts` deleted; zero references to `toBalanceProvider`, `getBalanceProvider`, or `balance-providers` remain in the tree. Trigger met: last consumer removed. | Closed: shim and file deleted; new code uses `getAdapter`. |
 | D5 | ecdsa 0.19.2 accepted residual risk (PYSEC-2026-1325 / CVE-2024-23342). No owner acceptance order is on record. | Ceiling: the acceptance is a lane verdict, not an owner decision. Trigger: owner acceptance, a new signing path, `coincurve` dropped, or `ecdsa` bumped. See `SECURITY-FINDINGS.md`. |
 
 ## Guard the bar
