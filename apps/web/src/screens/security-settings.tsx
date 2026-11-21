@@ -1,9 +1,18 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
+import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
+import { deleteVault } from "../wallet/vault";
+import { AutoLockSetting } from "./auto-lock-setting";
 
 export function SecuritySettingsScreen() {
-  const { vaultState } = useWallet();
+  const { vaultState, refreshVaultAccounts } = useWallet();
+  const [deleteArmed, setDeleteArmed] = useState(false);
+
+  useEffect(() => {
+    setDeleteArmed(false);
+  }, [vaultState]);
 
   // Desktop layout (Bawa Balanced, following Sol's reviewed arrangement):
   // the heading and the reading panels span both columns, while the
@@ -29,20 +38,7 @@ export function SecuritySettingsScreen() {
         </ul>
       </div>
 
-      <Card className="rounded-xl">
-        <CardHeader>
-          <CardTitle>Vault stays unlocked</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {vaultState === 'no-vault' ? (
-            <p role="status">No vault yet — create or import a wallet first.</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Your wallet stays unlocked on this device. Anyone with access to this device can open it.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <AutoLockSetting />
 
       <Card className="rounded-xl lg:col-span-2">
         <CardHeader>
@@ -63,6 +59,35 @@ export function SecuritySettingsScreen() {
           </Link>
         </CardContent>
       </Card>
+
+      {vaultState !== 'no-vault' && (
+        <Card className="rounded-xl border-destructive/40">
+          <CardHeader>
+            <CardTitle>Delete vault</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Deleting the vault removes the encrypted recovery phrase from this device. This cannot
+              be undone — make sure you have written down your recovery phrase first.
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={async () => {
+                if (!deleteArmed) {
+                  setDeleteArmed(true);
+                  return;
+                }
+
+                await deleteVault();
+                await refreshVaultAccounts();
+              }}
+            >
+              {deleteArmed ? 'Tap again to confirm delete' : 'Delete vault'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </section>
   );
 }

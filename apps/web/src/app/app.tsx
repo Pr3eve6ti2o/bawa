@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BawaIcon, type BawaIconName } from '../ui/components/icons';
 import { BawaLoading } from '../ui/components/loading';
-import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router';
+import { BrowserRouter, Link, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { DashboardScreen } from '../screens/dashboard';
 import { WelcomeScreen } from '../screens/welcome';
 // Hot routes are eager imports (Rabby pattern): the live browser showed
@@ -65,6 +65,10 @@ const WalletManagementScreen = lazy(loadWalletManagement);
 // itself renders at once. The desktop sidebar (sidebar-nav.tsx) can
 // reuse this export. A failed preload is swallowed — it must never
 // break navigation, and the click itself still loads the chunk.
+const loadLock = () =>
+  import('../screens/lock').then((m) => ({ default: m.LockScreen }));
+const LockScreen = lazy(loadLock);
+
 const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/import-wallet': loadImportWallet,
   '/mnemonic-backup': loadMnemonicBackup,
@@ -75,6 +79,7 @@ const ROUTE_PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/track': loadTrackTransaction,
   '/networks': loadNetworkSelection,
   '/wallets': loadWalletManagement,
+  '/lock': loadLock,
 };
 
 const preloadedRoutes = new Set<string>();
@@ -126,6 +131,37 @@ function AppLayout() {
   }, [moreOpen]);
   const location = useLocation();
   const pathname = location.pathname;
+  const navigate = useNavigate();
+  const prevVaultState = useRef(vaultState);
+  // Lock-with-return-to (Rabby `/unlock?from=`, MetaMask `state.from`).
+  // The key is duplicated in lock.tsx; keep the two in sync.
+  // Use sessionStorage, not localStorage, so the target dies with the tab.
+  useEffect(() => {
+    if (location.pathname === '/lock') return;
+
+    try {
+      sessionStorage.setItem(
+        'bawa-lock-return-to',
+        `${location.pathname}${location.search}`,
+      );
+    } catch {
+      // Private mode: the lock screen falls back to `/`.
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const wasUnlocked = prevVaultState.current === 'unlocked';
+    prevVaultState.current = vaultState;
+
+    // Focused and restore flows retain state and handle locks themselves.
+    if (
+      wasUnlocked &&
+      vaultState === 'locked' &&
+      !['/lock', '/send', '/create-wallet', '/import-wallet'].includes(pathname)
+    ) {
+      navigate('/lock');
+    }
+  }, [vaultState, pathname, navigate]);
   // Focused flows hide the navigation chrome (Safe PageLayout pattern):
   // the create-wallet flow and the send flow. Send review is a state
   // inside /send rather than its own route, so the whole /send flow
@@ -144,7 +180,7 @@ function AppLayout() {
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
-  const isWideAtLg = ['/create-wallet', '/security'].includes(pathname);
+  const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
 
   return (
     <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
@@ -348,6 +384,7 @@ export function App() {
             <Route path="networks" element={<NetworkSelectionScreen />} />
             <Route path="wallets" element={<WalletManagementScreen />} />
             <Route path="security" element={<SecuritySettingsScreen />} />
+            <Route path="lock" element={<LockScreen />} />
             <Route path="*" element={<NotFound />} />
           </Route>
           </Routes>

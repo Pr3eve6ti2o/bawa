@@ -221,6 +221,92 @@ Known gaps (not fixed here, flagged to the coordinator):
   unknown passphrase was not verified by this lane (send screen is the
   UI lane's scope).
 
+## 8. Optional auto-lock — auto-lock returns as an optional setting, off by default
+
+**Decision: auto-lock returns as an OPTIONAL setting, OFF by default, via
+`AutoLockSetting` on /security (toggle + duration: Immediately / 1 / 5 / 15
+minutes / 1 hour / 1 day).**
+
+Evidence: the owner ordered the lock removed (2026-11-20 ~22:39 IST) after
+the live browser found the vault auto-locking in ~1 minute, not the stated
+5 minutes (section 7). A later order (2026-11-20 ~23:11 IST) supersedes it:
+"Keep auto lock optional." The vault stays unlocked by default; it locks
+only when the user enables auto-lock and picks a duration.
+
+What was done (Lane D0, auto-lock):
+
+- `apps/web/src/wallet/auto-lock.ts` (new): `AUTO_LOCK_OPTIONS = [0, 1, 5,
+  15, 60, 1440]`, labels, `AUTO_LOCK_DEFAULT_MINUTES = 5`, keys
+  `bawa-auto-lock-enabled` / `bawa-auto-lock-minutes`, read/write helpers,
+  `autoLockDurationMs()` — the one minutes-to-ms conversion. Default OFF.
+- `apps/web/src/wallet/vault.ts`: `isLocked()`, `lock()` and `unlock()`
+  restored (`VAULT_WRONG_PASSWORD` back). Key-storage invariant enforced
+  at `createVault`, `unlock` and `changePassword`: auto-lock ON means NO
+  stored vault key (`bawa-vault-key` is deleted on enabling); auto-lock OFF
+  means the derived key IS stored and the vault auto-unlocks. Disabling
+  auto-lock stores the key when unlocked, or prompts for the password first
+  when locked. `changePassword` deletes the stored key when auto-lock is ON
+  (a stale old key otherwise survived). `storeCurrentKey()` /
+  `deleteStoredKey()` / `hasStoredKey()`; `deleteVault()` deletes the stored
+  key too.
+- `apps/web/src/state/wallet-context.tsx`: `VaultState` is
+  `'no-vault' | 'locked' | 'unlocked'` again. `computeVaultState()` /
+  `computeBootVaultState()` ('unlocked' only with a stored key AND auto-lock
+  off); `lockVault()` (clears addresses/balances/history) / `unlockVault()`;
+  auto-lock settings state with invariant-correct toggling. Timer
+  redesigned: one `setTimeout(lockVault, autoLockDurationMs(minutes))`,
+  activity resets it, minutes 0 locks on `pagehide` / `visibilitychange`
+  hidden, NO persisted deadline — the removed timer honoured a stored
+  deadline across reloads, so an old deadline could fire minutes early
+  despite the 5-minute setting, which likely caused the ~1-minute lock.
+  The new timer always counts the FULL chosen duration from the last unlock
+  or activity, in the live session only. A locked boot never rehydrates
+  persisted addresses; `refreshVaultAccounts` restores them only when
+  unlocked.
+- `apps/web/src/screens/lock.tsx` (new, rebuilt in the D1 drawing style):
+  the `/lock` screen returns, with lock return-to, password and passphrase
+  fields, wrong-password alert, and 'Forgotten password? Restore wallet'
+  → `/import-wallet`. The deleted lock tests are restored
+  (`lock.test.tsx`, 9 tests).
+- `apps/web/src/screens/security-settings.tsx`: the 'Vault stays unlocked'
+  card is replaced by `<AutoLockSetting />` (toggle + duration + honest
+  copy explaining both states), plus a Danger-zone delete-vault card with
+  two-tap confirmation that works while locked. No copy claims the vault
+  never locks.
+- Locked-state UX: while locked, derived addresses are hidden; the
+  dashboard hero shows 'Locked' plus 'Locked — unlock to see balances.';
+  Popular chains show 'Locked'; send refuses to sign and links to `/lock`.
+- Legacy vaults heal on their first unlock when auto-lock is off:
+  `unlock()` stores the key, so later boots auto-unlock (section 7's
+  legacy-vault gap is closed for this path).
+- Tests: `auto-lock.test.ts` (31 tests), `vault.test.ts` (35 tests, incl.
+  stored-key invariant tests), `lock.test.tsx` (9 tests),
+  `auto-lock-setting.test.tsx` (9 tests), `security-settings.test.tsx`
+  (5 tests), context auto-lock tests incl. the fake-timer suite and the
+  real-time 1-minute timer test (see below).
+
+Timer verification: the 1-minute timer was verified end-to-end by a
+real-time test (D0-20b): the vault locked at ~60 real seconds (≥59 s
+asserted, rejecting premature locking) and the stored key was absent.
+The 5-minute path is reasoned from the same code (same timer function,
+same duration parameter) but NOT verified — do not claim it works without
+evidence.
+
+SECURITY TRADEOFF (unchanged from section 7): with auto-lock off, the raw
+vault key sits in localStorage next to the ciphertext it decrypts, so
+anyone who can read this origin's localStorage can decrypt the vault
+without the password. The mnemonic itself is still never stored in
+plaintext, and the envelope stays AES-GCM-256 / PBKDF2 600k. With auto-lock
+on, there is no stored key while locked, so the lock is real — unlocking
+requires the password.
+
+Known gaps (not fixed here, flagged to the coordinator):
+
+- The 5-minute timer path is not verified end-to-end (see above).
+- Passphrase wallets: the session passphrase is still never persisted, so
+  a reload loses it; derivation stays blocked until the passphrase is in
+  the session again (section 7's gap, unchanged).
+
 ## Coordinator calls made during the programme
 
 - **Doc 4 scope (Phase 4):** kept Lane I's "Doc 4 — Mainnet" → "Mainnet"

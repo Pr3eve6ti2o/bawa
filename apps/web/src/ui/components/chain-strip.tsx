@@ -69,6 +69,7 @@ export function PopularChainsStrip({
           const shownPrimary =
             hideBalance &&
             display.primary !== "Unavailable" &&
+            display.primary !== "Locked" &&
             display.primary !== "—" &&
             display.primary !== "Zero balance"
               ? "••••••"

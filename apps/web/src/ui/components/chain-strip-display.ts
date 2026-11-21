@@ -24,7 +24,7 @@ export function chainStripDisplay(
   balance: BalanceState,
   entry: PriceEntry | undefined,
   nowMs: number,
-  vaultState: "no-vault" | "unlocked",
+  vaultState: "no-vault" | "locked" | "unlocked",
   pricesLoading: boolean,
   mode: "welcome" | "dashboard",
 ): ChainStripDisplayResult {
@@ -43,6 +43,10 @@ export function chainStripDisplay(
 
   if (vaultState === "no-vault") {
     return { loading: false, primary: "—", ...metadata };
+  }
+
+  if (vaultState === "locked") {
+    return { loading: false, primary: "Locked", ...metadata };
   }
 
   if (balance.status === "loading") {
