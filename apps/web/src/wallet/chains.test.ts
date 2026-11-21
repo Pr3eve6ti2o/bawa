@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assertHardenedEd25519Path,
   assertSupported,
   availableFor,
   capabilitiesFor,
   CHAINS,
   chainConfig,
   chainConfigForNetwork,
+  GENERATED_CHAIN_FACTS,
   pathFor,
   profileFor,
   SOLANA_PROFILES,
@@ -645,4 +647,172 @@ describe('capabilities.json registry shape and identity', () => {
       expect(() => chainConfig(coinName as never)).toThrow(/Unsupported chain/);
     },
   );
+});
+
+describe('generated chain facts and ed25519 paths (S6b, item 22)', () => {
+  // Marker lines copied verbatim from apps/web/scripts/generate-chains.mjs;
+  // they are the contract the drift check enforces.
+  const BEGIN_MARKER =
+    '// BEGIN GENERATED CHAIN FACTS — do not hand-edit. Regenerate with: node scripts/generate-chains.mjs';
+  const END_MARKER = '// END GENERATED CHAIN FACTS';
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  async function readRegistryCoins(): Promise<
+    Record<string, Record<string, unknown>>
+  > {
+    const { readFileSync } = await import('node:fs');
+    // Resolve from this test file, not from the Vitest working directory.
+    const registryUrl = new URL(
+      '../../../../registry/capabilities.json',
+      import.meta.url,
+    );
+    const registry: unknown = JSON.parse(readFileSync(registryUrl, 'utf8'));
+    if (!isRecord(registry) || !isRecord(registry.coins)) {
+      throw new Error('Registry must contain a coins object');
+    }
+    return registry.coins as Record<string, Record<string, unknown>>;
+  }
+
+  async function readChainsSource(): Promise<string> {
+    const { readFileSync } = await import('node:fs');
+    const chainsUrl = new URL('./chains.ts', import.meta.url);
+    return readFileSync(chainsUrl, 'utf8');
+  }
+
+  function supportedCoinFor(
+    coins: Record<string, Record<string, unknown>>,
+    chain: string,
+  ): Record<string, unknown> {
+    const coin = Object.values(coins).find(
+      (entry) => entry.bawaChainId === chain,
+    );
+    if (!coin) {
+      throw new Error(`No supported registry coin for chain ${chain}`);
+    }
+    return coin;
+  }
+
+  // Mirrors the single-value formatting in scripts/generate-chains.mjs
+  // (tsValue). Byte-exactness of the whole block is the --check gate's job;
+  // this pins that every registry value appears in the committed block in
+  // the generator's format.
+  function formatGeneratedValue(value: unknown): string {
+    if (value === null) return 'null';
+    if (typeof value === 'number') return String(value);
+    if (typeof value === 'string') {
+      return "'" + value.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+    }
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '[]';
+      if (value.length === 1) {
+        return '[' + formatGeneratedValue(value[0]) + ']';
+      }
+      return (
+        '[\n' +
+        value.map((item) => '      ' + formatGeneratedValue(item) + ',').join('\n') +
+        '\n    ]'
+      );
+    }
+    throw new Error(
+      `Cannot format generated value: ${JSON.stringify(value)}`,
+    );
+  }
+
+  it.each(SUPPORTED_CHAINS)(
+    'generated facts for %s agree with registry/capabilities.json',
+    async (chain) => {
+      expect.assertions(8);
+      const coins = await readRegistryCoins();
+      const coin = supportedCoinFor(coins, chain);
+      const facts = GENERATED_CHAIN_FACTS[chain];
+      expect(facts.displayName).toBe(coin.displayName as string);
+      expect(facts.symbol).toBe(coin.symbol as string);
+      expect(facts.coinTypeName).toBe(coin.coinTypeName as string);
+      expect(facts.networkId).toBe(coin.networkId as string);
+      expect(facts.assetId).toBe(coin.assetId as string);
+      expect(facts.profileId).toBe(coin.profileId as string);
+      expect(facts.rpcEndpoints).toEqual(coin.rpcEndpoints as string[]);
+      expect(facts.evmChainId).toBe(coin.evmChainId as number | null);
+    },
+  );
+
+  it('keeps exactly one generated-block marker pair in chains.ts, BEGIN before END', async () => {
+    expect.assertions(3);
+    const source = await readChainsSource();
+    expect(source.split(BEGIN_MARKER).length - 1).toBe(1);
+    expect(source.split(END_MARKER).length - 1).toBe(1);
+    expect(source.indexOf(BEGIN_MARKER)).toBeLessThan(
+      source.indexOf(END_MARKER),
+    );
+  });
+
+  it.each(SUPPORTED_CHAINS)(
+    'emits the %s generated block lines from the registry values (drift invariant)',
+    async (chain) => {
+      expect.assertions(9);
+      const source = await readChainsSource();
+      const coins = await readRegistryCoins();
+      const coin = supportedCoinFor(coins, chain);
+      const block = source.slice(
+        source.indexOf(BEGIN_MARKER),
+        source.indexOf(END_MARKER) + END_MARKER.length,
+      );
+      expect(block).toContain(`  ${chain}: {`);
+      expect(block).toContain(
+        `    displayName: ${formatGeneratedValue(coin.displayName)},`,
+      );
+      expect(block).toContain(
+        `    symbol: ${formatGeneratedValue(coin.symbol)},`,
+      );
+      expect(block).toContain(
+        `    coinTypeName: ${formatGeneratedValue(coin.coinTypeName)},`,
+      );
+      expect(block).toContain(
+        `    networkId: ${formatGeneratedValue(coin.networkId)},`,
+      );
+      expect(block).toContain(
+        `    assetId: ${formatGeneratedValue(coin.assetId)},`,
+      );
+      expect(block).toContain(
+        `    profileId: ${formatGeneratedValue(coin.profileId)},`,
+      );
+      expect(block).toContain(
+        `    rpcEndpoints: ${formatGeneratedValue(coin.rpcEndpoints)},`,
+      );
+      expect(block).toContain(
+        `    evmChainId: ${formatGeneratedValue(coin.evmChainId)},`,
+      );
+    },
+  );
+
+  it('passes the fully hardened TON path and both Solana profile paths', () => {
+    expect.assertions(6);
+    const walletcore = SOLANA_PROFILES['walletcore-solana-default-v1'];
+    const phantom = SOLANA_PROFILES['solana-phantom-bip44change-v1'];
+    expect(walletcore).toBeDefined();
+    expect(phantom).toBeDefined();
+    expect(() => assertHardenedEd25519Path(pathFor('ton', 0, 0))).not.toThrow();
+    expect(() =>
+      assertHardenedEd25519Path(walletcore?.path ?? ''),
+    ).not.toThrow();
+    expect(() =>
+      assertHardenedEd25519Path(phantom?.path.replace('{i}', '0') ?? ''),
+    ).not.toThrow();
+    // The Phantom placeholder form is itself fully hardened.
+    expect(() => assertHardenedEd25519Path(phantom?.path ?? '')).not.toThrow();
+  });
+
+  it('throws naming the path for a non-hardened ed25519 component', () => {
+    expect.assertions(3);
+    for (const bad of [
+      "m/44'/501'/0'/0",
+      "m/44'/501'/0/0",
+      "m/44'/607'/0/0",
+    ]) {
+      expect(() => assertHardenedEd25519Path(bad)).toThrow(bad);
+    }
+  });
 });

@@ -126,72 +126,110 @@ function assertAccountIndex(account: number, index: number): void {
  * do an operation. A chain is available for an operation only when
  * availableFor(capability) returns it (status verified).
  */
-export const CHAINS: Record<ChainId, ChainConfig> = {
+
+// BEGIN GENERATED CHAIN FACTS — do not hand-edit. Regenerate with: node scripts/generate-chains.mjs
+// Drift check: from apps/web run `node scripts/generate-chains.mjs --check`;
+// it exits 1 when this block differs from registry/capabilities.json.
+// Capabilities, evidence, enablement and derivation behaviour stay
+// hand-written in chains.ts — only the eight static facts per chain below
+// are generated. The registry mixes upstream Wallet Core registry.json
+// values with Bawa-added fields (profileId, rpcEndpoints, xpubVersion
+// from SLIP-0132 version bytes — the upstream registry carries xpub
+// labels only).
+export const GENERATED_CHAIN_FACTS: Record<
+  ChainId,
+  Pick<
+    ChainConfig,
+    | 'displayName'
+    | 'symbol'
+    | 'coinTypeName'
+    | 'networkId'
+    | 'assetId'
+    | 'profileId'
+    | 'rpcEndpoints'
+    | 'evmChainId'
+  >
+> = {
   btc: {
-    id: 'btc',
     displayName: 'Bitcoin',
     symbol: 'BTC',
     coinTypeName: 'bitcoin',
     networkId: 'bip122:000000000019d6689c085ae165831e93',
     assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
     profileId: 'bawa-btc-bip84-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/84'/0'/${account}'/0/${index}`;
-    },
     rpcEndpoints: ['https://mempool.space/api'],
     evmChainId: null,
-    capabilities: capabilitiesForAdapterChain('btc', true),
   },
   eth: {
-    id: 'eth',
     displayName: 'Ethereum',
     symbol: 'ETH',
     coinTypeName: 'ethereum',
     networkId: 'eip155:1',
     assetId: 'eip155:1/slip44:60',
     profileId: 'bawa-evm-bip44-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/44'/60'/${account}'/0/${index}`;
-    },
-    // ETH adapter: viem public client against the pinned mainnet RPC.
     rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
     evmChainId: 1,
-    capabilities: capabilitiesForAdapterChain('eth', true),
   },
   trx: {
-    id: 'trx',
     displayName: 'TRON',
     symbol: 'TRX',
     coinTypeName: 'tron',
     networkId: 'tron:0x2b6653dc',
     assetId: 'tron:0x2b6653dc/slip44:195',
     profileId: 'bawa-trx-bip44-v1',
-    pathFor: (account, index) => {
-      assertAccountIndex(account, index);
-      return `m/44'/195'/${account}'/0/${index}`;
-    },
     rpcEndpoints: ['https://api.trongrid.io'],
     evmChainId: null,
-    capabilities: capabilitiesForAdapterChain('trx', true),
   },
   ton: {
-    id: 'ton',
     displayName: 'TON',
     symbol: 'TON',
     coinTypeName: 'ton',
     networkId: 'ton:-239',
     assetId: 'ton:-239/slip44:607',
     profileId: 'bawa-ton-v4r2-v1',
+    rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
+    evmChainId: null,
+  },
+};
+// END GENERATED CHAIN FACTS
+export const CHAINS: Record<ChainId, ChainConfig> = {
+  btc: {
+    ...GENERATED_CHAIN_FACTS.btc,
+    id: 'btc',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/84'/0'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('btc', true),
+  },
+  eth: {
+    // ETH adapter: viem public client against the pinned mainnet RPC.
+    ...GENERATED_CHAIN_FACTS.eth,
+    id: 'eth',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('eth', true),
+  },
+  trx: {
+    ...GENERATED_CHAIN_FACTS.trx,
+    id: 'trx',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/195'/${account}'/0/${index}`;
+    },
+    capabilities: capabilitiesForAdapterChain('trx', true),
+  },
+  ton: {
+    ...GENERATED_CHAIN_FACTS.ton,
+    id: 'ton',
     pathFor: (account) => {
       assertAccountIndex(account, 0);
       // Fully hardened: one address per wallet, no index suffix.
       // Wallet V4 R2, workchain 0, wallet ID 698983191.
       return "m/44'/607'/0'";
     },
-    rpcEndpoints: ['https://toncenter.com/api/v2/jsonRPC'],
-    evmChainId: null,
     capabilities: capabilitiesForAdapterChain('ton', false),
   },
 };
@@ -227,6 +265,36 @@ export const SOLANA_PROFILES: Readonly<Record<string, UnsupportedProfile>> = {
     note: 'OKX / Phantom bip44Change profile. Unsupported in this lane.',
   },
 };
+
+/**
+ * SLIP-0010: Ed25519 allows hardened-only child derivation; a non-hardened
+ * suffix on an ed25519 path is invalid. Throws an Error naming the path when
+ * any component after m/ is non-hardened (no trailing apostrophe).
+ */
+export function assertHardenedEd25519Path(path: string): void {
+  const components = path.split('/');
+  if (components.length < 2 || components[0] !== 'm') {
+    throw new Error(
+      `Invalid Ed25519 derivation path (expected m/...): ${path}`,
+    );
+  }
+  for (const component of components.slice(1)) {
+    if (component.length === 0 || !component.endsWith("'")) {
+      throw new Error(
+        `Invalid Ed25519 derivation path ${path}: component ${component} ` +
+          `is not hardened (SLIP-0010 allows hardened-only child derivation).`,
+      );
+    }
+  }
+}
+
+// Module-load enforcement: a non-hardened ed25519 path fails import, never
+// derivation. The TON path and every Solana profile path ({i} expanded to 0)
+// are fully hardened; no existing path value is changed.
+assertHardenedEd25519Path(CHAINS.ton.pathFor(0, 0));
+for (const profile of Object.values(SOLANA_PROFILES)) {
+  assertHardenedEd25519Path(profile.path.replace('{i}', '0'));
+}
 
 export function chainConfig(chain: ChainId): ChainConfig {
   const config = CHAINS[chain];
