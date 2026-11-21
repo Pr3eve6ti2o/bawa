@@ -3,12 +3,15 @@ import { createTestWallet, gotoInApp, setupMaskedScreenshots } from './helpers';
 
 setupMaskedScreenshots();
 
-// E2E-02 — REWRITTEN for the vault-lock removal (owner order 2026-11-20).
-// The old "Lock and unlock the vault" case no longer exists: there is no
-// lock button, no lock screen and no /lock route. This case now guards
-// the no-lock behaviour instead: the vault stays open after creation,
-// the Security screen says so, and a full page reload re-opens it via
-// auto-unlock with no password prompt.
+// E2E-02 — REWRITTEN for auto-lock restored (merge 2, layout-rebuild into
+// adopt-proper). Auto-lock is OPTIONAL and OFF by default: with it off the
+// vault stays open after creation, the Security screen shows the Auto-lock
+// card switched off, and a full page reload re-opens it via auto-unlock
+// with no password prompt. /lock IS a route again — it shows the unlock
+// screen only when the vault is locked, so while unlocked it shows no
+// unlock heading. (The merge-1 version of this spec guarded the no-lock
+// model — "Vault stays unlocked" copy, no /lock route — which merge 2
+// superseded.)
 test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
   await createTestWallet(page);
 
@@ -16,10 +19,15 @@ test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
   await gotoInApp(page, 'Home');
   await expect(page.getByText('Zero balance').first()).toBeVisible();
 
-  // The Security screen states the vault stays unlocked and offers no
-  // way to lock it.
+  // The Security screen states auto-lock is off and offers no way to
+  // lock it: the duration select only appears when auto-lock is on.
   await gotoInApp(page, 'Security');
-  await expect(page.getByText('Vault stays unlocked')).toBeVisible();
+  await expect(
+    page.getByText(
+      'Auto-lock off — your wallet stays unlocked on this device.',
+    ),
+  ).toBeVisible();
+  await expect(page.locator('#auto-lock')).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Lock vault' }),
   ).toHaveCount(0);
@@ -36,7 +44,7 @@ test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
     page.getByRole('heading', { name: 'Unlock your wallet' }),
   ).toHaveCount(0);
 
-  // /lock is not a route any more: it never shows an unlock screen.
+  // /lock with the vault unlocked shows no unlock screen.
   await page.goto('/lock');
   await expect(
     page.getByRole('heading', { name: 'Unlock your wallet' }),

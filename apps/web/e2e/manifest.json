@@ -20,14 +20,14 @@
     {
       "asserts": [
         "vault is open after creation (balances load)",
-        "Security screen states 'Vault stays unlocked' with no 'Lock vault' button and no unlock heading",
+        "Security screen states 'Auto-lock off — your wallet stays unlocked on this device.' with no duration select, no 'Lock vault' button and no unlock heading",
         "a full reload re-opens the vault via auto-unlock with no password prompt",
-        "/lock never shows an unlock screen"
+        "/lock shows no unlock screen while the vault is unlocked"
       ],
-      "covers": "no-lock guard: vault stays open after creation, Security screen states it, full reload auto-unlocks, /lock route shows no unlock screen",
+      "covers": "auto-lock-off guard: vault stays open after creation, Security screen states auto-lock is off, full reload auto-unlocks, /lock shows no unlock screen while unlocked",
       "file": "e2e/unlock-lock.spec.ts",
       "id": "E2E-02",
-      "phase": "no-lock",
+      "phase": "auto-lock-off",
       "title": "Vault stays unlocked (no lock screen)"
     },
     {
