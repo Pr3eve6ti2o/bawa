@@ -3,6 +3,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
+import { messageOf } from '../wallet/adapters/types';
 import * as vault from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import {
@@ -155,9 +156,6 @@ function readStored(): Record<string, unknown> {
   }
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message :
-    isRecord(error) && typeof error.message === 'string' ? error.message : String(error);
 
 function computeVaultState(): VaultState {
   if (!vault.hasVault()) return 'no-vault';

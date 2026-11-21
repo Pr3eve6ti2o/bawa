@@ -3,6 +3,7 @@ import {
   DEFAULT_TON_WALLET_VERSION,
   assertTonWalletVersion,
   httpFetchTransport,
+  toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -34,8 +35,6 @@ export interface TonAdapterOverrides {
   version?: TonWalletVersion;
 }
 
-const messageOf = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -156,7 +155,7 @@ export function createTonAdapter(
         'ton.rpc',
       );
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     if (!isRecord(raw)) {
       return { status: 'error', reason: 'Invalid response: expected an object' };
@@ -207,7 +206,7 @@ export function createTonAdapter(
     try {
       balance = parseTonBalance(result.data);
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     return {
       status: 'ok',
@@ -240,7 +239,7 @@ export function createTonAdapter(
     try {
       list = parseTonTxList(result.data);
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     const txs: AdapterTx[] = [];
     for (const entry of list) {
@@ -324,7 +323,7 @@ export function createTonAdapter(
     try {
       seqno = parseTonSeqno(result.data);
     } catch (error: unknown) {
-      return { status: 'error', reason: messageOf(error) };
+      return toAdapterError(error);
     }
     return {
       status: 'ok',

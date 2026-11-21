@@ -5,6 +5,8 @@
 
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. If you write wallet code or use an AI coding agent, give the agent one plain request; it uses this repo to produce a real, buildable project.
 
+The single entry point for Bawa documentation is [docs/index.md](docs/index.md).
+
 ## Quickstart
 
 [Install the requirements and clone this branch](#installation), then start the one-prompt workflow from the repo root:

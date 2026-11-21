@@ -9,6 +9,7 @@ import { loadCore } from '../engine/boundary';
 import { createVault, hasVault } from '../wallet/vault';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import { useWallet } from '../state/wallet-context';
+import { TEST_VAULT_PROFILE_IDS } from '../state/test-helpers';
 
 vi.mock('../wallet/core', () => ({
   createWallet: vi.fn(),
@@ -204,12 +205,7 @@ describe('create wallet screen', () => {
       });
       await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
-      expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, [
-        'bawa-btc-bip84-v1',
-        'bawa-evm-bip44-v1',
-        'bawa-trx-bip44-v1',
-        'bawa-ton-v4r2-v1',
-      ], '');
+      expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS, '');
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
       // The mnemonic is cleared: no recovery word is shown any more.
       expect(mounted.div.textContent).not.toContain('abandon');
@@ -336,12 +332,7 @@ describe('create wallet screen', () => {
         findButton(mounted.div, 'Confirm and create wallet').click();
       });
       await settle();
-      expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, [
-        'bawa-btc-bip84-v1',
-        'bawa-evm-bip44-v1',
-        'bawa-trx-bip44-v1',
-        'bawa-ton-v4r2-v1',
-      ], 'TREZOR');
+      expect(createVault).toHaveBeenCalledWith(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS, 'TREZOR');
       expect(isPassphraseUsed()).toBe(true);
       expect(mounted.div.textContent).toContain('Your wallet is ready');
     } finally {

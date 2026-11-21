@@ -29,6 +29,7 @@ import type {
   AdapterTx,
   ChainAdapter,
 } from '../wallet/adapters/types';
+import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
 // The capability registry is mocked to verified so the adapter path is
 // exercised; the no-adapter gate itself is covered by wallet-context.test.tsx.
@@ -44,12 +45,6 @@ vi.mock('../wallet/chains', async (importOriginal) => {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -174,7 +169,7 @@ describe('wallet refresh — post-split behaviour (item 28)', () => {
       registerAdapter(stubAdapter('trx', okBalance('0'), okTxs([])));
       registerAdapter(stubAdapter('ton', okBalance('0'), okTxs([])));
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
       });
       expect(latest?.balances.eth.status).toBe('available');
@@ -237,7 +232,7 @@ describe('wallet refresh — post-split behaviour (item 28)', () => {
       registerAdapter(stubAdapter('trx', okBalance('0'), okTxs([])));
       registerAdapter(stubAdapter('ton', okBalance('0'), okTxs([])));
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
       });
       // Wait for the unlock's background refresh to queue its deferred
@@ -289,7 +284,7 @@ describe('wallet refresh — post-split behaviour (item 28)', () => {
       registerAdapter(stubAdapter('trx', okBalance('0'), okTxs([])));
       registerAdapter(stubAdapter('ton', okBalance('0'), okTxs([])));
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
       });
       await act(async () => {

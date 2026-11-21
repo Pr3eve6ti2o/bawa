@@ -12,6 +12,7 @@ import {
 } from '../wallet/vault';
 import { ERROR_MESSAGES, WalletErrorCodes } from '../wallet/errors';
 import { SUPPORTED_CHAINS } from '../wallet/chains';
+import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
 // No adapter is registered in this file: the adapters module is mocked so
 // lazy registration (ensureAdapters) cannot bring the real adapters in.
@@ -27,12 +28,6 @@ vi.mock('../wallet/adapters', () => ({
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -92,14 +87,14 @@ describe('wallet context — vault-backed accounts', () => {
       expect(latest?.vaultProfileIds).toBeNull();
 
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         // createVault leaves the vault unlocked; these tests' premise is
         // a locked vault.
         lock();
         await latest?.refreshVaultAccounts();
       });
       expect(latest?.vaultState).toBe('locked');
-      expect(latest?.vaultProfileIds).toEqual(TEST_PROFILES);
+      expect(latest?.vaultProfileIds).toEqual(TEST_VAULT_PROFILE_IDS);
       expect(latest?.vaultAddresses.eth).toEqual([]);
 
       const expected = await deriveAddresses(TEST_MNEMONIC);
@@ -126,7 +121,7 @@ describe('wallet context — vault-backed accounts', () => {
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         // createVault leaves the vault unlocked; these tests' premise is
         // a locked vault.
         lock();
@@ -148,7 +143,7 @@ describe('wallet context — vault-backed accounts', () => {
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
         await latest?.refreshBalances();
       });

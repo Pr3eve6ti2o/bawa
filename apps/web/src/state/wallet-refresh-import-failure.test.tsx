@@ -21,6 +21,7 @@ import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
 import type { WalletContextValue } from './wallet-context';
 import { createVault, deleteVault, lock } from '../wallet/vault';
+import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 
 // The adapter chunk fails to load: registerAllAdapters throws, so the
 // ensureAdapters() promise rejects. Everything else is a no-op.
@@ -45,12 +46,6 @@ vi.mock('../wallet/chains', async (importOriginal) => {
 const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
-const TEST_PROFILES = [
-  'bawa-btc-bip84-v1',
-  'bawa-evm-bip44-v1',
-  'bawa-trx-bip44-v1',
-  'bawa-ton-v4r2-v1',
-];
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -107,7 +102,7 @@ describe('wallet refresh — adapter import failure (post-split behaviour)', () 
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
       });
       // The background refresh failed and its report landed in state;
@@ -147,7 +142,7 @@ describe('wallet refresh — adapter import failure (post-split behaviour)', () 
     const mounted = await mountProvider();
     try {
       await act(async () => {
-        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
+        await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
         await latest?.unlockVault(TEST_PASSWORD);
       });
       // No rejection anymore: the outcome is a report in state.
