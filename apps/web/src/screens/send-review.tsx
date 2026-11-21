@@ -4,7 +4,7 @@
 // and the broadcast-disabled reason. The only action is "Sign offline";
 // there is no broadcast button.
 import { Button } from '../ui/components/button';
-import type { SendApprovalStage } from './send';
+import type { SendApprovalStage } from './send-approval';
 
 export type SendReviewProps = {
   chainName: string;

@@ -30,25 +30,12 @@ import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
+import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 type Step = 'recipient' | 'amount' | 'review' | 'result';
-
-export const SEND_APPROVAL_STAGES = [
-  'review',
-  'simulating',
-  'signing',
-  'signed',
-  'broadcast-disabled',
-] as const;
-
-export type SendApprovalStage = (typeof SEND_APPROVAL_STAGES)[number];
-
-export function canStartSigning(stage: SendApprovalStage): boolean {
-  return stage === 'review';
-}
 
 type SignState =
   | { status: 'idle' }

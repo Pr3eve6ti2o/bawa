@@ -9,7 +9,7 @@ import {
   SEND_APPROVAL_STAGES,
   canStartSigning,
   type SendApprovalStage,
-} from '../screens/send';
+} from '../screens/send-approval';
 import { registerAdapter } from './adapters';
 import type {
   AdapterResult,
