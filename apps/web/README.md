@@ -101,11 +101,25 @@ Paths are relative to `apps/web/` unless marked otherwise.
 
 ### Chain logos
 
-The native chain logos in `src/assets/chains/` (Bitcoin, Ethereum, TRON, TON)
-are copied from [`trustwallet/assets`](https://github.com/trustwallet/assets),
-`blockchains/<chain>/info/logo.png`, MIT licence,
-Copyright (c) 2019-2023 Trust Wallet. They are rendered by the `ChainLogo`
-component (`src/screens/asset-rows.tsx`) in place of ticker-letter chips.
+The native chain logos in `src/assets/chains/` are copied from
+[`trustwallet/assets`](https://github.com/trustwallet/assets), MIT licence,
+Copyright (c) 2019-2023 Trust Wallet, pinned at commit
+`e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`. The four original logos
+(Bitcoin, Ethereum, TRON, TON) live under `blockchains/<chain>/info/logo.png`.
+The nine token-discovery logos (Solana, BNB Smart Chain, Polygon, Arbitrum,
+Optimism, Base, Avalanche C-Chain, Litecoin, Dogecoin) use the same source
+with one directory correction each: BNB Smart Chain is
+`blockchains/smartchain` (not `blockchains/binance`, which is the BNB
+Beacon Chain mark), Avalanche C-Chain is `blockchains/avalanchec` (not
+`avalanche`), and Dogecoin is `blockchains/doge` (not `dogecoin`). Each
+logo's upstream `info.json` name was verified at fetch time. They are
+rendered by the chain-keyed `chainLogoFor` map in
+`src/screens/token-logo.tsx` (so Arbitrum, Optimism and Base no longer
+all fall back to the Ethereum logo) and by the `ChainLogo` component
+(`src/screens/asset-rows.tsx`) in place of ticker-letter chips.
+Each logo is stored twice: the original PNG (canonical source, 303,787
+bytes total) and a 96 px WebP at quality 85 (39,670 bytes total, -87%),
+matching the existing chain-logo convention.
 
 ### Token logos
 
@@ -124,10 +138,13 @@ DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F,
 LINK 0x514910771AF9Ca656af840dff83E8264EcF986CA,
 UNI 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,
 WBTC 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599), each verified against
-its upstream `info.json` name at fetch time. No balance adapter lists
-these tokens yet, so they are registered for future token adapters and
-are not displayed in asset rows today, and must never be shown with a
-fabricated balance. A token with no registered logo renders a readable
+its upstream `info.json` name at fetch time. The seven default tokens
+(USDC, USDT, DAI, LINK, UNI, WBTC on Ethereum; USDT on TRON) are
+displayed in the asset rows with real balances from
+`src/wallet/adapters/token-balances.ts` (ERC-20 `balanceOf` via viem,
+TRC-20 `balanceOf` via TronGrid) and real prices from the CoinGecko
+token feed (`src/wallet/token-prices.ts`); they must never be shown with
+a fabricated balance. A token with no registered logo renders a readable
 ticker badge, never a broken image.
 
 ## Evidence

@@ -198,6 +198,28 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
   };
 }
 
+/**
+ * Token-discovery balance capabilities (2026-11-22). Same as the extended
+ * chain capabilities, except balance is verified: each new adapter has
+ * unit tests plus a live mainnet cross-check against a second source on
+ * 2026-11-22. History, fee-quote and send stay blocked — the adapters
+ * either do not implement them or they have no live cross-check yet —
+ * and are never faked.
+ */
+function capabilitiesForBalanceChain(chain: ChainId): Capabilities {
+  const base = capabilitiesForExtendedChain(chain);
+  return {
+    ...base,
+    balance: {
+      status: 'verified',
+      evidenceLevel: 'mainnet-confirmed',
+      evidence:
+        `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
+        `mainnet cross-check 2026-11-22 (second source) for balance.`,
+    },
+  };
+}
+
 function assertAccountIndex(account: number, index: number): void {
   if (
     !Number.isSafeInteger(account) ||
@@ -332,9 +354,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return "m/44'/501'/0'";
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://api.mainnet-beta.solana.com'],
     evmChainId: null,
-    capabilities: capabilitiesForExtendedChain('sol'),
+    capabilities: capabilitiesForBalanceChain('sol'),
   },
   bsc: {
     id: 'bsc',
@@ -348,9 +370,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://bsc-rpc.publicnode.com'],
     evmChainId: 56,
-    capabilities: capabilitiesForExtendedChain('bsc'),
+    capabilities: capabilitiesForBalanceChain('bsc'),
   },
   matic: {
     id: 'matic',
@@ -364,9 +386,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://polygon-bor-rpc.publicnode.com'],
     evmChainId: 137,
-    capabilities: capabilitiesForExtendedChain('matic'),
+    capabilities: capabilitiesForBalanceChain('matic'),
   },
   arb: {
     id: 'arb',
@@ -380,9 +402,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://arbitrum-rpc.publicnode.com'],
     evmChainId: 42161,
-    capabilities: capabilitiesForExtendedChain('arb'),
+    capabilities: capabilitiesForBalanceChain('arb'),
   },
   op: {
     id: 'op',
@@ -396,9 +418,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://optimism-rpc.publicnode.com'],
     evmChainId: 10,
-    capabilities: capabilitiesForExtendedChain('op'),
+    capabilities: capabilitiesForBalanceChain('op'),
   },
   base: {
     id: 'base',
@@ -412,9 +434,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://base-rpc.publicnode.com'],
     evmChainId: 8453,
-    capabilities: capabilitiesForExtendedChain('base'),
+    capabilities: capabilitiesForBalanceChain('base'),
   },
   avax: {
     id: 'avax',
@@ -428,9 +450,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://avalanche-rpc.publicnode.com'],
     evmChainId: 43114,
-    capabilities: capabilitiesForExtendedChain('avax'),
+    capabilities: capabilitiesForBalanceChain('avax'),
   },
   ltc: {
     id: 'ltc',
@@ -444,9 +466,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/84'/2'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://litecoinspace.org/api'],
     evmChainId: null,
-    capabilities: capabilitiesForExtendedChain('ltc'),
+    capabilities: capabilitiesForBalanceChain('ltc'),
   },
   doge: {
     id: 'doge',
@@ -460,9 +482,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/3'/${account}'/0/${index}`;
     },
-    rpcEndpoints: [],
+    rpcEndpoints: ['https://api.blockcypher.com/v1/doge/main'],
     evmChainId: null,
-    capabilities: capabilitiesForExtendedChain('doge'),
+    capabilities: capabilitiesForBalanceChain('doge'),
   },
 };
 

@@ -3,9 +3,20 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { availableFor } from '../wallet/chains';
+import { availableFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
 import { messageOf } from '../wallet/adapters/types';
+import {
+  DEFAULT_TOKENS,
+  addCustomTokenToList,
+  isDuplicateToken,
+  readCustomTokens,
+  readEnabledChains,
+  tokenKeyOf,
+  writeCustomTokens,
+  writeEnabledChains,
+  type TokenRecord,
+} from '../wallet/tokens';
 import * as vault from '../wallet/vault';
 import {
   AUTO_LOCK_OPTIONS,
@@ -154,6 +165,13 @@ interface WalletState {
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
   history: PerChain<HistoryState>;
+  // Token discovery: balances keyed by tokenKey (`${chain}:${contract}`),
+  // the chains the user has enabled (default: all 13), and the
+  // user-added token records (defaults live in wallet/tokens.ts, not
+  // here). Public data only; the vault is untouched.
+  tokenBalances: Record<string, BalanceState>;
+  enabledChains: ChainId[];
+  customTokens: TokenRecord[];
   // True until boot hydration finishes (watch-only xpubs validated and
   // vault addresses rehydrated). Screens render a loading state, not an
   // error, while this is true (Rabby's pending-guard pattern).
@@ -179,6 +197,15 @@ export interface WalletContextValue extends WalletState {
   }): Promise<void>;
   refreshBalances(): Promise<void>;
   refreshHistory(): Promise<void>;
+  // Token balances refresh on demand (AssetRows calls it on mount and on
+  // Retry; the Add Token dialog calls it after adding). It is NOT wired
+  // into the provider boot effect: the provider tests derive real vault
+  // addresses, and a boot-wired token refresh would fire live RPC calls
+  // from unit tests. Native balances stay boot-wired; token balances are
+  // asset-screen state, like prices (usePrices/useTokenPrices).
+  refreshTokenBalances(): Promise<void>;
+  setChainEnabled(chain: ChainId, enabled: boolean): void;
+  addCustomToken(record: TokenRecord): { ok: true } | { ok: false; error: string };
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
@@ -506,6 +533,9 @@ function initialWalletState(): WalletState {
     vaultProfileIds: null,
     balances,
     history: mayFetch ? initialHistory() : clearedHistory(),
+    tokenBalances: {},
+    enabledChains: readEnabledChains(),
+    customTokens: readCustomTokens(),
     hydrating: true,
   };
 }
@@ -527,6 +557,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const vaultDerivations = useRef(0);
   const balanceRequests = useRef(perChain(() => 0));
   const historyRequests = useRef(perChain(() => 0));
+  // Per-token request generations (same stale-write guard as the
+  // per-chain counters above, keyed by tokenKey).
+  const tokenBalanceRequests = useRef<Record<string, number>>({});
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -729,6 +762,115 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }));
   }, [update]);
 
+  // Token balances (token discovery): the 7 default tokens plus the
+  // user-added ones, each read with its real on-chain balance via
+  // fetchTokenBalance (ERC-20 eth_call / TRC-20 triggerconstant-
+  // contract). Same last-good/stale shape as refreshBalances, same
+  // bounded retry, same "never zero on failure" rule. A disabled
+  // chain's tokens resolve unavailable/disabled and are hidden by the
+  // asset rows. The token-balance module is dynamically imported so the
+  // viem chunk stays out of first paint, like the adapters above.
+  const refreshTokenBalances = useCallback(async () => {
+    const { fetchTokenBalance } = await import('../wallet/adapters/token-balances');
+    const tokens = [...DEFAULT_TOKENS, ...current.current.customTokens];
+    await Promise.all(tokens.map(async (token) => {
+      const key = tokenKeyOf(token);
+      const request = (tokenBalanceRequests.current[key] ?? 0) + 1;
+      tokenBalanceRequests.current[key] = request;
+      const setTokenBalance = (balance: BalanceState) => {
+        if (request !== tokenBalanceRequests.current[key]) return;
+        update(previous => ({
+          ...previous,
+          tokenBalances: { ...previous.tokenBalances, [key]: balance },
+        }));
+      };
+      if (!current.current.enabledChains.includes(token.chain)) {
+        setTokenBalance({ status: 'unavailable', reason: 'disabled' });
+        return;
+      }
+      const address =
+        current.current.vaultAddresses[token.chain][0] ??
+        current.current.addresses[token.chain][0]?.address;
+      if (!address) {
+        setTokenBalance({ status: 'unavailable', reason: 'no-address' });
+        return;
+      }
+      const previous = current.current.tokenBalances[key];
+      const hasLastGood =
+        previous !== undefined &&
+        (previous.status === 'available' || previous.status === 'zero');
+      if (hasLastGood) {
+        setTokenBalance({ ...previous, refreshing: true, stale: false });
+      } else if (previous === undefined || previous.status !== 'loading') {
+        setTokenBalance({ status: 'loading' });
+      }
+      const result = await fetchWithRetry(() =>
+        fetchTokenBalance({
+          chain: token.chain,
+          contract: token.contract,
+          ownerAddress: address,
+          decimals: token.decimals,
+        }),
+      );
+      if (request !== tokenBalanceRequests.current[key]) return;
+      if (result.status === 'ok') {
+        const fetchedAtMs = Date.now();
+        const next: BalanceState = result.data.valueBaseUnits === '0'
+          ? { status: 'zero', value: '0', fetchedAtMs }
+          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        setTokenBalance(next);
+      } else if (hasLastGood && previous !== undefined) {
+        setTokenBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });
+      } else if (result.status === 'unavailable') {
+        setTokenBalance({ status: 'unavailable', reason: result.reason });
+      } else {
+        setTokenBalance({ status: 'error', reason: result.reason });
+      }
+    }));
+  }, [update]);
+
+  // Enable/disable one registry chain. Persisted (public data only) and
+  // kept in registry order. Enabling re-fetches the chain's native
+  // balance and its tokens; disabling hides its rows (AssetRows filters
+  // on enabledChains) and marks its tokens unavailable/disabled.
+  const setChainEnabled = useCallback((chain: ChainId, enabled: boolean) => {
+    const next = enabled
+      ? [...current.current.enabledChains, chain]
+      : current.current.enabledChains.filter((candidate) => candidate !== chain);
+    const ordered = SUPPORTED_CHAINS.filter((candidate) => next.includes(candidate));
+    writeEnabledChains(ordered);
+    update(previous => ({ ...previous, enabledChains: ordered }));
+    if (enabled) {
+      void refreshBalances();
+      void refreshTokenBalances();
+    }
+  }, [update, refreshBalances, refreshTokenBalances]);
+
+  // Adds a user-verified token record (the Add Token dialog verifies
+  // before calling). Duplicates are checked against the defaults AND
+  // the custom list — adding USDC again must say "Already added", not
+  // create a second row. Persisted (public data only), then its balance
+  // is fetched.
+  const addCustomToken = useCallback((record: TokenRecord) => {
+    if (
+      isDuplicateToken(
+        [...DEFAULT_TOKENS, ...current.current.customTokens],
+        record.chain,
+        record.contract,
+      )
+    ) {
+      return { ok: false as const, error: 'Already added' };
+    }
+    const result = addCustomTokenToList(current.current.customTokens, record);
+    if ('error' in result) {
+      return { ok: false as const, error: result.error };
+    }
+    writeCustomTokens(result.list);
+    update(previous => ({ ...previous, customTokens: result.list }));
+    void refreshTokenBalances();
+    return { ok: true as const };
+  }, [update, refreshTokenBalances]);
+
   // Vault-backed accounts. An xpub can never be upgraded into signing keys:
   // spending requires vault creation or mnemonic restoration. Watch-only xpubs
   // stay a separate, explicitly labelled account type (see xpubs above).
@@ -871,6 +1013,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultAddresses: perChain<string[]>(() => []),
       balances: clearedBalances(),
       history: clearedHistory(),
+      tokenBalances: {},
     }));
   }, [update]);
 
@@ -1040,8 +1183,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
     setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
+    refreshTokenBalances, setChainEnabled, addCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled]);
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

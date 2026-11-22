@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
+import { useTokenPrices } from '../wallet/token-prices';
+import { DEFAULT_TOKENS, tokenKeyOf, tokenSlug, type TokenRecord } from '../wallet/tokens';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
@@ -18,7 +20,11 @@ const DERIVATION_PATHS = {
 } as const;
 
 export function AssetDetailScreen() {
-  const { chain } = useParams<{ chain: string }>();
+  const { chain, token: tokenParam } = useParams<{ chain: string; token?: string }>();
+  // useParams types chain as string | undefined (the optional token
+  // param widens it). After the unknown-chain early return below it
+  // is a valid registry chain; chainId carries that assertion once.
+  const chainId = chain as ChainId;
   const {
     xpubs,
     addresses,
@@ -33,8 +39,35 @@ export function AssetDetailScreen() {
     refreshBalances,
     refreshHistory,
     setSelectedChain,
+    customTokens,
+    tokenBalances,
+    refreshTokenBalances,
   } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
+
+  // The registry is the source of truth for "known chain": chainConfig
+  // throws on an unknown chain (the screen tests mock it to return
+  // undefined instead), so both shapes read as unknown here. This
+  // replaces the old hardcoded 4-chain guard — all 13 chains have a
+  // detail screen now.
+  const config = (() => {
+    try {
+      return chainConfig(chainId);
+    } catch {
+      return undefined;
+    }
+  })();
+
+  // Token route (/assets/:chain/:token): the slug is the lowercased
+  // symbol for a default token, the lowercased contract for a
+  // user-added one (see tokenSlug). An unknown slug is "Unknown token".
+  const tokenRecord: TokenRecord | undefined = useMemo(() => {
+    if (tokenParam === undefined || config === undefined) return undefined;
+    return [...DEFAULT_TOKENS, ...(customTokens ?? [])].find(
+      (candidate) => candidate.chain === chain && tokenSlug(candidate) === tokenParam,
+    );
+  }, [tokenParam, config, customTokens, chain]);
+  const isToken = tokenRecord !== undefined;
 
   // Per-unit price from the same live CoinGecko feed as the dashboard
   // strip and the asset list (usePrices pattern: auto-fetch on mount,
@@ -58,23 +91,40 @@ export function AssetDetailScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  // Token price (token route only): the same CoinGecko feed, one call
+  // for the single token. Gated on the token existing — native routes
+  // never fetch here.
+  const tokenList = useMemo(
+    () => (tokenRecord === undefined ? [] : [tokenRecord]),
+    [tokenRecord],
+  );
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
+  useEffect(() => {
+    if (tokenRecord === undefined || tokenPricesState.status !== 'idle') return;
+    refreshTokenPrices();
+  }, [tokenRecord, tokenPricesState.status, refreshTokenPrices]);
+
   // Mount / chain refresh (Lane G, Phase 3): a direct load or a move to
   // another chain re-fetches for that chain. Gated on hydration so the
   // first call has the rehydrated addresses — without an address a fetch
   // cannot run and Retry would be dead. The provider also refreshes once
-  // after hydration; this covers later :chain changes.
+  // after hydration; this covers later :chain changes. Token routes
+  // also refresh the token balance.
   useEffect(() => {
-    if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') return;
+    if (config === undefined) return;
     if (hydrating) return;
-    void refreshChain(chain as ChainId);
+    void refreshChain(chainId);
     // Promise.resolve: the real refreshBalances always returns a promise,
     // but a mocked context may not — history must still run after balances.
     void Promise.resolve(refreshBalances()).finally(() => {
       void refreshHistory();
     });
-  }, [chain, hydrating, refreshChain, refreshBalances, refreshHistory]);
+    if (tokenRecord !== undefined) {
+      void refreshTokenBalances();
+    }
+  }, [chain, config, hydrating, refreshChain, refreshBalances, refreshHistory, tokenRecord, refreshTokenBalances]);
 
-  if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
+  if (config === undefined) {
     return (
       <div>
         <h1 className="text-2xl font-semibold">Unknown chain</h1>
@@ -82,11 +132,23 @@ export function AssetDetailScreen() {
     );
   }
 
-  const config = chainConfig(chain);
-  const xpub = xpubs[chain]?.xpub;
-  const state = uiState[chain];
-  const balance = balances[chain];
-  const chainHistory = history[chain];
+  if (tokenParam !== undefined && tokenRecord === undefined) {
+    return (
+      <div>
+        <h1 className="text-2xl font-semibold">Unknown token</h1>
+      </div>
+    );
+  }
+
+  const xpub = xpubs[chainId]?.xpub;
+  const state = uiState[chainId];
+  // Token routes show the token balance; native routes show the chain
+  // balance. A missing token entry (before the first refresh) reads as
+  // loading, never as a premature failure.
+  const balance = tokenRecord !== undefined
+    ? ((tokenBalances ?? {})[tokenKeyOf(tokenRecord)] ?? { status: 'loading' as const })
+    : balances[chainId];
+  const chainHistory = history[chainId];
   const recentTxs = [...chainHistory.txs]
     .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
     .slice(0, 5);
@@ -95,24 +157,33 @@ export function AssetDetailScreen() {
   // derived addresses and the watch-only xpub's derived addresses. "Not
   // imported" only when BOTH are empty for the chain — the xpub record
   // alone is a watch-only detail, not the wallet-existence test.
-  const vaultList = vaultAddresses?.[chain] ?? [];
+  const vaultList = vaultAddresses?.[chainId] ?? [];
   const hasVaultAddress = vaultList.length > 0;
   const firstVaultAddress = vaultList[0];
-  const hasWallet = hasVaultAddress || (addresses[chain]?.length ?? 0) > 0;
+  const hasWallet = hasVaultAddress || (addresses[chainId]?.length ?? 0) > 0;
   const showHistoryList =
     chainHistory.status === 'loaded'
     || (chainHistory.status === 'loading' && recentTxs.length > 0);
-  const unitPrice = unitPriceForChain(pricesState.entries[chain], Date.now());
+  const displaySymbol = tokenRecord !== undefined ? tokenRecord.symbol : config.symbol;
+  const displayDecimals = tokenRecord !== undefined ? tokenRecord.decimals : CHAIN_DECIMALS[chainId];
+  const displayTitle = tokenRecord !== undefined ? tokenRecord.symbol : config.displayName;
+  const displaySubtitle =
+    tokenRecord !== undefined
+      ? `${tokenRecord.name} on ${config.displayName}`
+      : `${config.displayName} mainnet`;
+  const unitPrice = tokenRecord !== undefined
+    ? unitPriceForChain(tokenPricesState.entries[tokenKeyOf(tokenRecord)], Date.now())
+    : unitPriceForChain(pricesState.entries[chainId], Date.now());
   const detailsBalance =
     balance.status === 'loading'
       ? 'Loading…'
       : balance.status === 'zero'
-        ? `0 ${config.symbol}`
+        ? `0 ${displaySymbol}`
         : balance.status === 'available'
           ? formatNativeWithSymbol(
               balance.value ?? '0',
-              CHAIN_DECIMALS[chain as ChainId],
-              config.symbol,
+              displayDecimals,
+              displaySymbol,
             )
           : 'Balance unavailable';
   const detailsBalanceStale =
@@ -131,10 +202,13 @@ export function AssetDetailScreen() {
   }
 
   function refreshAll() {
-    void refreshChain(chain as ChainId);
+    void refreshChain(chainId);
     void Promise.resolve(refreshBalances()).finally(() => {
       void refreshHistory();
     });
+    if (isToken) {
+      void refreshTokenBalances();
+    }
   }
 
   return (
@@ -152,12 +226,12 @@ export function AssetDetailScreen() {
           <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
             <svg viewBox="0 0 48 48" aria-hidden="true" className="size-10 rotate-3">
               <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={24}>{config.symbol}</text>
+              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={24}>{displaySymbol}</text>
             </svg>
           </span>
           <div>
-            <h1 className="text-2xl font-semibold text-ink">{config.displayName}</h1>
-            <p className="text-sm text-ink">{`${config.displayName} mainnet`}</p>
+            <h1 className="text-2xl font-semibold text-ink">{displayTitle}</h1>
+            <p className="text-sm text-ink">{displaySubtitle}</p>
           </div>
         </div>
         {balance.status === 'loading' ? (
@@ -165,7 +239,7 @@ export function AssetDetailScreen() {
         ) : balance.status === 'zero' ? (
           <>
             <p className="text-[32px] font-semibold leading-10 text-ink">
-              {`0 ${config.symbol}`}
+              {`0 ${displaySymbol}`}
             </p>
             <p className="text-sm text-ink">Zero balance</p>
           </>
@@ -173,8 +247,8 @@ export function AssetDetailScreen() {
           <p className="text-[32px] font-semibold leading-10 text-panel-text">
             {formatNativeWithSymbol(
               balance.value ?? '0',
-              CHAIN_DECIMALS[chain as ChainId],
-              config.symbol,
+              displayDecimals,
+              displaySymbol,
             )}
           </p>
         ) : (
@@ -194,7 +268,11 @@ export function AssetDetailScreen() {
                 </Button>
               </>
             ) : (
-              <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void (isToken ? refreshTokenBalances() : refreshBalances())}
+              >
                 Retry
               </Button>
             )}
@@ -215,13 +293,16 @@ export function AssetDetailScreen() {
         Order and behaviour are unchanged — layout only.
       */}
       <div className="sticky top-0 z-10 -mx-2 flex flex-wrap gap-3 rounded-bawa border-2 border-ink bg-paper px-2 py-2">
-        <Button asChild className="h-11">
-          <Link to="/send" onClick={() => setSelectedChain(chain)}>
-            Send
-          </Link>
-        </Button>
+        {/* No Send for tokens: no token send exists in this wallet. */}
+        {!isToken && (
+          <Button asChild className="h-11">
+            <Link to="/send" onClick={() => setSelectedChain(chainId)}>
+              Send
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline" className="h-11">
-          <Link to="/receive" onClick={() => setSelectedChain(chain)}>
+          <Link to="/receive" onClick={() => setSelectedChain(chainId)}>
             Receive
           </Link>
         </Button>
@@ -275,7 +356,7 @@ export function AssetDetailScreen() {
                     <>
                       <span>{unitPrice.text}</span>
                       <span className="block text-xs font-normal text-muted-foreground">
-                        {`per ${config.symbol} · CoinGecko`}
+                        {`per ${displaySymbol} · CoinGecko`}
                       </span>
                     </>
                   ) : unitPrice.kind === 'expired' ? (
@@ -291,6 +372,20 @@ export function AssetDetailScreen() {
                 <dt className="text-muted-foreground">Network</dt>
                 <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
               </div>
+              {tokenRecord !== undefined && (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Contract</dt>
+                    <dd className="min-w-0 break-all font-mono text-xs font-semibold">
+                      {tokenRecord.contract}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">Decimals</dt>
+                    <dd className="font-semibold">{tokenRecord.decimals}</dd>
+                  </div>
+                </>
+              )}
             </dl>
           </CardContent>
         </Card>
@@ -308,7 +403,16 @@ export function AssetDetailScreen() {
             Track a transaction
           </Link>
         </div>
-        {chainHistory.status === 'loading' && recentTxs.length === 0 ? (
+      {/*
+        Token history: no token-history adapter exists yet, so the token
+        route shows an honest note instead of the native history list.
+        Never a fabricated or empty-state list.
+      */}
+      {isToken ? (
+        <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+          Transaction history is not connected for this token yet.
+        </p>
+      ) : chainHistory.status === 'loading' && recentTxs.length === 0 ? (
           <BawaLoading label="Loading transactions…" />
         ) : showHistoryList ? (
           <>
@@ -334,7 +438,7 @@ export function AssetDetailScreen() {
                       <span className="text-sm font-semibold">
                         {formatNativeWithSymbol(
                           tx.amountBaseUnits,
-                          CHAIN_DECIMALS[chain as ChainId],
+                          CHAIN_DECIMALS[chainId],
                           config.symbol,
                         )}
                       </span>
@@ -406,7 +510,7 @@ export function AssetDetailScreen() {
                 </Button>
               </li>
             ))}
-            {addresses[chain].map(({ index, address }) => (
+            {addresses[chainId].map(({ index, address }) => (
               <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
                 <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
                 {' '}
@@ -434,12 +538,12 @@ export function AssetDetailScreen() {
         ) : state === 'error' ? (
           <Alert variant="destructive">
             <AlertDescription>
-              {errors[chain] ?? 'Unable to load derived addresses.'}
+              {errors[chainId] ?? 'Unable to load derived addresses.'}
             </AlertDescription>
           </Alert>
         ) : (
           <ul className="space-y-3">
-            {addresses[chain].map(({ index, address }) => (
+            {addresses[chainId].map(({ index, address }) => (
               <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
                 <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
                 {' '}
@@ -483,7 +587,13 @@ export function AssetDetailScreen() {
                 {chain === 'ton' ? (
                   'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
                 ) : (
-                  <code>{DERIVATION_PATHS[chain]}</code>
+                  // The three documented templates first; every other
+                  // chain falls back to its registry path (account 0,
+                  // index 0) so the row is never blank.
+                  <code>
+                    {(DERIVATION_PATHS as Partial<Record<ChainId, string>>)[chainId]
+                      ?? config.pathFor(0, 0)}
+                  </code>
                 )}
               </dd>
             </div>

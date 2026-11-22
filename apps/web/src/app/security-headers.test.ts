@@ -10,7 +10,7 @@ import {
 } from '../../scripts/wasm-integrity.mjs';
 
 const EXPECTED_CONNECT_SRC =
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com";
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://api.mainnet-beta.solana.com https://litecoinspace.org https://api.blockcypher.com";
 
 describe('T47 security headers', () => {
   it('CSP allows same-origin scripts plus WASM compilation only', () => {
@@ -29,7 +29,7 @@ describe('T47 security headers', () => {
     expect(CONTENT_SECURITY_POLICY).not.toContain('*');
   });
 
-  it('CSP blocks plugins, base hijack and framing; connect-src allows only the six pinned provider origins', () => {
+  it('CSP blocks plugins, base hijack and framing; connect-src allows only the fifteen pinned provider origins', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
@@ -40,10 +40,13 @@ describe('T47 security headers', () => {
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith('connect-src '));
     expect(connectSrc).toBe(EXPECTED_CONNECT_SRC);
-    // Exactly six https: origins in the whole policy, all of them in
+    // Exactly fifteen https: origins in the whole policy, all of them in
     // connect-src: mempool.space (BTC), ethereum-rpc.publicnode.com (ETH RPC)
     // + eth.blockscout.com (ETH history), api.trongrid.io (TRX),
-    // toncenter.com (TON), api.coingecko.com (CoinGecko price feed).
+    // toncenter.com (TON), api.coingecko.com (CoinGecko price feed), plus
+    // the nine token-discovery origins: bsc/polygon-bor/arbitrum/
+    // optimism/base/avalanche-rpc.publicnode.com, api.mainnet-beta.solana.com
+    // (SOL), litecoinspace.org (LTC), api.blockcypher.com (DOGE).
     const httpsOrigins = CONTENT_SECURITY_POLICY.match(/https:\/\/[^\s;]+/g) ?? [];
     expect(httpsOrigins).toEqual([
       'https://mempool.space',
@@ -52,6 +55,15 @@ describe('T47 security headers', () => {
       'https://api.trongrid.io',
       'https://toncenter.com',
       'https://api.coingecko.com',
+      'https://bsc-rpc.publicnode.com',
+      'https://polygon-bor-rpc.publicnode.com',
+      'https://arbitrum-rpc.publicnode.com',
+      'https://optimism-rpc.publicnode.com',
+      'https://base-rpc.publicnode.com',
+      'https://avalanche-rpc.publicnode.com',
+      'https://api.mainnet-beta.solana.com',
+      'https://litecoinspace.org',
+      'https://api.blockcypher.com',
     ]);
   });
 

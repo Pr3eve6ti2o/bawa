@@ -33,9 +33,7 @@ function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_update
     'the-open-network': { usd: 1.028, last_updated_at: secondsBefore(ageMs) },
     solana: { usd: 150, last_updated_at: secondsBefore(ageMs) },
     binancecoin: { usd: 600, last_updated_at: secondsBefore(ageMs) },
-    'matic-network': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
-    arbitrum: { usd: 1.0, last_updated_at: secondsBefore(ageMs) },
-    optimism: { usd: 2.0, last_updated_at: secondsBefore(ageMs) },
+    'polygon-ecosystem-token': { usd: 0.5, last_updated_at: secondsBefore(ageMs) },
     'avalanche-2': { usd: 25, last_updated_at: secondsBefore(ageMs) },
     litecoin: { usd: 80, last_updated_at: secondsBefore(ageMs) },
     dogecoin: { usd: 0.15, last_updated_at: secondsBefore(ageMs) },
@@ -130,6 +128,41 @@ describe('parsePriceResponse', () => {
     expect(parsePriceResponse(payload, NOW_MS).ton).toEqual({
       status: 'unavailable',
       reason: 'missing',
+    });
+  });
+
+  it('prices Arbitrum and Optimism as native ETH, not their governance tokens', () => {
+    // Regression: PRICE_IDS once mapped arb → `arbitrum` and op →
+    // `optimism`, which are the ARB/OP governance-token prices, not the
+    // native ETH the wallet holds on those chains. Both must resolve to
+    // the ethereum quote.
+    const prices = parsePriceResponse(freshPayload(), NOW_MS);
+
+    for (const chain of ['arb', 'op'] as const) {
+      expect(prices[chain]).toMatchObject({
+        status: 'fresh',
+        quote: {
+          chain,
+          providerAssetId: 'ethereum',
+          usdPrice: '1774.93',
+        },
+      });
+    }
+  });
+
+  it('prices Polygon as POL, not the stale MATIC listing', () => {
+    // Regression: `matic-network` on CoinGecko was last updated
+    // 2026-02-03 and would parse as expired forever; the live POL
+    // listing is `polygon-ecosystem-token`.
+    const prices = parsePriceResponse(freshPayload(), NOW_MS);
+
+    expect(prices.matic).toMatchObject({
+      status: 'fresh',
+      quote: {
+        chain: 'matic',
+        providerAssetId: 'polygon-ecosystem-token',
+        usdPrice: '0.5',
+      },
     });
   });
 
@@ -452,7 +485,7 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,matic-network,arbitrum,optimism,avalanche-2,litecoin,dogecoin&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin&vs_currencies=usd&include_last_updated_at=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }

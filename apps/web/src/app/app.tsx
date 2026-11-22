@@ -400,6 +400,7 @@ export function App() {
             <Route path="mnemonic-backup" element={<MnemonicBackupScreen />} />
             <Route path="assets" element={<AssetListScreen />} />
             <Route path="assets/:chain" element={<AssetDetailScreen />} />
+            <Route path="assets/:chain/:token" element={<AssetDetailScreen />} />
             <Route path="receive" element={<ReceiveScreen />} />
             <Route path="send" element={<SendScreen />} />
             <Route path="transactions" element={<TransactionHistoryScreen />} />

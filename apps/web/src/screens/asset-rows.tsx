@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { useWallet } from '../state/wallet-context';
 import type { BalanceState } from '../state/wallet-context';
@@ -5,19 +6,47 @@ import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { fiatValueForBalance, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
 import type { PriceEntry, PriceMap, UnitPrice } from '../wallet/prices';
+import {
+  DEFAULT_TOKENS,
+  isDefaultToken,
+  tokenKeyOf,
+  tokenSlug,
+  type TokenRecord,
+} from '../wallet/tokens';
+import {
+  fiatValueForTokenBalance,
+  type TokenPriceMap,
+} from '../wallet/token-prices';
 import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import type { ChainId } from '../engine/boundary';
-import { TokenLogo } from './token-logo';
+import { TokenLogo, chainLogoFor } from './token-logo';
 
 /**
  * Native chain logo (40px default), rendered through TokenLogo so the
  * asset rows, asset detail and wallet management all share one logo
  * path: a real Trust Wallet logo when registered, a readable ticker
- * badge otherwise. See ./token-logo for the source and attribution.
+ * badge otherwise. Chain-keyed (token discovery): Arbitrum, OP Mainnet
+ * and Base have their own marks — a symbol-keyed lookup would show the
+ * Ethereum logo for all three. See ./token-logo for the source and
+ * attribution.
  */
 export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
+  const logo = chainLogoFor(chain);
+  if (logo !== undefined) {
+    return (
+      <img
+        src={logo}
+        alt={`${chainConfig(chain).displayName} logo`}
+        width={size}
+        height={size}
+        decoding="async"
+        className="size-10 shrink-0 rounded-full"
+        style={size === 40 ? undefined : { width: size, height: size }}
+      />
+    );
+  }
   return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
 }
 
@@ -41,36 +70,61 @@ function priceCell(displayUnit: UnitPrice): PriceCell {
 }
 
 /**
- * One chain's row, computed once and rendered by either variant (list
- * rows or the wide table). The computation is the same either way, so a
- * balance or price state can never disagree between the two layouts.
- * Only the failed row is ever marked — a failure never blanks the rest
- * of the list (layout findings §4, Lane B).
+ * One asset's row — a native chain or a token — computed once and
+ * rendered by either variant (list rows or the wide table). The
+ * computation is the same either way, so a balance or price state can
+ * never disagree between the two layouts. Only the failed row is ever
+ * marked — a failure never blanks the rest of the list (layout
+ * findings §4, Lane B).
  */
 type AssetRowModel =
-  | { kind: 'loading'; chain: ChainId; displayName: string }
+  | {
+      kind: 'loading';
+      key: string;
+      title: string;
+      subtitle: string;
+      link: string;
+      isToken: boolean;
+      logoChain: ChainId | null;
+      logoSymbol: string;
+    }
   | {
       kind: 'unavailable';
-      chain: ChainId;
-      displayName: string;
+      key: string;
+      title: string;
+      subtitle: string;
       symbol: string;
       statusText: string;
       price: PriceCell;
       showRetry: boolean;
+      link: string;
+      isToken: boolean;
+      logoChain: ChainId | null;
+      logoSymbol: string;
     }
   | {
       kind: 'ready';
-      chain: ChainId;
-      displayName: string;
+      key: string;
+      title: string;
+      subtitle: string;
       symbol: string;
       balanceStatus: 'zero' | 'available';
       amount: string;
       valueText: string | undefined;
       detail: string;
       price: PriceCell;
+      link: string;
+      isToken: boolean;
+      logoChain: ChainId | null;
+      logoSymbol: string;
     };
 
-function getRowModel(
+function RowLogo({ model }: { model: AssetRowModel }) {
+  if (model.logoChain !== null) return <ChainLogo chain={model.logoChain} />;
+  return <TokenLogo symbol={model.logoSymbol} />;
+}
+
+function getNativeRowModel(
   chain: ChainId,
   wallet: ReturnType<typeof useWallet>,
   prices: PriceMap | undefined,
@@ -90,16 +144,27 @@ function getRowModel(
     pricesLoading === true && unit.kind === 'unavailable'
       ? { kind: 'missing' }
       : unit;
+  const link = `/assets/${chain}`;
 
   if (balance.status === 'loading') {
-    return { kind: 'loading', chain, displayName: config.displayName };
+    return {
+      kind: 'loading',
+      key: chain,
+      title: config.displayName,
+      subtitle: config.symbol,
+      link,
+      isToken: false,
+      logoChain: chain,
+      logoSymbol: config.symbol,
+    };
   }
 
   if (balance.status === 'unavailable' || balance.status === 'error') {
     return {
       kind: 'unavailable',
-      chain,
-      displayName: config.displayName,
+      key: chain,
+      title: config.displayName,
+      subtitle: config.symbol,
       symbol: config.symbol,
       statusText:
         balance.status === 'unavailable'
@@ -111,6 +176,10 @@ function getRowModel(
       // to no-address), so Retry could only fail again. AssetRows
       // shows one Unlock prompt for the list instead.
       showRetry: !isLocked,
+      link,
+      isToken: false,
+      logoChain: chain,
+      logoSymbol: config.symbol,
     };
   }
 
@@ -164,14 +233,133 @@ function getRowModel(
 
   return {
     kind: 'ready',
-    chain,
-    displayName: config.displayName,
+    key: chain,
+    title: config.displayName,
+    subtitle: config.symbol,
     symbol: config.symbol,
     balanceStatus: balance.status,
     amount: balance.status === 'zero' ? 'Zero balance' : value,
     valueText: fiatText,
     detail,
     price: priceCell(displayUnit),
+    link,
+    isToken: false,
+    logoChain: chain,
+    logoSymbol: config.symbol,
+  };
+}
+
+function getTokenRowModel(
+  token: TokenRecord,
+  wallet: ReturnType<typeof useWallet>,
+  tokenPrices: TokenPriceMap | undefined,
+  nowMs: number,
+  tokenPricesLoading: boolean | undefined,
+  isLocked: boolean,
+): AssetRowModel {
+  const key = tokenKeyOf(token);
+  const chainName = chainConfig(token.chain).displayName;
+  const link = `/assets/${token.chain}/${tokenSlug(token)}`;
+  // Before the first token refresh lands, the entry is missing: show
+  // the loading skeleton, not a premature failure (same rule as
+  // natives — see getNativeRowModel).
+  const balance: BalanceState = wallet.tokenBalances?.[key] ?? { status: 'loading' };
+  const entry: PriceEntry | undefined = tokenPrices?.[key];
+  const unit = unitPriceForChain(entry, nowMs);
+  const displayUnit: UnitPrice =
+    tokenPricesLoading === true && unit.kind === 'unavailable'
+      ? { kind: 'missing' }
+      : unit;
+
+  if (balance.status === 'loading') {
+    return {
+      kind: 'loading',
+      key,
+      title: token.symbol,
+      subtitle: chainName,
+      link,
+      isToken: true,
+      logoChain: null,
+      logoSymbol: token.symbol,
+    };
+  }
+
+  if (balance.status === 'unavailable' || balance.status === 'error') {
+    return {
+      kind: 'unavailable',
+      key,
+      title: token.symbol,
+      subtitle: chainName,
+      symbol: token.symbol,
+      statusText:
+        balance.status === 'unavailable'
+          ? 'Balance unavailable'
+          : 'Could not load balance',
+      price: priceCell(displayUnit),
+      showRetry: !isLocked,
+      link,
+      isToken: true,
+      logoChain: null,
+      logoSymbol: token.symbol,
+    };
+  }
+
+  const value =
+    balance.value === undefined
+      ? '0'
+      : formatNativeWithSymbol(balance.value, token.decimals, token.symbol);
+  let fiatText: string | undefined;
+  let detail = `${chainName} · ${isDefaultToken(token) ? 'Default token' : 'Added token'}`;
+
+  if (entry !== undefined) {
+    const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+    switch (fiat.kind) {
+      case 'fiat':
+        if (entry.status === 'fresh') {
+          fiatText = fiat.text;
+          detail = `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+        }
+        break;
+      case 'zero':
+      case 'balance-unavailable':
+        if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
+          fiatText = displayUnit.text;
+          detail = `per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+        } else if (displayUnit.kind === 'expired') {
+          detail = 'Price expired';
+        } else if (displayUnit.kind === 'unavailable') {
+          detail = 'Price unavailable';
+        } else if (displayUnit.kind === 'error') {
+          detail = 'Price error';
+        }
+        break;
+      case 'expired':
+        detail = 'Price expired';
+        break;
+      case 'unavailable':
+        detail = 'Price unavailable';
+        break;
+      case 'error':
+        detail = 'Price error';
+        break;
+    }
+  }
+
+  return {
+    kind: 'ready',
+    key,
+    title: token.symbol,
+    subtitle: chainName,
+    symbol: token.symbol,
+    balanceStatus: balance.status,
+    amount: balance.status === 'zero' ? 'Zero balance' : value,
+    valueText: fiatText,
+    detail,
+    price: priceCell(displayUnit),
+    link,
+    isToken: true,
+    logoChain: null,
+    logoSymbol: token.symbol,
   };
 }
 
@@ -180,7 +368,7 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
     return (
       <li role="status" className="py-3">
         <Skeleton className="h-[68px] w-full" />
-        <span className="sr-only">{`Loading ${model.displayName} balance…`}</span>
+        <span className="sr-only">{`Loading ${model.title} balance…`}</span>
       </li>
     );
   }
@@ -188,10 +376,10 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
   if (model.kind === 'unavailable') {
     return (
       <li className="flex items-center gap-3 px-4 py-3">
-        <ChainLogo chain={model.chain} />
+        <RowLogo model={model} />
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-bold text-foreground">
-            {model.displayName}
+            {model.title}
           </span>
           {' '}
           <span className="block text-xs text-muted-foreground">{model.statusText}</span>
@@ -220,11 +408,11 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
   return (
     <li>
       <Link
-        to={`/assets/${model.chain}`}
+        to={model.link}
         className="block"
       >
         <AssetRow
-          avatar={<ChainLogo chain={model.chain} />}
+          avatar={<RowLogo model={model} />}
           symbol={model.symbol}
           amount={model.amount}
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
@@ -267,7 +455,7 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
     return (
       <li role="status" className="py-3">
         <Skeleton className="h-[68px] w-full" />
-        <span className="sr-only">{`Loading ${model.displayName} balance…`}</span>
+        <span className="sr-only">{`Loading ${model.title} balance…`}</span>
       </li>
     );
   }
@@ -277,10 +465,10 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
       <li>
         <div className={TABLE_GRID}>
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
-            <ChainLogo chain={model.chain} />
+            <RowLogo model={model} />
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-bold text-foreground">
-                {model.displayName}
+                {model.title}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
                 {model.statusText}
@@ -315,18 +503,18 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
   return (
     <li>
       <Link
-        to={`/assets/${model.chain}`}
+        to={model.link}
         className="block"
       >
         <div className={TABLE_GRID}>
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
-            <ChainLogo chain={model.chain} />
+            <RowLogo model={model} />
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-bold text-foreground">
-                {model.displayName}
+                {model.title}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
-                {model.symbol}
+                {model.subtitle}
               </span>
             </span>
           </span>
@@ -356,13 +544,27 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
   );
 }
 
+export interface AssetRowsProps {
+  hideZero: boolean;
+  onShowAll?: () => void;
+  prices?: PriceMap;
+  pricesNowMs?: number;
+  pricesLoading?: boolean;
+  /** Token prices, keyed by tokenKey — from useTokenPrices. */
+  tokenPrices?: TokenPriceMap;
+  tokenPricesNowMs?: number;
+  tokenPricesLoading?: boolean;
+  variant?: 'list' | 'table';
+}
+
 /**
  * Real-balance asset rows, shared by the dashboard and the asset list.
- * A row appears only for a chain whose balance capability is verified
- * (availableFor('balance')). A non-zero balance shows its fiat value
- * when the caller passes a fresh price. Every row also shows the
- * per-unit price ("$61,706.00", labelled "per BTC") whenever a fresh
- * price is available — including zero balances and unavailable
+ * A row appears for every enabled chain whose balance capability is
+ * verified (availableFor('balance')), plus one row per enabled token
+ * (the 7 defaults, then user-added tokens). A non-zero balance shows
+ * its fiat value when the caller passes a fresh price. Every row also
+ * shows the per-unit price ("$61,706.00", labelled "per BTC") whenever
+ * a fresh price is available — including zero balances and unavailable
  * balances — so a working feed is visible and a failed one says so
  * ("Price unavailable" / "Price error" / "Price expired"), never a
  * silent empty and never a fabricated number. While the first fetch is
@@ -371,26 +573,83 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
  * a failed row shows no Retry — a refetch cannot succeed without a
  * derived address — and the list shows one Unlock prompt instead.
  *
+ * Token balances refresh when these rows mount (and when the vault
+ * addresses change): the wallet context refreshes them on demand, not
+ * at boot, so unit tests that derive real vault addresses never fire
+ * live RPC calls from the provider.
+ *
  * Variants: 'list' (default) is the compact row the dashboard uses.
  * 'table' is the asset list's wide layout (MetaMask's
  * `variant={isWideLayout ? 'table' : 'list'}`): a four-column
  * Asset | Balance | Price | Value table that collapses back to the
  * list shape on a narrow container, via container queries.
  */
-export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoading, variant }: { hideZero: boolean; onShowAll?: () => void; prices?: PriceMap; pricesNowMs?: number; pricesLoading?: boolean; variant?: 'list' | 'table' }) {
+export function AssetRows({
+  hideZero,
+  onShowAll,
+  prices,
+  pricesNowMs,
+  pricesLoading,
+  tokenPrices,
+  tokenPricesNowMs,
+  tokenPricesLoading,
+  variant,
+}: AssetRowsProps) {
   const wallet = useWallet();
-  const { balances, refreshBalances } = wallet;
-  const chains = availableFor('balance');
+  const { refreshBalances } = wallet;
+  // Defensive defaults: the existing screen tests mock useWallet with
+  // only { balances, refreshBalances, vaultState } — token fields are
+  // absent there, and the rows must still render the natives.
+  const customTokens = wallet.customTokens ?? [];
+  const enabledChains = wallet.enabledChains;
+  const refreshTokenBalances = wallet.refreshTokenBalances;
 
-  if (chains.length === 0) {
+  const chains = availableFor('balance').filter(
+    (chain) => enabledChains === undefined || enabledChains.includes(chain),
+  );
+  // A token row appears only for a chain whose balance capability is
+  // verified (the same rule as the native rows) — when no chain can
+  // provide balances, the list shows the empty state, not loading
+  // token rows with no chain behind them.
+  const tokens = [...DEFAULT_TOKENS, ...customTokens].filter(
+    (token) =>
+      chains.includes(token.chain)
+      && (enabledChains === undefined || enabledChains.includes(token.chain)),
+  );
+
+  // Token balances load with the rows (see the doc comment above).
+  // The addresses key re-runs the refresh after unlock / account switch.
+  const addressesKey = useMemo(() => {
+    const addresses = wallet.vaultAddresses ?? {};
+    return Object.values(addresses)
+      .map((list) => list[0] ?? '')
+      .join('|');
+  }, [wallet.vaultAddresses]);
+  useEffect(() => {
+    if (refreshTokenBalances === undefined) return;
+    void refreshTokenBalances();
+  }, [refreshTokenBalances, addressesKey]);
+
+  if (chains.length === 0 && tokens.length === 0) {
     return <p className="p-4 text-sm text-muted-foreground">Balances aren't available yet.</p>;
   }
 
-  const visible = chains.filter((chain) => {
-    if (!hideZero) return true;
-    const balance = balances[chain];
-    return balance.status !== 'zero';
-  });
+  const isZeroBalance = (model: AssetRowModel): boolean =>
+    model.kind === 'ready' && model.balanceStatus === 'zero';
+
+  const nowMs = pricesNowMs ?? Date.now();
+  const tokenNowMs = tokenPricesNowMs ?? nowMs;
+  const isLocked = wallet.vaultState === 'locked';
+
+  const models: AssetRowModel[] = [
+    ...chains.map((chain) =>
+      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked),
+    ),
+    ...tokens.map((token) =>
+      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, isLocked),
+    ),
+  ];
+  const visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;
 
   if (visible.length === 0) {
     if (hideZero) {
@@ -411,10 +670,13 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
     );
   }
 
-  const onRetry = () => {
-    void refreshBalances();
+  const onRetryFor = (model: AssetRowModel) => {
+    if (model.isToken) {
+      void refreshTokenBalances?.();
+    } else {
+      void refreshBalances();
+    }
   };
-  const nowMs = pricesNowMs ?? Date.now();
 
   // While the vault is locked there is no derived address in state, so
   // a balance refetch can only fail again with no-address (see
@@ -425,11 +687,9 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
   // actually failed — a locked vault with nothing to retry gets no
   // prompt. 'no-vault' keeps its Retry: a watch-only xpub address can
   // still load, so a refetch there may succeed.
-  const isLocked = wallet.vaultState === 'locked';
-  const hasFailedRow = visible.some((chain) => {
-    const balance = balances[chain];
-    return balance.status === 'unavailable' || balance.status === 'error';
-  });
+  const hasFailedRow = visible.some(
+    (model) => model.kind === 'unavailable',
+  );
   const lockedNotice =
     isLocked && hasFailedRow ? (
       <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -455,11 +715,11 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
           <span className="text-right">Value</span>
         </div>
         <ul className="divide-y divide-border">
-          {visible.map((chain) => (
+          {visible.map((model) => (
             <TableRow
-              key={chain}
-              model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
-              onRetry={onRetry}
+              key={model.key}
+              model={model}
+              onRetry={() => onRetryFor(model)}
             />
           ))}
         </ul>
@@ -472,11 +732,11 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
     <>
       {lockedNotice}
       <ul className="divide-y divide-border">
-        {visible.map((chain) => (
+        {visible.map((model) => (
           <ListRow
-            key={chain}
-            model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
-            onRetry={onRetry}
+            key={model.key}
+            model={model}
+            onRetry={() => onRetryFor(model)}
           />
         ))}
       </ul>

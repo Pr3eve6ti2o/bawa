@@ -20,11 +20,15 @@
 // - img-src 'self' data:: QR codes are inline SVG (no raster fetch); data:
 //   is kept for favicon-style assets. font-src 'self' data:: @fontsource
 //   woff2 is self-hosted; data: covers inlined font subsets if any.
-// - connect-src 'self' plus the six pinned provider origins: the
+// - connect-src 'self' plus the fifteen pinned provider origins: the
 //   same-origin wallet-core.wasm fetch plus the read-only balance/history
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
-//   (history), TRX https://api.trongrid.io, TON https://toncenter.com. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL).
+//   (history), TRX https://api.trongrid.io, TON https://toncenter.com, and
+//   the token-discovery chains: BSC/Polygon/Arbitrum/Optimism/Base/Avalanche
+//   via publicnode.com, Solana https://api.mainnet-beta.solana.com,
+//   Litecoin https://litecoinspace.org, Dogecoin
+//   https://api.blockcypher.com. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL).
 //   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
@@ -38,7 +42,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://api.mainnet-beta.solana.com https://litecoinspace.org https://api.blockcypher.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

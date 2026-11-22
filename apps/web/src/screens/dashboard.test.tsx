@@ -233,8 +233,13 @@ describe('dashboard screen', () => {
     setWallet(balancesFor({}));
     const mounted = await mountScreen();
     try {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(String(fetchMock.mock.calls[0]![0])).toContain('api.coingecko.com');
+      // Two CoinGecko feeds now: native prices and token prices
+      // (token discovery), each auto-fetching on mount.
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+      expect(urls.every((url) => url.includes('api.coingecko.com'))).toBe(true);
+      expect(urls.some((url) => url.includes('ids=bitcoin,ethereum'))).toBe(true);
+      expect(urls.some((url) => url.includes('ids=usd-coin,tether'))).toBe(true);
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
@@ -602,12 +607,14 @@ describe('dashboard screen', () => {
         await act(async () => {
           await vi.advanceTimersByTimeAsync(0);
         });
-        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        // Two feeds (native + token) on mount.
+        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(60_000);
         });
-        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        // Both feeds retry about every minute.
+        expect(globalThis.fetch).toHaveBeenCalledTimes(4);
       } finally {
         await mounted.cleanup();
       }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { BawaIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
@@ -8,8 +8,11 @@ import {
   usePrices,
   PRICE_ATTRIBUTION_TEXT,
 } from '../wallet/prices';
+import { useTokenPrices } from '../wallet/token-prices';
+import { DEFAULT_TOKENS } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
 import { AssetRows } from './asset-rows';
+import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 import { PopularChainsStrip } from './chain-strip';
@@ -31,9 +34,11 @@ export function DashboardScreen() {
     balances,
     refreshBalances,
     vaultState,
+    customTokens,
   } = useWallet();
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
+  const [addTokenOpen, setAddTokenOpen] = useState(false);
   const [assetsTab, setAssetsTab] = useState<'tokens' | 'activity'>('tokens');
   // Hide-balance toggle (Rabby's DashboardPanel): masks the hero total
   // and the strip amounts. Local state only — it never hides a state
@@ -61,6 +66,35 @@ export function DashboardScreen() {
 
   const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
+
+  // Token prices (token discovery): the same CoinGecko feed, one batched
+  // call for the default 7 tokens (six unique ids) plus user-added
+  // tokens. Same auto-fetch on mount and ~60 s refresh as the native
+  // feed — two calls a minute, inside the keyless ~5 calls/min budget.
+  const tokenList = useMemo(
+    () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
+    [customTokens],
+  );
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
+  const tokenPricesLoading = tokenPricesState.status === 'loading';
+
+  useEffect(() => {
+    if (tokenPricesState.status === 'idle') {
+      refreshTokenPrices();
+    }
+  }, [tokenPricesState.status, refreshTokenPrices]);
+
+  const refreshTokenPricesRef = useRef(refreshTokenPrices);
+  useEffect(() => {
+    refreshTokenPricesRef.current = refreshTokenPrices;
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshTokenPricesRef.current();
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-fetch on mount: prices previously loaded only after a manual
   // click, so the first paint never showed any price. The hook's own
@@ -111,7 +145,8 @@ export function DashboardScreen() {
   // Only chains with a verified balance adapter count toward the hero.
   // The multichain-extension chains have no balance adapter yet, so their
   // 'unavailable' status must not fail the hero.
-  const heroBalances = availableFor('balance').map((chain) => balances[chain]);
+  const heroChains = availableFor('balance');
+  const heroBalances = heroChains.map((chain) => balances[chain]);
   const heroLoading = heroBalances.some((b) => b?.status === 'loading');
   // A failed chain contributes 0 to the total (portfolioTotal's partial
   // path) and is marked on its own row/strip entry — it never blanks the
@@ -137,7 +172,7 @@ export function DashboardScreen() {
   const nextHero: typeof lastHeroRef.current | null = heroLoading
     ? null
     : (() => {
-        const total = portfolioTotal(balances, pricesState.entries, Date.now());
+        const total = portfolioTotal(balances, pricesState.entries, Date.now(), heroChains);
 
         switch (total.status) {
           case 'zero':
@@ -348,19 +383,30 @@ export function DashboardScreen() {
           <section aria-label="Assets">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-ink">Assets</h2>
-              <Button
-                type="button"
-                aria-pressed={hideZero}
-                onClick={() => setHideZero((current) => !current)}
-                variant={hideZero ? 'default' : 'outline'}
-                className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
-              >
-                Hide zero balances
-              </Button>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setAddTokenOpen(true)}
+                  variant="outline"
+                  className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+                >
+                  Add token
+                </Button>
+                <Button
+                  type="button"
+                  aria-pressed={hideZero}
+                  onClick={() => setHideZero((current) => !current)}
+                  variant={hideZero ? 'default' : 'outline'}
+                  className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+                >
+                  Hide zero balances
+                </Button>
+              </div>
             </div>
             <Card className="mt-4">
-              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} />
+              <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
             </Card>
+            <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
           </section>
             <div className="hidden lg:block">
               <RecentActivity />

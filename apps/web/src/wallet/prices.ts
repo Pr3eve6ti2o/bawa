@@ -2,9 +2,14 @@
  * CoinGecko public API: https://api.coingecko.com/api/v3 (terms 2026-11-20).
  * GET /simple/price?ids=bitcoin,ethereum,tron,the-open-network&vs_currencies=usd&include_last_updated_at=true
  * IDs: btc=bitcoin; eth=ethereum; trx=tron; ton=the-open-network;
- * sol=solana; bsc=binancecoin; matic=matic-network; arb=arbitrum;
- * op=optimism; base=ethereum (Base native asset is ETH);
- * avax=avalanche-2; ltc=litecoin; doge=dogecoin.
+ * sol=solana; bsc=binancecoin; matic=polygon-ecosystem-token;
+ * arb=ethereum (Arbitrum native asset is ETH — NOT 'arbitrum', the ARB
+ * governance token); op=ethereum (OP native asset is ETH — NOT
+ * 'optimism', the OP governance token); base=ethereum (Base native
+ * asset is ETH); avax=avalanche-2; ltc=litecoin; doge=dogecoin.
+ * matic-network is the STALE MATIC listing (last updated 2026-02-03,
+ * verified live 2026-11-22): its quote would parse as expired forever.
+ * polygon-ecosystem-token is the live POL listing.
  * Keyless: ~5 calls/min/shared IP; back off on 429; not recommended for production.
  * Optional import.meta.env.VITE_COINGECKO_DEMO_KEY -> x-cg-demo-api-key.
  * Demo tier: 10,000 credits/month; 100 calls/min.
@@ -32,9 +37,9 @@ export const PRICE_IDS: Record<ChainId, string> = {
   ton: 'the-open-network',
   sol: 'solana',
   bsc: 'binancecoin',
-  matic: 'matic-network',
-  arb: 'arbitrum',
-  op: 'optimism',
+  matic: 'polygon-ecosystem-token',
+  arb: 'ethereum',
+  op: 'ethereum',
   base: 'ethereum',
   avax: 'avalanche-2',
   ltc: 'litecoin',
@@ -584,23 +589,32 @@ export function portfolioTotal(
   balances: Record<ChainId, BalanceState>,
   entries: PriceMap,
   nowMs: number,
+  // Chains to total. Defaults to all 13 registry chains; the dashboard
+  // passes availableFor('balance') so the hero totals exactly the chains
+  // its loading/failed detection counts (in the screen tests that mock
+  // is the original 4, which keeps the hero's 4-chain expectations).
+  // Token values are NOT in this total: the hero is the native-coin
+  // portfolio; token fiat values show on their own rows.
+  chains: readonly ChainId[] = [
+    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+  ],
 ): {
   status: 'zero' | 'total' | 'partial' | 'unavailable';
   text: string;
   partial: boolean;
 } {
-  const chains: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
   const list = chains.map((chain) => balances[chain]);
   // A chain still loading means the total is not decidable yet; the
   // dashboard holds the previous hero text in that case. Loading is not
   // a failure, so it is the one status that still yields 'unavailable'.
-  if (list.some(({ status }) => status === 'loading')) {
+  if (list.some((balance) => balance?.status === 'loading')) {
     return { status: 'unavailable', text: 'Unavailable', partial: false };
   }
   if (
     list.every(
-      ({ status, value }) =>
-        status === 'zero' || (status === 'available' && value === '0'),
+      (balance) =>
+        balance !== undefined &&
+        (balance.status === 'zero' || (balance.status === 'available' && balance.value === '0')),
     )
   ) {
     return { status: 'zero', text: '$0.00', partial: false };
@@ -609,10 +623,15 @@ export function portfolioTotal(
   // Partial total (Safe's aggregateBalance shape): sum the chains that
   // loaded; a failed chain contributes 0 and marks the total partial.
   // No all-or-nothing gate — one chain's failure never blanks the total.
+  // A missing balance record counts as a failed chain, never as zero.
   const contributed: number[] = [];
   let partial = false;
   for (const chain of chains) {
     const balance = balances[chain];
+    if (balance === undefined) {
+      partial = true;
+      continue;
+    }
     if (balance.status === 'zero' || balance.value === '0') {
       continue;
     }
@@ -623,6 +642,7 @@ export function portfolioTotal(
     const entry = entries[chain];
     if (
       balance.value === undefined ||
+      entry === undefined ||
       entry.status !== 'fresh' ||
       !isFreshQuote(entry.quote, nowMs)
     ) {

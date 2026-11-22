@@ -3,6 +3,15 @@ import bitcoinLogo from '../assets/chains/bitcoin.webp';
 import ethereumLogo from '../assets/chains/ethereum.webp';
 import tronLogo from '../assets/chains/tron.webp';
 import tonLogo from '../assets/chains/ton.webp';
+import solanaLogo from '../assets/chains/solana.webp';
+import smartchainLogo from '../assets/chains/smartchain.webp';
+import polygonLogo from '../assets/chains/polygon.webp';
+import arbitrumLogo from '../assets/chains/arbitrum.webp';
+import optimismLogo from '../assets/chains/optimism.webp';
+import baseLogo from '../assets/chains/base.webp';
+import avalanchecLogo from '../assets/chains/avalanchec.webp';
+import litecoinLogo from '../assets/chains/litecoin.webp';
+import dogeLogo from '../assets/chains/doge.webp';
 import usdcLogo from '../assets/tokens/usdc.webp';
 import usdtLogo from '../assets/tokens/usdt.webp';
 import daiLogo from '../assets/tokens/dai.webp';
@@ -15,18 +24,19 @@ import wbtcLogo from '../assets/tokens/wbtc.webp';
 // blockchains/<chain>/info/logo.png (same files as the chain logos);
 // ERC-20 logos are blockchains/ethereum/assets/<contract>/logo.png.
 // Full licence note: apps/web/README.md "Chain logos" and "Token logos".
-// Served as WebP (Lane F, 2026-11-20): the same Trust Wallet images,
-// resized to 96px and re-encoded at quality 85 — 23,378 bytes total vs
-// 167,628 bytes for the PNGs (-86%). The original PNGs stay in
-// src/assets/chains and src/assets/tokens as the canonical sources.
+// Served as WebP (Lane F, 2026-11-20; token discovery, 2026-11-22): the
+// same Trust Wallet images, resized to 96px and re-encoded at quality
+// 85 — 39,670 bytes total vs 303,787 bytes for the PNGs (-87%). The
+// original PNGs stay in src/assets/chains and src/assets/tokens as the
+// canonical sources.
 export const TOKEN_LOGOS: Record<string, string> = {
   BTC: bitcoinLogo,
   ETH: ethereumLogo,
   TRX: tronLogo,
   TON: tonLogo,
-  // ERC-20 logos are registered for future token adapters. No balance adapter
-  // lists them yet, so they are not displayed in asset rows today and must
-  // never be shown with a fabricated balance.
+  // ERC-20 logos, displayed by the token rows (token discovery): every
+  // balance shown with one comes from a real on-chain read, never a
+  // fabricated value.
   USDC: usdcLogo,
   USDT: usdtLogo,
   DAI: daiLogo,
@@ -34,6 +44,31 @@ export const TOKEN_LOGOS: Record<string, string> = {
   UNI: uniLogo,
   WBTC: wbtcLogo,
 };
+
+/**
+ * Chain logos keyed by chain id (token discovery, 2026-11-22). The three
+ * ETH-symbol chains (Arbitrum One, OP Mainnet, Base) need their own
+ * marks — a symbol-keyed lookup would show the Ethereum logo for all
+ * three. Filenames follow the Trust Wallet directory names (solana,
+ * smartchain, polygon, arbitrum, optimism, base, avalanchec, litecoin,
+ * doge); BSC uses blockchains/smartchain (the BNB Smart Chain mark),
+ * not blockchains/binance (the BNB Beacon Chain mark).
+ */
+export const CHAIN_LOGOS: Record<string, string> = {
+  sol: solanaLogo,
+  bsc: smartchainLogo,
+  matic: polygonLogo,
+  arb: arbitrumLogo,
+  op: optimismLogo,
+  base: baseLogo,
+  avax: avalanchecLogo,
+  ltc: litecoinLogo,
+  doge: dogeLogo,
+};
+
+export function chainLogoFor(chain: string): string | undefined {
+  return CHAIN_LOGOS[chain];
+}
 
 export function tokenLogoFor(symbol: string): string | undefined {
   return TOKEN_LOGOS[symbol.toUpperCase()];

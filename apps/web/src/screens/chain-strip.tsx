@@ -8,7 +8,8 @@ import {
   PRICE_ATTRIBUTION_TEXT,
   type PriceMap,
 } from "../wallet/prices";
-import { availableFor, chainConfig } from "../wallet/chains";
+import { chainConfig } from "../wallet/chains";
+import type { ChainId } from "../engine/boundary";
 import { BawaIcon } from "../ui/components/icons";
 import { BawaLoading } from "../ui/components/loading";
 
@@ -43,7 +44,13 @@ export function PopularChainsStrip({
     }
   }, [mode, vaultState, pricesState.status, refreshPrices]);
 
-  const chains = availableFor("balance");
+  // Popular chains are the four original adapter chains. The full
+  // 13-chain registry belongs on /assets and /networks; the strip
+  // is a compact horizontal list and stays at five cards (four
+  // chains + All networks). availableFor('balance') now returns
+  // all 13 (token discovery), so the strip no longer derives
+  // its list from it.
+  const chains: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
   // The strip sits in a parent grid on both screens (dashboard 2-col,
   // welcome 5-col). lg:col-span-full keeps it on a full-width row so all

@@ -20,7 +20,7 @@
     {
       "asserts": [
         "vault is open after creation (balances load)",
-        "Security screen states 'Auto-lock off — your wallet stays unlocked on this device.' with no duration select, no 'Lock vault' button and no unlock heading",
+        "Security screen states 'Auto-lock off \u2014 your wallet stays unlocked on this device.' with no duration select, no 'Lock vault' button and no unlock heading",
         "a full reload re-opens the vault via auto-unlock with no password prompt",
         "/lock shows no unlock screen while the vault is unlocked"
       ],
@@ -32,10 +32,10 @@
     },
     {
       "asserts": [
-        "each chain shows zero balance or an honest unavailable state with a reason",
+        "each of the 20 tokens (13 natives + 7 default tokens) shows zero balance or an honest unavailable state with a reason",
         "no invented balance or price is ever shown"
       ],
-      "covers": "dashboard refresh after unlock, per-chain balance states",
+      "covers": "dashboard refresh after unlock, per-token balance states (token discovery: 20-token default list)",
       "file": "e2e/balances.spec.ts",
       "id": "E2E-03",
       "phase": "balance",
@@ -64,6 +64,18 @@
       "phase": "refresh-failure",
       "requires": "item 28 (refresh failure state) \u2014 this case is skipped until wallet-refresh.ts lands; the skip is recorded in the case file with the reason",
       "title": "A failed refresh is visible, not silent"
+    },
+    {
+      "asserts": [
+        "adding WETH by its real Ethereum contract adds the token with a real (zero) balance from a live eth_call",
+        "a bad contract is rejected with a specific inline error and nothing is added",
+        "adding a chain re-enables a disabled chain and its row returns"
+      ],
+      "covers": "Add Token dialog (add token by contract, bad input, add chain), live ERC-20 verification, /networks enable/disable",
+      "file": "e2e/add-token.spec.ts",
+      "id": "E2E-06",
+      "phase": "add-token",
+      "title": "Add Token flow works end to end"
     }
   ],
   "harness": {

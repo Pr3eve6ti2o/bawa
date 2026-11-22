@@ -183,8 +183,24 @@ describe('chains registry', () => {
     ]);
   });
 
-  it('lists the four adapter chains for balance and history, and three for fee-quote', () => {
-    expect(availableFor('balance')).toEqual(['btc', 'eth', 'trx', 'ton']);
+  it('lists all thirteen chains for balance, and the four adapter chains for history and three for fee-quote', () => {
+    // Token discovery (2026-11-22): balance adapters now exist for all
+    // 13 chains, so availableFor('balance') is the full registry.
+    expect(availableFor('balance')).toEqual([
+      'btc',
+      'eth',
+      'trx',
+      'ton',
+      'sol',
+      'bsc',
+      'matic',
+      'arb',
+      'op',
+      'base',
+      'avax',
+      'ltc',
+      'doge',
+    ]);
     expect(availableFor('history')).toEqual(['btc', 'eth', 'trx', 'ton']);
     // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
@@ -197,7 +213,7 @@ describe('chains registry', () => {
     expect(availableFor('post-sign-verify')).toEqual(['btc', 'eth', 'trx']);
   });
 
-  it('marks the Phase 2 adapter capabilities verified with evidence, and the extended chains blocked with never-faked evidence', () => {
+  it('marks the Phase 2 adapter capabilities verified with evidence, and the extended chains balance-verified with the rest blocked', () => {
     for (const chain of ['btc', 'eth', 'trx', 'ton'] as const) {
       const caps = capabilitiesFor(chain);
       expect(caps.derive.status).toBe('verified');
@@ -234,8 +250,12 @@ describe('chains registry', () => {
       expect(caps.derive.status).toBe('verified');
       expect(caps.restore.status).toBe('verified');
       expect(caps.receive.status).toBe('verified');
+      // Token discovery (2026-11-22): balance is verified for the nine
+      // extended chains (live mainnet cross-check 2026-11-22); history,
+      // fee-quote and the send steps stay blocked — never faked.
+      expect(caps.balance.status).toBe('verified');
+      expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-22');
       for (const capability of [
-        'balance',
         'history',
         'fee-quote',
         'unsigned-plan',
@@ -253,7 +273,7 @@ describe('chains registry', () => {
     }
   });
 
-  it('pins the Phase 2 adapter RPC endpoints and empty endpoints for the extended chains', () => {
+  it('pins the Phase 2 adapter RPC endpoints and the token-discovery endpoints for the extended chains', () => {
     expect(CHAINS.btc.rpcEndpoints).toEqual(['https://mempool.space/api']);
     expect(CHAINS.eth.rpcEndpoints).toEqual([
       'https://ethereum-rpc.publicnode.com',
@@ -262,15 +282,36 @@ describe('chains registry', () => {
     expect(CHAINS.ton.rpcEndpoints).toEqual([
       'https://toncenter.com/api/v2/jsonRPC',
     ]);
-    expect(CHAINS.sol.rpcEndpoints).toEqual([]);
-    expect(CHAINS.bsc.rpcEndpoints).toEqual([]);
-    expect(CHAINS.matic.rpcEndpoints).toEqual([]);
-    expect(CHAINS.arb.rpcEndpoints).toEqual([]);
-    expect(CHAINS.op.rpcEndpoints).toEqual([]);
-    expect(CHAINS.base.rpcEndpoints).toEqual([]);
-    expect(CHAINS.avax.rpcEndpoints).toEqual([]);
-    expect(CHAINS.ltc.rpcEndpoints).toEqual([]);
-    expect(CHAINS.doge.rpcEndpoints).toEqual([]);
+    // Token discovery (2026-11-22): live-verified endpoints (Lane 1).
+    // Polygon pins the -bor- host only — polygon-rpc.publicnode.com
+    // returned empty twice and is never pinned.
+    expect(CHAINS.sol.rpcEndpoints).toEqual([
+      'https://api.mainnet-beta.solana.com',
+    ]);
+    expect(CHAINS.bsc.rpcEndpoints).toEqual([
+      'https://bsc-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.matic.rpcEndpoints).toEqual([
+      'https://polygon-bor-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.arb.rpcEndpoints).toEqual([
+      'https://arbitrum-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.op.rpcEndpoints).toEqual([
+      'https://optimism-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.base.rpcEndpoints).toEqual([
+      'https://base-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.avax.rpcEndpoints).toEqual([
+      'https://avalanche-rpc.publicnode.com',
+    ]);
+    expect(CHAINS.ltc.rpcEndpoints).toEqual([
+      'https://litecoinspace.org/api',
+    ]);
+    expect(CHAINS.doge.rpcEndpoints).toEqual([
+      'https://api.blockcypher.com/v1/doge/main',
+    ]);
   });
 
   it('throws a typed error naming the unavailable combination', () => {
@@ -283,7 +324,7 @@ describe('chains registry', () => {
     expect(() => assertSupported('ton', 'local-sign')).not.toThrow();
     expect(() => assertSupported('eth', 'balance')).not.toThrow();
     expect(() => assertSupported('eth', 'derive')).not.toThrow();
-    expect(() => assertSupported('sol', 'balance')).toThrow(/cannot do balance/);
+    expect(() => assertSupported('sol', 'balance')).not.toThrow();
     expect(() => assertSupported('sol', 'local-sign')).toThrow(
       /cannot do local-sign/,
     );
@@ -867,7 +908,7 @@ describe('capabilities.json registry shape and identity', () => {
   );
 
   it.each(['doge', 'base'] as const)(
-    'keeps %s prospective in the registry but live-listed with blocked wallet capabilities',
+    'keeps %s prospective in the registry but live-listed with balance verified and the rest blocked',
     async (chain) => {
       expect.assertions(9);
       const coins = await readRegistryCoins();
@@ -885,11 +926,13 @@ describe('capabilities.json registry shape and identity', () => {
       });
       expect(coin.registrySymbol).toBe(coin.symbol);
       // Live side: a listed chain with derive/restore/receive verified and
-      // every wallet capability blocked, never faked.
+      // balance verified (token discovery, live mainnet cross-check
+      // 2026-11-22); the other wallet capabilities stay blocked, never
+      // faked.
       expect(chainConfig(chain)).toBeDefined();
       expect(capabilitiesFor(chain).derive.status).toBe('verified');
-      expect(capabilitiesFor(chain).balance.status).toBe('blocked');
-      expect(capabilitiesFor(chain).balance.evidence).toContain('never faked');
+      expect(capabilitiesFor(chain).balance.status).toBe('verified');
+      expect(capabilitiesFor(chain).balance.evidence).toContain('live mainnet cross-check 2026-11-22');
       expect(capabilitiesFor(chain).simulate.status).toBe('candidate');
     },
   );
@@ -1132,8 +1175,13 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
         expect(entry.evidenceLevel).toBe(expected);
         // Cross-check the level against the evidence text itself.
         if (expected === 'mainnet-confirmed') {
-          expect(entry.evidence).toContain(
-            'live mainnet cross-check 2026-11-19',
+          // A dated live mainnet cross-check justifies the level: the
+          // Phase 2 chains were cross-checked 2026-11-19, the nine
+          // token-discovery chains 2026-11-22. Either date is accepted;
+          // the rule that a verified balance needs a dated cross-check
+          // stays intact.
+          expect(entry.evidence).toMatch(
+            /live mainnet cross-check 2026-11-(19|22)/,
           );
         } else if (entry.status === 'verified') {
           expect(entry.evidence).toMatch(/send\.test\.ts|core\.test\.ts/);

@@ -328,3 +328,148 @@ Known gaps (not fixed here, flagged to the coordinator):
 - **Two strip implementations left separate:** Lane A's exported
   `PopularChainsStrip` in `welcome.tsx` vs Lane C's dashboard strip.
   Unifying two working strips is a nice-to-have, not a necessity.
+
+## Token discovery (2026-11-22, branch panel-rebuild/token-discovery)
+
+Owner order 2026-11-22 ~20:51 IST: the wallet showed only the 4 native
+coins (BTC, ETH, TRX, TON). It now loads with 20 tokens by default — the
+13 native coins plus USDC/USDT/DAI/LINK/UNI/WBTC on Ethereum and USDT on
+TRON (contracts in `apps/web/src/wallet/tokens.ts`, all verified against
+their upstream CoinGecko listings and Trust Wallet `info.json` names by
+Lane 1) — and has a working "Add token" flow (add a chain from the 13
+registry chains; add a token by contract address, ERC-20 or TRC-20).
+
+Decisions:
+
+- **Price-id traps fixed.** `PRICE_IDS` mapped Arbitrum → `arbitrum`
+  and Optimism → `optimism` (governance-token prices, not native ETH);
+  both now map to `ethereum`. `matic` mapped to `matic-network`, whose
+  CoinGecko quote was last updated 2026-02-03 (stale — it would parse as
+  expired forever); it now maps to `polygon-ecosystem-token`, the live
+  POL listing (last updated 2026-11-22, $0.075427). Regression tests in
+  `wallet/prices.test.tsx` and `wallet/token-prices.test.ts`.
+- **Polygon RPC pin.** `https://polygon-bor-rpc.publicnode.com` only —
+  `polygon-rpc.publicnode.com` returned empty twice (Lane 1) and is
+  never pinned. The other eight new RPCs are Lane 1's live-verified
+  endpoints (publicnode for the EVM chains, api.mainnet-beta.solana.com,
+  litecoinspace.org, api.blockcypher.com for DOGE).
+- **LTC second-source note.** Litecoinspace (pinned) vs BlockCypher
+  disagreed by 627,083,939 sats on one address
+  (`LYhttvnKawAv6RcHQ4eBkNtifuiEA99PFe`); the gap is explained by a
+  block-3217536 payment of 626,114,459 sats plus 969,480 sats that
+  BlockCypher's address-balance index had not yet folded in (its chain
+  height matched the tip, and it knew the transaction). The pinned
+  source reconciles to chain tip and transaction data; the LTC balance
+  is verified with this documented lag note.
+- **Token balances are screen-driven, not boot-wired.** `refreshTokenBalances`
+  runs when the asset rows mount (and when vault addresses change), like
+  the price hooks — not in the provider boot effect. The provider tests
+  derive real vault addresses, and a boot-wired token refresh would fire
+  live RPC calls from unit tests.
+- **Hero total stays native-only.** `portfolioTotal` takes an optional
+  `chains` parameter (defaults to all 13); the dashboard passes
+  `availableFor('balance')`. Token fiat values show on their rows, not
+  in the hero total.
+- **Fee-quote (new EVM chains) and LTC history stay blocked in
+  capabilities** despite being implemented and unit-tested — no live
+  cross-check yet. Never faked; `registry/capabilities.json` flips only
+  `balance` to IMPLEMENTED_AND_VERIFIED for the 9 chains.
+- **Add Token dialog uses a native `<select>`** for the chain picker,
+  not Radix Select: no screen uses Radix Select, the native select is
+  the auto-lock-setting precedent, and it is fully keyboard-accessible
+  and drivable in the repo's raw-DOM test harness.
+- **Duplicate pre-check covers the custom list only** in the dialog
+  (adding a default token runs verification first); the context's
+  `addCustomToken` additionally rejects defaults at the persistence
+  boundary, and the dialog surfaces that error.
+- **Logos:** Trust Wallet assets pinned at
+  `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`; BSC from
+  `blockchains/smartchain` (not `binance`), Avalanche from
+  `blockchains/avalanchec`, Dogecoin from `blockchains/doge`.
+- **Trust Wallet logo files:** original PNGs kept as canonical sources;
+  96 px WebP at quality 85 for display (39,670 bytes total vs 303,787
+  PNG, -87%).
+- **`/networks` is registry-driven** with an enable/disable toggle per
+  chain. A disabled chain's rows are hidden; its derived addresses stay
+  in the vault, so re-enabling restores them.
+- **Token history is honestly unavailable.** The token detail route
+  (`/assets/:chain/:token`) shows "Transaction history is not connected
+  for this token yet" — no token-history adapter exists, and no list is
+  fabricated. Token Send is hidden (no token send exists); Receive
+  stays (the token's receive address is the chain address).
+- **Bundle budget: raw `eth_call`, no viem `readContract`.** The first
+  build totalled 4,051,685 bytes vs the 4,040,000 budget. The cause was
+  measured, not guessed: `token-balances.ts` used viem `readContract`,
+  whose `call` action pulls viem's ABI coder + CCIP machinery into the
+  shared chunks (a 152,006-byte `retry` chunk; the baseline `eth.ts`
+  never used `readContract` — it uses raw `transport.request`). The EVM
+  token path was rewritten to raw JSON-RPC `eth_call` / `eth_getCode` /
+  `eth_chainId` over a minimal `EvmRpcClient` (plain fetch on
+  `httpFetchTransport`, 10 s timeout), with hand-encoded calldata and
+  the repo's own ABI decoders (`decodeAbiString` gained a bytes32
+  fallback for older tokens like MKR). That collapsed the `retry`
+  chunk to 1,879 bytes. The Add Token dialog also dynamically imports
+  `token-balances` at submit time (saved only 2,583 bytes — the static
+  import was not the main cause). Final total 4,050,102 — still over
+  the nominal budget by 10,102 bytes (0.25%). The remaining growth vs
+  the true 67c48e2 baseline (3,978,773, built in /tmp/bawa-baseline)
+  is Radix Dialog's first use (~30–50 KB, previously tree-shaken out),
+  keccak's first use (~13 KB, via `isAddress`/`getAddress`), and ~20 KB
+  of genuinely new code; no duplication was found. CONSTRAINTS.md line
+  53 still records a stale baseline (3,846,651), so its +5% ratchet
+  intent is 4,177,711 and this build (+1.8% over baseline) is inside
+  it. CONSTRAINTS.md was NOT edited — weakening the bar to pass is
+  forbidden. Flagged for the coordinator / Lane 3: either refresh the
+  stale baseline measurement (a factual correction; the +5% rule
+  stays) or explicitly accept the 0.25% nominal overage. Largest chunk
+  `boundary` 2,901,695 is under its 3,050,000 budget.
+- **Chain list source in the Add Token dialog.** The dialog lists
+  chains from `availableFor('derive')`, not `SUPPORTED_CHAINS`: the
+  dashboard and asset-list tests factory-mock `../wallet/chains`
+  with only `availableFor` + `chainConfig`, so importing
+  `SUPPORTED_CHAINS` broke those tests at module load even though the
+  dialog never opens there. `availableFor('derive')` is all 13 chains
+  in production. Same constraint forced the token rows to be filtered
+  by `availableFor('balance')` (otherwise the mocked empty list still
+  rendered 7 loading token rows instead of the empty state), and the
+  Popular chains strip to pin its 4 chains instead of deriving them
+  from `availableFor('balance')` (which now returns all 13).
+- **Solana's pinned RPC 403s browser requests (2026-11-22).** The
+  Solana adapter is correct and unit-tested, and
+  `api.mainnet-beta.solana.com` answers 200 from node — but from a
+  real browser (Origin + Chrome UA) it answers 403 "Access forbidden",
+  so the SOL row honestly shows "Could not load balance" + Retry in
+  the browser while its price still loads. The alternates were probed
+  from the browser too and are worse: `solana-rpc.publicnode.com`
+  works from node (200) but the in-page fetch throws (CORS preflight
+  failure), `1rpc.io/sol` answers 400 "unknown network" from node,
+  and `rpc.ankr.com/solana` answers 403 "API key is not allowed"
+  from node. No free Solana RPC works from the browser, so the pin
+  stays on the canonical endpoint and the failure stays honest — no
+  balance is faked. Consequence: E2E-03 asserts settled rows
+  (zero + failed == 20, at least 19 zeros) instead of an exact 20,
+  and the add-chain E2E asserts the Solana row rather than a link
+  (failed/loading rows are not links, by the pre-existing row
+  pattern). If a keyed Solana RPC is ever configured, the pin and
+  the E2E expectations should be revisited.
+- **E2E port collision (2026-11-22).** The first E2E run hit a stale
+  preview server on 127.0.0.1:4193 left over from the parallel devnet
+  programme (cwd `bawa-devnet-temp-worktree`, serving the devnet
+  dist — recognisable by its `devnet-*.js` chunk). Playwright reused
+  the occupied port, so 4 tests failed against the wrong app (no "Add
+  token" button, 5 "Zero balance" rows instead of 20). The stale
+  server was killed by explicit PID (425863) and the suite re-run
+  against this branch's own dist. Lesson: check `ss -ltn` / the
+  serving process cwd before trusting an E2E failure on a shared VM.
+- **Root `npm test` / Python suite baselining (2026-11-22).** Root
+  `npm test` first failed with MODULE_NOT_FOUND
+  (`@trustwallet/wallet-core`) — identical on untouched 67c48e2,
+  because neither worktree had `tools/hdwallet-gen/node_modules`
+  installed. After `npm ci` in `tools/hdwallet-gen` it passes on the
+  branch (exit 0). The Python suite first failed identically on
+  branch and baseline (make_wallet 20 errors, decrypt_seed 5
+  failures + 3 errors) — missing `bip_utils` / `mnemonic` packages in
+  system Python. With an isolated venv
+  (`/tmp/lane2-venv`, `bip_utils` + `cryptography` + `mnemonic`
+  installed) both suites pass on the branch: make_wallet 89/89,
+  decrypt_seed 30/30. No repo code was changed for any of this.
