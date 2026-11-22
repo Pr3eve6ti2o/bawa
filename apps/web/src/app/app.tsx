@@ -174,14 +174,24 @@ function AppLayout() {
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
-  // /create-wallet and /security keep the 480px cap below lg only:
-  // at lg they go full content width so the screens can lay out in two
-  // columns (create-wallet, security).
+  // Desktop (desktop-layout-v2): the screens below widen at lg, each in
+  // the way that fits its content — full content width where the screen
+  // lays out in two columns there (/assets/:chain, /send, /receive,
+  // alongside the existing /create-wallet, /security, /lock), and a
+  // 720px task column where the screen stays a linear stack of cards
+  // with long inputs (/import-wallet, /mnemonic-backup). Below lg every
+  // one of them keeps the 480px cap: the mobile layout is untouched.
   const isNarrow =
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
-  const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
+  const isWideAtLg =
+    ['/create-wallet', '/security', '/lock', '/send', '/receive'].includes(
+      pathname,
+    ) || pathname.startsWith('/assets/');
+  const isMediumAtLg = ['/import-wallet', '/mnemonic-backup'].includes(
+    pathname,
+  );
 
   return (
     <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
@@ -278,7 +288,9 @@ function AppLayout() {
                 className={
                   isWideAtLg
                     ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
-                    : 'mx-auto w-full max-w-[480px]'
+                    : isMediumAtLg
+                      ? 'mx-auto w-full max-w-[480px] lg:max-w-[720px]'
+                      : 'mx-auto w-full max-w-[480px]'
                 }
               >
                 <Outlet />

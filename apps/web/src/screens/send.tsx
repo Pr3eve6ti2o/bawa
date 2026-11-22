@@ -370,7 +370,14 @@ export function SendScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    // Desktop layout (desktop-layout-v2): the header, progress and
+    // chain picker form a sticky left rail (2 of 5 columns) and the
+    // current step renders in the right column (3 of 5) — the same
+    // rail pattern as create-wallet. Below lg the same blocks stack in
+    // one column in the same order (space-y-6, no bare grid class),
+    // so the mobile flow is untouched.
+    <div className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-8 lg:items-start lg:space-y-0">
+      <div className="space-y-6 lg:col-span-2 lg:sticky lg:top-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
         <p
@@ -457,6 +464,8 @@ export function SendScreen() {
           );
         })}
       </div>
+      </div>
+      <div className="space-y-6 lg:col-span-3">
 
       {step === 'recipient' && (
         <section aria-labelledby="send-recipient-heading" className="space-y-4">
@@ -707,6 +716,7 @@ export function SendScreen() {
       >
         Receive
       </Link>
+      </div>
     </div>
   );
 }

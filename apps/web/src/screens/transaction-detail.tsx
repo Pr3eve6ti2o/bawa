@@ -138,7 +138,10 @@ export function TransactionDetailScreen() {
   })();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground">
+    // Desktop layout (desktop-layout-v2): the self-capped detail column
+    // grows to 3xl at lg so long hashes get room. Below lg it stays
+    // max-w-2xl, so the mobile layout is untouched.
+    <main className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground lg:max-w-3xl">
       <header className="mb-6">
         <Link
           to="/transactions"

@@ -125,10 +125,16 @@ export function ReceiveScreen() {
   const config = chainConfig(chain);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-ink">Receive</h1>
-      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
+    // Desktop layout (desktop-layout-v2): the heading spans both
+    // columns, the address list sits left and the amount + QR card
+    // right, sticky while the list scrolls. Below lg the same blocks
+    // stack in one column in the same order (space-y-6, no bare grid
+    // class), so the mobile layout is untouched.
+    <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
+      <h1 className="text-2xl font-semibold text-ink lg:col-span-2">Receive</h1>
+      <p className="font-display text-xl text-ink lg:col-span-2">This is your address — share the drawing, keep the keys.</p>
 
+      <div className="space-y-6">
       <section aria-labelledby="receive-addresses-heading" className="space-y-3">
         <h2 id="receive-addresses-heading" className="text-lg font-semibold text-ink">
           Your addresses
@@ -207,6 +213,8 @@ export function ReceiveScreen() {
         </Alert>
       )}
 
+      </div>
+      <div className="space-y-6 lg:sticky lg:top-6">
       {address && (
         <div className="space-y-1">
           <Label htmlFor="receive-amount" className="text-sm font-medium">
@@ -285,6 +293,7 @@ export function ReceiveScreen() {
       <p className="text-sm text-ink">
         Only share this address to receive funds. Check the address carefully before accepting funds.
       </p>
+      </div>
     </div>
   );
 }

@@ -196,4 +196,33 @@ describe('transaction detail screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('widens the detail column on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the self-capped detail
+    // column grows from 2xl to 3xl at lg so long hashes get room.
+    // Below lg it stays max-w-2xl, so the mobile layout is untouched.
+    setWallet({
+      btc: emptyHistory,
+      eth: emptyHistory,
+      trx: emptyHistory,
+      ton: emptyHistory,
+      sol: emptyHistory,
+      bsc: emptyHistory,
+      matic: emptyHistory,
+      arb: emptyHistory,
+      op: emptyHistory,
+      base: emptyHistory,
+      avax: emptyHistory,
+      ltc: emptyHistory,
+      doge: emptyHistory,
+    });
+    const mounted = await mountScreen('/transactions/0xmissing');
+    try {
+      const main = mounted.div.querySelector('main');
+      expect(main?.className).toContain('max-w-2xl');
+      expect(main?.className).toContain('lg:max-w-3xl');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

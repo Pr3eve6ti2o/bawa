@@ -226,7 +226,7 @@ export function MnemonicBackupScreen() {
             with a different profile recovers different addresses — back up
             the profile names with the words.
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {BACKUP_CHAINS.map((chain) => {
               const profileId = profileFor(chain);
               const stored = profiles.includes(profileId);
@@ -253,6 +253,10 @@ export function MnemonicBackupScreen() {
             These items are reminders, not a record of completed steps. This
             app cannot verify that you have followed them.
           </p>
+          {/* Desktop layout (desktop-layout-v2): the checklist lays out
+              in two columns at lg. Below lg it stays a single-column
+              stack (space-y-3, no bare grid class). */}
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {guidanceItems.map((item) => (
             <ChecklistCard
               key={item.id}
@@ -260,6 +264,7 @@ export function MnemonicBackupScreen() {
               description={item.description}
             />
           ))}
+          </div>
         </section>
       )}
 
@@ -371,7 +376,7 @@ export function MnemonicBackupScreen() {
                 Write these words down in order, then hide them. Never
                 photograph, share, or paste them anywhere.
               </p>
-              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {words.map((word, index) => (
                   <li
                     key={`${index}-${word}`}

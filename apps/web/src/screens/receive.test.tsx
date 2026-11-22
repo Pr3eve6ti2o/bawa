@@ -175,4 +175,30 @@ describe('receive screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('lays the address list beside the QR card on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the heading spans both
+    // columns, the address list sits left and the amount + QR card
+    // right, sticky while the list scrolls. Below lg the same blocks
+    // stack in one column in the same order (space-y-6, no bare
+    // grid-cols-2), so the mobile layout is untouched.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const root = mounted.div.firstElementChild as Element | null;
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-2');
+      expect(root?.className).toContain('space-y-6');
+      expect(root?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const heading = mounted.div.querySelector('h1');
+      expect(heading?.className).toContain('lg:col-span-2');
+      const qrColumn = [...mounted.div.querySelectorAll('div')].find((el) =>
+        el.className.includes('lg:sticky'),
+      );
+      expect(qrColumn).not.toBeUndefined();
+      expect(qrColumn?.querySelector('#receive-amount')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

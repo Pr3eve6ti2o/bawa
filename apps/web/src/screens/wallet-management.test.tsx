@@ -24,9 +24,15 @@ const TEST_ADDRESSES = {
 function setWallet(
   setVaultAccount: (account: number, index: number) => Promise<void>,
   vaultAccount = { account: 0, index: 0 },
+  xpubs: Record<'btc' | 'eth' | 'trx' | 'ton', { xpub: string; label?: string } | null> = {
+    btc: null,
+    eth: null,
+    trx: null,
+    ton: null,
+  },
 ): void {
   vi.mocked(useWallet).mockReturnValue({
-    xpubs: { btc: null, eth: null, trx: null, ton: null },
+    xpubs,
     removeXpub: vi.fn(),
     vaultAccount,
     setVaultAccount,
@@ -165,6 +171,37 @@ describe('wallet management — vault account selection', () => {
       expect(mounted.div.textContent).toContain(
         'index must be a non-negative safe integer below 0x80000000',
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('lays vault addresses and imported wallets in two columns on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the four vault-address
+    // blocks and the imported-wallet cards each lay out in two columns
+    // at lg. Below lg they stay single-column stacks (space-y-3 /
+    // space-y-4, no bare grid-cols-2), so the mobile layout is
+    // untouched.
+    setWallet(async () => {}, { account: 0, index: 0 }, {
+      btc: { xpub: 'xpub6TestBtc1234567890abcdef' },
+      eth: null,
+      trx: null,
+      ton: null,
+    });
+    const mounted = await mountScreen();
+    try {
+      const dl = mounted.div.querySelector('dl');
+      expect(dl?.className).toContain('lg:grid');
+      expect(dl?.className).toContain('lg:grid-cols-2');
+      expect(dl?.className).toContain('space-y-3');
+      expect(dl?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const list = [...mounted.div.querySelectorAll('ul')].find((el) =>
+        el.querySelector('[aria-label="Forget stored Bitcoin key"]'),
+      );
+      expect(list?.className).toContain('lg:grid');
+      expect(list?.className).toContain('lg:grid-cols-2');
+      expect(list?.className).toContain('space-y-4');
+      expect(list?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
     } finally {
       await mounted.cleanup();
     }

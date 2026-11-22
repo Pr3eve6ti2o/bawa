@@ -113,7 +113,11 @@ export function WalletManagementScreen() {
                 {accountError}
               </p>
             )}
-            <dl className="space-y-3">
+            {/* Desktop layout (desktop-layout-v2): the four chain
+                address blocks lay out in two columns at lg. Below lg
+                they stay a single-column stack (space-y-3, no bare
+                grid class). */}
+            <dl className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
               {chains.map(({ id, name }) => (
                 <div key={id} className="space-y-1">
                   <dt className="text-sm font-semibold">{name}</dt>
@@ -132,7 +136,10 @@ export function WalletManagementScreen() {
       </Card>
 
       {hasWallets ? (
-        <ul className="space-y-4">
+        // Desktop layout (desktop-layout-v2): the imported-wallet cards
+        // lay out in two columns at lg. Below lg they stay a
+        // single-column stack (space-y-4, no bare grid class).
+        <ul className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
           {chains.map(({ id, name }) => {
             const wallet = xpubs[id];
             if (!wallet) return null;

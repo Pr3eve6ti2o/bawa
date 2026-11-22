@@ -178,6 +178,32 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     }
   });
 
+  it('lays recovery profiles and guidance in two columns on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the four recovery profiles
+    // and the guidance checklist each lay out in two columns at lg.
+    // Below lg they stay single-column stacks (space-y-2 / space-y-3,
+    // no bare grid-cols-2), so the mobile layout is untouched.
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
+      const list = profiles?.querySelector('ul');
+      expect(list?.className).toContain('lg:grid');
+      expect(list?.className).toContain('lg:grid-cols-2');
+      expect(list?.className).toContain('space-y-2');
+      expect(list?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const guidance = div.querySelector('[aria-label="Backup guidance"]');
+      const grid = [...(guidance?.querySelectorAll('div') ?? [])].find((el) =>
+        el.className.includes('lg:grid-cols-2'),
+      );
+      expect(grid).not.toBeUndefined();
+      expect(grid?.textContent).toContain('Words written on paper');
+      expect(grid?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('hides the reveal section without a vault', async () => {
     const { div, cleanup } = await mountBackupScreen();
     try {
@@ -267,6 +293,39 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       });
       expect(div.textContent).not.toContain('abandon');
       expect(div.textContent).toContain('Reveal recovery phrase');
+    } finally {
+      await cleanup();
+    }
+  }, 30000);
+
+  // Password verification runs a 600k-iteration PBKDF2 trial decrypt,
+  // which can take several seconds while the full suite runs in parallel
+  // workers.
+  it('shows the revealed words four across on desktop widths', async () => {
+    // Desktop layout (desktop-layout-v2): the revealed 24-word grid is
+    // four across at lg (six rows) instead of three across at every
+    // width. Below lg it stays two across, then three at sm.
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      await openPasswordStage(div);
+      await verifyPassword(div, TEST_PASSWORD);
+      await waitForText(div, 'Answer all three questions correctly');
+      await act(async () => {
+        findButton(div, 'Spend from this wallet').click();
+        findButton(div, 'On paper, stored offline').click();
+        findButton(div, 'Paste them into any app or website').click();
+      });
+      await act(async () => {
+        findButton(div, 'Show recovery phrase').click();
+      });
+      await waitForText(div, 'Hide recovery phrase');
+      const words = [...div.querySelectorAll('ol')].find((el) =>
+        el.textContent?.includes('abandon'),
+      );
+      expect(words?.className).toContain('lg:grid-cols-4');
+      expect(words?.className).toContain('sm:grid-cols-3');
+      expect(words?.className).toContain('grid-cols-2');
     } finally {
       await cleanup();
     }

@@ -179,6 +179,33 @@ describe.sequential('App', () => {
     });
   });
 
+  it('desktop task screens use wider caps at lg, not the 480px phone column', async () => {
+    // Desktop layout (desktop-layout-v2): /assets/:chain, /send and
+    // /receive go full content width at lg (their screens lay out in
+    // two columns there), while /import-wallet and /mnemonic-backup
+    // widen to a 720px task column for their long inputs. Below lg
+    // every one of them keeps the 480px cap, so the mobile layout is
+    // untouched.
+    const cases: Array<[string, string]> = [
+      ['/assets/btc', 'lg:max-w-none'],
+      ['/send', 'lg:max-w-none'],
+      ['/receive', 'lg:max-w-none'],
+      ['/import-wallet', 'lg:max-w-[720px]'],
+      ['/mnemonic-backup', 'lg:max-w-[720px]'],
+    ];
+    for (const [path, expected] of cases) {
+      await withRenderedApp(path, (div) => {
+        const main = div.querySelector('main');
+        expect(main).not.toBeNull();
+        const wrapper = main?.children[0] as Element | undefined;
+        expect(wrapper?.className).toContain('max-w-[480px]');
+        expect(wrapper?.className).toContain(expected);
+      });
+    }
+    // Five full App mounts in one test (lazy chunks + live provider
+    // effects each) need more than the 5s default.
+  }, 30000);
+
   it('renders the Create screen with all seven tools', async () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');
