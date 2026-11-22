@@ -139,4 +139,16 @@ describe('CreateScreen', () => {
       ),
     ).toHaveLength(1);
   });
+
+  it('lays the seven tools out in four columns on desktop widths, with no lone orphan', () => {
+    // P6: seven cards in a 3-col grid left a lone orphan card in row
+    // 3. Four columns make it 4 + 3 at desktop widths; below xl the
+    // grid stays two-wide, so the mobile layout is untouched.
+    const list = container.querySelector('ul');
+    expect(list).not.toBeNull();
+    expect(list?.className).toContain('md:grid-cols-2');
+    expect(list?.className).toContain('xl:grid-cols-4');
+    expect(list?.className).not.toContain('xl:grid-cols-3');
+    expect(list?.querySelectorAll(':scope > li')).toHaveLength(7);
+  });
 });

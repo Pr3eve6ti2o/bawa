@@ -113,6 +113,44 @@ function HomeScreen() {
   return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
 }
 
+// Outlet wrapper class for a route path, or null when the screen
+// renders directly in <main> with no wrapper. Narrow task screens get
+// a local 480px cap inside the content frame; /assets itself stays
+// full-width, only /assets/<chain> is narrow. Welcome self-caps in
+// welcome.tsx (it also renders on the home route).
+// Desktop (desktop-layout-v2 + follow-up): the screens below widen to
+// full content width at lg, where each lays out in two columns
+// (/assets/:chain, /send, /receive, /import-wallet,
+// /mnemonic-backup, alongside the existing /create-wallet, /security,
+// /lock). Below lg every one of them keeps the 480px cap: the mobile
+// layout is untouched.
+// P10: matching runs on the path with trailing slashes stripped.
+// GitHub Pages redirects /bawa/assets to /bawa/assets/, and the
+// trailing slash used to match startsWith('/assets/') and wrap the
+// asset LIST in the 480px cap. Exported so unit tests can pin the
+// classification without mounting the app.
+export function outletWrapperClass(pathname: string): string | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  const isNarrow =
+    ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
+      normalized,
+    ) || /^\/assets\/[^/]+$/.test(normalized);
+  const isWideAtLg =
+    [
+      '/create-wallet',
+      '/security',
+      '/lock',
+      '/send',
+      '/receive',
+      '/import-wallet',
+      '/mnemonic-backup',
+    ].includes(normalized) || /^\/assets\/[^/]+$/.test(normalized);
+  if (!isNarrow && !isWideAtLg) return null;
+  return isWideAtLg
+    ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
+    : 'mx-auto w-full max-w-[480px]';
+}
+
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -171,27 +209,10 @@ function AppLayout() {
   // navigation.
   const isFocusedFlow =
     pathname === '/create-wallet' || pathname === '/send';
-  // Narrow task screens get a local 480px cap inside the content frame;
-  // /assets itself stays full-width, only /assets/<chain> is narrow.
-  // Welcome self-caps in welcome.tsx (it also renders on the home route).
-  // Desktop (desktop-layout-v2): the screens below widen at lg, each in
-  // the way that fits its content — full content width where the screen
-  // lays out in two columns there (/assets/:chain, /send, /receive,
-  // alongside the existing /create-wallet, /security, /lock), and a
-  // 720px task column where the screen stays a linear stack of cards
-  // with long inputs (/import-wallet, /mnemonic-backup). Below lg every
-  // one of them keeps the 480px cap: the mobile layout is untouched.
-  const isNarrow =
-    ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
-      pathname,
-    ) || pathname.startsWith('/assets/');
-  const isWideAtLg =
-    ['/create-wallet', '/security', '/lock', '/send', '/receive'].includes(
-      pathname,
-    ) || pathname.startsWith('/assets/');
-  const isMediumAtLg = ['/import-wallet', '/mnemonic-backup'].includes(
-    pathname,
-  );
+  // The outlet wrapper class for this route (see outletWrapperClass):
+  // null when the screen renders directly in <main>, otherwise the
+  // 480px phone cap that widens at lg.
+  const wrapperClass = outletWrapperClass(pathname);
 
   return (
     <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
@@ -283,16 +304,8 @@ function AppLayout() {
               lengths readable; the narrow task screens keep their own
               480px cap above. */}
           <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
-            {isNarrow || isWideAtLg ? (
-              <div
-                className={
-                  isWideAtLg
-                    ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
-                    : isMediumAtLg
-                      ? 'mx-auto w-full max-w-[480px] lg:max-w-[720px]'
-                      : 'mx-auto w-full max-w-[480px]'
-                }
-              >
+            {wrapperClass ? (
+              <div className={wrapperClass}>
                 <Outlet />
               </div>
             ) : (

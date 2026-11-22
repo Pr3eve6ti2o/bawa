@@ -265,12 +265,19 @@ export function DashboardScreen() {
         )}
         <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
-      <div className="grid grid-cols-3 gap-2 lg:self-center">
+      {/* Follow-up: the dashboard was md5-identical to the saved build
+          on desktop, which is what the owner reported as "still mobile
+          layout". The quick actions now run as a vertical rail beside
+          the hero at lg (icon left, label left, full-width rows)
+          instead of a three-wide row under it — the one visible
+          desktop arrangement change on this screen. Below lg they
+          stay a three-wide row, so the mobile layout is untouched. */}
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:self-center">
         {ACTIONS.map(({ to, icon, label }) => (
           <Link
             key={to}
             to={to}
-            className="flex flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="flex flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral lg:flex-row lg:justify-start lg:gap-4 lg:px-4 lg:py-3"
           >
             <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
               <BawaIcon name={icon} className="size-6" />

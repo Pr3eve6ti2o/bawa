@@ -949,4 +949,29 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('lays the quick actions out as a vertical rail beside the hero on desktop widths', async () => {
+    // Follow-up: the dashboard was md5-identical to the saved build on
+    // desktop, which is what the owner reported as "still mobile
+    // layout". The quick actions (Send / Receive / Activity) now run
+    // as a vertical rail beside the hero at lg instead of a three-wide
+    // row — the one visible desktop arrangement change on this screen.
+    // Below lg they stay a three-wide row, so the mobile layout is
+    // untouched.
+    setWallet(balancesFor({}));
+    const mounted = await mountScreen();
+    try {
+      const sendLink = mounted.div.querySelector('a[href="/send"]');
+      expect(sendLink).not.toBeNull();
+      const rail = sendLink?.parentElement;
+      expect(rail?.className).toContain('grid-cols-3');
+      expect(rail?.className).toContain('lg:grid-cols-1');
+      expect(rail?.className).not.toMatch(/(^|\s)lg:grid-cols-3(\s|$)/);
+      expect(sendLink?.className).toContain('lg:flex-row');
+      // The whole rail is still three links, nothing added or removed.
+      expect(rail?.querySelectorAll(':scope > a')).toHaveLength(3);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

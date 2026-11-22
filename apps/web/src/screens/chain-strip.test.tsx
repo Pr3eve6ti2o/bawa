@@ -180,4 +180,27 @@ describe("PopularChainsStrip", () => {
 
     expect(linkTo("/assets/eth").getAttribute("aria-current")).toBe("page");
   });
+
+  it("shows a compact loader without the freshness square while a chain loads", async () => {
+    // P4: while loading, the tile showed the empty freshness square
+    // (a bare "□") beside the full-size loader, which reads as a
+    // broken image in a still. The square means nothing before a price
+    // exists, and the compact row fits the tile.
+    mocks.useWallet.mockReturnValue({
+      balances: { ...balances, btc: { status: "loading" } as const },
+      vaultState: "unlocked",
+    });
+
+    await renderStrip();
+
+    const loadingTile = linkTo("/assets/btc");
+    expect(loadingTile.querySelector(".bawa-loading-compact")).not.toBeNull();
+    // ".size-2.5" is not a valid selector (the dot in the class name),
+    // so the freshness square is matched by attribute instead.
+    expect(loadingTile.querySelector('[class*="size-2.5"]')).toBeNull();
+    // Control: a settled chain still shows its freshness square.
+    expect(
+      linkTo("/assets/eth").querySelector('[class*="size-2.5"]'),
+    ).not.toBeNull();
+  });
 });

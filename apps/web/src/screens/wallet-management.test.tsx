@@ -176,12 +176,16 @@ describe('wallet management — vault account selection', () => {
     }
   });
 
-  it('lays vault addresses and imported wallets in two columns on desktop widths', async () => {
-    // Desktop layout (desktop-layout-v2): the four vault-address
-    // blocks and the imported-wallet cards each lay out in two columns
-    // at lg. Below lg they stay single-column stacks (space-y-3 /
-    // space-y-4, no bare grid-cols-2), so the mobile layout is
-    // untouched.
+  it('lays the vault card beside the imported wallets on desktop widths', async () => {
+    // Follow-up: the vault card sat left and the imported list
+    // underneath it in a full-width two-column grid, which left the
+    // "No wallets imported" card mostly empty and the vault card with
+    // dead space bottom-right. The screen is now two columns at lg —
+    // vault card left, imported list (or the empty card), note and
+    // Forget-all button in a right rail. The vault address list keeps
+    // its own two columns inside the vault card. Below lg the same
+    // blocks stack in one column in the same order (space-y-6, no bare
+    // grid class), so the mobile layout is untouched.
     setWallet(async () => {}, { account: 0, index: 0 }, {
       btc: { xpub: 'xpub6TestBtc1234567890abcdef' },
       eth: null,
@@ -190,6 +194,13 @@ describe('wallet management — vault account selection', () => {
     });
     const mounted = await mountScreen();
     try {
+      const section = mounted.div.querySelector('section');
+      expect(section?.className).toContain('space-y-6');
+      expect(section?.className).toContain('lg:grid');
+      expect(section?.className).toContain('lg:grid-cols-[7fr_5fr]');
+      expect(section?.className).not.toMatch(
+        /(^|\s)grid-cols-\[7fr_5fr\](\s|$)/,
+      );
       const dl = mounted.div.querySelector('dl');
       expect(dl?.className).toContain('lg:grid');
       expect(dl?.className).toContain('lg:grid-cols-2');
@@ -199,7 +210,8 @@ describe('wallet management — vault account selection', () => {
         el.querySelector('[aria-label="Forget stored Bitcoin key"]'),
       );
       expect(list?.className).toContain('lg:grid');
-      expect(list?.className).toContain('lg:grid-cols-2');
+      expect(list?.className).toContain('lg:grid-cols-1');
+      expect(list?.className).not.toContain('lg:grid-cols-2');
       expect(list?.className).toContain('space-y-4');
       expect(list?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
     } finally {

@@ -48,7 +48,11 @@ export function Skeleton({
         />
       </svg>
 
-      <BawaLoading />
+      {/* P2: the full loader is taller than the fixed-height rows a
+          Skeleton is usually given (h-[68px] / h-20 / h-24), so its
+          label spilled over the border, half-clipped. The compact row
+          fits the row it loads in. */}
+      <BawaLoading compact />
     </div>
   );
 }

@@ -1,6 +1,13 @@
 export type BawaLoadingProps = {
   label?: string;
   className?: string;
+  // Compact row loader for fixed-height containers (skeletons): the
+  // full loader is ~110px tall (48px spinner + dots + 1.5rem label),
+  // so inside a 68px skeleton row its label spilled over the
+  // container's bottom border, half-clipped (P2). The compact row
+  // keeps the same label and dots beside a 24px spinner, so it fits
+  // the row it loads in. The default column loader is unchanged.
+  compact?: boolean;
 };
 
 const animationStyles = `
@@ -37,16 +44,20 @@ const animationStyles = `
 export function BawaLoading({
   label = "Loading…",
   className,
+  compact = false,
 }: BawaLoadingProps) {
+  const size = compact ? 24 : 48;
   return (
     <div
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className={["bawa-loading", className].filter(Boolean).join(" ")}
+      className={["bawa-loading", compact && "bawa-loading-compact", className]
+        .filter(Boolean)
+        .join(" ")}
       style={{
         display: "flex",
-        flexDirection: "column",
+        flexDirection: compact ? "row" : "column",
         alignItems: "center",
         justifyContent: "center",
         gap: "0.5rem",
@@ -60,8 +71,8 @@ export function BawaLoading({
         aria-hidden="true"
         focusable="false"
         viewBox="0 0 48 48"
-        width={48}
-        height={48}
+        width={size}
+        height={size}
       >
         <path
           className="bawa-draw-circle"
@@ -91,7 +102,11 @@ export function BawaLoading({
 
       <span
         className="font-display"
-        style={{ fontSize: "1.5rem", lineHeight: 1.2 }}
+        style={
+          compact
+            ? { fontSize: "0.875rem", lineHeight: 1.2 }
+            : { fontSize: "1.5rem", lineHeight: 1.2 }
+        }
       >
         {label}
       </span>

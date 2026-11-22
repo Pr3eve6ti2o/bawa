@@ -39,7 +39,14 @@ export function SecuritySettingsScreen() {
         </ul>
       </div>
 
-      <AutoLockSetting />
+      {/* P1: the auto-lock and delete-vault cards sat at half width
+          while the reading panels above were full-width, with an empty
+          right half beside them. AutoLockSetting renders its own Card
+          and takes no className, so it is wrapped; every direct child
+          of the section now spans both desktop columns. */}
+      <div className="lg:col-span-2">
+        <AutoLockSetting />
+      </div>
 
       <Card className="rounded-xl lg:col-span-2">
         <CardHeader>
@@ -62,7 +69,7 @@ export function SecuritySettingsScreen() {
       </Card>
 
       {vaultState !== 'no-vault' && (
-        <Card className="rounded-xl border-destructive/40">
+        <Card className="rounded-xl border-destructive/40 lg:col-span-2">
           <CardHeader>
             <CardTitle>Delete vault</CardTitle>
           </CardHeader>

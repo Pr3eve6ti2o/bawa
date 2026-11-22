@@ -180,18 +180,19 @@ describe.sequential('App', () => {
   });
 
   it('desktop task screens use wider caps at lg, not the 480px phone column', async () => {
-    // Desktop layout (desktop-layout-v2): /assets/:chain, /send and
-    // /receive go full content width at lg (their screens lay out in
-    // two columns there), while /import-wallet and /mnemonic-backup
-    // widen to a 720px task column for their long inputs. Below lg
-    // every one of them keeps the 480px cap, so the mobile layout is
-    // untouched.
+    // Desktop layout (desktop-layout-v2 + follow-up): /assets/:chain,
+    // /send, /receive, /import-wallet and /mnemonic-backup all go full
+    // content width at lg — their screens lay out in two columns
+    // there, and the 720px task column for the two import screens read
+    // as a phone column on a 1440px main, so it was widened too. Below
+    // lg every one of them keeps the 480px cap, so the mobile layout
+    // is untouched.
     const cases: Array<[string, string]> = [
       ['/assets/btc', 'lg:max-w-none'],
       ['/send', 'lg:max-w-none'],
       ['/receive', 'lg:max-w-none'],
-      ['/import-wallet', 'lg:max-w-[720px]'],
-      ['/mnemonic-backup', 'lg:max-w-[720px]'],
+      ['/import-wallet', 'lg:max-w-none'],
+      ['/mnemonic-backup', 'lg:max-w-none'],
     ];
     for (const [path, expected] of cases) {
       await withRenderedApp(path, (div) => {
@@ -204,6 +205,20 @@ describe.sequential('App', () => {
     }
     // Five full App mounts in one test (lazy chunks + live provider
     // effects each) need more than the 5s default.
+  }, 30000);
+
+  it('treats a trailing slash on the asset list as the list, not a chain detail', async () => {
+    // P10: GitHub Pages redirects /bawa/assets to /bawa/assets/, and
+    // the trailing slash used to match startsWith('/assets/') and wrap
+    // the list in the 480px phone column. The list route keeps full
+    // width with or without the slash.
+    await withRenderedApp('/assets/', (div) => {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      const outlet = main?.children[0] as Element | undefined;
+      expect(outlet?.className).not.toContain('max-w-[480px]');
+      expect(div.textContent).toContain('Assets');
+    });
   }, 30000);
 
   it('renders the Create screen with all seven tools', async () => {

@@ -177,6 +177,31 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       await cleanup();
     }
   });
+
+  it('lays the intro beside the import form on desktop widths', async () => {
+    // Follow-up: the screen was wrapped in a centered 720px column,
+    // which reads as a phone column on a 1440px main. The intro now
+    // sits left (5 of 12) and the mode-specific form right (7 of 12)
+    // at lg. Below lg the same blocks stack in one column in the
+    // same order (space-y-6, no bare grid class), so the mobile
+    // layout is untouched.
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      const outlet = main?.children[0] as Element | undefined;
+      const root = outlet?.children[0] as Element | undefined;
+      expect(root?.className).toContain('space-y-6');
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-[5fr_7fr]');
+      expect(root?.className).not.toMatch(
+        /(^|\s)grid-cols-\[5fr_7fr\](\s|$)/,
+      );
+      expect(root?.textContent).toContain('Import a wallet');
+    } finally {
+      await cleanup();
+    }
+  });
 });
 
 describe.sequential('ImportWalletScreen (T41)', () => {

@@ -146,15 +146,21 @@ export function PopularChainsStrip({
                     </span>
 
                     <div className="flex min-h-5 items-center justify-center gap-2 text-sm text-ink">
-                      <span
-                        aria-hidden="true"
-                        className={`size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink ${freshnessClassName}`}
-                      />
-
+                      {/* P4: while loading there is no price yet, so
+                          the freshness square is an empty "□" beside
+                          the loader — it reads as a broken image in a
+                          still. The square is hidden until a price
+                          exists, and the compact loader fits the row. */}
                       {display.loading ? (
-                        <BawaLoading />
+                        <BawaLoading compact />
                       ) : (
-                        <span>{shownPrimary}</span>
+                        <>
+                          <span
+                            aria-hidden="true"
+                            className={`size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink ${freshnessClassName}`}
+                          />
+                          <span>{shownPrimary}</span>
+                        </>
                       )}
                     </div>
 

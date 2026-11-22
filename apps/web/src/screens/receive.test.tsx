@@ -201,4 +201,19 @@ describe('receive screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('reserves no space for the copy status until something is copied', async () => {
+    // P8: the empty status paragraph rendered unconditionally below
+    // Copy/Share, reserving ~100px of dead space inside the QR card
+    // (its own height plus the card's bottom padding). It only
+    // renders once a copy or share reports a status, and still
+    // carries role="status" then.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.querySelector('p[role="status"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

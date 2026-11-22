@@ -24,7 +24,11 @@ export function NetworkSelectionScreen() {
           <CardTitle>Mainnet</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-3">
+          {/* P7: one sparse list stretched full-width left ~55% of a
+              1919x1080 viewport empty. Two columns at lg make it a
+              compact 2x2. Below lg it stays a single-column list, so
+              the mobile layout is untouched. */}
+          <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {networks.map(({ id, mainnet }) => (
               <li
                 key={id}

@@ -275,9 +275,15 @@ export function ReceiveScreen() {
             </Link>
           </div>
         )}
-        <p role="status" className="mt-4 text-center text-sm text-ink">
-          {copyStatus}
-        </p>
+        {/* P8: the empty status paragraph rendered unconditionally and
+            reserved ~100px of dead space inside the QR card. It only
+            renders once a copy or share reports a status, and still
+            carries role="status" then. */}
+        {copyStatus !== '' && (
+          <p role="status" className="mt-4 text-center text-sm text-ink">
+            {copyStatus}
+          </p>
+        )}
       </Card>
 
       <p className="text-sm text-ink">

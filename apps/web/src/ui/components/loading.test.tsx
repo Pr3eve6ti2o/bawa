@@ -112,6 +112,34 @@ describe("BawaLoading", () => {
     );
     expect(getByText(container, "Finding your wallet…")).not.toBeNull();
   });
+
+  it("renders the full column loader by default, not the compact row", async () => {
+    const container = await mount(<BawaLoading />);
+
+    const status = getByRole(container, "status");
+    expect(status.classList.contains("bawa-loading-compact")).toBe(false);
+    const svg = status.querySelector("svg");
+    expect(svg?.getAttribute("width")).toBe("48");
+    expect(svg?.getAttribute("height")).toBe("48");
+  });
+
+  it("renders a compact row loader that fits a fixed-height skeleton", async () => {
+    // P2: the full loader (48px spinner + dots + 1.5rem label) is
+    // ~110px tall, so inside a fixed 68px skeleton row the "Loading…"
+    // label spilled over the container's bottom border, half-clipped.
+    // The compact row keeps the same label and dots beside a smaller
+    // spinner, so it fits the row it loads in.
+    const container = await mount(<BawaLoading compact />);
+
+    const status = getByRole(container, "status");
+    expect(status.classList.contains("bawa-loading-compact")).toBe(true);
+    expect(getByText(container, "Loading…")).not.toBeNull();
+    const svg = status.querySelector("svg");
+    expect(svg?.getAttribute("width")).toBe("24");
+    expect(svg?.getAttribute("height")).toBe("24");
+    expect((status as HTMLElement).style.flexDirection).toBe("row");
+    expect(status.querySelectorAll("span.bawa-dot")).toHaveLength(3);
+  });
 });
 
 describe("SquiggleDivider", () => {
@@ -157,5 +185,15 @@ describe("Skeleton", () => {
     expect(skeleton).not.toBeNull();
     expect(skeleton?.contains(label)).toBe(true);
     expect(skeleton?.contains(getByRole(container, "status"))).toBe(true);
+  });
+
+  it("renders the compact loader so the label fits inside a fixed-height row", async () => {
+    // P2: a Skeleton is usually given a fixed row height (h-[68px] in
+    // the asset rows, h-20/h-24 elsewhere); the full loader overflows
+    // it and its label straddles the border. The compact row fits.
+    const container = await mount(<Skeleton className="h-[68px]" />);
+
+    const skeleton = container.querySelector('[data-slot="skeleton"]');
+    expect(skeleton?.querySelector(".bawa-loading-compact")).not.toBeNull();
   });
 });

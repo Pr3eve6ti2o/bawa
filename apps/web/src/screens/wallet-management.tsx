@@ -63,8 +63,15 @@ export function WalletManagementScreen() {
   }
 
   return (
-    <section className="space-y-6" aria-labelledby="wallets-heading">
-      <h1 id="wallets-heading" className="text-2xl font-semibold">
+    // Follow-up (P9): the vault card sat full-width above the imported
+    // list, which left the "No wallets imported" card mostly empty and
+    // the vault card with dead space bottom-right. The screen is now
+    // two columns at lg — vault card left, imported list (or the empty
+    // card), note and Forget-all button in a right rail. Below lg the
+    // same blocks stack in one column in the same order (space-y-6,
+    // no bare grid class), so the mobile layout is untouched.
+    <section className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:items-start lg:space-y-0" aria-labelledby="wallets-heading">
+      <h1 id="wallets-heading" className="text-2xl font-semibold lg:col-span-2">
         Wallets
       </h1>
 
@@ -135,11 +142,16 @@ export function WalletManagementScreen() {
         </CardContent>
       </Card>
 
+      {/* Right rail at lg: imported list (or the empty card), the note
+          and the Forget-all button. A plain div below lg, so the
+          mobile order and spacing are unchanged. */}
+      <div className="space-y-6">
       {hasWallets ? (
-        // Desktop layout (desktop-layout-v2): the imported-wallet cards
-        // lay out in two columns at lg. Below lg they stay a
-        // single-column stack (space-y-4, no bare grid class).
-        <ul className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+        // Follow-up: the imported-wallet cards stack in one column
+        // inside the right rail at lg — two columns there would be
+        // ~260px each and crush the card headers. Below lg they stay
+        // a single-column stack (space-y-4, no bare grid class).
+        <ul className="space-y-4 lg:grid lg:grid-cols-1 lg:gap-4 lg:space-y-0">
           {chains.map(({ id, name }) => {
             const wallet = xpubs[id];
             if (!wallet) return null;
@@ -213,6 +225,7 @@ export function WalletManagementScreen() {
           Forget all stored keys
         </Button>
       )}
+      </div>
     </section>
   );
 }

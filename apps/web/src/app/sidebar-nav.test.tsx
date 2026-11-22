@@ -9,10 +9,13 @@ const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
-async function mountNav(props: {
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
-}) {
+async function mountNav(
+  props: {
+    collapsed?: boolean;
+    onToggleCollapse?: () => void;
+  },
+  path = '/',
+) {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -20,7 +23,7 @@ async function mountNav(props: {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={[path]}>
         <SidebarNav {...props} />
       </MemoryRouter>,
     );
@@ -135,5 +138,26 @@ describe('sidebar nav — collapse toggle (Lane A)', () => {
       '/mnemonic-backup',
       '/welcome',
     ]);
+  });
+
+  it('lets long active labels wrap instead of truncating them', async () => {
+    // P3: the active item adds a coral square (~18px) beside the label,
+    // so at 224px "Track a transaction" and "Mnemonic backup" clipped
+    // to "Track a transact…" / "Mnemonic back…". The labels are copy
+    // and must not be shortened; the item lets them wrap instead.
+    for (const [path, label] of [
+      ['/track', 'Track a transaction'],
+      ['/mnemonic-backup', 'Mnemonic backup'],
+    ] as const) {
+      const mounted = await mountNav({}, path);
+      try {
+        const link = mounted.div.querySelector(`a[href="${path}"]`);
+        expect(link).not.toBeNull();
+        expect(link?.textContent).toContain(label);
+        expect(link?.querySelector('.truncate')).toBeNull();
+      } finally {
+        await mounted.cleanup();
+      }
+    }
   });
 });

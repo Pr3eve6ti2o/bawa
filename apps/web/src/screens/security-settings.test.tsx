@@ -182,4 +182,23 @@ describe('security settings screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('gives every card the same width on desktop — no half-width cards', async () => {
+    // P1: "What this wallet does" and "Backup procedure" were
+    // full-width while "Auto-lock" and "Delete vault" sat at half
+    // width with an empty right half on the same screen. Every direct
+    // child of the section spans both desktop columns.
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      const section = mounted.div.querySelector('section') as HTMLElement;
+      const children = [...section.children] as HTMLElement[];
+      expect(children.length).toBeGreaterThan(0);
+      for (const child of children) {
+        expect(child.className).toContain('lg:col-span-2');
+      }
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

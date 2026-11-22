@@ -153,7 +153,13 @@ export function CreateScreen() {
         Creating a wallet starts with a short risk check. Your recovery phrase
         is shown only after you confirm you understand the risks.
       </p>
-      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* P6: seven cards in a 3-col grid left a lone orphan card in
+          row 3. Four columns make it 4 + 3 at desktop widths. Below
+          xl the grid stays two-wide, so the mobile layout is
+          untouched. Row heights are not forced equal: each row sizes
+          to its tallest card, which is standard grid behaviour — the
+          orphan was the defect. */}
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {tools.map((tool) => (
           <li key={tool.name} className="min-w-0">
             <ToolCard tool={tool} />

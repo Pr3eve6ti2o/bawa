@@ -376,7 +376,7 @@ export function SendScreen() {
     // rail pattern as create-wallet. Below lg the same blocks stack in
     // one column in the same order (space-y-6, no bare grid class),
     // so the mobile flow is untouched.
-    <div className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-8 lg:items-start lg:space-y-0">
+    <div className="space-y-6 lg:grid lg:grid-cols-5 lg:min-h-[calc(100vh-7.5rem)] lg:content-center lg:gap-8 lg:items-start lg:space-y-0">
       <div className="space-y-6 lg:col-span-2 lg:sticky lg:top-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>

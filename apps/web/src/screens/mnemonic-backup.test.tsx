@@ -330,4 +330,33 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
       await cleanup();
     }
   }, 30000);
+
+  it('lays the intro, profiles and guidance in two columns on desktop widths', async () => {
+    // Follow-up: the screen was wrapped in a centered 720px column,
+    // which reads as a phone column on a 1440px main. The intro spans
+    // both columns at lg, the profiles and guidance sit left and the
+    // reveal section right, and the back link spans both. Below lg the
+    // same blocks stack in one column in the same order (space-y-6,
+    // no bare grid-cols-2), so the mobile layout is untouched. This
+    // mounts with no vault, so only the always-visible blocks are
+    // asserted here.
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      const outlet = main?.children[0] as Element | undefined;
+      const root = outlet?.children[0] as Element | undefined;
+      expect(root?.className).toContain('space-y-6');
+      expect(root?.className).toContain('lg:grid');
+      expect(root?.className).toContain('lg:grid-cols-2');
+      expect(root?.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+      const intro = [...root?.querySelectorAll('div') ?? []].find((el) =>
+        el.textContent?.includes('Mnemonic backup') &&
+        el.className.includes('rounded-bawa'),
+      ) as HTMLElement | undefined;
+      expect(intro?.className).toContain('lg:col-span-2');
+    } finally {
+      await cleanup();
+    }
+  });
 });

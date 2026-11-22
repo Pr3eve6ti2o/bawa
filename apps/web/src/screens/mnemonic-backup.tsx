@@ -170,8 +170,14 @@ export function MnemonicBackupScreen() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="rounded-xl">
+    // Follow-up: the screen was wrapped in a centered 720px column,
+    // which reads as a phone column on a 1440px main. The intro spans
+    // both columns at lg, the profiles and guidance sit left and the
+    // reveal section right, and the back link spans both. Below lg the
+    // same blocks stack in one column in the same order (space-y-6,
+    // no bare grid-cols-2), so the mobile layout is untouched.
+    <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start lg:space-y-0">
+      <Card className="rounded-xl lg:col-span-2">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
           <CardDescription>
@@ -217,7 +223,12 @@ export function MnemonicBackupScreen() {
       </Card>
 
       {profiles !== null && (
-        <section aria-labelledby="backup-profiles" className="space-y-3">
+        // Left column at lg: profiles and guidance share one wrapper
+        // so the reveal section keeps the right column to itself. The
+        // wrapper is a plain div below lg, so the mobile order and
+        // spacing are unchanged.
+        <div className="space-y-6">
+          <section aria-labelledby="backup-profiles" className="space-y-3">
           <h2 id="backup-profiles" className="text-lg font-semibold">
             Recovery profiles
           </h2>
@@ -245,9 +256,7 @@ export function MnemonicBackupScreen() {
             })}
           </ul>
         </section>
-      )}
 
-      {profiles !== null && (
         <section aria-label="Backup guidance" className="space-y-3">
           <p className="text-sm text-ink">
             These items are reminders, not a record of completed steps. This
@@ -266,6 +275,7 @@ export function MnemonicBackupScreen() {
           ))}
           </div>
         </section>
+        </div>
       )}
 
       {profiles !== null && (
@@ -395,7 +405,7 @@ export function MnemonicBackupScreen() {
         </section>
       )}
 
-      <Link to="/" className="inline-block text-sm underline underline-offset-4">
+      <Link to="/" className="inline-block text-sm underline underline-offset-4 lg:col-span-2">
         Back to wallet
       </Link>
     </div>
