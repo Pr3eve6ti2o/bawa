@@ -337,11 +337,18 @@ function decodeTonBase64(value: string): Uint8Array | null {
 // private-key material. TON has no xpub and exactly one address per
 // wallet, so this validates a public address, not an extended key.
 // Semantics mirror destination.ts validateTon: tag 0x11 bounceable /
-// 0x51 non-bounceable (0x80 testnet flag rejected), workchain 0x00/0xff,
-// CRC16-XMODEM over the first 34 bytes; raw "0:"/"-1:" + 64 hex has no
-// checksum by design. Inputs containing whitespace or a private-key
-// prefix are secret-like and rejected without echoing the input.
-export function validateTonAddress(address: string): TonAddressValidation {
+// 0x51 non-bounceable (0x80 testnet flag rejected on mainnet), workchain
+// 0x00/0xff, CRC16-XMODEM over the first 34 bytes; raw "0:"/"-1:" + 64
+// hex has no checksum by design. Inputs containing whitespace or a
+// private-key prefix are secret-like and rejected without echoing the
+// input. TEMPORARY devnet mode: pass `{ devnet: true }` to require the
+// testnet flag instead (mainnet tags are rejected); the watch-only call
+// sites stay mainnet-only and pass no option.
+export function validateTonAddress(
+  address: string,
+  options?: { devnet?: boolean },
+): TonAddressValidation {
+  const devnet = options?.devnet === true;
   const value = address.trim();
 
   if (value.length === 0) {
@@ -412,7 +419,15 @@ export function validateTonAddress(address: string): TonAddressValidation {
       message: 'Unsupported TON address tag.',
     };
   }
-  if ((tag & 0x80) !== 0) {
+  if (devnet) {
+    if ((tag & 0x80) === 0) {
+      return {
+        ok: false,
+        reason: 'wrong-network',
+        message: 'Mainnet TON addresses are not supported in devnet mode.',
+      };
+    }
+  } else if ((tag & 0x80) !== 0) {
     return {
       ok: false,
       reason: 'wrong-network',

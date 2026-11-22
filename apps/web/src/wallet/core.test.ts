@@ -16,6 +16,7 @@ import {
   createWallet,
   deriveAddresses,
   deriveAddressesAt,
+  deriveDevnetAddressesAt,
   deriveFromXpub,
   intentFingerprint,
   isPartialSigner,
@@ -24,6 +25,8 @@ import {
   type AddressOnlyAccount,
   type LocalAccount,
 } from './core';
+import { decodeBtcBech32 } from './devnet';
+import { ripemd160 } from 'viem';
 
 // Public fixtures already in the repo (apps/web/src/engine/boundary.test.ts).
 const trxXpub =
@@ -603,5 +606,78 @@ describe('wallet core message signing, signer guards, and intents', () => {
         to: otherTo,
       }),
     ).toThrow(new Error('Signing intent mismatch: to.'));
+  });
+});
+
+describe('deriveDevnetAddressesAt (temporary devnet mode)', () => {
+  it('derives tb1q BTC at the testnet coin-type path with the same witness program as the key', async () => {
+    const core = await loadCore();
+    const wallet = core.HDWallet.createWithMnemonic(TEST_VECTOR_MNEMONIC, '');
+    // Independent route to the key at m/84'/1'/0'/0/0 (coin type 1):
+    // hash160 of its compressed public key must equal the tb1q program.
+    const key = wallet.getKey(core.CoinType.bitcoin, "m/84'/1'/0'/0/0");
+    let expectedProgram: number[];
+    try {
+      const pubkey = key.getPublicKeySecp256k1(true);
+      try {
+        const compressed = new Uint8Array(pubkey.data());
+        const hash = ripemd160(sha256(compressed));
+        expectedProgram = Array.from(hexToBytes(hash));
+      } finally {
+        pubkey.delete();
+      }
+    } finally {
+      key.delete();
+      wallet.delete();
+    }
+
+    const devnet = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 0);
+    expect(devnet.btc.startsWith('tb1q')).toBe(true);
+    const decoded = decodeBtcBech32(devnet.btc);
+    expect(decoded).not.toBeNull();
+    expect(decoded?.hrp).toBe('tb');
+    expect(decoded?.witnessVersion).toBe(0);
+    expect(decoded?.program).toEqual(expectedProgram);
+  });
+
+  it('reuses the mainnet address for ETH and TRX, and re-encodes TON with the testnet flag', async () => {
+    const mainnet = await deriveAddresses(TEST_VECTOR_MNEMONIC);
+    const devnet = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 0);
+    expect(devnet.eth).toBe(mainnet.eth);
+    expect(devnet.eth).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(devnet.trx).toBe(mainnet.trx);
+    expect(devnet.trx).toBe('TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH');
+    // Same account hash as the mainnet UQ address, testnet-flagged (0Q).
+    expect(devnet.ton.startsWith('0Q')).toBe(true);
+    expect(devnet.ton).toBe('0QAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-akS');
+    // The other nine chains stay mainnet-only.
+    expect(devnet.sol).toBe(mainnet.sol);
+    expect(devnet.bsc).toBe(mainnet.bsc);
+    expect(devnet.ltc).toBe(mainnet.ltc);
+    expect(devnet.doge).toBe(mainnet.doge);
+  });
+
+  it('changes BTC at index 1 but not TON', async () => {
+    const base = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 0);
+    const next = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 1);
+    expect(next.btc).not.toBe(base.btc);
+    expect(next.btc.startsWith('tb1q')).toBe(true);
+    expect(next.ton).toBe(base.ton);
+    expect(next.eth).not.toBe(base.eth);
+  });
+
+  it('rejects an invalid mnemonic', async () => {
+    await expect(
+      deriveDevnetAddressesAt('abandon abandon', '', 0, 0),
+    ).rejects.toThrow('Invalid mnemonic.');
+  });
+
+  it('rejects a negative account and an out-of-range index', async () => {
+    await expect(
+      deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', -1, 0),
+    ).rejects.toThrow(RangeError);
+    await expect(
+      deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 0x80000000),
+    ).rejects.toThrow(RangeError);
   });
 });

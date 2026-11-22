@@ -25,6 +25,8 @@ export type SendReviewProps = {
   stage: SendApprovalStage;
   onBack: () => void;
   onSign: () => void;
+  /** TEMPORARY devnet mode: the test network this send broadcasts to. */
+  devnetNetworkName?: string;
 };
 
 const approvalStageCopy = {
@@ -48,6 +50,10 @@ const approvalStageCopy = {
     heading: 'Signed — broadcast disabled',
     helper: 'The send is signed offline. Broadcasting remains disabled.',
   },
+  'broadcast-devnet': {
+    heading: 'Broadcasting to the test network…',
+    helper: 'The signed transaction is being sent to the test network. Test tokens have no value.',
+  },
 } satisfies Record<
   SendApprovalStage,
   { heading: string; helper: string }
@@ -66,6 +72,7 @@ export function SendReview({
   stage,
   onBack,
   onSign,
+  devnetNetworkName,
 }: SendReviewProps) {
   const { heading, helper } = approvalStageCopy[stage];
 
@@ -138,8 +145,19 @@ export function SendReview({
         role="alert"
         className="space-y-2 rounded-xl border border-warning-border bg-warning-surface p-4 text-warning-text"
       >
-        <p className="font-semibold">Sending is switched off</p>
-        <p className="break-words text-sm">{disabledReason}</p>
+        {devnetNetworkName ? (
+          <>
+            <p className="font-semibold">Devnet test mode</p>
+            <p className="break-words text-sm">
+              {`This send broadcasts to the ${devnetNetworkName} test network only. Test tokens have no value.`}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold">Sending is switched off</p>
+            <p className="break-words text-sm">{disabledReason}</p>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap justify-between gap-3">

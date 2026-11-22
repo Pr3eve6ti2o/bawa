@@ -31,6 +31,7 @@ export function DashboardScreen() {
     balances,
     refreshBalances,
     vaultState,
+    devnetEnabled,
   } = useWallet();
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
@@ -59,7 +60,7 @@ export function DashboardScreen() {
     });
   };
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
   const pricesLoading = pricesState.status === 'loading';
 
   // Auto-fetch on mount: prices previously loaded only after a manual

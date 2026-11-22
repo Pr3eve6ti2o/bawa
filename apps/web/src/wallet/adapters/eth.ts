@@ -14,6 +14,7 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
   type FeeEstimate,
   type FetchTransport,
@@ -36,6 +37,16 @@ export interface EthAdapterOverrides {
    * Defaults to the single-attempt HTTP transport.
    */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * chain id the identity check pins, the explorer base, and the
+   * devnet broadcast. Unset, the adapter is the mainnet adapter
+   * exactly as before.
+   */
+  networkId?: string;
+  expectedChainId?: number;
+  explorerBaseUrl?: string;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 
@@ -53,6 +64,11 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     });
   const historyBaseUrl = overrides.historyBaseUrl ?? HISTORY_BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
+  // Devnet overrides default to the mainnet values, so a mainnet
+  // adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? NETWORK_ID;
+  const expectedChainId = overrides.expectedChainId ?? 1;
+  const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://eth.blockscout.com';
   // The Blockscout history read is a plain fetchJson call, so it gets the
   // bounded retry (item 2). The viem client calls below are NOT wrapped:
   // viem's http transport already retries transient RPC failures
@@ -62,25 +78,26 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     withRetry(() => transport.request(url), { operation });
 
   /**
-   * Chain identity, checked on every call: the RPC must report chain 1.
-   * Returns an error result on mismatch, null when the network is mainnet.
+   * Chain identity, checked on every call: the RPC must report the
+   * pinned chain id (1 on mainnet, 11155111 on Sepolia).
+   * Returns an error result on mismatch, null when the network matches.
    * No silent fallback to another RPC.
    */
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
+  const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     let chainId: number;
     try {
       chainId = await client.getChainId();
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (chainId !== 1) {
+    if (chainId !== expectedChainId) {
       return {
         status: 'error',
-        reason: `Network identity mismatch: expected chain 1 (eip155:1), got ${chainId}.`,
+        reason: `Network identity mismatch: expected chain ${expectedChainId} (${networkId}), got ${chainId}.`,
       };
     }
     // The RPC's chain id maps to the CAIP-2 network id; verify the mapping.
-    assertNetworkId(`eip155:${chainId}`, NETWORK_ID, SOURCE);
+    assertNetworkId(`eip155:${chainId}`, networkId, SOURCE);
     return null;
   };
 
@@ -90,7 +107,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     if (!isAddress(address)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     try {
       const balance = await client.getBalance({ address: getAddress(address) });
@@ -99,7 +116,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         data: {
           chain: 'eth',
           address: getAddress(address),
-          networkId: NETWORK_ID,
+          networkId,
           valueBaseUnits: balance.toString(),
           decimals: DECIMALS,
           source: SOURCE,
@@ -120,7 +137,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     if (!isAddress(address)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const url =
       `${historyBaseUrl}?module=account&action=txlist` +
@@ -164,21 +181,21 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
       txs.push({
         hash,
         chain: 'eth',
-        networkId: NETWORK_ID,
+        networkId,
         direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
         amountBaseUnits: value,
         counterparty:
           fromSelf && toSelf ? null : fromSelf ? toRaw || null : fromRaw || null,
         timestamp: Number.isFinite(timeStamp) ? timeStamp * 1000 : null,
         status: failed ? 'failed' : 'confirmed',
-        explorerUrl: `https://eth.blockscout.com/tx/${hash}`,
+        explorerUrl: `${explorerBaseUrl}/tx/${hash}`,
       });
     }
     return { status: 'ok', data: txs, source: 'blockscout', fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     try {
       const gasPrice = await client.getGasPrice();
@@ -186,7 +203,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
         status: 'ok',
         data: {
           chain: 'eth',
-          networkId: NETWORK_ID,
+          networkId,
           feeBaseUnits: (gasPrice * 21000n).toString(),
           unit: 'wei',
           note: 'Native-transfer estimate at current gas price, 21000 gas; not a final fee',
@@ -207,7 +224,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     if (!isAddress(address)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     try {
       const nonce = await client.getTransactionCount({ address: getAddress(address) });
@@ -222,13 +239,16 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     }
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: 'eth',
-    networkId: NETWORK_ID,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

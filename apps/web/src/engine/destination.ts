@@ -213,7 +213,10 @@ interface Bech32Decoded {
   addressType: 'p2wpkh' | 'p2wsh' | 'p2tr';
 }
 
-function decodeBech32Address(address: string): Bech32Decoded | Bech32Failure {
+function decodeBech32Address(
+  address: string,
+  devnet = false,
+): Bech32Decoded | Bech32Failure {
   if (address.length > 90) return 'invalid-length';
   const hasLower = /[a-z]/.test(address);
   const hasUpper = /[A-Z]/.test(address);
@@ -224,7 +227,14 @@ function decodeBech32Address(address: string): Bech32Decoded | Bech32Failure {
     return 'invalid-format';
   }
   const hrp = lower.slice(0, separator);
-  if (hrp !== 'bc') {
+  if (devnet) {
+    // Devnet accepts the tb HRP only; bc is a mainnet address here and
+    // bcrt (regtest) is never a devnet destination.
+    if (hrp !== 'tb') {
+      if (hrp === 'bc' || hrp === 'bcrt') return 'wrong-network';
+      return 'invalid-format';
+    }
+  } else if (hrp !== 'bc') {
     if (hrp === 'tb' || hrp === 'bcrt') return 'wrong-network';
     return 'invalid-format';
   }
@@ -285,8 +295,10 @@ function failure(
 
 async function validateBtc(
   address: string,
+  options?: DestinationValidationOptions,
 ): Promise<DestinationValidation> {
   const chain: DestinationChain = 'btc';
+  const devnet = options?.devnet === true;
   if (address === '') {
     return failure(chain, 'empty', 'destination address is empty');
   }
@@ -295,7 +307,7 @@ async function validateBtc(
   // rejects unknown HRPs; everything else is Base58Check. Base58
   // P2PKH/P2SH addresses start with '1'/'3', so they never match.
   if (/^[a-zA-Z]{1,83}1[0-9a-zA-Z]+$/.test(address)) {
-    const decoded = decodeBech32Address(address);
+    const decoded = decodeBech32Address(address, devnet);
     if (typeof decoded === 'string') {
       return failure(chain, decoded, `invalid bech32 address: ${decoded}`);
     }
@@ -315,18 +327,34 @@ async function validateBtc(
     );
   }
   const { version } = decoded.decoded;
-  if (version === 0x00) {
-    return { ok: true, chain, checksum: 'verified', addressType: 'p2pkh' };
-  }
-  if (version === 0x05) {
-    return { ok: true, chain, checksum: 'verified', addressType: 'p2sh' };
-  }
-  if (version === 0x6f || version === 0xc4) {
-    return failure(
-      chain,
-      'wrong-network',
-      'testnet address version: mainnet destinations only',
-    );
+  if (devnet) {
+    if (version === 0x6f) {
+      return { ok: true, chain, checksum: 'verified', addressType: 'p2pkh' };
+    }
+    if (version === 0xc4) {
+      return { ok: true, chain, checksum: 'verified', addressType: 'p2sh' };
+    }
+    if (version === 0x00 || version === 0x05) {
+      return failure(
+        chain,
+        'wrong-network',
+        'mainnet address version: devnet destinations only',
+      );
+    }
+  } else {
+    if (version === 0x00) {
+      return { ok: true, chain, checksum: 'verified', addressType: 'p2pkh' };
+    }
+    if (version === 0x05) {
+      return { ok: true, chain, checksum: 'verified', addressType: 'p2sh' };
+    }
+    if (version === 0x6f || version === 0xc4) {
+      return failure(
+        chain,
+        'wrong-network',
+        'testnet address version: mainnet destinations only',
+      );
+    }
   }
   return failure(
     chain,
@@ -459,8 +487,12 @@ function decodeTonFriendly(
   return bytes;
 }
 
-function validateTon(address: string): DestinationValidation {
+function validateTon(
+  address: string,
+  options?: DestinationValidationOptions,
+): DestinationValidation {
   const chain: DestinationChain = 'ton';
+  const devnet = options?.devnet === true;
   if (address === '') {
     return failure(chain, 'empty', 'destination address is empty');
   }
@@ -486,7 +518,17 @@ function validateTon(address: string): DestinationValidation {
   const tag = bytes[0]!;
   const isTestnet = (tag & TON_TEST_FLAG) !== 0;
   const baseTag = tag & ~TON_TEST_FLAG;
-  if (isTestnet) {
+  if (devnet) {
+    // Devnet accepts the testnet flag only; a mainnet tag is a
+    // mainnet destination, not a devnet one.
+    if (!isTestnet) {
+      return failure(
+        chain,
+        'wrong-network',
+        'mainnet TON address: devnet destinations only',
+      );
+    }
+  } else if (isTestnet) {
     return failure(
       chain,
       'wrong-network',
@@ -525,20 +567,28 @@ function validateTon(address: string): DestinationValidation {
   return { ok: true, chain, checksum: 'verified', addressType };
 }
 
+/** Devnet threading (temporary devnet mode): pass `{ devnet: true }`
+ * to validate a destination on the test network instead of mainnet.
+ * BTC accepts tb HRP + base58 0x6f/0xc4 and rejects bc/0x00/0x05;
+ * TON accepts the testnet flag and rejects mainnet tags; ETH/TRX are
+ * unchanged (Sepolia shares Ethereum addresses, Nile shares 0x41). */
+export type DestinationValidationOptions = { devnet?: boolean };
+
 export async function validateDestination(
   chain: DestinationChain,
   address: string,
+  options?: DestinationValidationOptions,
 ): Promise<DestinationValidation> {
   const trimmed = address.trim();
   switch (chain) {
     case 'btc':
-      return validateBtc(trimmed);
+      return validateBtc(trimmed, options);
     case 'eth':
       return validateEth(trimmed);
     case 'trx':
       return validateTrx(trimmed);
     case 'ton':
-      return validateTon(trimmed);
+      return validateTon(trimmed, options);
     default:
       throw new Error('unknown chain');
   }

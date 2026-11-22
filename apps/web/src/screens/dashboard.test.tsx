@@ -949,4 +949,30 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('never fetches mainnet prices and shows no Testnet label in devnet mode', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'available', value: '1500000000000000000' },
+      }),
+      { devnetEnabled: true },
+    );
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      // Real balances from the context, formatted from base units.
+      expect(text).toContain('1.5 ETH');
+      expect(text).toContain('Zero balance');
+      // Devnet tokens have no market price: the price feed is never hit.
+      expect(fetchMock).not.toHaveBeenCalled();
+      // The dashboard itself never invents a testnet label; the only
+      // devnet marker is the app header pill.
+      expect(text).not.toContain('Testnet');
+      expect(text).not.toContain('TESTNET');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
+

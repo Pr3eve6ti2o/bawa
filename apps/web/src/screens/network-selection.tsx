@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";
+import { useWallet } from "../state/wallet-context";
+import { DevnetSetting } from "./devnet-setting";
 
 const networks = [
   { id: "btc", mainnet: "Bitcoin mainnet" },
@@ -8,6 +10,8 @@ const networks = [
 ] as const;
 
 export function NetworkSelectionScreen() {
+  const { devnetEnabled } = useWallet();
+
   return (
     <section className="space-y-6" aria-labelledby="networks-heading">
       <header className="space-y-2">
@@ -15,7 +19,9 @@ export function NetworkSelectionScreen() {
           Networks
         </h1>
         <p className="text-sm text-muted-foreground">
-          Mainnet only. This wallet never connects to a test network.
+          {devnetEnabled
+            ? "Devnet test mode is on. This wallet connects to test networks with valueless test tokens."
+            : "Mainnet only. This wallet never connects to a test network."}
         </p>
       </header>
 
@@ -39,6 +45,8 @@ export function NetworkSelectionScreen() {
           </ul>
         </CardContent>
       </Card>
+
+      <DevnetSetting />
 
       <p className="text-sm text-muted-foreground">
         Your balances and history come from public blockchain networks.

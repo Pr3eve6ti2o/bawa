@@ -17,9 +17,14 @@ import { BTC_PROFILE_ID, EVM_PROFILE_ID } from './test-helpers';
 
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
+  getDevnetAdapter: vi.fn(() => undefined),
+  getAdapterForMode: vi.fn(() => undefined),
   registerAdapter: vi.fn(),
+  registerDevnetAdapter: vi.fn(),
   registeredChains: vi.fn(() => []),
+  registeredDevnetChains: vi.fn(() => []),
   registerAllAdapters: vi.fn(),
+  registerDevnetAdapters: vi.fn(),
 }));
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -493,4 +498,75 @@ describe('wallet context — auto-lock real-time timer', () => {
     },
     120_000,
   );
+});
+
+describe('wallet context — temporary devnet mode', () => {
+  it('derives devnet addresses under a separate key and restores mainnet on toggle off', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      expect(exposed!.devnetEnabled).toBe(false);
+      expect(exposed!.vaultAddresses.btc[0]).toMatch(/^bc1q/);
+      const mainnetStored = localStorage.getItem('bawa-vault-addresses:v1');
+      expect(mainnetStored).toContain('bc1q');
+      expect(localStorage.getItem('bawa-vault-addresses-devnet:v1')).toBeNull();
+
+      await act(async () => {
+        await exposed!.setDevnetEnabled(true);
+      });
+      expect(exposed!.devnetEnabled).toBe(true);
+      expect(localStorage.getItem('bawa-devnet-enabled')).toBe('1');
+      expect(exposed!.vaultAddresses.btc[0]).toMatch(/^tb1q/);
+      expect(exposed!.vaultAddresses.ton[0]).toMatch(/^0Q/);
+      expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
+      const devnetStored = localStorage.getItem(
+        'bawa-vault-addresses-devnet:v1',
+      );
+      expect(devnetStored).toContain('tb1q');
+      // The mainnet record is untouched by the devnet derivation.
+      expect(localStorage.getItem('bawa-vault-addresses:v1')).toBe(
+        mainnetStored,
+      );
+
+      await act(async () => {
+        await exposed!.setDevnetEnabled(false);
+      });
+      expect(exposed!.devnetEnabled).toBe(false);
+      expect(localStorage.getItem('bawa-devnet-enabled')).toBe('0');
+      expect(exposed!.vaultAddresses.btc[0]).toMatch(/^bc1q/);
+      expect(exposed!.vaultAddresses.ton[0]).toMatch(/^UQ/);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('boots into devnet when the flag is set and rehydrates devnet addresses', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    const first = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      await act(async () => {
+        await exposed!.setDevnetEnabled(true);
+      });
+      expect(exposed!.vaultAddresses.btc[0]).toMatch(/^tb1q/);
+    } finally {
+      await first.cleanup();
+    }
+
+    // Remount with the flag still set: the devnet addresses rehydrate
+    // from the devnet record without a fresh derivation.
+    const second = await mountProvider();
+    try {
+      expect(exposed!.devnetEnabled).toBe(true);
+      expect(exposed!.vaultAddresses.btc[0]).toMatch(/^tb1q/);
+      expect(exposed!.vaultAddresses.ton[0]).toMatch(/^0Q/);
+    } finally {
+      await second.cleanup();
+    }
+  });
 });

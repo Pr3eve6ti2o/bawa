@@ -6,6 +6,7 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
   type FeeEstimate,
   type FetchTransport,
@@ -26,6 +27,17 @@ export interface BtcAdapterOverrides {
    * transport; tests inject a fake instead of stubbing the global fetch.
    */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * genesis hash the identity check pins, the explorer base, whether
+   * testnet address forms are accepted, and the devnet broadcast.
+   * Unset, the adapter is the mainnet adapter exactly as before.
+   */
+  networkId?: string;
+  genesisHash?: string;
+  explorerBaseUrl?: string;
+  acceptTestnetAddresses?: boolean;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 
@@ -33,8 +45,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isBtcAddress(address: string): boolean {
+function isBtcAddress(address: string, acceptTestnet = false): boolean {
   if (address.length < 26) return false;
+  if (acceptTestnet) {
+    return (
+      address.startsWith('tb1q') ||
+      address.startsWith('tb1p') ||
+      address.startsWith('m') ||
+      address.startsWith('n') ||
+      address.startsWith('2')
+    );
+  }
   return (
     address.startsWith('bc1q') ||
     address.startsWith('bc1p') ||
@@ -48,16 +69,22 @@ export function createBtcAdapter(
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
+  // Devnet overrides default to the mainnet values, so a mainnet
+  // adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? NETWORK_ID;
+  const genesisHash = overrides.genesisHash ?? GENESIS_HASH;
+  const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://mempool.space';
+  const acceptTestnet = overrides.acceptTestnetAddresses ?? false;
   // Idempotent reads only: every network read below is bounded-retry via
   // withRetry (item 2). Broadcast is never retried — it stays disabled.
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
   // Chain-identity check result, cached per instance: the genesis block
-  // hash proves the endpoint serves Bitcoin mainnet. The endpoint URL is
-  // fixed at construction, so one check per instance is enough.
+  // hash proves the endpoint serves the pinned network. The endpoint URL
+  // is fixed at construction, so one check per instance is enough.
   let identityChecked = false;
 
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
+  const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
     let raw: unknown;
     try {
@@ -74,7 +101,7 @@ export function createBtcAdapter(
       };
     }
     try {
-      assertNetworkId(genesis, GENESIS_HASH, SOURCE);
+      assertNetworkId(genesis, genesisHash, SOURCE);
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -85,10 +112,10 @@ export function createBtcAdapter(
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
-    if (!isBtcAddress(address)) {
+    if (!isBtcAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid Bitcoin address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -113,7 +140,7 @@ export function createBtcAdapter(
       data: {
         chain: 'btc',
         address,
-        networkId: NETWORK_ID,
+        networkId,
         valueBaseUnits: balance.toString(),
         decimals: DECIMALS,
         source: SOURCE,
@@ -128,10 +155,10 @@ export function createBtcAdapter(
     address: string,
     limit = 25,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isBtcAddress(address)) {
+    if (!isBtcAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid Bitcoin address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -198,7 +225,7 @@ export function createBtcAdapter(
       txs.push({
         hash: txid,
         chain: 'btc',
-        networkId: NETWORK_ID,
+        networkId,
         direction,
         amountBaseUnits:
           direction === 'in'
@@ -209,14 +236,14 @@ export function createBtcAdapter(
         counterparty,
         timestamp: Number.isFinite(blockTime) ? blockTime * 1000 : null,
         status: confirmed ? 'confirmed' : 'pending',
-        explorerUrl: `https://mempool.space/tx/${txid}`,
+        explorerUrl: `${explorerBaseUrl}/tx/${txid}`,
       });
     }
     return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -232,7 +259,7 @@ export function createBtcAdapter(
       status: 'ok',
       data: {
         chain: 'btc',
-        networkId: NETWORK_ID,
+        networkId,
         feeBaseUnits: String(Math.trunc(fastest)),
         unit: 'sat/vB',
         note: 'Rate per virtual byte; multiply by tx vsize in Phase 4',
@@ -247,10 +274,10 @@ export function createBtcAdapter(
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isBtcAddress(address)) {
+    if (!isBtcAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid Bitcoin address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -278,13 +305,16 @@ export function createBtcAdapter(
     };
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: 'btc',
-    networkId: NETWORK_ID,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

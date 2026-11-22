@@ -307,6 +307,175 @@ Known gaps (not fixed here, flagged to the coordinator):
   a reload loses it; derivation stays blocked until the passphrase is in
   the session again (section 7's gap, unchanged).
 
+## 9. Temporary devnet mode — test networks only, removable without touching mainnet
+
+**Decision: a TEMPORARY devnet mode (owner order 2026-11-22 ~19:53 IST) lets
+the wallet test send and receive on the four adapter chains' test networks.
+Devnet is off by default, clearly marked in the UI and the code, and must
+be removable without touching mainnet. It is NOT merged into adopt-proper
+or main; it lives on `panel-rebuild/devnet-temp` only.**
+
+Evidence: the owner's order — "add devnet temporary so we can test send
+and receive function properly in the wallet and get some devnet token for
+each chain yourself. And tell me how it went. Devnet will be temporary
+for checking the wallet all the chains."
+
+What was done (Lane C, hands-on Muse, 0 Sol calls):
+
+- `apps/web/src/wallet/devnet.ts` (new): `DEVNET_ENABLED_KEY =
+  'bawa-devnet-enabled'`, `readDevnetEnabled()` (default off) /
+  `writeDevnetEnabled()`, plus the address re-encoding helpers (bech32
+  BIP-173/350, base58check, TON testnet-flag variant with CRC16-XMODEM).
+- `apps/web/src/wallet/devnet-endpoints.ts` (new, outside the generated
+  block in `chains.ts`): `DEVNET_CHAIN_CONFIGS` — Bitcoin testnet4
+  (mempool.space/testnet4, genesis
+  `00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043`),
+  Ethereum Sepolia (chainId 11155111, publicnode RPC, Blockscout
+  history), TRON Nile (nile.trongrid.io, api.nileex.io fallback), TON
+  testnet (testnet.toncenter.com). `DEVNET_NETWORK_IDS`,
+  `isDevnetNetworkId()`, `chainConfigForDevnetNetwork()`,
+  `devnetExplorerTxUrl()`, and the four devnet `broadcast()` closures
+  (mempool `POST /tx`, viem `sendRawTransaction`, TronGrid
+  `POST /wallet/broadcasttransaction`, TonCenter `sendBoc`).
+- `apps/web/src/wallet/core.ts`: `deriveDevnetAddressesAt()` — BTC at
+  `m/84'/1'/…` re-encoded `bc1q` → `tb1q`; TON testnet-flag variant;
+  ETH/TRX reuse mainnet derivation. `DEFAULT_PATHS` / `pathFor`
+  untouched.
+- `apps/web/src/wallet/adapters/`: devnet factory overrides + a
+  separate devnet registry (`registerDevnetAdapters()`,
+  `getDevnetAdapter()`, `getAdapterForMode(chain, devnet)`,
+  `registeredDevnetChains()`). Mainnet `registerAllAdapters` untouched.
+  Devnet adapters accept testnet forms ONLY; mainnet adapters accept
+  mainnet forms only.
+- `apps/web/src/wallet/send.ts`: `SendDevnetOptions = { devnet? }`
+  threaded through `validateRecipient`, `previewSendAmount`,
+  `simulateSend`, `planBtcFee`, `signEthOffline` (Sepolia chainId),
+  `signBtcOffline` (key path `m/84'/1'/0'/0/0`, tb1q → bc1q mapping
+  for Wallet Core calls), `signTrxOffline`, `signTonOffline`. New
+  `broadcastSignedDevnet(chain, signedTx, { devnet })`: asserts devnet
+  mode on, provenance not test-provenance, and the adapter
+  `networkId` is a devnet id — then calls the devnet adapter
+  `broadcast()`. Mainnet `broadcastSigned` / every mainnet
+  `broadcast()` still throw `BROADCAST_DISABLED_MESSAGE`.
+- `apps/web/src/engine/destination.ts` + `engine/boundary.ts`:
+  devnet-aware BTC/TON validation (`tb` HRP, base58 `0x6f`/`0xc4`,
+  TON testnet flag). Watch-only stays mainnet-only, no tpub.
+- `apps/web/src/wallet/tracker.ts` + `wallet/prices.ts` +
+  `state/pending-broadcasts.ts`: tracker lookups take `{ devnet? }`
+  (testnet explorers); `usePrices({ devnet? })` skips cached AND live
+  mainnet prices in devnet mode; pending broadcasts recorded under a
+  separate key `bawa-pending-broadcasts-devnet`.
+- `apps/web/src/state/wallet-context.tsx`: `devnetEnabled` +
+  `setDevnetEnabled()` (mirrors autoLock), `ensureDevnetAdapters()`,
+  `devnetEnabledRef`; devnet addresses persist under
+  `bawa-vault-addresses-devnet:v1`, never overwriting
+  `bawa-vault-addresses:v1`; toggling off restores mainnet addresses.
+- UI (`app/app.tsx`, `screens/network-selection.tsx`,
+  `screens/devnet-setting.tsx` (new), `screens/welcome.tsx`,
+  `screens/receive.tsx`, `screens/send.tsx`,
+  `screens/send-review.tsx`, `screens/send-approval.ts`,
+  `screens/track-transaction.tsx`, `screens/dashboard.tsx`,
+  `screens/asset-list.tsx`, `screens/asset-detail.tsx`,
+  `screens/chain-strip.tsx`): the header pill reads "Devnet — test
+  mode" when on; the Networks screen gains the Devnet switch with
+  temporary / test-only / valueless copy and per-chain devnet status;
+  receive/welcome copy names the devnet per chain; the send flow gains
+  stage `'broadcast-devnet'` (tx hash + testnet explorer link +
+  "testnet tokens, no value" copy); the tracker screen and price
+  displays pass the devnet flag. Mobile layout at 390/820 px is
+  unchanged except the devnet switch/marker itself.
+- Tests: devnet describes added to `wallet/devnet.test.ts`,
+  `wallet/devnet-endpoints.test.ts`, `wallet/core.test.ts`,
+  `wallet/adapters/devnet.test.ts`, `wallet/send.test.ts`,
+  `engine/destination.test.ts`, `engine/boundary.test.ts`,
+  `wallet/tracker.test.ts`, `wallet/prices.test.tsx`,
+  `state/pending-broadcasts.test.ts`,
+  `state/wallet-context.test.tsx`,
+  `screens/devnet-setting.test.tsx` (new),
+  `screens/network-selection.test.tsx` (new),
+  `screens/track-transaction.test.tsx`, `screens/dashboard.test.tsx`,
+  `app/app.test.tsx`, `wallet/chains.test.ts` (devnet ids live in the
+  devnet module only; the mainnet registry guard is kept).
+- CONSTRAINTS.md: exception E1 (owner 2026-11-22, expires 2027-02-20)
+  carves devnet-only broadcast out of the "no broadcast path" floor;
+  D2 records its trigger as met for devnet only. AGENTS.md §8 was NOT
+  edited — the conflict between its DoD line and this programme is
+  flagged in the Lane C report instead.
+
+CONFLICT (flagged, not resolved by editing house rules): AGENTS.md §8
+DoD and CONSTRAINTS.md both state "No broadcast path built or enabled
+(standing owner order)". This programme's owner order explicitly
+authorises a devnet-only broadcast path, so the work proceeded with
+mainnet broadcast still throwing unconditionally, and the loosening is
+recorded loudly (E1 + D2 + this section). The exception expires
+2027-02-20; if devnet is still needed then, the owner must renew it.
+
+Known gaps (not fixed here, flagged to the coordinator):
+
+- BTC plan/sign with tb1q is proven only by unit test (synthetic
+  UTXOs, no WASM chain verification): `signBtcOffline` devnet signs a
+  tb1q spend in-test, but live proof with a funded testnet4 UTXO,
+  broadcast and explorer confirmation stays with the testing lane.
+  Never let a first testnet plan attempt run against the live app
+  session — an uncaught WASM throw aborts the instance.
+- The TON devnet `broadcast()` return shape (base64 message hash →
+  hex tx hash) is an assumption from the TonCenter `sendBoc` docs,
+  not a live observation; the testing lane must verify it.
+- Sign functions always derive account 0 index 0, ignoring a
+  non-default vault account selection (mainnet has the same
+  behaviour; out of scope).
+
+### Removal checklist — how to remove devnet mode later
+
+Devnet is designed to delete cleanly. Work top-down; after each step
+run `npx tsc --noEmit` and the full vitest suite in `apps/web`.
+
+1. Delete `apps/web/src/wallet/devnet.ts`,
+   `apps/web/src/wallet/devnet-endpoints.ts`,
+   `apps/web/src/wallet/adapters/devnet.test.ts`,
+   `apps/web/src/screens/devnet-setting.tsx` and its test.
+2. In `apps/web/src/wallet/core.ts`: delete
+   `deriveDevnetAddressesAt()` and its tests in `core.test.ts`.
+3. In `apps/web/src/wallet/adapters/`: delete the devnet factory
+   overrides and `registerDevnetAdapters()` / `getDevnetAdapter()` /
+   `getAdapterForMode()` / `registeredDevnetChains()` in `index.ts`;
+   restore `requireMainnet` naming if desired. Delete the devnet
+   `broadcast()` closures.
+4. In `apps/web/src/wallet/send.ts`: delete `broadcastSignedDevnet()`
+   and the `SendDevnetOptions` parameter from every function; restore
+   the mainnet-only call sites. Delete the devnet describe in
+   `send.test.ts`.
+5. In `apps/web/src/engine/destination.ts` and
+   `engine/boundary.ts`: delete the devnet branches; restore the
+   mainnet-only validators.
+6. In `apps/web/src/wallet/tracker.ts`, `wallet/prices.ts` and
+   `state/pending-broadcasts.ts`: delete the `{ devnet? }` options,
+   the devnet parse variants, and the devnet pending-broadcast
+   functions + key `bawa-pending-broadcasts-devnet`.
+7. In `apps/web/src/state/wallet-context.tsx`: delete `devnetEnabled`
+   / `setDevnetEnabled` / `ensureDevnetAdapters()` /
+   `devnetEnabledRef` and the `bawa-vault-addresses-devnet:v1` key.
+   Users' `bawa-devnet-enabled` flags and devnet address records
+   become inert localStorage entries; delete them on next unlock if
+   desired.
+8. In the UI: delete the `DevnetSetting` card from
+   `screens/network-selection.tsx` and restore the mainnet-only copy;
+   restore the `Mainnet` pill in `app/app.tsx`, the `MAINNET` badge
+   and copy in `screens/welcome.tsx`, the mainnet copy in
+   `screens/receive.tsx`; delete the `'broadcast-devnet'` stage from
+   `screens/send-approval.ts`, the devnet branch in `screens/send.tsx`
+   and `screens/send-review.tsx`; drop the devnet flag from
+   `screens/track-transaction.tsx` and the `usePrices({ devnet })`
+   calls.
+9. In `wallet/chains.test.ts`: delete the "keeps devnet network ids
+   in the devnet module only" test.
+10. In `CONSTRAINTS.md`: delete exception E1 and restore the D2 row
+    to its pre-devnet text. In this file: mark this section REMOVED
+    with the date. Verify `node scripts/generate-chains.mjs --check`,
+    `scripts/check-wallet-cycles.mjs`, `npm run lint`, `npm audit`
+    and the full gates still pass — the mainnet code paths must be
+    byte-identical to before devnet was added.
+
 ## Coordinator calls made during the programme
 
 - **Doc 4 scope (Phase 4):** kept Lane I's "Doc 4 — Mainnet" → "Mainnet"

@@ -158,7 +158,10 @@ void function boundaryTypeContracts(
     ExtendedKeyValidator
   >();
   expectTypeOf<typeof validateTonAddress>().toEqualTypeOf<
-    (address: string) => TonAddressValidation
+    (
+      address: string,
+      options?: { devnet?: boolean },
+    ) => TonAddressValidation
   >();
   expectTypeOf<typeof validateWatchOnlyImport>().toEqualTypeOf<
     (chain: ChainId, value: string) => Promise<ExpectedWatchOnlyImportValidation>

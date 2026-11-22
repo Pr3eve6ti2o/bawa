@@ -682,9 +682,15 @@ function idleEntries(): PriceMap {
 }
 
 export function usePrices(
-  options?: { sleep?: (ms: number) => Promise<void> },
+  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
 ): { state: PricesState; refresh: () => void } {
+  // TEMPORARY devnet mode: devnet tokens have no market price. Never
+  // load cached mainnet prices for testnet balances, and never fetch.
+  const devnet = options?.devnet === true;
   const [state, setState] = useState<PricesState>(() => {
+    if (devnet) {
+      return { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null };
+    }
     let entries: PriceMap;
     try {
       entries = loadCachedPrices(Date.now()) ?? idleEntries();
@@ -709,7 +715,17 @@ export function usePrices(
     };
   }, []);
 
+  // Reset to no-prices when devnet mode turns on; the caller re-fetches
+  // when it turns back off.
+  useEffect(() => {
+    if (devnet) {
+      setState({ status: 'idle', entries: idleEntries(), lastFetchedAtMs: null });
+    }
+  }, [devnet]);
+
   const refresh = useCallback(() => {
+    // Devnet tokens have no market price: refresh is a no-op.
+    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
 
     const networkEntries: PriceMap = { ...idleEntries() };
@@ -806,7 +822,7 @@ export function usePrices(
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep]);
+  }, [state.status, sleep, devnet]);
 
   return { state, refresh };
 }

@@ -132,6 +132,16 @@ export const httpFetchTransport: FetchTransport = {
 export const BROADCAST_DISABLED_MESSAGE =
   'Sending funds is switched off until it is separately approved.';
 
+/**
+ * What a broadcast returns. Mainnet adapters never return one: their
+ * broadcast() always throws BROADCAST_DISABLED_MESSAGE. Devnet adapters
+ * (temporary, see wallet/devnet-endpoints.ts) return this on success.
+ */
+export interface BroadcastResult {
+  txHash: string;
+  explorerUrl: string | null;
+}
+
 export interface ChainAdapter {
   chain: ChainId;
   /** CAIP-2 mainnet network identifier (see chains.ts). */
@@ -143,8 +153,12 @@ export interface ChainAdapter {
   ): Promise<AdapterResult<AdapterTx[]>>;
   estimateFee(): Promise<AdapterResult<FeeEstimate>>;
   getTxInputs(address: string): Promise<AdapterResult<TxInput>>;
-  /** Built but DISABLED: always throws BROADCAST_DISABLED_MESSAGE. */
-  broadcast(signedTx: unknown): Promise<never>;
+  /**
+   * Mainnet adapters: built but DISABLED, always throws
+   * BROADCAST_DISABLED_MESSAGE. Devnet adapters: broadcasts on the
+   * devnet only and returns the transaction hash.
+   */
+  broadcast(signedTx: unknown): Promise<BroadcastResult>;
 }
 
 /**

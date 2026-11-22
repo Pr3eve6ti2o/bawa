@@ -3,14 +3,26 @@
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TrackTransactionScreen } from './track-transaction';
 import { getRecentActivity, lookupTransaction } from '../wallet/tracker';
+import { useWallet } from '../state/wallet-context';
 
 vi.mock('../wallet/tracker', () => ({
   lookupTransaction: vi.fn(),
   getRecentActivity: vi.fn(),
 }));
+
+// The screen reads devnetEnabled from the wallet context; the tracker
+// tests run with devnet off unless a test flips it.
+vi.mock('../state/wallet-context', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../state/wallet-context')>();
+  return {
+    ...actual,
+    useWallet: vi.fn(() => ({ devnetEnabled: false })),
+  };
+});
 
 const btcHash =
   'f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16';
@@ -58,6 +70,13 @@ function mount() {
 }
 
 let mounted: ReturnType<typeof mount> | undefined;
+
+beforeEach(() => {
+  // afterEach resets all mocks, so restore the devnet-off default here.
+  vi.mocked(useWallet).mockReturnValue({
+    devnetEnabled: false,
+  } as ReturnType<typeof useWallet>);
+});
 
 afterEach(() => {
   mounted?.cleanup();
@@ -262,7 +281,7 @@ describe('TrackTransactionScreen', () => {
     await clickButton(div, 'Look up this example');
 
     expect(lookupTransaction).toHaveBeenCalledTimes(1);
-    expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined });
+    expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined, devnet: false });
     expect(div.textContent).toContain('50 BTC');
   });
 
@@ -278,5 +297,22 @@ describe('TrackTransactionScreen', () => {
     expect(guide?.textContent).toContain('What a result shows');
     const grey = guide?.querySelectorAll('[class*="text-muted-foreground"], [class*="text-gray"]');
     expect(grey?.length).toBe(0);
+  });
+
+  it('passes the devnet flag to the tracker when devnet is on', async () => {
+    vi.mocked(useWallet).mockReturnValue({ devnetEnabled: true } as ReturnType<typeof useWallet>);
+    vi.mocked(lookupTransaction).mockResolvedValue({
+      status: 'not-found',
+      networkId: 'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      explorerUrl: null,
+    } as never);
+    mounted = mount();
+    const { div } = mounted;
+    const input = findInputByLabel(div, 'Transaction hash');
+    setInputValue(input, btcHash);
+    await act(async () => {
+      findButton(div, 'Look up').click();
+    });
+    expect(lookupTransaction).toHaveBeenCalledWith('btc', btcHash, { address: undefined, devnet: true });
   });
 });

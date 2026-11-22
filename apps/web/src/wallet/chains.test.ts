@@ -13,6 +13,7 @@ import {
   SOLANA_PROFILES,
   SUPPORTED_CHAINS,
 } from './chains';
+import { DEVNET_NETWORK_IDS } from './devnet-endpoints';
 
 describe('chains registry', () => {
   it('supports exactly thirteen mainnet chains', () => {
@@ -294,6 +295,25 @@ describe('chains registry', () => {
   it('has no non-mainnet network, asset or endpoint string in the registry', () => {
     const registryText = JSON.stringify(CHAINS) + JSON.stringify(SOLANA_PROFILES);
     expect(registryText).not.toMatch(/testnet|sepolia|nile/i);
+  });
+
+  it('keeps devnet network ids in the devnet module only', () => {
+    // TEMPORARY devnet mode: testnet strings are allowed in
+    // wallet/devnet-endpoints.ts (DEVNET_NETWORK_IDS) and nowhere in
+    // the mainnet registry above. The mainnet resolver still rejects
+    // every devnet network id, and the devnet resolver rejects every
+    // mainnet id — the two registries never resolve each other.
+    expect([...DEVNET_NETWORK_IDS].sort()).toEqual([
+      'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      'eip155:11155111',
+      'ton:-3',
+      'tron:nile',
+    ]);
+    for (const networkId of DEVNET_NETWORK_IDS) {
+      expect(() => chainConfigForNetwork(networkId)).toThrow(
+        /Unsupported network/,
+      );
+    }
   });
 
   it('resolves chains by mainnet network ID and throws for anything else', () => {

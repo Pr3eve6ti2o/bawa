@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
 import { usePrices } from '../wallet/prices';
+import { useWallet } from '../state/wallet-context';
 import { AssetRows } from './asset-rows';
 
 /**
@@ -14,8 +15,9 @@ import { AssetRows } from './asset-rows';
  */
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
+  const { devnetEnabled } = useWallet();
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
   const pricesLoading = pricesState.status === 'loading';
 
   // Auto-fetch on mount, as on the dashboard: without this the rows

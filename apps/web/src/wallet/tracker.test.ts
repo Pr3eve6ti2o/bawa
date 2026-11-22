@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAdapter, registerAdapter } from './adapters/index';
+import { getAdapter, registerAdapter, registerDevnetAdapter } from './adapters/index';
 import { base64ToHex } from './adapters/ton';
 import type { ChainAdapter } from './adapters/types';
 import {
@@ -262,3 +262,134 @@ it.skipIf(process.env.BAWA_LIVE_TRACKER !== '1')('live: known BTC hash returns r
     data: { hash: BTC_TX.txid, status: 'confirmed' },
   });
 }, 30_000);
+
+describe('tracker devnet (temporary devnet mode)', () => {
+  const queue: unknown[] = [];
+
+  beforeEach(() => {
+    queue.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => queue.shift(),
+    })));
+  });
+
+  it('parses devnet transactions with devnet network ids and explorers', () => {
+    expect(parseBtcTx(BTC_TX, 976624, true)).toMatchObject({
+      networkId:
+        'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      explorerUrl: `https://mempool.space/testnet4/tx/${BTC_TX.txid}`,
+    });
+    expect(parseEthTx(ETH_TX, true)).toMatchObject({
+      networkId: 'eip155:11155111',
+      explorerUrl: `https://sepolia.etherscan.io/tx/${ETH_TX.hash}`,
+    });
+    expect(parseTrxTx(TRX_TX, true)).toMatchObject({
+      networkId: 'tron:nile',
+      explorerUrl: `https://nile.tronscan.org/#/transaction/${TRX_TX.txID}`,
+    });
+    expect(parseTonTxEntry(TON_ENTRY, true)).toMatchObject({
+      networkId: 'ton:-3',
+      explorerUrl: `https://testnet.tonviewer.com/transaction/${TON_HASH}`,
+    });
+  });
+
+  it('mainnet parses are unchanged', () => {
+    expect(parseBtcTx(BTC_TX, 976624)).toMatchObject({
+      networkId: 'bip122:000000000019d6689c085ae165831e93',
+      explorerUrl: `https://mempool.space/tx/${BTC_TX.txid}`,
+    });
+    expect(parseEthTx(ETH_TX)).toMatchObject({
+      networkId: 'eip155:1',
+      explorerUrl: `https://eth.blockscout.com/tx/${ETH_TX.hash}`,
+    });
+    expect(parseTrxTx(TRX_TX)).toMatchObject({
+      networkId: 'tron:0x2b6653dc',
+      explorerUrl: `https://tronscan.org/#/transaction/${TRX_TX.txID}`,
+    });
+    expect(parseTonTxEntry(TON_ENTRY)).toMatchObject({
+      networkId: 'ton:-239',
+      explorerUrl: `https://tonviewer.com/transaction/${TON_HASH}`,
+    });
+  });
+
+  it('looks up devnet BTC from the testnet4 endpoints', async () => {
+    queue.push(BTC_TX, 162786);
+    const result = await lookupTransaction('btc', BTC_TX.txid, {
+      devnet: true,
+    });
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: {
+        networkId:
+          'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      },
+    });
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls[0]?.[0]).toContain('/testnet4/api/tx/');
+    expect(calls[1]?.[0]).toContain('/testnet4/api/blocks/tip/height');
+  });
+
+  it('looks up devnet ETH from Sepolia Blockscout', async () => {
+    queue.push(ETH_TX);
+    const result = await lookupTransaction('eth', ETH_TX.hash, {
+      devnet: true,
+    });
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { networkId: 'eip155:11155111' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      'eth-sepolia.blockscout.com',
+    );
+  });
+
+  it('looks up devnet TRX from Nile', async () => {
+    queue.push(TRX_TX);
+    const result = await lookupTransaction('trx', TRX_TX.txID, {
+      devnet: true,
+    });
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { networkId: 'tron:nile' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain('nile.trongrid.io');
+  });
+
+  it('looks up devnet TON from testnet TonCenter', async () => {
+    queue.push({ ok: true, result: [TON_ENTRY] });
+    const result = await lookupTransaction('ton', TON_HASH, {
+      address: TON_ADDRESS,
+      devnet: true,
+    });
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { networkId: 'ton:-3' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      'testnet.toncenter.com',
+    );
+  });
+
+  it('getRecentActivity uses the devnet adapter in devnet mode', async () => {
+    const address = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+    const getHistory = vi.fn(async (_address: string, _limit: number) => ({
+      status: 'ok' as const,
+      data: [],
+      source: 'stub',
+      fetchedAt: 1,
+    }));
+    registerDevnetAdapter({
+      chain: 'btc',
+      networkId:
+        'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      getHistory,
+    } as unknown as ChainAdapter);
+    const result = await getRecentActivity('btc', address, 10, {
+      devnet: true,
+    });
+    expect(result).toMatchObject({ status: 'ok', data: [] });
+    expect(getHistory).toHaveBeenCalledWith(address, 10);
+  });
+});
