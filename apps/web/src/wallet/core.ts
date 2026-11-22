@@ -2,6 +2,11 @@ import { hashMessage, hexToBytes, sha256, stringToHex } from 'viem';
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { pathFor } from './chains';
+import {
+  decodeBtcBech32,
+  encodeBtcBech32,
+  toTonTestnetUqAddress,
+} from './devnet';
 
 export type { ChainId };
 
@@ -359,6 +364,79 @@ export async function deriveAddressesAt(
       ltc: addressFor('ltc'),
       doge: addressFor('doge'),
     };
+  } finally {
+    wallet.delete();
+  }
+}
+
+/**
+ * TEMPORARY devnet derivation (owner order 2026-11-22). Same wallet,
+ * test networks, account 0 index 0 by default:
+ * - BTC at m/84'/1'/${account}'/0/${index} (coin type 1), re-encoded
+ *   with the tb HRP — Wallet Core always encodes the bitcoin coin as
+ *   bc1q, so the same witness program is re-encoded (see wallet/
+ *   devnet.ts). CoinTypeExt.validate is bypassed for devnet BTC only:
+ *   the bech32 checksum/program is the validation.
+ * - ETH / TRX reuse the mainnet derivation (the same address).
+ * - TON re-encodes the mainnet UQ address with the testnet flag
+ *   (tag 0xD1, CRC recomputed).
+ * - The other nine chains stay mainnet-only (derive-only, no adapter).
+ * DEFAULT_PATHS and pathFor are untouched: recovery profiles are pinned.
+ */
+export async function deriveDevnetAddressesAt(
+  mnemonic: string,
+  passphrase: string,
+  account: number,
+  index: number,
+): Promise<WalletAddresses> {
+  if (!Number.isSafeInteger(account) || account < 0) {
+    throw new RangeError('account must be a non-negative safe integer');
+  }
+  if (!Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) {
+    throw new RangeError(
+      'index must be a non-negative safe integer below 0x80000000',
+    );
+  }
+
+  const base = await deriveAddressesAt(mnemonic, passphrase, account, index);
+  const btc = await deriveDevnetBtcAddress(mnemonic, passphrase, account, index);
+  return { ...base, btc, ton: toTonTestnetUqAddress(base.ton) };
+}
+
+async function deriveDevnetBtcAddress(
+  mnemonic: string,
+  passphrase: string,
+  account: number,
+  index: number,
+): Promise<string> {
+  const core = await loadCore();
+  assertValidMnemonic(core, mnemonic);
+  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
+  if (!wallet) {
+    throw new Error('Unable to restore wallet.');
+  }
+
+  try {
+    const coin = core.CoinType.bitcoin;
+    const key = wallet.getKey(coin, `m/84'/1'/${account}'/0/${index}`);
+    try {
+      const rawPubkey = key.getPublicKeySecp256k1(true);
+      try {
+        const mainnet = core.CoinTypeExt.deriveAddressFromPublicKey(
+          coin,
+          rawPubkey,
+        );
+        const decoded = decodeBtcBech32(mainnet);
+        if (decoded === null || decoded.hrp !== 'bc') {
+          throw new Error('Wallet Core returned an invalid BTC address.');
+        }
+        return encodeBtcBech32('tb', decoded.witnessVersion, decoded.program);
+      } finally {
+        rawPubkey.delete();
+      }
+    } finally {
+      key.delete();
+    }
   } finally {
     wallet.delete();
   }

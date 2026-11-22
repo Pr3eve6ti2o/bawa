@@ -32,7 +32,7 @@ export function PopularChainsStrip({
   const wallet = useWallet();
   const balances = wallet?.balances;
   const vaultState = wallet?.vaultState ?? "no-vault";
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: wallet?.devnetEnabled });
 
   useEffect(() => {
     if (

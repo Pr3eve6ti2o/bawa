@@ -8,9 +8,20 @@ import {
   createPartialSigner,
   createTransactionIntent,
   deriveAddresses,
+  deriveDevnetAddressesAt,
   withSigningKey,
 } from './core';
-import { getAdapter } from './adapters';
+import { getAdapterForMode, getDevnetAdapter } from './adapters';
+import {
+  chainConfigForDevnetNetwork,
+  devnetExplorerTxUrl,
+  isDevnetNetworkId,
+} from './devnet-endpoints';
+import {
+  isValidTestnetBtcAddress,
+  isValidTestnetTonAddress,
+  reencodeBtcAddressToMainnet,
+} from './devnet';
 import {
   BROADCAST_DISABLED_MESSAGE,
   type UtxoInput,
@@ -22,9 +33,24 @@ import type { KeyProvenance } from './vault';
 /**
  * Send flow (Fix Lane 3, Phase 4). Pure send-domain helpers on top of the
  * Phase 2 adapters and the Wallet Core 4.9.3 WASM engine. Nothing in this
- * module broadcasts: broadcast stays DISABLED until separately authorised
- * (see broadcastSigned). No function here logs or stores a secret.
+ * module broadcasts on mainnet: broadcast stays DISABLED until separately
+ * authorised (see broadcastSigned). The temporary devnet broadcast
+ * (broadcastSignedDevnet) submits on devnet only, behind three gates.
+ * No function here logs or stores a secret.
  */
+
+/** Devnet threading (temporary devnet mode): pass `{ devnet: true }` to
+ * use the devnet derivation, the devnet adapters and the devnet
+ * broadcast. Mainnet behaviour is unchanged when the option is absent. */
+export type SendDevnetOptions = {
+  devnet?: boolean;
+  /**
+   * The signer's message hash (0x-prefixed hex), when the signer
+   * computed one. TON's jsonRPC sendBoc returns no hash, so the TON
+   * devnet broadcast identifies the transaction by this hash instead.
+   */
+  messageHash?: string;
+};
 
 export type RecipientValidation =
   | { ok: true }
@@ -56,6 +82,7 @@ const CHAIN_NAMES: Record<ChainId, string> = {
 export async function validateRecipient(
   chain: ChainId,
   address: string,
+  options?: SendDevnetOptions,
 ): Promise<RecipientValidation> {
   const recipient = address.trim();
 
@@ -68,8 +95,29 @@ export async function validateRecipient(
     reason: 'Invalid ' + CHAIN_NAMES[chain] + ' address.',
   };
 
-  // EQ/UQ require mainnet; the third Base64 character ensures workchain 0.
-  if (chain === 'ton' && !/^(?:EQ|UQ)[A-D]/.test(recipient)) {
+  const devnet = options?.devnet === true;
+
+  // BTC devnet: Wallet Core's validator only knows mainnet forms, so
+  // testnet forms are validated by bech32 checksum/program (tb1q/tb1p)
+  // or base58check version (0x6f/0xc4) instead.
+  if (chain === 'btc' && devnet) {
+    return isValidTestnetBtcAddress(recipient) ? { ok: true } : invalid;
+  }
+
+  // TON devnet: the testnet flag is display-only for the destination
+  // (workchain + hash), so EQ/UQ stay valid destinations and fall
+  // through to Wallet Core's validator; 0Q/kQ are validated
+  // structurally because Wallet Core only knows mainnet tags. The
+  // third Base64 character ensures workchain 0 in every case.
+  if (chain === 'ton' && devnet) {
+    if (!/^(?:EQ|UQ|0Q|kQ)[A-D]/.test(recipient)) {
+      return invalid;
+    }
+    if (recipient.startsWith('0Q') || recipient.startsWith('kQ')) {
+      return isValidTestnetTonAddress(recipient) ? { ok: true } : invalid;
+    }
+  } else if (chain === 'ton' && !/^(?:EQ|UQ)[A-D]/.test(recipient)) {
+    // EQ/UQ require mainnet; the third Base64 character ensures workchain 0.
     return invalid;
   }
 
@@ -106,6 +154,13 @@ export type SendPreview =
       feeBaseUnits: string;
       totalBaseUnits: string;
       feeNote: string;
+      /**
+       * TON only: the fee is not known at preview time (no read-only
+       * fee endpoint exists) and feeBaseUnits is a '0' placeholder that
+       * must never be displayed as a real fee. The review screen shows
+       * unknown-fee copy instead.
+       */
+      feeUnknown?: boolean;
     }
   | {
       ok: false;
@@ -187,6 +242,7 @@ async function planBtcFee(
   amount: string,
   feeRateSatPerVB: string,
   utxos: UtxoInput[],
+  devnet = false,
 ): Promise<
   { ok: true; feeBaseUnits: string } | SendFailure
 > {
@@ -205,10 +261,24 @@ async function planBtcFee(
   ) {
     return { ok: false, code: 'invalid-input', reason: 'Invalid BTC fee-planning inputs.' };
   }
+  // Devnet: never pass a tb1q address to Wallet Core — re-encode the
+  // same witness program with the bc HRP. The scriptPubKey is
+  // identical, so the plan (fee, change) is the same.
+  let planFrom = fromAddress;
+  let planTo = toAddress;
+  if (devnet) {
+    const mappedFrom = reencodeBtcAddressToMainnet(fromAddress);
+    const mappedTo = reencodeBtcAddressToMainnet(toAddress);
+    if (mappedFrom === null || mappedTo === null) {
+      return { ok: false, code: 'invalid-input', reason: 'Invalid BTC devnet address.' };
+    }
+    planFrom = mappedFrom;
+    planTo = mappedTo;
+  }
   try {
     const core = await loadCore();
     const scriptObj = core.BitcoinScript.lockScriptForAddress(
-      fromAddress,
+      planFrom,
       core.CoinType.bitcoin,
     );
     let encoded: Uint8Array;
@@ -218,8 +288,8 @@ async function planBtcFee(
         hashType: 1,
         amount: Long.fromNumber(amountInt),
         byteFee: Long.fromNumber(feeRate),
-        toAddress,
-        changeAddress: fromAddress,
+        toAddress: planTo,
+        changeAddress: planFrom,
         privateKey: [],
         utxo: utxos.map((u) => ({
           outPoint: {
@@ -262,13 +332,15 @@ export async function previewSendAmount(
   fromAddress: string,
   toAddress: string,
   amountDecimal: string,
+  options?: SendDevnetOptions,
 ): Promise<SendPreview> {
+  const devnet = options?.devnet === true;
   const amount = decimalToBaseUnits(amountDecimal, CHAIN_DECIMALS[chain]);
   if (amount === null || BigInt(amount) <= 0n) {
     return { ok: false, code: 'invalid-input', reason: 'Enter a valid amount.' };
   }
 
-  const adapter = getAdapter(chain);
+  const adapter = getAdapterForMode(chain, devnet);
   if (!adapter) {
     return { ok: false, code: 'adapter-unavailable', reason: 'No adapter available for this chain.' };
   }
@@ -279,6 +351,39 @@ export async function previewSendAmount(
   }
   if (BigInt(amount) > BigInt(balance.data.valueBaseUnits)) {
     return { ok: false, code: 'insufficient-funds', reason: 'Amount exceeds available balance.' };
+  }
+
+  // TON has no read-only fee endpoint: the adapter honestly reports the
+  // fee quote unavailable. Gating the preview on estimateFee made TON
+  // sends impossible — the review step could never be reached (found
+  // live in devnet, Lane D 2026-11-22). When the adapter does return a
+  // fee, use it; otherwise the preview proceeds with the fee marked
+  // unknown. No fee number is invented: feeBaseUnits '0' is a
+  // placeholder, never displayed (the review screen shows unknown-fee
+  // copy), and the note says the network charges the fee on top of the
+  // amount at broadcast.
+  if (chain === 'ton') {
+    const fee = await adapter.estimateFee();
+    if (fee.status === 'ok') {
+      return {
+        ok: true,
+        amountBaseUnits: amount,
+        feeBaseUnits: fee.data.feeBaseUnits,
+        totalBaseUnits: (
+          BigInt(amount) + BigInt(fee.data.feeBaseUnits)
+        ).toString(),
+        feeNote: fee.data.note,
+      };
+    }
+    return {
+      ok: true,
+      amountBaseUnits: amount,
+      feeBaseUnits: '0',
+      totalBaseUnits: amount,
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    };
   }
 
   const fee = await adapter.estimateFee();
@@ -300,6 +405,7 @@ export async function previewSendAmount(
       amount,
       fee.data.feeBaseUnits,
       inputs.data.utxos,
+      devnet,
     );
     if (!planned.ok) return planned;
     return {
@@ -331,7 +437,13 @@ export type SimulationError = {
 };
 
 export type SimulateSendResult =
-  | { ok: true; amountBaseUnits: string; feeBaseUnits: string }
+  | {
+      ok: true;
+      amountBaseUnits: string;
+      feeBaseUnits: string;
+      /** TON only: see SendPreview.feeUnknown. */
+      feeUnknown?: boolean;
+    }
   | {
       ok: false;
       error: SimulationError;
@@ -419,8 +531,10 @@ export async function simulateSend(
   from: string,
   to: string,
   amountDecimal: string,
+  options?: SendDevnetOptions,
 ): Promise<SimulateSendResult> {
-  const preview = await previewSendAmount(chain, from, to, amountDecimal);
+  const devnet = options?.devnet === true;
+  const preview = await previewSendAmount(chain, from, to, amountDecimal, options);
 
   if (!preview.ok) {
     return {
@@ -435,7 +549,7 @@ export async function simulateSend(
 
   // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
   if (chain !== 'eth' && chain !== 'ton') {
-    const adapter = getAdapter(chain);
+    const adapter = getAdapterForMode(chain, devnet);
     if (!adapter) {
       return simulationFailed(
         chain,
@@ -478,6 +592,7 @@ export async function simulateSend(
           preview.amountBaseUnits,
           feeEstimate.data.feeBaseUnits,
           inputs.data.utxos,
+          devnet,
         );
         if (!plan.ok) {
           return simulationFailed(
@@ -547,7 +662,7 @@ export async function simulateSend(
   // Reuse the same adapter resolver as previewSendAmount. getTxInputs
   // returns the AdapterResult discriminated union ({status, data|reason});
   // its data is a TxInput ({kind:'nonce', nonce} or {kind:'seqno', seqno}).
-  const adapter = getAdapter(chain);
+  const adapter = getAdapterForMode(chain, devnet);
   if (!adapter) {
     return simulationFailed(chain, undefined, 'adapter-unavailable', fallbackReason);
   }
@@ -770,7 +885,11 @@ export async function signEthOffline(
   amountBaseUnits: string,
   nonce: string,
   gasPriceBaseUnits: string,
+  options?: SendDevnetOptions,
 ): Promise<EthSignedTx> {
+  const devnet = options?.devnet === true;
+  // Sepolia chain id in devnet mode; mainnet chain id otherwise.
+  const chainId = devnet ? 11155111 : 1;
   if (
     ![amountBaseUnits, nonce, gasPriceBaseUnits].every(
       (value) => typeof value === 'string' && /^[0-9]+$/.test(value),
@@ -786,7 +905,9 @@ export async function signEthOffline(
 
   let from: string;
   try {
-    from = (await deriveAddresses(mnemonic, passphrase)).eth;
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).eth
+      : (await deriveAddresses(mnemonic, passphrase)).eth;
   } catch (error: unknown) {
     return {
       ok: false,
@@ -818,7 +939,7 @@ export async function signEthOffline(
   }
 
   const unsigned = {
-    chainId: 1,
+    chainId,
     // viem types nonce as number, but its serializer accepts bigint losslessly.
     nonce: BigInt(nonce) as unknown as number,
     gasPrice: BigInt(gasPriceBaseUnits),
@@ -844,7 +965,7 @@ export async function signEthOffline(
   const sig = await signer.signDigest(digest);
   const r = bytesToHex(sig.slice(0, 32));
   const s = bytesToHex(sig.slice(32, 64));
-  const v = BigInt(sig[64]! + 35 + 2 * 1);
+  const v = BigInt(sig[64]! + 35 + 2 * chainId);
 
   try {
     const signed = serializeTransaction(unsigned, { r, s, v });
@@ -904,6 +1025,51 @@ export async function broadcastSigned(
 }
 
 /**
+ * TEMPORARY devnet broadcast (owner order 2026-11-22). Submits a signed
+ * transaction through the devnet adapter ONLY. Three gates, in order:
+ * devnet mode must be on, the vault must not have test provenance, and
+ * the adapter's network id must be a devnet id. The broadcast itself is
+ * never retried here — the adapter owns its own transport. Mainnet
+ * broadcast stays disabled (see broadcastSigned): this function never
+ * touches a mainnet adapter or a mainnet network id.
+ */
+export async function broadcastSignedDevnet(
+  chain: ChainId,
+  signedTx: string,
+  options: SendDevnetOptions,
+): Promise<{ status: 'submitted'; txHash: string; explorerUrl: string }> {
+  if (options?.devnet !== true) {
+    throw new Error('Devnet broadcast requires devnet mode.');
+  }
+  assertNotTestAccount();
+  const adapter = getDevnetAdapter(chain);
+  if (!adapter) {
+    throw new Error(`Devnet adapter unavailable for ${chain}.`);
+  }
+  if (!isDevnetNetworkId(adapter.networkId)) {
+    throw new Error(
+      `Refusing to broadcast: adapter network ${adapter.networkId} is not a devnet network.`,
+    );
+  }
+  const result = await adapter.broadcast(
+    chain === 'ton' && options.messageHash !== undefined
+      ? { boc: signedTx, messageHash: options.messageHash }
+      : signedTx,
+  );
+  // The adapter's networkId was asserted devnet above, so its config
+  // resolves here; BroadcastResult.explorerUrl is nullable (mainnet
+  // adapters return null), so fall back to the devnet explorer and
+  // never return a null link.
+  const config = chainConfigForDevnetNetwork(adapter.networkId);
+  return {
+    status: 'submitted',
+    txHash: result.txHash,
+    explorerUrl:
+      result.explorerUrl ?? devnetExplorerTxUrl(config.id, result.txHash),
+  };
+}
+
+/**
  * Ambiguous-broadcast rule (Sol p5; OneKey ServiceSend pattern): an
  * unknown outcome stays unresolved. Never resend, never blindly compose
  * a replacement — only independent reconciliation may resolve it.
@@ -956,7 +1122,9 @@ export async function signBtcOffline(
   utxos: BtcSigningUtxo[],
   byteFee: string,
   changeAddress: string,
+  options?: SendDevnetOptions,
 ): Promise<BtcSignedTx> {
+  const devnet = options?.devnet === true;
   const amount = toSafeInt(amountSats);
   const feeRate = toSafeInt(byteFee);
   if (
@@ -982,7 +1150,9 @@ export async function signBtcOffline(
 
   let from: string;
   try {
-    from = (await deriveAddresses(mnemonic, passphrase)).btc;
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).btc
+      : (await deriveAddresses(mnemonic, passphrase)).btc;
   } catch (error: unknown) {
     return {
       ok: false,
@@ -997,13 +1167,36 @@ export async function signBtcOffline(
     };
   }
 
+  // Devnet: map every address Wallet Core will see to its mainnet form
+  // up front — a tb1q address must never reach the WASM engine. The
+  // same witness program re-encoded with the bc HRP has the identical
+  // scriptPubKey, so the plan and the signed outputs are the same.
+  let wasmFrom = from;
+  let wasmTo = to;
+  let wasmChange = changeAddress;
+  if (devnet) {
+    const mappedFrom = reencodeBtcAddressToMainnet(from);
+    const mappedTo = reencodeBtcAddressToMainnet(to);
+    const mappedChange = reencodeBtcAddressToMainnet(changeAddress);
+    if (mappedFrom === null || mappedTo === null || mappedChange === null) {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: 'Invalid BTC devnet address.',
+      };
+    }
+    wasmFrom = mappedFrom;
+    wasmTo = mappedTo;
+    wasmChange = mappedChange;
+  }
+
   const core = await loadCore();
   try {
     return await withSigningKey(
       mnemonic,
       passphrase,
       core.CoinType.bitcoin,
-      "m/84'/0'/0'/0/0",
+      devnet ? "m/84'/1'/0'/0/0" : "m/84'/0'/0'/0/0",
       async (keyBytes) => {
         if (keyBytes.length !== 32) {
           return {
@@ -1013,7 +1206,7 @@ export async function signBtcOffline(
           };
         }
         const scriptObj = core.BitcoinScript.lockScriptForAddress(
-          from,
+          wasmFrom,
           core.CoinType.bitcoin,
         );
         try {
@@ -1022,8 +1215,8 @@ export async function signBtcOffline(
             hashType: 1,
             amount: Long.fromNumber(amount),
             byteFee: Long.fromNumber(feeRate),
-            toAddress: to,
-            changeAddress,
+            toAddress: wasmTo,
+            changeAddress: wasmChange,
             privateKey: [keyBytes],
             utxo: utxos.map((u) => ({
               outPoint: {
@@ -1058,11 +1251,11 @@ export async function signBtcOffline(
             }
             // Verify the signed outputs before returning anything.
             const destScript = core.BitcoinScript.lockScriptForAddress(
-              to,
+              wasmTo,
               core.CoinType.bitcoin,
             );
             const changeScript = core.BitcoinScript.lockScriptForAddress(
-              changeAddress,
+              wasmChange,
               core.CoinType.bitcoin,
             );
             try {
@@ -1146,7 +1339,9 @@ export async function signTrxOffline(
   to: string,
   amountSun: string,
   blockHeader: TrxBlockHeader,
+  options?: SendDevnetOptions,
 ): Promise<TrxSignedTx> {
+  const devnet = options?.devnet === true;
   const amount = toSafeInt(amountSun);
   let headerBytes: {
     txTrieRoot: Uint8Array;
@@ -1179,7 +1374,9 @@ export async function signTrxOffline(
 
   let from: string;
   try {
-    from = (await deriveAddresses(mnemonic, passphrase)).trx;
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).trx
+      : (await deriveAddresses(mnemonic, passphrase)).trx;
   } catch (error: unknown) {
     return {
       ok: false,
@@ -1365,8 +1562,10 @@ export async function signTonOffline(
     walletVersion?: TonWalletVersion;
     signer?: TonExternalSigner;
     domain?: SignatureDomain;
+    devnet?: boolean;
   },
 ): Promise<TonSignedTx> {
+  const devnet = options?.devnet === true;
   // Version dispatch (S5): only V4R2 is supported because derivation is
   // V4R2-only. Any other value fails loudly naming the version, before
   // either signing path runs.
@@ -1393,7 +1592,9 @@ export async function signTonOffline(
 
   let from: string;
   try {
-    from = (await deriveAddresses(mnemonic, passphrase)).ton;
+    from = devnet
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).ton
+      : (await deriveAddresses(mnemonic, passphrase)).ton;
   } catch (error: unknown) {
     return {
       ok: false,

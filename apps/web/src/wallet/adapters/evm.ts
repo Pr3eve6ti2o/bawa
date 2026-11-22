@@ -26,6 +26,7 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
   type FeeEstimate,
   type FetchTransport,
@@ -54,6 +55,16 @@ export interface EvmAdapterOverrides {
   historyBaseUrl?: string;
   /** Injectable transport for the Blockscout history read. */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode, via eth.ts): the network
+   * id, the chain id the identity check pins, the explorer base for
+   * history links, and the devnet broadcast. Unset, the adapter is
+   * the configured mainnet adapter exactly as before.
+   */
+  networkId?: string;
+  evmChainId?: number;
+  historyExplorerBase?: string;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,11 +76,15 @@ export function createEvmAdapter(
   overrides: EvmAdapterOverrides = {},
 ): ChainAdapter {
   const rpcUrl = overrides.rpcUrl ?? config.rpcUrl;
+  // Devnet overrides fall back to the configured mainnet values, so a
+  // mainnet adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? config.networkId;
+  const evmChainId = overrides.evmChainId ?? config.evmChainId;
   const client: PublicClient =
     overrides.client ??
     createPublicClient({
       chain: defineChain({
-        id: config.evmChainId,
+        id: evmChainId,
         name: config.chainName,
         nativeCurrency: { name: config.chainName, symbol: config.nativeSymbol, decimals: 18 },
         rpcUrls: { default: { http: [rpcUrl] } },
@@ -77,7 +92,8 @@ export function createEvmAdapter(
       transport: http(rpcUrl),
     });
   const historyBaseUrl = overrides.historyBaseUrl ?? config.historyBaseUrl;
-  const historyExplorerBase = config.historyExplorerBase;
+  const historyExplorerBase =
+    overrides.historyExplorerBase ?? config.historyExplorerBase;
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
@@ -85,7 +101,7 @@ export function createEvmAdapter(
   /**
    * Chain identity, checked on every call: the RPC must report the
    * configured chain id. Returns an error result on mismatch, null when
-   * the network is the expected mainnet chain. No silent fallback.
+   * the network is the expected chain. No silent fallback.
    */
   const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
     let chainId: number;
@@ -94,15 +110,15 @@ export function createEvmAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (chainId !== config.evmChainId) {
+    if (chainId !== evmChainId) {
       return {
         status: 'error',
         reason:
-          `Network identity mismatch: expected chain ${config.evmChainId} ` +
-          `(${config.networkId}), got ${chainId}.`,
+          `Network identity mismatch: expected chain ${evmChainId} ` +
+          `(${networkId}), got ${chainId}.`,
       };
     }
-    assertNetworkId(`eip155:${chainId}`, config.networkId, config.source);
+    assertNetworkId(`eip155:${chainId}`, networkId, config.source);
     return null;
   };
 
@@ -121,7 +137,7 @@ export function createEvmAdapter(
         data: {
           chain: config.chain,
           address: getAddress(address),
-          networkId: config.networkId,
+          networkId,
           valueBaseUnits: balance.toString(),
           decimals: 18,
           source: config.source,
@@ -192,7 +208,7 @@ export function createEvmAdapter(
       txs.push({
         hash,
         chain: config.chain,
-        networkId: config.networkId,
+        networkId,
         direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
         amountBaseUnits: value,
         counterparty:
@@ -217,7 +233,7 @@ export function createEvmAdapter(
         status: 'ok',
         data: {
           chain: config.chain,
-          networkId: config.networkId,
+          networkId,
           feeBaseUnits: (gasPrice * 21000n).toString(),
           unit: 'wei',
           note: 'Native-transfer estimate at current gas price, 21000 gas; not a final fee',
@@ -253,13 +269,16 @@ export function createEvmAdapter(
     }
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: config.chain,
-    networkId: config.networkId,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

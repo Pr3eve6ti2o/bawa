@@ -10,8 +10,10 @@ import {
   CardTitle,
 } from "../ui/components/card";
 import { PopularChainsStrip } from "./chain-strip";
+import { useWallet } from "../state/wallet-context";
 
 export function WelcomeScreen() {
+  const { devnetEnabled } = useWallet();
   return (
     <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
       <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
@@ -35,7 +37,7 @@ export function WelcomeScreen() {
         <div className="mt-6 flex h-11 items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper px-4">
           <p className="text-xs font-semibold text-ink">Network</p>
           <span className="flex h-6 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-            MAINNET
+            {devnetEnabled ? "DEVNET" : "MAINNET"}
           </span>
         </div>
 
@@ -90,7 +92,11 @@ export function WelcomeScreen() {
       </div>
 
       <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-2">
-        <p>Mainnet only — this wallet never connects to a test network.</p>
+        <p>
+          {devnetEnabled
+            ? "Devnet — test mode. This wallet connects to a test network with valueless test tokens."
+            : "Mainnet only — this wallet never connects to a test network."}
+        </p>
         <p>
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.
         </p>

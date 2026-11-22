@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig, type ChainId } from '../wallet/chains';
+import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { buildBawaSendLink, buildPaymentUri } from '../wallet/payment-links';
 import {
@@ -20,7 +21,7 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
 export function ReceiveScreen() {
-  const { addresses, vaultAddresses, selectedChain, setSelectedChain, customTokens } = useWallet();
+  const { addresses, vaultAddresses, selectedChain, setSelectedChain, customTokens, devnetEnabled } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
@@ -464,7 +465,14 @@ export function ReceiveScreen() {
       </Card>
 
       <p className="text-sm text-ink">
-        {`Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`}
+        {(() => {
+          const devnetConfig = devnetEnabled
+            ? devnetChainConfigOrUndefined(chain)
+            : undefined;
+          return devnetConfig
+            ? `Devnet — this address is for the ${devnetConfig.devnetName} test network. Test tokens have no value. Funds sent on another network cannot be recovered.`
+            : `Mainnet only — this address is for the ${config.displayName} mainnet. Funds sent on another network cannot be recovered.`;
+        })()}
       </p>
 
       {chain === 'ton' && (

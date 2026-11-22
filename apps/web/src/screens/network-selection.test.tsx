@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
@@ -16,11 +16,17 @@ const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
-function setWallet(enabledChains: string[]) {
+type Wallet = ReturnType<typeof useWallet>;
+
+function setWallet(enabledChains: string[], overrides: Partial<Wallet> = {}) {
   const mock = {
     enabledChains,
     setChainEnabled: vi.fn(),
     customTokens: [],
+    vaultState: 'unlocked',
+    devnetEnabled: false,
+    setDevnetEnabled: vi.fn(async () => {}),
+    ...overrides,
   };
   vi.mocked(useWallet).mockReturnValue(
     mock as unknown as ReturnType<typeof useWallet>,
@@ -61,6 +67,10 @@ async function mountScreen() {
 }
 
 describe('NetworkSelectionScreen', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('lists all thirteen registry chains with their enable state', async () => {
     setWallet([...SUPPORTED_CHAINS].filter((chain) => chain !== 'sol'));
     const mounted = await mountScreen();
@@ -118,6 +128,35 @@ describe('NetworkSelectionScreen', () => {
         buttons[0]!.click();
       });
       expect(wallet.setChainEnabled).toHaveBeenCalledWith('sol', true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('states mainnet-only and shows the devnet switch when devnet is off', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Mainnet only. This wallet never connects to a test network.',
+      );
+      expect(mounted.div.textContent).toContain('Devnet — temporary test mode');
+      expect(mounted.div.textContent).not.toContain('Devnet test mode is on.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('states devnet test mode and lists the test networks when devnet is on', async () => {
+    setWallet([...SUPPORTED_CHAINS], { devnetEnabled: true });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Devnet test mode is on.');
+      expect(mounted.div.textContent).toContain('valueless test tokens');
+      expect(mounted.div.textContent).not.toContain(
+        'Mainnet only. This wallet never connects to a test network.',
+      );
+      expect(mounted.div.textContent).toContain('Bitcoin testnet4');
     } finally {
       await mounted.cleanup();
     }

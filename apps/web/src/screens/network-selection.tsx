@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/components/card'
 import { useWallet } from '../state/wallet-context';
 import { CHAINS, SUPPORTED_CHAINS } from '../wallet/chains';
 import type { ChainId } from '../engine/boundary';
+import { DevnetSetting } from './devnet-setting';
 
 // The /networks screen reads the 13-chain registry directly and lets
 // the owner enable or disable each chain (token-discovery programme).
@@ -10,7 +11,7 @@ import type { ChainId } from '../engine/boundary';
 // its derived addresses stay in the vault, so re-enabling restores
 // them without any re-derivation. Nothing is deleted here.
 export function NetworkSelectionScreen() {
-  const { enabledChains, setChainEnabled, customTokens } = useWallet();
+  const { enabledChains, setChainEnabled, customTokens, devnetEnabled } = useWallet();
   const enabled = new Set(enabledChains ?? SUPPORTED_CHAINS);
   const customByChain = new Map<ChainId, number>();
   for (const token of customTokens ?? []) {
@@ -24,9 +25,9 @@ export function NetworkSelectionScreen() {
           Networks
         </h1>
         <p className="text-sm text-muted-foreground">
-          Mainnet only. This wallet never connects to a test network.
-          Enable or disable chains — disabled chains are hidden from your
-          assets.
+          {devnetEnabled
+            ? "Devnet test mode is on. This wallet connects to test networks with valueless test tokens."
+            : "Mainnet only. This wallet never connects to a test network. Enable or disable chains — disabled chains are hidden from your assets."}
         </p>
       </header>
 
@@ -96,6 +97,8 @@ export function NetworkSelectionScreen() {
           </ul>
         </CardContent>
       </Card>
+
+      <DevnetSetting />
 
       <p className="text-sm text-muted-foreground">
         Your balances and history come from public blockchain networks.

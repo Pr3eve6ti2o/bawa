@@ -26,6 +26,10 @@ import {
   writeAutoLockEnabled,
   writeAutoLockMinutes,
 } from '../wallet/auto-lock';
+import {
+  readDevnetEnabled,
+  writeDevnetEnabled,
+} from '../wallet/devnet';
 import { isPassphraseUsed } from '../wallet/passphrase';
 import type { BalanceState } from '../wallet/balance-state';
 
@@ -60,6 +64,24 @@ export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
   adaptersPromise = promise;
   void promise.catch(() => {
     if (adaptersPromise === promise) adaptersPromise = null;
+  });
+  return promise;
+}
+
+let devnetAdaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
+
+// TEMPORARY devnet mode: the devnet adapter registry (Sepolia, Nile,
+// testnet4, TON testnet) loads lazily like the mainnet one and never
+// replaces it. Exported for the send screen's devnet broadcast path.
+export function ensureDevnetAdapters(): Promise<typeof import('../wallet/adapters')> {
+  if (devnetAdaptersPromise) return devnetAdaptersPromise;
+  const promise = import('../wallet/adapters').then((adapters) => {
+    adapters.registerDevnetAdapters();
+    return adapters;
+  });
+  devnetAdaptersPromise = promise;
+  void promise.catch(() => {
+    if (devnetAdaptersPromise === promise) devnetAdaptersPromise = null;
   });
   return promise;
 }
@@ -115,6 +137,9 @@ export type VaultState = 'no-vault' | 'locked' | 'unlocked';
 // client-localstorage-schema: version and minimise localStorage data) and is
 // only trusted when it matches the stored vault-account selection.
 const VAULT_ADDRESSES_KEY = 'bawa-vault-addresses:v1';
+// TEMPORARY devnet mode: devnet addresses persist under a separate key
+// and never overwrite the mainnet record.
+const VAULT_ADDRESSES_KEY_DEVNET = 'bawa-vault-addresses-devnet:v1';
 // Last-good balances cache (the usePrices() pattern, prices.ts): public
 // balance values with the address they belong to, so a boot never shows
 // another account's balance. Entries older than this are ignored.
@@ -196,6 +221,9 @@ export interface WalletContextValue extends WalletState {
   autoLockMinutes: number;
   setAutoLockMinutes(minutes: number): void;
   setAutoLockEnabled(enabled: boolean): Promise<void>;
+  /** TEMPORARY devnet mode: test networks, valueless tokens. */
+  devnetEnabled: boolean;
+  setDevnetEnabled(enabled: boolean): Promise<void>;
   setVaultAccount(account: number, index: number): Promise<void>;
   refreshVaultAccounts(selection?: {
     account: number;
@@ -389,10 +417,12 @@ interface PersistedVaultAddresses {
   addresses: PerChain<string[]>;
 }
 
-function readPersistedVaultAddresses(): PersistedVaultAddresses | null {
+function readPersistedVaultAddresses(
+  key: string = VAULT_ADDRESSES_KEY,
+): PersistedVaultAddresses | null {
   try {
     if (typeof window === 'undefined') return null;
-    const raw = window.localStorage.getItem(VAULT_ADDRESSES_KEY);
+    const raw = window.localStorage.getItem(key);
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.version !== 1) return null;
@@ -423,11 +453,12 @@ function persistVaultAddresses(
   account: number,
   index: number,
   addresses: PerChain<string[]>,
+  key: string = VAULT_ADDRESSES_KEY,
 ): void {
   try {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(
-      VAULT_ADDRESSES_KEY,
+      key,
       JSON.stringify({ version: 1, account, index, addresses }),
     );
   } catch {
@@ -495,8 +526,14 @@ function saveCachedBalances(entries: Partial<Record<ChainId, CachedBalance>>): v
 // skeleton that never resolves.
 function initialWalletState(): WalletState {
   // A locked boot never rehydrates persisted addresses into state.
+  // TEMPORARY devnet mode: a reload while devnet is on boots into
+  // devnet, reading the devnet record — never the mainnet one.
   const persisted =
-    computeBootVaultState() === 'unlocked' ? readPersistedVaultAddresses() : null;
+    computeBootVaultState() === 'unlocked'
+      ? readPersistedVaultAddresses(
+          readDevnetEnabled() ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
+        )
+      : null;
   const stored = readStored();
   const hasPersistedAddress =
     persisted !== null
@@ -556,6 +593,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const [autoLockEnabled, setAutoLockEnabledState] = useState<boolean>(() => readAutoLockEnabled());
   const [autoLockMinutes, setAutoLockMinutesState] = useState<number>(() => readAutoLockMinutes());
+  // TEMPORARY devnet mode (mirrors autoLockEnabled). The ref lets the
+  // refresh callbacks see the new mode synchronously, before React
+  // re-renders with the new state value.
+  const [devnetEnabled, setDevnetEnabledState] = useState<boolean>(() => readDevnetEnabled());
+  const devnetEnabledRef = useRef(devnetEnabled);
   const current = useRef(state);
   const additions = useRef(perChain(() => 0));
   const changed = useRef(perChain(() => false));
@@ -623,7 +665,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // data exists at all. Transient failures retry boundedly (see
   // fetchWithRetry); the last good value is cached for the next boot.
   const refreshBalances = useCallback(async () => {
-    const { getAdapter } = await ensureAdapters();
+    const adapters = devnetEnabledRef.current
+      ? await ensureDevnetAdapters()
+      : await ensureAdapters();
+    const resolveAdapter = (chain: ChainId) =>
+      devnetEnabledRef.current
+        ? adapters.getDevnetAdapter(chain)
+        : adapters.getAdapter(chain);
     // Every chain in the registry resolves out of the initial 'loading'
     // state here — not just the four balance chains — so no chain is left
     // showing a first-load skeleton forever. Chains without a verified
@@ -641,7 +689,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setBalance({ status: 'unavailable', reason: 'no-adapter' });
         return;
       }
-      const adapter = getAdapter(chain);
+      const adapter = resolveAdapter(chain);
       if (!adapter) {
         setBalance({ status: 'unavailable', reason: 'no-adapter' });
         return;
@@ -691,7 +739,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   const refreshHistory = useCallback(async () => {
-    const { getAdapter } = await ensureAdapters();
+    const adapters = devnetEnabledRef.current
+      ? await ensureDevnetAdapters()
+      : await ensureAdapters();
+    const resolveAdapter = (chain: ChainId) =>
+      devnetEnabledRef.current
+        ? adapters.getDevnetAdapter(chain)
+        : adapters.getAdapter(chain);
     // See refreshBalances: every chain resolves out of 'loading' here.
     await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
       const request = ++historyRequests.current[chain];
@@ -706,7 +760,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
         return;
       }
-      const adapter = getAdapter(chain);
+      const adapter = resolveAdapter(chain);
       if (!adapter) {
         setHistory({ status: 'unavailable', reason: 'no-adapter', txs: [] });
         return;
@@ -920,7 +974,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       !passphraseKnown ||
       !(await vault.autoUnlock())
     ) {
-      const persisted = readPersistedVaultAddresses();
+      const persisted = readPersistedVaultAddresses(
+        devnetEnabledRef.current ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
+      );
       // While locked, derived addresses must remain hidden.
       const restored =
         vaultState === 'unlocked'
@@ -939,16 +995,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     let derived: Record<ChainId, string>;
     try {
-      const { deriveAddressesAt: deriveVaultAddressesAt } = await loadVaultCore();
+      const core = await loadVaultCore();
+      // TEMPORARY devnet mode: derive the testnet addresses (BTC at
+      // m/84'/1'/..., TON testnet-flagged) and persist them under the
+      // separate devnet key — the mainnet record is never overwritten.
+      const devnet = devnetEnabledRef.current;
       derived = await vault.withMnemonic((mnemonic) =>
-        deriveVaultAddressesAt(
-          mnemonic,
-          // The passphrase lane (p13a) already landed: derive with the
-          // session passphrase, never '' when one is in use.
-          vault.getSessionPassphrase(),
-          selected.account,
-          selected.index,
-        ),
+        devnet
+          ? core.deriveDevnetAddressesAt(
+              mnemonic,
+              // The passphrase lane (p13a) already landed: derive with the
+              // session passphrase, never '' when one is in use.
+              vault.getSessionPassphrase(),
+              selected.account,
+              selected.index,
+            )
+          : core.deriveAddressesAt(
+              mnemonic,
+              vault.getSessionPassphrase(),
+              selected.account,
+              selected.index,
+            ),
       );
     } catch (error: unknown) {
       if (request !== vaultDerivations.current) return;
@@ -984,7 +1051,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }));
     // Persist the PUBLIC addresses only (never keys or the mnemonic), so a
     // reload or direct load can fetch balances/history without an unlock.
-    persistVaultAddresses(selected.account, selected.index, addresses);
+    // In devnet mode the devnet record is written; the mainnet record
+    // is left untouched, so toggling off restores it.
+    persistVaultAddresses(
+      selected.account,
+      selected.index,
+      addresses,
+      devnetEnabledRef.current ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
+    );
     // Balances/history load in the background: this function returns as
     // soon as the derived addresses are in state, so the wallet shows
     // immediately. A failed background refresh leaves the per-chain
@@ -1056,6 +1130,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     setAutoLockEnabledState(enabled);
   }, []);
+
+  // TEMPORARY devnet mode (mirrors setAutoLockEnabled). The ref is
+  // updated before the re-derivation so refreshVaultAccounts (and the
+  // balance/history refreshes it triggers) see the new mode at once.
+  // Toggling off re-derives the mainnet addresses from the untouched
+  // mainnet record.
+  const setDevnetEnabled = useCallback(async (enabled: boolean) => {
+    writeDevnetEnabled(enabled);
+    devnetEnabledRef.current = enabled;
+    setDevnetEnabledState(enabled);
+    await refreshVaultAccounts();
+  }, [refreshVaultAccounts]);
 
   // NO persisted deadline: the removed timer honored a stored deadline across
   // reloads, so an earlier-session deadline could fire minutes early even though
@@ -1202,7 +1288,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
     refreshTokenBalances, setChainEnabled, addCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled]);
+    devnetEnabled, setDevnetEnabled,
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

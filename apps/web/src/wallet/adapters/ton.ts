@@ -8,6 +8,7 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
   type FeeEstimate,
   type FetchTransport,
@@ -24,6 +25,16 @@ const DECIMALS = 9;
 
 export interface TonAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * explorer base, whether testnet address forms are accepted, and
+   * the devnet broadcast. Unset, the adapter is the mainnet adapter
+   * exactly as before.
+   */
+  networkId?: string;
+  explorerBaseUrl?: string;
+  acceptTestnetAddresses?: boolean;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
   retryDelaysMs?: number[];
   /**
    * Minimum gap (ms) between the start of one TonCenter request and the
@@ -52,8 +63,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isTonAddress(address: string): boolean {
-  return address.length === 48 && (address.startsWith('EQ') || address.startsWith('UQ'));
+function isTonAddress(address: string, acceptTestnet = false): boolean {
+  if (address.length !== 48) return false;
+  // Devnet mode accepts testnet-flagged forms ONLY (kQ bounceable, 0Q
+  // non-bounceable); mainnet mode accepts EQ/UQ only. A mainnet address
+  // on the devnet adapter is an isolation error, not a lookup.
+  if (acceptTestnet) {
+    return address.startsWith('kQ') || address.startsWith('0Q');
+  }
+  return address.startsWith('EQ') || address.startsWith('UQ');
 }
 
 /**
@@ -102,8 +120,20 @@ function parseTonTxList(value: unknown): unknown[] {
  * valid seqno (a fresh wallet has seqno 0): it must parse to 0, never be
  * treated as missing — the ton 16.3.0 seqno-0 `validUntil` regression test
  * pins this.
+ *
+ * The run's `exit_code` must be 0: TonCenter answers ok:true even when
+ * the get-method failed, and the stack on a failed run is garbage. Live
+ * devnet finding (Lane D, 2026-11-22): on an uninitialized wallet the
+ * run returns exit_code -13 with stack 0x14c97; reading that stack as a
+ * seqno signed a message with seqno 85143 and the network rejected it.
+ * A missing exit_code is tolerated (older fixtures / responses), but a
+ * present non-zero one is always a failure.
  */
 function parseTonSeqno(value: unknown): number {
+  const exitCode = isRecord(value) ? value['exit_code'] : undefined;
+  if (typeof exitCode === 'number' && exitCode !== 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
   const stack = isRecord(value) ? value['stack'] : undefined;
   const first = Array.isArray(stack) ? stack[0] : undefined;
   const hex =
@@ -116,6 +146,15 @@ function parseTonSeqno(value: unknown): number {
     throw invalidTonResponse('ton.getTxInputs');
   }
   return seqno;
+}
+
+/** Parses a `getAddressInformation` account state (`uninitialized` | `active` | `frozen`). */
+function parseTonAccountState(value: unknown): string {
+  const state = isRecord(value) ? value['state'] : undefined;
+  if (typeof state !== 'string' || state.length === 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
+  return state;
 }
 
 /** Base64 (TonCenter tx hashes) to lowercase hex, without Buffer. */
@@ -133,6 +172,11 @@ export function createTonAdapter(
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
+  // Devnet overrides default to the mainnet values, so a mainnet
+  // adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? NETWORK_ID;
+  const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://tonviewer.com';
+  const acceptTestnet = overrides.acceptTestnetAddresses ?? false;
   // Fail loudly on an unsupported version (item 4): the adapter and the
   // signer must never silently disagree about the wallet contract.
   const version = assertTonWalletVersion(
@@ -158,7 +202,8 @@ export function createTonAdapter(
     lastAttemptStartedAtMs = Date.now();
   };
   // Chain-identity check result, cached per instance: TON's identity rests
-  // on the pinned mainnet host (testnet lives on testnet.toncenter.com).
+  // on the pinned host (mainnet lives on toncenter.com, testnet on
+  // testnet.toncenter.com).
   // The host is fixed at construction, so one check per instance is enough.
   let identityChecked = false;
   let identityCheckInFlight: Promise<AdapterResult<never> | null> | null = null;
@@ -270,7 +315,7 @@ export function createTonAdapter(
     return run;
   };
 
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
+  const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
 
     // Merge 1 (Lane B): adopt-proper's in-flight dedup kept (concurrent
@@ -302,10 +347,10 @@ export function createTonAdapter(
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
-    if (!isTonAddress(address)) {
+    if (!isTonAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid TON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const result = await rpc('getAddressBalance', { address });
     if (result.status !== 'ok') return result;
@@ -320,7 +365,7 @@ export function createTonAdapter(
       data: {
         chain: 'ton',
         address,
-        networkId: NETWORK_ID,
+        networkId,
         valueBaseUnits: balance,
         decimals: DECIMALS,
         source: SOURCE,
@@ -335,10 +380,10 @@ export function createTonAdapter(
     address: string,
     limit = 10,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isTonAddress(address)) {
+    if (!isTonAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid TON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const result = await rpc('getTransactions', { address, limit });
     if (result.status !== 'ok') return result;
@@ -391,13 +436,13 @@ export function createTonAdapter(
       txs.push({
         hash,
         chain: 'ton',
-        networkId: NETWORK_ID,
+        networkId,
         direction,
         amountBaseUnits: amount,
         counterparty,
         timestamp: Number.isFinite(utime) ? utime * 1000 : null,
         status: 'confirmed',
-        explorerUrl: `https://tonviewer.com/transaction/${hash}`,
+        explorerUrl: `${explorerBaseUrl}/transaction/${hash}`,
       });
     }
     return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
@@ -415,10 +460,10 @@ export function createTonAdapter(
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isTonAddress(address)) {
+    if (!isTonAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid TON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const result = await rpc('runGetMethod', {
       address,
@@ -430,7 +475,20 @@ export function createTonAdapter(
     try {
       seqno = parseTonSeqno(result.data);
     } catch (error: unknown) {
-      return toAdapterError(error);
+      // A failed seqno run means the account has no code to run it — an
+      // uninitialized wallet. Its seqno is 0 by definition, but only
+      // the account state may say so: a failed run on an active or
+      // unreadable account stays an error, never a guessed 0.
+      const stateResult = await rpc('getAddressInformation', { address });
+      if (stateResult.status !== 'ok') return toAdapterError(error);
+      try {
+        if (parseTonAccountState(stateResult.data) !== 'uninitialized') {
+          return toAdapterError(error);
+        }
+      } catch {
+        return toAdapterError(error);
+      }
+      seqno = 0;
     }
     return {
       status: 'ok',
@@ -442,13 +500,16 @@ export function createTonAdapter(
     };
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: 'ton',
-    networkId: NETWORK_ID,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

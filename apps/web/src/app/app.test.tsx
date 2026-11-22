@@ -192,4 +192,22 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Coming soon');
     });
   });
+
+  it('shows the Devnet pill and devnet welcome copy when devnet is on', async () => {
+    window.localStorage.removeItem('bawa-vault');
+    window.localStorage.setItem('bawa-devnet-enabled', '1');
+    try {
+      await withRenderedApp('/', (div) => {
+        expect(div.textContent).toContain('Devnet — test mode');
+        expect(div.textContent).toContain(
+          'Devnet — test mode. This wallet connects to a test network',
+        );
+        expect(div.textContent).not.toContain(
+          'Mainnet only — this wallet never connects to a test network',
+        );
+      });
+    } finally {
+      window.localStorage.removeItem('bawa-devnet-enabled');
+    }
+  });
 });

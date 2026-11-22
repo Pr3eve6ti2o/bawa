@@ -42,6 +42,7 @@ export function AssetDetailScreen() {
     customTokens,
     tokenBalances,
     refreshTokenBalances,
+    devnetEnabled,
   } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
 
@@ -73,7 +74,7 @@ export function AssetDetailScreen() {
   // strip and the asset list (usePrices pattern: auto-fetch on mount,
   // refresh about every 60 seconds). No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
   useEffect(() => {
     if (pricesState.status === 'idle') {
       refreshPrices();
@@ -98,7 +99,7 @@ export function AssetDetailScreen() {
     () => (tokenRecord === undefined ? [] : [tokenRecord]),
     [tokenRecord],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
   useEffect(() => {
     if (tokenRecord === undefined || tokenPricesState.status !== 'idle') return;
     refreshTokenPrices();

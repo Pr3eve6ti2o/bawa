@@ -16,16 +16,23 @@ import {
   signTonOffline,
   tronAddressToBytes,
   broadcastSigned,
+  broadcastSignedDevnet,
+  verifyEthSignedTx,
   isBroadcastAllowedFor,
   markBroadcastUnknown,
   simulateSend,
   signingFailure,
   planFailure,
 } from './send';
-import { createWallet, deriveAddresses } from './core';
+import {
+  createWallet,
+  deriveAddresses,
+  deriveDevnetAddressesAt,
+} from './core';
 import { createVault, deleteVault, TEST_PROVENANCE } from './vault';
 import { loadCore } from '../engine/boundary';
-import { registerAdapter } from './adapters';
+import { registerAdapter, registerDevnetAdapter } from './adapters';
+import { decodeBtcBech32 } from './devnet';
 import type {
   AdapterResult,
   ChainAdapter,
@@ -283,7 +290,14 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     }
   });
 
-  it('reports the TON fee-quote block honestly instead of inventing a fee', async () => {
+  it('previews a TON send with the fee marked unknown instead of blocking on the fee quote (Lane D, 2026-11-22)', async () => {
+    // The TON adapter honestly reports no fee quote (no read-only fee
+    // endpoint exists). Gating the preview on it made TON sends
+    // impossible — the review step could never be reached (found live
+    // in devnet: the Amount step always failed with the fee-quote
+    // reason). The preview now proceeds with the fee marked unknown;
+    // no fee number is invented (feeBaseUnits '0' is a placeholder,
+    // never displayed — the review screen shows unknown-fee copy).
     expect(
       await previewSendAmount(
         'ton',
@@ -292,10 +306,46 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
         '1',
       ),
     ).toEqual({
-      ok: false,
-      code: 'adapter-unavailable',
-      reason:
-        'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
+      ok: true,
+      amountBaseUnits: '1000000000',
+      feeBaseUnits: '0',
+      totalBaseUnits: '1000000000',
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    });
+  });
+
+  it('previews a TON send with the adapter fee when one is available', async () => {
+    registerAdapter(
+      stubAdapter('ton', '1000000000', {
+        status: 'ok',
+        data: {
+          chain: 'ton',
+          networkId: 'test',
+          feeBaseUnits: '1000000',
+          unit: 'nanoton',
+          note: 'stub fee',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+    );
+    expect(
+      await previewSendAmount(
+        'ton',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        '0.5',
+      ),
+    ).toEqual({
+      ok: true,
+      amountBaseUnits: '500000000',
+      feeBaseUnits: '1000000',
+      totalBaseUnits: '501000000',
+      feeNote: 'stub fee',
     });
   });
 
@@ -1281,5 +1331,394 @@ describe.skip('mainnet qualification (item 23) — manual step, never in routine
     expect(txid.trim(), 'Paste the actual manually confirmed mainnet txid').not.toBe('');
     expect(explorerUrl.trim(), 'Paste the actual explorer URL').not.toBe('');
     expect(new URL(explorerUrl.trim()).protocol).toBe('https:');
+  });
+});
+
+describe('devnet send (temporary devnet mode)', () => {
+  const TB1Q_DEST = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+  const TON_TESTNET_ZERO = '0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACkT';
+  const ETH_TO = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+
+  it('validateRecipient accepts tb1q and testnet base58 only in devnet mode', async () => {
+    expect(
+      await validateRecipient('btc', TB1Q_DEST, { devnet: true }),
+    ).toEqual({ ok: true });
+    expect(
+      await validateRecipient(
+        'btc',
+        'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+        { devnet: true },
+      ),
+    ).toEqual({ ok: true });
+    // Mainnet mode still rejects testnet forms.
+    expect(await validateRecipient('btc', TB1Q_DEST)).toEqual({
+      ok: false,
+      reason: 'Invalid Bitcoin address.',
+    });
+    // Devnet mode rejects mainnet forms.
+    expect(
+      await validateRecipient(
+        'btc',
+        'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+        { devnet: true },
+      ),
+    ).toEqual({ ok: false, reason: 'Invalid Bitcoin address.' });
+  });
+
+  it('validateRecipient accepts testnet-flagged TON only in devnet mode', async () => {
+    expect(
+      await validateRecipient('ton', TON_TESTNET_ZERO, { devnet: true }),
+    ).toEqual({ ok: true });
+    expect(
+      await validateRecipient(
+        'ton',
+        'kQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHTW',
+        { devnet: true },
+      ),
+    ).toEqual({ ok: true });
+    // Mainnet mode still rejects testnet-flagged forms.
+    expect(await validateRecipient('ton', TON_TESTNET_ZERO)).toEqual({
+      ok: false,
+      reason: 'Invalid TON address.',
+    });
+    // Mainnet forms stay valid destinations in devnet mode: the tag is
+    // display-only, the on-chain destination (workchain + hash) is the same.
+    expect(
+      await validateRecipient(
+        'ton',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        { devnet: true },
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it('signEthOffline signs with Sepolia chain id 11155111 in devnet mode', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveAddresses(mnemonic, '')).eth;
+    const signed = await signEthOffline(
+      mnemonic,
+      '',
+      ETH_TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+      { devnet: true },
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.chainId).toBe(11155111);
+    expect(parsed.value).toBe(10000000000000000n);
+    const verified = await verifyEthSignedTx(signed.signedTxHex, {
+      from,
+      to: ETH_TO,
+      amountBaseUnits: '10000000000000000',
+      nonce: '0',
+      chainId: 11155111,
+    });
+    expect(verified).toEqual({ ok: true });
+  });
+
+  it('signBtcOffline signs a tb1q spend in devnet mode; outputs verify against the witness programs', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveDevnetAddressesAt(mnemonic, '', 0, 0)).btc;
+    expect(from.startsWith('tb1q')).toBe(true);
+    const fakeTxid = createHash('sha256')
+      .update('lane3-btc-devnet-test-utxo')
+      .digest('hex');
+    const signed = await signBtcOffline(
+      mnemonic,
+      '',
+      TB1Q_DEST,
+      '50000',
+      [{ txid: fakeTxid, vout: 0, valueBaseUnits: '100000' }],
+      '10',
+      from,
+      { devnet: true },
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    expect(signed.feeBaseUnits).toBe('1410');
+    const parsed = parseBtcRawTx(signed.signedTxHex);
+    expect(parsed.txid).toBe(signed.txHash);
+    // P2WPKH script from the witness program — no WASM call, so the
+    // verification does not depend on Wallet Core accepting tb1q.
+    const scriptHex = (address: string): string => {
+      const decoded = decodeBtcBech32(address);
+      if (!decoded) throw new Error('test address did not decode');
+      return (
+        '0014' + Buffer.from(decoded.program).toString('hex')
+      );
+    };
+    expect(parsed.outputs).toContainEqual({
+      value: 50000n,
+      scriptHex: scriptHex(TB1Q_DEST),
+    });
+    expect(parsed.outputs).toContainEqual({
+      value: 48590n,
+      scriptHex: scriptHex(from),
+    });
+  });
+
+  it('signTrxOffline signs with the devnet from address', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveDevnetAddressesAt(mnemonic, '', 0, 0)).trx;
+    const dest = 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c';
+    const signed = await signTrxOffline(mnemonic, '', dest, '1000000', {
+      timestamp: Date.now(),
+      number: 72938490,
+      txTrieRoot: '00'.repeat(32),
+      parentHash: '00'.repeat(32),
+      witnessAddress: from,
+    }, { devnet: true });
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    const json = JSON.parse(signed.signedTxJson) as {
+      raw_data: {
+        contract: {
+          parameter: { value: { owner_address: string } };
+        }[];
+      };
+    };
+    expect(
+      json.raw_data.contract[0]?.parameter.value.owner_address,
+    ).toBe(bytesToHex(tronAddressToBytes(from)).slice(2));
+  });
+
+  it('signTonOffline signs with a 0Q from address in devnet mode', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveDevnetAddressesAt(mnemonic, '', 0, 0)).ton;
+    expect(from.startsWith('0Q')).toBe(true);
+    const signed = await signTonOffline(
+      mnemonic,
+      '',
+      TON_TESTNET_ZERO,
+      '1000000000',
+      0,
+      { devnet: true },
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    expect(signed.from).toBe(from);
+    expect(signed.messageHash).toMatch(/^0x[0-9a-f]{64}$/);
+    const boc = Buffer.from(signed.signedBocBase64, 'base64');
+    expect(boc.subarray(0, 4).toString('hex')).toBe('b5ee9c72');
+  });
+
+  it('previewSendAmount uses the devnet adapter in devnet mode (BTC plan proves the tb1q mapping)', async () => {
+    const mnemonic = await createWallet();
+    const from = (await deriveDevnetAddressesAt(mnemonic, '', 0, 0)).btc;
+    const fakeTxid = createHash('sha256')
+      .update('lane3-btc-devnet-preview-utxo')
+      .digest('hex');
+    registerDevnetAdapter({
+      chain: 'btc',
+      networkId:
+        'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+      getBalance: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'btc',
+          address: from,
+          networkId:
+            'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+          valueBaseUnits: '100000',
+          decimals: 8,
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({
+        status: 'ok',
+        data: {
+          chain: 'btc',
+          networkId:
+            'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043',
+          feeBaseUnits: '10',
+          unit: 'sat/vB',
+          note: 'stub',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      getTxInputs: async () => ({
+        status: 'ok',
+        data: {
+          kind: 'utxo',
+          utxos: [{ txid: fakeTxid, vout: 0, valueBaseUnits: '100000' }],
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      broadcast: async () => {
+        throw new Error('disabled');
+      },
+    });
+    const preview = await previewSendAmount(
+      'btc',
+      from,
+      TB1Q_DEST,
+      '0.0005',
+      { devnet: true },
+    );
+    expect(preview).toMatchObject({
+      ok: true,
+      amountBaseUnits: '50000',
+      feeBaseUnits: '1410',
+      totalBaseUnits: '51410',
+    });
+  });
+
+  it('previewSendAmount in devnet mode without a devnet adapter is unavailable', async () => {
+    const preview = await previewSendAmount(
+      'trx',
+      'TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH',
+      'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c',
+      '1',
+      { devnet: true },
+    );
+    expect(preview).toMatchObject({
+      ok: false,
+      code: 'adapter-unavailable',
+    });
+  });
+
+  it('broadcastSignedDevnet submits through the devnet adapter', async () => {
+    registerDevnetAdapter({
+      chain: 'eth',
+      networkId: 'eip155:11155111',
+      getBalance: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      getTxInputs: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      broadcast: async () => ({
+        txHash: '0xabc',
+        explorerUrl: 'https://sepolia.etherscan.io/tx/0xabc',
+      }),
+    });
+    const result = await broadcastSignedDevnet('eth', '0x02f801', {
+      devnet: true,
+    });
+    expect(result).toEqual({
+      status: 'submitted',
+      txHash: '0xabc',
+      explorerUrl: 'https://sepolia.etherscan.io/tx/0xabc',
+    });
+  });
+
+  it('broadcastSignedDevnet refuses when devnet mode is off', async () => {
+    await expect(
+      broadcastSignedDevnet('eth', '0x02f801', { devnet: false }),
+    ).rejects.toThrow('Devnet broadcast requires devnet mode.');
+  });
+
+  it('broadcastSignedDevnet refuses a non-devnet network id without calling broadcast', async () => {
+    const broadcast = vi.fn(async () => ({
+      txHash: '0xabc',
+      explorerUrl: 'https://example.invalid/tx/0xabc',
+    }));
+    registerDevnetAdapter({
+      chain: 'btc',
+      networkId: 'bip122:000000000019d6689c085ae165831e93',
+      getBalance: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      getHistory: async () => ({
+        status: 'ok',
+        data: [],
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      getTxInputs: async () => ({
+        status: 'unavailable',
+        reason: 'stub',
+      }),
+      broadcast,
+    });
+    await expect(
+      broadcastSignedDevnet('btc', '0200000001deadbeef', { devnet: true }),
+    ).rejects.toThrow('not a devnet network');
+    expect(broadcast).not.toHaveBeenCalled();
+  });
+
+  it('broadcastSignedDevnet reports no adapter when none is registered', async () => {
+    await expect(
+      broadcastSignedDevnet('ton', 'te6ccgEBAQEAAgAA', { devnet: true }),
+    ).rejects.toThrow('Devnet adapter unavailable for ton.');
+  });
+
+  it('broadcastSignedDevnet blocks test provenance', async () => {
+    const holder = globalThis as Record<string, unknown>;
+    const previousStorage = holder.localStorage;
+    const store = new Map<string, string>();
+    const shim = {
+      get length() {
+        return store.size;
+      },
+      clear: () => {
+        store.clear();
+      },
+      getItem: (key: string) => store.get(key) ?? null,
+      key: (index: number) => [...store.keys()][index] ?? null,
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    } as Storage;
+    holder.localStorage = shim;
+    try {
+      const mnemonic = await createWallet();
+      await createVault(
+        mnemonic,
+        'test-only-password',
+        ['bawa-evm-bip44-v1'],
+        '',
+        TEST_PROVENANCE,
+      );
+      await expect(
+        broadcastSignedDevnet('eth', '0x02f801', { devnet: true }),
+      ).rejects.toThrow('Broadcast blocked: account has test provenance.');
+    } finally {
+      deleteVault();
+      if (previousStorage === undefined) {
+        delete holder.localStorage;
+      } else {
+        holder.localStorage = previousStorage;
+      }
+    }
   });
 });

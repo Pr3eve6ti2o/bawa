@@ -38,6 +38,7 @@ export function DashboardScreen() {
     vaultState,
     customTokens,
     tokenBalances,
+    devnetEnabled,
   } = useWallet();
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
@@ -67,7 +68,7 @@ export function DashboardScreen() {
     });
   };
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
+  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
   const pricesLoading = pricesState.status === 'loading';
 
   // Token prices (token discovery): the same CoinGecko feed, one batched
@@ -78,7 +79,7 @@ export function DashboardScreen() {
     () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
     [customTokens],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
   const tokenPricesLoading = tokenPricesState.status === 'loading';
 
   useEffect(() => {

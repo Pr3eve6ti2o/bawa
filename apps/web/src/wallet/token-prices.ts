@@ -396,8 +396,11 @@ export type TokenPricesState = {
  */
 export function useTokenPrices(
   tokens: readonly TokenRecord[],
-  options?: { sleep?: (ms: number) => Promise<void> },
+  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
 ): { state: TokenPricesState; refresh: () => void } {
+  // TEMPORARY devnet mode: devnet tokens have no market price. Never
+  // load cached mainnet prices for testnet balances, and never fetch.
+  const devnet = options?.devnet === true;
   const requests = tokenPriceRequests(tokens);
   const requestKey = requests.map((r) => `${r.key}=${r.coingeckoId}`).sort().join('|');
   const requestsRef = useRef(requests);
@@ -407,10 +410,14 @@ export function useTokenPrices(
   const [state, setState] = useState<TokenPricesState>(() => {
     const keys = requests.map((r) => r.key);
     let entries: TokenPriceMap;
-    try {
-      entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
-    } catch {
+    if (devnet) {
       entries = tokenPriceEntries(keys);
+    } else {
+      try {
+        entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
+      } catch {
+        entries = tokenPriceEntries(keys);
+      }
     }
     return { status: 'idle', entries, lastFetchedAtMs: null };
   });
@@ -426,7 +433,21 @@ export function useTokenPrices(
     };
   }, []);
 
+  // Reset to no-prices when devnet mode turns on; the caller re-fetches
+  // when it turns back off.
+  useEffect(() => {
+    if (devnet) {
+      setState({
+        status: 'idle',
+        entries: tokenPriceEntries(requestsRef.current.map((r) => r.key)),
+        lastFetchedAtMs: null,
+      });
+    }
+  }, [devnet]);
+
   const refresh = useCallback(() => {
+    // Devnet tokens have no market price: refresh is a no-op.
+    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
     const currentRequests = requestsRef.current;
     const keys = currentRequests.map((r) => r.key);
@@ -509,7 +530,7 @@ export function useTokenPrices(
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep, requestKey]);
+  }, [state.status, sleep, requestKey, devnet]);
 
   return { state, refresh };
 }

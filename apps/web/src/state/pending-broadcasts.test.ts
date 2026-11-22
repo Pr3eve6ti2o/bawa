@@ -4,9 +4,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   listPendingBroadcasts,
+  listPendingBroadcastsDevnet,
   recordPendingBroadcast,
+  recordPendingBroadcastDevnet,
   reconcilePendingBroadcasts,
+  reconcilePendingBroadcastsDevnet,
   removePendingBroadcast,
+  removePendingBroadcastDevnet,
 } from './pending-broadcasts';
 
 beforeEach(() => {
@@ -59,5 +63,42 @@ describe('pending-broadcasts', () => {
       '0xmissing',
       '0xunknown',
     ]);
+  });
+});
+
+describe('pending-broadcasts devnet (temporary devnet mode)', () => {
+  it('records devnet broadcasts under a separate key', () => {
+    recordPendingBroadcastDevnet({ txHash: '0xdev', chain: 'eth' });
+    expect(listPendingBroadcasts()).toHaveLength(0);
+    expect(listPendingBroadcastsDevnet()).toHaveLength(1);
+    expect(listPendingBroadcastsDevnet()[0]?.txHash).toBe('0xdev');
+    recordPendingBroadcast({ txHash: '0xmain', chain: 'eth' });
+    expect(listPendingBroadcasts()).toHaveLength(1);
+    expect(listPendingBroadcastsDevnet()).toHaveLength(1);
+  });
+
+  it('removes devnet entries without touching mainnet entries', () => {
+    recordPendingBroadcast({ txHash: '0xmain', chain: 'eth' });
+    recordPendingBroadcastDevnet({ txHash: '0xdev', chain: 'eth' });
+    removePendingBroadcastDevnet('0xdev', 'eth');
+    expect(listPendingBroadcastsDevnet()).toHaveLength(0);
+    expect(listPendingBroadcasts()).toHaveLength(1);
+  });
+
+  it('reconciles devnet entries only', async () => {
+    recordPendingBroadcast({ txHash: '0xmain', chain: 'eth' });
+    recordPendingBroadcastDevnet({ txHash: '0xconfirmed', chain: 'eth' });
+    recordPendingBroadcastDevnet({ txHash: '0xunknown', chain: 'btc' });
+    const resolved = vi.fn(async (entry: { txHash: string }) => {
+      if (entry.txHash === '0xconfirmed') return 'confirmed' as const;
+      return 'unknown' as const;
+    });
+    const outcome = await reconcilePendingBroadcastsDevnet(resolved);
+    expect(outcome).toEqual({ confirmed: 1, stillUnknown: 1 });
+    expect(resolved).toHaveBeenCalledTimes(2);
+    expect(listPendingBroadcastsDevnet().map((entry) => entry.txHash)).toEqual([
+      '0xunknown',
+    ]);
+    expect(listPendingBroadcasts()).toHaveLength(1);
   });
 });

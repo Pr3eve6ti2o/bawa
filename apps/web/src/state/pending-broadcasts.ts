@@ -15,6 +15,11 @@
 // The module never fetches, signs or broadcasts anything itself. The
 // reconcile resolver is read-only by contract: it answers whether a
 // hash is confirmed, not found, or still unknown.
+//
+// TEMPORARY devnet mode: the devnet record lives under a separate key
+// (bawa-pending-broadcasts-devnet) with parallel record/list/remove/
+// reconcile functions, so a devnet broadcast is never reconciled
+// against mainnet observations or vice versa.
 import type { ChainId } from '@bawa/contracts';
 
 export interface PendingBroadcast {
@@ -27,12 +32,16 @@ export interface PendingBroadcast {
 }
 
 const STORAGE_KEY = 'bawa-pending-broadcasts';
+const DEVNET_STORAGE_KEY = 'bawa-pending-broadcasts-devnet';
 const MAX_ENTRIES = 50;
 
 // One storage backend, decided once: localStorage when it works, an
 // in-memory list otherwise. Never mix the two — a cleared localStorage
-// must not resurrect entries from the memory copy.
-let memoryFallback: PendingBroadcast[] = [];
+// must not resurrect entries from the memory copy. Mainnet and devnet
+// records are separate stores under separate keys.
+type BroadcastStore = { key: string; memory: PendingBroadcast[] };
+const mainnetStore: BroadcastStore = { key: STORAGE_KEY, memory: [] };
+const devnetStore: BroadcastStore = { key: DEVNET_STORAGE_KEY, memory: [] };
 
 function storageWorks(): boolean {
   try {
@@ -45,10 +54,10 @@ function storageWorks(): boolean {
 
 const useLocalStorage = storageWorks();
 
-function readStored(): PendingBroadcast[] {
-  if (!useLocalStorage) return [...memoryFallback];
+function readStored(store: BroadcastStore): PendingBroadcast[] {
+  if (!useLocalStorage) return [...store.memory];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(store.key);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -65,13 +74,13 @@ function readStored(): PendingBroadcast[] {
   }
 }
 
-function writeStored(entries: PendingBroadcast[]): void {
+function writeStored(store: BroadcastStore, entries: PendingBroadcast[]): void {
   if (!useLocalStorage) {
-    memoryFallback = [...entries];
+    store.memory = [...entries];
     return;
   }
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    window.localStorage.setItem(store.key, JSON.stringify(entries));
   } catch {
     // Storage failed mid-write; the in-memory copy is not promoted —
     // the next read retries localStorage rather than serving stale data.
@@ -91,20 +100,57 @@ export function recordPendingBroadcast(entry: {
     recordedAt: Date.now(),
     status: 'unknown',
   };
-  const rest = readStored().filter(
+  const rest = readStored(mainnetStore).filter(
     (item) => !(item.txHash === recorded.txHash && item.chain === recorded.chain),
   );
-  writeStored([...rest, recorded].slice(-MAX_ENTRIES));
+  writeStored(mainnetStore, [...rest, recorded].slice(-MAX_ENTRIES));
   return recorded;
 }
 
 export function listPendingBroadcasts(): PendingBroadcast[] {
-  return readStored();
+  return readStored(mainnetStore);
 }
 
 export function removePendingBroadcast(txHash: string, chain: ChainId): void {
   writeStored(
-    readStored().filter(
+    mainnetStore,
+    readStored(mainnetStore).filter(
+      (item) => !(item.txHash === txHash && item.chain === chain),
+    ),
+  );
+}
+
+/** TEMPORARY devnet mode: the parallel devnet record, separate key. */
+export function recordPendingBroadcastDevnet(entry: {
+  txHash: string;
+  chain: ChainId;
+  nonce?: number;
+}): PendingBroadcast {
+  const recorded: PendingBroadcast = {
+    txHash: entry.txHash,
+    chain: entry.chain,
+    ...(entry.nonce !== undefined ? { nonce: entry.nonce } : {}),
+    recordedAt: Date.now(),
+    status: 'unknown',
+  };
+  const rest = readStored(devnetStore).filter(
+    (item) => !(item.txHash === recorded.txHash && item.chain === recorded.chain),
+  );
+  writeStored(devnetStore, [...rest, recorded].slice(-MAX_ENTRIES));
+  return recorded;
+}
+
+export function listPendingBroadcastsDevnet(): PendingBroadcast[] {
+  return readStored(devnetStore);
+}
+
+export function removePendingBroadcastDevnet(
+  txHash: string,
+  chain: ChainId,
+): void {
+  writeStored(
+    devnetStore,
+    readStored(devnetStore).filter(
       (item) => !(item.txHash === txHash && item.chain === chain),
     ),
   );
@@ -120,7 +166,7 @@ export type BroadcastResolution = 'confirmed' | 'not-found' | 'unknown';
 export async function reconcilePendingBroadcasts(
   resolve: (entry: PendingBroadcast) => Promise<BroadcastResolution>,
 ): Promise<{ confirmed: number; stillUnknown: number }> {
-  const entries = readStored();
+  const entries = readStored(mainnetStore);
   let confirmed = 0;
   const remaining: PendingBroadcast[] = [];
   for (const entry of entries) {
@@ -131,6 +177,25 @@ export async function reconcilePendingBroadcasts(
       remaining.push(entry);
     }
   }
-  writeStored(remaining);
+  writeStored(mainnetStore, remaining);
+  return { confirmed, stillUnknown: remaining.length };
+}
+
+/** TEMPORARY devnet mode: reconcile the devnet record only. */
+export async function reconcilePendingBroadcastsDevnet(
+  resolve: (entry: PendingBroadcast) => Promise<BroadcastResolution>,
+): Promise<{ confirmed: number; stillUnknown: number }> {
+  const entries = readStored(devnetStore);
+  let confirmed = 0;
+  const remaining: PendingBroadcast[] = [];
+  for (const entry of entries) {
+    const resolution = await resolve(entry);
+    if (resolution === 'confirmed') {
+      confirmed += 1;
+    } else {
+      remaining.push(entry);
+    }
+  }
+  writeStored(devnetStore, remaining);
   return { confirmed, stillUnknown: remaining.length };
 }

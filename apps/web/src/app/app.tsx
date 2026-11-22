@@ -116,7 +116,7 @@ function HomeScreen() {
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState } = useWallet();
+  const { vaultState, devnetEnabled } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
   useEffect(() => {
@@ -232,7 +232,7 @@ function AppLayout() {
               {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
             </Link>
             <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              Mainnet
+              {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
             </span>
           </header>
 
@@ -256,7 +256,7 @@ function AppLayout() {
               </div>
             </div>
             <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              Mainnet
+              {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
             </span>
           </header>
 

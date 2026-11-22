@@ -401,3 +401,131 @@ describe('isSameDestination', () => {
     ).toBe(false);
   });
 });
+
+describe('validateDestination: devnet (temporary devnet mode)', () => {
+  it('BTC accepts tb1q/tb1p and testnet base58 in devnet mode', async () => {
+    const tb1q = await validateDestination(
+      'btc',
+      'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+      { devnet: true },
+    );
+    expect(tb1q).toMatchObject({
+      ok: true,
+      chain: 'btc',
+      checksum: 'verified',
+      addressType: 'p2wpkh',
+    });
+    const tb1p = await validateDestination(
+      'btc',
+      bech32mEncode(
+        'tb',
+        1,
+        '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+      ),
+      { devnet: true },
+    );
+    expect(tb1p).toMatchObject({
+      ok: true,
+      chain: 'btc',
+      checksum: 'verified',
+      addressType: 'p2tr',
+    });
+    const p2pkh = await validateDestination(
+      'btc',
+      reversioned('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', 0x6f),
+      { devnet: true },
+    );
+    expect(p2pkh).toMatchObject({
+      ok: true,
+      chain: 'btc',
+      checksum: 'verified',
+      addressType: 'p2pkh',
+    });
+    const p2sh = await validateDestination(
+      'btc',
+      reversioned('3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', 0xc4),
+      { devnet: true },
+    );
+    expect(p2sh).toMatchObject({
+      ok: true,
+      chain: 'btc',
+      checksum: 'verified',
+      addressType: 'p2sh',
+    });
+  });
+
+  it('BTC rejects mainnet forms and bcrt in devnet mode', async () => {
+    const mainnet = await validateDestination(
+      'btc',
+      'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+      { devnet: true },
+    );
+    expect(mainnet).toMatchObject({ ok: false, reason: 'wrong-network' });
+    const base58 = await validateDestination(
+      'btc',
+      '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+      { devnet: true },
+    );
+    expect(base58).toMatchObject({ ok: false, reason: 'wrong-network' });
+    const regtest = await validateDestination(
+      'btc',
+      'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080',
+      { devnet: true },
+    );
+    expect(regtest).toMatchObject({ ok: false, reason: 'wrong-network' });
+  });
+
+  it('TON accepts the testnet flag in devnet mode and rejects mainnet tags', async () => {
+    const bounceable = await validateDestination(
+      'ton',
+      tonTestnetVariant('EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi'),
+      { devnet: true },
+    );
+    expect(bounceable).toMatchObject({
+      ok: true,
+      chain: 'ton',
+      checksum: 'verified',
+      addressType: 'bounceable',
+    });
+    const nonBounceable = await validateDestination(
+      'ton',
+      '0QAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-akS',
+      { devnet: true },
+    );
+    expect(nonBounceable).toMatchObject({
+      ok: true,
+      chain: 'ton',
+      checksum: 'verified',
+      addressType: 'non-bounceable',
+    });
+    const mainnet = await validateDestination(
+      'ton',
+      'EQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wDyEi',
+      { devnet: true },
+    );
+    expect(mainnet).toMatchObject({ ok: false, reason: 'wrong-network' });
+    // The raw form is network-agnostic (workchain + hash) and stays valid.
+    const raw = tonRawForm('UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn');
+    const rawResult = await validateDestination('ton', raw, { devnet: true });
+    expect(rawResult).toMatchObject({
+      ok: true,
+      chain: 'ton',
+      addressType: 'raw',
+    });
+  });
+
+  it('TRX and ETH validation is unchanged in devnet mode', async () => {
+    const trx = await validateDestination(
+      'trx',
+      'TUEZSdKsoDHQMeZwihtdoBiN46zxhGWYdH',
+      { devnet: true },
+    );
+    expect(trx).toMatchObject({ ok: true, chain: 'trx' });
+    const eth = await validateDestination(
+      'eth',
+      '0x9858EfFD232B4033E47d90003D41EC34EcaEda94',
+      { devnet: true },
+    );
+    expect(eth).toMatchObject({ ok: true, chain: 'eth' });
+  });
+});

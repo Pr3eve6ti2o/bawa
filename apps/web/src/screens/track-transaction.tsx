@@ -17,7 +17,7 @@ import { Label } from '../ui/components/label';
 import { Card, CardContent } from '../ui/components/card';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { BawaLoading } from '../ui/components/loading';
-import { humanReasonMessage } from '../state/wallet-context';
+import { humanReasonMessage, useWallet } from '../state/wallet-context';
 
 type ChainId = (typeof SUPPORTED_CHAINS)[number];
 // Result states wrap the tracker result so the discriminant is always
@@ -184,6 +184,7 @@ function TransactionDetails({ data, chain, checkedAt }: {
 }
 
 export function TrackTransactionScreen() {
+  const { devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
   const [chain, setChain] = useState<ChainId>(
     () => SUPPORTED_CHAINS.find((id) => id === searchParams.get('chain')) ?? 'btc',
@@ -222,7 +223,7 @@ export function TrackTransactionScreen() {
     const addressForTon = lookupChain === 'ton' ? tonAddress.trim() : undefined;
     setLookup({ kind: 'loading' });
     try {
-      const result = await lookupTransaction(lookupChain, value, { address: addressForTon });
+      const result = await lookupTransaction(lookupChain, value, { address: addressForTon, devnet: devnetEnabled });
       if (request === lookupRequest.current) setLookup({ kind: 'result', result });
     } catch (error: unknown) {
       if (request === lookupRequest.current) {
@@ -247,7 +248,7 @@ export function TrackTransactionScreen() {
     const request = ++activityRequest.current;
     setActivity({ kind: 'loading' });
     try {
-      const result = await getRecentActivity(chain, address.trim(), 10);
+      const result = await getRecentActivity(chain, address.trim(), 10, { devnet: devnetEnabled });
       if (request === activityRequest.current) setActivity({ kind: 'result', result });
     } catch (error: unknown) {
       if (request === activityRequest.current) {

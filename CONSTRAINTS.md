@@ -25,7 +25,7 @@ pass.** Tightening the bar is silent; loosening it is loud (see
   are fresh, disposable, and never funded.
 - No fake data: no fabricated balances or prices. A missing value is
   `unavailable` with a reason, never `$0.00`.
-- No broadcast path built or enabled (standing owner order).
+- No broadcast path built or enabled (standing owner order). Exception E1 (temporary devnet only) applies — see Exceptions below.
 - This file does not get weakened to make a change pass.
 
 ## Enforced with numbers
@@ -61,7 +61,7 @@ finding — not a reason to edit this file.
 
 | ID | Rule | Path | Reason | Owner | Expires |
 | --- | --- | --- | --- | --- | --- |
-| (none) | — | — | No exceptions are in force. The first exception must be added here with an owner and an expiry no more than 90 days out. | — | — |
+| E1 | No broadcast path built or enabled | `apps/web/src/wallet/send.ts` (`broadcastSignedDevnet`), devnet adapter `broadcast()` implementations, `apps/web/src/screens/send.tsx` (devnet broadcast stage) | TEMPORARY devnet mode only (owner order 2026-11-22): broadcast is enabled for the four devnet networks only — Bitcoin testnet4, Ethereum Sepolia, TRON Nile, TON testnet. Every mainnet `broadcast()` still throws `BROADCAST_DISABLED_MESSAGE` unconditionally, and `broadcastSignedDevnet` asserts devnet mode plus a devnet networkId before any network write. | Owner (2026-11-22) | 2027-02-20 |
 
 An exception with no owner, or an expiry more than 90 days out, is not
 an exception — it is a deleted rule.
@@ -83,7 +83,7 @@ grep -rn "DEFER(" -- apps/web/src scripts tools | grep -v node_modules
 | ID | Deferral | Ceiling / trigger |
 | --- | --- | --- |
 | D1 | Single-attempt `fetchJson` (ADR-0009). No retry in the transport; retries live in callers under a budget. | Ceiling: retries stay caller-side, bounded, reads-only. Trigger: a caller retries a broadcast, or an unbounded retry appears. |
-| D2 | Broadcast disabled (standing owner order). Send is built, signing is local, broadcast throws. | Ceiling: no broadcast path is enabled. Trigger: a separate owner authorisation to enable broadcast. |
+| D2 | Broadcast disabled (standing owner order). Send is built, signing is local, broadcast throws. | Ceiling: no broadcast path is enabled. Trigger: a separate owner authorisation to enable broadcast. Trigger MET for devnet only (owner order 2026-11-22, exception E1, expires 2027-02-20): a devnet-only broadcast path exists (`broadcastSignedDevnet`); mainnet broadcast remains disabled and every mainnet `broadcast()` still throws. |
 | D3 | Price-feed absence on this checkout. No CoinGecko client, no `prices.ts`; balances are native amounts only. | Ceiling: no fiat value is ever invented. Trigger: the multichain-create tracker/price merge (Prerequisite 0). |
 | D4 | `toBalanceProvider` legacy shim (`adapters/types.ts`) — REMOVED 2026-11-22 (P5 C1, merge 85ba72a). `balance-providers.ts` deleted; zero references to `toBalanceProvider`, `getBalanceProvider`, or `balance-providers` remain in the tree. Trigger met: last consumer removed. | Closed: shim and file deleted; new code uses `getAdapter`. |
 | D5 | ecdsa 0.19.2 accepted residual risk (PYSEC-2026-1325 / CVE-2024-23342). No owner acceptance order is on record. | Ceiling: the acceptance is a lane verdict, not an owner decision. Trigger: owner acceptance, a new signing path, `coincurve` dropped, or `ecdsa` bumped. See `SECURITY-FINDINGS.md`. |

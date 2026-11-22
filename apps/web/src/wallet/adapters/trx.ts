@@ -6,6 +6,7 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
   type FeeEstimate,
   type FetchTransport,
@@ -26,6 +27,14 @@ export interface TronAdapterOverrides {
    * transport; tests inject a fake instead of stubbing the global fetch.
    */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * explorer base, and the devnet broadcast. Unset, the adapter is
+   * the mainnet adapter exactly as before.
+   */
+  networkId?: string;
+  explorerBaseUrl?: string;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 
@@ -100,17 +109,21 @@ export function createTronAdapter(
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
+  // Devnet overrides default to the mainnet values, so a mainnet
+  // adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? NETWORK_ID;
+  const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://tronscan.org';
   // Idempotent reads only: every network read below is bounded-retry via
   // withRetry (item 2). Broadcast is never retried — it stays disabled.
   const readJson = (url: string, operation: string): Promise<unknown> =>
     readWithRetry(transport, url, operation);
   // Chain-identity check result, cached per instance: TRON has no on-chain
-  // chain-id, so identity rests on the pinned mainnet endpoint responding
-  // with a well-formed mainnet block. The endpoint URL is fixed at
+  // chain-id, so identity rests on the pinned endpoint responding
+  // with a well-formed block. The endpoint URL is fixed at
   // construction and never changes, so one check per instance is enough.
   let identityChecked = false;
 
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
+  const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
     let raw: unknown;
     try {
@@ -125,7 +138,7 @@ export function createTronAdapter(
     if (typeof number !== 'number' || number <= 0) {
       return {
         status: 'error',
-        reason: 'Network identity check failed: TronGrid did not return a mainnet block.',
+        reason: 'Network identity check failed: TronGrid did not return a block.',
       };
     }
     // Endpoint check only: TRON exposes no on-chain chain-id, so there is
@@ -140,7 +153,7 @@ export function createTronAdapter(
     if (!isTronAddress(address)) {
       return { status: 'error', reason: 'Invalid TRON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -165,7 +178,7 @@ export function createTronAdapter(
       data: {
         chain: 'trx',
         address,
-        networkId: NETWORK_ID,
+        networkId,
         valueBaseUnits: balance,
         decimals: DECIMALS,
         source: SOURCE,
@@ -183,7 +196,7 @@ export function createTronAdapter(
     if (!isTronAddress(address)) {
       return { status: 'error', reason: 'Invalid TRON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -235,20 +248,20 @@ export function createTronAdapter(
       txs.push({
         hash: txID,
         chain: 'trx',
-        networkId: NETWORK_ID,
+        networkId,
         direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
         amountBaseUnits: amount,
         counterparty: fromSelf && toSelf ? null : fromSelf ? to || null : owner || null,
         timestamp: Number.isFinite(blockTimestamp) ? blockTimestamp : null,
         status: 'confirmed',
-        explorerUrl: `https://tronscan.org/#/transaction/${txID}`,
+        explorerUrl: `${explorerBaseUrl}/#/transaction/${txID}`,
       });
     }
     return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
     try {
@@ -273,7 +286,7 @@ export function createTronAdapter(
       status: 'ok',
       data: {
         chain: 'trx',
-        networkId: NETWORK_ID,
+        networkId,
         feeBaseUnits: String(Math.trunc(value)),
         unit: 'SUN per unit of energy',
         note: 'TRON fees are energy/bandwidth, not a flat tx fee; this is the network energy fee',
@@ -298,13 +311,16 @@ export function createTronAdapter(
     };
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: 'trx',
-    networkId: NETWORK_ID,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

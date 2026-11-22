@@ -1284,3 +1284,84 @@ describe('usePrices', () => {
     }
   });
 });
+
+describe('usePrices devnet (temporary devnet mode)', () => {
+  let devnetLatest: ReturnType<typeof usePrices> | null = null;
+
+  function ProbeDevnet(): null {
+    devnetLatest = usePrices({ devnet: true });
+    return null;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    devnetLatest = null;
+    localStorage.clear();
+    vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  async function mountDevnet() {
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(div);
+    await act(async () => {
+      root.render(<ProbeDevnet />);
+    });
+    return {
+      div,
+      root,
+      cleanup: async () => {
+        await act(async () => {
+          root.unmount();
+        });
+        div.remove();
+      },
+    };
+  }
+
+  it('never loads cached mainnet prices and never fetches in devnet mode', async () => {
+    // Seed a fresh mainnet cache: the normal probe would show it.
+    saveCachedPrices(parsePriceResponse(freshPayload(), NOW_MS), NOW_MS);
+    expect(loadCachedPrices(NOW_MS)).not.toBeNull();
+    const stub = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+      headers: { get: () => null },
+    }));
+    vi.stubGlobal('fetch', stub);
+    const { cleanup } = await mountDevnet();
+    try {
+      expect(devnetLatest!.state).toMatchObject({
+        status: 'idle',
+        lastFetchedAtMs: null,
+      });
+      for (const entry of Object.values(devnetLatest!.state.entries)) {
+        expect(entry).toMatchObject({
+          status: 'unavailable',
+          reason: 'missing',
+        });
+      }
+      await act(async () => {
+        devnetLatest?.refresh();
+        await Promise.resolve();
+      });
+      expect(stub).not.toHaveBeenCalled();
+      expect(devnetLatest!.state.status).toBe('idle');
+      for (const entry of Object.values(devnetLatest!.state.entries)) {
+        expect(entry).toMatchObject({
+          status: 'unavailable',
+          reason: 'missing',
+        });
+      }
+    } finally {
+      await cleanup();
+    }
+  });
+});

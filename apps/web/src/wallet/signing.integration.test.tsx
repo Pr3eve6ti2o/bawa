@@ -237,6 +237,10 @@ describe('send approval stages', () => {
       'signing',
       'signed',
       'broadcast-disabled',
+      // TEMPORARY devnet mode only: the stage the send flow enters
+      // after signing when devnet is on (broadcast to the test
+      // network). Mainnet never reaches it.
+      'broadcast-devnet',
     ]);
   });
 
