@@ -83,7 +83,7 @@
     "config": "apps/web/playwright.config.ts",
     "continueAfterFailure": true,
     "runner": "Playwright (@playwright/test), Chromium only",
-    "server": "vite preview of dist/ on http://127.0.0.1:4173 \u2014 started by the config's webServer block, never by hand",
+    "server": "vite preview of dist/ on http://127.0.0.1:4193 \u2014 started by the config's webServer block, never by hand",
     "verdict": "exit 0 only when every case passes; any failure fails the CI e2e job",
     "workers": 1
   },

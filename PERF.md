@@ -17,12 +17,19 @@ is not an attempt.
 ## Bundle-size ratchet
 
 Measured 2026-11-20 on `panel-rebuild/repo-study` at `0fd3a2e`
-(`npm run build` in `apps/web`, after `npm ci`):
+(`npm run build` in `apps/web`, after `npm ci`): 3,864,173 bytes total
+(baseline 3,846,651). Re-measured 2026-11-22 on `adopt-proper` at
+`67c48e2` (two independent builds, byte-identical): 3,978,773 bytes
+total; largest chunk 2,901,695 bytes. The 3,846,651 baseline was
+measured on the repo-study tree, not the adopt-proper base the
+token-discovery branch builds on — the budget below is the +~5%
+ratchet on the corrected 67c48e2 baseline, not a raised budget.
+The +5% rule is unchanged.
 
 | Metric | Measured | Budget (enforced in CI) |
 | --- | --- | --- |
-| Total JS in `dist/assets` | 3,864,173 bytes (2026-11-20, final lane gates; after the item-28 split; baseline 3,846,651) | ≤ 4,040,000 bytes (today + ~5%) |
-| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,899,891 bytes (gzip 289.58 kB) | ≤ 3,050,000 bytes (today + ~5%) |
+| Total JS in `dist/assets` | 3,978,773 bytes (2026-11-22, adopt-proper 67c48e2; branch build 4,050,102, inside the ratchet) | ≤ 4,177,711 bytes (today + ~5%) |
+| Largest single JS chunk (`boundary-*.js`, the WASM engine chunk) | 2,901,695 bytes | ≤ 3,050,000 bytes (today + ~5%) |
 | Total CSS in `dist/assets` | 432,288 bytes | recorded, not yet enforced |
 | Total `dist/` | 32,665,605 bytes (includes the WASM binary and fonts) | recorded, not yet enforced |
 
