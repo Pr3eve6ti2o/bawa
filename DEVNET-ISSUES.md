@@ -5,6 +5,11 @@ Hands-on Muse testing on `panel-rebuild/devnet-temp`, worktree
 valueless test tokens only. 0 Sol calls. Nothing in this file was
 broadcast on mainnet; no real funds were involved.
 
+Lane C update (2026-11-22 ~22:46 IST): Issue 7 and the BTC/ETH/TRX
+coverage rows rewritten after the faucet attempts (0 obtained on all four
+faucets); no app code changed. Full attempt log:
+`/home/boxd/workspace/bawa-captcha-faucet/LANE-C-ATTEMPTS.md`.
+
 ## Test wallets (disposable)
 
 - Wallet A (sender): BTC testnet4 `tb1qthpp9j0xe2a2lu92rlma8wavza4c4dnr3t9dv7`,
@@ -20,9 +25,9 @@ broadcast on mainnet; no real funds were involved.
 
 | Token / chain | Devnet | Faucet / amount | Receive | Send | Tracking |
 |---|---|---|---|---|---|
-| BTC — Bitcoin testnet4 | testnet4 | coinfaucet.eu, zalalena — 0 (captcha, issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; WASM plan/sign proven by isolated probe, see below) | NOT PROVEN (no tx) |
-| ETH — Sepolia | Sepolia | pk910 PoW — 0 (captcha, issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; validation works — "Amount exceeds available balance") | NOT PROVEN (dummy hash → format validation) |
-| TRX — Nile | Nile | nileex — 0 (captcha, issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; validation works) | NOT PROVEN (dummy hash → "not found") |
+| BTC — Bitcoin testnet4 | testnet4 | coinfaucet.eu, zalalena — 0 (hCaptcha image grid: no free solver covers the served labels; zalalena Turnstile gate cleared but hCaptcha checkbox won't check — issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; WASM plan/sign proven by isolated probe, see below) | NOT PROVEN (no tx) |
+| ETH — Sepolia | Sepolia | pk910 PoW — 0 (IP block: `[IPINFO_RESTRICTION]`, hosting IP range — issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; validation works — "Amount exceeds available balance") | NOT PROVEN (dummy hash → format validation) |
+| TRX — Nile | Nile | nileex — 0 (Turnstile never completes: widget hangs on "Verifying..." / checkbox clicks don't take — issue 7) | NOT PROVEN (unfunded) | NOT PROVEN (unfunded; validation works) | NOT PROVEN (dummy hash → "not found") |
 | TON — testnet | TON testnet | Acton PoW CLI — 2 GRAM claimed, 1 GRAM moved to wallet A | PROVEN (`1de6a99f…`, 1 GRAM) | PROVEN for deployed wallets (3 app sends, hashes below); NOT PROVEN for fresh wallets (issue 5) | PROVEN for tx hashes; NOT for message hashes (issue 6) |
 | SOL / BNB / Polygon / Arbitrum / OP / Base / Avalanche / LTC / DOGE | — | — | NOT TESTABLE — derive-only, no adapter (issue 8) | NOT TESTABLE | NOT TESTABLE |
 | USDC / USDT / DAI / LINK / UNI / WBTC (ERC-20 logos only) | — | — | NOT TESTABLE — logos only, never displayed, no adapter (issue 8) | NOT TESTABLE | NOT TESTABLE |
@@ -176,20 +181,46 @@ BTC send still needs a funded testnet4 UTXO.
 
 ### 7. [FAUCET GAP] BTC / ETH / TRX devnet faucets all captcha-blocked — 0 obtained
 
-- BTC testnet4: `coinfaucet.eu/en/btc-testnet4/` — invisible
-  hCaptcha, visual challenge on claim. `faucet.zalalena.com/bitcoin/`
-  — Cloudflare Turnstile + hCaptcha + session-verification overlay.
-  mempool.space faucet needs an account (not created, per brief).
-- ETH Sepolia: `sepolia-faucet.pk910.de` — Cloudflare Turnstile;
-  "Start Mining" without it returns `[INVALID_CAPTCHA]`. All other
-  Sepolia faucets gate on mainnet balance or an account (not used).
-- TRX Nile: `nileex.io/join/getJoinPage` — 7 Turnstile frames;
-  "Obtain" returns "Please perform human-machine authentication
-  first."
-- No captcha was solved by any service or trick. Unblock path (for
-  the owner, not done here): complete the captcha in their own
-  browser at the faucet with the wallet-A devnet address for that
-  chain. Until then BTC/ETH/TRX send and receive stay NOT PROVEN.
+Lane C attempted all four faucets on 2026-11-22 (~22:14–22:46 IST) with
+SeleniumBase 4.58.3 (UC Mode + CDP Mode, headed Chromium under Xvfb) and,
+for hCaptcha image grids, hcaptcha-challenger 0.7.8 (local ONNX models, no
+key). Full log: `/home/boxd/workspace/bawa-captcha-faucet/LANE-C-ATTEMPTS.md`.
+**0 test tokens obtained on every faucet; no claim succeeded.**
+
+- ETH Sepolia: `sepolia-faucet.pk910.de` — the Turnstile captcha is no
+  longer the blocker. "Start Mining" now returns
+  `[IPINFO_RESTRICTION] IP Blocked: You're connecting from a hosting IP
+  range.` The faucet blocks the gray-pinee egress IP
+  (`185.209.179.229`) outright; no captcha technique run from this IP
+  can pass it.
+- TRX Nile: `nileex.io/join/getJoinPage` — Turnstile never completes.
+  Four attempts (UC GUI click, poll-then-click, CDP `solve_captcha()`,
+  explicit human-like mouse click): the widget either hangs on
+  "Verifying..." or its checkbox stays unchecked after every click
+  transport. "Obtain" returns verbatim: `Please perform human-machine
+  authentication first.`
+- BTC testnet4: `coinfaucet.eu/en/btc-testnet4/` — invisible hCaptcha
+  presents a visual image grid on claim ("Please click on the TWO lines
+  that are shorter"; a later attempt served "Click the item connected
+  to sports and games"). hcaptcha-challenger 0.7.8 ran on its own
+  undetected-chromedriver but answered `Types of challenges not yet
+  scheduled` for the served label and retreated (`backcall`); token 0.
+  The current challenger needs a paid Gemini API key (STOP — not used).
+- BTC testnet4: `faucet.zalalena.com/bitcoin/` — the Turnstile
+  "Secure Access" overlay gate CAN be cleared (CDP `solve_captcha()`
+  did it twice), the address fills and "Claim 0.00001 tBTC" clicks, but
+  the claim then demands the hCaptcha checkbox and the page answers
+  `Complete captcha verification`: the checkbox stays unchecked after
+  GUI clicks; `h-captcha-response` token length 0.
+- mempool.space faucet needs an account (not created, per brief).
+  All other Sepolia faucets gate on mainnet balance or an account
+  (not used).
+- No captcha was solved by any service or trick; no paid solving
+  service, sign-up or payment was used. Unblock path (for the owner,
+  not done here): complete the captcha in their own browser at the
+  faucet with the wallet-A devnet address for that chain (pk910 also
+  needs a non-hosting IP). Until then BTC/ETH/TRX send and receive stay
+  NOT PROVEN.
 
 ### 8. [ADAPTER GAP] 9 derive-only chains and 6 logo-only ERC-20 tokens are not testable
 
