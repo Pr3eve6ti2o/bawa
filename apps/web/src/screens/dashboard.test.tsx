@@ -866,7 +866,9 @@ describe('dashboard screen', () => {
 
   it('retries unavailable history while unlocked', async () => {
     // Zero balances, so no balance Retry exists: the only Retry on
-    // the page is the failed history's.
+    // the page is the failed history's. The failure reason is a
+    // retryable one ('down'): a no-address failure has no Retry at
+    // all, unlocked or not, because there is no address to fetch for.
     const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
     setWallet(
       balancesFor({
@@ -877,7 +879,7 @@ describe('dashboard screen', () => {
       }),
       {
         history: {
-          btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+          btc: { status: 'unavailable', reason: 'down', txs: [] },
           eth: { status: 'empty', txs: [] },
           trx: { status: 'empty', txs: [] },
           ton: { status: 'empty', txs: [] },

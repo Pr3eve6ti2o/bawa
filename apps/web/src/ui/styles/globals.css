@@ -368,6 +368,20 @@
   --spacing-density-airy-x: var(--density-airy-x);
 }
 
+/*
+ * Shell breakpoint: 980px (61.25rem). Chrome and Brave force the layout
+ * viewport to exactly 980 CSS px when "Desktop site" is enabled, which
+ * is below Tailwind lg (1024px) — so the shell keyed off lg: rendered
+ * the mobile layout on a phone in desktop mode. The desktop: variant
+ * switches the SHELL ONLY (app.tsx: sidebar, headers, bottom nav,
+ * outlet cap). Every in-page lg: grid stays at 1024px, and genuine
+ * phone/tablet browsing below 980px is untouched. Nothing here keys
+ * off the user-agent string.
+ */
+@theme {
+  --breakpoint-desktop: 61.25rem;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

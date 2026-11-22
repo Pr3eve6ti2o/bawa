@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import { App } from './app';
+import { App, outletWrapperClass } from './app';
 
 // jsdom has no matchMedia; the vendored theme toggle reads it on mount.
 if (typeof window.matchMedia !== 'function') {
@@ -68,6 +68,36 @@ async function withRenderedApp(
     }
   }
 }
+
+describe('outletWrapperClass', () => {
+  it('widens the narrow task screens at the desktop: breakpoint, not lg', () => {
+    // The shell switches at 980px (desktop:), the width a phone in
+    // desktop mode is forced to — below Tailwind lg (1024px). The
+    // in-page grids stay lg:; only the shell cap moves.
+    for (const path of [
+      '/send',
+      '/receive',
+      '/import-wallet',
+      '/mnemonic-backup',
+      '/assets/btc',
+      '/security',
+      '/create-wallet',
+      '/lock',
+    ]) {
+      const cls = outletWrapperClass(path);
+      expect(cls).toContain('max-w-[480px]');
+      expect(cls).toContain('desktop:max-w-none');
+      expect(cls).not.toContain('lg:max-w-none');
+    }
+  });
+
+  it('leaves the asset list and other full-width routes unwrapped', () => {
+    expect(outletWrapperClass('/assets')).toBeNull();
+    expect(outletWrapperClass('/assets/')).toBeNull();
+    expect(outletWrapperClass('/')).toBeNull();
+    expect(outletWrapperClass('/transactions')).toBeNull();
+  });
+});
 
 describe.sequential('App', () => {
   it('renders the wallet title and welcome screen without a vault', async () => {
@@ -141,7 +171,7 @@ describe.sequential('App', () => {
       const main = div.querySelector('main');
       expect(main).not.toBeNull();
       expect(main?.className).toContain('pb-24');
-      expect(main?.className).toContain('lg:py-6');
+      expect(main?.className).toContain('desktop:py-6');
     });
   });
 
@@ -155,15 +185,15 @@ describe.sequential('App', () => {
     // frame is full-bleed at lg, and the content cap steps up at 2xl.
     await withRenderedApp('/', (div) => {
       const frame = Array.from(div.querySelectorAll('div')).find((el) =>
-        el.className.includes('lg:flex-row'),
+        el.className.includes('desktop:flex-row'),
       );
-      expect(frame?.className).toContain('lg:max-w-none');
-      expect(frame?.className).not.toContain('lg:max-w-[1440px]');
+      expect(frame?.className).toContain('desktop:max-w-none');
+      expect(frame?.className).not.toContain('desktop:max-w-[1440px]');
 
       const asides = div.querySelectorAll('aside');
       expect(asides.length).toBeGreaterThanOrEqual(2);
       const shellAside = asides[0] as Element;
-      expect(shellAside.className).toContain('lg:w-[224px]');
+      expect(shellAside.className).toContain('desktop:w-[224px]');
       expect(shellAside.className).not.toContain('lg:border-r-2');
       const stickyWrapper = shellAside.children[0] as Element;
       expect(stickyWrapper?.className).toContain('overflow-x-hidden');
@@ -179,20 +209,52 @@ describe.sequential('App', () => {
     });
   });
 
-  it('desktop task screens use wider caps at lg, not the 480px phone column', async () => {
+  it('desktop shell switches at the 980px desktop: breakpoint, not lg', async () => {
+    // A phone in desktop mode is forced to a 980px layout viewport,
+    // below lg (1024px) — the shell (frame, sidebar, headers, bottom
+    // nav, main padding) must switch on desktop: so the sidebar
+    // appears there. In-page lg: grids are untouched by this change.
+    await withRenderedApp('/', (div) => {
+      const frame = Array.from(div.querySelectorAll('div')).find((el) =>
+        el.className.includes('desktop:flex-row'),
+      );
+      expect(frame?.className).toContain('desktop:max-w-none');
+      expect(frame?.className).not.toContain('lg:flex-row');
+
+      const shellAside = div.querySelectorAll('aside')[0] as Element;
+      expect(shellAside.className).toContain('desktop:w-[224px]');
+      expect(shellAside.className).not.toContain('lg:w-[224px]');
+
+      const headers = div.querySelectorAll('header');
+      expect(headers[0]?.className).toContain('desktop:flex');
+      expect(headers[1]?.className).toContain('desktop:hidden');
+
+      const bottomNav = Array.from(div.querySelectorAll('nav')).find((el) =>
+        el.className.includes('sticky bottom-0'),
+      );
+      expect(bottomNav?.className).toContain('desktop:hidden');
+      expect(bottomNav?.className).not.toContain('lg:hidden');
+
+      const main = div.querySelector('main');
+      expect(main?.className).toContain('desktop:py-6');
+      expect(main?.className).not.toContain('lg:py-6');
+    });
+  });
+
+  it('desktop task screens use wider caps at desktop:, not the 480px phone column', async () => {
     // Desktop layout (desktop-layout-v2 + follow-up): /assets/:chain,
     // /send, /receive, /import-wallet and /mnemonic-backup all go full
-    // content width at lg — their screens lay out in two columns
+    // content width at desktop: (980px) — their screens lay out in two columns
     // there, and the 720px task column for the two import screens read
     // as a phone column on a 1440px main, so it was widened too. Below
-    // lg every one of them keeps the 480px cap, so the mobile layout
+    // desktop: every one of them keeps the 480px cap, so the mobile layout
     // is untouched.
     const cases: Array<[string, string]> = [
-      ['/assets/btc', 'lg:max-w-none'],
-      ['/send', 'lg:max-w-none'],
-      ['/receive', 'lg:max-w-none'],
-      ['/import-wallet', 'lg:max-w-none'],
-      ['/mnemonic-backup', 'lg:max-w-none'],
+      ['/assets/btc', 'desktop:max-w-none'],
+      ['/send', 'desktop:max-w-none'],
+      ['/receive', 'desktop:max-w-none'],
+      ['/import-wallet', 'desktop:max-w-none'],
+      ['/mnemonic-backup', 'desktop:max-w-none'],
     ];
     for (const [path, expected] of cases) {
       await withRenderedApp(path, (div) => {

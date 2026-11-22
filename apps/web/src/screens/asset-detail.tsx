@@ -193,11 +193,11 @@ export function AssetDetailScreen() {
                   <Link to="/lock">Unlock</Link>
                 </Button>
               </>
-            ) : (
+            ) : balance.reason !== 'no-address' ? (
               <Button type="button" variant="outline" onClick={() => void refreshBalances()}>
                 Retry
               </Button>
-            )}
+            ) : null}
           </>
         )}
         {(balance.status === 'available' || balance.status === 'zero') && balance.stale === true ? (
@@ -387,11 +387,11 @@ export function AssetDetailScreen() {
                   <Link to="/lock">Unlock</Link>
                 </Button>
               </>
-            ) : (
+            ) : chainHistory.reason !== 'no-address' ? (
               <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
                 Retry
               </Button>
-            )}
+            ) : null}
           </div>
         )}
       </section>

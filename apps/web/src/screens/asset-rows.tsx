@@ -70,13 +70,18 @@ type AssetRowModel =
       price: PriceCell;
     };
 
-function getRowModel(
+export function getRowModel(
   chain: ChainId,
   wallet: ReturnType<typeof useWallet>,
   prices: PriceMap | undefined,
   nowMs: number,
   pricesLoading: boolean | undefined,
   isLocked: boolean,
+  // Pattern 6: when several chains failed at once the list owns the
+  // single Retry and the per-row buttons are suppressed — pass false.
+  // Exported so unit tests can pin the retry gate without mounting
+  // the app (same precedent as outletWrapperClass in app.tsx).
+  allowPerRowRetry = true,
 ): AssetRowModel {
   const { balances } = wallet;
   const config = chainConfig(chain);
@@ -106,11 +111,17 @@ function getRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
-      // No Retry while locked: a refetch needs a derived address and
-      // there is none in state while locked (refreshBalances resolves
-      // to no-address), so Retry could only fail again. AssetRows
-      // shows one Unlock prompt for the list instead.
-      showRetry: !isLocked,
+      // Retry is gated on "an address exists to fetch for": a
+      // no-address balance can only fail again (refreshBalances
+      // resolves to unavailable / no-address with no address in
+      // state), so no Retry is offered there — the empty state takes
+      // its place. A genuine failed fetch WITH an address keeps its
+      // Retry. No Retry while locked: a refetch needs a derived
+      // address and there is none in state while locked, so Retry
+      // could only fail again. AssetRows shows one Unlock prompt for
+      // the list instead.
+      showRetry:
+        allowPerRowRetry && !isLocked && balance.reason !== 'no-address',
     };
   }
 
@@ -370,6 +381,13 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
  * is shown rather than a premature failure. While the vault is locked,
  * a failed row shows no Retry — a refetch cannot succeed without a
  * derived address — and the list shows one Unlock prompt instead.
+ * A no-address row never shows Retry either (a refetch can only fail
+ * again with no address to fetch for); only a genuine failed fetch
+ * WITH an address does. In no-vault with zero addresses the dead
+ * rows are replaced by one empty-state block (Create / Import a
+ * wallet). When several chains failed at once with an address, the
+ * per-row buttons collapse to one list-level Retry (table variant;
+ * the list variant relies on the dashboard hero's own retry).
  *
  * Variants: 'list' (default) is the compact row the dashboard uses.
  * 'table' is the asset list's wide layout (MetaMask's
@@ -411,6 +429,41 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
     );
   }
 
+  // No-wallet empty state (patterns 1 + 3): in no-vault with zero
+  // addresses every row would read "Balance unavailable" with a Retry
+  // that can only fail again — there is nothing to retry. The dead
+  // rows are replaced by one block reusing the welcome screen's copy
+  // and routes ("Create a wallet" /create-wallet, "Import a wallet"
+  // /import-wallet), same Card/Button, no new copy. A locked vault
+  // also resolves to no-address, but it keeps its Unlock prompt
+  // instead — so this fires on vaultState 'no-vault' only. While any
+  // chain is still loading the rows stay skeletons, never this block.
+  const isNoVault = wallet.vaultState === 'no-vault';
+  const allNoAddress = visible.every((chain) => {
+    const balance = balances[chain];
+    return balance.status === 'unavailable' && balance.reason === 'no-address';
+  });
+  if (isNoVault && allNoAddress) {
+    return (
+      <div role="status" className="space-y-3 p-4">
+        <p className="text-sm text-muted-foreground">
+          A self-custodial multi-chain wallet. Create a wallet in the browser
+          — your recovery phrase is encrypted on this device with your vault
+          password — or import a watch-only wallet to track addresses without
+          holding secrets.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" asChild>
+            <Link to="/create-wallet">Create a wallet</Link>
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link to="/import-wallet">Import a wallet</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const onRetry = () => {
     void refreshBalances();
   };
@@ -423,8 +476,9 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
   // Unlock prompt replaces it for the whole list, using the same copy
   // as the dashboard hero's locked message. It shows only when a row
   // actually failed — a locked vault with nothing to retry gets no
-  // prompt. 'no-vault' keeps its Retry: a watch-only xpub address can
-  // still load, so a refetch there may succeed.
+  // prompt. 'no-vault' keeps its Retry only where an address exists
+  // to fetch for: a watch-only xpub address can still load, so a
+  // refetch there may succeed — but a no-address row never shows one.
   const isLocked = wallet.vaultState === 'locked';
   const hasFailedRow = visible.some((chain) => {
     const balance = balances[chain];
@@ -436,6 +490,31 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
         <p className="text-sm text-muted-foreground">Locked — unlock to see balances.</p>
         <Button type="button" variant="outline" asChild>
           <Link to="/lock">Unlock</Link>
+        </Button>
+      </div>
+    ) : null;
+
+  // Pattern 6: one retry per failed list, not one per row. A chain is
+  // retryable when its balance failed AND an address exists to fetch
+  // for (reason !== 'no-address'); with several retryable failures
+  // the per-row buttons are suppressed and the list owns a single
+  // Retry. In the list variant the dashboard hero already owns that
+  // retry ("Refresh balances"), so no second button renders there;
+  // the table variant (/assets) has no hero and renders one below
+  // the list. A single retryable failure keeps its per-row Retry.
+  const retryableFailed = visible.filter((chain) => {
+    const balance = balances[chain];
+    return (
+      (balance.status === 'unavailable' || balance.status === 'error') &&
+      balance.reason !== 'no-address'
+    );
+  });
+  const allowPerRowRetry = retryableFailed.length <= 1;
+  const listRetry =
+    variant === 'table' && !isLocked && retryableFailed.length > 1 ? (
+      <div className="flex justify-end px-4 py-3">
+        <Button type="button" variant="outline" onClick={onRetry}>
+          Retry
         </Button>
       </div>
     ) : null;
@@ -458,12 +537,13 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
           {visible.map((chain) => (
             <TableRow
               key={chain}
-              model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
+              model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked, allowPerRowRetry)}
               onRetry={onRetry}
             />
           ))}
         </ul>
         </div>
+        {listRetry}
       </>
     );
   }
@@ -475,7 +555,7 @@ export function AssetRows({ hideZero, onShowAll, prices, pricesNowMs, pricesLoad
         {visible.map((chain) => (
           <ListRow
             key={chain}
-            model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked)}
+            model={getRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked, allowPerRowRetry)}
             onRetry={onRetry}
           />
         ))}

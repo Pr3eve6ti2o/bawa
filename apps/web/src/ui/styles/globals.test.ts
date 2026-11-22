@@ -44,6 +44,13 @@ describe('globals.css', () => {
     );
   });
 
+  it('defines a desktop: breakpoint at 980px for the shell switch', () => {
+    // Chrome/Brave desktop mode forces the layout viewport to 980px,
+    // below Tailwind lg (1024px) — the shell switches on this custom
+    // breakpoint instead, so a phone in desktop mode gets the sidebar.
+    expect(css).toMatch(/--breakpoint-desktop\s*:\s*61\.25rem\s*;/);
+  });
+
   it('defines --radius-bawa and --radius-bawa-sm', () => {
     expect(css).toMatch(
       containingAll(

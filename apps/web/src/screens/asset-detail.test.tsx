@@ -402,6 +402,76 @@ describe('asset detail screen', () => {
     }
   });
 
+  it('while unlocked, a no-address balance shows no Retry', async () => {
+    // Same dead-Retry class as the locked case, but the vault is open:
+    // with no address for the chain a balance refetch cannot run.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'error', reason: 'no-address' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'unlocked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Balance unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while unlocked, a no-address history shows no Retry', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: { status: 'error', reason: 'no-address', txs: [] },
+      },
+      { vaultState: 'unlocked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      expect(mounted.div.textContent).toContain('Could not load transactions.');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('gates each Retry separately: a failed balance keeps Retry while a no-address history does not', async () => {
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'error', reason: 'rpc-error' },
+      },
+      {
+        ...perChain(emptyHistory),
+        eth: { status: 'error', reason: 'no-address', txs: [] },
+      },
+      { vaultState: 'unlocked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('while locked, the sticky Refresh is replaced by Unlock', async () => {
     // Same class as the dead Retry: while the vault is locked there is no
     // derived address in state, so refreshAll can only fail again with

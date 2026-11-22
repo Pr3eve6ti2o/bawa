@@ -119,10 +119,11 @@ function HomeScreen() {
 // full-width, only /assets/<chain> is narrow. Welcome self-caps in
 // welcome.tsx (it also renders on the home route).
 // Desktop (desktop-layout-v2 + follow-up): the screens below widen to
-// full content width at lg, where each lays out in two columns
+// full content width at desktop: (980px, the shell breakpoint), where
+// each lays out in two columns
 // (/assets/:chain, /send, /receive, /import-wallet,
 // /mnemonic-backup, alongside the existing /create-wallet, /security,
-// /lock). Below lg every one of them keeps the 480px cap: the mobile
+// /lock). Below desktop: every one of them keeps the 480px cap: the mobile
 // layout is untouched.
 // P10: matching runs on the path with trailing slashes stripped.
 // GitHub Pages redirects /bawa/assets to /bawa/assets/, and the
@@ -135,7 +136,7 @@ export function outletWrapperClass(pathname: string): string | null {
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       normalized,
     ) || /^\/assets\/[^/]+$/.test(normalized);
-  const isWideAtLg =
+  const isWideAtDesktop =
     [
       '/create-wallet',
       '/security',
@@ -145,9 +146,9 @@ export function outletWrapperClass(pathname: string): string | null {
       '/import-wallet',
       '/mnemonic-backup',
     ].includes(normalized) || /^\/assets\/[^/]+$/.test(normalized);
-  if (!isNarrow && !isWideAtLg) return null;
-  return isWideAtLg
-    ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
+  if (!isNarrow && !isWideAtDesktop) return null;
+  return isWideAtDesktop
+    ? 'mx-auto w-full max-w-[480px] desktop:max-w-none'
     : 'mx-auto w-full max-w-[480px]';
 }
 
@@ -215,15 +216,15 @@ function AppLayout() {
   const wrapperClass = outletWrapperClass(pathname);
 
   return (
-    <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
-      {/* Desktop shell is full-bleed at lg: below lg the app is a centred
-          430px phone frame, but at lg the frame used to cap at 1440px, so
-          on a 1919px viewport the content column sat in the left ~1230px
-          with dead paper on the right. The content column itself still
-          caps for readability (see <main>); it just grows with the
-          window now. At 1440px and below nothing changes: the cap never
-          bound there. */}
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
+    <div className="min-h-screen bg-paper sm:py-6 desktop:py-0">
+      {/* Desktop shell is full-bleed at desktop: (980px): below it the
+          app is a centred 430px phone frame, but at desktop: the frame
+          used to cap at 1440px, so on a 1919px viewport the content
+          column sat in the left ~1230px with dead paper on the right.
+          The content column itself still caps for readability (see
+          <main>); it just grows with the window now. At 1440px and
+          below nothing changes: the cap never bound there. */}
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink desktop:max-w-none desktop:flex-row desktop:rounded-none desktop:border-0 desktop:min-h-screen">
         {!isFocusedFlow && (
           <aside
             className={
@@ -232,8 +233,8 @@ function AppLayout() {
               // SidebarNav draws the single border-r-2 itself, and a
               // duplicate shell border would shrink this aside's content
               // box by 2px and re-overflow the inner sidebar.
-              'hidden shrink-0 transition-[width] duration-200 lg:block lg:bg-paper ' +
-              (sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[224px]')
+              'hidden shrink-0 transition-[width] duration-200 desktop:block desktop:bg-paper ' +
+              (sidebarCollapsed ? 'desktop:w-[72px]' : 'desktop:w-[224px]')
             }
           >
             {/* overflow-x-hidden is the guard: overflow-y-auto alone
@@ -253,7 +254,7 @@ function AppLayout() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 lg:flex xl:px-8">
+          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 desktop:flex xl:px-8">
             <Link
               to="/wallets"
               onMouseEnter={() => preloadRoute('/wallets')}
@@ -267,7 +268,7 @@ function AppLayout() {
             </span>
           </header>
 
-          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
+          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 desktop:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                 <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
@@ -296,14 +297,14 @@ function AppLayout() {
               long page — e.g. the "Show recent activity" button on
               /track — scrolled under the nav and was half-untappable.
               pb-24 leaves ~30px clear at max scroll. Desktop is
-              unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
+              unchanged: the nav is desktop:hidden and desktop:py-6 still applies. */}
           {/* Wide-window content cap: the column steps 1024px -> 1152px
               at xl -> 1440px at 2xl, so on a 1919px viewport it uses the
               window instead of freezing at 1152px. 1440px reuses the old
               frame cap as the widest the column ever gets, keeping line
               lengths readable; the narrow task screens keep their own
               480px cap above. */}
-          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
+          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 desktop:px-6 desktop:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
             {wrapperClass ? (
               <div className={wrapperClass}>
                 <Outlet />
@@ -317,7 +318,7 @@ function AppLayout() {
             <div
               role="menu"
               aria-label="More"
-              className="rounded-bawa border-2 border-ink bg-paper p-2 max-lg:fixed max-lg:bottom-[76px] max-lg:left-1/2 max-lg:z-20 max-lg:max-h-[60vh] max-lg:w-[calc(100%-2rem)] max-lg:max-w-[398px] max-lg:-translate-x-1/2 max-lg:overflow-y-auto lg:hidden"
+              className="rounded-bawa border-2 border-ink bg-paper p-2 max-desktop:fixed max-desktop:bottom-[76px] max-desktop:left-1/2 max-desktop:z-20 max-desktop:max-h-[60vh] max-desktop:w-[calc(100%-2rem)] max-desktop:max-w-[398px] max-desktop:-translate-x-1/2 max-desktop:overflow-y-auto desktop:hidden"
             >
               {MORE_LINKS.map(({ to, label }) => (
                 <Link
@@ -338,7 +339,7 @@ function AppLayout() {
           {!isFocusedFlow && (
             <nav
               aria-label="Main navigation"
-            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] lg:hidden"
+            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
           >
             <div className="grid grid-cols-5">
               {tabs.map(({ to, label, icon }) => (

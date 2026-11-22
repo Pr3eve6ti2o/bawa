@@ -211,6 +211,44 @@ describe('transaction history screen', () => {
     }
   });
 
+  it('shows no Retry when every failed chain has no address', async () => {
+    setWallet({
+      ...perChainEmpty(),
+      btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+      eth: { status: 'unavailable', reason: 'no-address', txs: [] },
+      trx: { status: 'unavailable', reason: 'no-address', txs: [] },
+      ton: { status: 'unavailable', reason: 'no-address', txs: [] },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('history unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps Retry when at least one failed chain has a retryable reason', async () => {
+    setWallet({
+      ...perChainEmpty(),
+      eth: { status: 'unavailable', reason: 'no-address', txs: [] },
+      trx: { status: 'unavailable', reason: 'down', txs: [] },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('history unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the empty state when no transaction history is available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(perChainEmpty());
