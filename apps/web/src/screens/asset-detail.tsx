@@ -225,15 +225,26 @@ export function AssetDetailScreen() {
             Receive
           </Link>
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={state === 'loading'}
-          onClick={refreshAll}
-          className="h-11"
-        >
-          Refresh
-        </Button>
+        {/*
+          While locked there is no derived address in state, so refreshAll
+          can only land back on unavailable/no-address — the same dead
+          refetch the balance/history Retries already replace with Unlock.
+        */}
+        {vaultState === 'locked' ? (
+          <Button asChild variant="outline" className="h-11">
+            <Link to="/lock">Unlock</Link>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={state === 'loading'}
+            onClick={refreshAll}
+            className="h-11"
+          >
+            Refresh
+          </Button>
+        )}
       </div>
 
       {/*

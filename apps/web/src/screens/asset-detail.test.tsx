@@ -70,6 +70,7 @@ function setWallet(
     uiState?: Record<ChainKey, string>;
     xpubs?: Record<string, { xpub: string } | null>;
     vaultState?: 'locked' | 'unlocked' | 'no-vault';
+    refreshChain?: () => Promise<void>;
     refreshBalances?: () => Promise<void>;
     refreshHistory?: () => Promise<void>;
   },
@@ -89,7 +90,7 @@ function setWallet(
     errors: perChain(null),
     balances,
     history,
-    refreshChain: vi.fn(async () => {}),
+    refreshChain: overrides?.refreshChain ?? vi.fn(async () => {}),
     refreshBalances: overrides?.refreshBalances ?? vi.fn(async () => {}),
     refreshHistory: overrides?.refreshHistory ?? vi.fn(async () => {}),
     setSelectedChain: vi.fn(),
@@ -396,6 +397,92 @@ describe('asset detail screen', () => {
       expect(retryButtons).toHaveLength(0);
       expect(mounted.div.textContent).toContain('Locked — unlock to see activity.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while locked, the sticky Refresh is replaced by Unlock', async () => {
+    // Same class as the dead Retry: while the vault is locked there is no
+    // derived address in state, so refreshAll can only fail again with
+    // no-address. The sticky bar must offer Unlock instead of Refresh.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'error', reason: 'no-address' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'locked' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const refreshButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Refresh',
+      );
+      expect(refreshButtons).toHaveLength(0);
+      const sticky = mounted.div.querySelector('.sticky');
+      expect(sticky).not.toBeNull();
+      expect(sticky?.querySelector('a[href="/lock"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('while unlocked, the sticky Refresh calls refreshAll', async () => {
+    const mockRefreshChain = vi.fn(async () => {});
+    const mockRefreshBalances = vi.fn(async () => {});
+    const mockRefreshHistory = vi.fn(async () => {});
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      perChain(emptyHistory),
+      {
+        vaultState: 'unlocked',
+        refreshChain: mockRefreshChain,
+        refreshBalances: mockRefreshBalances,
+        refreshHistory: mockRefreshHistory,
+      },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      // The mount effect already called all three once; clear it so the
+      // click below is the only call counted.
+      mockRefreshChain.mockClear();
+      mockRefreshBalances.mockClear();
+      mockRefreshHistory.mockClear();
+      const refresh = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refresh',
+      ) as HTMLButtonElement;
+      expect(refresh).not.toBeUndefined();
+      await act(async () => {
+        refresh.click();
+      });
+      expect(mockRefreshChain).toHaveBeenCalledTimes(1);
+      expect(mockRefreshBalances).toHaveBeenCalledTimes(1);
+      expect(mockRefreshHistory).toHaveBeenCalledTimes(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('keeps the sticky Refresh when there is no vault', async () => {
+    // Watch-only xpubs can still load with no vault, so Refresh stays.
+    setWallet(
+      {
+        ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
+        eth: { status: 'available', value: '1500000000000000000' },
+      },
+      perChain(emptyHistory),
+      { vaultState: 'no-vault' },
+    );
+    const mounted = await mountScreen('/assets/eth');
+    try {
+      const refreshButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Refresh',
+      );
+      expect(refreshButtons).toHaveLength(1);
     } finally {
       await mounted.cleanup();
     }
