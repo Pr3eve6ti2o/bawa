@@ -302,7 +302,10 @@ export function SendScreen() {
         setApprovalStage('broadcast-devnet');
         setDevnetBroadcast({ status: 'broadcasting' });
         try {
-          const broadcast = await broadcastSignedDevnet(chain, signed.payload, { devnet: true });
+          const broadcast = await broadcastSignedDevnet(chain, signed.payload, {
+            devnet: true,
+            messageHash: signed.txHash,
+          });
           recordPendingBroadcastDevnet({ txHash: broadcast.txHash, chain });
           setDevnetBroadcast({
             status: 'submitted',
@@ -669,16 +672,28 @@ export function SendScreen() {
               CHAIN_DECIMALS[chain],
               config.symbol,
             )}
-            fee={formatNativeWithSymbol(
-              preview.feeBaseUnits,
-              CHAIN_DECIMALS[chain],
-              config.symbol,
-            )}
-            total={formatNativeWithSymbol(
-              preview.totalBaseUnits,
-              CHAIN_DECIMALS[chain],
-              config.symbol,
-            )}
+            fee={
+              preview.feeUnknown
+                ? 'Unknown — charged by the network at broadcast'
+                : formatNativeWithSymbol(
+                    preview.feeBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )
+            }
+            total={
+              preview.feeUnknown
+                ? `${formatNativeWithSymbol(
+                    preview.amountBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )} + network fee`
+                : formatNativeWithSymbol(
+                    preview.totalBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )
+            }
             feeNote={preview.feeNote}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}

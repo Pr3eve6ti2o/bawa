@@ -25,6 +25,16 @@
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
 //   (history), TRX https://api.trongrid.io, TON https://toncenter.com. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL).
+//   TEMPORARY devnet mode (Lane D, 2026-11-22): five more origins for the
+//   test networks — ETH Sepolia https://ethereum-sepolia-rpc.publicnode.com
+//   (RPC) and https://eth-sepolia.blockscout.com (history), TRX Nile
+//   https://nile.trongrid.io and https://api.nileex.io (fallback), TON
+//   testnet https://testnet.toncenter.com. BTC testnet4 needs no new
+//   origin (same https://mempool.space host). Without these, the browser
+//   refuses every devnet fetch and devnet mode is dead in the app even
+//   though the endpoints answer curl. Devnet is TEMPORARY: the removal
+//   checklist in docs/DECISIONS.md reverts this line and the test to the
+//   six mainnet origins.
 //   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
@@ -38,7 +48,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

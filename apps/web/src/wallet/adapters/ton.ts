@@ -120,8 +120,20 @@ function parseTonTxList(value: unknown): unknown[] {
  * valid seqno (a fresh wallet has seqno 0): it must parse to 0, never be
  * treated as missing — the ton 16.3.0 seqno-0 `validUntil` regression test
  * pins this.
+ *
+ * The run's `exit_code` must be 0: TonCenter answers ok:true even when
+ * the get-method failed, and the stack on a failed run is garbage. Live
+ * devnet finding (Lane D, 2026-11-22): on an uninitialized wallet the
+ * run returns exit_code -13 with stack 0x14c97; reading that stack as a
+ * seqno signed a message with seqno 85143 and the network rejected it.
+ * A missing exit_code is tolerated (older fixtures / responses), but a
+ * present non-zero one is always a failure.
  */
 function parseTonSeqno(value: unknown): number {
+  const exitCode = isRecord(value) ? value['exit_code'] : undefined;
+  if (typeof exitCode === 'number' && exitCode !== 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
   const stack = isRecord(value) ? value['stack'] : undefined;
   const first = Array.isArray(stack) ? stack[0] : undefined;
   const hex =
@@ -134,6 +146,15 @@ function parseTonSeqno(value: unknown): number {
     throw invalidTonResponse('ton.getTxInputs');
   }
   return seqno;
+}
+
+/** Parses a `getAddressInformation` account state (`uninitialized` | `active` | `frozen`). */
+function parseTonAccountState(value: unknown): string {
+  const state = isRecord(value) ? value['state'] : undefined;
+  if (typeof state !== 'string' || state.length === 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
+  return state;
 }
 
 /** Base64 (TonCenter tx hashes) to lowercase hex, without Buffer. */
@@ -454,7 +475,20 @@ export function createTonAdapter(
     try {
       seqno = parseTonSeqno(result.data);
     } catch (error: unknown) {
-      return toAdapterError(error);
+      // A failed seqno run means the account has no code to run it — an
+      // uninitialized wallet. Its seqno is 0 by definition, but only
+      // the account state may say so: a failed run on an active or
+      // unreadable account stays an error, never a guessed 0.
+      const stateResult = await rpc('getAddressInformation', { address });
+      if (stateResult.status !== 'ok') return toAdapterError(error);
+      try {
+        if (parseTonAccountState(stateResult.data) !== 'uninitialized') {
+          return toAdapterError(error);
+        }
+      } catch {
+        return toAdapterError(error);
+      }
+      seqno = 0;
     }
     return {
       status: 'ok',

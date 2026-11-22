@@ -10,7 +10,7 @@ import {
 } from '../../scripts/wasm-integrity.mjs';
 
 const EXPECTED_CONNECT_SRC =
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com";
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com";
 
 describe('T47 security headers', () => {
   it('CSP allows same-origin scripts plus WASM compilation only', () => {
@@ -29,7 +29,7 @@ describe('T47 security headers', () => {
     expect(CONTENT_SECURITY_POLICY).not.toContain('*');
   });
 
-  it('CSP blocks plugins, base hijack and framing; connect-src allows only the six pinned provider origins', () => {
+  it('CSP blocks plugins, base hijack and framing; connect-src allows only the six pinned provider origins plus the five TEMPORARY devnet origins', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
@@ -40,10 +40,15 @@ describe('T47 security headers', () => {
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith('connect-src '));
     expect(connectSrc).toBe(EXPECTED_CONNECT_SRC);
-    // Exactly six https: origins in the whole policy, all of them in
+    // Exactly eleven https: origins in the whole policy, all of them in
     // connect-src: mempool.space (BTC), ethereum-rpc.publicnode.com (ETH RPC)
     // + eth.blockscout.com (ETH history), api.trongrid.io (TRX),
-    // toncenter.com (TON), api.coingecko.com (CoinGecko price feed).
+    // toncenter.com (TON), api.coingecko.com (CoinGecko price feed),
+    // plus the five TEMPORARY devnet origins (Lane D, 2026-11-22: without
+    // them every devnet fetch is refused by the browser — the devnet
+    // endpoints are separate origins from mainnet).
+    // Devnet is TEMPORARY: the removal checklist in docs/DECISIONS.md
+    // reverts this test and security-headers.ts to the six mainnet origins.
     const httpsOrigins = CONTENT_SECURITY_POLICY.match(/https:\/\/[^\s;]+/g) ?? [];
     expect(httpsOrigins).toEqual([
       'https://mempool.space',
@@ -52,6 +57,11 @@ describe('T47 security headers', () => {
       'https://api.trongrid.io',
       'https://toncenter.com',
       'https://api.coingecko.com',
+      'https://ethereum-sepolia-rpc.publicnode.com',
+      'https://eth-sepolia.blockscout.com',
+      'https://nile.trongrid.io',
+      'https://api.nileex.io',
+      'https://testnet.toncenter.com',
     ]);
   });
 

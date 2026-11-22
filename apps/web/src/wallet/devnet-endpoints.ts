@@ -285,17 +285,40 @@ export function createDevnetTrxBroadcast(
 }
 
 /**
- * TON testnet broadcast: JSON-RPC sendBoc to testnet TonCenter. The
- * result is the message hash as base64 (TonCenter's sendBoc return);
- * it is converted to hex for the explorer link. If a future TonCenter
- * response changes shape, this throws rather than guessing.
+ * TON testnet broadcast: JSON-RPC sendBoc to testnet TonCenter.
+ *
+ * Two response shapes exist in the wild, and both are successes:
+ * - `result` is a base64 message hash (the REST-style return) — it is
+ *   converted to hex for the explorer link.
+ * - `result` is `{"@type":"ok"}` (the jsonRPC return, observed live on
+ *   testnet 2026-11-22) — no hash is returned at all. The signer's
+ *   message hash must then be supplied by the caller as
+ *   `{boc, messageHash}`; without one the broadcast cannot be identified
+ *   and this throws rather than guessing. The old code threw "expected
+ *   a message hash" on every successful jsonRPC broadcast, so the app
+ *   reported "not broadcast" for transactions that had in fact landed.
  */
 export function createDevnetTonBroadcast(
   transport: FetchTransport,
   baseUrl: string,
 ): (signedTx: unknown) => Promise<BroadcastResult> {
   return async (signedTx: unknown): Promise<BroadcastResult> => {
-    if (typeof signedTx !== 'string' || signedTx.trim().length === 0) {
+    let boc: string;
+    let messageHash: string | undefined;
+    if (typeof signedTx === 'string') {
+      boc = signedTx;
+    } else if (
+      isRecord(signedTx) &&
+      typeof signedTx['boc'] === 'string' &&
+      (signedTx['messageHash'] === undefined ||
+        typeof signedTx['messageHash'] === 'string')
+    ) {
+      boc = signedTx['boc'];
+      messageHash = signedTx['messageHash'];
+    } else {
+      throw new Error('Invalid signed TON message: expected base64 BOC.');
+    }
+    if (boc.trim().length === 0) {
       throw new Error('Invalid signed TON message: expected base64 BOC.');
     }
     const raw: unknown = await transport.request(baseUrl, {
@@ -305,7 +328,7 @@ export function createDevnetTonBroadcast(
         id: 1,
         jsonrpc: '2.0',
         method: 'sendBoc',
-        params: { boc: signedTx },
+        params: { boc },
       }),
     });
     if (!isRecord(raw) || raw['ok'] !== true) {
@@ -319,19 +342,30 @@ export function createDevnetTonBroadcast(
       );
     }
     const result = raw['result'];
-    if (typeof result !== 'string' || result.length === 0) {
-      throw new Error('Invalid response: expected a message hash');
+    if (typeof result === 'string' && result.length > 0) {
+      let txHash: string;
+      try {
+        txHash = base64ToHex(result);
+      } catch {
+        throw new Error('Invalid response: expected a base64 message hash');
+      }
+      if (!/^[0-9a-f]{64}$/.test(txHash)) {
+        throw new Error('Invalid response: expected a 32-byte message hash');
+      }
+      return { txHash, explorerUrl: devnetExplorerTxUrl('ton', txHash) };
     }
-    let txHash: string;
-    try {
-      txHash = base64ToHex(result);
-    } catch {
-      throw new Error('Invalid response: expected a base64 message hash');
+    if (isRecord(result) && result['@type'] === 'ok') {
+      const hash = messageHash?.startsWith('0x')
+        ? messageHash.slice(2)
+        : messageHash;
+      if (hash === undefined || !/^[0-9a-f]{64}$/.test(hash)) {
+        throw new Error(
+          'TonCenter accepted the message but returned no hash and no message hash was supplied',
+        );
+      }
+      return { txHash: hash, explorerUrl: devnetExplorerTxUrl('ton', hash) };
     }
-    if (!/^[0-9a-f]{64}$/.test(txHash)) {
-      throw new Error('Invalid response: expected a 32-byte message hash');
-    }
-    return { txHash, explorerUrl: devnetExplorerTxUrl('ton', txHash) };
+    throw new Error('Invalid response: expected a message hash');
   };
 }
 

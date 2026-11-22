@@ -290,7 +290,14 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
     }
   });
 
-  it('reports the TON fee-quote block honestly instead of inventing a fee', async () => {
+  it('previews a TON send with the fee marked unknown instead of blocking on the fee quote (Lane D, 2026-11-22)', async () => {
+    // The TON adapter honestly reports no fee quote (no read-only fee
+    // endpoint exists). Gating the preview on it made TON sends
+    // impossible — the review step could never be reached (found live
+    // in devnet: the Amount step always failed with the fee-quote
+    // reason). The preview now proceeds with the fee marked unknown;
+    // no fee number is invented (feeBaseUnits '0' is a placeholder,
+    // never displayed — the review screen shows unknown-fee copy).
     expect(
       await previewSendAmount(
         'ton',
@@ -299,10 +306,46 @@ describe('previewSendAmount (Sol p2, corrected hands-on)', () => {
         '1',
       ),
     ).toEqual({
-      ok: false,
-      code: 'adapter-unavailable',
-      reason:
-        'TON fee-quote needs the unsigned message (Phase 4); no fee is invented.',
+      ok: true,
+      amountBaseUnits: '1000000000',
+      feeBaseUnits: '0',
+      totalBaseUnits: '1000000000',
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    });
+  });
+
+  it('previews a TON send with the adapter fee when one is available', async () => {
+    registerAdapter(
+      stubAdapter('ton', '1000000000', {
+        status: 'ok',
+        data: {
+          chain: 'ton',
+          networkId: 'test',
+          feeBaseUnits: '1000000',
+          unit: 'nanoton',
+          note: 'stub fee',
+          source: 'stub',
+          fetchedAt: 0,
+        },
+        source: 'stub',
+        fetchedAt: 0,
+      }),
+    );
+    expect(
+      await previewSendAmount(
+        'ton',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+        '0.5',
+      ),
+    ).toEqual({
+      ok: true,
+      amountBaseUnits: '500000000',
+      feeBaseUnits: '1000000',
+      totalBaseUnits: '501000000',
+      feeNote: 'stub fee',
     });
   });
 

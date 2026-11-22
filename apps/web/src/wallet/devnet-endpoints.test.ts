@@ -214,4 +214,48 @@ describe('devnet broadcast closures', () => {
       `https://testnet.tonviewer.com/transaction/${hashBytes.toString('hex')}`,
     );
   });
+
+  it('TON accepts an ok-object sendBoc result and uses the supplied message hash', async () => {
+    // Live devnet finding (Lane D, 2026-11-22): the jsonRPC sendBoc
+    // returns {"ok":true,"result":{"@type":"ok"}} — no hash at all.
+    // The old code threw "expected a message hash" on every successful
+    // broadcast, so the app reported "not broadcast" for transactions
+    // that had in fact landed. The signer's message hash (supplied by
+    // the caller) is the transaction identifier in that case.
+    const hashHex = 'db42efc3dc58eddc70dd0083ade69292967b04e8323eb0e0f43ef412672c4c5b';
+    const transport: FetchTransport = {
+      request: vi.fn(async () => ({
+        ok: true,
+        result: { '@type': 'ok' },
+      })),
+    };
+    const broadcast = createDevnetTonBroadcast(
+      transport,
+      'https://testnet.toncenter.com/api/v2/jsonRPC',
+    );
+    const result = await broadcast({
+      boc: 'BOCBASE64',
+      messageHash: `0x${hashHex}`,
+    });
+    expect(result.txHash).toBe(hashHex);
+    expect(result.explorerUrl).toBe(
+      `https://testnet.tonviewer.com/transaction/${hashHex}`,
+    );
+  });
+
+  it('TON throws a clear error when the ok result carries no hash and none was supplied', async () => {
+    const transport: FetchTransport = {
+      request: vi.fn(async () => ({
+        ok: true,
+        result: { '@type': 'ok' },
+      })),
+    };
+    const broadcast = createDevnetTonBroadcast(
+      transport,
+      'https://testnet.toncenter.com/api/v2/jsonRPC',
+    );
+    await expect(broadcast('BOCBASE64')).rejects.toThrow(
+      /no message hash was supplied/,
+    );
+  });
 });

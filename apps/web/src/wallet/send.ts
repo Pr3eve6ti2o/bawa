@@ -42,7 +42,15 @@ import type { KeyProvenance } from './vault';
 /** Devnet threading (temporary devnet mode): pass `{ devnet: true }` to
  * use the devnet derivation, the devnet adapters and the devnet
  * broadcast. Mainnet behaviour is unchanged when the option is absent. */
-export type SendDevnetOptions = { devnet?: boolean };
+export type SendDevnetOptions = {
+  devnet?: boolean;
+  /**
+   * The signer's message hash (0x-prefixed hex), when the signer
+   * computed one. TON's jsonRPC sendBoc returns no hash, so the TON
+   * devnet broadcast identifies the transaction by this hash instead.
+   */
+  messageHash?: string;
+};
 
 export type RecipientValidation =
   | { ok: true }
@@ -146,6 +154,13 @@ export type SendPreview =
       feeBaseUnits: string;
       totalBaseUnits: string;
       feeNote: string;
+      /**
+       * TON only: the fee is not known at preview time (no read-only
+       * fee endpoint exists) and feeBaseUnits is a '0' placeholder that
+       * must never be displayed as a real fee. The review screen shows
+       * unknown-fee copy instead.
+       */
+      feeUnknown?: boolean;
     }
   | {
       ok: false;
@@ -338,6 +353,39 @@ export async function previewSendAmount(
     return { ok: false, code: 'insufficient-funds', reason: 'Amount exceeds available balance.' };
   }
 
+  // TON has no read-only fee endpoint: the adapter honestly reports the
+  // fee quote unavailable. Gating the preview on estimateFee made TON
+  // sends impossible — the review step could never be reached (found
+  // live in devnet, Lane D 2026-11-22). When the adapter does return a
+  // fee, use it; otherwise the preview proceeds with the fee marked
+  // unknown. No fee number is invented: feeBaseUnits '0' is a
+  // placeholder, never displayed (the review screen shows unknown-fee
+  // copy), and the note says the network charges the fee on top of the
+  // amount at broadcast.
+  if (chain === 'ton') {
+    const fee = await adapter.estimateFee();
+    if (fee.status === 'ok') {
+      return {
+        ok: true,
+        amountBaseUnits: amount,
+        feeBaseUnits: fee.data.feeBaseUnits,
+        totalBaseUnits: (
+          BigInt(amount) + BigInt(fee.data.feeBaseUnits)
+        ).toString(),
+        feeNote: fee.data.note,
+      };
+    }
+    return {
+      ok: true,
+      amountBaseUnits: amount,
+      feeBaseUnits: '0',
+      totalBaseUnits: amount,
+      feeNote:
+        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
+      feeUnknown: true,
+    };
+  }
+
   const fee = await adapter.estimateFee();
   if (fee.status !== 'ok') {
     return { ok: false, code: 'adapter-unavailable', reason: fee.reason };
@@ -389,7 +437,13 @@ export type SimulationError = {
 };
 
 export type SimulateSendResult =
-  | { ok: true; amountBaseUnits: string; feeBaseUnits: string }
+  | {
+      ok: true;
+      amountBaseUnits: string;
+      feeBaseUnits: string;
+      /** TON only: see SendPreview.feeUnknown. */
+      feeUnknown?: boolean;
+    }
   | {
       ok: false;
       error: SimulationError;
@@ -997,7 +1051,11 @@ export async function broadcastSignedDevnet(
       `Refusing to broadcast: adapter network ${adapter.networkId} is not a devnet network.`,
     );
   }
-  const result = await adapter.broadcast(signedTx);
+  const result = await adapter.broadcast(
+    chain === 'ton' && options.messageHash !== undefined
+      ? { boc: signedTx, messageHash: options.messageHash }
+      : signedTx,
+  );
   // The adapter's networkId was asserted devnet above, so its config
   // resolves here; BroadcastResult.explorerUrl is nullable (mainnet
   // adapters return null), so fall back to the devnet explorer and

@@ -475,6 +475,12 @@ run `npx tsc --noEmit` and the full vitest suite in `apps/web`.
     `scripts/check-wallet-cycles.mjs`, `npm run lint`, `npm audit`
     and the full gates still pass — the mainnet code paths must be
     byte-identical to before devnet was added.
+11. In `apps/web/src/app/security-headers.ts` and
+    `security-headers.test.ts`: delete the five TEMPORARY devnet
+    `connect-src` origins (Sepolia RPC + Blockscout, Nile + Nileex,
+    testnet TonCenter) and restore the six mainnet origins. Found by
+    Lane D, 2026-11-22: without them the browser refuses every devnet
+    fetch, so devnet mode was dead in the app until this fix.
 
 ## Coordinator calls made during the programme
 
