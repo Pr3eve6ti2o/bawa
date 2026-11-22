@@ -1,11 +1,17 @@
 /**
- * Solana adapter (token discovery).
+ * Solana adapter (token gaps, item 1).
  *
- * Native SOL balance via JSON-RPC getBalance on the pinned mainnet
- * endpoint. Chain identity rests on getHealth returning 'ok' (cached
- * per instance: the endpoint URL is fixed at construction). History,
- * fee-quote and tx inputs are not built — they report unavailable,
- * never faked. Broadcast stays disabled.
+ * Native SOL balance via JSON-RPC getBalance. Primary endpoint is
+ * https://solana-rpc.publicnode.com (Lane 1, 2026-11-22: in-page 200,
+ * getBalance 2368210 lamports for
+ * 4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM, re-confirmed at a later
+ * slot with the identical value); fallback is
+ * https://public.rpc.solanavibestation.com (same call, same value).
+ * api.mainnet-beta.solana.com is RETIRED: it 403s browser requests
+ * ("Access forbidden", re-confirmed for getBalance and getHealth).
+ * Chain identity rests on getHealth returning 'ok' (cached per
+ * instance). History, fee-quote and tx inputs are not built — they
+ * report unavailable, never faked. Broadcast stays disabled.
  */
 import {
   BROADCAST_DISABLED_MESSAGE,
@@ -22,12 +28,15 @@ import {
 import { withRetry } from '../retry';
 
 const NETWORK_ID = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
-const BASE_URL = 'https://api.mainnet-beta.solana.com';
-const SOURCE = 'solana-mainnet-beta';
+const PRIMARY_URL = 'https://solana-rpc.publicnode.com';
+const FALLBACK_URL = 'https://public.rpc.solanavibestation.com';
+const PRIMARY_SOURCE = 'solana-publicnode';
+const FALLBACK_SOURCE = 'solana-vibe-station';
 const DECIMALS = 9;
 
 export interface SolanaAdapterOverrides {
   baseUrl?: string;
+  fallbackUrl?: string;
   /** Injectable transport; defaults to the single-attempt HTTP transport. */
   transport?: FetchTransport;
 }
@@ -50,16 +59,38 @@ function isSolanaAddress(address: string): boolean {
 export function createSolanaAdapter(
   overrides: SolanaAdapterOverrides = {},
 ): ChainAdapter {
-  const baseUrl = overrides.baseUrl ?? BASE_URL;
+  const baseUrl = overrides.baseUrl ?? PRIMARY_URL;
+  const fallbackUrl = overrides.fallbackUrl ?? FALLBACK_URL;
   const transport = overrides.transport ?? httpFetchTransport;
-  const rpc = (method: string, params: unknown[], operation: string): Promise<unknown> =>
+  const post = (url: string, method: string, params: unknown[]): Promise<unknown> =>
+    transport.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    });
+  // Each RPC call tries the primary first and falls back once — on a
+  // transport failure (e.g. the old 403) or on a JSON-RPC error object.
+  // The withRetry wrapper still bounds the whole attempt.
+  const rpc = (
+    method: string,
+    params: unknown[],
+    operation: string,
+  ): Promise<{ raw: unknown; source: string }> =>
     withRetry(
-      () =>
-        transport.request(baseUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-        }),
+      async () => {
+        let raw: unknown;
+        try {
+          raw = await post(baseUrl, method, params);
+        } catch {
+          raw = await post(fallbackUrl, method, params);
+          return { raw, source: FALLBACK_SOURCE };
+        }
+        if (isRecord(raw) && isRecord(raw['error'])) {
+          const fallbackRaw = await post(fallbackUrl, method, params);
+          return { raw: fallbackRaw, source: FALLBACK_SOURCE };
+        }
+        return { raw, source: PRIMARY_SOURCE };
+      },
       { operation },
     );
   let identityChecked = false;
@@ -68,7 +99,7 @@ export function createSolanaAdapter(
     if (identityChecked) return null;
     let raw: unknown;
     try {
-      raw = await rpc('getHealth', [], 'sol.identity');
+      ({ raw } = await rpc('getHealth', [], 'sol.identity'));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -92,8 +123,9 @@ export function createSolanaAdapter(
     const identity = await requireMainnet();
     if (identity) return identity;
     let raw: unknown;
+    let source = PRIMARY_SOURCE;
     try {
-      raw = await rpc('getBalance', [address], 'sol.getBalance');
+      ({ raw, source } = await rpc('getBalance', [address], 'sol.getBalance'));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -115,10 +147,10 @@ export function createSolanaAdapter(
         networkId: NETWORK_ID,
         valueBaseUnits: String(value),
         decimals: DECIMALS,
-        source: SOURCE,
+        source,
         fetchedAt: Date.now(),
       },
-      source: SOURCE,
+      source,
       fetchedAt: Date.now(),
     };
   };

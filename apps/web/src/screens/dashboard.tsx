@@ -7,9 +7,10 @@ import {
   portfolioTotal,
   usePrices,
   PRICE_ATTRIBUTION_TEXT,
+  type PortfolioTokenContribution,
 } from '../wallet/prices';
-import { useTokenPrices } from '../wallet/token-prices';
-import { DEFAULT_TOKENS } from '../wallet/tokens';
+import { fiatValueForTokenBalance, useTokenPrices } from '../wallet/token-prices';
+import { DEFAULT_TOKENS, tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
@@ -25,9 +26,10 @@ const ACTIONS = [
 
 /**
  * Panel home — real balances plus the live CoinGecko price feed. The hero
- * total includes ONLY fresh-quoted balances and reads Partial when incomplete.
- * Missing, expired, or failed prices are shown as unavailable or an error,
- * never as $0.00 and never as fabricated prices.
+ * total is the whole portfolio — natives plus priced token balances —
+ * and reads Partial when incomplete. Missing, expired, or failed prices
+ * are shown as unavailable or an error, never as $0.00 and never as
+ * fabricated prices.
  */
 export function DashboardScreen() {
   const {
@@ -35,6 +37,7 @@ export function DashboardScreen() {
     refreshBalances,
     vaultState,
     customTokens,
+    tokenBalances,
   } = useWallet();
   const isLocked = vaultState === 'locked';
   const [hideZero, setHideZero] = useState(false);
@@ -142,12 +145,54 @@ export function DashboardScreen() {
     balancesFailed: false,
   });
 
+  // Token fiat folded into the hero total (token gaps, item 7): the
+  // priced token balances, with the same honesty rules as the natives.
+  // A token never fetched yet is skipped — not a failure — while a
+  // token still loading holds the hero like a native chain does.
+  const tokenContribution: PortfolioTokenContribution = useMemo(() => {
+    const minorUnits: number[] = [];
+    let partial = false;
+    let loadedZero = false;
+    let unpricedNonzero = false;
+    const nowMs = Date.now();
+    for (const token of tokenList) {
+      const balance = (tokenBalances ?? {})[tokenKey(token.chain, token.contract)];
+      if (balance === undefined) continue;
+      const entry = tokenPricesState.entries[tokenKey(token.chain, token.contract)];
+      const value = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
+      switch (value.kind) {
+        case 'fiat':
+          minorUnits.push(value.minorUnits);
+          break;
+        case 'zero':
+          loadedZero = true;
+          break;
+        case 'balance-unavailable':
+          partial = true;
+          break;
+        case 'unavailable':
+        case 'expired':
+        case 'error':
+          unpricedNonzero = true;
+          partial = true;
+          break;
+      }
+    }
+    return { minorUnits, partial, loadedZero, unpricedNonzero };
+  }, [tokenList, tokenBalances, tokenPricesState.entries]);
+
   // Only chains with a verified balance adapter count toward the hero.
   // The multichain-extension chains have no balance adapter yet, so their
   // 'unavailable' status must not fail the hero.
   const heroChains = availableFor('balance');
   const heroBalances = heroChains.map((chain) => balances[chain]);
-  const heroLoading = heroBalances.some((b) => b?.status === 'loading');
+  const heroLoading =
+    heroBalances.some((b) => b?.status === 'loading') ||
+    tokenList.some(
+      (token) =>
+        (tokenBalances ?? {})[tokenKey(token.chain, token.contract)]?.status ===
+        'loading',
+    );
   // A failed chain contributes 0 to the total (portfolioTotal's partial
   // path) and is marked on its own row/strip entry — it never blanks the
   // hero. allHeroFailed is only for the message when NO balance loaded
@@ -172,7 +217,13 @@ export function DashboardScreen() {
   const nextHero: typeof lastHeroRef.current | null = heroLoading
     ? null
     : (() => {
-        const total = portfolioTotal(balances, pricesState.entries, Date.now(), heroChains);
+        const total = portfolioTotal(
+          balances,
+          pricesState.entries,
+          Date.now(),
+          heroChains,
+          tokenContribution,
+        );
 
         switch (total.status) {
           case 'zero':

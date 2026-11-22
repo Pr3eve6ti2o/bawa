@@ -103,6 +103,76 @@ describe('solana adapter — balance', () => {
     );
     expect(healthCalls).toHaveLength(1);
   });
+
+  it('posts to solana-rpc.publicnode.com by default (token gaps, item 1)', async () => {
+    // api.mainnet-beta.solana.com 403s browser requests ("Access
+    // forbidden", re-confirmed 2026-11-22); Lane 1 (token gaps) probed
+    // solana-rpc.publicnode.com in-page: 200, getBalance 2368210
+    // lamports for 4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM.
+    const transport = solTransport({
+      getHealth: { jsonrpc: '2.0', id: 2, result: 'ok' },
+      getBalance: { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 5 } },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    await adapter.getBalance(ADDRESS);
+    const calls = (transport.request as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call[0]).toBe('https://solana-rpc.publicnode.com');
+    }
+  });
+
+  it('falls back to the Vibe Station RPC when publicnode throws', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (url === 'https://solana-rpc.publicnode.com') {
+        throw new Error('Network error: publicnode unreachable');
+      }
+      if (url === 'https://public.rpc.solanavibestation.com') {
+        if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+        if (body.method === 'getBalance') {
+          return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 2368210 } };
+        }
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const adapter = createSolanaAdapter({ transport: { request } });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('2368210');
+      expect(result.data.source).toBe('solana-vibe-station');
+    }
+  });
+
+  it('falls back to the Vibe Station RPC when publicnode returns an error object', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (url === 'https://solana-rpc.publicnode.com') {
+        return { jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'Access forbidden' } };
+      }
+      if (url === 'https://public.rpc.solanavibestation.com') {
+        if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+        if (body.method === 'getBalance') {
+          return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 7 } };
+        }
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const adapter = createSolanaAdapter({ transport: { request } });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.valueBaseUnits).toBe('7');
+  });
+
+  it('errors when both Solana RPCs fail', async () => {
+    const request = vi.fn(async () => {
+      throw new Error('Network error: all Solana RPCs unreachable');
+    });
+    const adapter = createSolanaAdapter({ transport: { request } });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+  });
 });
 
 describe('solana adapter — unbuilt operations', () => {

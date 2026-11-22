@@ -169,4 +169,57 @@ describe('wallet management — vault account selection', () => {
       await mounted.cleanup();
     }
   });
+
+  it('explains in plain English what Wallets is for and why the address changes', async () => {
+    setWallet(vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Wallets is where you manage the wallets this app knows about.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'each number derives a different account from the same recovery phrase, which is why the addresses change when you change a number.',
+      );
+      expect(mounted.div.textContent).toContain('Addresses for this account');
+      expect(mounted.div.textContent).toContain('Account number');
+      expect(mounted.div.textContent).toContain('Address number');
+      expect(mounted.div.textContent).toContain(
+        'Watching only shows what is already public on the network — it cannot send.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('lists a watch-only Solana wallet, not just the four original chains', async () => {
+    // Token gaps, item 6 + item 8: the Wallets screen only listed
+    // watch-only wallets for BTC/ETH/TRX/TON, so an imported SOL
+    // wallet was invisible here even though it was stored.
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: null,
+        eth: null,
+        trx: null,
+        ton: null,
+        sol: {
+          chain: 'sol',
+          xpub: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+          label: '',
+          derivedCount: 1,
+        },
+      },
+      removeXpub: vi.fn(),
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Solana');
+      expect(mounted.div.textContent).toContain('4uQeVj5tqViQ');
+      expect(mounted.div.textContent).toContain('WCJziofM');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

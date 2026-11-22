@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig, type ChainId } from '../wallet/chains';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
+import { buildBawaSendLink, buildPaymentUri } from '../wallet/payment-links';
+import {
+  DEFAULT_TOKENS,
+  isVerifiedToken,
+  resolveTokenByTickerOrName,
+  shortContract,
+  type TokenRecord,
+} from '../wallet/tokens';
+import { AddTokenDialog } from './add-token';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
@@ -11,9 +20,13 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
 export function ReceiveScreen() {
-  const { addresses, vaultAddresses, selectedChain, setSelectedChain } = useWallet();
+  const { addresses, vaultAddresses, selectedChain, setSelectedChain, customTokens } = useWallet();
   const [copyStatus, setCopyStatus] = useState('');
   const [amount, setAmount] = useState('');
+  const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
+  const [tokenFilter, setTokenFilter] = useState('');
+  const [addTokenOpen, setAddTokenOpen] = useState(false);
+  const qrRef = useRef<HTMLDivElement | null>(null);
 
   const chains = availableFor('receive');
   const chain = chains.includes(selectedChain) ? selectedChain : chains[0];
@@ -31,10 +44,44 @@ export function ReceiveScreen() {
     return watched ? { address: watched, watchOnly: true } : { address: undefined, watchOnly: false };
   }
 
+  // Full token list (token gaps, item 2): the defaults plus user-added
+  // tokens, on the networks this screen can receive on. Native coins
+  // are the network list above; this list is the tokens.
+  const allTokens = [...DEFAULT_TOKENS, ...(customTokens ?? [])];
+  const visibleTokens = allTokens.filter((token) => chains.includes(token.chain));
+  const filter = tokenFilter.trim();
+  const matchedKeys = new Set(
+    filter === ''
+      ? []
+      : resolveTokenByTickerOrName(filter, visibleTokens).map(
+          (token) => `${token.chain}:${token.contract.toLowerCase()}`,
+        ),
+  );
+  const filteredTokens =
+    filter === ''
+      ? visibleTokens
+      : visibleTokens.filter((token) =>
+          matchedKeys.has(`${token.chain}:${token.contract.toLowerCase()}`),
+        );
+
+  // The selected asset: a token, or the selected network's native coin.
+  const effectiveToken =
+    selectedToken !== null && chains.includes(selectedToken.chain) ? selectedToken : null;
+  const assetSymbol = effectiveToken?.symbol ?? (chain ? chainConfig(chain).symbol : '');
+  const assetDecimals = effectiveToken?.decimals ?? (chain ? CHAIN_DECIMALS[chain] : 18);
+
   function selectChain(next: ChainId): void {
     setCopyStatus('');
     setAmount('');
+    setSelectedToken(null);
     setSelectedChain(next);
+  }
+
+  function selectToken(token: TokenRecord): void {
+    setCopyStatus('');
+    setAmount('');
+    setSelectedToken(token);
+    setSelectedChain(token.chain);
   }
 
   async function copyAddressFor(candidate: ChainId): Promise<void> {
@@ -59,43 +106,78 @@ export function ReceiveScreen() {
   const amountError =
     amount.trim() === ''
       ? null
-      : decimalToBaseUnits(amount, chain ? CHAIN_DECIMALS[chain] : 18) === null
+      : decimalToBaseUnits(amount, assetDecimals) === null
         ? 'Enter a valid amount.'
         : null;
 
-  // Payment-request URI (BlueWallet ReceiveDetails pattern). BTC uses a
-  // BIP-21 amount; ETH encodes the value in wei. TRX and TON have no
-  // standard payment URI here, so the QR stays the plain address and the
-  // amount is shown as text beside it.
-  const qrValue = (() => {
-    if (!address || !chain || amountError) return address ?? '';
+  // Payment-request URI (token gaps, item 3 — payment-links.ts): BIP-21
+  // for BTC/LTC/DOGE, EIP-681 for EVM natives and ERC-20 transfers,
+  // Solana Pay for SOL, ton://transfer for TON. TRON has no standard
+  // payment URI, so its QR stays the plain address and the amount is
+  // shown as text — the share link below still carries amount + address.
+  const paymentUri = (() => {
+    if (!address || !chain || amountError) return null;
     const trimmed = amount.trim();
-    if (trimmed === '') return address;
-    if (chain === 'btc') return `bitcoin:${address}?amount=${trimmed}`;
-    if (chain === 'eth') {
-      const wei = decimalToBaseUnits(trimmed, CHAIN_DECIMALS.eth);
-      return wei === null ? address : `ethereum:${address}?value=${wei}`;
-    }
-    return address;
+    const result = buildPaymentUri({
+      chain,
+      address,
+      amount: trimmed === '' ? undefined : trimmed,
+      tokenContract: effectiveToken?.contract,
+      tokenDecimals: effectiveToken?.decimals,
+    });
+    return result.ok ? result.uri : null;
   })();
+  const qrValue = paymentUri ?? address ?? '';
+  const paymentUriUnavailable =
+    address !== undefined &&
+    chain !== undefined &&
+    amount.trim() !== '' &&
+    !amountError &&
+    paymentUri === null;
 
-  async function copyAddress() {
-    if (!address) return;
+  // Bawa web deep link: opens this app's Send screen with chain,
+  // address, amount and token prefilled. Works on desktop wallets too,
+  // and covers chains with no payment-URI standard (TRON).
+  const shareLink =
+    address && chain
+      ? buildBawaSendLink(window.location.origin, {
+          chain,
+          to: address,
+          amount: amount.trim() === '' || amountError ? undefined : amount.trim(),
+          token: effectiveToken?.contract,
+        })
+      : '';
+
+  async function copyText(value: string, okMessage: string): Promise<void> {
     setCopyStatus('');
     try {
-      await navigator.clipboard.writeText(address);
-      setCopyStatus('Address copied.');
+      await navigator.clipboard.writeText(value);
+      setCopyStatus(okMessage);
     } catch {
-      setCopyStatus('Unable to copy the address. Please copy it manually.');
+      setCopyStatus('Unable to copy. Please copy it manually.');
     }
   }
 
-  async function shareAddress() {
+  async function copyAddress() {
     if (!address) return;
+    await copyText(address, 'Address copied.');
+  }
+
+  async function copyLink() {
+    if (!shareLink) return;
+    await copyText(shareLink, 'Payment link copied.');
+  }
+
+  async function sharePayment() {
+    if (!address || !shareLink) return;
     setCopyStatus('');
     if (navigator.share) {
       try {
-        await navigator.share({ text: qrValue });
+        await navigator.share({
+          title: `Receive ${assetSymbol}`,
+          text: paymentUri ?? address,
+          url: shareLink,
+        });
         setCopyStatus('Shared.');
         return;
       } catch (error: unknown) {
@@ -103,11 +185,30 @@ export function ReceiveScreen() {
         if ((error as Error | undefined)?.name === 'AbortError') return;
       }
     }
+    await copyText(shareLink, 'Payment link copied.');
+  }
+
+  async function downloadQr() {
+    const svg = qrRef.current?.querySelector('svg');
+    if (!svg) {
+      setCopyStatus('Unable to download the QR code.');
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(qrValue);
-      setCopyStatus('Address copied.');
+      const blob = new Blob([new XMLSerializer().serializeToString(svg)], {
+        type: 'image/svg+xml',
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `bawa-receive-${chain}${effectiveToken ? `-${effectiveToken.symbol.toLowerCase()}` : ''}.svg`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setCopyStatus('QR code downloaded.');
     } catch {
-      setCopyStatus('Unable to share or copy. Please copy the address manually.');
+      setCopyStatus('Unable to download the QR code.');
     }
   }
 
@@ -192,6 +293,85 @@ export function ReceiveScreen() {
         </ul>
       </section>
 
+      <section aria-labelledby="receive-tokens-heading" className="space-y-3">
+        <h2 id="receive-tokens-heading" className="text-lg font-semibold text-ink">
+          Receive a token
+        </h2>
+        <p className="text-sm text-ink">
+          Every token in the wallet — choose one to receive it. Native
+          coins are in the network list above. A tick means the token is
+          verified: it is one of the wallet&apos;s curated tokens, or its
+          contract resolved to a real CoinGecko listing.
+        </p>
+        <div className="space-y-1">
+          <Label htmlFor="receive-token-filter" className="text-sm font-medium">
+            Find a token by ticker or name
+          </Label>
+          <Input
+            id="receive-token-filter"
+            type="text"
+            value={tokenFilter}
+            onChange={(event) => setTokenFilter(event.target.value)}
+            placeholder="e.g. USDC"
+            className="h-12"
+          />
+        </div>
+        {filteredTokens.length === 0 ? (
+          <p className="text-sm text-ink">
+            {filter === ''
+              ? 'No tokens yet on these networks.'
+              : `No token found for “${filter}”. Try Add token — it searches CoinGecko by ticker or name.`}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {filteredTokens.map((token) => {
+              const tokenConfig = chainConfig(token.chain);
+              const selected =
+                effectiveToken !== null &&
+                effectiveToken.chain === token.chain &&
+                effectiveToken.contract.toLowerCase() === token.contract.toLowerCase();
+              return (
+                <li
+                  key={`${token.chain}:${token.contract.toLowerCase()}`}
+                  className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                    selected ? 'bg-sun' : 'bg-paper'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectToken(token)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  >
+                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                        <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
+                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{token.symbol}</text>
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">
+                        {token.name} · {token.symbol}
+                        {isVerifiedToken(token) && (
+                          <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                        )}
+                      </span>
+                      <span className="block text-sm text-ink">
+                        {tokenConfig.displayName} · {shortContract(token.contract)}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <Button type="button" variant="outline" onClick={() => setAddTokenOpen(true)}>
+          Add token
+        </Button>
+        <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
+      </section>
+
       <Alert>
         <AlertDescription>
           Send only on the selected network — the sender must use the network you selected, even where addresses look the same.
@@ -210,7 +390,7 @@ export function ReceiveScreen() {
       {address && (
         <div className="space-y-1">
           <Label htmlFor="receive-amount" className="text-sm font-medium">
-            Amount (optional) — {config.symbol}
+            Amount (optional) — {assetSymbol}
           </Label>
           <Input
             id="receive-amount"
@@ -218,7 +398,7 @@ export function ReceiveScreen() {
             inputMode="decimal"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            placeholder={`0.0 ${config.symbol}`}
+            placeholder={`0.0 ${assetSymbol}`}
             className="h-12"
           />
           {amountError ? (
@@ -232,30 +412,41 @@ export function ReceiveScreen() {
           <div className="flex flex-col items-center gap-4">
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               {/* Paper surround keeps the QR scannable — Ink modules on Paper. */}
-              <div className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
+              <div ref={qrRef} className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
                 <QRCodeSVG
                   value={qrValue}
                   size={192}
                   marginSize={4}
+                  level="H"
                   fgColor="#2B2B2B"
                   bgColor="#FFFDF7"
-                  title={`${config.symbol} receiving address`}
+                  title={qrValue}
                 />
               </div>
-              {(chain === 'trx' || chain === 'ton') && amount.trim() !== '' && !amountError && (
+              {paymentUriUnavailable && (
                 <p className="text-sm text-ink">
-                  Requested amount: {amount.trim()} {config.symbol} (shown as text — the QR
-                  encodes the address only).
+                  Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
+                  standard payment-request link, so the QR encodes the address only. The share
+                  link below still carries the amount.)
                 </p>
               )}
             </div>
             <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
+            <p data-testid="receive-share-link" className="w-full break-all text-center font-mono text-xs text-ink">
+              {shareLink}
+            </p>
             <div className="flex flex-wrap justify-center gap-2">
               <Button type="button" onClick={() => void copyAddress()}>
                 Copy address
               </Button>
-              <Button type="button" variant="outline" onClick={() => void shareAddress()}>
+              <Button type="button" variant="outline" onClick={() => void sharePayment()}>
                 Share
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void copyLink()}>
+                Copy link
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void downloadQr()}>
+                Download QR
               </Button>
             </div>
           </div>

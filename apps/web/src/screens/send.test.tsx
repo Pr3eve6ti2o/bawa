@@ -110,6 +110,9 @@ function setWallet(overrides: Record<string, unknown> = {}): void {
       trx: { status: 'unavailable', reason: 'no-adapter' },
       ton: { status: 'unavailable', reason: 'no-adapter' },
     },
+    selectedChain: 'eth',
+    customTokens: [],
+    tokenBalances: {},
     ...overrides,
   } as unknown as ReturnType<typeof useWallet>);
 }
@@ -132,7 +135,7 @@ function findButton(div: HTMLDivElement, text: string): HTMLButtonElement {
   return button as HTMLButtonElement;
 }
 
-async function mountScreen() {
+async function mountScreen(initialEntries: string[] = ['/send']) {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -140,7 +143,7 @@ async function mountScreen() {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/send']}>
+      <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/send" element={<SendScreen />} />
         </Routes>
@@ -312,6 +315,93 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain(
         'Camera is not available in this browser.',
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows all thirteen chains and the selected chain’s tokens', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      // All 13 registry chains have a picker button (disabled without
+      // a wallet on that chain).
+      for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin']) {
+        expect(mounted.div.textContent).toContain(name);
+      }
+      // The full token list for the selected chain, with the verified
+      // tick and short contract under each token.
+      expect(mounted.div.textContent).toContain('USD Coin');
+      expect(mounted.div.textContent).toContain('Tether USD');
+      expect(mounted.div.textContent).toContain('ChainLink Token');
+      expect(mounted.div.textContent).toContain('Verified');
+      expect(mounted.div.textContent).toContain('0xA0b8…eB48');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('prefills chain, recipient and amount from a Bawa send link', async () => {
+    setWallet();
+    const mounted = await mountScreen([
+      `/send?chain=eth&to=${RECIPIENT}&amount=0.5`,
+    ]);
+    try {
+      // The link moves the flow to the amount step with both prefilled.
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('0.5');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('prefills a token payment from a Bawa send link', async () => {
+    setWallet();
+    const mounted = await mountScreen([
+      '/send?chain=eth&to=' +
+        RECIPIENT +
+        '&amount=25&token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    ]);
+    try {
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('25');
+      expect(mounted.div.textContent).toContain('Amount (USDC)');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a token send shows the honest unavailable state, never a native preview', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('USD Coin'),
+      );
+      expect(usdcButton).not.toBeUndefined();
+      await act(async () => {
+        usdcButton?.click();
+      });
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      await click(mounted.div, 'Continue');
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect(mounted.div.textContent).toContain('Amount (USDC)');
+      await act(async () => {
+        setInputValue(amount, '25');
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, "Sending USDC isn't available yet");
+      expect(mounted.div.textContent).toContain(
+        "Sending USDC isn't available yet",
+      );
+      expect(mounted.div.textContent).not.toContain('Review your send');
     } finally {
       await mounted.cleanup();
     }

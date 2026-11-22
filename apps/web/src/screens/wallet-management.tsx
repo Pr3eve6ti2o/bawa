@@ -14,6 +14,28 @@ const chains = [
   { id: "ton", name: "TON" },
 ] as const;
 
+// Token gaps, item 6 + item 8: the WATCH-ONLY list covers all 13
+// registry chains. It used to be the same four as the vault section
+// above, so a watch-only wallet imported for any other chain (e.g.
+// SOL) was stored but invisible here. The xpub map, validation and
+// derivation already cover all 13. The vault section keeps the
+// original four — its address list is out of this item's scope.
+const watchChains = [
+  { id: "btc", name: "Bitcoin" },
+  { id: "eth", name: "Ethereum" },
+  { id: "trx", name: "TRON" },
+  { id: "ton", name: "TON" },
+  { id: "sol", name: "Solana" },
+  { id: "bsc", name: "BNB Smart Chain" },
+  { id: "matic", name: "Polygon" },
+  { id: "arb", name: "Arbitrum One" },
+  { id: "op", name: "OP Mainnet" },
+  { id: "base", name: "Base" },
+  { id: "avax", name: "Avalanche C-Chain" },
+  { id: "ltc", name: "Litecoin" },
+  { id: "doge", name: "Dogecoin" },
+] as const;
+
 export function WalletManagementScreen() {
   const {
     xpubs,
@@ -22,7 +44,7 @@ export function WalletManagementScreen() {
     setVaultAccount,
     vaultAddresses,
   } = useWallet();
-  const hasWallets = chains.some(({ id }) => Boolean(xpubs[id]));
+  const hasWallets = watchChains.some(({ id }) => Boolean(xpubs[id]));
 
   // Vault account selection (Fix Lane 3 p14b). Inputs track the context
   // selection; Apply clamps invalid input to 0 and re-derives.
@@ -67,15 +89,31 @@ export function WalletManagementScreen() {
       <h1 id="wallets-heading" className="text-2xl font-semibold">
         Wallets
       </h1>
+      <p className="text-sm text-muted-foreground">
+        Wallets is where you manage the wallets this app knows about. Your
+        vault — the wallet made from your recovery phrase — is at the top.
+        Below it are any watch-only wallets you imported: the app can show
+        their balances and history, but it can never spend from them,
+        because no private key is stored here.
+      </p>
 
       <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Vault account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your vault is the wallet made from your recovery phrase. It
+              holds one account at a time. The two numbers below pick which
+              account that is: each number derives a different account from
+              the same recovery phrase, which is why the addresses change
+              when you change a number. Changing the numbers never creates
+              or deletes a wallet — it just shows a different account from
+              the same phrase. Your phrase never leaves this device.
+            </p>
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-2">
-                <Label htmlFor="vault-account">Account</Label>
+                <Label htmlFor="vault-account">Account number</Label>
                 <Input
                   id="vault-account"
                   type="number"
@@ -88,7 +126,7 @@ export function WalletManagementScreen() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vault-index">Index</Label>
+                <Label htmlFor="vault-index">Address number</Label>
                 <Input
                   id="vault-index"
                   type="number"
@@ -113,6 +151,7 @@ export function WalletManagementScreen() {
                 {accountError}
               </p>
             )}
+            <h2 className="text-sm font-semibold">Addresses for this account</h2>
             <dl className="space-y-3">
               {chains.map(({ id, name }) => (
                 <div key={id} className="space-y-1">
@@ -126,14 +165,21 @@ export function WalletManagementScreen() {
               ))}
             </dl>
             <p className="text-sm text-muted-foreground">
-              TON has one address per wallet — account and index do not change it.
+              TON has one address per wallet, so changing the numbers above does not change the TON address.
             </p>
         </CardContent>
       </Card>
 
       {hasWallets ? (
-        <ul className="space-y-4">
-          {chains.map(({ id, name }) => {
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Watch-only wallets</h2>
+          <p className="text-sm text-muted-foreground">
+            These wallets were imported by public key or address. The app
+            can show their balances and history, but it cannot sign or send
+            from them. To stop watching one, choose “Forget stored key”.
+          </p>
+          <ul className="space-y-4">
+          {watchChains.map(({ id, name }) => {
             const wallet = xpubs[id];
             if (!wallet) return null;
             const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
@@ -168,7 +214,8 @@ export function WalletManagementScreen() {
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </div>
       ) : (
         <Card>
           <CardHeader>
@@ -176,7 +223,9 @@ export function WalletManagementScreen() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Import a watch-only wallet to add it here.
+              Import a watch-only wallet to watch its balances and history
+              here. Watching only shows what is already public on the
+              network — it cannot send.
             </p>
             <Link
               to="/import-wallet"
@@ -189,10 +238,13 @@ export function WalletManagementScreen() {
       )}
 
       <p className="text-sm text-muted-foreground">
-        Only extended public keys and TON public addresses are stored (in localStorage). No secrets are stored anywhere in this wallet.
-        An extended public key lets its holder track this account&apos;s derivable addresses, balances and
-        transaction history. Forgetting a key removes it
-        from this browser, but cannot revoke a copy someone already took.
+        What is stored here: only extended public keys and TON public
+        addresses, kept in this browser. No recovery phrase or private key
+        is stored anywhere in this wallet. An extended public key lets
+        anyone who has it see this account&apos;s addresses, balances and
+        transaction history — that is all it can do. Forgetting a key
+        removes it from this browser, but it cannot take back a copy
+        someone already made.
       </p>
 
       {hasWallets && (
@@ -200,7 +252,7 @@ export function WalletManagementScreen() {
           type="button"
           variant="outline"
           onClick={() => {
-            for (const { id } of chains) removeXpub(id);
+            for (const { id } of watchChains) removeXpub(id);
           }}
         >
           Forget all stored keys

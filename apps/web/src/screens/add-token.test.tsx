@@ -376,3 +376,65 @@ describe('AddTokenDialog — add token mode', () => {
     }
   });
 });
+
+describe('AddTokenDialog — find by ticker or name', () => {
+  it('resolves USDC from the local registry and prefills chain + contract', async () => {
+    // Token gaps, item 2: a ticker search resolves to the token with
+    // its chain and contract — no network call for a registry token.
+    const mounted = await mountDialog();
+    try {
+      const search = document.querySelector<HTMLInputElement>('#add-token-search');
+      expect(search).not.toBeNull();
+      setInputValue(search!, 'USDC');
+      await act(async () => {
+        clickButton(document, 'Search');
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(document.body.textContent).toContain('USD Coin (USDC)');
+      expect(document.body.textContent).toContain('0xA0b8…eB48');
+      const useButton = [...document.querySelectorAll('button')].find((candidate) =>
+        candidate.textContent?.includes('Use'),
+      );
+      expect(useButton).not.toBeUndefined();
+      act(() => {
+        useButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      const contract = document.querySelector<HTMLInputElement>('#add-token-contract');
+      expect(contract?.value).toBe(USDC_CONTRACT);
+      const status = document.querySelector('[role="status"]');
+      expect(status?.textContent).toContain('USD Coin (USDC) on Ethereum');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('says honestly when a ticker resolves nowhere', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ coins: [] }),
+        headers: { get: () => null },
+      })),
+    );
+    const mounted = await mountDialog();
+    try {
+      const search = document.querySelector<HTMLInputElement>('#add-token-search');
+      setInputValue(search!, 'zzzznonexistent');
+      await act(async () => {
+        clickButton(document, 'Search');
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      const alert = document.querySelector('[role="alert"]');
+      expect(alert?.textContent).toContain('No token found for "zzzznonexistent"');
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});

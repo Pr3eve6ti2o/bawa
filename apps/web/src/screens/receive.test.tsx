@@ -14,6 +14,25 @@ vi.mock('../state/wallet-context', () => ({
 vi.mock('../wallet/chains', () => ({
   availableFor: vi.fn(),
   chainConfig: vi.fn(),
+  SUPPORTED_CHAINS: [
+    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+  ],
+  // payment-links.ts (EIP-681) reads evmChainId off CHAINS.
+  CHAINS: {
+    btc: { evmChainId: null },
+    eth: { evmChainId: 1 },
+    trx: { evmChainId: null },
+    ton: { evmChainId: null },
+    sol: { evmChainId: null },
+    bsc: { evmChainId: 56 },
+    matic: { evmChainId: 137 },
+    arb: { evmChainId: 42161 },
+    op: { evmChainId: 10 },
+    base: { evmChainId: 8453 },
+    avax: { evmChainId: 43114 },
+    ltc: { evmChainId: null },
+    doge: { evmChainId: null },
+  },
 }));
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -136,7 +155,8 @@ describe('receive screen', () => {
     try {
       expect(mounted.div.textContent).toContain('ETH');
       expect(mounted.div.textContent).toContain('TON');
-      expect(mounted.div.textContent).not.toContain('BTC');
+      // 'Bitcoin' (not 'BTC' — the token list's WBTC contains those letters).
+      expect(mounted.div.textContent).not.toContain('Bitcoin');
     } finally {
       await mounted.cleanup();
     }
@@ -171,6 +191,100 @@ describe('receive screen', () => {
         input.dispatchEvent(new Event('input', { bubbles: true }));
       });
       expect(mounted.div.textContent).toContain('Enter a valid amount.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the full token list with verified ticks and short contracts', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      // Defaults on eth + trx (the mocked receive chains) are listed.
+      expect(mounted.div.textContent).toContain('USD Coin');
+      expect(mounted.div.textContent).toContain('Tether USD');
+      expect(mounted.div.textContent).toContain('ChainLink Token');
+      // Verified tick + short contract under the token.
+      expect(mounted.div.textContent).toContain('Verified');
+      expect(mounted.div.textContent).toContain('0xA0b8…eB48');
+      expect(mounted.div.textContent).toContain('Add token');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('filters the token list by ticker', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector('#receive-token-filter') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(input, 'link');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      expect(mounted.div.textContent).toContain('ChainLink Token');
+      expect(mounted.div.textContent).not.toContain('USD Coin');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('says so honestly when the filter resolves to no token', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector('#receive-token-filter') as HTMLInputElement;
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(input, 'NOTATOKEN');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      expect(mounted.div.textContent).toContain('No token found for “NOTATOKEN”');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('selecting a token switches the amount to that token and encodes an EIP-681 transfer QR', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('USD Coin'),
+      );
+      expect(usdcButton).not.toBeUndefined();
+      await act(async () => {
+        usdcButton?.dispatchEvent(new Event('click', { bubbles: true }));
+      });
+      const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
+      expect(amountInput.placeholder).toContain('USDC');
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(amountInput, '25');
+        amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      // The QR encodes the EIP-681 transfer URI (readable via its title).
+      const title = mounted.div.querySelector('svg title');
+      expect(title?.textContent).toBe(
+        'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
+      );
+      // The share link carries chain, address, amount and token.
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link?.textContent).toContain('chain=eth');
+      expect(link?.textContent).toContain('to=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979');
+      expect(link?.textContent).toContain('amount=25');
+      expect(link?.textContent).toContain('token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     } finally {
       await mounted.cleanup();
     }

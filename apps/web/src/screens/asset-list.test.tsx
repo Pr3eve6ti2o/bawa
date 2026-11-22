@@ -285,4 +285,35 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('shows the verified tick and short contract on token rows', async () => {
+    // Token gaps, item 2: official tokens get a VERIFIED tick beside
+    // them, with the short contract just below the token.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'USDC');
+      expect(mounted.div.textContent).toContain('USDC');
+      expect(mounted.div.textContent).toContain('✓ Verified');
+      expect(mounted.div.textContent).toContain('0xA0b8…eB48');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

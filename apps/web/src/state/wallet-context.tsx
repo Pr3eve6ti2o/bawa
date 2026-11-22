@@ -65,7 +65,13 @@ export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
 }
 
 
-const CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+// Token gaps, item 6 + item 8: the boot hydration effect used to
+// iterate a stale four-chain list here, so a watch-only wallet stored
+// for any other chain (e.g. SOL) was persisted but dropped on every
+// reload — the Wallets screen showed "No wallets imported" and the
+// Assets row stayed "Balance unavailable" until the wallet was
+// re-added. Hydration now covers all 13 registry chains
+// (ALL_CHAIN_IDS), like the initial-state checks above it.
 // Maximum wallet-label length enforced at the storage boundary (T43
 // r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
 // characters, an xprv is 111, and a 32-byte data key in hex is 64, so
@@ -605,30 +611,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return refreshChain(chain);
   }, [refreshChain, update]);
 
-  const addXpub = useCallback(async (chain: ChainId, xpub: string, label: string) => {
-    const request = ++additions.current[chain];
-    const epoch = lifetime.current;
-    const publicKey = xpub.trim();
-    const { validateWatchOnlyImport } = await import('../engine/boundary');
-    const validation = await validateWatchOnlyImport(chain, publicKey);
-    if (!validation.ok) throw new Error(validation.message);
-    if (epoch !== lifetime.current || request !== additions.current[chain]) return;
-    changed.current[chain] = true;
-    const trimmedLabel = label.trim();
-    if (trimmedLabel.length > LABEL_MAX_LENGTH) {
-      throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
-    }
-    // For TON, xpub holds the validated TON public address (see
-    // contracts). TON has one address because its path is fully hardened.
-    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: chain === 'ton' ? 1 : 5 };
-    await putWallet(chain, wallet);
-  }, [putWallet]);
-
-  const removeXpub = useCallback((chain: ChainId) => {
-    ++additions.current[chain];
-    changed.current[chain] = true;
-    void putWallet(chain, null);
-  }, [putWallet]);
 
   // Balances and history come from the Phase 2 adapters, gated on the
   // capability registry: a chain is readable only when its balance/history
@@ -828,6 +810,41 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     }));
   }, [update]);
+
+  // Adding or removing a watch-only wallet re-fetches balances (and
+  // history after them) for the new address set. Token gaps, item 6:
+  // without this, a wallet added after boot kept its boot-time balance
+  // state ('unavailable', no address) until a reload or a manual
+  // refresh — the boot refresh runs only once at hydration. These live
+  // below refreshBalances/refreshHistory so their stable identities can
+  // be listed as dependencies.
+  const addXpub = useCallback(async (chain: ChainId, xpub: string, label: string) => {
+    const request = ++additions.current[chain];
+    const epoch = lifetime.current;
+    const publicKey = xpub.trim();
+    const { validateWatchOnlyImport } = await import('../engine/boundary');
+    const validation = await validateWatchOnlyImport(chain, publicKey);
+    if (!validation.ok) throw new Error(validation.message);
+    if (epoch !== lifetime.current || request !== additions.current[chain]) return;
+    changed.current[chain] = true;
+    const trimmedLabel = label.trim();
+    if (trimmedLabel.length > LABEL_MAX_LENGTH) {
+      throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
+    }
+    // For TON, xpub holds the validated TON public address (see
+    // contracts). TON has one address because its path is fully hardened.
+    const wallet = { chain, xpub: publicKey, label: trimmedLabel, derivedCount: chain === 'ton' ? 1 : 5 };
+    await putWallet(chain, wallet);
+    void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
+  }, [putWallet, refreshBalances, refreshHistory]);
+
+  const removeXpub = useCallback((chain: ChainId) => {
+    ++additions.current[chain];
+    changed.current[chain] = true;
+    void putWallet(chain, null).finally(() => {
+      void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
+    });
+  }, [putWallet, refreshBalances, refreshHistory]);
 
   // Enable/disable one registry chain. Persisted (public data only) and
   // kept in registry order. Enabling re-fetches the chain's native
@@ -1095,7 +1112,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     const saved = readStored();
-    void Promise.all(CHAINS.map(async chain => {
+    void Promise.all(ALL_CHAIN_IDS.map(async chain => {
       const entry = saved[chain];
       if (changed.current[chain] || !isRecord(entry) || typeof entry.xpub !== 'string') return;
       const publicKey = entry.xpub.trim();
@@ -1137,7 +1154,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
       ++lifetime.current;
-      CHAINS.forEach(chain => { ++derivations.current[chain]; });
+      ALL_CHAIN_IDS.forEach(chain => { ++derivations.current[chain]; });
     };
   }, [putWallet, update]);
 

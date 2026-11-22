@@ -51,7 +51,26 @@ export function expandUniquePrefix(value: string): string {
     : value;
 }
 
-const chains: ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+const chains: ChainId[] = [
+  'btc',
+  'eth',
+  'trx',
+  'ton',
+  'sol',
+  'bsc',
+  'matic',
+  'arb',
+  'op',
+  'base',
+  'avax',
+  'ltc',
+  'doge',
+];
+// Token gaps, item 6 + item 8: the picker used to list only the first
+// four chains even though validation (validateWatchOnlyImport), address
+// derivation (deriveAddresses, incl. the single-address SOL/TON path)
+// and the input labels below already cover all 13 registry chains. A
+// Solana or Dogecoin address could not be watched at all.
 
 type ImportInputConfig = {
   label: string;
@@ -137,8 +156,13 @@ export function ImportWalletScreen() {
     const wordCount = normalized === '' ? 0 : normalized.split(' ').length;
     // Clear the input immediately: a rejected phrase must not linger.
     setPhrase('');
-    if (wordCount !== 12 && wordCount !== 24) {
-      setPhraseError('Enter a 12- or 24-word recovery phrase.');
+    // BIP-39 word counts are 12/15/18/21/24. The gate used to accept
+    // only 12 or 24, which rejected the repo's own published 15-word
+    // test vector (docs/mainnet/MAINNET-VECTORS.md) before validation
+    // ever ran. Any other count is still rejected here; a valid count
+    // with invalid words is rejected by restoreWallet below.
+    if (![12, 15, 18, 21, 24].includes(wordCount)) {
+      setPhraseError('Enter a 12-, 15-, 18-, 21- or 24-word recovery phrase.');
       return;
     }
     setIsRestoring(true);
@@ -291,7 +315,7 @@ export function ImportWalletScreen() {
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
-              Enter the 12 or 24 words of the wallet you want to restore.
+              Enter the 12, 15, 18, 21 or 24 words of the wallet you want to restore.
               They are used once to derive your addresses, then cleared.
             </CardDescription>
           </CardHeader>
@@ -320,7 +344,7 @@ export function ImportWalletScreen() {
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="12 or 24 words, separated by spaces"
+                    placeholder="12, 15, 18, 21 or 24 words, separated by spaces"
                     required
                   />
                   <p className="text-sm text-muted-foreground">

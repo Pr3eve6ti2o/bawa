@@ -91,6 +91,18 @@ export const DEFAULT_TOKENS: TokenRecord[] = [
     coingeckoId: 'tether',
     addedAtMs: 0,
   },
+  {
+    // Token #21 (token gaps): Base USDC — contract, decimals and
+    // CoinGecko id verified live 2026-11-22 against the CoinGecko Base
+    // contract endpoint (id usd-coin, decimals 6) and the Base explorer.
+    chain: 'base',
+    contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
 ];
 
 /** Identity key: `${chain}:${contract}` — contract lowercased, TRON included. */
@@ -107,10 +119,64 @@ export function tokenKeyOf(record: TokenRecord): string {
   return tokenKey(record.chain, record.contract);
 }
 
-/** True when the record is one of the 7 verified default tokens. */
+/** True when the record is one of the 8 verified default tokens. */
 export function isDefaultToken(record: TokenRecord): boolean {
   const key = tokenKeyOf(record);
   return DEFAULT_TOKENS.some((candidate) => tokenKeyOf(candidate) === key);
+}
+
+/**
+ * Verified-tick rule (token gaps, item 2). A token is official — and
+ * gets the VERIFIED tick — when it is one of the curated in-repo
+ * defaults (verified twice: in-repo + live CoinGecko) or when its
+ * contract resolved to a real CoinGecko listing at add time
+ * (coingeckoId set by the contract endpoint for that exact chain +
+ * contract). A user-added token by raw contract with no CoinGecko
+ * listing gets no tick. Pattern: Uniswap token-lists (membership in a
+ * curated list is the verification; identity is chainId + address)
+ * and Trust Wallet assets (a reviewed listing with logo + info.json
+ * is the verification).
+ */
+export function isVerifiedToken(record: TokenRecord): boolean {
+  return isDefaultToken(record) || record.coingeckoId !== null;
+}
+
+/**
+ * Short contract display: first 6 characters + ellipsis + last 4
+ * (e.g. 0xA0b8…eB48, TR7NHq…Lj6t). Values already that short are
+ * returned unchanged.
+ */
+export function shortContract(contract: string): string {
+  if (contract.length <= 12) return contract;
+  return `${contract.slice(0, 6)}…${contract.slice(-4)}`;
+}
+
+/**
+ * Resolve tokens by ticker or name against the in-repo registry
+ * (defaults + user-added). Exact symbol matches come first, then exact
+ * name, then partial symbol/name — all case-insensitive. A query that
+ * resolves to nothing returns an empty list: the caller must say so
+ * honestly and never invent a token. (Remote ticker/name resolution
+ * lives in token-search.ts, which queries CoinGecko; this function is
+ * the local half.)
+ */
+export function resolveTokenByTickerOrName(
+  query: string,
+  tokens: readonly TokenRecord[],
+): TokenRecord[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === '') return [];
+  const exactSymbol: TokenRecord[] = [];
+  const exactName: TokenRecord[] = [];
+  const partial: TokenRecord[] = [];
+  for (const token of tokens) {
+    const symbol = token.symbol.toLowerCase();
+    const name = token.name.toLowerCase();
+    if (symbol === needle) exactSymbol.push(token);
+    else if (name === needle) exactName.push(token);
+    else if (symbol.includes(needle) || name.includes(needle)) partial.push(token);
+  }
+  return [...exactSymbol, ...exactName, ...partial];
 }
 
 /**

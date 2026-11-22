@@ -24,12 +24,19 @@ import type { ChainId } from '../engine/boundary';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { useWallet } from '../state/wallet-context';
 import {
+  DEFAULT_TOKENS,
   isDuplicateToken,
+  resolveTokenByTickerOrName,
+  shortContract,
   tokenStandardFor,
   validateEvmContractAddress,
   validateTronContractAddress,
   type TokenRecord,
 } from '../wallet/tokens';
+import {
+  searchTokensByNameOrTicker,
+  type TokenSearchCandidate,
+} from '../wallet/token-search';
 // NOTE: token-balances is dynamically imported at submit time (see
 // handleSubmitToken), never statically: it pulls viem's readContract /
 // ABI machinery, which must stay out of the eager bundle — the
@@ -105,6 +112,15 @@ export function AddTokenDialog({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  // Token gaps, item 2: find a token by ticker or name. The local
+  // registry is tried first; only then CoinGecko. A query that
+  // resolves nowhere says so honestly — a token is never invented.
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCandidates, setSearchCandidates] = useState<
+    TokenSearchCandidate[] | null
+  >(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fresh state every time the dialog opens.
@@ -116,6 +132,10 @@ export function AddTokenDialog({
     setError(null);
     setStatus(null);
     setChecking(false);
+    setSearchQuery('');
+    setSearchCandidates(null);
+    setSearchError(null);
+    setSearching(false);
   }, [open ]);
 
   // The addable chains are the registry chains with derivation —
@@ -137,6 +157,61 @@ export function AddTokenDialog({
   const onAddChain = (chainId: ChainId) => {
     wallet.setChainEnabled(chainId, true);
     setStatus(`${chainConfig(chainId).displayName} added`);
+  };
+
+  const onSearch = async () => {
+    const query = searchQuery.trim();
+    if (query === '') {
+      setSearchError('Type a ticker or name to search for.');
+      setSearchCandidates(null);
+      return;
+    }
+    setSearching(true);
+    setSearchError(null);
+    setSearchCandidates(null);
+    try {
+      // Local registry first (no network): defaults + user-added.
+      const local = resolveTokenByTickerOrName(query, [
+        ...DEFAULT_TOKENS,
+        ...(wallet.customTokens ?? []),
+      ]);
+      if (local.length > 0) {
+        setSearchCandidates(
+          local.map((record) => ({
+            chain: record.chain,
+            contract: record.contract,
+            name: record.name,
+            symbol: record.symbol,
+            decimals: record.decimals,
+            coingeckoId: record.coingeckoId ?? '',
+          })),
+        );
+        return;
+      }
+      const remote = await searchTokensByNameOrTicker(query, globalThis.fetch);
+      if (remote.status === 'found') {
+        setSearchCandidates(remote.candidates);
+      } else if (remote.status === 'not-found') {
+        setSearchError(
+          `No token found for "${query}". Check the spelling, or add it by contract address below.`,
+        );
+      } else {
+        setSearchError(`Search failed: ${remote.reason}`);
+      }
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const onPickCandidate = (candidate: TokenSearchCandidate) => {
+    setChain(candidate.chain);
+    setContract(candidate.contract);
+    setSearchCandidates(null);
+    setSearchError(null);
+    setStatus(
+      `${candidate.name} (${candidate.symbol}) on ${chainConfig(candidate.chain).displayName} — check the contract below, then Add.`,
+    );
+    setError(null);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -283,6 +358,59 @@ export function AddTokenDialog({
           </ul>
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="add-token-search">Find by name or ticker</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="add-token-search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="e.g. USDC or USD Coin"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  inputMode="text"
+                />
+                <Button type="button" variant="secondary" onClick={onSearch} disabled={searching}>
+                  {searching ? 'Searching…' : 'Search'}
+                </Button>
+              </div>
+              <p className="text-xs text-ink/70">
+                Searching finds the token&apos;s chain and contract. If it is not found,
+                add it by contract address below.
+              </p>
+              {searchError !== null && (
+                <p role="alert" className="text-sm font-medium text-ink">
+                  {searchError}
+                </p>
+              )}
+              {searchCandidates !== null && searchCandidates.length > 0 && (
+                <ul className="flex max-h-[40vh] flex-col gap-2 overflow-y-auto">
+                  {searchCandidates.map((candidate) => (
+                    <li key={`${candidate.chain}:${candidate.contract}`}>
+                      <button
+                        type="button"
+                        onClick={() => onPickCandidate(candidate)}
+                        className="flex w-full items-center justify-between gap-3 rounded-bawa border-2 border-ink bg-paper px-3 py-2 text-left"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-ink">
+                            {candidate.name} ({candidate.symbol})
+                          </span>
+                          <span className="block text-xs text-ink/70">
+                            {chainConfig(candidate.chain).displayName} ·{' '}
+                            {shortContract(candidate.contract)}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-sm font-medium text-ink/70">Use</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="add-token-chain">Chain</Label>
               <select

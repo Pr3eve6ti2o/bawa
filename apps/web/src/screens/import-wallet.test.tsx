@@ -177,6 +177,56 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       await cleanup();
     }
   });
+  it('offers all 13 chains in the watch-only picker, including SOL', async () => {
+    // Token gaps, item 6 + item 8: the watch-only picker offered only
+    // BTC/ETH/TRX/TON even though validation, derivation and the label
+    // map already cover all 13 chains — a SOL address could not be
+    // watched at all. The picker must offer every registry chain.
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      for (const chain of ['SOL', 'DOGE', 'LTC', 'BSC', 'BASE', 'AVAX']) {
+        const button = [...div.querySelectorAll('button')].find(
+          (candidate) => candidate.textContent === chain,
+        );
+        expect(button, `watch-only picker offers ${chain}`).not.toBeUndefined();
+      }
+      await clickButton(div, 'SOL');
+      expect(
+        div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
+      ).toBe('Solana public address');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('adds a watch-only Solana address and lists it', async () => {
+    // Token gaps, item 6: end-to-end watch-only for SOL, with the
+    // public Lane 1 address (known live balance 0.00236821 SOL).
+    const SOL_ADDRESS = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      await clickButton(div, 'SOL');
+      const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, SOL_ADDRESS);
+      });
+      await clickButton(div, 'Add');
+      // The imported list truncates the address (first 12 + last 8
+      // chars); the full address never appears in the DOM.
+      await act(async () => {
+        for (let i = 0; i < 20 && !div.textContent?.includes('4uQeVj5tqViQ'); i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(div.textContent).toContain('4uQeVj5tqViQ');
+      expect(div.textContent).toContain('WCJziofM');
+    } finally {
+      await cleanup();
+    }
+  });
 });
 
 describe.sequential('ImportWalletScreen (T41)', () => {
@@ -389,7 +439,7 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       await openPhraseMode(div);
       await restorePhrase(div, 'hello world');
       await waitFor(div, () =>
-        (div.textContent ?? '').includes('Enter a 12- or 24-word recovery phrase.'),
+        (div.textContent ?? '').includes('Enter a 12-, 15-, 18-, 21- or 24-word recovery phrase.'),
       );
       const input = div.querySelector<HTMLInputElement>('#recovery-phrase');
       expect(input?.value).toBe('');
@@ -420,6 +470,31 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       expect(text.indexOf('Ethereum')).toBeLessThan(text.indexOf('Bitcoin'));
       expect(text.indexOf('Bitcoin')).toBeLessThan(text.indexOf('TRON'));
       expect(text.indexOf('TRON')).toBeLessThan(text.indexOf('TON'));
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  it('restores a valid 15-word phrase (BIP-39 allows 12/15/18/21/24)', async () => {
+    // Token gaps, item 10: the repo's own published test vector is 15
+    // words (docs/mainnet/MAINNET-VECTORS.md), but the submit gate
+    // only accepted 12 or 24, so the vector could not be imported at
+    // all — the preview step never appeared. BIP-39 word counts are
+    // 12/15/18/21/24; all of them must reach the preview.
+    const VEC =
+      'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      await restorePhrase(div, VEC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const expected = await deriveAddresses(VEC);
+      expect(div.textContent).toContain(expected.eth);
+      expect(div.textContent).toContain(expected.btc);
+      expect(div.textContent).toContain(expected.trx);
+      expect(div.textContent).toContain(expected.ton);
     } finally {
       await cleanup();
     }
@@ -485,6 +560,7 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       await cleanup();
     }
   }, 30_000);
+
 });
 
 describe('expandUniquePrefix', () => {

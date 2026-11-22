@@ -585,6 +585,18 @@ export function fiatValueForBalance(
   return { kind: 'fiat', minorUnits, text: formatFiatUSD(minorUnits) };
 }
 
+/** Token fiat folded into the hero portfolio total (token gaps, item 7). */
+export interface PortfolioTokenContribution {
+  /** Fiat minor units of priced, non-zero token balances. */
+  minorUnits: number[];
+  /** True when a token balance failed to load or has no fresh price. */
+  partial: boolean;
+  /** True when at least one token balance loaded as zero. */
+  loadedZero: boolean;
+  /** True when a loaded non-zero token balance has no fresh price. */
+  unpricedNonzero: boolean;
+}
+
 export function portfolioTotal(
   balances: Record<ChainId, BalanceState>,
   entries: PriceMap,
@@ -593,11 +605,14 @@ export function portfolioTotal(
   // passes availableFor('balance') so the hero totals exactly the chains
   // its loading/failed detection counts (in the screen tests that mock
   // is the original 4, which keeps the hero's 4-chain expectations).
-  // Token values are NOT in this total: the hero is the native-coin
-  // portfolio; token fiat values show on their own rows.
+  // Token values ARE in this total (token gaps, item 7): the hero is the
+  // whole portfolio — natives plus the priced token balances the caller
+  // folds in via tokenContribution. Token fiat values also show on
+  // their own rows.
   chains: readonly ChainId[] = [
     'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
   ],
+  tokenContribution?: PortfolioTokenContribution,
 ): {
   status: 'zero' | 'total' | 'partial' | 'unavailable';
   text: string;
@@ -610,7 +625,13 @@ export function portfolioTotal(
   if (list.some((balance) => balance?.status === 'loading')) {
     return { status: 'unavailable', text: 'Unavailable', partial: false };
   }
+  const tokensSettledZero =
+    tokenContribution === undefined ||
+    (tokenContribution.minorUnits.length === 0 &&
+      !tokenContribution.partial &&
+      !tokenContribution.unpricedNonzero);
   if (
+    tokensSettledZero &&
     list.every(
       (balance) =>
         balance !== undefined &&
@@ -626,6 +647,12 @@ export function portfolioTotal(
   // A missing balance record counts as a failed chain, never as zero.
   const contributed: number[] = [];
   let partial = false;
+  // A loaded non-zero balance whose price is not fresh: its value is
+  // genuinely unknown, so the total is undecidable (unlike a failed
+  // load, which the partial shape treats as 0 and discloses).
+  let hasUnpricedNonzero = false;
+  let loadedZero =
+    tokenContribution !== undefined && tokenContribution.loadedZero;
   for (const chain of chains) {
     const balance = balances[chain];
     if (balance === undefined) {
@@ -633,6 +660,7 @@ export function portfolioTotal(
       continue;
     }
     if (balance.status === 'zero' || balance.value === '0') {
+      loadedZero = true;
       continue;
     }
     if (balance.status === 'unavailable' || balance.status === 'error') {
@@ -647,6 +675,9 @@ export function portfolioTotal(
       !isFreshQuote(entry.quote, nowMs)
     ) {
       partial = true;
+      if (balance.value !== undefined && balance.value !== '0') {
+        hasUnpricedNonzero = true;
+      }
       continue;
     }
     contributed.push(
@@ -657,8 +688,23 @@ export function portfolioTotal(
       ),
     );
   }
+  if (tokenContribution !== undefined) {
+    contributed.push(...tokenContribution.minorUnits);
+    partial = partial || tokenContribution.partial;
+    hasUnpricedNonzero = hasUnpricedNonzero || tokenContribution.unpricedNonzero;
+  }
   if (contributed.length === 0) {
-    return { status: 'unavailable', text: 'Unavailable', partial: false };
+    // Nothing priced. A known non-zero amount with no fresh price makes
+    // the total undecidable — never report $0.00 for it. But when every
+    // balance that did load is zero and only failed loads are unknown,
+    // the loaded total is genuinely $0.00: report it as a partial total
+    // (the dashboard's "some balances are missing" note discloses the
+    // failed chains) instead of the bare 'Unavailable' a fresh wallet
+    // used to see. Nothing loaded at all stays 'unavailable'.
+    if (hasUnpricedNonzero || !loadedZero) {
+      return { status: 'unavailable', text: 'Unavailable', partial: false };
+    }
+    return { status: 'partial', text: '$0.00', partial: true };
   }
   return {
     status: partial ? 'partial' : 'total',

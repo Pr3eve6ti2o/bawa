@@ -9,6 +9,8 @@ import type { PriceEntry, PriceMap, UnitPrice } from '../wallet/prices';
 import {
   DEFAULT_TOKENS,
   isDefaultToken,
+  isVerifiedToken,
+  shortContract,
   tokenKeyOf,
   tokenSlug,
   type TokenRecord,
@@ -101,6 +103,8 @@ type AssetRowModel =
       isToken: boolean;
       logoChain: ChainId | null;
       logoSymbol: string;
+      /** Token gaps, item 2: official token — show the VERIFIED tick. */
+      verified?: boolean;
     }
   | {
       kind: 'ready';
@@ -117,6 +121,8 @@ type AssetRowModel =
       isToken: boolean;
       logoChain: ChainId | null;
       logoSymbol: string;
+      /** Token gaps, item 2: official token — show the VERIFIED tick. */
+      verified?: boolean;
     };
 
 function RowLogo({ model }: { model: AssetRowModel }) {
@@ -260,6 +266,10 @@ function getTokenRowModel(
   const key = tokenKeyOf(token);
   const chainName = chainConfig(token.chain).displayName;
   const link = `/assets/${token.chain}/${tokenSlug(token)}`;
+  // Token gaps, item 2: the short contract sits just below the token
+  // (subtitle), and official tokens carry the VERIFIED tick.
+  const subtitle = `${chainName} · ${shortContract(token.contract)}`;
+  const verified = isVerifiedToken(token);
   // Before the first token refresh lands, the entry is missing: show
   // the loading skeleton, not a premature failure (same rule as
   // natives — see getNativeRowModel).
@@ -276,7 +286,7 @@ function getTokenRowModel(
       kind: 'loading',
       key,
       title: token.symbol,
-      subtitle: chainName,
+      subtitle,
       link,
       isToken: true,
       logoChain: null,
@@ -289,7 +299,7 @@ function getTokenRowModel(
       kind: 'unavailable',
       key,
       title: token.symbol,
-      subtitle: chainName,
+      subtitle,
       symbol: token.symbol,
       statusText:
         balance.status === 'unavailable'
@@ -301,6 +311,7 @@ function getTokenRowModel(
       isToken: true,
       logoChain: null,
       logoSymbol: token.symbol,
+      verified,
     };
   }
 
@@ -349,7 +360,7 @@ function getTokenRowModel(
     kind: 'ready',
     key,
     title: token.symbol,
-    subtitle: chainName,
+    subtitle,
     symbol: token.symbol,
     balanceStatus: balance.status,
     amount: balance.status === 'zero' ? 'Zero balance' : value,
@@ -360,6 +371,7 @@ function getTokenRowModel(
     isToken: true,
     logoChain: null,
     logoSymbol: token.symbol,
+    verified,
   };
 }
 
@@ -380,7 +392,12 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-bold text-foreground">
             {model.title}
+            {model.verified === true && (
+              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+            )}
           </span>
+          {' '}
+          <span className="block text-xs text-muted-foreground">{model.subtitle}</span>
           {' '}
           <span className="block text-xs text-muted-foreground">{model.statusText}</span>
         </span>
@@ -417,6 +434,8 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
           amount={model.amount}
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}
+          {...(model.verified === true ? { verified: true } : {})}
+          subline={model.isToken ? model.subtitle : undefined}
         />
       </Link>
     </li>
@@ -512,6 +531,9 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-bold text-foreground">
                 {model.title}
+                {model.verified === true && (
+                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                )}
               </span>
               <span className="block truncate text-xs text-muted-foreground">
                 {model.subtitle}

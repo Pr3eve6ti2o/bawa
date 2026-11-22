@@ -5,8 +5,11 @@ import {
   ENABLED_CHAINS_KEY,
   addCustomTokenToList,
   isDuplicateToken,
+  isVerifiedToken,
   readCustomTokens,
   readEnabledChains,
+  resolveTokenByTickerOrName,
+  shortContract,
   tokenKey,
   tokenStandardFor,
   validateEvmContractAddress,
@@ -40,8 +43,8 @@ const USDC: TokenRecord = {
 };
 
 describe('DEFAULT_TOKENS', () => {
-  it('lists exactly the 7 default tokens with verified contracts', () => {
-    expect(DEFAULT_TOKENS).toHaveLength(7);
+  it('lists exactly the 8 default tokens with verified contracts', () => {
+    expect(DEFAULT_TOKENS).toHaveLength(8);
     const byKey = new Map(DEFAULT_TOKENS.map((t) => [tokenKey(t.chain, t.contract), t]));
     expect(byKey.get('eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')).toMatchObject({
       symbol: 'USDC',
@@ -78,11 +81,136 @@ describe('DEFAULT_TOKENS', () => {
       decimals: 6,
       coingeckoId: 'tether',
     });
+    // Token #21 (token gaps): Base USDC, verified live against the
+    // CoinGecko Base contract endpoint 2026-11-22 (id usd-coin,
+    // decimals 6, contract 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913).
+    expect(byKey.get('base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')).toMatchObject({
+      symbol: 'USDC',
+      name: 'USD Coin',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+    });
   });
 
   it('has unique token keys', () => {
     const keys = DEFAULT_TOKENS.map((t) => tokenKey(t.chain, t.contract));
     expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe('isVerifiedToken', () => {
+  // Verified-tick rule (token gaps, item 2): a token is official when it
+  // is one of the curated in-repo defaults — verified twice (in-repo +
+  // live CoinGecko) — or when its contract resolved to a real CoinGecko
+  // listing at add time (coingeckoId set by the contract endpoint). A
+  // user-added token by raw contract with no CoinGecko listing gets no
+  // tick. (Uniswap token-list pattern: membership in a curated list is
+  // the verification; Trust Wallet assets pattern: a reviewed listing
+  // with logo + info.json is the verification.)
+  it('marks every default token verified', () => {
+    for (const token of DEFAULT_TOKENS) {
+      expect(isVerifiedToken(token)).toBe(true);
+    }
+  });
+
+  it('marks a user-added token verified when CoinGecko listed its contract', () => {
+    const added: TokenRecord = {
+      chain: 'eth',
+      contract: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      name: 'Wrapped Ether',
+      symbol: 'WETH',
+      decimals: 18,
+      coingeckoId: 'weth',
+      addedAtMs: 1,
+    };
+    expect(isVerifiedToken(added)).toBe(true);
+  });
+
+  it('does not mark a user-added token verified when CoinGecko has no listing for it', () => {
+    const added: TokenRecord = {
+      chain: 'eth',
+      contract: '0x0000000000000000000000000000000000000001',
+      name: 'Unknown Token',
+      symbol: 'UNKN',
+      decimals: 18,
+      coingeckoId: null,
+      addedAtMs: 1,
+    };
+    expect(isVerifiedToken(added)).toBe(false);
+  });
+});
+
+describe('shortContract', () => {
+  it('shortens an EVM contract to first 6 + ellipsis + last 4', () => {
+    expect(shortContract('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')).toBe(
+      '0xA0b8…eB48',
+    );
+  });
+
+  it('shortens a TRON contract the same way', () => {
+    expect(shortContract('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')).toBe(
+      'TR7NHq…Lj6t',
+    );
+  });
+
+  it('returns a short value unchanged', () => {
+    expect(shortContract('0x1234')).toBe('0x1234');
+  });
+});
+
+describe('resolveTokenByTickerOrName', () => {
+  const list: TokenRecord[] = [
+    USDC,
+    {
+      chain: 'trx',
+      contract: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+      name: 'Tether USD',
+      symbol: 'USDT',
+      decimals: 6,
+      coingeckoId: 'tether',
+      addedAtMs: 0,
+    },
+    {
+      chain: 'base',
+      contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      name: 'USD Coin',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+      addedAtMs: 0,
+    },
+  ];
+
+  it('resolves an exact ticker, case-insensitive, with chain and contract', () => {
+    const found = resolveTokenByTickerOrName('usdc', list);
+    expect(found).toHaveLength(2);
+    expect(found[0]).toMatchObject({ chain: 'eth', symbol: 'USDC' });
+    expect(found[1]).toMatchObject({ chain: 'base', symbol: 'USDC' });
+  });
+
+  it('resolves by name', () => {
+    const found = resolveTokenByTickerOrName('Tether USD', list);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ chain: 'trx', symbol: 'USDT' });
+  });
+
+  it('resolves a partial ticker or name', () => {
+    // 'usd' matches USDC (symbol) and 'Tether USD' (name) alike.
+    const found = resolveTokenByTickerOrName('usd', list);
+    expect(found).toHaveLength(3);
+    expect(found.map((t) => `${t.chain}:${t.symbol}`).sort()).toEqual([
+      'base:USDC',
+      'eth:USDC',
+      'trx:USDT',
+    ]);
+  });
+
+  it('returns an empty list for a blank query', () => {
+    expect(resolveTokenByTickerOrName('   ', list)).toEqual([]);
+  });
+
+  it('returns an empty list when nothing resolves — never invents a token', () => {
+    expect(resolveTokenByTickerOrName('NOTATOKEN', list)).toEqual([]);
   });
 });
 

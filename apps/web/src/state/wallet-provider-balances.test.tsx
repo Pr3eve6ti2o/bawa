@@ -12,12 +12,18 @@ import { TEST_VAULT_PROFILE_IDS } from './test-helpers';
 // The capability registry is mocked to verified so the adapter path is
 // exercised; the no-adapter gate itself is covered by wallet-context.test.tsx.
 // Only availableFor is overridden — the rest (incl. pathFor, used by
-// deriveAddressesAt) comes from the real module.
+// deriveAddressesAt) comes from the real module. 'sol' is included for
+// 'balance'/'history' only, so the watch-only refresh test below can
+// exercise the SOL balance path; it stays out of 'derive' (vault SOL
+// derivation stalls in jsdom) and every other capability.
 vi.mock('../wallet/chains', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../wallet/chains')>();
   return {
     ...actual,
-    availableFor: () => ['btc', 'eth', 'trx', 'ton'],
+    availableFor: (capability: string) =>
+      capability === 'balance' || capability === 'history'
+        ? ['btc', 'eth', 'trx', 'ton', 'sol']
+        : ['btc', 'eth', 'trx', 'ton'],
   };
 });
 
@@ -121,6 +127,12 @@ beforeEach(() => {
   localStorage.clear();
   deleteVault();
   latest = undefined;
+  // The capability mock below lets 'sol' through for balance/history,
+  // so the real Solana adapter would otherwise make live RPC calls in
+  // jsdom (slow retries). A zero stub keeps every test in this file
+  // off the network; the watch-only test re-registers the 2368210
+  // stub after mount.
+  registerAdapter(stubAdapter('sol', okBalance('0'), okTxs([])));
 });
 
 describe('wallet context — adapter-backed balances and history', () => {
@@ -205,4 +217,66 @@ describe('wallet context — adapter-backed balances and history', () => {
   // 'clears balances and history on vault lock' was deleted with the lock
   // (owner order 2026-11-20): lockVault no longer exists, so there is no
   // lock that clears balances or history any more.
+
+  it('loads a watch-only balance right after addXpub, with no manual refresh', async () => {
+    // Token gaps, item 6: adding a watch-only wallet must fetch its
+    // balance (and history after it) at once — before this fix the row
+    // kept its boot-time 'unavailable' state until a reload or a
+    // manual refresh, because only the boot refresh called
+    // refreshBalances. The SOL address is the public Lane 1 address
+    // (live balance 0.00236821 SOL = 2368210 lamports).
+    const SOL_ADDRESS = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+    const mounted = await mountProvider();
+    try {
+      registerAdapter(stubAdapter('sol', okBalance('2368210'), okTxs([])));
+      expect(latest?.balances.sol.status).toBe('unavailable');
+      await act(async () => {
+        await latest?.addXpub('sol', SOL_ADDRESS, '');
+      });
+      await act(async () => {
+        for (let i = 0; i < 40 && latest?.balances.sol.status !== 'available'; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(latest?.balances.sol.status).toBe('available');
+      expect(latest?.balances.sol.value).toBe('2368210');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('restores a stored watch-only Solana wallet on boot (hydration covers all 13 chains)', async () => {
+    // Token gaps, item 6 + item 8: the boot hydration effect iterated
+    // a stale four-chain list, so a SOL watch-only wallet persisted in
+    // localStorage was dropped on every reload — the Wallets screen
+    // showed "No wallets imported" and the Assets row stayed
+    // "Balance unavailable" until the wallet was re-added. Seeding
+    // storage before mount reproduces the reload: the provider must
+    // restore xpubs.sol, derive its address, and load its balance.
+    const SOL_ADDRESS = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+    localStorage.setItem(
+      'bawa-watch-only-xpubs',
+      JSON.stringify({
+        btc: null, eth: null, trx: null, ton: null,
+        sol: { chain: 'sol', xpub: SOL_ADDRESS, label: '', derivedCount: 5 },
+        bsc: null, matic: null, arb: null, op: null, base: null,
+        avax: null, ltc: null, doge: null,
+      }),
+    );
+    registerAdapter(stubAdapter('sol', okBalance('2368210'), okTxs([])));
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        for (let i = 0; i < 200 && latest?.balances.sol.status !== 'available'; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(latest?.xpubs.sol).not.toBeNull();
+      expect(latest?.xpubs.sol?.xpub).toBe(SOL_ADDRESS);
+      expect(latest?.balances.sol.status).toBe('available');
+      expect(latest?.balances.sol.value).toBe('2368210');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

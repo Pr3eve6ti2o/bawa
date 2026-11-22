@@ -7,6 +7,10 @@ interface AssetRowProps extends React.ComponentProps<'div'> {
   amount: string
   value?: string
   detail?: string
+  /** Token gaps, item 2: show the VERIFIED tick beside an official token. */
+  verified?: boolean
+  /** Token gaps, item 2: short contract under the token, e.g. 0xA0b8…eB48. */
+  subline?: string
 }
 
 function AssetRow({
@@ -15,6 +19,8 @@ function AssetRow({
   amount,
   value,
   detail,
+  verified,
+  subline,
   className,
   ...props
 }: AssetRowProps) {
@@ -27,8 +33,16 @@ function AssetRow({
       <div className="flex items-center gap-3">
         {avatar}
         <div>
-          <div className="text-base font-semibold">{symbol}</div>
+          <div className="text-base font-semibold">
+            {symbol}
+            {verified === true && (
+              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+            )}
+          </div>
           {' '}
+          {subline !== undefined && (
+            <div className="text-xs text-ink">{subline}</div>
+          )}
           <div className="text-sm text-ink">{amount}</div>
         </div>
       </div>

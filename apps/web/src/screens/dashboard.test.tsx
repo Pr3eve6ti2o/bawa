@@ -177,6 +177,76 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('shows a partial $0.00 hero when every loaded balance is zero and a chain failed', async () => {
+    // Token gaps, item 7: a fresh wallet whose only failure is one
+    // chain (the old SOL 403 / DOGE 429 shape) must not read the bare
+    // 'Unavailable' — the loaded total is genuinely $0.00, disclosed
+    // as partial.
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'error', reason: 'rpc-error' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(heroAmount(mounted)).toBe('$0.00 (Partial)');
+      expect(mounted.div.textContent).toContain('Partial total — some balances or prices are missing');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('adds priced token values to the hero total', async () => {
+    // Token gaps, item 7: 1 BTC ($62,683.00) + 25 USDC ($25.00).
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.includes('usd-coin')
+            ? {
+                ...freshPayload(),
+                'usd-coin': { usd: 1, last_updated_at: Math.floor(Date.now() / 1000) - 30 },
+              }
+            : freshPayload(),
+        headers: { get: () => null },
+      })),
+    );
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        tokenBalances: {
+          'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+            status: 'available',
+            value: '25000000',
+          },
+        },
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const start = Date.now();
+      while (Date.now() - start < 10_000) {
+        if (heroAmount(mounted) === '$62,708.00') break;
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+      }
+      expect(heroAmount(mounted)).toBe('$62,708.00');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the empty state when no balances are available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(balancesFor({}));

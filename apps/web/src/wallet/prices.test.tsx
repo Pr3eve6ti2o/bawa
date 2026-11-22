@@ -816,6 +816,70 @@ describe('portfolioTotal', () => {
     const balances = { ...zeros, btc, eth: { status: 'loading' } } as const;
     expect(portfolioTotal(balances, fresh, NOW_MS).status).toBe('unavailable');
   });
+
+  it('returns a partial $0.00 total when every loaded balance is zero and a chain failed', () => {
+    // Token gaps, item 7: a fresh wallet whose SOL balance errors (the
+    // old 403) and DOGE flakes has every other balance zero — the old
+    // code returned 'unavailable' here even though the loaded total is
+    // genuinely $0.00. The failed chain is disclosed by partial: true
+    // (the dashboard's "some balances are missing" note).
+    const balances = { ...zeros, sol: { status: 'error', reason: 'rpc-error' } } as const;
+    expect(portfolioTotal(balances, fresh, NOW_MS)).toEqual({
+      status: 'partial',
+      text: '$0.00',
+      partial: true,
+    });
+  });
+
+  it('returns unavailable when every balance failed and none loaded as zero', () => {
+    const failed = Object.fromEntries(
+      Object.keys(zeros).map((chain) => [chain, { status: 'unavailable' }]),
+    ) as Record<string, { status: 'unavailable' }>;
+    expect(portfolioTotal(failed as never, fresh, NOW_MS)).toEqual({
+      status: 'unavailable',
+      text: 'Unavailable',
+      partial: false,
+    });
+  });
+
+  it('adds priced token values to the hero total', () => {
+    // Token gaps, item 7: the hero totals the whole portfolio, natives
+    // + tokens. 1 BTC ($62,683.00) + $25.00 of tokens = $62,708.00.
+    const tokens = { minorUnits: [2500], partial: false, loadedZero: false, unpricedNonzero: false };
+    expect(portfolioTotal({ ...zeros, btc }, fresh, NOW_MS, undefined, tokens)).toEqual({
+      status: 'total',
+      text: '$62,708.00',
+      partial: false,
+    });
+  });
+
+  it('returns a partial $0.00 total when a token failed and all natives are zero', () => {
+    const tokens = { minorUnits: [], partial: true, loadedZero: false, unpricedNonzero: false };
+    expect(portfolioTotal(zeros, fresh, NOW_MS, undefined, tokens)).toEqual({
+      status: 'partial',
+      text: '$0.00',
+      partial: true,
+    });
+  });
+
+  it('returns unavailable when a loaded non-zero token has no fresh price', () => {
+    // A known non-zero amount with an unknown price must never read $0.00.
+    const tokens = { minorUnits: [], partial: true, loadedZero: false, unpricedNonzero: true };
+    expect(portfolioTotal(zeros, fresh, NOW_MS, undefined, tokens)).toEqual({
+      status: 'unavailable',
+      text: 'Unavailable',
+      partial: false,
+    });
+  });
+
+  it('still returns zero when all natives and tokens loaded as zero', () => {
+    const tokens = { minorUnits: [], partial: false, loadedZero: true, unpricedNonzero: false };
+    expect(portfolioTotal(zeros, fresh, NOW_MS, undefined, tokens)).toEqual({
+      status: 'zero',
+      text: '$0.00',
+      partial: false,
+    });
+  });
 });
 
 describe('quoteFreshnessLabel', () => {

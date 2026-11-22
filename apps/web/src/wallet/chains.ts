@@ -354,7 +354,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return "m/44'/501'/0'";
     },
-    rpcEndpoints: ['https://api.mainnet-beta.solana.com'],
+    rpcEndpoints: ['https://solana-rpc.publicnode.com', 'https://public.rpc.solanavibestation.com'],
     evmChainId: null,
     capabilities: capabilitiesForBalanceChain('sol'),
   },
@@ -482,7 +482,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/3'/${account}'/0/${index}`;
     },
-    rpcEndpoints: ['https://api.blockcypher.com/v1/doge/main'],
+    rpcEndpoints: ['https://sochain.com/api/v3', 'https://api.blockcypher.com/v1/doge/main'],
     evmChainId: null,
     capabilities: capabilitiesForBalanceChain('doge'),
   },

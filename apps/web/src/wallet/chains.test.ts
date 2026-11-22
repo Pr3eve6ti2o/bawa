@@ -285,8 +285,13 @@ describe('chains registry', () => {
     // Token discovery (2026-11-22): live-verified endpoints (Lane 1).
     // Polygon pins the -bor- host only — polygon-rpc.publicnode.com
     // returned empty twice and is never pinned.
+    // Token gaps (2026-11-22, Lane 1): SOL retires
+    // api.mainnet-beta.solana.com (browser 403) for publicnode primary +
+    // Vibe Station fallback; DOGE adds SoChain primary ahead of
+    // BlockCypher.
     expect(CHAINS.sol.rpcEndpoints).toEqual([
-      'https://api.mainnet-beta.solana.com',
+      'https://solana-rpc.publicnode.com',
+      'https://public.rpc.solanavibestation.com',
     ]);
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',
@@ -310,6 +315,7 @@ describe('chains registry', () => {
       'https://litecoinspace.org/api',
     ]);
     expect(CHAINS.doge.rpcEndpoints).toEqual([
+      'https://sochain.com/api/v3',
       'https://api.blockcypher.com/v1/doge/main',
     ]);
   });

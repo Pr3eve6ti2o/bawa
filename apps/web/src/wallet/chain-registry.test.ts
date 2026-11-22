@@ -34,14 +34,20 @@ describe('chain registry — token discovery', () => {
   });
 
   it('pins the live-verified RPC for each new chain', () => {
-    expect(CHAINS.sol.rpcEndpoints).toEqual(['https://api.mainnet-beta.solana.com']);
+    expect(CHAINS.sol.rpcEndpoints).toEqual([
+      'https://solana-rpc.publicnode.com',
+      'https://public.rpc.solanavibestation.com',
+    ]);
     expect(CHAINS.bsc.rpcEndpoints).toEqual(['https://bsc-rpc.publicnode.com']);
     expect(CHAINS.arb.rpcEndpoints).toEqual(['https://arbitrum-rpc.publicnode.com']);
     expect(CHAINS.op.rpcEndpoints).toEqual(['https://optimism-rpc.publicnode.com']);
     expect(CHAINS.base.rpcEndpoints).toEqual(['https://base-rpc.publicnode.com']);
     expect(CHAINS.avax.rpcEndpoints).toEqual(['https://avalanche-rpc.publicnode.com']);
     expect(CHAINS.ltc.rpcEndpoints).toEqual(['https://litecoinspace.org/api']);
-    expect(CHAINS.doge.rpcEndpoints).toEqual(['https://api.blockcypher.com/v1/doge/main']);
+    expect(CHAINS.doge.rpcEndpoints).toEqual([
+      'https://sochain.com/api/v3',
+      'https://api.blockcypher.com/v1/doge/main',
+    ]);
   });
 
   it('lists all 13 chains for balance once their adapters land', () => {
