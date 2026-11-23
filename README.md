@@ -24,21 +24,10 @@ If you arrived looking for a wallet to hold funds, read [If you want a wallet to
 
 Real screenshots of the example web wallet running from this branch, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px.
 
-![Dashboard of the Bawa web wallet on desktop](docs/images/web-wallet-dashboard-desktop.png)
-
-*Dashboard on desktop — portfolio, popular chains, assets and recent activity.*
-
-<img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" width="390">
-
-*Dashboard on mobile — a fresh test wallet, same zero balances.*
-
-![Receive screen of the Bawa web wallet on desktop](docs/images/web-wallet-receive-desktop.png)
-
-*Receive on desktop — the QR card with its three templates: address, payment request and share link.*
-
-<img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="390">
-
-*Receive on mobile — the QR card, amount and full address.*
+| Dashboard (desktop) | Dashboard (mobile) | Receive (desktop) | Receive (mobile) |
+| --- | --- | --- | --- |
+| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" width="180"> | <img src="docs/images/web-wallet-receive-desktop.png" alt="Receive screen of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="180"> |
+| Portfolio, assets and recent activity. | The same wallet on mobile. | The QR card with its three templates: address, payment request and share link. | The QR card, amount and full address. |
 
 ## Quickstart
 
