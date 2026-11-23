@@ -307,6 +307,181 @@ Known gaps (not fixed here, flagged to the coordinator):
   a reload loses it; derivation stays blocked until the passphrase is in
   the session again (section 7's gap, unchanged).
 
+## 9. Temporary devnet mode — test networks only, removable without touching mainnet
+
+**Decision: a TEMPORARY devnet mode (owner order 2026-11-22 ~19:53 IST) lets
+the wallet test send and receive on the four adapter chains' test networks.
+Devnet is off by default, clearly marked in the UI and the code, and must
+be removable without touching mainnet. It is NOT merged into adopt-proper
+or main; it lives on `panel-rebuild/devnet-temp` only.**
+
+Evidence: the owner's order — "add devnet temporary so we can test send
+and receive function properly in the wallet and get some devnet token for
+each chain yourself. And tell me how it went. Devnet will be temporary
+for checking the wallet all the chains."
+
+What was done (Lane C, hands-on Muse, 0 Sol calls):
+
+- `apps/web/src/wallet/devnet.ts` (new): `DEVNET_ENABLED_KEY =
+  'bawa-devnet-enabled'`, `readDevnetEnabled()` (default off) /
+  `writeDevnetEnabled()`, plus the address re-encoding helpers (bech32
+  BIP-173/350, base58check, TON testnet-flag variant with CRC16-XMODEM).
+- `apps/web/src/wallet/devnet-endpoints.ts` (new, outside the generated
+  block in `chains.ts`): `DEVNET_CHAIN_CONFIGS` — Bitcoin testnet4
+  (mempool.space/testnet4, genesis
+  `00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043`),
+  Ethereum Sepolia (chainId 11155111, publicnode RPC, Blockscout
+  history), TRON Nile (nile.trongrid.io, api.nileex.io fallback), TON
+  testnet (testnet.toncenter.com). `DEVNET_NETWORK_IDS`,
+  `isDevnetNetworkId()`, `chainConfigForDevnetNetwork()`,
+  `devnetExplorerTxUrl()`, and the four devnet `broadcast()` closures
+  (mempool `POST /tx`, viem `sendRawTransaction`, TronGrid
+  `POST /wallet/broadcasttransaction`, TonCenter `sendBoc`).
+- `apps/web/src/wallet/core.ts`: `deriveDevnetAddressesAt()` — BTC at
+  `m/84'/1'/…` re-encoded `bc1q` → `tb1q`; TON testnet-flag variant;
+  ETH/TRX reuse mainnet derivation. `DEFAULT_PATHS` / `pathFor`
+  untouched.
+- `apps/web/src/wallet/adapters/`: devnet factory overrides + a
+  separate devnet registry (`registerDevnetAdapters()`,
+  `getDevnetAdapter()`, `getAdapterForMode(chain, devnet)`,
+  `registeredDevnetChains()`). Mainnet `registerAllAdapters` untouched.
+  Devnet adapters accept testnet forms ONLY; mainnet adapters accept
+  mainnet forms only.
+- `apps/web/src/wallet/send.ts`: `SendDevnetOptions = { devnet? }`
+  threaded through `validateRecipient`, `previewSendAmount`,
+  `simulateSend`, `planBtcFee`, `signEthOffline` (Sepolia chainId),
+  `signBtcOffline` (key path `m/84'/1'/0'/0/0`, tb1q → bc1q mapping
+  for Wallet Core calls), `signTrxOffline`, `signTonOffline`. New
+  `broadcastSignedDevnet(chain, signedTx, { devnet })`: asserts devnet
+  mode on, provenance not test-provenance, and the adapter
+  `networkId` is a devnet id — then calls the devnet adapter
+  `broadcast()`. Mainnet `broadcastSigned` / every mainnet
+  `broadcast()` still throw `BROADCAST_DISABLED_MESSAGE`.
+- `apps/web/src/engine/destination.ts` + `engine/boundary.ts`:
+  devnet-aware BTC/TON validation (`tb` HRP, base58 `0x6f`/`0xc4`,
+  TON testnet flag). Watch-only stays mainnet-only, no tpub.
+- `apps/web/src/wallet/tracker.ts` + `wallet/prices.ts` +
+  `state/pending-broadcasts.ts`: tracker lookups take `{ devnet? }`
+  (testnet explorers); `usePrices({ devnet? })` skips cached AND live
+  mainnet prices in devnet mode; pending broadcasts recorded under a
+  separate key `bawa-pending-broadcasts-devnet`.
+- `apps/web/src/state/wallet-context.tsx`: `devnetEnabled` +
+  `setDevnetEnabled()` (mirrors autoLock), `ensureDevnetAdapters()`,
+  `devnetEnabledRef`; devnet addresses persist under
+  `bawa-vault-addresses-devnet:v1`, never overwriting
+  `bawa-vault-addresses:v1`; toggling off restores mainnet addresses.
+- UI (`app/app.tsx`, `screens/network-selection.tsx`,
+  `screens/devnet-setting.tsx` (new), `screens/welcome.tsx`,
+  `screens/receive.tsx`, `screens/send.tsx`,
+  `screens/send-review.tsx`, `screens/send-approval.ts`,
+  `screens/track-transaction.tsx`, `screens/dashboard.tsx`,
+  `screens/asset-list.tsx`, `screens/asset-detail.tsx`,
+  `screens/chain-strip.tsx`): the header pill reads "Devnet — test
+  mode" when on; the Networks screen gains the Devnet switch with
+  temporary / test-only / valueless copy and per-chain devnet status;
+  receive/welcome copy names the devnet per chain; the send flow gains
+  stage `'broadcast-devnet'` (tx hash + testnet explorer link +
+  "testnet tokens, no value" copy); the tracker screen and price
+  displays pass the devnet flag. Mobile layout at 390/820 px is
+  unchanged except the devnet switch/marker itself.
+- Tests: devnet describes added to `wallet/devnet.test.ts`,
+  `wallet/devnet-endpoints.test.ts`, `wallet/core.test.ts`,
+  `wallet/adapters/devnet.test.ts`, `wallet/send.test.ts`,
+  `engine/destination.test.ts`, `engine/boundary.test.ts`,
+  `wallet/tracker.test.ts`, `wallet/prices.test.tsx`,
+  `state/pending-broadcasts.test.ts`,
+  `state/wallet-context.test.tsx`,
+  `screens/devnet-setting.test.tsx` (new),
+  `screens/network-selection.test.tsx` (new),
+  `screens/track-transaction.test.tsx`, `screens/dashboard.test.tsx`,
+  `app/app.test.tsx`, `wallet/chains.test.ts` (devnet ids live in the
+  devnet module only; the mainnet registry guard is kept).
+- CONSTRAINTS.md: exception E1 (owner 2026-11-22, expires 2027-02-20)
+  carves devnet-only broadcast out of the "no broadcast path" floor;
+  D2 records its trigger as met for devnet only. AGENTS.md §8 was NOT
+  edited — the conflict between its DoD line and this programme is
+  flagged in the Lane C report instead.
+
+CONFLICT (flagged, not resolved by editing house rules): AGENTS.md §8
+DoD and CONSTRAINTS.md both state "No broadcast path built or enabled
+(standing owner order)". This programme's owner order explicitly
+authorises a devnet-only broadcast path, so the work proceeded with
+mainnet broadcast still throwing unconditionally, and the loosening is
+recorded loudly (E1 + D2 + this section). The exception expires
+2027-02-20; if devnet is still needed then, the owner must renew it.
+
+Known gaps (not fixed here, flagged to the coordinator):
+
+- BTC plan/sign with tb1q is proven only by unit test (synthetic
+  UTXOs, no WASM chain verification): `signBtcOffline` devnet signs a
+  tb1q spend in-test, but live proof with a funded testnet4 UTXO,
+  broadcast and explorer confirmation stays with the testing lane.
+  Never let a first testnet plan attempt run against the live app
+  session — an uncaught WASM throw aborts the instance.
+- The TON devnet `broadcast()` return shape (base64 message hash →
+  hex tx hash) is an assumption from the TonCenter `sendBoc` docs,
+  not a live observation; the testing lane must verify it.
+- Sign functions always derive account 0 index 0, ignoring a
+  non-default vault account selection (mainnet has the same
+  behaviour; out of scope).
+
+### Removal checklist — how to remove devnet mode later
+
+Devnet is designed to delete cleanly. Work top-down; after each step
+run `npx tsc --noEmit` and the full vitest suite in `apps/web`.
+
+1. Delete `apps/web/src/wallet/devnet.ts`,
+   `apps/web/src/wallet/devnet-endpoints.ts`,
+   `apps/web/src/wallet/adapters/devnet.test.ts`,
+   `apps/web/src/screens/devnet-setting.tsx` and its test.
+2. In `apps/web/src/wallet/core.ts`: delete
+   `deriveDevnetAddressesAt()` and its tests in `core.test.ts`.
+3. In `apps/web/src/wallet/adapters/`: delete the devnet factory
+   overrides and `registerDevnetAdapters()` / `getDevnetAdapter()` /
+   `getAdapterForMode()` / `registeredDevnetChains()` in `index.ts`;
+   restore `requireMainnet` naming if desired. Delete the devnet
+   `broadcast()` closures.
+4. In `apps/web/src/wallet/send.ts`: delete `broadcastSignedDevnet()`
+   and the `SendDevnetOptions` parameter from every function; restore
+   the mainnet-only call sites. Delete the devnet describe in
+   `send.test.ts`.
+5. In `apps/web/src/engine/destination.ts` and
+   `engine/boundary.ts`: delete the devnet branches; restore the
+   mainnet-only validators.
+6. In `apps/web/src/wallet/tracker.ts`, `wallet/prices.ts` and
+   `state/pending-broadcasts.ts`: delete the `{ devnet? }` options,
+   the devnet parse variants, and the devnet pending-broadcast
+   functions + key `bawa-pending-broadcasts-devnet`.
+7. In `apps/web/src/state/wallet-context.tsx`: delete `devnetEnabled`
+   / `setDevnetEnabled` / `ensureDevnetAdapters()` /
+   `devnetEnabledRef` and the `bawa-vault-addresses-devnet:v1` key.
+   Users' `bawa-devnet-enabled` flags and devnet address records
+   become inert localStorage entries; delete them on next unlock if
+   desired.
+8. In the UI: delete the `DevnetSetting` card from
+   `screens/network-selection.tsx` and restore the mainnet-only copy;
+   restore the `Mainnet` pill in `app/app.tsx`, the `MAINNET` badge
+   and copy in `screens/welcome.tsx`, the mainnet copy in
+   `screens/receive.tsx`; delete the `'broadcast-devnet'` stage from
+   `screens/send-approval.ts`, the devnet branch in `screens/send.tsx`
+   and `screens/send-review.tsx`; drop the devnet flag from
+   `screens/track-transaction.tsx` and the `usePrices({ devnet })`
+   calls.
+9. In `wallet/chains.test.ts`: delete the "keeps devnet network ids
+   in the devnet module only" test.
+10. In `CONSTRAINTS.md`: delete exception E1 and restore the D2 row
+    to its pre-devnet text. In this file: mark this section REMOVED
+    with the date. Verify `node scripts/generate-chains.mjs --check`,
+    `scripts/check-wallet-cycles.mjs`, `npm run lint`, `npm audit`
+    and the full gates still pass — the mainnet code paths must be
+    byte-identical to before devnet was added.
+11. In `apps/web/src/app/security-headers.ts` and
+    `security-headers.test.ts`: delete the five TEMPORARY devnet
+    `connect-src` origins (Sepolia RPC + Blockscout, Nile + Nileex,
+    testnet TonCenter) and restore the six mainnet origins. Found by
+    Lane D, 2026-11-22: without them the browser refuses every devnet
+    fetch, so devnet mode was dead in the app until this fix.
+
 ## Coordinator calls made during the programme
 
 - **Doc 4 scope (Phase 4):** kept Lane I's "Doc 4 — Mainnet" → "Mainnet"
@@ -328,6 +503,154 @@ Known gaps (not fixed here, flagged to the coordinator):
 - **Two strip implementations left separate:** Lane A's exported
   `PopularChainsStrip` in `welcome.tsx` vs Lane C's dashboard strip.
   Unifying two working strips is a nice-to-have, not a necessity.
+
+## Token discovery (2026-11-22, branch panel-rebuild/token-discovery)
+
+Owner order 2026-11-22 ~20:51 IST: the wallet showed only the 4 native
+coins (BTC, ETH, TRX, TON). It now loads with 20 tokens by default — the
+13 native coins plus USDC/USDT/DAI/LINK/UNI/WBTC on Ethereum and USDT on
+TRON (contracts in `apps/web/src/wallet/tokens.ts`, all verified against
+their upstream CoinGecko listings and Trust Wallet `info.json` names by
+Lane 1) — and has a working "Add token" flow (add a chain from the 13
+registry chains; add a token by contract address, ERC-20 or TRC-20).
+
+Decisions:
+
+- **Price-id traps fixed.** `PRICE_IDS` mapped Arbitrum → `arbitrum`
+  and Optimism → `optimism` (governance-token prices, not native ETH);
+  both now map to `ethereum`. `matic` mapped to `matic-network`, whose
+  CoinGecko quote was last updated 2026-02-03 (stale — it would parse as
+  expired forever); it now maps to `polygon-ecosystem-token`, the live
+  POL listing (last updated 2026-11-22, $0.075427). Regression tests in
+  `wallet/prices.test.tsx` and `wallet/token-prices.test.ts`.
+- **Polygon RPC pin.** `https://polygon-bor-rpc.publicnode.com` only —
+  `polygon-rpc.publicnode.com` returned empty twice (Lane 1) and is
+  never pinned. The other eight new RPCs are Lane 1's live-verified
+  endpoints (publicnode for the EVM chains, api.mainnet-beta.solana.com,
+  litecoinspace.org, api.blockcypher.com for DOGE).
+- **LTC second-source note.** Litecoinspace (pinned) vs BlockCypher
+  disagreed by 627,083,939 sats on one address
+  (`LYhttvnKawAv6RcHQ4eBkNtifuiEA99PFe`); the gap is explained by a
+  block-3217536 payment of 626,114,459 sats plus 969,480 sats that
+  BlockCypher's address-balance index had not yet folded in (its chain
+  height matched the tip, and it knew the transaction). The pinned
+  source reconciles to chain tip and transaction data; the LTC balance
+  is verified with this documented lag note.
+- **Token balances are screen-driven, not boot-wired.** `refreshTokenBalances`
+  runs when the asset rows mount (and when vault addresses change), like
+  the price hooks — not in the provider boot effect. The provider tests
+  derive real vault addresses, and a boot-wired token refresh would fire
+  live RPC calls from unit tests.
+- **Hero total stays native-only.** `portfolioTotal` takes an optional
+  `chains` parameter (defaults to all 13); the dashboard passes
+  `availableFor('balance')`. Token fiat values show on their rows, not
+  in the hero total.
+- **Fee-quote (new EVM chains) and LTC history stay blocked in
+  capabilities** despite being implemented and unit-tested — no live
+  cross-check yet. Never faked; `registry/capabilities.json` flips only
+  `balance` to IMPLEMENTED_AND_VERIFIED for the 9 chains.
+- **Add Token dialog uses a native `<select>`** for the chain picker,
+  not Radix Select: no screen uses Radix Select, the native select is
+  the auto-lock-setting precedent, and it is fully keyboard-accessible
+  and drivable in the repo's raw-DOM test harness.
+- **Duplicate pre-check covers the custom list only** in the dialog
+  (adding a default token runs verification first); the context's
+  `addCustomToken` additionally rejects defaults at the persistence
+  boundary, and the dialog surfaces that error.
+- **Logos:** Trust Wallet assets pinned at
+  `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`; BSC from
+  `blockchains/smartchain` (not `binance`), Avalanche from
+  `blockchains/avalanchec`, Dogecoin from `blockchains/doge`.
+- **Trust Wallet logo files:** original PNGs kept as canonical sources;
+  96 px WebP at quality 85 for display (39,670 bytes total vs 303,787
+  PNG, -87%).
+- **`/networks` is registry-driven** with an enable/disable toggle per
+  chain. A disabled chain's rows are hidden; its derived addresses stay
+  in the vault, so re-enabling restores them.
+- **Token history is honestly unavailable.** The token detail route
+  (`/assets/:chain/:token`) shows "Transaction history is not connected
+  for this token yet" — no token-history adapter exists, and no list is
+  fabricated. Token Send is hidden (no token send exists); Receive
+  stays (the token's receive address is the chain address).
+- **Bundle budget: raw `eth_call`, no viem `readContract`.** The first
+  build totalled 4,051,685 bytes vs the 4,040,000 budget. The cause was
+  measured, not guessed: `token-balances.ts` used viem `readContract`,
+  whose `call` action pulls viem's ABI coder + CCIP machinery into the
+  shared chunks (a 152,006-byte `retry` chunk; the baseline `eth.ts`
+  never used `readContract` — it uses raw `transport.request`). The EVM
+  token path was rewritten to raw JSON-RPC `eth_call` / `eth_getCode` /
+  `eth_chainId` over a minimal `EvmRpcClient` (plain fetch on
+  `httpFetchTransport`, 10 s timeout), with hand-encoded calldata and
+  the repo's own ABI decoders (`decodeAbiString` gained a bytes32
+  fallback for older tokens like MKR). That collapsed the `retry`
+  chunk to 1,879 bytes. The Add Token dialog also dynamically imports
+  `token-balances` at submit time (saved only 2,583 bytes — the static
+  import was not the main cause). Final total 4,050,102 — still over
+  the nominal budget by 10,102 bytes (0.25%). The remaining growth vs
+  the true 67c48e2 baseline (3,978,773, built in /tmp/bawa-baseline)
+  is Radix Dialog's first use (~30–50 KB, previously tree-shaken out),
+  keccak's first use (~13 KB, via `isAddress`/`getAddress`), and ~20 KB
+  of genuinely new code; no duplication was found. CONSTRAINTS.md line
+  53 still records a stale baseline (3,846,651), so its +5% ratchet
+  intent is 4,177,711 and this build (+1.8% over baseline) is inside
+  it. CONSTRAINTS.md was NOT edited — weakening the bar to pass is
+  forbidden. Flagged for the coordinator / Lane 3: either refresh the
+  stale baseline measurement (a factual correction; the +5% rule
+  stays) or explicitly accept the 0.25% nominal overage. Largest chunk
+  `boundary` 2,901,695 is under its 3,050,000 budget.
+- **Chain list source in the Add Token dialog.** The dialog lists
+  chains from `availableFor('derive')`, not `SUPPORTED_CHAINS`: the
+  dashboard and asset-list tests factory-mock `../wallet/chains`
+  with only `availableFor` + `chainConfig`, so importing
+  `SUPPORTED_CHAINS` broke those tests at module load even though the
+  dialog never opens there. `availableFor('derive')` is all 13 chains
+  in production. Same constraint forced the token rows to be filtered
+  by `availableFor('balance')` (otherwise the mocked empty list still
+  rendered 7 loading token rows instead of the empty state), and the
+  Popular chains strip to pin its 4 chains instead of deriving them
+  from `availableFor('balance')` (which now returns all 13).
+- **Solana's pinned RPC 403s browser requests (2026-11-22).** The
+  Solana adapter is correct and unit-tested, and
+  `api.mainnet-beta.solana.com` answers 200 from node — but from a
+  real browser (Origin + Chrome UA) it answers 403 "Access forbidden",
+  so the SOL row honestly shows "Could not load balance" + Retry in
+  the browser while its price still loads. The alternates were probed
+  from the browser too and are worse: `solana-rpc.publicnode.com`
+  works from node (200) but the in-page fetch throws (CORS preflight
+  failure), `1rpc.io/sol` answers 400 "unknown network" from node,
+  and `rpc.ankr.com/solana` answers 403 "API key is not allowed"
+  from node. No free Solana RPC works from the browser, so the pin
+  stays on the canonical endpoint and the failure stays honest — no
+  balance is faked. Consequence: E2E-03 asserts settled rows
+  (zero + failed == 20, at least 19 zeros) instead of an exact 20,
+  and the add-chain E2E asserts the Solana row rather than a link
+  (failed/loading rows are not links, by the pre-existing row
+  pattern). If a keyed Solana RPC is ever configured, the pin and
+  the E2E expectations should be revisited.
+- **E2E port collision (2026-11-22).** The first E2E run hit a stale
+  preview server on 127.0.0.1:4193 left over from the parallel devnet
+  programme (cwd `bawa-devnet-temp-worktree`, serving the devnet
+  dist — recognisable by its `devnet-*.js` chunk). Playwright reused
+  the occupied port, so 4 tests failed against the wrong app (no "Add
+  token" button, 5 "Zero balance" rows instead of 20). The stale
+  server was killed by explicit PID (425863) and the suite re-run
+  against this branch's own dist. Lesson: check `ss -ltn` / the
+  serving process cwd before trusting an E2E failure on a shared VM.
+- **Root `npm test` / Python suite baselining (2026-11-22).** Root
+  `npm test` first failed with MODULE_NOT_FOUND
+  (`@trustwallet/wallet-core`) — identical on untouched 67c48e2,
+  because neither worktree had `tools/hdwallet-gen/node_modules`
+  installed. After `npm ci` in `tools/hdwallet-gen` it passes on the
+  branch (exit 0). The Python suite first failed identically on
+  branch and baseline (make_wallet 20 errors, decrypt_seed 5
+  failures + 3 errors) — missing `bip_utils` / `mnemonic` packages in
+  system Python. With an isolated venv
+  (`/tmp/lane2-venv`, `bip_utils` + `cryptography` + `mnemonic`
+  installed) both suites pass on the branch: make_wallet 89/89,
+  decrypt_seed 30/30. No repo code was changed for any of this.
+- **Token discovery Lane 3 verification - bundle baseline correction + manifest port (2026-11-22).** Lane 3 rebuilt adopt-proper 67c48e2 from clean (npm run build) and measured total JS 3,978,773 bytes, largest chunk (boundary) 2,901,695 bytes - byte-identical to Lane 2's independent build. The CONSTRAINTS.md baseline 3,846,651 was measured 2026-11-20 on the repo-study tree (0fd3a2e), not on the adopt-proper base, so it was stale. Factual correction only: the +5% ratchet rule is unchanged, the total cap moves 4,040,000 to 4,177,711, and the branch build (4,050,102) is inside it. The largest-chunk budget 3,050,000 is unchanged (2,901,695 x 1.05 = 3,046,780, still under it). PERF.md records the re-measurement with its history kept. Separately, e2e/manifest.json said the preview serves on 4173 while the Playwright config deliberately serves on 4193 (4173 is Vite's default and is held by another lane on this shared VM); the manifest now says 4193.
+- **Token gaps, items 1–10 + Base USDC #21 (2026-11-22, branch panel-rebuild/token-gaps, Lane 2 IMPLEMENT, hands-on Muse, 0 Sol calls).** SOL balances: `solana-rpc.publicnode.com` primary, `public.rpc.solanavibestation.com` fallback (both verified in-page 200 by Lane 1: 2368210 lamports for 4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM); `api.mainnet-beta.solana.com` retired (in-page 403 re-confirmed). DOGE balances: SoChain `https://sochain.com/api/v3/balance/DOGE/{address}` primary (confirmed 10007.79125175 DOGE for the fixture address DU5VEHzdNfQWUnonpHkXVchYqi1mqC3S8K), BlockCypher fallback. CSP pinned to 17 origins (added publicnode, Vibe Station, sochain.com; dropped mainnet-beta). Verified tick rule: verified = in-repo DEFAULT_TOKENS OR the record's coingeckoId resolved from CoinGecko's contract endpoint for that exact chain+contract at add time; raw-contract user-added tokens get no tick. Short contract = first 6 + `…` + last 4. Payment URIs: BIP-21, EIP-681 with @chainId (+ transfer for ERC-20), Solana Pay, TON `ton://transfer`; TRON has no generic payment-URI standard, so no `tron:` URI is invented — TRX/TRC-20 QRs stay address-only with amount as text and the shareable Bawa `/send` web link carries amount+address. Base USDC #21: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, 6 decimals, CoinGecko usd-coin (verified from CoinGecko + Lane 1). Portfolio hero: partial $0.00 when everything loaded is zero and a chain failed; 'unavailable' only when nothing loaded at all. E2E-03 updated to 21 rows (13 natives + 8 default tokens); the >= 18 zero floor is unchanged pending CDP evidence. No merge, no push.
+- **Token gaps, item 8 bug hunt round 2 — watch-only hydration + 15-word import gate (2026-11-22, same branch).** (1) Watch-only hydration covered only 4 of 13 chains: `state/wallet-context.tsx` defined a local `CHAINS = ['btc','eth','trx','ton']` that the boot hydration effect iterated, so a stored watch-only wallet for SOL (or any other non-original chain) was persisted but dropped on every reload — Wallets showed "No wallets imported" and the Assets row stayed "Balance unavailable" until re-added. The `addXpub` balance-refresh fix was correct but wiped by the remount (`page.goto` reloads; in-app SPA navigation kept the in-memory state, so a real user hit this only on reload/fresh visit). Fix: hydration + cleanup iterate `ALL_CHAIN_IDS` (13); RED-first test seeds localStorage before mount and asserts xpubs.sol restored + balance 2368210. (2) Import rejected valid 15-word mnemonics: the submit gate accepted only 12 or 24 words, but the repo's own published test vector is 15 words (docs/mainnet/MAINNET-VECTORS.md) and BIP-39 allows 12/15/18/21/24. Fix: gate accepts all five counts; helper/placeholder/error copy updated; RED-first test restores the 15-word vector to the preview step. No merge, no push.
 
 ## 10. UI/UX Fixes programme — 21 items, merged into token-gaps (2026-11-23)
 
@@ -360,8 +683,12 @@ Still open after the programme: E2E-03/06 need a stable-network run;
 non-zero DOGE watch-row render unproven; 1919 settled widths not
 captured; TON Issue 5 (first-send state init) and Issue 6 (`/track`
 message hash) in `DEVNET-ISSUES.md`; devnet exception E1 expires
-2027-02-20; the mobile Receive 40 px question awaits the owner's pick;
-the item-14 cannot-add chain list is not recorded in the repo.
+2027-02-20; the mobile Receive 40 px question was decided 2026-11-23
+~14:17 IST (owner: keep the fix — do not re-ask; the fix itself was
+restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); the item-14 cannot-add chain
+list is now recorded in `docs/UI-UX-FIXES-PROGRAMME.md` (reverify lane
+1, item R-16).
 
 ## 11. UI/UX Round 2 programme — 10 items, merged into token-gaps (2026-11-23)
 
@@ -433,9 +760,13 @@ Still open after the programme: the E2E harness versus `base:
 device (items 1 and 9); the Receive tagline removed in item 8; the
 token contract tail truncated on one-line rows; review and sign steps
 not CDP-verified; CoinGecko 429s on the shared VM IP; the word grid at
-1024 px is tight; the import path has no "Continue to your send"
-button; external wallet apps not tested for deep links; the mobile
-Receive 40 px question still awaits the owner's pick; devnet exception
+1024 px is tight; the import path now has a "Continue to your send"
+button on the restored screen (reverify lane 1, 2026-11-23, see
+`docs/REVERIFY-CHECKLIST.md` item R-15); external wallet apps not
+tested for deep links; the mobile Receive 40 px question was decided
+2026-11-23 ~14:17 IST (owner: keep the fix — do not re-ask; the fix
+itself was restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); devnet exception
 E1 expires 2027-02-20; TON Issues 5 and 6 in `DEVNET-ISSUES.md`.
 
 ## 12. Reverify + Professional Polish programme — 5 lanes, merged into token-gaps (2026-11-23)
@@ -489,13 +820,14 @@ checklist: `docs/REVERIFY-CHECKLIST.md`. Hands-on Muse, 0 Sol calls.
   stale/refreshing flags. Neither is polish work.
 - **Unwired modules stay:** `engine/destination.ts`,
   `wallet/adapters/confirmation.ts`, `wallet/evm-typed-data.ts`,
-  `wallet/secretHandoff.ts` — wire them, or delete them by explicit
+  `wallet/secret-handoff.ts` — wire them, or delete them by explicit
   decision.
 - **Merge decisions.** The Lane 2 / Lane 3 README conflict was
   resolved by keeping Lane 2's canonical Screenshots section; Lane
   3's follow-up commit was skipped because its content was already
   in the tree from that resolution. Nothing from any lane was
   dropped.
+
 ## 13. Deep Audit + Devnet E2E programme — 5 lanes, merged into token-gaps (2026-11-23)
 
 **Decision: the 5-lane Deep Audit + Devnet E2E programme (owner order
@@ -523,6 +855,34 @@ Decisions and findings recorded here:
   version prefix, intentionally. SOL multi-address and TON
   one-address are by design (owner decisions to confirm as final);
   the bot must use shared `m/44'/60'` for CELO, not SLIP-44 527.
+- **Lane A (FINISH THE PRODUCT, 2026-11-23) — the four "confirm as
+  final" derivation items are FIXED, not confirmed.** Hands-on Muse,
+  0 Sol calls. (1) SOL multi-address: account 0 index 0 keeps
+  `m/44'/501'/0'` byte-identical, so existing users' addresses do not
+  move; new accounts use `m/44'/501'/<account>'/0'` (the Phantom
+  template already recorded in `SOLANA_PROFILES`) and rotations
+  `m/44'/501'/<account>'/0'/<index>'`. (2) TON second address: the
+  same scheme — (0,0) keeps `m/44'/607'/0'`, accounts
+  `m/44'/607'/<account>'` (Tonkeeper template), rotations
+  `m/44'/607'/<account>'/<index>'`; a second key gives a distinct
+  V4R2 wallet contract (same code hash, wallet ID 698983191), so the
+  one-address limit was a Wallet Core default-path convention, not a
+  protocol limit. `signTonOffline` now signs from the selected
+  account's key (`options.account`, default 0). (3) CELO: derivation,
+  export and the bot agreement already used the shared `m/44'/60'`
+  at the programme base; pinned by regression tests (CELO == ETH
+  addresses at (0,0)/(0,1)/(1,0), CELO xpub == ETH xpub,
+  export/import round-trip). (4) LTC zpub accepted alongside Ltub:
+  the version prefix alone cannot tell a BTC zpub from an LTC zpub,
+  so the chain chosen at import is the disambiguator — the same
+  accepted semantics as the `0488b21e` xpub shared by BTC/ETH/TRX.
+  This supersedes the "LTC zpub stays rejected" line above and the
+  GAP-ANALYSIS §15 rejection. Oracle proof: Python bip_utils 2.13.0
+  + Wallet Core 4.9.3 (`apps/web/src/wallet/lane-a-derivation.test.ts`,
+  14 tests; full suite 1758 passed / 5 skipped). CDP proof: SOL
+  rotation changes the Receive address; /wallets shows CELO
+  `m/44'/60'/0'` with an xpub identical to ETH's; the
+  ripple-fixture LTC zpub imports as a watch-only LTC wallet.
 - **Devnet Issue 5 CLOSED with live proof.** The TON first-send
   state init IS present in the app-signed BOC (code hash
   `feb5ff68...`, V4R2, init address == wallet C's address exactly;
@@ -640,3 +1000,329 @@ byte-identical to the verified `a8018fd` tree).
   (90 files), lint 25 errors all pre-existing in `apps/web/scripts/*.mjs`,
   npm audit 0, root `npm test` 0. E2E not run on this tree (deep-audit ran
   23/24 on its own tree; this tree covered by vitest + CDP).
+
+## §15 — Finish-the-product programme, Lane J (homepage + 4-token sweep + Retry + performance + Scan)
+
+- **Popular chains removed from the homepage (both states).** The
+  `PopularChainsStrip` is gone from `welcome.tsx` (no vault) and
+  `dashboard.tsx` (vault) — the homepage is the hero total, the four
+  actions, then the rows. The `chain-strip.tsx` /
+  `chain-strip-display.ts` files are left in place, now unused: Lane G
+  owns the component machinery, so the merge lane deletes them if G
+  does not re-home the component.
+- **4-token sweep — two real bugs fixed, the rest honest labels.**
+  `transaction-detail.tsx` hardcoded the four chains for its history
+  lookup; it now iterates `availableFor('history')` (7 chains).
+  `mnemonic-backup.tsx` showed 4 recovery profiles; the create/import
+  flows already store 7 distinct profiles, so the screen now shows all
+  7 (EVM collapsed to one Ethereum row). Genuinely-4 screens are
+  labelled, not silently 4: `SIGNING_CHAINS` (the wallet signs native
+  BTC/ETH/TRX/TON only) and `DEVNET_CHAINS` (4 test networks) both say
+  so in their copy. `wallet-refresh.ts` (`CHAINS = 4`) is dead
+  production code — imported only by its own tests — reported, not
+  rewritten; repo-cleanup owns deletion.
+- **Per-row Retry removed entirely from asset rows.** The fetch layer
+  already retries silently with backoff and keeps the last good value,
+  so a row button could only fail again — the Dogecoin row proved it
+  (SoChain 429s, BlockCypher CORS-blocked). The row model is MetaMask's
+  standardised unavailable display plus Ivy Wallet's
+  `feature/accounts` pattern (icon + name + balance + one status line,
+  no Retry — patterns only, GPL-3.0, no code copied); a failed row is
+  an Aceternity Empty States shape (real logo, one plain line, one
+  action — the list-level Refresh). The single retry path is the
+  list-level "Refresh balances" on the hosting screen; the /assets one
+  is a Stateful Button (busy + disabled while the refetch is in
+  flight). Deliberately kept: the dashboard hero Retry (only when every
+  hero balance failed), `asset-detail.tsx` LockedOrRetry, the
+  history Retry in `recent-activity.tsx`, and the Transactions-screen
+  Retry in `refresh-failure.spec.ts`.
+- **Scan on the homepage (dashboard only).** Fourth action tile
+  (Send / Receive / Scan / Activity) linking to `/send?scan=1`, which
+  opens the Round 2 QR scanner on arrival. No Scan tile on the welcome
+  screen: without a vault there is nothing to send from.
+- **Performance (measured, see `PERF.md`).** Cold-load fix, two
+  attempts. Attempt 1 (gated warm-up + lazy engine) won first paint
+  but made Slow 4G settle worse (55.1 s → 69.0 s), so the warm-up was
+  removed: attempt 2 loads the engine only on demand. Final medians:
+  FCP -33% to -45%, heading visible -38% to -71%, Slow 4G settle
+  55.1 s → 3.8 s (mobile) and 55.5 s → 3.8 s (desktop); cold-load
+  bytes 14,698,005 → 1,369,955. The 2.9 MB engine chunk left the
+  first-paint modulepreload graph (dynamic `loadCore` in
+  `create-wallet.tsx` and `wallet/core.ts`, plus the coin-type key
+  table moved to the leaf module `engine/coin-type-keys.ts`).
+  Trade-off: Generate pays the engine download on first use on a
+  slow connection, behind its honest loading state. Keys are never
+  cached: the engine download never carries a vault or a mnemonic.
+- **UI/UX research applied (see `bawa-uiux-sources/RESEARCH.md`).**
+  Linework token structure formalised Bawa's tokens as a comment in
+  `globals.css` (no value changes); Magic UI Number Ticker picked over
+  Number Flow for the hero, honest variant (counts only between
+  settled dollar values, never from $0.00, immediate under
+  reduced motion); the ui-ux-pro-max pre-delivery checklist adopted as
+  the gate (SVG icons only, 4.5:1 contrast via existing tokens,
+  375 px check); OJO 8-state model on the new Scan tile and Refresh
+  button. NOT applied: Animated List (activity feed is not this
+  lane's screen), the Send Stateful Button (Send screen is not this
+  lane's screen), liquid-glass/aurora/neon styling (clashes with the
+  hand-drawn ink look).
+
+## §16 — Finish-the-product programme, Lane D (fix all recorded gaps) — 2026-11-23
+
+**Lane D (this lane), hands-on Muse, 0 Sol calls, 0 AgentRouter calls.**
+Worktree detached at token-gaps `d47d282`; nothing pushed, no branch
+created.
+
+- **Gap 1 (EVM history, partial fix).** Celo, Optimism and Scroll now
+  have wired keyless history sources (probed live 2026-11-23;
+  `EVM_HISTORY_SOURCES` in `apps/web/src/wallet/adapters/index.ts`).
+  The other twelve non-ETH EVM chains stay unwired (403/404 per host);
+  the remaining decision is unchanged: an Etherscan-family keyed API
+  (owner approval) or accept those twelve as balance-only.
+- **Gap 16 (derive.js, fixed).** `derive.js`, `derive-daemon.js` and
+  `extended-key.js` now cover 20 chains (btc/eth/trx + ltc/doge + 15
+  EVM); every new fixture address two-oracle verified (Wallet Core
+  4.9.3 + bip_utils 2.12.3); smoke test RED-then-GREEN.
+- **Gap 24 (result-screen copy, fixed).** A failed devnet broadcast
+  now says so in the heading ("Send signed — broadcast failed") and
+  the paragraph, instead of claiming it was broadcast.
+- **Gap 11 (lint, fixed).** apps/web lint widened to cover `scripts/`
+  (25 `no-undef` errors gone); new root eslint config + `npm run
+  lint` (6 more errors in `scripts/check-pinned-dependencies.js`
+  gone). CI still lints apps/web only — wiring the root lint into
+  the workflow is a follow-up.
+- **Gap 7 (E1 expiry, fixed).** The 2027-02-20 date is now in
+  `docs/launch-checklist.md` (Devnet exception section); the renewal
+  owner is still blank.
+- **Gap 17 (phrases fixed, rotation a decision).** 18/21-word
+  restore tests added (25/25). Rotation: refresh reads only
+  `vaultAddresses[chain][0]` and `receiveAddresses` is consumed
+  only by Receive — funds at a rotated address are invisible in the
+  dashboard. Options: sum rotated addresses into the hero + merge
+  history; per-address rows; or leave as-is and document watch-only.
+  Owner picks; not implemented silently.
+- **Gap 21 (watch-only devnet TON, closed by owner decision).**
+  Watch-only is MAINNET-ONLY and stays that way (owner order
+  2026-11-23 ~20:34 IST) — no code change.
+- **Gaps 3/5/6 verified already fixed** (adapters + token logos;
+  refresh limiter cap 4; TON Issues 5/6) and statuses updated in
+  `docs/GAP-ANALYSIS.md` and `DEVNET-ISSUES.md`.
+- **Not duplicated:** gaps 13/18/19 (Networks copy) belong to Lane
+  C; gap 15 belongs to Lane A; gap 2 (multi-phrase vaults) stays a
+  decision (design questions unsettled); gaps 9/10/12/22/23 stay
+  decisions (faucets, TonCenter key, DOGE fallback).
+- **Owner-order scope note (2026-11-23 ~21:03 IST, six phone
+  screenshots):** Lanes G–J were added to the programme after this
+  lane started (Popular-chains cards, Retry-as-zero, token icons,
+  Receive step-1 redesign, create-screen single button, 'Popular
+  chains' removal, remaining token Retry, slow loading, Scan icon,
+  QR-card polish). That work overlaps gaps 3/12/14/20 but was NOT
+  briefed to this lane; recorded for the coordinator, not done here.
+- **Registry validator note:** `scripts/validate-registry.mjs`
+  reports pre-existing errors for opbnb/metis/aurora/fantom
+  ("unknown chain") on the untouched baseline too — identical with
+  and without this lane's `capabilities.json` change.
+- **Gap 4 / E2E (final).** Full suite run 4 times on the root-base
+  build: 22/24, 23/24, 22/24 (plus a killed first run). **E2E-05
+  rewritten in place** — the old spec expected 'history unavailable'
+  on a fresh wallet, which the Transactions screen deliberately
+  never shows (failure box only when the wallet has activity);
+  proved by a 120 s CDP probe and by the spec failing identically
+  on the untouched `d47d282` baseline. The rewritten spec asserts
+  the honest empty state and passed alone (56.2 s) and in the full
+  suite. **E2E-02 found bug (not fixed here):** after toggle +
+  full reload, the devnet BTC receive address can stay missing
+  ("No receiving address available for this chain", failure
+  screenshot viewed) — the devnet re-derivation has no retry and
+  `refreshReceiveAddresses` runs only on rotation; failed in 3 of 4
+  full runs, passed alone and in CDP. Item D Jetton timeouts are
+  live-network flakes (pass alone).
+- **CDP (this tree).** C-41 Done — QR templates labelled + 64 px
+  alternates, main QR 136 px measured live (code: `qr-card.tsx`
+  `size={136}`; the 192 px spec is a recorded owner decision, not
+  changed). D-02 verified — `/lock` has exactly 1 `<main>`,
+  `/security` has "Lock now". Gap 14 measured: details step is
+  1,270 px in an 844 px viewport at 390 px (426 px scroll, was
+  40–90 px) — owner decision, folded into the Lanes G–J QR-card
+  redesign. Gap 20 measured: exactly 2 of 22 chain names truncate
+  at 390 px (BNB Smart Chain, Avalanche C-Chain) — left alone for
+  the owner-ordered Receive redesign. Gap 1 Celo settled in CDP:
+  "No transactions yet for this chain." DOGE watch row renders with
+  "Could not load balance" + the app's single remaining Retry.
+  1919 px dashboard: no overflow, no clipping.
+- **Owner-order scope note 2 (2026-11-23 ~21:33 IST):** diagrams
+  BOTH — hand-crafted SVG in the README + richer Mermaid in docs —
+  added as Lane K. Not this lane's work; recorded for the
+  coordinator.
+
+
+## §17 — Finish-the-product programme, Lane B — watch-only multi-chain, HD all-chains, real-time tracking (2026-11-23)
+
+Hands-on Muse, 0 Sol calls. Worktree `bawa-finish-b-worktree`, detached
+from token-gaps `e290654`; commit SHA in the lane report.
+
+- **Watch-only fans out by address family (mainnet only).** One plain
+  address import now watches every chain the address belongs to:
+  an EVM address (`0x…`) watches all 16 EVM chains; BTC, LTC, DOGE,
+  TRX and SOL addresses watch their own chain. An existing watch-only
+  entry is never overwritten — an xpub entry keeps its 5 derived
+  addresses. Implementation: `wallet/watch-only-families.ts` (pure
+  shape routing), `engine/boundary.ts` (`validateWatchOnlyImport`
+  returns `kind: 'address' | 'xpub'`; `deriveAddress`/`deriveAddresses`
+  return the plain address at index 0 only),
+  `state/wallet-context.tsx` (`addWatchOnlyAddress`, skips already
+  watched chains), `screens/import-wallet.tsx` (per-chain "address or
+  xpub" labels, grouped import list by stored value). **Vault-shadowing
+  finding (same day, CDP):** `balances[chain]` is a single per-chain
+  slot and `refreshBalances` reads the vault address first, so a
+  watch-only balance never reaches the asset rows while a vault
+  exists — the fan-out stored the address on 16 chains but the user
+  saw only the vault's zeros. Fixed in place: the Wallets screen now
+  shows each watch-only row's own balance (`WatchOnlyBalance` in
+  `screens/wallet-management.tsx`, fetched for the watched address
+  via `ensureAdapters`, with an honest failure + "Retry balance";
+  unit-tested with Vitalik's 5.799564 ETH). History stays
+  vault-shadowed the same way on the Transactions screen — a
+  watch-only address's history is still reachable per-address via
+  /track "Recent activity for an address".
+- **History wired for 9 more EVM chains (gap 1: 7 → 16 verified).**
+  Optimism, Scroll, Celo, Aurora via their Blockscout hosts;
+  Avalanche and Mantle via Routescan's Etherscan-compatible API;
+  Polygon, Base and Arbitrum via their Blockscout hosts — these
+  three answer 403 Cloudflare to curl but HTTP 200 with real
+  transactions to a headless-Chromium fetch, and their Blockscout v2
+  tx-by-hash endpoints verified the same way. All probed live
+  2026-11-23 with Vitalik's address
+  (`0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`, nonzero balance on
+  all 16 EVM chains). `/track` hash lookup extended to seven
+  Blockscout v2 chains (`wallet/tracker.ts`, parameterised
+  `parseEthTx`); Avalanche/Mantle lookup stays unsupported
+  (Routescan tx-info shape differs from Blockscout v2). **CSP catch:**
+  the wiring was dead in the browser until `connect-src` pinned the
+  nine history hosts (56 origins: 51 mainnet + 5 temporary devnet);
+  the drift-guard test now collects `historyBaseUrl` and
+  `historyExplorerBase` origins too (it collected RPC endpoints
+  only). Six chains remain blocked with no working keyless indexer
+  (bsc, gnosis, linea, opbnb, metis, fantom) — owner decision §1 in
+  GAP-ANALYSIS.md (Etherscan key or another indexer).
+- **Live ground truth for the CDP demo (all verified 2026-11-23):**
+  Vitalik EVM address (all 16 chains); SOL
+  `4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM` (0.00236821 SOL);
+  TRX `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5` (19,276,582.84 TRX,
+  richest-accounts list); BTC `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`
+  (57.7198 BTC); LTC `MLos7u44mMq1ufgPJZTatEfPm3Kgxj5Nt9`
+  (0.0533665 LTC, 857 txs); DOGE `DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke`
+  (27,164,003,668.40 DOGE). Two recalled candidate addresses proved
+  wrong and were dropped: a Binance EVM address (42 hex chars, nodes
+  want 40) and the Litecoin/Dogecoin foundation addresses from memory
+  (both invalid; the correct DOGE whale address ends `…vGLR3mr7L`).
+  DOGE's in-app sources are both degraded today (SoChain keyless
+  quota exhausted, BlockCypher 429) — the live DOGE figure above is
+  from dogechain.info, not the wallet's own path.
+- **Final live verdict (same day, CDP, Wallets screen).** Every
+  family above was imported watch-only and its balance read in the
+  app: EVM 16/16 live (Vitalik, each matching the RPC ground truth
+  to 6 decimals), BTC 57.71980119, SOL 0.00236821, LTC 0.0533665,
+  TON 0 (toncenter confirms 0). TRX and DOGE show an honest failure
+  with "Retry balance": TRX 429s from Trongrid on the shared egress
+  IP (the `/v1/accounts/` fetch and `getnowblock` both rate-limited
+  under the app's request volume; a single direct probe returns
+  19,283,710.80 TRX), DOGE has no working in-app source that day.
+  History in-app still flaps with the same rate limits — the
+  Transactions screen showed 9 chains "unavailable" on the final
+  run and the ETH `/track` lookup that succeeded earlier in the day
+  failed on re-run, while the OP lookup of the same hash returned
+  the correct "Transaction not found", proving the OP wiring
+  reaches its indexer. The wiring is proven; the flapping is the
+  keyless indexers' rate limits on a shared IP, and only a keyed
+  indexer (owner decision §1 in GAP-ANALYSIS.md) fixes it durably.
+- **SOL multi-address untouched.** The SOL derivation question is
+  Lane A's open owner decision; this lane did not change SOL
+  derivation (would move existing users' addresses).
+- **Gates:** tsc 0, build 0, vitest 1775 passed / 5 skipped / 0
+  failed (baseline 1738/5/0), lint 0, npm audit 0 vulnerabilities,
+  `generate-chains.mjs --check` OK, root `npm test` 0.
+## §18 — Finish-the-product programme, merge lane (Lane F) — 2026-11-23
+
+Hands-on Muse, 0 Sol calls. Worktree `bawa-finish-product-worktree`.
+Cherry-picked all 10 lane commits onto `panel-rebuild/finish-product`
+(`d47d282` base) in order E, A, C, K, G, H, I, J, D, B-last; follow-up
+commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as [SHA TBD].
+
+- **Merge order.** B last because its base was `e290654` (rebase onto
+  `d47d282`, 11 conflicts). C and A merged before K's follow-ups so the
+  stale price-fallback copy and derivation paths were fixed on the merged
+  tree, not on a lane branch.
+- **Merged CSP is 56 total origins, 51 mainnet.** Lane B added 8 history
+  hosts; 3 overlapped Lane D's gap-1 origins (deduplicated). The
+  `security-headers.test.ts` `httpsOrigins` array is rebuilt from the
+  merged string so the two can never drift. History verified is 16 chains
+  (`btc, eth, trx, ton, sol, matic, arb, op, base, avax, ltc, doge, celo,
+  mantle, scroll, aurora`); six stay blocked (`bsc, gnosis, linea, opbnb,
+  metis, fantom`) — no working keyless indexer (owner decision §1 in
+  GAP-ANALYSIS.md).
+- **Chain-strip removal wins.** `chain-strip.tsx` / `chain-strip-display.ts`
+  / `chain-strip.test.tsx` deleted (owner order via Lane J); verified no
+  production importers.
+- **`--bawa-shadow`: keep as-is.** The Oishi hard-offset-shadow treatment
+  was explicitly ordered by the research steer. A flat 4 px ink offset is
+  not the blur/glow the `globals.test.ts` box-shadow guard covers, and the
+  guard bans literal `box-shadow` in `globals.css` source — the token holds
+  the value in a CSS variable, so the source stays clean. If the owner
+  wants the guard to ban offset shadows too, that is a new decision.
+- **QR 136 px vs 192 px spec: keep 136 px.** Owner decision; measured live
+  at 136×136 in CDP. Do not change silently.
+- **Recent Activity vs Transactions divergence (both tested, intentional).**
+  On Recent Activity, a failed history is not an empty history: the
+  unavailable + Retry block renders when the wallet has activity, while
+  locked, or when any chain failed with a reason other than `no-address`
+  (`no-address` is the initial state, not a failure). On the Transactions
+  screen the merged semantics show neither state with no activity (the
+  honest empty state, E2E-05). The two screens differ by design; do not
+  "unify" them without an owner decision.
+- **Merge defects found by gates and fixed in place (all in commit
+  `69f7d8c`).** `dex-prices.ts` lost Lane C's `PRICE_FETCH_TIMEOUT_MS`
+  import + local `isAbortError` in the resolution (tsc caught it);
+  `chains.ts` had a stray comment line + a duplicate
+  `HISTORY_EVIDENCE_2026_11_23` const git auto-merged; `chains.test.ts`
+  had a dead `else if (chain === 'op')` outside the resolved region. The
+  lesson stands: a cherry-pick that "succeeds" still needs the full suite
+  on the merged tree before it is trusted.
+- **CDP re-verification (this lane, root-base build).** SOL rotation live
+  (`AWJmCKgC…` → `C4McuDyE…`, QR decodes to the rotated address); TON
+  second address live (`UQBlsndF…` → `UQDI4-PA…`); CELO shares the ETH
+  address live; LTC zpub import live (toast + Imported wallets entry);
+  watch-only Vitalik 16/16 live; CoinGecko-blocked prices live (CoinLore
+  BTC $61,878.40, ETH $1,763.80; Fantom $0.029092 DexScreener); Celo history
+  empty state live; Transactions honest empty state live; no Retry / no
+  "Balance unavailable" / real logos at 390/1440/1919; Receive redesign +
+  136 px QR + 3 templates live; single Create button live; no Popular
+  chains on the homepage + Scan tile live; cold load 1,376,967 bytes
+  (390 ms settle ~3.2 s unthrottled, ~5.3 s Slow 4G); both SVGs render
+  (architecture line fixed after a viewed clip). The Recent Activity "No
+  activity yet" empty state was NOT captured live in CDP — the indexers
+  429'd on both runs, so Lane C's all-failed unavailable state rendered
+  instead (correct behaviour); it is covered by unit test + E2E-05.
+- **Gates:** tsc 0, build 0, build:e2e 0, vitest 1871 passed / 5 skipped /
+  0 failed (97 files), lint 0 (apps/web + root), npm audit 0
+  vulnerabilities, root `npm test` 0, root `npm run check` 0. E2E: full
+  suite 15/24 pass, 9 fail (13.3 min) — E2E-06, E2E-03, E2E-13, E2E-18,
+  E2E-19, E2E-02, Item D DISC, Item D MY, E2E-05. Alone on the merged tree
+  E2E-03 and E2E-18 pass; E2E-06, E2E-19, E2E-02, E2E-05, E2E-13, DISC fail
+  identically on the pristine `d47d282` baseline (pre-existing, not merge
+  defects; the CoinGecko failure flipped: NOT on baseline, SHIB on merged).
+  E2E-02 is the known real devnet-derivation race. The rest are
+  live-network (Solana backup RPC unreachable from this egress, CoinGecko
+  429s, public-RPC rate limits). E2E is NOT claimed green.
+- **Open decisions carried forward (unchanged).** QR 136/192; Receive
+  details scroll 426 px (smaller buttons vs top-stack rework); E2E-02
+  devnet-derivation race (real app bug); 12 EVM chains balance-only
+  without a keyed API; rotation funds invisible in the dashboard;
+  multi-phrase vaults; faucets (owner must complete captchas); TonCenter
+  keyed tier; DOGE fallback (Blockchair key or accept outage); xDAI+MNT
+  no keyless price fallback; FTM low-liquidity pair; devnet+unlocked-vault
+  Retry; asset-detail sticky Refresh; Number Ticker CDP-unverified
+  (nonzero hero needs a funded wallet, forbidden); live-camera scan
+  unverified (needs the owner's phone); review/sign CDP-unverified;
+  Receive tagline (owner must say which line goes); README showcase link
+  (item A waits on the owner's link); `ci.yml` defines the `web` job
+  twice (second shadows the first — owner/merge-lane decision).
