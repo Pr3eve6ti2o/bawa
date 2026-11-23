@@ -6,18 +6,18 @@ import { availableFor } from '../wallet/chains';
 import {
   idlePriceEntries,
   portfolioTotal,
-  usePrices,
   PRICE_ATTRIBUTION_TEXT,
   type PortfolioTokenContribution,
 } from '../wallet/prices';
-import { fiatValueForTokenBalance, useTokenPrices } from '../wallet/token-prices';
-import { DEFAULT_TOKENS, tokenKey } from '../wallet/tokens';
+import { fiatValueForTokenBalance } from '../wallet/token-prices';
+import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
 import { PopularChainsStrip } from './chain-strip';
+import { useLivePrices } from './use-live-prices';
 
 const ACTIONS = [
   { to: '/send', icon: 'send', label: 'Send' },
@@ -37,7 +37,6 @@ export function DashboardScreen() {
     balances,
     refreshBalances,
     vaultState,
-    customTokens,
     tokenBalances,
     devnetEnabled,
   } = useWallet();
@@ -69,63 +68,14 @@ export function DashboardScreen() {
     });
   };
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
-  const pricesLoading = pricesState.status === 'loading';
-
-  // Token prices (token discovery): the same CoinGecko feed, one batched
-  // call for the default 7 tokens (six unique ids) plus user-added
-  // tokens. Same auto-fetch on mount and ~60 s refresh as the native
-  // feed — two calls a minute, inside the keyless ~5 calls/min budget.
-  const tokenList = useMemo(
-    () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
-    [customTokens],
-  );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
-  const tokenPricesLoading = tokenPricesState.status === 'loading';
-
-  useEffect(() => {
-    if (tokenPricesState.status === 'idle') {
-      refreshTokenPrices();
-    }
-  }, [tokenPricesState.status, refreshTokenPrices]);
-
-  const refreshTokenPricesRef = useRef(refreshTokenPrices);
-  useEffect(() => {
-    refreshTokenPricesRef.current = refreshTokenPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshTokenPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-fetch on mount: prices previously loaded only after a manual
-  // click, so the first paint never showed any price. The hook's own
-  // guard prevents starting another fetch while one is in flight.
-  useEffect(() => {
-    if (pricesState.status === 'idle') {
-      refreshPrices();
-    }
-  }, [pricesState.status, refreshPrices]);
-
-  // Refresh about every 60 seconds while mounted (the price module
-  // documents "Refresh ~60s"). The ref always holds the latest refresh
-  // callback, so the interval is set once and never resets on status
-  // changes. One call/minute per tab fits the keyless ~5 calls/min
-  // budget; several open tabs share it.
-  const refreshPricesRef = useRef(refreshPrices);
-  useEffect(() => {
-    refreshPricesRef.current = refreshPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    pricesState,
+    pricesLoading,
+    refreshPrices,
+    tokenPricesState,
+    tokenPricesLoading,
+    tokenList,
+  } = useLivePrices();
 
   // Hold the last settled hero text while balances refresh so it never flashes
   // Unavailable mid-refresh. Missing, expired, or failed prices are never $0.00.

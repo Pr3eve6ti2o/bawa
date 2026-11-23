@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 import { BawaLoading } from '../ui/components/loading';
+import { usePriceFeedAutoRefresh } from './use-live-prices';
 
 const DERIVATION_PATHS = {
   btc: "m/84'/0'/0'/0/i",
@@ -72,26 +73,10 @@ export function AssetDetailScreen() {
   const isToken = tokenRecord !== undefined;
 
   // Per-unit price from the same live price feed as the dashboard
-  // strip and the asset list (usePrices pattern: auto-fetch on mount,
-  // refresh about every 60 seconds). No price is ever invented: a
+  // strip and the asset list. No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
   const { state: pricesState, refresh: refreshPrices } = usePrices();
-  useEffect(() => {
-    if (pricesState.status === 'idle') {
-      refreshPrices();
-    }
-  }, [pricesState.status, refreshPrices]);
-  const refreshPricesRef = useRef(refreshPrices);
-  useEffect(() => {
-    refreshPricesRef.current = refreshPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
+  usePriceFeedAutoRefresh(pricesState.status, refreshPrices);
 
   // Token price (token route only): the same price feed, one call
   // for the single token. Gated on the token existing — native routes
