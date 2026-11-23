@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "node scripts/copy-wasm.mjs && vite",
     "build": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build && npm run palette-audit",
+    "build:e2e": "node scripts/copy-wasm.mjs && tsc --noEmit && vite build --base / && npm run palette-audit",
     "palette-audit": "node scripts/palette-audit.mjs",
     "preview": "vite preview",
+    "preview:e2e": "vite preview --base /",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",

@@ -19,6 +19,7 @@ import {
   deriveAddressesAt,
   deriveDevnetAddressesAt,
   deriveFromXpub,
+  getAccountExtendedPublicKey,
   intentFingerprint,
   isPartialSigner,
   restoreWallet,
@@ -45,6 +46,15 @@ const ltcLtub =
   'Ltub2ZANw57Fi4JfMGenngwfZMqDrsccTf2m3qEjvLuk8faGXB973sSqGttAdKBvGSCLG9DXh2yxaUB9qpwQUe2zCCtrZPhjxGuMAWqL6F7Xrpd';
 const dogeDgub =
   'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs';
+
+// Lane C: Wallet Core serialisations of the ripple fixture's LTC/DOGE
+// account keys (public test vector). The dpub is what
+// getAccountExtendedPublicKey returns for DOGE; the dgub above is the
+// same key in the other serialisation.
+const rippleLtcLtub =
+  'Ltub2YwB7k9sjn5JgCMHzxRYAWdTwJcaxjLSoaCpYjJZ2xN1bh9BdB1y3BXBiSobcrSnHj4WnopzaoK8J5L5nJzeqmJhkeDVCb52cb2WM3UaH4h';
+const rippleDogeDpub =
+  'dpubZG2yVAE9cxzbb951cYM2av1gxG46wXAdAKDDJEcTLC7cSFUvHbVo8mMYqZDAe2dPyigxSve76Kvi537CVzxjyhZnNPCRBCm6HJKTqYSjKSn';
 
 // Published wallet-core HDWallet.test.ts vector (public test data, test-only,
 // never for funds): the TREZOR BIP-39 vector with passphrase "TREZOR".
@@ -263,6 +273,87 @@ describe('wallet/core', () => {
 
   it('rejects TON derivation from an xpub', async () => {
     await expect(deriveFromXpub('ton', trxXpub, 0)).rejects.toThrow();
+  });
+
+  it('exports the account extended public key for every secp256k1 chain (Lane C)', async () => {
+    const mnemonic = ETH_VECTOR_MNEMONIC;
+    expect(await getAccountExtendedPublicKey(mnemonic, '', 'btc', 0)).toBe(
+      btcZpub,
+    );
+    expect(await getAccountExtendedPublicKey(mnemonic, '', 'eth', 0)).toBe(
+      ethXpub,
+    );
+    expect(await getAccountExtendedPublicKey(mnemonic, '', 'trx', 0)).toBe(
+      trxXpub,
+    );
+    expect(await getAccountExtendedPublicKey(mnemonic, '', 'ltc', 0)).toBe(
+      rippleLtcLtub,
+    );
+    expect(await getAccountExtendedPublicKey(mnemonic, '', 'doge', 0)).toBe(
+      rippleDogeDpub,
+    );
+    // Every EVM chain shares the m/44'/60'/0' account key.
+    for (const chain of [
+      'bsc',
+      'matic',
+      'arb',
+      'op',
+      'base',
+      'avax',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
+    ] as const) {
+      expect(await getAccountExtendedPublicKey(mnemonic, '', chain, 0)).toBe(
+        ethXpub,
+      );
+    }
+  });
+
+  it('the exported keys derive the wallet addresses (Lane C round-trip)', async () => {
+    const mnemonic = ETH_VECTOR_MNEMONIC;
+    const cases = [
+      ['btc', 'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd'],
+      ['eth', '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7'],
+      ['trx', 'TJ9VWHMsmZLeA5Xp6WmDLiN4as1eySgB9c'],
+      ['ltc', 'ltc1qrw5czevuyhhgzrz2ca6hd8ulncqwnl8dp6gtca'],
+      ['doge', 'DTkd5ZVxsernAkEVuvyp7bAW3oMYz9nH5H'],
+    ] as const;
+    for (const [chain, address] of cases) {
+      const xpub = await getAccountExtendedPublicKey(mnemonic, '', chain, 0);
+      expect(await deriveFromXpub(chain, xpub, 0)).toBe(address);
+      expect(await deriveFromXpub(chain, xpub, 1)).not.toBe(address);
+    }
+  });
+
+  it('refuses to export an extended key for TON and SOL (Lane C)', async () => {
+    const mnemonic = ETH_VECTOR_MNEMONIC;
+    await expect(
+      getAccountExtendedPublicKey(mnemonic, '', 'ton', 0),
+    ).rejects.toThrow(
+      'TON uses fully hardened Ed25519 derivation and cannot derive children from an xpub.',
+    );
+    await expect(
+      getAccountExtendedPublicKey(mnemonic, '', 'sol', 0),
+    ).rejects.toThrow(
+      'SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.',
+    );
+  });
+
+  it('exports a different key for account 1 and rejects a negative account (Lane C)', async () => {
+    const mnemonic = ETH_VECTOR_MNEMONIC;
+    const account0 = await getAccountExtendedPublicKey(mnemonic, '', 'eth', 0);
+    const account1 = await getAccountExtendedPublicKey(mnemonic, '', 'eth', 1);
+    expect(account1).not.toBe(account0);
+    await expect(
+      getAccountExtendedPublicKey(mnemonic, '', 'eth', -1),
+    ).rejects.toThrow(RangeError);
   });
 
   it('rejects SOL derivation from an xpub', async () => {

@@ -390,12 +390,15 @@ describe('receive screen', () => {
     }
   });
 
-  it('keeps every step compact: chain grid, 192 px QR card, truncated share link', async () => {
+  it('keeps every step compact: chain grid, 136 px QR card, truncated share link', async () => {
     // Round 2, item 8: the chain step is a two-column grid (not a
-    // 22-row list), the QR card's code is 192 px, and the long share link shows as
+    // 22-row list), the QR card's code is 136 px, and the long share link shows as
     // one truncated line — each step fits the viewport without scrolling
     // to reach the next control. Layout heights are asserted in CDP;
-    // this test locks the structure that makes them fit.
+    // this test locks the structure that makes them fit. (The 136 px
+    // value is D2's; the Round-2 merge kept A2's 192 px QrCard and the
+    // deep audit re-measured the merged tree at scrollH 1446 with the
+    // Copy/Share/Download row below the fold.)
     setWallet();
     const mounted = await mountScreen();
     try {
@@ -407,7 +410,7 @@ describe('receive screen', () => {
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('192');
+      expect(qrSvg?.getAttribute('width')).toBe('136');
       const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
       expect(link).not.toBeNull();
       expect(link?.className).toContain('truncate');

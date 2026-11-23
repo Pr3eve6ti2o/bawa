@@ -207,6 +207,43 @@ describe('tracker (offline)', () => {
       .toMatchObject({ status: 'ok', data: TON_FIELDS });
   });
 
+  // Issue 6 (Lane B): the send result screen shows the message hash, so
+  // /track must resolve it — a user pasting the hash they were just shown
+  // must not get a false "not found".
+  it('looks up TON by the message hash the send screen displays', async () => {
+    const messageHash =
+      '97a806498152ff9003aabef57a84e1b702d3af99e2e4315fda964ed63c88a975';
+    const entry = {
+      ...TON_ENTRY,
+      in_msg: {
+        ...TON_ENTRY.in_msg,
+        hash: 'l6gGSYFS/5ADqr71eoThtwLTr5ni5DFf2pZO1jyIqXU=',
+      },
+    };
+    queue.push({ ok: true, result: [entry] });
+    expect(
+      await lookupTransaction('ton', messageHash, { address: TON_ADDRESS }),
+    ).toMatchObject({ status: 'ok', data: TON_FIELDS });
+  });
+
+  it('looks up TON by a 0x-prefixed message hash, as the result screen shows it', async () => {
+    const entry = {
+      ...TON_ENTRY,
+      in_msg: {
+        ...TON_ENTRY.in_msg,
+        hash: 'l6gGSYFS/5ADqr71eoThtwLTr5ni5DFf2pZO1jyIqXU=',
+      },
+    };
+    queue.push({ ok: true, result: [entry] });
+    expect(
+      await lookupTransaction(
+        'ton',
+        '0x97a806498152ff9003aabef57a84e1b702d3af99e2e4315fda964ed63c88a975',
+        { address: TON_ADDRESS },
+      ),
+    ).toMatchObject({ status: 'ok', data: TON_FIELDS });
+  });
+
   it('explains the 10-most-recent TON lookup window when not found', async () => {
     queue.push({ ok: true, result: [] });
     const result = await lookupTransaction('ton', TON_HASH, { address: TON_ADDRESS });

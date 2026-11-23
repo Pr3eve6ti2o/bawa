@@ -20,6 +20,7 @@ import { Label } from '../ui/components/label';
 import {
   ensureAdapters,
   ensureDevnetAdapters,
+  humanReasonMessage,
   useWallet,
 } from '../state/wallet-context';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
@@ -706,7 +707,11 @@ export function SendScreen() {
       setFeeEstimate(
         result.status === 'ok'
           ? { ok: true, feeBaseUnits: result.data.feeBaseUnits, note: result.data.note }
-          : { ok: false, reason: result.reason },
+          // Lane D: the adapter reason is a machine code (a TRON
+          // getchainparameters 429 surfaced here as a bare 'HTTP 429').
+          // No screen renders a raw reason (wallet-context rule) —
+          // map it to the human sentence first.
+          : { ok: false, reason: humanReasonMessage(result.reason, 'general') },
       );
     })();
     return () => {

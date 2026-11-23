@@ -145,6 +145,20 @@ describe.sequential('App', () => {
     });
   });
 
+  it('focused flows take no bottom-nav clearance: /send main has pb-0, not pb-24', async () => {
+    // Deep audit, Lane A: /send hides the sticky bottom nav
+    // (isFocusedFlow), so the unconditional pb-24 left 92px of dead
+    // scroll below the chain step (scrollH 936 at 390x844, content
+    // ending at 840) — the "zero scroll" claim failed on empty space.
+    // Nav screens keep pb-24 (previous test); focused flows take pb-0.
+    await withRenderedApp('/send', (div) => {
+      const main = div.querySelector('main');
+      expect(main).not.toBeNull();
+      expect(main?.className).toContain('pb-0');
+      expect(main?.className).not.toContain('pb-24');
+    });
+  });
+
   it('desktop shell is full-bleed with a widening content cap and no sidebar horizontal scroll', async () => {
     // Issue (a): the sidebar's inner nav was w-64 (256px) inside a
     // 224px shell, overflowing a wrapper whose overflow-y-auto computes

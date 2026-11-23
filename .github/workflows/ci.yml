@@ -269,9 +269,9 @@ jobs:
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
 
-      - name: Build
+      - name: Build (root-base build for E2E, ADR-0011)
         working-directory: apps/web
-        run: npm run build
+        run: npm run build:e2e
 
       - name: Run E2E tests
         working-directory: apps/web

@@ -18,10 +18,14 @@ async function btcAddress(page: Page): Promise<string> {
   // A reload resets the stepped flow to step 1; the vault auto-unlocks
   // and the devnet flag persists.
   await page.goto('/receive');
-  await page.getByRole('button', { name: /Bitcoin · BTC/ }).click();
+  // The chain buttons are named "Bitcoin BTC" (no separator dot):
+  // the earlier /Bitcoin · BTC/ pattern never matched the rendered
+  // accessible name and the spec timed out waiting for it.
+  await page.getByRole('button', { name: /Bitcoin BTC/ }).click();
   // Item 20 stepped flow: the chain button lands on the token step;
   // the native coin opens the details step where the QR address shows.
-  await page.getByRole('button', { name: /Bitcoin · BTC/ }).click();
+  // The token-step button carries the dot: "Bitcoin · BTC · Native coin".
+  await page.getByRole('button', { name: /Bitcoin · BTC · Native coin/ }).click();
   // The QR card shows the selected chain's address as a mono paragraph.
   const address = page.locator('p.font-mono', { hasText: /^(bc1q|tb1q)/ }).first();
   await expect(address).toBeVisible({ timeout: 15_000 });
@@ -45,8 +49,10 @@ test('E2E-02 header pill toggles mainnet to devnet and back', async ({ page }) =
   expect(devnetAddress).not.toBe(mainnetAddress);
 
   // Devnet mode says so on the dashboard, and token balances are off.
+  // The pill renders in both the mobile and desktop headers, so the
+  // text matches twice — .first() picks the visible one.
   await gotoInApp(page, 'Home');
-  await expect(page.getByText('Devnet test mode')).toBeVisible();
+  await expect(page.getByText('Devnet test mode').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/lane-b/item2-devnet-1919.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(500);

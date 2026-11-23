@@ -22,6 +22,14 @@ import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
 
+// E2E port (Lane E, 2026-11-23, ADR-0011): 4193 is the default, but on
+// a shared machine another lane may already hold it — reuseExistingServer
+// then silently attaches the tests to that lane's build, not this one
+// (seen first-hand: a 4193 preview from another worktree served its own
+// dist while this config's tests ran against it). Set E2E_PORT to a free
+// port when sharing a machine; CI always uses the default.
+const e2ePort = Number(process.env.E2E_PORT ?? 4193);
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -34,7 +42,7 @@ export default defineConfig({
   retries: isCI ? 1 : 0,
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4193',
+    baseURL: `http://127.0.0.1:${e2ePort}`,
     trace: 'off',
     video: 'off',
     // No automatic failure screenshots: Playwright cannot mask regions
@@ -50,14 +58,25 @@ export default defineConfig({
     },
   ],
   webServer: {
+    // The dist/ served here MUST be the root-base build
+    // (`npm run build:e2e`, ADR-0011), served by `preview:e2e`
+    // (`vite preview --base /`): the preview server takes its base
+    // from the Vite config, not from dist/, so a plain `preview`
+    // would still mount the root-base dist under `/bawa/`. The Pages
+    // build (base '/bawa/') 404s every root-absolute spec route —
+    // specs start with page.goto('/create-wallet') — so the suite
+    // fails at boot.
     // Port 4193 (not Vite's default 4173): other lanes on this shared
     // machine run their own preview on 4173, and reuseExistingServer
-    // would otherwise attach the tests to their app.
+    // would otherwise attach the tests to their app. With
+    // reuseExistingServer, a server already on the port is reused
+    // as-is, so a stale or foreign dist is tested silently — see the
+    // E2E_PORT note above when sharing the machine.
     // Bind explicitly to 127.0.0.1: bare `vite preview` binds to
     // `localhost`, which can resolve to ::1 while the URL below is IPv4
     // — the server then never answers the health check.
-    command: 'npm run preview -- --host 127.0.0.1 --port 4193',
-    url: 'http://127.0.0.1:4193',
+    command: `npm run preview:e2e -- --host 127.0.0.1 --port ${e2ePort}`,
+    url: `http://127.0.0.1:${e2ePort}`,
     reuseExistingServer: !isCI,
     timeout: 120_000,
   },

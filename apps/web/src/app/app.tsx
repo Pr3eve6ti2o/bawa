@@ -97,6 +97,7 @@ export function preloadRoute(to: string): void {
 }
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { appBasePath } from '../wallet/payment-links';
+import { accountName } from '../wallet/vault';
 import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
@@ -180,7 +181,7 @@ export function NetworkModePill() {
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState } = useWallet();
+  const { vaultState, vaultAccount } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
   useEffect(() => {
@@ -293,7 +294,7 @@ function AppLayout() {
               onFocus={() => preloadRoute('/wallets')}
               className="truncate text-sm font-medium text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
             >
-              {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+              {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
             </Link>
             <NetworkModePill />
           </header>
@@ -313,7 +314,7 @@ function AppLayout() {
                   onFocus={() => preloadRoute('/wallets')}
                   className="block truncate text-xs leading-tight text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
                 >
-                  {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+                  {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
                 </Link>
               </div>
             </div>
@@ -325,14 +326,21 @@ function AppLayout() {
               long page — e.g. the "Show recent activity" button on
               /track — scrolled under the nav and was half-untappable.
               pb-24 leaves ~30px clear at max scroll. Desktop is
-              unchanged: the nav is lg:hidden and lg:py-6 still applies. */}
+              unchanged: the nav is lg:hidden and lg:py-6 still applies.
+              Focused flows (/send, /create-wallet) hide the bottom nav,
+              so they take pb-0 instead: with pb-24 the /send chain step
+              scrolled 92px into empty space (deep audit, Lane A). */}
           {/* Wide-window content cap: the column steps 1024px -> 1152px
               at xl -> 1440px at 2xl, so on a 1919px viewport it uses the
               window instead of freezing at 1152px. 1440px reuses the old
               frame cap as the widest the column ever gets, keeping line
               lengths readable; the narrow task screens keep their own
               480px cap above. */}
-          <main className="mx-auto w-full max-w-[1024px] flex-1 px-5 pb-24 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px]">
+          <main
+            className={`mx-auto w-full max-w-[1024px] flex-1 px-5 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
+              isFocusedFlow ? 'pb-0' : 'pb-24'
+            }`}
+          >
             {isNarrow || isWideAtLg ? (
               <div
                 className={

@@ -11,10 +11,13 @@ test('E2E-05 refresh failure is shown honestly', async ({ page }) => {
   test.setTimeout(90_000);
   // Block every non-app request before the wallet is created, so the
   // background history refresh that runs on unlock fails deterministically.
-  // Same-origin requests (the app itself) are allowed through.
+  // Same-origin requests (the app itself) are allowed through. The check
+  // is on the hostname, not the port: the harness port is overridable
+  // (E2E_PORT, ADR-0011), and a hardcoded port would abort the app's
+  // own requests on any other port.
   await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
-    if (url.origin === 'http://127.0.0.1:4193') await route.continue();
+    if (url.hostname === '127.0.0.1') await route.continue();
     else await route.abort();
   });
   await createTestWallet(page);

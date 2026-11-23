@@ -228,6 +228,16 @@ export interface WalletContextValue extends WalletState {
   nextReceiveAddress(chain: ChainId): Promise<void>;
   /** Reset HD receive rotation to index 0 (new or deleted vault). */
   resetReceiveRotation(): void;
+  /**
+   * Lane C (bot use case): export the current account's extended public
+   * key for one chain, so the owner can derive many receiving addresses
+   * in their bot. Returns null when the vault is locked; throws for
+   * TON/SOL, which have no extended public key (one address per wallet).
+   * The key is public data — it can never sign — but it reveals
+   * addresses, balances and history, so the screen shows it only on
+   * demand and never stores it.
+   */
+  exportAccountExtendedPublicKey(chain: ChainId): Promise<string | null>;
   refreshVaultAccounts(selection?: {
     account: number;
     index: number;
@@ -1348,6 +1358,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }));
   }, [update]);
 
+  // Lane C (bot use case): export the current account's extended public
+  // key for one chain. Locked vault → null (the screen hides the key).
+  // The mnemonic is borrowed inside the vault closure and never leaves
+  // this function; only the public key is returned.
+  const exportAccountExtendedPublicKey = useCallback(
+    async (chain: ChainId): Promise<string | null> => {
+      if (
+        computeVaultState() !== 'unlocked' ||
+        !(await vault.autoUnlock())
+      ) {
+        return null;
+      }
+      const core = await loadVaultCore();
+      let result: string | null = null;
+      await vault.withMnemonicAsync(async (mnemonic) => {
+        result = await core.getAccountExtendedPublicKey(
+          mnemonic,
+          vault.getSessionPassphrase(),
+          chain,
+          current.current.vaultAccount.account,
+        );
+      });
+      return result;
+    },
+    [],
+  );
+
   const unlockVault = useCallback(async (password: string, passphrase = '') => {
     if (isPassphraseUsed() && !passphrase) {
       throw new Error('This wallet uses a passphrase. Enter it to unlock.');
@@ -1553,11 +1590,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
     setVaultAccount, selectVaultAccount, createVaultAccounts,
     refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation,
+    exportAccountExtendedPublicKey,
     refreshVaultAccounts, refreshBalances, refreshHistory,
     refreshTokenBalances, setChainEnabled, addCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
     devnetEnabled, setDevnetEnabled,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
