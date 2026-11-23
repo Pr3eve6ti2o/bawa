@@ -68,6 +68,15 @@ const CHAIN_NAMES: Record<ChainId, string> = {
   op: 'OP Mainnet',
   base: 'Base',
   avax: 'Avalanche C-Chain',
+  gnosis: 'Gnosis',
+  celo: 'Celo',
+  linea: 'Linea',
+  mantle: 'Mantle',
+  scroll: 'Scroll',
+  opbnb: 'opBNB',
+  metis: 'Metis',
+  aurora: 'Aurora',
+  fantom: 'Fantom',
   ltc: 'Litecoin',
   doge: 'Dogecoin',
 };
@@ -137,6 +146,15 @@ export async function validateRecipient(
       op: core.CoinType.optimism,
       base: core.CoinType.base,
       avax: core.CoinType.avalancheCChain,
+      gnosis: core.CoinType.xdai,
+      celo: core.CoinType.celo,
+      linea: core.CoinType.linea,
+      mantle: core.CoinType.mantle,
+      scroll: core.CoinType.scroll,
+      opbnb: core.CoinType.opBNB,
+      metis: core.CoinType.metis,
+      aurora: core.CoinType.aurora,
+      fantom: core.CoinType.fantom,
     };
 
     return core.CoinTypeExt.validate(coinTypes[chain], recipient)

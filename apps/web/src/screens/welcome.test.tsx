@@ -39,7 +39,16 @@ type ChainKey =
   | 'base'
   | 'avax'
   | 'ltc'
-  | 'doge';
+  | 'doge'
+  | 'gnosis'
+  | 'celo'
+  | 'linea'
+  | 'mantle'
+  | 'scroll'
+  | 'opbnb'
+  | 'metis'
+  | 'aurora'
+  | 'fantom';
 
 const ALL_CHAINS: readonly ChainKey[] = [
   'btc',
@@ -55,6 +64,15 @@ const ALL_CHAINS: readonly ChainKey[] = [
   'avax',
   'ltc',
   'doge',
+  'gnosis',
+  'celo',
+  'linea',
+  'mantle',
+  'scroll',
+  'opbnb',
+  'metis',
+  'aurora',
+  'fantom',
 ];
 
 function balancesFor(

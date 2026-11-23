@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addCustomRpcEndpoint,
   assertHardenedEd25519Path,
   assertSupported,
   availableFor,
@@ -10,39 +11,67 @@ import {
   GENERATED_CHAIN_FACTS,
   pathFor,
   profileFor,
+  promoteBackupEndpoint,
+  promoteBackupEndpointsAll,
+  removeRpcEndpoint,
+  resetAllRpcEndpoints,
+  resetRpcEndpoints,
+  resolveRpcEndpoints,
+  rpcEndpointHost,
+  RPC_OVERRIDES_KEY,
+  type RpcOverrideStorage,
   SOLANA_PROFILES,
   SUPPORTED_CHAINS,
+  validateRpcEndpoint,
 } from './chains';
 import { DEVNET_NETWORK_IDS } from './devnet-endpoints';
 
 describe('chains registry', () => {
-  it('supports exactly thirteen mainnet chains', () => {
+  it('supports exactly twenty-two mainnet chains', () => {
     expect([...SUPPORTED_CHAINS].sort()).toEqual([
       'arb',
+      'aurora',
       'avax',
       'base',
       'bsc',
       'btc',
+      'celo',
       'doge',
       'eth',
+      'fantom',
+      'gnosis',
+      'linea',
       'ltc',
+      'mantle',
       'matic',
+      'metis',
       'op',
+      'opbnb',
+      'scroll',
       'sol',
       'ton',
       'trx',
     ]);
     expect(Object.keys(CHAINS).sort()).toEqual([
       'arb',
+      'aurora',
       'avax',
       'base',
       'bsc',
       'btc',
+      'celo',
       'doge',
       'eth',
+      'fantom',
+      'gnosis',
+      'linea',
       'ltc',
+      'mantle',
       'matic',
+      'metis',
       'op',
+      'opbnb',
+      'scroll',
       'sol',
       'ton',
       'trx',
@@ -136,7 +165,7 @@ describe('chains registry', () => {
     expect(pathFor('sol', 1, 0)).toBe("m/44'/501'/0'");
   });
 
-  it('lists all thirteen chains for derive, restore and receive', () => {
+  it('lists all twenty-two chains for derive, restore and receive', () => {
     expect(availableFor('derive')).toEqual([
       'btc',
       'eth',
@@ -151,6 +180,15 @@ describe('chains registry', () => {
       'avax',
       'ltc',
       'doge',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
     ]);
     expect(availableFor('restore')).toEqual([
       'btc',
@@ -166,6 +204,15 @@ describe('chains registry', () => {
       'avax',
       'ltc',
       'doge',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
     ]);
     expect(availableFor('receive')).toEqual([
       'btc',
@@ -181,12 +228,23 @@ describe('chains registry', () => {
       'avax',
       'ltc',
       'doge',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
     ]);
   });
 
-  it('lists all thirteen chains for balance, and the four adapter chains for history and three for fee-quote', () => {
+  it('lists all twenty-two chains for balance, and the four adapter chains for history and three for fee-quote', () => {
     // Token discovery (2026-11-22): balance adapters now exist for all
     // 13 chains, so availableFor('balance') is the full registry.
+    // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains use
+    // the same generic EVM adapter, so balance covers all 22 chains.
     expect(availableFor('balance')).toEqual([
       'btc',
       'eth',
@@ -201,6 +259,15 @@ describe('chains registry', () => {
       'avax',
       'ltc',
       'doge',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
     ]);
     expect(availableFor('history')).toEqual(['btc', 'eth', 'trx', 'ton']);
     // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
@@ -267,6 +334,37 @@ describe('chains registry', () => {
         expect(caps[capability].evidence).toContain('never faked');
       }
     }
+    // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains
+    // carry the same capability shape as the token-discovery
+    // extended chains, with their own live cross-check date.
+    for (const chain of [
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
+    ] as const) {
+      const caps = capabilitiesFor(chain);
+      expect(caps.derive.status).toBe('verified');
+      expect(caps.restore.status).toBe('verified');
+      expect(caps.receive.status).toBe('verified');
+      expect(caps.balance.status).toBe('verified');
+      expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-23');
+      for (const capability of [
+        'history',
+        'fee-quote',
+        'unsigned-plan',
+        'local-sign',
+        'post-sign-verify',
+      ] as const) {
+        expect(caps[capability].status).toBe('blocked');
+        expect(caps[capability].evidence).toContain('never faked');
+      }
+    }
     expect(capabilitiesFor('ton')['fee-quote'].status).toBe('blocked');
     expect(capabilitiesFor('ton')['fee-quote'].evidence).toContain('unsigned message');
     for (const chain of ['btc', 'eth', 'trx'] as const) {
@@ -275,9 +373,13 @@ describe('chains registry', () => {
   });
 
   it('pins the Phase 2 adapter RPC endpoints and the token-discovery endpoints for the extended chains', () => {
-    expect(CHAINS.btc.rpcEndpoints).toEqual(['https://mempool.space/api']);
+    expect(CHAINS.btc.rpcEndpoints).toEqual([
+      'https://mempool.space/api',
+      'https://blockstream.info/api',
+    ]);
     expect(CHAINS.eth.rpcEndpoints).toEqual([
       'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
     ]);
     expect(CHAINS.trx.rpcEndpoints).toEqual(['https://api.trongrid.io']);
     expect(CHAINS.ton.rpcEndpoints).toEqual([
@@ -296,6 +398,7 @@ describe('chains registry', () => {
     ]);
     expect(CHAINS.bsc.rpcEndpoints).toEqual([
       'https://bsc-rpc.publicnode.com',
+      'https://bsc-dataseed.binance.org',
     ]);
     expect(CHAINS.matic.rpcEndpoints).toEqual([
       'https://polygon-bor-rpc.publicnode.com',
@@ -305,12 +408,14 @@ describe('chains registry', () => {
     ]);
     expect(CHAINS.op.rpcEndpoints).toEqual([
       'https://optimism-rpc.publicnode.com',
+      'https://mainnet.optimism.io',
     ]);
     expect(CHAINS.base.rpcEndpoints).toEqual([
       'https://base-rpc.publicnode.com',
     ]);
     expect(CHAINS.avax.rpcEndpoints).toEqual([
       'https://avalanche-rpc.publicnode.com',
+      'https://api.avax.network/ext/bc/C/rpc',
     ]);
     expect(CHAINS.ltc.rpcEndpoints).toEqual([
       'https://litecoinspace.org/api',
@@ -318,6 +423,45 @@ describe('chains registry', () => {
     expect(CHAINS.doge.rpcEndpoints).toEqual([
       'https://sochain.com/api/v3',
       'https://api.blockcypher.com/v1/doge/main',
+    ]);
+    // UI/UX fixes item 14 (2026-11-23): each new chain pins two
+    // independent keyless endpoints, both verified live
+    // (eth_chainId + eth_getBalance agree) on 2026-11-23.
+    expect(CHAINS.gnosis.rpcEndpoints).toEqual([
+      'https://gnosis-rpc.publicnode.com',
+      'https://rpc.gnosischain.com',
+    ]);
+    expect(CHAINS.celo.rpcEndpoints).toEqual([
+      'https://celo-rpc.publicnode.com',
+      'https://forno.celo.org',
+    ]);
+    expect(CHAINS.linea.rpcEndpoints).toEqual([
+      'https://linea-rpc.publicnode.com',
+      'https://rpc.linea.build',
+    ]);
+    expect(CHAINS.mantle.rpcEndpoints).toEqual([
+      'https://mantle-rpc.publicnode.com',
+      'https://rpc.mantle.xyz',
+    ]);
+    expect(CHAINS.scroll.rpcEndpoints).toEqual([
+      'https://scroll-rpc.publicnode.com',
+      'https://rpc.scroll.io',
+    ]);
+    expect(CHAINS.opbnb.rpcEndpoints).toEqual([
+      'https://opbnb-rpc.publicnode.com',
+      'https://opbnb-mainnet-rpc.bnbchain.org',
+    ]);
+    expect(CHAINS.metis.rpcEndpoints).toEqual([
+      'https://metis-rpc.publicnode.com',
+      'https://andromeda.metis.io',
+    ]);
+    expect(CHAINS.aurora.rpcEndpoints).toEqual([
+      'https://mainnet.aurora.dev',
+      'https://1rpc.io/aurora',
+    ]);
+    expect(CHAINS.fantom.rpcEndpoints).toEqual([
+      'https://rpc.fantom.network',
+      'https://rpc2.fantom.network',
     ]);
   });
 
@@ -474,7 +618,7 @@ describe('capabilities.json registry shape and identity', () => {
       networkId: 'bip122:000000000019d6689c085ae165831e93',
       assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
       profileId: 'bawa-btc-bip84-v1',
-      rpcEndpoints: ['https://mempool.space/api'],
+      rpcEndpoints: ['https://mempool.space/api', 'https://blockstream.info/api'],
     },
     ethereum: {
       registryId: 'ethereum',
@@ -494,7 +638,10 @@ describe('capabilities.json registry shape and identity', () => {
       networkId: 'eip155:1',
       assetId: 'eip155:1/slip44:60',
       profileId: 'bawa-evm-bip44-v1',
-      rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
+      rpcEndpoints: [
+        'https://ethereum-rpc.publicnode.com',
+        'https://1rpc.io/eth',
+      ],
     },
     tron: {
       registryId: 'tron',
@@ -549,6 +696,15 @@ describe('capabilities.json registry shape and identity', () => {
     'avalanchec',
     'litecoin',
     'doge',
+    'xdai',
+    'celo',
+    'linea',
+    'mantle',
+    'scroll',
+    'opbnb',
+    'metis',
+    'aurora',
+    'fantom',
   ] as const;
   const coinNames = [
     ...Object.keys(expectedSupportedCoins),
@@ -586,6 +742,15 @@ describe('capabilities.json registry shape and identity', () => {
     'eip155:43114',
     'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2',
     'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691',
+    'eip155:100',
+    'eip155:42220',
+    'eip155:59144',
+    'eip155:5000',
+    'eip155:534352',
+    'eip155:204',
+    'eip155:1088',
+    'eip155:1313161554',
+    'eip155:250',
   ] as const;
 
   const supportedMainnetNetworkIds = [
@@ -727,7 +892,7 @@ describe('capabilities.json registry shape and identity', () => {
       .replace(/\{index\}/g, '0');
   }
 
-  it('contains exactly the thirteen known coin entries', async () => {
+  it('contains exactly the twenty-two known coin entries', async () => {
     expect.assertions(1);
     const coins = await readRegistryCoins();
     expect(Object.keys(coins).sort()).toEqual([...coinNames].sort());
@@ -815,7 +980,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('allows only the thirteen explicitly listed mainnet network IDs', async () => {
+  it('allows only the twenty-two explicitly listed mainnet network IDs', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
 
@@ -852,7 +1017,7 @@ describe('capabilities.json registry shape and identity', () => {
     },
   );
 
-  it('has unique network IDs across the thirteen listed chains', async () => {
+  it('has unique network IDs across the twenty-two listed chains', async () => {
     expect.assertions(2);
     const coins = await readRegistryCoins();
     const liveIds = Object.values(CHAINS).map((chain) => chain.networkId);
@@ -860,18 +1025,20 @@ describe('capabilities.json registry shape and identity', () => {
       (coin) => coin.networkId,
     );
 
-    expect(new Set(liveIds).size).toBe(13);
+    expect(new Set(liveIds).size).toBe(22);
     expect(new Set(registryIds).size).toBe(4);
   });
 
   it('has unique account 0 index 0 derivation paths across the four engine chains', async () => {
     expect.assertions(3);
     const coins = await readRegistryCoins();
-    // Only the four engine-supported chains: the seven coin-type-60 chains
-    // (eth, bsc, matic, arb, op, base, avax) share m/44'/60'/0'/0/0 at
-    // account 0 index 0 BY DESIGN — same coin type, same path — so path
-    // uniqueness can only hold across the four engine chains. Verified
-    // first-hand on the merged tree: 7 unique live paths across 13 chains.
+    // Only the four engine-supported chains: the sixteen coin-type-60 chains
+    // (eth, bsc, matic, arb, op, base, avax + gnosis, celo, linea,
+    // mantle, scroll, opbnb, metis, aurora, fantom) share m/44'/60'/0'/0/0
+    // at account 0 index 0 BY DESIGN — same coin type, same path — so
+    // path uniqueness can only hold across the four engine chains.
+    // Verified first-hand on the merged tree: 7 unique live paths
+    // across 22 chains.
     const livePaths = implementedCoins.map(([, coin]) =>
       pathFor(coin.bawaChainId, 0, 0),
     );
@@ -1203,11 +1370,12 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
         if (expected === 'mainnet-confirmed') {
           // A dated live mainnet cross-check justifies the level: the
           // Phase 2 chains were cross-checked 2026-11-19, the nine
-          // token-discovery chains 2026-11-22. Either date is accepted;
-          // the rule that a verified balance needs a dated cross-check
-          // stays intact.
+          // token-discovery chains 2026-11-22, the nine UI/UX-fixes
+          // item-14 chains 2026-11-23. Any of the three dates is
+          // accepted; the rule that a verified balance needs a dated
+          // cross-check stays intact.
           expect(entry.evidence).toMatch(
-            /live mainnet cross-check 2026-11-(19|22)/,
+            /live mainnet cross-check 2026-11-(19|22|23)/,
           );
         } else if (entry.status === 'verified') {
           expect(entry.evidence).toMatch(/send\.test\.ts|core\.test\.ts/);
@@ -1215,6 +1383,243 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
           expect(entry.evidence).not.toContain('live mainnet cross-check');
         }
       }
+    },
+  );
+});
+
+describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
+  /** In-memory stand-in for localStorage: the functions take it explicitly. */
+  function memoryStorage(
+    initial: Record<string, string> = {},
+  ): RpcOverrideStorage {
+    const store = new Map(Object.entries(initial));
+    return {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    };
+  }
+
+  it('resolves the registry defaults when nothing is stored', () => {
+    const storage = memoryStorage();
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+    expect(resolveRpcEndpoints('btc', storage)).toEqual([
+      'https://mempool.space/api',
+      'https://blockstream.info/api',
+    ]);
+    expect(resolveRpcEndpoints('bsc', storage)).toEqual([
+      'https://bsc-rpc.publicnode.com',
+      'https://bsc-dataseed.binance.org',
+    ]);
+    expect(resolveRpcEndpoints('matic', storage)).toEqual([
+      'https://polygon-bor-rpc.publicnode.com',
+    ]);
+  });
+
+  it('returns the stored override list instead of the defaults', () => {
+    const storage = memoryStorage({
+      [RPC_OVERRIDES_KEY]: JSON.stringify({
+        eth: ['https://custom.invalid/eth', 'https://ethereum-rpc.publicnode.com'],
+      }),
+    });
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://custom.invalid/eth',
+      'https://ethereum-rpc.publicnode.com',
+    ]);
+    // Other chains are unaffected by one chain's override.
+    expect(resolveRpcEndpoints('btc', storage)).toEqual([
+      'https://mempool.space/api',
+      'https://blockstream.info/api',
+    ]);
+  });
+
+  it('ignores malformed stored overrides and falls back to defaults', () => {
+    const storage = memoryStorage({ [RPC_OVERRIDES_KEY]: 'not json {' });
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+    const badShape = memoryStorage({
+      [RPC_OVERRIDES_KEY]: JSON.stringify({ eth: 'https://x.invalid' }),
+    });
+    expect(resolveRpcEndpoints('eth', badShape)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+    const badUrls = memoryStorage({
+      [RPC_OVERRIDES_KEY]: JSON.stringify({
+        eth: ['http://plain.invalid', 'https://ok.invalid'],
+      }),
+    });
+    expect(resolveRpcEndpoints('eth', badUrls)).toEqual(['https://ok.invalid']);
+  });
+
+  it('validates an endpoint URL: https only, no credentials, no query', () => {
+    expect(validateRpcEndpoint('https://example.invalid/rpc')).toBeNull();
+    expect(validateRpcEndpoint('https://example.invalid:8443/api')).toBeNull();
+    expect(validateRpcEndpoint('http://example.invalid')).toMatch(/https/i);
+    expect(validateRpcEndpoint('https://user:pass@example.invalid')).toMatch(
+      /credential/i,
+    );
+    expect(validateRpcEndpoint('https://example.invalid/rpc?key=abc')).toMatch(
+      /query/i,
+    );
+    expect(validateRpcEndpoint('not a url')).toMatch(/valid/i);
+    expect(validateRpcEndpoint('')).toMatch(/valid/i);
+    expect(validateRpcEndpoint('https://')).toMatch(/valid/i);
+  });
+
+  it('adds a custom endpoint to the end of the list and persists it', () => {
+    const storage = memoryStorage();
+    const added = addCustomRpcEndpoint('eth', 'https://custom.invalid/eth', storage);
+    expect(added).toEqual({ ok: true });
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+      'https://custom.invalid/eth',
+    ]);
+  });
+
+  it('rejects an invalid custom endpoint without storing anything', () => {
+    const storage = memoryStorage();
+    const added = addCustomRpcEndpoint('eth', 'http://plain.invalid', storage);
+    expect(added.ok).toBe(false);
+    if (!added.ok) expect(added.reason).toMatch(/https/i);
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+  });
+
+  it('refuses a duplicate endpoint and caps the list at three', () => {
+    const storage = memoryStorage();
+    expect(
+      addCustomRpcEndpoint('eth', 'https://ethereum-rpc.publicnode.com', storage),
+    ).toEqual({ ok: false, reason: expect.stringMatching(/already/i) });
+    expect(addCustomRpcEndpoint('eth', 'https://one.invalid', storage)).toEqual({
+      ok: true,
+    });
+    expect(addCustomRpcEndpoint('eth', 'https://two.invalid', storage)).toEqual({
+      ok: false,
+      reason: expect.stringMatching(/at most 3/i),
+    });
+  });
+
+  it('removes a custom endpoint and clears the override when back to defaults', () => {
+    const storage = memoryStorage();
+    addCustomRpcEndpoint('eth', 'https://custom.invalid/eth', storage);
+    expect(removeRpcEndpoint('eth', 'https://custom.invalid/eth', storage)).toBe(
+      true,
+    );
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+    // Removing a registry endpoint is refused: the list is the registry.
+    expect(
+      removeRpcEndpoint('eth', 'https://ethereum-rpc.publicnode.com', storage),
+    ).toBe(false);
+  });
+
+  it('promotes the backup endpoint to primary for one chain', () => {
+    const storage = memoryStorage();
+    expect(promoteBackupEndpoint('eth', storage)).toBe(true);
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://1rpc.io/eth',
+      'https://ethereum-rpc.publicnode.com',
+    ]);
+    // A second promote swaps back.
+    expect(promoteBackupEndpoint('eth', storage)).toBe(true);
+    expect(resolveRpcEndpoints('eth', storage)[0]).toBe(
+      'https://ethereum-rpc.publicnode.com',
+    );
+    // A single-endpoint chain has no backup to promote.
+    expect(promoteBackupEndpoint('matic', storage)).toBe(false);
+  });
+
+  it('promotes every managed chain with a backup, and skips Dogecoin', () => {
+    const storage = memoryStorage();
+    const changed = promoteBackupEndpointsAll(storage);
+    expect(changed).toContain('eth');
+    expect(changed).toContain('btc');
+    expect(changed).toContain('bsc');
+    expect(changed).not.toContain('doge');
+    expect(changed).not.toContain('matic');
+    expect(resolveRpcEndpoints('eth', storage)[0]).toBe(
+      'https://1rpc.io/eth',
+    );
+    expect(resolveRpcEndpoints('doge', storage)).toEqual([
+      'https://sochain.com/api/v3',
+      'https://api.blockcypher.com/v1/doge/main',
+    ]);
+  });
+
+  it('resets one chain and all chains back to the registry defaults', () => {
+    const storage = memoryStorage();
+    promoteBackupEndpoint('eth', storage);
+    addCustomRpcEndpoint('btc', 'https://custom.invalid/btc', storage);
+    resetRpcEndpoints('eth', storage);
+    expect(resolveRpcEndpoints('eth', storage)).toEqual([
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ]);
+    expect(resolveRpcEndpoints('btc', storage)).toContain(
+      'https://custom.invalid/btc',
+    );
+    resetAllRpcEndpoints(storage);
+    expect(resolveRpcEndpoints('btc', storage)).toEqual([
+      'https://mempool.space/api',
+      'https://blockstream.info/api',
+    ]);
+  });
+
+  it('reports the hostname for display', () => {
+    expect(rpcEndpointHost('https://bsc-dataseed.binance.org')).toBe(
+      'bsc-dataseed.binance.org',
+    );
+    expect(rpcEndpointHost('https://api.avax.network/ext/bc/C/rpc')).toBe(
+      'api.avax.network',
+    );
+    expect(rpcEndpointHost('not a url')).toBe('not a url');
+  });
+});
+
+describe('UI/UX fixes item 14 — nine new EVM chains', () => {
+  const NEW_CHAINS = [
+    { id: 'gnosis', displayName: 'Gnosis', symbol: 'XDAI', evmChainId: 100, assetId: 'eip155:100/slip44:60' },
+    { id: 'celo', displayName: 'Celo', symbol: 'CELO', evmChainId: 42220, assetId: 'eip155:42220/slip44:527' },
+    { id: 'linea', displayName: 'Linea', symbol: 'ETH', evmChainId: 59144, assetId: 'eip155:59144/slip44:60' },
+    { id: 'mantle', displayName: 'Mantle', symbol: 'MNT', evmChainId: 5000, assetId: 'eip155:5000/slip44:60' },
+    { id: 'scroll', displayName: 'Scroll', symbol: 'ETH', evmChainId: 534352, assetId: 'eip155:534352/slip44:60' },
+    { id: 'opbnb', displayName: 'opBNB', symbol: 'BNB', evmChainId: 204, assetId: 'eip155:204/slip44:60' },
+    { id: 'metis', displayName: 'Metis', symbol: 'METIS', evmChainId: 1088, assetId: 'eip155:1088/slip44:60' },
+    { id: 'aurora', displayName: 'Aurora', symbol: 'ETH', evmChainId: 1313161554, assetId: 'eip155:1313161554/slip44:60' },
+    { id: 'fantom', displayName: 'Fantom', symbol: 'FTM', evmChainId: 250, assetId: 'eip155:250/slip44:250' },
+  ] as const;
+
+  it.each(NEW_CHAINS)(
+    '$id is a dual-endpoint EVM chain on the shared m/44\'/60\' profile',
+    (chain) => {
+      const config = CHAINS[chain.id];
+      expect(config.displayName).toBe(chain.displayName);
+      expect(config.symbol).toBe(chain.symbol);
+      expect(config.evmChainId).toBe(chain.evmChainId);
+      expect(config.networkId).toBe(`eip155:${chain.evmChainId}`);
+      expect(config.assetId).toBe(chain.assetId);
+      expect(config.profileId).toBe('bawa-evm-bip44-v1');
+      expect(config.rpcEndpoints.length).toBeGreaterThanOrEqual(2);
+      for (const url of config.rpcEndpoints) {
+        expect(url.startsWith('https://')).toBe(true);
+      }
+      expect(pathFor(chain.id, 0, 0)).toBe("m/44'/60'/0'/0/0");
+      expect(capabilitiesFor(chain.id).balance.status).toBe('verified');
     },
   );
 });

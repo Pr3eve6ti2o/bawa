@@ -4,7 +4,9 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { WalletProvider, useWallet } from './wallet-context';
 import { getAdapter } from '../wallet/adapters';
+import { fetchTokenBalance } from '../wallet/adapters/token-balances';
 import { deriveAddressesAt } from '../wallet/core';
+import { DEFAULT_TOKENS, tokenKeyOf } from '../wallet/tokens';
 import { createVault, deleteVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { BTC_PROFILE_ID, EVM_PROFILE_ID } from './test-helpers';
@@ -14,6 +16,25 @@ import { BTC_PROFILE_ID, EVM_PROFILE_ID } from './test-helpers';
 // counted from the last unlock or activity.
 // The passphrase tests below pass the passphrase to createVault — the session
 // passphrase is set at creation — and derivation runs through refreshVaultAccounts.
+
+vi.mock('../wallet/adapters/token-balances', () => ({
+  // A non-zero mainnet balance: if devnet mode ever calls this, the
+  // leak is visible as an 'available' token balance.
+  fetchTokenBalance: vi.fn(async () => ({
+    status: 'ok',
+    data: {
+      chain: 'eth',
+      address: '0x0000000000000000000000000000000000000000',
+      networkId: 'eip155:1',
+      valueBaseUnits: '123000000',
+      decimals: 6,
+      source: 'mock',
+      fetchedAt: Date.now(),
+    },
+    source: 'mock',
+    fetchedAt: Date.now(),
+  })),
+}));
 
 vi.mock('../wallet/adapters', () => ({
   getAdapter: vi.fn(() => undefined),
@@ -538,6 +559,42 @@ describe('wallet context — temporary devnet mode', () => {
       expect(localStorage.getItem('bawa-devnet-enabled')).toBe('0');
       expect(exposed!.vaultAddresses.btc[0]).toMatch(/^bc1q/);
       expect(exposed!.vaultAddresses.ton[0]).toMatch(/^UQ/);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('never reads mainnet token balances in devnet mode', async () => {
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      await act(async () => {
+        await exposed!.setDevnetEnabled(true);
+      });
+      expect(exposed!.devnetEnabled).toBe(true);
+      // The devnet ETH address IS the mainnet address (same m/44'/60'
+      // path), so a mainnet ERC-20 read here would return the user's
+      // real mainnet token balance inside devnet mode — the leak.
+      expect(exposed!.vaultAddresses.eth[0]).toBe(VECTOR_ETH);
+      // Let any in-flight auto-refresh settle before clearing the spy.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      vi.mocked(fetchTokenBalance).mockClear();
+      await act(async () => {
+        await exposed!.refreshTokenBalances();
+      });
+
+      expect(fetchTokenBalance).not.toHaveBeenCalled();
+      for (const token of DEFAULT_TOKENS) {
+        const balance = exposed!.tokenBalances[tokenKeyOf(token)];
+        expect(balance?.status).toBe('unavailable');
+        expect(balance?.reason).toBe('devnet-no-tokens');
+      }
     } finally {
       await mounted.cleanup();
     }

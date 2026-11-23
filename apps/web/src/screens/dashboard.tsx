@@ -456,6 +456,12 @@ export function DashboardScreen() {
               </div>
             </div>
             <Card className="mt-4">
+              {devnetEnabled && (
+                <p className="border-b px-4 pt-4 text-sm text-ink">
+                  Devnet test mode — token balances and prices are off here;
+                  only the four test networks show balances.
+                </p>
+              )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />
             </Card>
             <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />

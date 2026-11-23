@@ -92,7 +92,7 @@ export function ensureDevnetAdapters(): Promise<typeof import('../wallet/adapter
 // for any other chain (e.g. SOL) was persisted but dropped on every
 // reload — the Wallets screen showed "No wallets imported" and the
 // Assets row stayed "Balance unavailable" until the wallet was
-// re-added. Hydration now covers all 13 registry chains
+// re-added. Hydration now covers all 22 registry chains
 // (ALL_CHAIN_IDS), like the initial-state checks above it.
 // Maximum wallet-label length enforced at the storage boundary (T43
 // r2b Fix (b)). The shortest 12-word English BIP-39 mnemonic is 47
@@ -118,11 +118,24 @@ const perChain = <T,>(make: () => T): PerChain<T> => ({
   op: make(),
   base: make(),
   avax: make(),
+  gnosis: make(),
+  celo: make(),
+  linea: make(),
+  mantle: make(),
+  scroll: make(),
+  opbnb: make(),
+  metis: make(),
+  aurora: make(),
+  fantom: make(),
   ltc: make(),
   doge: make(),
 });
+// Kept as a literal list, not SUPPORTED_CHAINS: the screen tests mock
+// '../wallet/chains' with only {availableFor, chainConfig}, so importing
+// SUPPORTED_CHAINS here breaks those suites at load time. Must stay in
+// step with SUPPORTED_CHAINS (chains.test.ts pins that list).
 const ALL_CHAIN_IDS = [
-  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+  'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom',
 ] as const;
 
 // 'locked' is reachable only with auto-lock enabled or before the first
@@ -807,6 +820,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // asset rows. The token-balance module is dynamically imported so the
   // viem chunk stays out of first paint, like the adapters above.
   const refreshTokenBalances = useCallback(async () => {
+    // TEMPORARY devnet mode (UI/UX fixes, item 2): token balances are
+    // mainnet reads — ERC-20 eth_call / TRC-20 triggerconstant-contract
+    // against mainnet RPCs and mainnet contracts. In devnet mode the
+    // EVM addresses are the mainnet addresses (same m/44'/60' path),
+    // so reading them would display the user's real mainnet token
+    // balances inside test mode: mainnet leakage. Devnet has no token
+    // contracts configured, so every token resolves unavailable with a
+    // devnet reason and no network call is made. The request counters
+    // are bumped first so an in-flight mainnet refresh cannot land
+    // after this and overwrite the devnet state.
+    if (devnetEnabledRef.current) {
+      const devnetTokens = [...DEFAULT_TOKENS, ...current.current.customTokens];
+      for (const token of devnetTokens) {
+        const key = tokenKeyOf(token);
+        tokenBalanceRequests.current[key] =
+          (tokenBalanceRequests.current[key] ?? 0) + 1;
+        update((previous) => ({
+          ...previous,
+          tokenBalances: {
+            ...previous.tokenBalances,
+            [key]: { status: 'unavailable', reason: 'devnet-no-tokens' },
+          },
+        }));
+      }
+      return;
+    }
     const { fetchTokenBalance } = await import('../wallet/adapters/token-balances');
     const tokens = [...DEFAULT_TOKENS, ...current.current.customTokens];
     await Promise.all(tokens.map(async (token) => {
@@ -1040,6 +1079,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       op: [derived.op],
       base: [derived.base],
       avax: [derived.avax],
+      gnosis: [derived.gnosis],
+      celo: [derived.celo],
+      linea: [derived.linea],
+      mantle: [derived.mantle],
+      scroll: [derived.scroll],
+      opbnb: [derived.opbnb],
+      metis: [derived.metis],
+      aurora: [derived.aurora],
+      fantom: [derived.fantom],
       ltc: [derived.ltc],
       doge: [derived.doge],
     };

@@ -113,10 +113,73 @@ function HomeScreen() {
   return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
 }
 
+// The header network pill (UI/UX fixes, item 2): the Mainnet/Devnet
+// indicator in the app header is a button, not a label. Tapping it
+// switches the wallet between mainnet and devnet — the same mode flag
+// the Networks screen's DevnetSetting switch flips — and back again.
+// Same pill look, same place, no restyle: the button keeps the exact
+// classes the old span had. Used in both headers (desktop + mobile).
+//
+// Disabled with no vault (the DevnetSetting rule: there is nothing to
+// re-derive). A failed toggle is announced to assistive technology and
+// kept on the button's title; the visible error copy lives on the
+// Networks screen's DevnetSetting, which shows the same failure.
+export function NetworkModePill() {
+  const { vaultState, devnetEnabled, setDevnetEnabled } = useWallet();
+  const [isToggling, setIsToggling] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const hasVault = vaultState !== 'no-vault';
+  const disabled = !hasVault || isToggling;
+
+  async function handleToggle() {
+    if (disabled) return;
+    setActionError(null);
+    setIsToggling(true);
+    try {
+      await setDevnetEnabled(!devnetEnabled);
+    } catch (error: unknown) {
+      setActionError(
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      setIsToggling(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-pressed={devnetEnabled}
+        aria-label={devnetEnabled ? 'Switch to mainnet' : 'Switch to devnet'}
+        title={
+          actionError ??
+          (devnetEnabled
+            ? 'Devnet test mode — tap to switch back to mainnet'
+            : 'Mainnet — tap to switch to devnet test mode')
+        }
+        disabled={disabled}
+        onClick={() => {
+          void handleToggle();
+        }}
+        className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink disabled:opacity-60"
+      >
+        {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
+      </button>
+      {actionError !== null && (
+        <span role="alert" className="sr-only">
+          {actionError}
+        </span>
+      )}
+    </>
+  );
+}
+
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState, devnetEnabled } = useWallet();
+  const { vaultState } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
   useEffect(() => {
@@ -231,9 +294,7 @@ function AppLayout() {
             >
               {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
             </Link>
-            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
-            </span>
+            <NetworkModePill />
           </header>
 
           <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
@@ -255,9 +316,7 @@ function AppLayout() {
                 </Link>
               </div>
             </div>
-            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
-            </span>
+            <NetworkModePill />
           </header>
 
           {/* Mobile bottom padding must clear the sticky bottom nav

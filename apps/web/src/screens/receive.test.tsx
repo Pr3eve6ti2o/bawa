@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
@@ -30,6 +30,15 @@ vi.mock('../wallet/chains', () => ({
     op: { evmChainId: 10 },
     base: { evmChainId: 8453 },
     avax: { evmChainId: 43114 },
+    gnosis: { evmChainId: 100 },
+    celo: { evmChainId: 42220 },
+    linea: { evmChainId: 59144 },
+    mantle: { evmChainId: 5000 },
+    scroll: { evmChainId: 534352 },
+    opbnb: { evmChainId: 204 },
+    metis: { evmChainId: 1088 },
+    aurora: { evmChainId: 1313161554 },
+    fantom: { evmChainId: 250 },
     ltc: { evmChainId: null },
     doge: { evmChainId: null },
   },
@@ -51,6 +60,15 @@ const CHAINS = {
   op: { displayName: 'OP Mainnet', symbol: 'ETH' },
   base: { displayName: 'Base', symbol: 'ETH' },
   avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  gnosis: { displayName: 'Gnosis', symbol: 'XDAI' },
+  celo: { displayName: 'Celo', symbol: 'CELO' },
+  linea: { displayName: 'Linea', symbol: 'ETH' },
+  mantle: { displayName: 'Mantle', symbol: 'MNT' },
+  scroll: { displayName: 'Scroll', symbol: 'ETH' },
+  opbnb: { displayName: 'opBNB', symbol: 'BNB' },
+  metis: { displayName: 'Metis', symbol: 'METIS' },
+  aurora: { displayName: 'Aurora', symbol: 'ETH' },
+  fantom: { displayName: 'Fantom', symbol: 'FTM' },
   ltc: { displayName: 'Litecoin', symbol: 'LTC' },
   doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
@@ -399,6 +417,165 @@ describe('receive screen', () => {
       expect(dai).toBeGreaterThanOrEqual(0);
       expect(usdc).toBeGreaterThanOrEqual(0);
       expect(dai).toBeLessThan(usdc);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', () => {
+  // jsdom has no canvas and its Image never loads: install the fakes
+  // the production QR renderer uses, per test. jsdom's
+  // URL.createObjectURL also rejects Node-realm Blobs (its _buffer),
+  // so the blob-URL pair is stubbed too — the browser has one realm
+  // and needs none of this.
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+
+  function stubQrRendering(): void {
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: () => 'blob:fake-qr',
+      configurable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: () => {},
+      configurable: true,
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillStyle: '',
+      fillRect: () => {},
+      drawImage: () => {},
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(
+      (callback: (blob: Blob | null) => void) => {
+        callback(new Blob(['png-bytes'], { type: 'image/png' }));
+      },
+    );
+    class FakeImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      width = 192;
+      height = 192;
+      set src(_value: string) {
+        queueMicrotask(() => {
+          this.onload?.();
+        });
+      }
+    }
+    vi.stubGlobal('Image', FakeImage);
+  }
+
+  function clickButtonByText(root: ParentNode, text: string): void {
+    const button = [...root.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === text,
+    );
+    expect(button).not.toBeUndefined();
+    act(() => {
+      button!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+  }
+
+  function stubNavigatorShare(share: unknown, canShare: unknown): void {
+    Object.defineProperty(window.navigator, 'share', {
+      value: share,
+      configurable: true,
+    });
+    Object.defineProperty(window.navigator, 'canShare', {
+      value: canShare,
+      configurable: true,
+    });
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    Object.defineProperty(URL, 'createObjectURL', {
+      value: originalCreateObjectURL,
+      configurable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      value: originalRevokeObjectURL,
+      configurable: true,
+    });
+    delete (window.navigator as unknown as Record<string, unknown>)['share'];
+    delete (window.navigator as unknown as Record<string, unknown>)['canShare'];
+  });
+
+  it('shares the QR as a PNG image file when the platform supports file sharing', async () => {
+    setWallet();
+    stubQrRendering();
+    const share = vi.fn(
+      async (_args: {
+        files: File[];
+        title: string;
+        text: string;
+        url: string;
+      }) => {},
+    );
+    stubNavigatorShare(share, vi.fn(() => true));
+    const mounted = await mountScreen();
+    try {
+      clickButtonByText(mounted.div, 'Share');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(share).toHaveBeenCalledTimes(1);
+      const args = share.mock.calls[0]![0];
+      expect(args.files).toHaveLength(1);
+      const file = args.files[0]!;
+      expect(file).toBeInstanceOf(File);
+      expect(file.name).toBe('bawa-receive-eth.png');
+      expect(file.type).toBe('image/png');
+      expect(await file.text()).toBe('png-bytes');
+      expect(mounted.div.textContent).toContain('QR code shared.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('downloads the QR PNG when file sharing is not available', async () => {
+    setWallet();
+    stubQrRendering();
+    stubNavigatorShare(undefined, vi.fn(() => false));
+    const clickedAnchors: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      function (this: HTMLAnchorElement) {
+        clickedAnchors.push(this);
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      clickButtonByText(mounted.div, 'Share');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(clickedAnchors).toHaveLength(1);
+      expect(clickedAnchors[0]!.download).toBe('bawa-receive-eth.png');
+      expect(clickedAnchors[0]!.href.startsWith('blob:')).toBe(true);
+      expect(mounted.div.textContent).toContain('downloaded instead');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('downloads the QR as a PNG from the Download QR button', async () => {
+    setWallet();
+    stubQrRendering();
+    const clickedAnchors: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      function (this: HTMLAnchorElement) {
+        clickedAnchors.push(this);
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      clickButtonByText(mounted.div, 'Download QR');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(clickedAnchors).toHaveLength(1);
+      expect(clickedAnchors[0]!.download).toBe('bawa-receive-eth.png');
+      expect(mounted.div.textContent).toContain('QR code downloaded.');
     } finally {
       await mounted.cleanup();
     }

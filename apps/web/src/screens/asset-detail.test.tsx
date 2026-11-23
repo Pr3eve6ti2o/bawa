@@ -40,6 +40,15 @@ const CHAINS = {
   op: { displayName: 'OP Mainnet', symbol: 'ETH' },
   base: { displayName: 'Base', symbol: 'ETH' },
   avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  gnosis: { displayName: 'Gnosis', symbol: 'XDAI' },
+  celo: { displayName: 'Celo', symbol: 'CELO' },
+  linea: { displayName: 'Linea', symbol: 'ETH' },
+  mantle: { displayName: 'Mantle', symbol: 'MNT' },
+  scroll: { displayName: 'Scroll', symbol: 'ETH' },
+  opbnb: { displayName: 'opBNB', symbol: 'BNB' },
+  metis: { displayName: 'Metis', symbol: 'METIS' },
+  aurora: { displayName: 'Aurora', symbol: 'ETH' },
+  fantom: { displayName: 'Fantom', symbol: 'FTM' },
   ltc: { displayName: 'Litecoin', symbol: 'LTC' },
   doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
@@ -47,7 +56,7 @@ const CHAINS = {
 type ChainKey = keyof typeof CHAINS;
 
 function perChain<T>(value: T): Record<ChainKey, T> {
-  return { btc: value, eth: value, trx: value, ton: value, sol: value, bsc: value, matic: value, arb: value, op: value, base: value, avax: value, ltc: value, doge: value };
+  return { btc: value, eth: value, trx: value, ton: value, sol: value, bsc: value, matic: value, arb: value, op: value, base: value, avax: value, gnosis: value, celo: value, linea: value, mantle: value, scroll: value, opbnb: value, metis: value, aurora: value, fantom: value, ltc: value, doge: value };
 }
 
 const unavailablePrices = perChain({ status: 'unavailable', reason: 'missing' } as const);

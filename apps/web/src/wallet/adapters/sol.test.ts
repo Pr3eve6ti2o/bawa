@@ -188,3 +188,57 @@ describe('solana adapter — unbuilt operations', () => {
     await expect(adapter.broadcast({})).rejects.toThrow(BROADCAST_DISABLED_MESSAGE);
   });
 });
+
+describe('solana adapter — custom RPC list (UI/UX fixes, item 19)', () => {
+  it('walks a resolver-supplied list until an endpoint answers', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (url === 'https://first.invalid' || url === 'https://second.invalid') {
+        throw new Error(`Network error: ${url} unreachable`);
+      }
+      if (url === 'https://third.invalid') {
+        if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+        if (body.method === 'getBalance') {
+          return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 99 } };
+        }
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const adapter = createSolanaAdapter({
+      transport: { request },
+      rpcUrls: [
+        'https://first.invalid',
+        'https://second.invalid',
+        'https://third.invalid',
+      ],
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('99');
+      expect(result.data.source).toBe('third.invalid');
+    }
+  });
+
+  it('re-reads a resolver-supplied list on every call', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+      if (body.method === 'getBalance') {
+        return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 5 } };
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    let urls = ['https://first.invalid'];
+    const adapter = createSolanaAdapter({
+      transport: { request },
+      rpcUrls: () => urls,
+    });
+    await adapter.getBalance(ADDRESS);
+    urls = ['https://second.invalid'];
+    await adapter.getBalance(ADDRESS);
+    const calls = request.mock.calls;
+    expect(calls.some((call) => call[0] === 'https://first.invalid')).toBe(true);
+    expect(calls.some((call) => call[0] === 'https://second.invalid')).toBe(true);
+  });
+});

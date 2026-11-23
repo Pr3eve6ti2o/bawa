@@ -233,3 +233,46 @@ export function toAdapterError(
 ): { status: 'error'; reason: string } {
   return { status: 'error', reason: messageOf(error) };
 }
+
+/**
+ * RPC failover (UI/UX fixes, item 19): tries each endpoint in order
+ * for one read and returns the first success with the endpoint that
+ * answered. A per-endpoint failure is swallowed and the next endpoint
+ * is tried; only when every endpoint fails does the last error surface,
+ * so the caller's withRetry can retry the whole sweep. The Solana
+ * adapter's per-call primary→fallback is the pattern this generalises.
+ * Never returns a partial result.
+ */
+export async function tryEndpoints<T>(
+  endpoints: string[],
+  attempt: (endpoint: string) => Promise<T>,
+): Promise<{ result: T; endpoint: string }> {
+  let lastError: unknown = new Error('No RPC endpoints configured.');
+  for (const endpoint of endpoints) {
+    try {
+      return { result: await attempt(endpoint), endpoint };
+    } catch (error: unknown) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
+/** An endpoint list, or a resolver that returns the current list. */
+export type EndpointList = string[] | (() => string[]);
+
+/** Resolves an EndpointList to the concrete list for this call. */
+export function resolveEndpoints(list: EndpointList | undefined, fallback: string[]): string[] {
+  if (list === undefined) return [...fallback];
+  const resolved = typeof list === 'function' ? list() : list;
+  return resolved.length > 0 ? [...resolved] : [...fallback];
+}
+
+/** The hostname of an endpoint URL, or the raw string when unparseable. */
+export function endpointHost(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}

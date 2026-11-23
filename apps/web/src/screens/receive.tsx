@@ -5,7 +5,7 @@ import { useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
-import { buildBawaSendLink, buildPaymentUri } from '../wallet/payment-links';
+import { buildBawaSendLink, buildPaymentUri, qrSvgToPngFile } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
   isVerifiedToken,
@@ -181,41 +181,81 @@ export function ReceiveScreen() {
   async function sharePayment() {
     if (!address || !shareLink) return;
     setCopyStatus('');
-    if (navigator.share) {
+    // Sharing attaches the QR as a PNG image (UI/UX fixes, item 4):
+    // the file is what the recipient's wallet scans; the payment URI
+    // stays in the text and the Bawa link in the URL. When the
+    // platform cannot share files, the PNG downloads instead — the
+    // link is only copied as a last resort.
+    const file = await qrPngFile();
+    if (
+      file !== null &&
+      typeof navigator.canShare === 'function' &&
+      navigator.canShare({ files: [file] })
+    ) {
       try {
         await navigator.share({
+          files: [file],
           title: `Receive ${assetSymbol}`,
           text: paymentUri ?? address,
           url: shareLink,
         });
-        setCopyStatus('Shared.');
+        setCopyStatus('QR code shared.');
         return;
       } catch (error: unknown) {
-        // A cancelled share sheet is not an error; fall through to copy.
+        // A cancelled share sheet is not an error; fall through to download.
         if ((error as Error | undefined)?.name === 'AbortError') return;
+      }
+    }
+    if (file !== null) {
+      try {
+        downloadBlob(file, file.name);
+        setCopyStatus(
+          'Sharing is not available here — the QR code was downloaded instead.',
+        );
+        return;
+      } catch {
+        // Fall through to copying the link.
       }
     }
     await copyText(shareLink, 'Payment link copied.');
   }
 
-  async function downloadQr() {
+  function qrFileName(): string {
+    return `bawa-receive-${chain}${effectiveToken ? `-${effectiveToken.symbol.toLowerCase()}` : ''}.png`;
+  }
+
+  async function qrPngFile(): Promise<File | null> {
     const svg = qrRef.current?.querySelector('svg');
-    if (!svg) {
+    if (!svg) return null;
+    try {
+      return await qrSvgToPngFile(
+        new XMLSerializer().serializeToString(svg),
+        qrFileName(),
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  function downloadBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadQr() {
+    const file = await qrPngFile();
+    if (!file) {
       setCopyStatus('Unable to download the QR code.');
       return;
     }
     try {
-      const blob = new Blob([new XMLSerializer().serializeToString(svg)], {
-        type: 'image/svg+xml',
-      });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `bawa-receive-${chain}${effectiveToken ? `-${effectiveToken.symbol.toLowerCase()}` : ''}.svg`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(file, file.name);
       setCopyStatus('QR code downloaded.');
     } catch {
       setCopyStatus('Unable to download the QR code.');

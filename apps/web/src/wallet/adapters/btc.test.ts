@@ -105,12 +105,18 @@ describe('btc adapter — retry (item 2)', () => {
   });
 
   it('does not retry a terminal 404', async () => {
-    const fetchMock = mockFetchRawSequence([okBody([GENESIS]), http404()]);
+    const fetchMock = mockFetchRawSequence([
+      okBody([GENESIS]),
+      http404(),
+      http404(),
+    ]);
     const adapter = createBtcAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
-    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 1 identity + 1 primary attempt + 1 fallback attempt: a 404 is
+    // terminal, never retried — the fallback attempt is a different
+    // endpoint, not a retry of the same one.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('does not retry an identity mismatch (a shape error, not a fetch failure)', async () => {
@@ -217,5 +223,83 @@ describe('btc adapter — fee, UTXOs, broadcast', () => {
     await expect(adapter.broadcast('deadbeef')).rejects.toThrow(
       BROADCAST_DISABLED_MESSAGE,
     );
+  });
+});
+
+describe('btc adapter — RPC failover (UI/UX fixes, item 19)', () => {
+  const PRIMARY = 'https://primary.invalid/api';
+  const FALLBACK = 'https://fallback.invalid/api';
+
+  const ok = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    json: async () => body,
+  });
+
+  /** The primary host is down; the fallback answers every path. */
+  function mockBtcFailover(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith(PRIMARY)) {
+          throw new Error('Network error: primary down');
+        }
+        if (url.endsWith('/blocks/0')) return ok([GENESIS]);
+        if (url.includes('/address/') && url.endsWith('/utxo')) return ok([]);
+        if (url.includes('/address/') && url.endsWith('/txs')) return ok([]);
+        if (url.includes('/address/')) {
+          return ok({ chain_stats: { funded_txo_sum: 500000, spent_txo_sum: 123456 } });
+        }
+        if (url.endsWith('/v1/fees/recommended')) {
+          return { ok: false, status: 404, json: async () => ({}) };
+        }
+        if (url.endsWith('/fee-estimates')) {
+          return ok({ '1': 5.2, '6': 2.1 });
+        }
+        throw new Error(`unexpected url ${url}`);
+      }),
+    );
+  }
+
+  it('loads a balance through the fallback when the primary is down', async () => {
+    mockBtcFailover();
+    const adapter = createBtcAdapter({ baseUrls: [PRIMARY, FALLBACK] });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('376544');
+      expect(result.data.source).toBe('fallback.invalid');
+    }
+  });
+
+  it('checks the genesis block on the fallback when the primary is down', async () => {
+    mockBtcFailover();
+    const adapter = createBtcAdapter({ baseUrls: [PRIMARY, FALLBACK] });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+  });
+
+  it('reads the fee from the fallback fee-estimates map (Esplora shape)', async () => {
+    mockBtcFailover();
+    const adapter = createBtcAdapter({ baseUrls: [PRIMARY, FALLBACK] });
+    const result = await adapter.estimateFee();
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      // Esplora reports 5.2 sat/vB for the fastest target: rounded up.
+      expect(result.data.feeBaseUnits).toBe('6');
+      expect(result.data.source).toBe('fallback.invalid');
+    }
+  });
+
+  it('errors when every endpoint is down', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('Network error: all endpoints down');
+      }),
+    );
+    const adapter = createBtcAdapter({ baseUrls: [PRIMARY, FALLBACK] });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
   });
 });

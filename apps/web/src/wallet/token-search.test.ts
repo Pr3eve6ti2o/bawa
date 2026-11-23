@@ -92,6 +92,7 @@ describe('searchTokensByNameOrTicker', () => {
         coins: [
           { id: 'usd-coin-wormhole', name: 'USD Coin (Wormhole)', symbol: 'USDC' },
           { id: 'usd-coin', name: 'USD Coin', symbol: 'USDC' },
+          { id: 'usd-coin-x', name: 'USDC Extra', symbol: 'USDCX' },
         ],
       },
       coins: {
@@ -104,15 +105,41 @@ describe('searchTokensByNameOrTicker', () => {
           },
         },
         'usd-coin': USDC_DETAIL,
+        'usd-coin-x': {
+          id: 'usd-coin-x',
+          name: 'USDC Extra',
+          symbol: 'usdcx',
+          detail_platforms: {
+            ethereum: {
+              decimal_place: 6,
+              contract_address: '0x0000000000000000000000000000000000000001',
+            },
+          },
+        },
       },
     });
     const result = await searchTokensByNameOrTicker('usdc', fetchFn);
     expect(result.status).toBe('found');
     if (result.status === 'found') {
-      // The Wormhole listing has no supported platform, so only the
-      // exact USDC candidates remain.
-      expect(result.candidates).toHaveLength(2);
-      expect(result.candidates[0]?.coingeckoId).toBe('usd-coin');
+      // UI/UX fixes, item 13: Solana is now a supported platform, so
+      // the Wormhole USDC (solana) is a legitimate candidate — and it
+      // is an exact symbol match too, so it keeps its search order
+      // ahead of the partial-symbol hit. Exact before partial still
+      // holds: the USDCX hit ranks last.
+      expect(result.candidates).toHaveLength(4);
+      expect(result.candidates.slice(0, 3).map((c) => c.symbol)).toEqual([
+        'USDC',
+        'USDC',
+        'USDC',
+      ]);
+      expect(result.candidates[3]?.coingeckoId).toBe('usd-coin-x');
+      expect(
+        result.candidates.some(
+          (candidate) =>
+            candidate.coingeckoId === 'usd-coin-wormhole' &&
+            candidate.chain === 'sol',
+        ),
+      ).toBe(true);
     }
   });
 
