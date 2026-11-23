@@ -10,7 +10,7 @@ import {
   intentFingerprint,
   type PartialSigner,
   type SigningIntent,
-} from './core';
+} from './signing-intent';
 
 export type Eip712Domain = {
   name: 'Bawa';

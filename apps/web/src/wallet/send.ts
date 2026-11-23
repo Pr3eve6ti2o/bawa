@@ -4,13 +4,15 @@ import { bytesToHex, keccak256, parseTransaction, recoverAddress, serializeTrans
 import { loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import {
-  assertIntentMatchesTransaction,
   createPartialSigner,
-  createTransactionIntent,
   deriveAddresses,
   deriveDevnetAddressesAt,
   withSigningKey,
 } from './core';
+import {
+  assertIntentMatchesTransaction,
+  createTransactionIntent,
+} from './signing-intent';
 import { getAdapterForMode, getDevnetAdapter } from './adapters';
 import {
   chainConfigForDevnetNetwork,

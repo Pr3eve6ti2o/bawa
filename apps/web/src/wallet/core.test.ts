@@ -8,11 +8,7 @@ import {
   sha256,
 } from 'viem';
 import {
-  assertIntentMatchesTransaction,
-  assertPartialSigner,
-  createNoopSigner,
   createPartialSigner,
-  createTransactionIntent,
   createWallet,
   deriveAddressAt,
   deriveAddresses,
@@ -20,13 +16,19 @@ import {
   deriveDevnetAddressesAt,
   deriveFromXpub,
   getAccountExtendedPublicKey,
-  intentFingerprint,
-  isPartialSigner,
   restoreWallet,
   withSigningKey,
+} from './core';
+import {
+  assertIntentMatchesTransaction,
+  assertPartialSigner,
+  createNoopSigner,
+  createTransactionIntent,
+  intentFingerprint,
+  isPartialSigner,
   type AddressOnlyAccount,
   type LocalAccount,
-} from './core';
+} from './signing-intent';
 import { decodeBtcBech32 } from './devnet';
 import { ripemd160 } from 'viem';
 
