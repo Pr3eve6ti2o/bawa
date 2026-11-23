@@ -58,6 +58,11 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Branch audit](archive/branch-audit.md) — `DOCUMENTED_NOT_TESTED`: what each of the five branches holds and where they differ.
 - [Architecture](../ARCHITECTURE.md) — `DOCUMENTED_NOT_TESTED`: code map, invariants, and boundaries.
 - [Architecture decisions](adr/README.md) — `DOCUMENTED_NOT_TESTED`: numbered decision records (ADRs).
+- [Decisions](DECISIONS.md) — owner-delegated decisions register (ECDSA, confirmation policy, merges).
+- [UI/UX Fixes programme](UI-UX-FIXES-PROGRAMME.md) — programme record: 21 items, merged into `panel-rebuild/token-gaps` (merge commit `4eb0242`).
+- [UI/UX Round 2 programme](UI-UX-ROUND2-PROGRAMME.md) — programme record: 10 items, merged into `panel-rebuild/token-gaps` (merge commit `6147b74`).
+- [Reverify + Professional Polish programme](REVERIFY-PROGRAMME.md) — programme record: 5 lanes, merged into `panel-rebuild/token-gaps`.
+- [Reverify checklist](REVERIFY-CHECKLIST.md) — every owner order from 2026-11-22 through 2026-11-23 ~18:14 IST, with a verdict and evidence per order.
 
 ## The builder
 

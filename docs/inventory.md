@@ -116,6 +116,15 @@ Staleness is decided by the drift check (below), not by this table.
 | `docs/RENAME-MAP.md` | Pr3eve6ti2o | 2026-11-20 | Rename map (env/file renames). |
 | `docs/SECURITY-RELEASE-GATES.md` | Pr3eve6ti2o | 2026-11-20 | Security release gates (renamed from lowercase `security-release-gates.md`). |
 
+### Programme records
+
+| Doc | Owner | Last changed | Notes |
+| --- | --- | --- | --- |
+| `docs/UI-UX-FIXES-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | UI/UX Fixes programme record (21 items, merged into token-gaps). |
+| `docs/UI-UX-ROUND2-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | UI/UX Round 2 programme record (10 items, merged into token-gaps). |
+| `docs/REVERIFY-PROGRAMME.md` | Pr3eve6ti2o | 2026-11-23 | Reverify + Professional Polish programme record (5 lanes, merged into token-gaps). |
+| `docs/REVERIFY-CHECKLIST.md` | Pr3eve6ti2o | 2026-11-23 | Reverify checklist: every owner order 2026-11-22 through 2026-11-23 ~18:14 IST, verdict + evidence per order. |
+
 ### Security
 
 | Doc | Owner | Last changed | Notes |
