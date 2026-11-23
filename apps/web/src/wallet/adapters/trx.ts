@@ -1,4 +1,5 @@
 import { hexToBytes, sha256 } from 'viem';
+import { BASE58_ALPHABET, encodeBase58 } from '../../engine/address-codecs';
 import { isRecord } from '../guards';
 import {
   createDisabledBroadcast,
@@ -22,8 +23,6 @@ import { createMempoolReader, feeEstimateResult } from './utxo-shared';
 const NETWORK_ID = 'tron:0x2b6653dc';
 const BASE_URL = 'https://api.trongrid.io';
 const DECIMALS = 6;
-const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
 export interface TronAdapterOverrides {
   baseUrl?: string;
   /**
@@ -74,31 +73,6 @@ export interface TronBlockHeader {
   parentHash: string;
   /** Base58 TRON address of the block witness. */
   witnessAddress: string;
-}
-
-function encodeBase58(bytes: Uint8Array): string {
-  let zeros = 0;
-  while (zeros < bytes.length && bytes[zeros] === 0) zeros += 1;
-  const digits: number[] = [0];
-  for (let i = zeros; i < bytes.length; i += 1) {
-    let carry = bytes[i] as number;
-    for (let j = 0; j < digits.length; j += 1) {
-      carry += (digits[j] as number) * 256;
-      digits[j] = carry % 58;
-      carry = Math.floor(carry / 58);
-    }
-    while (carry > 0) {
-      digits.push(carry % 58);
-      carry = Math.floor(carry / 58);
-    }
-  }
-  return (
-    '1'.repeat(zeros) +
-    digits
-      .reverse()
-      .map((digit) => BASE58_ALPHABET[digit] as string)
-      .join('')
-  );
 }
 
 /** 21 address bytes (0x41 version + 20-byte hash) as a base58check T-address. */

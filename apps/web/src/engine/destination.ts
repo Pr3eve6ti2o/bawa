@@ -25,22 +25,22 @@
 // confirmation thresholds are the register values (M-13, user-approved
 // 2026-11-10). Confirmation policy is not a finality guarantee.
 
+import {
+  BECH32_CHARSET,
+  BECH32_CONSTANT,
+  BECH32M_CONSTANT,
+  bech32Polymod,
+  convertBits,
+  crc16Xmodem,
+  decodeBase58,
+  hrpExpand,
+} from './address-codecs';
 import { keccak256Ascii } from './keccak';
 import type {
   DestinationChain,
   DestinationValidation,
   MainnetParams,
 } from '@bawa/contracts';
-
-const BASE58_ALPHABET =
-  '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
-const BECH32_GENERATORS = [
-  0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3,
-];
-const BECH32_CONSTANT = 1;
-const BECH32M_CONSTANT = 0x2bc830a3;
 
 const TON_BOUNCEABLE_TAG = 0x11;
 const TON_NON_BOUNCEABLE_TAG = 0x51;
@@ -65,53 +65,9 @@ async function doubleSha256(data: Uint8Array): Promise<Uint8Array> {
   return sha256(await sha256(data));
 }
 
-// CRC16-XMODEM (poly 0x1021, init 0x0000, MSB-first, no lookup table),
-// the checksum of TON user-friendly addresses (TEP-0002).
-function crc16Xmodem(data: Uint8Array): number {
-  let crc = 0x0000;
-  for (const byte of data) {
-    crc ^= byte << 8;
-    for (let bit = 0; bit < 8; bit++) {
-      crc =
-        (crc & 0x8000) !== 0
-          ? ((crc << 1) ^ 0x1021) & 0xffff
-          : (crc << 1) & 0xffff;
-    }
-  }
-  return crc;
-}
-
 // ---------------------------------------------------------------------------
 // Base58Check
 // ---------------------------------------------------------------------------
-
-// Decodes a Base58 string to bytes; returns null on an invalid character.
-// Leading '1' characters are leading zero bytes.
-function decodeBase58(input: string): Uint8Array | null {
-  let value = 0n;
-  for (const character of input) {
-    const digit = BASE58_ALPHABET.indexOf(character);
-    if (digit === -1) return null;
-    value = value * 58n + BigInt(digit);
-  }
-  const reversed: number[] = [];
-  while (value > 0n) {
-    reversed.push(Number(value % 256n));
-    value /= 256n;
-  }
-  let leadingZeroes = 0;
-  while (
-    leadingZeroes < input.length &&
-    input.charAt(leadingZeroes) === '1'
-  ) {
-    leadingZeroes++;
-  }
-  const bytes = new Uint8Array(leadingZeroes + reversed.length);
-  for (let i = 0; i < reversed.length; i++) {
-    bytes[leadingZeroes + i] = reversed[reversed.length - 1 - i]!;
-  }
-  return bytes;
-}
 
 interface Base58CheckDecoded {
   version: number;
@@ -144,60 +100,6 @@ async function decodeBase58Check(
 // ---------------------------------------------------------------------------
 // Bech32 / Bech32m (BIP-173 / BIP-350)
 // ---------------------------------------------------------------------------
-
-function bech32Polymod(values: readonly number[]): number {
-  let checksum = 1;
-  for (const value of values) {
-    const top = checksum >> 25;
-    checksum = ((checksum & 0x1ffffff) << 5) ^ value;
-    for (let i = 0; i < 5; i++) {
-      if (((top >> i) & 1) !== 0) {
-        checksum ^= BECH32_GENERATORS[i]!;
-      }
-    }
-  }
-  return checksum;
-}
-
-function hrpExpand(hrp: string): number[] {
-  const expanded: number[] = [];
-  for (let i = 0; i < hrp.length; i++) {
-    expanded.push(hrp.charCodeAt(i) >> 5);
-  }
-  expanded.push(0);
-  for (let i = 0; i < hrp.length; i++) {
-    expanded.push(hrp.charCodeAt(i) & 31);
-  }
-  return expanded;
-}
-
-// Strict convertbits: no padding allowed, non-zero padding bits and
-// incomplete final groups are rejected.
-function convertBits(
-  data: readonly number[],
-  fromBits: number,
-  toBits: number,
-): number[] | null {
-  let accumulator = 0;
-  let bits = 0;
-  const result: number[] = [];
-  const maxValue = (1 << toBits) - 1;
-  for (const value of data) {
-    accumulator = (accumulator << fromBits) | value;
-    bits += fromBits;
-    while (bits >= toBits) {
-      bits -= toBits;
-      result.push((accumulator >> bits) & maxValue);
-    }
-    accumulator &= (1 << bits) - 1;
-  }
-  if (bits > 0) {
-    // Leftover bits must be fewer than fromBits and all zero.
-    if (bits >= fromBits) return null;
-    if (((accumulator << (toBits - bits)) & maxValue) !== 0) return null;
-  }
-  return result;
-}
 
 type Bech32Failure =
   | 'invalid-format'

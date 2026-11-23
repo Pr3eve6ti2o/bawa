@@ -1,5 +1,6 @@
 import { hashMessage, hexToBytes, sha256, stringToHex } from 'viem';
-import { loadCore } from '../engine/boundary';
+import { crc16Xmodem } from '../engine/address-codecs';
+import { COIN_TYPE_KEY_FOR_CHAIN, loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { pathFor } from './chains';
 import {
@@ -43,77 +44,18 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
 });
 
 function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
-  switch (chain) {
-    case 'btc':
-      return core.CoinType.bitcoin;
-    case 'eth':
-      return core.CoinType.ethereum;
-    case 'trx':
-      return core.CoinType.tron;
-    case 'ton':
-      return core.CoinType.ton;
-    case 'sol':
-      return core.CoinType.solana;
-    case 'bsc':
-      return core.CoinType.smartChain;
-    case 'matic':
-      return core.CoinType.polygon;
-    case 'arb':
-      return core.CoinType.arbitrum;
-    case 'op':
-      return core.CoinType.optimism;
-    case 'base':
-      return core.CoinType.base;
-    case 'avax':
-      return core.CoinType.avalancheCChain;
-    case 'gnosis':
-      return core.CoinType.xdai;
-    case 'celo':
-      return core.CoinType.celo;
-    case 'linea':
-      return core.CoinType.linea;
-    case 'mantle':
-      return core.CoinType.mantle;
-    case 'scroll':
-      return core.CoinType.scroll;
-    case 'opbnb':
-      return core.CoinType.opBNB;
-    case 'metis':
-      return core.CoinType.metis;
-    case 'aurora':
-      return core.CoinType.aurora;
-    case 'fantom':
-      return core.CoinType.fantom;
-    case 'ltc':
-      return core.CoinType.litecoin;
-    case 'doge':
-      return core.CoinType.dogecoin;
-    default:
-      throw new Error('Unsupported chain.');
+  if (chain === 'ton') return core.CoinType.ton;
+  const key = COIN_TYPE_KEY_FOR_CHAIN[chain];
+  if (key === undefined) {
+    throw new Error('Unsupported chain.');
   }
+  return core.CoinType[key];
 }
 
 function assertValidMnemonic(core: WalletCore, mnemonic: string): void {
   if (!core.Mnemonic.isValid(mnemonic)) {
     throw new Error('Invalid mnemonic.');
   }
-}
-
-function crc16Xmodem(bytes: Uint8Array): number {
-  let crc = 0;
-
-  for (const byte of bytes) {
-    crc ^= byte << 8;
-
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc =
-        (crc & 0x8000) !== 0
-          ? ((crc << 1) ^ 0x1021) & 0xffff
-          : (crc << 1) & 0xffff;
-    }
-  }
-
-  return crc;
 }
 
 /**
