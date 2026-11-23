@@ -138,7 +138,7 @@ export function TransactionDetailScreen() {
   })();
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 text-foreground">
       <header className="mb-6">
         <Link
           to="/transactions"
@@ -246,6 +246,6 @@ export function TransactionDetailScreen() {
           </Link>
         </section>
       )}
-    </main>
+    </div>
   );
 }

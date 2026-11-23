@@ -26,6 +26,7 @@ function setWallet(overrides: Partial<Wallet> = {}) {
     autoLockMinutes: 5,
     setAutoLockMinutes: vi.fn(),
     setAutoLockEnabled: vi.fn(async () => {}),
+    lockVault: vi.fn(),
     unlockVault: vi.fn(async () => {}),
     ...overrides,
   } as Wallet;
@@ -281,6 +282,39 @@ describe('AutoLockSetting', () => {
       expect(div.textContent).toContain(error.message);
     } finally {
       cleanup();
+    }
+  });
+
+  it('offers Lock now while unlocked and locks the vault when clicked', async () => {
+    const wallet = setWallet();
+    const { div, cleanup } = mount();
+
+    try {
+      const button = [...div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Lock now',
+      );
+      expect(button).not.toBeUndefined();
+
+      await act(async () => {
+        button!.click();
+      });
+
+      expect(wallet.lockVault).toHaveBeenCalledTimes(1);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('offers no Lock now button while locked or without a vault', () => {
+    for (const vaultState of ['locked', 'no-vault'] as const) {
+      setWallet({ vaultState });
+      const { div, cleanup } = mount();
+
+      try {
+        expect(div.textContent).not.toContain('Lock now');
+      } finally {
+        cleanup();
+      }
     }
   });
 });
