@@ -9,7 +9,10 @@ setupMaskedScreenshots();
 // card switched off, and a full page reload re-opens it via auto-unlock
 // with no password prompt. /lock IS a route again — it shows the unlock
 // screen only when the vault is locked, so while unlocked it shows no
-// unlock heading. (The merge-1 version of this spec guarded the no-lock
+// unlock screen. (The title is a CardTitle, which renders a <div>,
+// so no heading role ever matches it — the old getByRole('heading')
+// assertions were vacuous: they passed whether or not the lock
+// screen was showing. getByText matches the real element.) (The merge-1 version of this spec guarded the no-lock
 // model — "Vault stays unlocked" copy, no /lock route — which merge 2
 // superseded.)
 test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
@@ -32,7 +35,7 @@ test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
     page.getByRole('button', { name: 'Lock vault' }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { name: 'Unlock your wallet' }),
+    page.getByText('Unlock your wallet'),
   ).toHaveCount(0);
 
   // A full page reload re-opens the vault via auto-unlock: no password
@@ -41,12 +44,12 @@ test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
   await gotoInApp(page, 'Home');
   await expect(page.getByText('Zero balance').first()).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Unlock your wallet' }),
+    page.getByText('Unlock your wallet'),
   ).toHaveCount(0);
 
   // /lock with the vault unlocked shows no unlock screen.
   await page.goto('/lock');
   await expect(
-    page.getByRole('heading', { name: 'Unlock your wallet' }),
+    page.getByText('Unlock your wallet'),
   ).toHaveCount(0);
 });
