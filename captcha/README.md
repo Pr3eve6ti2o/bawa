@@ -18,12 +18,14 @@ npm run check
 # Env: CAPTCHA_URL, CAPTCHA_PROXY (empty = direct egress), CAPTCHA_TIMEOUT_MS
 ```
 
-Set `CAPTCHA_URL` to any page that shows a captcha. The default is the
-TronScan Approval tab (`https://tronscan.org/#/tokenapproval`), the worked
+Set `CAPTCHA_URL` to any page that shows a captcha. It is required — the
+runner has no default target and refuses to run without it. The TronScan
+Approval tab (`https://tronscan.org/#/tokenapproval`) is the worked
 example in the section below.
 
-The runner is read-only: it never connects a wallet, never clicks
-Cancel/Revoke, and never signs or sends a transaction. It writes
+The runner is read-only: it only interacts with the captcha challenge
+itself; it never submits forms or clicks page action buttons, and never
+signs or sends a transaction. It writes
 `run-captcha-check/captcha-result.json` +
 `run-captcha-check/captcha-result.png`.
 
@@ -79,9 +81,10 @@ same result (verified first-hand, 2026-11-17):
 Both runs: no `cf_clearance` cookie, no Approval-tab UI. The two different
 egress IPs getting the same flat block page means it is not one bad IP — the
 datacenter egress class is blocked. Evidence: the run's
-`run-captcha-check/tronscan-result.json` and
-`run-captcha-check/tronscan-result.png` (kept under their original names as
-the record of the 2026-11-17 TronScan run).
+`run-captcha-check/captcha-result.json` and
+`run-captcha-check/captcha-result.png` (renamed from their original
+`tronscan-result.*` names when the tool was generalised; the contents are
+unchanged, the record of the 2026-11-17 TronScan run).
 
 P22 stays blocked from here. Its live options remain: retry on
 `tronscan.io`, or leave the rendered-UI finding UNVERIFIABLE.

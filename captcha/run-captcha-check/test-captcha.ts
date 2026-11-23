@@ -1,17 +1,19 @@
 // General captcha challenge-solving runner: completes (or bypasses) the captcha
 // challenge on any website that asks for one (Cloudflare Turnstile and similar),
 // using the vendored trawl Cloudflare solvers (../vendors/trawl/...) under patchright
-// (a Playwright fork) + headless Chromium. It never connects a wallet, never clicks
-// Cancel/Revoke, and never signs or sends a transaction.
+// (a Playwright fork) + headless Chromium. It is read-only: it only interacts
+// with the captcha challenge itself, never submits forms or clicks page action
+// buttons, and never signs or sends a transaction.
 //
 // Run from captcha/:  npm install && npm run check
-// Env:  CAPTCHA_URL     (default https://tronscan.org/#/tokenapproval — the worked example;
-//                     set it to any page that shows a captcha)
+// Env:  CAPTCHA_URL     (required — the page that shows the captcha challenge;
+//                     no default; the runner refuses to run without it)
 //       CAPTCHA_PROXY   (default http://127.0.0.1:3129; empty = direct egress)
 //       CAPTCHA_TIMEOUT_MS (challenge wait budget, default 90000)
 //
 // Writes captcha-result.json + captcha-result.png next to this file.
 // Exit 0 = ran to completion (outcome is in the JSON, not the exit code);
+// exit 1 = CAPTCHA_URL is not set;
 // exit 2 = the browser never reached the target (network failure, no challenge seen).
 
 import { chromium } from "patchright";
@@ -25,7 +27,13 @@ import { fileURLToPath } from "url";
 // Results go next to this script, wherever the command is run from.
 const OUT_DIR = fileURLToPath(new URL(".", import.meta.url));
 
-const TARGET = process.env.CAPTCHA_URL ?? "https://tronscan.org/#/tokenapproval";
+const TARGET = process.env.CAPTCHA_URL;
+if (!TARGET) {
+  console.error(
+    "CAPTCHA_URL is not set. Set CAPTCHA_URL to the page that shows the captcha challenge, e.g. CAPTCHA_URL=https://example.com/page-with-captcha npm run check",
+  );
+  process.exit(1);
+}
 const PROXY = process.env.CAPTCHA_PROXY ?? "http://127.0.0.1:3129";
 const TIMEOUT_MS = Number(process.env.CAPTCHA_TIMEOUT_MS ?? 90000);
 const START = new Date().toISOString();
@@ -68,7 +76,6 @@ const log = (...a: unknown[]) => console.log(`[${new Date().toISOString()}]`, ..
             title: await page.title().catch(() => "?"),
             url: page.url(),
             cfClearance: false,
-            approvalUI: false,
           },
           null,
           2,
@@ -89,10 +96,6 @@ const log = (...a: unknown[]) => console.log(`[${new Date().toISOString()}]`, ..
       log("solveTurnstile ->", solved);
       log("after turnstile: title=", JSON.stringify(await page.title().catch(() => "?")), "url=", page.url());
     }
-    const bodyText = (await page.content().catch(() => "")).slice(0, 2000);
-    // Diagnostic for the TronScan worked example only: whether the loaded page shows approval text.
-    const hasApprovalUI = /token approval|approval/i.test(bodyText);
-    log("approval UI text present:", hasApprovalUI);
     await page
       .screenshot({ path: path.join(OUT_DIR, "captcha-result.png"), fullPage: false })
       .catch((e) => log("screenshot error:", String(e).slice(0, 200)));
@@ -106,7 +109,6 @@ const log = (...a: unknown[]) => console.log(`[${new Date().toISOString()}]`, ..
           title: await page.title().catch(() => "?"),
           url: page.url(),
           cfClearance: !!clearance,
-          approvalUI: hasApprovalUI,
         },
         null,
         2,
