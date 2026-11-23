@@ -18,7 +18,7 @@ export function SecuritySettingsScreen() {
   // Desktop layout (Bawa Balanced, following Sol's reviewed arrangement):
   // the heading and the reading panels span both columns, while the
   // backup section gets its own distinct section below. Below lg the
-  // page stays a single 480px column (the shell's isWideAtLg cap),
+  // page stays a single 480px column (the shell's isWideAtDesktop cap),
   // unchanged.
   return (
     <section

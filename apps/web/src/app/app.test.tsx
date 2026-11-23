@@ -141,7 +141,7 @@ describe.sequential('App', () => {
       const main = div.querySelector('main');
       expect(main).not.toBeNull();
       expect(main?.className).toContain('pb-24');
-      expect(main?.className).toContain('lg:py-6');
+      expect(main?.className).toContain('desktop:py-6');
     });
   });
 
@@ -159,25 +159,27 @@ describe.sequential('App', () => {
     });
   });
 
-  it('desktop shell is full-bleed with a widening content cap and no sidebar horizontal scroll', async () => {
+  it('desktop shell switches at the 980px desktop: breakpoint, not lg, with a widening content cap and no sidebar horizontal scroll', async () => {
     // Issue (a): the sidebar's inner nav was w-64 (256px) inside a
     // 224px shell, overflowing a wrapper whose overflow-y-auto computes
     // overflow-x to auto — a horizontal scrollbar on every desktop
     // page. Issue (c): the frame capped at 1440px, so on a 1919px
     // viewport the content sat in the left ~1230px. The shell now owns
     // the sidebar width, the nav fills it, the wrapper clips x, the
-    // frame is full-bleed at lg, and the content cap steps up at 2xl.
+    // frame is full-bleed at desktop: (980px, the width a phone in
+    // desktop mode is forced to — below Tailwind lg, 1024px), and the
+    // content cap steps up at 2xl. Ported from desktop-layout-v2 bf00f54.
     await withRenderedApp('/', (div) => {
       const frame = Array.from(div.querySelectorAll('div')).find((el) =>
-        el.className.includes('lg:flex-row'),
+        el.className.includes('desktop:flex-row'),
       );
-      expect(frame?.className).toContain('lg:max-w-none');
-      expect(frame?.className).not.toContain('lg:max-w-[1440px]');
+      expect(frame?.className).toContain('desktop:max-w-none');
+      expect(frame?.className).not.toContain('desktop:max-w-[1440px]');
 
       const asides = div.querySelectorAll('aside');
       expect(asides.length).toBeGreaterThanOrEqual(2);
       const shellAside = asides[0] as Element;
-      expect(shellAside.className).toContain('lg:w-[224px]');
+      expect(shellAside.className).toContain('desktop:w-[224px]');
       expect(shellAside.className).not.toContain('lg:border-r-2');
       const stickyWrapper = shellAside.children[0] as Element;
       expect(stickyWrapper?.className).toContain('overflow-x-hidden');
@@ -236,7 +238,7 @@ describe.sequential('App', () => {
     // it shows or hides mid-scroll. dvh tracks the visible viewport.
     await withRenderedApp('/', (div) => {
       const frame = Array.from(div.querySelectorAll('div')).find((el) =>
-        el.className.includes('lg:flex-row'),
+        el.className.includes('desktop:flex-row'),
       );
       expect(frame?.className).toContain('min-h-dvh');
       expect(frame?.className).not.toContain('min-h-screen');

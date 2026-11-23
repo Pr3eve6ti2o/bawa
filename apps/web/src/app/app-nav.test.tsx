@@ -89,19 +89,19 @@ describe('app nav — focused flows and sidebar collapse (Lane A)', () => {
     const mounted = await mountApp('/', 'Welcome to Bawa');
     try {
       const aside = () => mounted.div.querySelector('aside');
-      expect(aside()?.className).toContain('lg:w-[224px]');
+      expect(aside()?.className).toContain('desktop:w-[224px]');
       const collapse = mounted.div.querySelector(
         'button[aria-label="Collapse sidebar"]',
       );
       expect(collapse).not.toBeNull();
       await click(collapse as Element);
-      expect(aside()?.className).toContain('lg:w-[72px]');
+      expect(aside()?.className).toContain('desktop:w-[72px]');
       const expand = mounted.div.querySelector(
         'button[aria-label="Expand sidebar"]',
       );
       expect(expand).not.toBeNull();
       await click(expand as Element);
-      expect(aside()?.className).toContain('lg:w-[224px]');
+      expect(aside()?.className).toContain('desktop:w-[224px]');
     } finally {
       await mounted.cleanup();
     }

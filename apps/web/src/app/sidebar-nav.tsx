@@ -49,7 +49,7 @@ export function SidebarNav({
   const collapseLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";
 
   return (
-    // Width is owned by the shell in app.tsx (lg:w-[224px] / lg:w-[72px]);
+    // Width is owned by the shell in app.tsx (desktop:w-[224px] / desktop:w-[72px]);
     // this aside fills it exactly. A fixed width here drifted from the
     // shell — w-64 is 256px against the shell's 224px (w-20 is 80px
     // against 72px) — and overflowed the shell's sticky wrapper, whose

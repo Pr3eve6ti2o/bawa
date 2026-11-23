@@ -246,18 +246,18 @@ function AppLayout() {
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
     ) || pathname.startsWith('/assets/');
-  const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
+  const isWideAtDesktop = ['/create-wallet', '/security', '/lock'].includes(pathname);
 
   return (
-    <div className="min-h-dvh bg-paper sm:py-6 lg:py-0">
-      {/* Desktop shell is full-bleed at lg: below lg the app is a centred
-          430px phone frame, but at lg the frame used to cap at 1440px, so
+    <div className="min-h-dvh bg-paper sm:py-6 desktop:py-0">
+      {/* Desktop shell is full-bleed at desktop: (980px): below desktop: the app is a centred
+          430px phone frame, but at desktop: the frame used to cap at 1440px, so
           on a 1919px viewport the content column sat in the left ~1230px
           with dead paper on the right. The content column itself still
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never
           bound there. */}
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-dvh">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink desktop:max-w-none desktop:flex-row desktop:rounded-none desktop:border-0 desktop:min-h-dvh">
         {!isFocusedFlow && (
           <aside
             className={
@@ -266,8 +266,8 @@ function AppLayout() {
               // SidebarNav draws the single border-r-2 itself, and a
               // duplicate shell border would shrink this aside's content
               // box by 2px and re-overflow the inner sidebar.
-              'hidden shrink-0 transition-[width] duration-200 lg:block lg:bg-paper ' +
-              (sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[224px]')
+              'hidden shrink-0 transition-[width] duration-200 desktop:block desktop:bg-paper ' +
+              (sidebarCollapsed ? 'desktop:w-[72px]' : 'desktop:w-[224px]')
             }
           >
             {/* overflow-x-hidden is the guard: overflow-y-auto alone
@@ -287,7 +287,7 @@ function AppLayout() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 lg:flex xl:px-8">
+          <header className="hidden h-[72px] shrink-0 items-center justify-between border-b-2 border-ink px-6 desktop:flex xl:px-8">
             <Link
               to="/wallets"
               onMouseEnter={() => preloadRoute('/wallets')}
@@ -299,7 +299,7 @@ function AppLayout() {
             <NetworkModePill />
           </header>
 
-          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
+          <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 desktop:hidden">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                 <BawaIcon name="wallet" className="size-5" aria-hidden="true" />
@@ -326,7 +326,7 @@ function AppLayout() {
               long page — e.g. the "Show recent activity" button on
               /track — scrolled under the nav and was half-untappable.
               pb-24 leaves ~30px clear at max scroll. Desktop is
-              unchanged: the nav is lg:hidden and lg:py-6 still applies.
+              unchanged: the nav is desktop:hidden and desktop:py-6 still applies.
               Focused flows (/send, /create-wallet) hide the bottom nav,
               so they take pb-0 instead: with pb-24 the /send chain step
               scrolled 92px into empty space (deep audit, Lane A). */}
@@ -337,15 +337,15 @@ function AppLayout() {
               lengths readable; the narrow task screens keep their own
               480px cap above. */}
           <main
-            className={`mx-auto w-full max-w-[1024px] flex-1 px-5 lg:px-6 lg:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
+            className={`mx-auto w-full max-w-[1024px] flex-1 px-5 desktop:px-6 desktop:py-6 xl:max-w-[1152px] xl:px-8 2xl:max-w-[1440px] ${
               isFocusedFlow ? 'pb-0' : 'pb-24'
             }`}
           >
-            {isNarrow || isWideAtLg ? (
+            {isNarrow || isWideAtDesktop ? (
               <div
                 className={
-                  isWideAtLg
-                    ? 'mx-auto w-full max-w-[480px] lg:max-w-none'
+                  isWideAtDesktop
+                    ? 'mx-auto w-full max-w-[480px] desktop:max-w-none'
                     : 'mx-auto w-full max-w-[480px]'
                 }
               >
@@ -360,7 +360,7 @@ function AppLayout() {
             <div
               role="menu"
               aria-label="More"
-              className="rounded-bawa border-2 border-ink bg-paper p-2 max-lg:fixed max-lg:bottom-[76px] max-lg:left-1/2 max-lg:z-20 max-lg:max-h-[60vh] max-lg:w-[calc(100%-2rem)] max-lg:max-w-[398px] max-lg:-translate-x-1/2 max-lg:overflow-y-auto lg:hidden"
+              className="rounded-bawa border-2 border-ink bg-paper p-2 max-desktop:fixed max-desktop:bottom-[76px] max-desktop:left-1/2 max-desktop:z-20 max-desktop:max-h-[60vh] max-desktop:w-[calc(100%-2rem)] max-desktop:max-w-[398px] max-desktop:-translate-x-1/2 max-desktop:overflow-y-auto desktop:hidden"
             >
               {MORE_LINKS.map(({ to, label }) => (
                 <Link
@@ -381,7 +381,7 @@ function AppLayout() {
           {!isFocusedFlow && (
             <nav
               aria-label="Main navigation"
-            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] lg:hidden"
+            className="sticky bottom-0 z-10 border-t-2 border-ink bg-paper pb-[env(safe-area-inset-bottom)] desktop:hidden"
           >
             <div className="grid grid-cols-5">
               {tabs.map(({ to, label, icon }) => (
