@@ -87,12 +87,15 @@ function writeStored(store: BroadcastStore, entries: PendingBroadcast[]): void {
   }
 }
 
-/** Record a broadcast attempt. Re-recording the same hash + chain replaces it. */
-export function recordPendingBroadcast(entry: {
-  txHash: string;
-  chain: ChainId;
-  nonce?: number;
-}): PendingBroadcast {
+/**
+ * Shared record step for the mainnet and devnet stores: build the
+ * record, drop any earlier entry for the same hash + chain, append
+ * (capped). The exported wrappers keep the two stores apart.
+ */
+function recordBroadcastInStore(
+  store: BroadcastStore,
+  entry: { txHash: string; chain: ChainId; nonce?: number },
+): PendingBroadcast {
   const recorded: PendingBroadcast = {
     txHash: entry.txHash,
     chain: entry.chain,
@@ -100,11 +103,44 @@ export function recordPendingBroadcast(entry: {
     recordedAt: Date.now(),
     status: 'unknown',
   };
-  const rest = readStored(mainnetStore).filter(
+  const rest = readStored(store).filter(
     (item) => !(item.txHash === recorded.txHash && item.chain === recorded.chain),
   );
-  writeStored(mainnetStore, [...rest, recorded].slice(-MAX_ENTRIES));
+  writeStored(store, [...rest, recorded].slice(-MAX_ENTRIES));
   return recorded;
+}
+
+/**
+ * Shared reconcile step for the mainnet and devnet stores: confirmed
+ * entries are removed (they settled); anything else stays pending.
+ * This never resubmits a transaction.
+ */
+async function reconcileBroadcastsInStore(
+  store: BroadcastStore,
+  resolve: (entry: PendingBroadcast) => Promise<BroadcastResolution>,
+): Promise<{ confirmed: number; stillUnknown: number }> {
+  const entries = readStored(store);
+  let confirmed = 0;
+  const remaining: PendingBroadcast[] = [];
+  for (const entry of entries) {
+    const resolution = await resolve(entry);
+    if (resolution === 'confirmed') {
+      confirmed += 1;
+    } else {
+      remaining.push(entry);
+    }
+  }
+  writeStored(store, remaining);
+  return { confirmed, stillUnknown: remaining.length };
+}
+
+/** Record a broadcast attempt. Re-recording the same hash + chain replaces it. */
+export function recordPendingBroadcast(entry: {
+  txHash: string;
+  chain: ChainId;
+  nonce?: number;
+}): PendingBroadcast {
+  return recordBroadcastInStore(mainnetStore, entry);
 }
 
 export function listPendingBroadcasts(): PendingBroadcast[] {
@@ -126,18 +162,7 @@ export function recordPendingBroadcastDevnet(entry: {
   chain: ChainId;
   nonce?: number;
 }): PendingBroadcast {
-  const recorded: PendingBroadcast = {
-    txHash: entry.txHash,
-    chain: entry.chain,
-    ...(entry.nonce !== undefined ? { nonce: entry.nonce } : {}),
-    recordedAt: Date.now(),
-    status: 'unknown',
-  };
-  const rest = readStored(devnetStore).filter(
-    (item) => !(item.txHash === recorded.txHash && item.chain === recorded.chain),
-  );
-  writeStored(devnetStore, [...rest, recorded].slice(-MAX_ENTRIES));
-  return recorded;
+  return recordBroadcastInStore(devnetStore, entry);
 }
 
 export function listPendingBroadcastsDevnet(): PendingBroadcast[] {
@@ -166,36 +191,12 @@ export type BroadcastResolution = 'confirmed' | 'not-found' | 'unknown';
 export async function reconcilePendingBroadcasts(
   resolve: (entry: PendingBroadcast) => Promise<BroadcastResolution>,
 ): Promise<{ confirmed: number; stillUnknown: number }> {
-  const entries = readStored(mainnetStore);
-  let confirmed = 0;
-  const remaining: PendingBroadcast[] = [];
-  for (const entry of entries) {
-    const resolution = await resolve(entry);
-    if (resolution === 'confirmed') {
-      confirmed += 1;
-    } else {
-      remaining.push(entry);
-    }
-  }
-  writeStored(mainnetStore, remaining);
-  return { confirmed, stillUnknown: remaining.length };
+  return reconcileBroadcastsInStore(mainnetStore, resolve);
 }
 
 /** TEMPORARY devnet mode: reconcile the devnet record only. */
 export async function reconcilePendingBroadcastsDevnet(
   resolve: (entry: PendingBroadcast) => Promise<BroadcastResolution>,
 ): Promise<{ confirmed: number; stillUnknown: number }> {
-  const entries = readStored(devnetStore);
-  let confirmed = 0;
-  const remaining: PendingBroadcast[] = [];
-  for (const entry of entries) {
-    const resolution = await resolve(entry);
-    if (resolution === 'confirmed') {
-      confirmed += 1;
-    } else {
-      remaining.push(entry);
-    }
-  }
-  writeStored(devnetStore, remaining);
-  return { confirmed, stillUnknown: remaining.length };
+  return reconcileBroadcastsInStore(devnetStore, resolve);
 }

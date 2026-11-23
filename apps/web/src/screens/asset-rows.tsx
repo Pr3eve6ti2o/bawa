@@ -5,7 +5,12 @@ import type { BalanceState } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { fiatValueForBalance, quoteFreshnessLabel, unitPriceForChain } from '../wallet/prices';
-import type { PriceEntry, PriceMap, UnitPrice } from '../wallet/prices';
+import type {
+  FiatValueResult,
+  PriceEntry,
+  PriceMap,
+  UnitPrice,
+} from '../wallet/prices';
 import {
   DEFAULT_TOKENS,
   isDefaultToken,
@@ -130,6 +135,83 @@ function RowLogo({ model }: { model: AssetRowModel }) {
   return <TokenLogo symbol={model.logoSymbol} />;
 }
 
+/**
+ * Shared fiat/detail computation for the native and token row models.
+ * A funded row shows its fiat value plus the per-unit price line; a
+ * zero/unknown row shows the per-unit price instead; a stale feed
+ * shows its state. Round 2, item 6: in devnet mode a non-zero test
+ * balance must never show a fiat value — test tokens are valueless,
+ * so pricing one at the mainnet rate would invent value; the row
+ * shows the live per-unit price instead, exactly as a zero-balance
+ * row does. The token rows do not apply the devnet suppression today
+ * (they pass devnet=false), so this helper takes it as a parameter
+ * rather than deciding it.
+ */
+function fiatDetail(
+  initialDetail: string,
+  fiat: FiatValueResult,
+  displayUnit: UnitPrice,
+  entry: PriceEntry,
+  symbol: string,
+  nowMs: number,
+  devnet: boolean,
+): { fiatText: string | undefined; detail: string } {
+  let fiatText: string | undefined;
+  let detail = initialDetail;
+  const effectiveFiat =
+    devnet && fiat.kind === 'fiat' ? { kind: 'zero' as const } : fiat;
+  switch (effectiveFiat.kind) {
+    case 'fiat':
+      if (entry.status === 'fresh') {
+        fiatText = effectiveFiat.text;
+        // Item 12: a funded row shows the current per-unit price as
+        // well as its fiat value — the same "per X" line the
+        // zero-balance rows already show.
+        detail =
+          displayUnit.kind === 'fresh'
+            ? `${displayUnit.text} per ${symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
+            : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
+      }
+      break;
+    case 'zero':
+    case 'balance-unavailable':
+      // No fiat value exists for a zero or unknown balance, so the row
+      // shows the per-unit price instead — the feed's state stays
+      // visible instead of a silent empty.
+      if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
+        fiatText = displayUnit.text;
+        detail = `per ${symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
+      } else if (displayUnit.kind === 'expired') {
+        detail = 'Price expired';
+      } else if (displayUnit.kind === 'unavailable') {
+        detail = 'Price unavailable';
+      } else if (displayUnit.kind === 'error') {
+        detail = 'Price error';
+      }
+      break;
+    case 'expired':
+      detail = 'Price expired';
+      break;
+    case 'unavailable':
+      detail = 'Price unavailable';
+      break;
+    case 'error':
+      detail = 'Price error';
+      break;
+  }
+  return { fiatText, detail };
+}
+
+/** Shared loading row for the list and the wide table: same skeleton. */
+function RowLoadingStatus({ title }: { title: string }) {
+  return (
+    <li role="status" className="py-3">
+      <Skeleton className="h-[68px] w-full" />
+      <span className="sr-only">{`Loading ${title} balance…`}</span>
+    </li>
+  );
+}
+
 function getNativeRowModel(
   chain: ChainId,
   wallet: ReturnType<typeof useWallet>,
@@ -203,51 +285,15 @@ function getNativeRowModel(
 
   if (entry !== undefined) {
     const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
-    // Round 2, item 6: in devnet mode a non-zero test balance must never
-    // show a fiat value — test tokens are valueless, so pricing one at
-    // the mainnet rate would invent value. The row shows the live
-    // per-unit price instead, exactly as a zero-balance row does.
-    const effectiveFiat =
-      devnet && fiat.kind === 'fiat' ? { kind: 'zero' as const } : fiat;
-    switch (effectiveFiat.kind) {
-      case 'fiat':
-        if (entry.status === 'fresh') {
-          fiatText = effectiveFiat.text;
-          // Item 12: a funded row shows the current per-unit price as
-          // well as its fiat value — the same "per X" line the
-          // zero-balance rows already show.
-          detail =
-            displayUnit.kind === 'fresh'
-              ? `${displayUnit.text} per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
-              : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-        }
-        break;
-      case 'zero':
-      case 'balance-unavailable':
-        // No fiat value exists for a zero or unknown balance, so
-        // the row shows the per-unit price instead — the feed's
-        // state stays visible instead of a silent empty.
-        if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
-          fiatText = displayUnit.text;
-          detail = `per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-        } else if (displayUnit.kind === 'expired') {
-          detail = 'Price expired';
-        } else if (displayUnit.kind === 'unavailable') {
-          detail = 'Price unavailable';
-        } else if (displayUnit.kind === 'error') {
-          detail = 'Price error';
-        }
-        break;
-      case 'expired':
-        detail = 'Price expired';
-        break;
-      case 'unavailable':
-        detail = 'Price unavailable';
-        break;
-      case 'error':
-        detail = 'Price error';
-        break;
-    }
+    ({ fiatText, detail } = fiatDetail(
+      detail,
+      fiat,
+      displayUnit,
+      entry,
+      config.symbol,
+      nowMs,
+      devnet,
+    ));
   }
 
   return {
@@ -337,40 +383,15 @@ function getTokenRowModel(
 
   if (entry !== undefined) {
     const fiat = fiatValueForTokenBalance(balance, token.decimals, entry, nowMs);
-    switch (fiat.kind) {
-      case 'fiat':
-        if (entry.status === 'fresh') {
-          fiatText = fiat.text;
-          // Item 12: see the native-row note above.
-          detail =
-            displayUnit.kind === 'fresh'
-              ? `${displayUnit.text} per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
-              : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-        }
-        break;
-      case 'zero':
-      case 'balance-unavailable':
-        if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
-          fiatText = displayUnit.text;
-          detail = `per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
-        } else if (displayUnit.kind === 'expired') {
-          detail = 'Price expired';
-        } else if (displayUnit.kind === 'unavailable') {
-          detail = 'Price unavailable';
-        } else if (displayUnit.kind === 'error') {
-          detail = 'Price error';
-        }
-        break;
-      case 'expired':
-        detail = 'Price expired';
-        break;
-      case 'unavailable':
-        detail = 'Price unavailable';
-        break;
-      case 'error':
-        detail = 'Price error';
-        break;
-    }
+    ({ fiatText, detail } = fiatDetail(
+      detail,
+      fiat,
+      displayUnit,
+      entry,
+      token.symbol,
+      nowMs,
+      false,
+    ));
   }
 
   return {
@@ -394,12 +415,7 @@ function getTokenRowModel(
 
 function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void }) {
   if (model.kind === 'loading') {
-    return (
-      <li role="status" className="py-3">
-        <Skeleton className="h-[68px] w-full" />
-        <span className="sr-only">{`Loading ${model.title} balance…`}</span>
-      </li>
-    );
+    return <RowLoadingStatus title={model.title} />;
   }
 
   if (model.kind === 'unavailable') {
@@ -488,12 +504,7 @@ function TablePriceCell({ price, symbol }: { price: PriceCell; symbol: string })
 
 function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void }) {
   if (model.kind === 'loading') {
-    return (
-      <li role="status" className="py-3">
-        <Skeleton className="h-[68px] w-full" />
-        <span className="sr-only">{`Loading ${model.title} balance…`}</span>
-      </li>
-    );
+    return <RowLoadingStatus title={model.title} />;
   }
 
   if (model.kind === 'unavailable') {

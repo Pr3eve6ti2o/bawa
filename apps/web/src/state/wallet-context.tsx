@@ -738,6 +738,17 @@ function initialWalletState(): WalletState {
   };
 }
 
+/**
+ * Balance state from a fetched base-units value: exactly '0' is a
+ * zero balance, anything else is available. Shared by refreshBalances
+ * and refreshTokenBalances.
+ */
+function balanceStateFromValue(valueBaseUnits: string, fetchedAtMs: number): BalanceState {
+  return valueBaseUnits === '0'
+    ? { status: 'zero', value: '0', fetchedAtMs }
+    : { status: 'available', value: valueBaseUnits, fetchedAtMs };
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   // No state or refs may hold a mnemonic, seed, private key, private extended key,
   // vault key or data key. Only validated public watch-only wallets enter state.
@@ -823,7 +834,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // refetch keeps it labelled stale — an error state appears only when no
   // data exists at all. Transient failures retry boundedly (see
   // fetchWithRetry); the last good value is cached for the next boot.
-  const refreshBalances = useCallback(async () => {
+  /**
+   * Shared adapter-resolution prologue for the refresh callbacks:
+   * load the mainnet or devnet adapters for the current mode and a
+   * resolver that picks the right one per chain at call time.
+   */
+  const loadAdapters = useCallback(async () => {
     const adapters = devnetEnabledRef.current
       ? await ensureDevnetAdapters()
       : await ensureAdapters();
@@ -831,6 +847,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       devnetEnabledRef.current
         ? adapters.getDevnetAdapter(chain)
         : adapters.getAdapter(chain);
+    return { adapters, resolveAdapter };
+  }, []);
+
+  const refreshBalances = useCallback(async () => {
+    const { resolveAdapter } = await loadAdapters();
     // Every chain in the registry resolves out of the initial 'loading'
     // state here — not just the four balance chains — so no chain is left
     // showing a first-load skeleton forever. Chains without a verified
@@ -873,9 +894,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (request !== balanceRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
-        const next: BalanceState = result.data.valueBaseUnits === '0'
-          ? { status: 'zero', value: '0', fetchedAtMs }
-          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        const next = balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs);
         setBalance(next);
         try {
           const cached = readCachedBalances();
@@ -897,16 +916,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setBalance({ status: 'error', reason: result.reason });
       }
     }));
-  }, [update]);
+  }, [update, loadAdapters]);
 
   const refreshHistory = useCallback(async () => {
-    const adapters = devnetEnabledRef.current
-      ? await ensureDevnetAdapters()
-      : await ensureAdapters();
-    const resolveAdapter = (chain: ChainId) =>
-      devnetEnabledRef.current
-        ? adapters.getDevnetAdapter(chain)
-        : adapters.getAdapter(chain);
+    const { resolveAdapter } = await loadAdapters();
     // See refreshBalances: every chain resolves out of 'loading' here.
     await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
       const request = ++historyRequests.current[chain];
@@ -959,7 +972,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setHistory({ status: 'error', reason: result.reason, txs: [] });
       }
     }));
-  }, [update]);
+  }, [update, loadAdapters]);
 
   // Token balances (token discovery): the 7 default tokens plus the
   // user-added ones, each read with its real on-chain balance via
@@ -1041,10 +1054,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       );
       if (request !== tokenBalanceRequests.current[key]) return;
       if (result.status === 'ok') {
-        const fetchedAtMs = Date.now();
-        const next: BalanceState = result.data.valueBaseUnits === '0'
-          ? { status: 'zero', value: '0', fetchedAtMs }
-          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        const next = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
         setTokenBalance(next);
       } else if (hasLastGood && previous !== undefined) {
         setTokenBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });

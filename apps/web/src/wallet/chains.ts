@@ -972,6 +972,19 @@ export function removeRpcEndpoint(
   const current = resolveRpcEndpoints(chain, storage);
   if (!current.includes(url)) return false;
   const next = current.filter((entry) => entry !== url);
+  return persistRpcEndpoints(chain, next, storage);
+}
+
+/**
+ * Persist an endpoint list: drop the override when it equals the
+ * registry defaults, store it otherwise. Shared by removeRpcEndpoint
+ * and promoteBackupEndpoint. False when the list is empty.
+ */
+function persistRpcEndpoints(
+  chain: ChainId,
+  next: string[],
+  storage?: RpcOverrideStorage,
+): boolean {
   if (next.length === 0) return false;
   const overrides = readStoredOverrides(storage);
   const defaults = CHAINS[chain].rpcEndpoints;
@@ -995,18 +1008,7 @@ export function promoteBackupEndpoint(
   const current = resolveRpcEndpoints(chain, storage);
   if (current.length < 2) return false;
   const next = [current[1] as string, current[0] as string, ...current.slice(2)];
-  const overrides = readStoredOverrides(storage);
-  const defaults = CHAINS[chain].rpcEndpoints;
-  if (
-    next.length === defaults.length &&
-    next.every((entry, index) => entry === defaults[index])
-  ) {
-    delete overrides[chain];
-  } else {
-    overrides[chain] = next;
-  }
-  writeStoredOverrides(overrides, storage);
-  return true;
+  return persistRpcEndpoints(chain, next, storage);
 }
 
 /** Promotes the backup for every managed chain that has one. Returns the chains changed. */
