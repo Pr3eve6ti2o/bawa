@@ -54,16 +54,15 @@
     },
     {
       "asserts": [
-        "a blocked refresh shows a failure state with a reason",
-        "the previous balances are marked stale, not presented as current",
-        "Retry re-attempts the refresh"
+        "a blocked refresh fabricates nothing: no empty claim, no failure line, no dead Retry on a wallet with no activity",
+        "after the network returns, a reload recovers to the genuine empty state ('No transactions yet')"
       ],
-      "covers": "refresh with the network blocked, sanitised failure state, Retry button",
+      "covers": "refresh with the network blocked; honest blank state while blocked, genuine empty state after recovery",
       "file": "e2e/refresh-failure.spec.ts",
       "id": "E2E-05",
       "phase": "refresh-failure",
-      "requires": "item 28 (refresh failure state) \u2014 this case is skipped until wallet-refresh.ts lands; the skip is recorded in the case file with the reason",
-      "title": "A failed refresh is visible, not silent"
+      "requires": "none \u2014 the case runs; wallet-refresh.ts was deleted by FIX-ALL Lane H (2026-11-24) and the refresh lives in wallet-context.tsx; the pre-wallet-refresh wording (failure state + Retry) was corrected by the merge lane",
+      "title": "A blocked refresh fabricates nothing and recovers honestly"
     },
     {
       "asserts": [

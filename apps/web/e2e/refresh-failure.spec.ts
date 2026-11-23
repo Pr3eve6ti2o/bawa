@@ -20,11 +20,10 @@ setupMaskedScreenshots();
 // actually has: the blocked refresh fabricates nothing and offers no
 // dead Retry, and after the network returns a reload recovers to the
 // genuine empty state (every history loads empty on a fresh wallet).
-// The manifest's E2E-05 case still describes a failure state with a
-// reason + Retry; that is the pre-wallet-refresh wording (its
-// `requires` field says the case is skipped until wallet-refresh.ts
-// lands) and does not match the merged screen behaviour — flagged as
-// manifest drift in the Lane D report, not silently rewritten here.
+// The manifest's E2E-05 case was corrected by the merge lane
+// (2026-11-24) to this honest behaviour: FIX-ALL Lane H deleted
+// wallet-refresh.ts, so the old failure-state + Retry wording no
+// longer applies. The drift Lane D flagged is closed by that fix.
 test('E2E-05 refresh failure is shown honestly', async ({ page }) => {
   // Settle + recovery are slow: creation + ~60 s blocked settle +
   // reload + live history load. 300 s covers the worst case.

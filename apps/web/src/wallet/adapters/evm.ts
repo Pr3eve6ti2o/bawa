@@ -233,7 +233,7 @@ export function createEvmAdapter(
     if (!historyBaseUrl) {
       return {
         status: 'unavailable',
-        // Fix-all Lane H, item 6: six chains stay balance-only — no
+        // Fix-all Lane H, item 6: five chains stay balance-only — no
         // keyless indexer covers them — so the reason says so, and that
         // the balance still loads. Shown as-is by humanReasonMessage.
         reason: `History is not connected for ${config.chainName} yet — no keyless indexer covers this chain, so only the balance shows here.`,

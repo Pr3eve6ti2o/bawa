@@ -1624,7 +1624,7 @@ is one line of scroll.
 ### 6. The 12 EVM chains that are balance-only — DECIDED-AND-RECORDED (accept 6, count corrected)
 The "12" in the brief is stale: finish-product Lane B (2026-11-23) wired
 9 of the 15 non-ETH EVM chains — celo/op/scroll, aurora, avax/mantle,
-matic/arb/base. Truly unwired six: bsc, gnosis, linea, opbnb, metis,
+matic/arb/base. Truly unwired five: bsc, gnosis, opbnb, metis,
 fantom (matches the `history-sources.test.ts` header comment). Live
 probes from gray-pinee (2026-11-23): Routescan
 `api.routescan.io/v2/network/mainnet/evm/{chainId}/etherscan/api`
@@ -1636,11 +1636,16 @@ fantom `.blockscout.com` 404; gnosis.blockscout.com 301 → gnosisscan.io
 (Etherscan-family, keyed). Metis `andromeda-explorer.metis.io/api`
 returns status '1' with 2 real txs but NO `Access-Control-Allow-Origin`
 header — one header away from wiring; record this. Aurora re-verified:
-status '1', 2 real txs, CORS `*`. Verdict: accept the six as balance-only
+status '1', 2 real txs, CORS `*`. Verdict: accept the five as balance-only
 with an honest note in the UI. `evm.ts` now renders: "History is not
 connected for {chain} yet — no keyless indexer covers this chain, so only
 the balance shows here." (rendered verbatim: `humanReasonMessage` shows a
 reason that already reads as a human sentence as-is).
+
+Correction (merge lane, 2026-11-24): Linea is wired since FIX-ALL
+Lane A (Etherscan V2 keyless, real tx `0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c`
+rendered in CDP) — five stay unwired, not six; `evm.ts` and this item
+corrected, `history-sources.test.ts` and `chains.ts` already said five.
 
 ### 7. Rotation funds invisible in the dashboard — DECIDED-AND-DONE (stated-not-shown)
 Evidence: `refreshBalances` reads only `vaultAddresses[chain][0]`
