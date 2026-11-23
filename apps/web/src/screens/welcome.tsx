@@ -27,15 +27,22 @@ export function WelcomeScreen() {
           Welcome to <span className="bawa-marker">Bawa</span>
         </h1>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          Bawa is a guide for humans and AI agents. It builds crypto
-          wallets, web wallets, Android wallets, HD wallets and smart
-          contracts from a few prompts.
+          Bawa is a self-custodial wallet that runs in your browser. One
+          recovery phrase covers 22 chains — Bitcoin, Ethereum, Solana,
+          TRON, TON and more. Your keys are made on this device and
+          encrypted with your vault password. They never leave it.
         </p>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          This web wallet is the wallet the guide builds: a self-custodial
-          multi-chain wallet that runs in your browser. Your recovery
-          phrase is encrypted on this device with your vault password —
-          only you hold it.
+          It shows your real balances and live prices, gives you a
+          receiving address and QR code for every chain, and lets you watch
+          any wallet from its public key — without holding its secrets.
+          Sending is switched off until it is separately approved, so
+          nothing here can move your funds. No account, no sign-up.
+        </p>
+        <p className="mt-2 max-w-xl text-body-md text-ink">
+          Bawa is also a guide for humans and AI agents that builds wallets
+          like this one from a few prompts — this web wallet is the wallet
+          the guide builds.
         </p>
 
         <div className="mt-6 flex h-11 items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper px-4">
@@ -46,33 +53,48 @@ export function WelcomeScreen() {
         </div>
 
         <h2 className="mt-6 text-body-md font-semibold text-ink">
-          What you can do with Bawa
+          What this wallet does
         </h2>
         <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink">
           <li>
-            <strong>Create a crypto wallet</strong>. One self-custodial
-            multi-chain wallet, with one address per chain.
+            <strong>Receive on 22 chains</strong>. One wallet, one address
+            per chain, with a QR code for each.
           </li>
           <li>
-            <strong>Create a web wallet</strong>. This one runs in your
-            browser. Nothing to install.
+            <strong>A fresh address for every payment</strong>. The QR card
+            always shows your next unused address, and you can make a new
+            receiving address at any time.
           </li>
           <li>
-            <strong>Create an Android wallet</strong>. The same wallet
-            on your phone.
+            <strong>Real balances and prices</strong>. Balances from public
+            blockchains, prices from CoinGecko — no made-up numbers.
           </li>
           <li>
-            <strong>Create an HD wallet</strong>. A fresh receiving address
-            for every payment.
+            <strong>Watch any wallet</strong>. Follow balances and history
+            from an extended public key, without ever holding its keys.
           </li>
           <li>
-            <strong>Create a smart contract</strong>. Guided step by step,
-            from a prompt.
+            <strong>Add tokens</strong>. Add a whole chain to your wallet,
+            or a single token by its contract address.
           </li>
         </ul>
       </div>
 
       <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
+        <Card className="flex flex-col rounded-xl bg-card text-foreground">
+          <CardHeader className="px-6 pt-6">
+            <CardTitle>Create a wallet</CardTitle>
+            <CardDescription>
+              One recovery phrase for 22 chains. Set a vault password,
+              write down 24 words, and your wallet is ready.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="mt-auto px-6 pb-6">
+            <Button asChild className="h-10 w-full">
+              <Link to="/create-wallet">Create a wallet</Link>
+            </Button>
+          </CardContent>
+        </Card>
         <Card className="flex flex-col rounded-xl bg-card text-foreground">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Import a wallet</CardTitle>

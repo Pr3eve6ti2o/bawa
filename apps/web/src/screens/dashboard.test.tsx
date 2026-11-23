@@ -195,11 +195,11 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('shows a partial $0.00 hero when every loaded balance is zero and a chain failed', async () => {
-    // Token gaps, item 7: a fresh wallet whose only failure is one
-    // chain (the old SOL 403 / DOGE 429 shape) must not read the bare
-    // 'Unavailable' — the loaded total is genuinely $0.00, disclosed
-    // as partial.
+  it('shows a clean $0.00 hero when every loaded balance is zero and a chain failed', async () => {
+    // Marketing fix, Lane 1: a fresh wallet whose only failure is one
+    // chain (the old SOL 403 / DOGE 429 shape) must not read the
+    // alarming "$0.00 (Partial)" — the loaded total is genuinely $0.00,
+    // so the hero is clean and the failure is a quiet note underneath.
     setWallet(
       balancesFor({
         btc: { status: 'zero', value: '0' },
@@ -210,8 +210,10 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
-      expect(heroAmount(mounted)).toBe('$0.00 (Partial)');
-      expect(mounted.div.textContent).toContain('Partial total. Some balances or prices are missing');
+      expect(heroAmount(mounted)).toBe('$0.00');
+      expect(mounted.div.textContent).not.toContain('(Partial)');
+      expect(mounted.div.textContent).not.toContain('Partial total. Some balances or prices are missing');
+      expect(mounted.div.textContent).toContain("Some balances or prices couldn't be checked just now.");
     } finally {
       await mounted.cleanup();
     }
@@ -996,9 +998,70 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('retries unavailable history while unlocked', async () => {
+  it('retries unavailable history while unlocked when the wallet has activity', async () => {
     // Zero balances, so no balance Retry exists: the only Retry on
-    // the page is the failed history's.
+    // the page is the failed history's — and it appears because the
+    // wallet HAS activity (a loaded ETH transaction), so the failed
+    // Bitcoin fetch is a real failure worth retrying.
+    const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        history: {
+          btc: { status: 'unavailable', reason: 'no-address', txs: [] },
+          eth: {
+            status: 'loaded',
+            txs: [
+              {
+                hash: '0xabc',
+                chain: 'eth',
+                networkId: 'eip155:1',
+                direction: 'out',
+                amountBaseUnits: '250000000000000000',
+                counterparty: '0xRecipient',
+                timestamp: 1700000000000,
+                status: 'confirmed',
+                explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+              },
+            ],
+          },
+          trx: { status: 'empty', txs: [] },
+          ton: { status: 'empty', txs: [] },
+        },
+        refreshHistory: mockRefreshHistory,
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const tab = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Activity',
+      );
+      await act(async () => {
+        (tab as HTMLButtonElement).click();
+      });
+      expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
+      const retry = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Retry',
+      ) as HTMLButtonElement;
+      expect(retry).not.toBeUndefined();
+      await act(async () => {
+        retry.click();
+      });
+      expect(mockRefreshHistory).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows only the empty state for unavailable history when the wallet has no activity', async () => {
+    // Marketing fix, Lane 1: a fresh wallet with no transactions must
+    // not show "history unavailable" + a dead Retry for a 429 that
+    // would only 429 again — just "No activity yet".
     const mockRefreshHistory = vi.fn().mockResolvedValue(undefined);
     setWallet(
       balancesFor({
@@ -1025,15 +1088,13 @@ describe('dashboard screen', () => {
       await act(async () => {
         (tab as HTMLButtonElement).click();
       });
-      expect(mounted.div.textContent).toContain('Bitcoin history unavailable');
-      const retry = [...mounted.div.querySelectorAll('button')].find(
+      expect(mounted.div.textContent).toContain('No activity yet');
+      expect(mounted.div.textContent).not.toContain('history unavailable');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
-      ) as HTMLButtonElement;
-      expect(retry).not.toBeUndefined();
-      await act(async () => {
-        retry.click();
-      });
-      expect(mockRefreshHistory).toHaveBeenCalled();
+      );
+      expect(retryButtons).toHaveLength(0);
+      expect(mockRefreshHistory).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }

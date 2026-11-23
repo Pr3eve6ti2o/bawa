@@ -162,3 +162,49 @@ describe('app routing — subpath basename (UI/UX round 2, deep-link fix)', () =
     }
   });
 });
+
+describe('app shell — single main landmark on /lock (D-02)', () => {
+  it('renders exactly one main landmark on /lock', async () => {
+    window.history.pushState({}, '', '/lock');
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    const previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+    try {
+      await act(async () => {
+        root.render(<App />);
+      });
+      // The lock screen is lazy: wait until it has rendered.
+      for (let i = 0; i < 50; i += 1) {
+        const text = div.textContent ?? '';
+        if (
+          text.includes('Set up your wallet') ||
+          text.includes('Unlock your wallet')
+        ) {
+          break;
+        }
+        await act(async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+          });
+        });
+      }
+      expect(div.textContent).toContain('Set up your wallet');
+      expect(div.querySelectorAll('main')).toHaveLength(1);
+    } finally {
+      try {
+        await act(async () => {
+          root.unmount();
+        });
+      } finally {
+        div.remove();
+        if (previousActEnvironment === undefined) {
+          delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+        } else {
+          testGlobal.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+        }
+      }
+    }
+  });
+});

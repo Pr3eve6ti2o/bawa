@@ -824,15 +824,15 @@ describe('portfolioTotal', () => {
     expect(portfolioTotal(balances, fresh, NOW_MS).status).toBe('unavailable');
   });
 
-  it('returns a partial $0.00 total when every loaded balance is zero and a chain failed', () => {
-    // Token gaps, item 7: a fresh wallet whose SOL balance errors (the
-    // old 403) and DOGE flakes has every other balance zero — the old
-    // code returned 'unavailable' here even though the loaded total is
-    // genuinely $0.00. The failed chain is disclosed by partial: true
-    // (the dashboard's "some balances are missing" note).
+  it('returns a clean $0.00 total when every loaded balance is zero and a chain failed', () => {
+    // Marketing fix, Lane 1: a fresh wallet whose SOL balance errors (the
+    // old 403) and DOGE flakes has every other balance zero — the loaded
+    // total is genuinely $0.00, so the hero reads a clean $0.00 (the
+    // failed chain is disclosed by partial: true, which the dashboard
+    // renders as a quiet note under the hero, never as "$0.00 (Partial)").
     const balances = { ...zeros, sol: { status: 'error', reason: 'rpc-error' } } as const;
     expect(portfolioTotal(balances, fresh, NOW_MS)).toEqual({
-      status: 'partial',
+      status: 'zero',
       text: '$0.00',
       partial: true,
     });
@@ -860,10 +860,12 @@ describe('portfolioTotal', () => {
     });
   });
 
-  it('returns a partial $0.00 total when a token failed and all natives are zero', () => {
+  it('returns a clean $0.00 total when a token failed and all natives are zero', () => {
+    // Same shape as the failed-chain case above: the $0.00 total is
+    // clean, the failure rides on partial: true for the quiet note.
     const tokens = { minorUnits: [], partial: true, loadedZero: false, unpricedNonzero: false };
     expect(portfolioTotal(zeros, fresh, NOW_MS, undefined, tokens)).toEqual({
-      status: 'partial',
+      status: 'zero',
       text: '$0.00',
       partial: true,
     });

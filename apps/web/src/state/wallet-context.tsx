@@ -440,6 +440,61 @@ async function fetchWithRetry<T>(
   return last as AdapterResult<T>;
 }
 
+/**
+ * Bounded-concurrency runner for the three refreshers (balances,
+ * history, token balances). One shared instance per provider caps ALL
+ * refresh network calls together — not per refresher.
+ *
+ * Why: unlocking a wallet used to fire the whole 43-row dashboard at
+ * once — 22 native balance reads + 21 token balance reads + 7 history
+ * reads + 2 CoinGecko batches, ~50 requests in the first second, most
+ * of them JSON-RPC against the same free-tier hosts (14 EVM chains on
+ * *.publicnode.com, each balance read a getChainId + getBalance pair).
+ * The free tiers 429, fetchWithRetry retries each 3x, and the hero
+ * reads "$0.00 (Partial)" on a wallet whose every balance is zero.
+ * Four concurrent network calls, with retries inside the slot, keeps
+ * the burst inside the free tier while the rows still settle in a few
+ * seconds. Pure promise queueing — no timers — so fake-timer tests are
+ * unaffected. The cap is deliberately small; raise it only with a live
+ * 429 measurement behind the change.
+ */
+export interface RefreshLimiter {
+  run<T>(task: () => Promise<T>): Promise<T>;
+}
+
+export function createRefreshLimiter(limit: number): RefreshLimiter {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  const release = (): void => {
+    active -= 1;
+    const next = queue.shift();
+    if (next !== undefined) next();
+  };
+  return {
+    run<T>(task: () => Promise<T>): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        const start = (): void => {
+          active += 1;
+          task().then(
+            (value) => {
+              release();
+              resolve(value);
+            },
+            (error) => {
+              release();
+              reject(error);
+            },
+          );
+        };
+        if (active < limit) start();
+        else queue.push(start);
+      });
+    },
+  };
+}
+
+export const REFRESH_CONCURRENCY_LIMIT = 4;
+
 // --- Lane G: persisted public vault addresses (see VAULT_ADDRESSES_KEY) ---
 const isStoredAddress = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 128 && !/\s/.test(value);
@@ -683,6 +738,17 @@ function initialWalletState(): WalletState {
   };
 }
 
+/**
+ * Balance state from a fetched base-units value: exactly '0' is a
+ * zero balance, anything else is available. Shared by refreshBalances
+ * and refreshTokenBalances.
+ */
+function balanceStateFromValue(valueBaseUnits: string, fetchedAtMs: number): BalanceState {
+  return valueBaseUnits === '0'
+    ? { status: 'zero', value: '0', fetchedAtMs }
+    : { status: 'available', value: valueBaseUnits, fetchedAtMs };
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   // No state or refs may hold a mnemonic, seed, private key, private extended key,
   // vault key or data key. Only validated public watch-only wallets enter state.
@@ -708,6 +774,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Per-token request generations (same stale-write guard as the
   // per-chain counters above, keyed by tokenKey).
   const tokenBalanceRequests = useRef<Record<string, number>>({});
+  // Shared refresh limiter (see createRefreshLimiter): one instance
+  // caps balances + history + token balances together at 4 concurrent
+  // network calls, so the three refreshers can never re-form the burst.
+  const refreshLimiter = useRef(createRefreshLimiter(REFRESH_CONCURRENCY_LIMIT));
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -764,7 +834,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // refetch keeps it labelled stale — an error state appears only when no
   // data exists at all. Transient failures retry boundedly (see
   // fetchWithRetry); the last good value is cached for the next boot.
-  const refreshBalances = useCallback(async () => {
+  /**
+   * Shared adapter-resolution prologue for the refresh callbacks:
+   * load the mainnet or devnet adapters for the current mode and a
+   * resolver that picks the right one per chain at call time.
+   */
+  const loadAdapters = useCallback(async () => {
     const adapters = devnetEnabledRef.current
       ? await ensureDevnetAdapters()
       : await ensureAdapters();
@@ -772,6 +847,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       devnetEnabledRef.current
         ? adapters.getDevnetAdapter(chain)
         : adapters.getAdapter(chain);
+    return { adapters, resolveAdapter };
+  }, []);
+
+  const refreshBalances = useCallback(async () => {
+    const { resolveAdapter } = await loadAdapters();
     // Every chain in the registry resolves out of the initial 'loading'
     // state here — not just the four balance chains — so no chain is left
     // showing a first-load skeleton forever. Chains without a verified
@@ -808,13 +888,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous.status !== 'loading') {
         setBalance({ status: 'loading' });
       }
-      const result = await fetchWithRetry(() => adapter.getBalance(address));
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() => adapter.getBalance(address)),
+      );
       if (request !== balanceRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
-        const next: BalanceState = result.data.valueBaseUnits === '0'
-          ? { status: 'zero', value: '0', fetchedAtMs }
-          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        const next = balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs);
         setBalance(next);
         try {
           const cached = readCachedBalances();
@@ -836,16 +916,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setBalance({ status: 'error', reason: result.reason });
       }
     }));
-  }, [update]);
+  }, [update, loadAdapters]);
 
   const refreshHistory = useCallback(async () => {
-    const adapters = devnetEnabledRef.current
-      ? await ensureDevnetAdapters()
-      : await ensureAdapters();
-    const resolveAdapter = (chain: ChainId) =>
-      devnetEnabledRef.current
-        ? adapters.getDevnetAdapter(chain)
-        : adapters.getAdapter(chain);
+    const { resolveAdapter } = await loadAdapters();
     // See refreshBalances: every chain resolves out of 'loading' here.
     await Promise.all(ALL_CHAIN_IDS.map(async (chain) => {
       const request = ++historyRequests.current[chain];
@@ -879,7 +953,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous.status !== 'loading') {
         setHistory({ status: 'loading', txs: [] });
       }
-      const result = await fetchWithRetry(() => adapter.getHistory(address, 25));
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() => adapter.getHistory(address, 25)),
+      );
       if (request !== historyRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
@@ -896,7 +972,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setHistory({ status: 'error', reason: result.reason, txs: [] });
       }
     }));
-  }, [update]);
+  }, [update, loadAdapters]);
 
   // Token balances (token discovery): the 7 default tokens plus the
   // user-added ones, each read with its real on-chain balance via
@@ -966,20 +1042,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous === undefined || previous.status !== 'loading') {
         setTokenBalance({ status: 'loading' });
       }
-      const result = await fetchWithRetry(() =>
-        fetchTokenBalance({
-          chain: token.chain,
-          contract: token.contract,
-          ownerAddress: address,
-          decimals: token.decimals,
-        }),
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() =>
+          fetchTokenBalance({
+            chain: token.chain,
+            contract: token.contract,
+            ownerAddress: address,
+            decimals: token.decimals,
+          }),
+        ),
       );
       if (request !== tokenBalanceRequests.current[key]) return;
       if (result.status === 'ok') {
-        const fetchedAtMs = Date.now();
-        const next: BalanceState = result.data.valueBaseUnits === '0'
-          ? { status: 'zero', value: '0', fetchedAtMs }
-          : { status: 'available', value: result.data.valueBaseUnits, fetchedAtMs };
+        const next = balanceStateFromValue(result.data.valueBaseUnits, Date.now());
         setTokenBalance(next);
       } else if (hasLastGood && previous !== undefined) {
         setTokenBalance({ ...previous, refreshing: false, stale: true, reason: result.reason });

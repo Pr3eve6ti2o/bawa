@@ -108,6 +108,19 @@ function sameLink(
   );
 }
 
+/**
+ * Shared signed-transaction result for the per-chain signing branches
+ * (ETH, BTC, TRON, TON): the hash, the signed payload and its label
+ * differ per chain, the envelope does not.
+ */
+function signedTxResult(
+  txHash: string,
+  payload: string,
+  payloadLabel: string,
+): { ok: true; txHash: string; payload: string; payloadLabel: string } {
+  return { ok: true as const, txHash, payload, payloadLabel };
+}
+
 export function SendScreen() {
   const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
@@ -544,12 +557,7 @@ export function SendScreen() {
             { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
-          return {
-            ok: true as const,
-            txHash: result.txHash,
-            payload: result.signedTxHex,
-            payloadLabel: 'Signed transaction (hex)',
-          };
+          return signedTxResult(result.txHash, result.signedTxHex, 'Signed transaction (hex)');
         }
         if (chain === 'btc') {
           const inputs = await adapter.getTxInputs(from);
@@ -570,12 +578,7 @@ export function SendScreen() {
             { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
-          return {
-            ok: true as const,
-            txHash: result.txHash,
-            payload: result.signedTxHex,
-            payloadLabel: 'Signed transaction (hex)',
-          };
+          return signedTxResult(result.txHash, result.signedTxHex, 'Signed transaction (hex)');
         }
         if (chain === 'trx') {
           const header = await getLatestBlockHeader(
@@ -593,12 +596,7 @@ export function SendScreen() {
             { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
-          return {
-            ok: true as const,
-            txHash: result.txId,
-            payload: result.signedTxJson,
-            payloadLabel: 'Signed transaction (JSON)',
-          };
+          return signedTxResult(result.txId, result.signedTxJson, 'Signed transaction (JSON)');
         }
         const inputs = await adapter.getTxInputs(from);
         if (inputs.status !== 'ok') throw new Error(inputs.reason);
@@ -614,12 +612,7 @@ export function SendScreen() {
           { devnet: devnetEnabled },
         );
         if (!result.ok) return result;
-        return {
-          ok: true as const,
-          txHash: result.messageHash,
-          payload: result.signedBocBase64,
-          payloadLabel: 'Signed message (base64 BOC)',
-        };
+        return signedTxResult(result.messageHash, result.signedBocBase64, 'Signed message (base64 BOC)');
       });
       if (!signed.ok) {
         setSignState({ status: 'error', reason: signed.reason });
@@ -943,7 +936,7 @@ export function SendScreen() {
             Choose a network
           </h2>
           <p className="text-sm text-muted-foreground">
-            Only networks with a wallet here can send.
+            Sending is switched off on mainnet. This flow signs offline only — nothing here sends cryptocurrency anywhere.
           </p>
       {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
           the network, token, amount and address by itself, so the

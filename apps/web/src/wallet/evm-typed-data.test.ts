@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hashTypedData } from 'viem';
-import { createMessageIntent, createNoopSigner } from './core';
+import { createMessageIntent, createNoopSigner } from './signing-intent';
 import {
   bawaEip712Domain,
   signTypedDataWithSigner,

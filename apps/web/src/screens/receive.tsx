@@ -199,8 +199,32 @@ export function ReceiveScreen() {
     { id: 'payment', label: 'Payment request', value: paymentUri },
     { id: 'link', label: 'Share link', value: shareLink === '' ? null : shareLink },
   ];
-  const effectiveTemplate: QrTemplate =
+  // Lane 7: a selected template that has no value (a token payment
+  // with no amount yet, or TRON, which has no payment-URI standard)
+  // falls back to the plain address — the main QR never silently
+  // shows one template while the screen names another.
+  const requestedTemplate: QrTemplate =
     template ?? (paymentUri !== null ? 'payment' : 'address');
+  const effectiveTemplate: QrTemplate =
+    qrTemplates.find((candidate) => candidate.id === requestedTemplate)
+      ?.value != null
+      ? requestedTemplate
+      : 'address';
+  const effectiveLabel =
+    qrTemplates.find((candidate) => candidate.id === effectiveTemplate)
+      ?.label ?? 'Address';
+  // Why the payment template is unavailable, when it is: a token
+  // payment needs an amount first; TRON has no payment-request
+  // standard at all (its QR stays the plain address and the share
+  // link still carries the amount).
+  const paymentNeedsAmount =
+    effectiveToken !== null && amount.trim() === '' && paymentUri === null;
+  const paymentHint =
+    paymentNeedsAmount
+      ? 'Payment request needs an amount — enter one below.'
+      : chain === 'trx' && amount.trim() === ''
+        ? 'TRON has no payment-request standard — the share link still carries the amount.'
+        : null;
   const mainQr =
     qrTemplates.find((candidate) => candidate.id === effectiveTemplate)?.value ??
     address ??
@@ -369,13 +393,15 @@ export function ReceiveScreen() {
   return (
     <div className="space-y-3">
       <h1 className="text-2xl font-semibold text-ink">Receive</h1>
-      <p className="text-body-sm font-medium text-panel-text-muted">
-        {step === 'chain'
-          ? 'Step 1 of 3: Network'
-          : step === 'token'
-            ? 'Step 2 of 3: Token'
-            : 'Step 3 of 3: Amount and QR'}
-      </p>
+      {/* Lane 7: no step line on the details step — the user has
+          completed steps 1–2 and the QR screen says where they are.
+          The line's 32 px is what the template row needs to sit
+          above the fold at 390 px. Steps 1–2 keep their lines. */}
+      {step !== 'details' && (
+        <p className="text-body-sm font-medium text-panel-text-muted">
+          {step === 'chain' ? 'Step 1 of 3: Network' : 'Step 2 of 3: Token'}
+        </p>
+      )}
 
       {step === 'chain' && (
       <section aria-labelledby="receive-addresses-heading" className="space-y-3">
@@ -532,7 +558,7 @@ export function ReceiveScreen() {
       )}
 
       {step === 'details' && (
-        <div className="space-y-3">
+        <div className="space-y-2">
       <p className="flex items-center justify-between gap-3 text-sm text-ink">
         <span>{`${config.displayName} · ${assetSymbol}`}</span>
         <Button type="button" variant="outline" onClick={() => setStep('token')}>
@@ -555,29 +581,9 @@ export function ReceiveScreen() {
         </Alert>
       )}
 
-      {address && (
-        <div className="space-y-1">
-          <Label htmlFor="receive-amount" className="text-sm font-medium">
-            Amount (optional) — {assetSymbol}
-          </Label>
-          <Input
-            id="receive-amount"
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder={`0.0 ${assetSymbol}`}
-            className="h-12"
-          />
-          {amountError ? (
-            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>
-          ) : null}
-        </div>
-      )}
-
       <Card className="rounded-xl border-border bg-card p-3 text-foreground">
         {address ? (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1.5">
             {/* The QR card (UI/UX Round 2, item 1): QR, amount,
                 address, token + chain with both logos — the same
                 card the Share and Download buttons send out. */}
@@ -597,12 +603,53 @@ export function ReceiveScreen() {
                 link below still carries the amount.)
               </p>
             )}
-            {/* Action row sits directly under the card (deep audit,
-                Lane A): with the template QRs + repeated address +
-                share link above it, Copy/Share/Download sat below
-                the 390px fold (scrollH 1446). The secondary rows
-                scroll below; the actions stay above it. */}
-            <div className="flex flex-wrap justify-center gap-2">
+            {/* Lane 7: the three QR templates, named — the main QR
+                above is the named one, the other two sit below it at
+                64 px, and tapping one swaps it into the main slot. */}
+            <p className="w-full text-center text-sm font-semibold text-ink">
+              {`QR type: ${effectiveLabel} — tap another to switch`}
+            </p>            <div className="flex items-start justify-center gap-2">
+              {smallQrs.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  disabled={candidate.value === null}
+                  aria-label={`Show ${candidate.label.toLowerCase()} QR`}
+                  onClick={() => setTemplate(candidate.id)}
+                  className="flex flex-col items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-50"
+                >
+                  {candidate.value !== null ? (
+                    <QRCodeSVG
+                      value={candidate.value}
+                      size={64}
+                      marginSize={2}
+                      level="H"
+                      fgColor="#2B2B2B"
+                      bgColor="#FFFDF7"
+                      title={candidate.value}
+                    />
+                  ) : (
+                    <span className="flex h-16 w-16 items-center justify-center border-2 border-dashed border-ink text-center">
+                      {candidate.id === 'payment' && paymentNeedsAmount
+                        ? 'Needs amount'
+                        : 'Not available'}
+                    </span>
+                  )}
+                  <span>{candidate.label}</span>
+                </button>
+              ))}
+            </div>
+            {paymentHint !== null && (
+              <p className="w-full text-center text-xs text-ink">{paymentHint}</p>
+            )}
+            {/* Action row (deep audit, Lane A, moved up from the
+                bottom of the card where Copy/Share/Download sat
+                below the 390px fold). It sits here, after the
+                template row: the three QR templates own the
+                above-fold slot (Lane 7, owner correction
+                2026-11-23), so the actions are one short scroll
+                below the templates instead of at the card bottom. */}
+<div className="flex flex-wrap justify-center gap-2">
               <Button type="button" onClick={() => void copyAddress()}>
                 Copy address
               </Button>
@@ -626,36 +673,29 @@ export function ReceiveScreen() {
                 Download card
               </Button>
             </div>
-            <div className="flex items-start justify-center gap-2">
-              {smallQrs.map((candidate) => (
-                <button
-                  key={candidate.id}
-                  type="button"
-                  disabled={candidate.value === null}
-                  aria-label={`Show ${candidate.label.toLowerCase()} QR`}
-                  onClick={() => setTemplate(candidate.id)}
-                  className="flex flex-col items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-50"
-                >
-                  {candidate.value !== null ? (
-                    <QRCodeSVG
-                      value={candidate.value}
-                      size={40}
-                      marginSize={2}
-                      level="H"
-                      fgColor="#2B2B2B"
-                      bgColor="#FFFDF7"
-                      title={candidate.value}
-                    />
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center text-center">
-                      Not available
-                    </span>
-                  )}
-                  <span>{candidate.label}</span>
-                </button>
-              ))}
+            {/* Lane 7: the amount sits under the templates — the QR
+                and its three types are the point of this step, and
+                the amount is the optional refinement that enables
+                the payment request for tokens. The full address
+                stays on the card above; the duplicate line that
+                repeated it below the card is gone. */}
+            <div className="w-full space-y-1">
+              <Label htmlFor="receive-amount" className="text-sm font-medium">
+                Amount (optional) — {assetSymbol}
+              </Label>
+              <Input
+                id="receive-amount"
+                type="text"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder={`0.0 ${assetSymbol}`}
+                className="h-12"
+              />
+              {amountError ? (
+                <p role="alert" className="text-sm text-ink bawa-squiggle-underline">{amountError}</p>
+              ) : null}
             </div>
-            <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
             {/* The address number is the HD indicator — which receiving
                 address of this account this is — so it stays, kept to
                 one line. */}

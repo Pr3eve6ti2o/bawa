@@ -1,5 +1,5 @@
 import {
-  BROADCAST_DISABLED_MESSAGE,
+  createDisabledBroadcast,
   DEFAULT_TON_WALLET_VERSION,
   assertTonWalletVersion,
   endpointHost,
@@ -608,10 +608,7 @@ export function createTonAdapter(
 
   // Mainnet: always throws. Devnet: the injected devnet broadcast.
   const broadcast: ChainAdapter['broadcast'] =
-    overrides.broadcast ??
-    (async (_signedTx: unknown): Promise<never> => {
-      throw new Error(BROADCAST_DISABLED_MESSAGE);
-    });
+    overrides.broadcast ?? createDisabledBroadcast();
 
   return {
     chain: 'ton',

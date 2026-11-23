@@ -156,7 +156,13 @@ export function TransactionHistoryScreen() {
             </ul>
           )}
 
-          {failedChains.length > 0 && (
+          {/* A failed history fetch is disclosed with a Retry only when
+              the wallet has activity (rows loaded somewhere): a fresh
+              wallet with no transactions shows "No transactions yet",
+              not an error + a dead Retry for a 429 that would only 429
+              again. A failed chain WITH retained transactions keeps its
+              block — its rows make rows.length > 0. */}
+          {rows.length > 0 && failedChains.length > 0 && (
             <div className="space-y-2 rounded-lg border p-4">
               <p className="text-sm">
                 {`${failedChains

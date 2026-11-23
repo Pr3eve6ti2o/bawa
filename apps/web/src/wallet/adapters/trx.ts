@@ -1,12 +1,12 @@
 import { hexToBytes, sha256 } from 'viem';
+import { BASE58_ALPHABET, encodeBase58 } from '../../engine/address-codecs';
 import { isRecord } from '../guards';
 import {
-  BROADCAST_DISABLED_MESSAGE,
+  createDisabledBroadcast,
   endpointHost,
   httpFetchTransport,
   resolveEndpoints,
   toAdapterError,
-  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -18,12 +18,11 @@ import {
   type TxInput,
 } from './types';
 import { withRetry } from '../retry';
+import { createMempoolReader, feeEstimateResult } from './utxo-shared';
 
 const NETWORK_ID = 'tron:0x2b6653dc';
 const BASE_URL = 'https://api.trongrid.io';
 const DECIMALS = 6;
-const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
 export interface TronAdapterOverrides {
   baseUrl?: string;
   /**
@@ -76,31 +75,6 @@ export interface TronBlockHeader {
   witnessAddress: string;
 }
 
-function encodeBase58(bytes: Uint8Array): string {
-  let zeros = 0;
-  while (zeros < bytes.length && bytes[zeros] === 0) zeros += 1;
-  const digits: number[] = [0];
-  for (let i = zeros; i < bytes.length; i += 1) {
-    let carry = bytes[i] as number;
-    for (let j = 0; j < digits.length; j += 1) {
-      carry += (digits[j] as number) * 256;
-      digits[j] = carry % 58;
-      carry = Math.floor(carry / 58);
-    }
-    while (carry > 0) {
-      digits.push(carry % 58);
-      carry = Math.floor(carry / 58);
-    }
-  }
-  return (
-    '1'.repeat(zeros) +
-    digits
-      .reverse()
-      .map((digit) => BASE58_ALPHABET[digit] as string)
-      .join('')
-  );
-}
-
 /** 21 address bytes (0x41 version + 20-byte hash) as a base58check T-address. */
 function tronBytesToBase58(addressBytes: Uint8Array): string {
   const checksum = hexToBytes(sha256(hexToBytes(sha256(addressBytes))));
@@ -125,17 +99,7 @@ export function createTronAdapter(
   // retry — so a dead primary fails over after one attempt, not nine.
   const resolveBaseUrls = (): string[] =>
     resolveEndpoints(overrides.baseUrls, [baseUrl]);
-  const readJsonFrom = (
-    urlFor: (base: string) => string,
-    operation: string,
-  ): Promise<{ raw: unknown; endpoint: string }> =>
-    withRetry(
-      () =>
-        tryEndpoints(resolveBaseUrls(), (base) =>
-          transport.request(urlFor(base)),
-        ),
-      { operation },
-    ).then(({ result, endpoint }) => ({ raw: result, endpoint }));
+  const readJsonFrom = createMempoolReader(transport, resolveBaseUrls);
   // Chain-identity check result, cached per instance: TRON has no on-chain
   // chain-id, so identity rests on the pinned endpoint responding
   // with a well-formed block. The endpoint URL is fixed at
@@ -315,20 +279,14 @@ export function createTronAdapter(
         reason: 'getEnergyFee not found in chain parameters',
       };
     }
-    return {
-      status: 'ok',
-      data: {
-        chain: 'trx',
-        networkId,
-        feeBaseUnits: String(Math.trunc(value)),
-        unit: 'SUN per unit of energy',
-        note: 'TRON fees are energy/bandwidth, not a flat tx fee; this is the network energy fee',
-        source: endpointHost(endpoint),
-        fetchedAt: Date.now(),
-      },
-      source: endpointHost(endpoint),
-      fetchedAt: Date.now(),
-    };
+    return feeEstimateResult(
+      'trx',
+      networkId,
+      String(Math.trunc(value)),
+      'SUN per unit of energy',
+      'TRON fees are energy/bandwidth, not a flat tx fee; this is the network energy fee',
+      endpoint,
+    );
   };
 
   const getTxInputs = async (
@@ -346,10 +304,7 @@ export function createTronAdapter(
 
   // Mainnet: always throws. Devnet: the injected devnet broadcast.
   const broadcast: ChainAdapter['broadcast'] =
-    overrides.broadcast ??
-    (async (_signedTx: unknown): Promise<never> => {
-      throw new Error(BROADCAST_DISABLED_MESSAGE);
-    });
+    overrides.broadcast ?? createDisabledBroadcast();
 
   return {
     chain: 'trx',

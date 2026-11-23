@@ -7,6 +7,8 @@
 import { initWasm } from '@trustwallet/wallet-core';
 import type { TonAddressValidation } from '@bawa/contracts';
 
+import { crc16Xmodem } from './address-codecs';
+
 export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
 
 const BASE58_ALPHABET =
@@ -310,23 +312,6 @@ export async function validateAccountKey(
   return { ok: true };
 }
 
-// CRC16-XMODEM (poly 0x1021, init 0x0000, MSB-first, no lookup table),
-// the checksum of TON user-friendly addresses (TEP-0002). Same
-// algorithm as destination.ts.
-function crc16Xmodem(data: Uint8Array): number {
-  let crc = 0x0000;
-  for (const byte of data) {
-    crc ^= byte << 8;
-    for (let bit = 0; bit < 8; bit++) {
-      crc =
-        (crc & 0x8000) !== 0
-          ? ((crc << 1) ^ 0x1021) & 0xffff
-          : (crc << 1) & 0xffff;
-    }
-  }
-  return crc;
-}
-
 // TON friendly addresses contain complete, unpadded base64 quartets.
 // Decodes standard base64 (after normalising base64url '-'/'_' to
 // '+/'), so the same address is accepted in either spelling, like
@@ -583,55 +568,52 @@ export async function validateWatchOnlyImport(
   return validateAccountKey(value, chain);
 }
 
+/**
+ * WASM CoinType key per chain (all chains except TON, which has no
+ * Wallet Core coin mapping in the engine). Shared by coinTypeForChain
+ * here and coinForChain in wallet/core.ts (which adds the TON case).
+ * The table holds key NAMES only — the CoinType values themselves
+ * stay inside this file, per the facade contract above; callers
+ * resolve `core.CoinType[key]` on their own core handle.
+ *
+ * Merge 1 (Lane B): the 9 extra chains adopt-proper added via the
+ * inline coin map in deriveAddress. Repo-study's deriveAddressWithCore
+ * helper only mapped btc/eth/trx, so the mappings move here instead
+ * of re-adding the inline map. Values verified against HEAD's map.
+ */
+export const COIN_TYPE_KEY_FOR_CHAIN: Record<
+  Exclude<ChainId, 'ton'>,
+  keyof WalletCore['CoinType']
+> = {
+  btc: 'bitcoin',
+  eth: 'ethereum',
+  trx: 'tron',
+  sol: 'solana',
+  bsc: 'smartChain',
+  matic: 'polygon',
+  arb: 'arbitrum',
+  op: 'optimism',
+  base: 'base',
+  avax: 'avalancheCChain',
+  gnosis: 'xdai',
+  celo: 'celo',
+  linea: 'linea',
+  mantle: 'mantle',
+  scroll: 'scroll',
+  opbnb: 'opBNB',
+  metis: 'metis',
+  aurora: 'aurora',
+  fantom: 'fantom',
+  ltc: 'litecoin',
+  doge: 'dogecoin',
+};
+
 function coinTypeForChain(core: WalletCore, chain: Exclude<ChainId, 'ton'>) {
-  switch (chain) {
-    case 'btc':
-      return core.CoinType.bitcoin;
-    case 'eth':
-      return core.CoinType.ethereum;
-    case 'trx':
-      return core.CoinType.tron;
-    // Merge 1 (Lane B): the 9 extra chains adopt-proper added via the
-    // inline coin map in deriveAddress. Repo-study's deriveAddressWithCore
-    // helper only mapped btc/eth/trx, so the mappings move here instead
-    // of re-adding the inline map. Values verified against HEAD's map.
-    case 'ltc':
-      return core.CoinType.litecoin;
-    case 'doge':
-      return core.CoinType.dogecoin;
-    case 'bsc':
-      return core.CoinType.smartChain;
-    case 'matic':
-      return core.CoinType.polygon;
-    case 'arb':
-      return core.CoinType.arbitrum;
-    case 'op':
-      return core.CoinType.optimism;
-    case 'base':
-      return core.CoinType.base;
-    case 'avax':
-      return core.CoinType.avalancheCChain;
-    case 'gnosis':
-      return core.CoinType.xdai;
-    case 'celo':
-      return core.CoinType.celo;
-    case 'linea':
-      return core.CoinType.linea;
-    case 'mantle':
-      return core.CoinType.mantle;
-    case 'scroll':
-      return core.CoinType.scroll;
-    case 'opbnb':
-      return core.CoinType.opBNB;
-    case 'metis':
-      return core.CoinType.metis;
-    case 'aurora':
-      return core.CoinType.aurora;
-    case 'fantom':
-      return core.CoinType.fantom;
-    default:
-      throw new Error('unsupported chain for WASM coin mapping: ' + chain);
+  const key = COIN_TYPE_KEY_FOR_CHAIN[chain];
+  if (key === undefined) {
+    throw new Error('unsupported chain for WASM coin mapping: ' + chain);
   }
+  return core.CoinType[key];
 }
 
 function deriveAddressWithCore(

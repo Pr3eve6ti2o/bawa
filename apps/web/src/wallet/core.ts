@@ -1,5 +1,5 @@
-import { hashMessage, hexToBytes, sha256, stringToHex } from 'viem';
-import { loadCore } from '../engine/boundary';
+import { bytesToBase64Url, crc16Xmodem } from '../engine/address-codecs';
+import { COIN_TYPE_KEY_FOR_CHAIN, loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { pathFor } from './chains';
 import {
@@ -7,6 +7,13 @@ import {
   encodeBtcBech32,
   toTonTestnetUqAddress,
 } from './devnet';
+import {
+  assertPartialSignerDigest,
+  hashPartialSignerMessage,
+  isPartialSignerChain,
+  partialSignerSignatureLength,
+  type PartialSigner,
+} from './signing-intent';
 
 export type { ChainId };
 
@@ -43,77 +50,18 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
 });
 
 function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
-  switch (chain) {
-    case 'btc':
-      return core.CoinType.bitcoin;
-    case 'eth':
-      return core.CoinType.ethereum;
-    case 'trx':
-      return core.CoinType.tron;
-    case 'ton':
-      return core.CoinType.ton;
-    case 'sol':
-      return core.CoinType.solana;
-    case 'bsc':
-      return core.CoinType.smartChain;
-    case 'matic':
-      return core.CoinType.polygon;
-    case 'arb':
-      return core.CoinType.arbitrum;
-    case 'op':
-      return core.CoinType.optimism;
-    case 'base':
-      return core.CoinType.base;
-    case 'avax':
-      return core.CoinType.avalancheCChain;
-    case 'gnosis':
-      return core.CoinType.xdai;
-    case 'celo':
-      return core.CoinType.celo;
-    case 'linea':
-      return core.CoinType.linea;
-    case 'mantle':
-      return core.CoinType.mantle;
-    case 'scroll':
-      return core.CoinType.scroll;
-    case 'opbnb':
-      return core.CoinType.opBNB;
-    case 'metis':
-      return core.CoinType.metis;
-    case 'aurora':
-      return core.CoinType.aurora;
-    case 'fantom':
-      return core.CoinType.fantom;
-    case 'ltc':
-      return core.CoinType.litecoin;
-    case 'doge':
-      return core.CoinType.dogecoin;
-    default:
-      throw new Error('Unsupported chain.');
+  if (chain === 'ton') return core.CoinType.ton;
+  const key = COIN_TYPE_KEY_FOR_CHAIN[chain];
+  if (key === undefined) {
+    throw new Error('Unsupported chain.');
   }
+  return core.CoinType[key];
 }
 
 function assertValidMnemonic(core: WalletCore, mnemonic: string): void {
   if (!core.Mnemonic.isValid(mnemonic)) {
     throw new Error('Invalid mnemonic.');
   }
-}
-
-function crc16Xmodem(bytes: Uint8Array): number {
-  let crc = 0;
-
-  for (const byte of bytes) {
-    crc ^= byte << 8;
-
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc =
-        (crc & 0x8000) !== 0
-          ? ((crc << 1) ^ 0x1021) & 0xffff
-          : (crc << 1) & 0xffff;
-    }
-  }
-
-  return crc;
 }
 
 /**
@@ -156,16 +104,7 @@ function toTonUqAddress(address: string): string {
   bytes[34] = checksum >>> 8;
   bytes[35] = checksum & 0xff;
 
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return globalThis
-    .btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/u, '');
+  return bytesToBase64Url(bytes);
 }
 
 function checkedAddress(
@@ -228,10 +167,13 @@ export async function createWallet(passphrase = ''): Promise<string> {
 }
 
 /** Validate and restore a mnemonic without retaining a WASM wallet object. */
-export async function restoreWallet(
-  mnemonic: string,
-  passphrase = '',
-): Promise<string> {
+/**
+ * Load Wallet Core, validate the mnemonic and open the HD wallet. The
+ * caller owns the wallet and must delete() it. Shared by the two sites
+ * that already did these steps with the same null check (restoreWallet,
+ * deriveDevnetBtcAddress).
+ */
+async function openWallet(mnemonic: string, passphrase: string) {
   const core = await loadCore();
   assertValidMnemonic(core, mnemonic);
 
@@ -239,6 +181,14 @@ export async function restoreWallet(
   if (!wallet) {
     throw new Error('Unable to restore wallet.');
   }
+  return { core, wallet };
+}
+
+export async function restoreWallet(
+  mnemonic: string,
+  passphrase = '',
+): Promise<string> {
+  const { wallet } = await openWallet(mnemonic, passphrase);
 
   try {
     return wallet.mnemonic();
@@ -252,6 +202,40 @@ export async function restoreWallet(
  * Wallet Core 4.9.3's TON default is a workchain-zero V4R2 wallet, using the
  * single fully hardened path m/44'/607'/0', with no change/index suffix.
  */
+/**
+ * All 22 registry chains' addresses from one address function. The
+ * deriveAddresses / deriveAddressesAt pair differ only in how a single
+ * address is derived, not in the chain map.
+ */
+function allChainAddresses(
+  addressFor: (chain: ChainId) => string,
+): WalletAddresses {
+  return {
+    btc: addressFor('btc'),
+    eth: addressFor('eth'),
+    trx: addressFor('trx'),
+    ton: addressFor('ton'),
+    sol: addressFor('sol'),
+    bsc: addressFor('bsc'),
+    matic: addressFor('matic'),
+    arb: addressFor('arb'),
+    op: addressFor('op'),
+    base: addressFor('base'),
+    avax: addressFor('avax'),
+    gnosis: addressFor('gnosis'),
+    celo: addressFor('celo'),
+    linea: addressFor('linea'),
+    mantle: addressFor('mantle'),
+    scroll: addressFor('scroll'),
+    opbnb: addressFor('opbnb'),
+    metis: addressFor('metis'),
+    aurora: addressFor('aurora'),
+    fantom: addressFor('fantom'),
+    ltc: addressFor('ltc'),
+    doge: addressFor('doge'),
+  };
+}
+
 export async function deriveAddresses(
   mnemonic: string,
   passphrase = '',
@@ -272,30 +256,7 @@ export async function deriveAddresses(
         wallet.getAddressForCoin(coinForChain(core, chain)),
       );
 
-    return {
-      btc: addressFor('btc'),
-      eth: addressFor('eth'),
-      trx: addressFor('trx'),
-      ton: addressFor('ton'),
-      sol: addressFor('sol'),
-      bsc: addressFor('bsc'),
-      matic: addressFor('matic'),
-      arb: addressFor('arb'),
-      op: addressFor('op'),
-      base: addressFor('base'),
-      avax: addressFor('avax'),
-      gnosis: addressFor('gnosis'),
-      celo: addressFor('celo'),
-      linea: addressFor('linea'),
-      mantle: addressFor('mantle'),
-      scroll: addressFor('scroll'),
-      opbnb: addressFor('opbnb'),
-      metis: addressFor('metis'),
-      aurora: addressFor('aurora'),
-      fantom: addressFor('fantom'),
-      ltc: addressFor('ltc'),
-      doge: addressFor('doge'),
-    };
+    return allChainAddresses(addressFor);
   } finally {
     wallet.delete();
   }
@@ -405,30 +366,7 @@ export async function deriveAddressesAt(
     const addressFor = (chain: ChainId): string =>
       deriveOneAddress(core, wallet, chain, account, index);
 
-    return {
-      btc: addressFor('btc'),
-      eth: addressFor('eth'),
-      trx: addressFor('trx'),
-      ton: addressFor('ton'),
-      sol: addressFor('sol'),
-      bsc: addressFor('bsc'),
-      matic: addressFor('matic'),
-      arb: addressFor('arb'),
-      op: addressFor('op'),
-      base: addressFor('base'),
-      avax: addressFor('avax'),
-      gnosis: addressFor('gnosis'),
-      celo: addressFor('celo'),
-      linea: addressFor('linea'),
-      mantle: addressFor('mantle'),
-      scroll: addressFor('scroll'),
-      opbnb: addressFor('opbnb'),
-      metis: addressFor('metis'),
-      aurora: addressFor('aurora'),
-      fantom: addressFor('fantom'),
-      ltc: addressFor('ltc'),
-      doge: addressFor('doge'),
-    };
+    return allChainAddresses(addressFor);
   } finally {
     wallet.delete();
   }
@@ -479,14 +417,7 @@ export async function deriveDevnetAddressesAt(
   account: number,
   index: number,
 ): Promise<WalletAddresses> {
-  if (!Number.isSafeInteger(account) || account < 0) {
-    throw new RangeError('account must be a non-negative safe integer');
-  }
-  if (!Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) {
-    throw new RangeError(
-      'index must be a non-negative safe integer below 0x80000000',
-    );
-  }
+  assertAccountIndex(account, index);
 
   const base = await deriveAddressesAt(mnemonic, passphrase, account, index);
   const btc = await deriveDevnetBtcAddress(mnemonic, passphrase, account, index);
@@ -499,12 +430,7 @@ async function deriveDevnetBtcAddress(
   account: number,
   index: number,
 ): Promise<string> {
-  const core = await loadCore();
-  assertValidMnemonic(core, mnemonic);
-  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
-  if (!wallet) {
-    throw new Error('Unable to restore wallet.');
-  }
+  const { core, wallet } = await openWallet(mnemonic, passphrase);
 
   try {
     const coin = core.CoinType.bitcoin;
@@ -649,185 +575,6 @@ export async function deriveFromXpub(
   }
 }
 
-/** Sign-only capability; credentials and raw keys are never exposed. */
-export interface PartialSigner {
-  readonly chain: ChainId;
-  readonly address: string;
-
-  /** Exactly 32 bytes; returns raw 65-byte secp256k1 or 64-byte ed25519 signatures. */
-  signDigest(digest: Uint8Array): Promise<Uint8Array>;
-
-  /** ETH uses EIP-191; other chains use SHA-256 before signing. */
-  signMessage(message: Uint8Array): Promise<Uint8Array>;
-}
-
-/** Watch-only data, not a signing capability. */
-export type AddressOnlyAccount = {
-  readonly kind: 'address-only';
-  readonly chain: ChainId;
-  readonly address: string;
-};
-
-export type LocalAccount = {
-  readonly kind: 'local';
-  readonly chain: ChainId;
-  readonly address: string;
-  readonly signer: PartialSigner;
-};
-
-export type SigningIntent =
-  | {
-      readonly kind: 'transaction';
-      readonly chain: ChainId;
-      readonly to: string;
-      readonly amountBaseUnits: string;
-      /** ETH nonce, TON seqno, TRX block number; empty string for BTC. */
-      readonly sequence: string;
-    }
-  | {
-      readonly kind: 'message';
-      readonly chain: ChainId;
-      readonly messageHash: string;
-    };
-
-/** Build a secret-free transaction intent; preserve the exact strings for approval. */
-export function createTransactionIntent(
-  chain: ChainId,
-  to: string,
-  amountBaseUnits: string,
-  sequence: string,
-): SigningIntent {
-  if (typeof to !== 'string' || to.trim().length === 0) {
-    throw new Error('Invalid signing intent field "to": expected a non-empty string.');
-  }
-
-  if (
-    typeof amountBaseUnits !== 'string' ||
-    !/^[0-9]+$/.test(amountBaseUnits)
-  ) {
-    throw new Error(
-      'Invalid signing intent field "amountBaseUnits": expected an unsigned decimal string.',
-    );
-  }
-
-  if (
-    typeof sequence !== 'string' ||
-    (sequence !== '' && !/^[0-9]+$/.test(sequence))
-  ) {
-    throw new Error(
-      'Invalid signing intent field "sequence": expected an unsigned decimal string or an empty string.',
-    );
-  }
-
-  return Object.freeze({
-    kind: 'transaction' as const,
-    chain,
-    to,
-    amountBaseUnits,
-    sequence,
-  });
-}
-
-/** Build a secret-free message intent from a supplied hash; this does not sign. */
-export function createMessageIntent(
-  chain: ChainId,
-  messageHash: string,
-): SigningIntent {
-  if (
-    typeof messageHash !== 'string' ||
-    !/^0x[0-9a-fA-F]{64}$/.test(messageHash)
-  ) {
-    throw new Error(
-      'Invalid signing intent field "messageHash": expected 0x followed by exactly 64 hexadecimal characters.',
-    );
-  }
-
-  return Object.freeze({
-    kind: 'message' as const,
-    chain,
-    messageHash,
-  });
-}
-
-/** Encode exact UTF-16 code units as length-prefixed ASCII, avoiding field ambiguity. */
-function encodeSigningIntentField(value: string): string {
-  let hex = '';
-  for (let index = 0; index < value.length; index += 1) {
-    hex += value.charCodeAt(index).toString(16).padStart(4, '0');
-  }
-  return `${hex.length}:${hex}`;
-}
-
-/** Fingerprint fixed-order public fields for approval; hashing is not signing. */
-export function intentFingerprint(intent: SigningIntent): string {
-  const fields: readonly string[] =
-    intent.kind === 'transaction'
-      ? [
-          intent.kind,
-          String(intent.chain),
-          intent.to,
-          intent.amountBaseUnits,
-          intent.sequence,
-        ]
-      : [intent.kind, String(intent.chain), intent.messageHash];
-
-  const canonical =
-    'bawa:signing-intent:v1|' +
-    fields.map(encodeSigningIntentField).join('');
-
-  return sha256(stringToHex(canonical));
-}
-
-/** Call before PartialSigner signing; sign only when the approved intent matches. */
-export function assertIntentMatchesTransaction(
-  intent: SigningIntent,
-  tx: {
-    readonly chain: ChainId;
-    readonly to: string;
-    readonly amountBaseUnits: string;
-    readonly sequence: string;
-  },
-): void {
-  if (intent.kind !== 'transaction') {
-    throw new Error('Signing intent mismatch: kind (expected "transaction").');
-  }
-
-  const fields = ['chain', 'to', 'amountBaseUnits', 'sequence'] as const;
-  for (const field of fields) {
-    if (intent[field] !== tx[field]) {
-      throw new Error(`Signing intent mismatch: ${field}.`);
-    }
-  }
-}
-
-function isPartialSignerChain(value: unknown): value is ChainId {
-  return value === 'btc' || value === 'eth' || value === 'trx' || value === 'ton';
-}
-
-function assertPartialSignerDigest(digest: Uint8Array): void {
-  if (!(digest instanceof Uint8Array) || digest.byteLength !== 32) {
-    throw new Error('signDigest requires exactly 32 bytes');
-  }
-}
-
-function partialSignerSignatureLength(chain: ChainId): 64 | 65 {
-  return chain === 'ton' ? 64 : 65;
-}
-
-function hashPartialSignerMessage(
-  chain: ChainId,
-  message: Uint8Array,
-): Uint8Array {
-  if (!(message instanceof Uint8Array)) {
-    throw new Error('signMessage requires a Uint8Array');
-  }
-
-  const bytes = Uint8Array.from(message);
-  return hexToBytes(
-    chain === 'eth' ? hashMessage({ raw: bytes }) : sha256(bytes),
-  );
-}
-
 /**
  * Build a sign-only facade over a mnemonic-derived key. The address is
  * derived with the same checked derivation as deriveAddresses (including
@@ -922,75 +669,6 @@ export async function createPartialSigner(
     } finally {
       wallet.delete();
     }
-  }
-
-  async function signMessage(message: Uint8Array): Promise<Uint8Array> {
-    return signDigest(hashPartialSignerMessage(chain, message));
-  }
-
-  return Object.freeze({ chain, address, signDigest, signMessage });
-}
-
-export function isPartialSigner(value: unknown): value is PartialSigner {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-
-  // Accounts are wrappers/data: signing requires the capability itself.
-  if (candidate.kind === 'address-only' || candidate.kind === 'local') {
-    return false;
-  }
-
-  return (
-    isPartialSignerChain(candidate.chain) &&
-    typeof candidate.address === 'string' &&
-    typeof candidate.signDigest === 'function' &&
-    typeof candidate.signMessage === 'function'
-  );
-}
-
-function partialSignerBadKind(value: unknown): string {
-  if (value === null) return 'null';
-
-  if (typeof value === 'object') {
-    const candidate = value as Record<string, unknown>;
-    if (typeof candidate.kind === 'string') {
-      return candidate.kind || '(empty kind)';
-    }
-    if (Array.isArray(value)) return 'array';
-  }
-
-  // Do not include arbitrary input values or credentials in errors.
-  return typeof value;
-}
-
-export function assertPartialSigner(
-  value: unknown,
-): asserts value is PartialSigner {
-  if (!isPartialSigner(value)) {
-    throw new Error(
-      `Expected PartialSigner; bad kind: ${partialSignerBadKind(value)}`,
-    );
-  }
-}
-
-/** Test-only: fresh, deterministic all-zero signatures; signs nothing real. */
-export function createNoopSigner(
-  chain: ChainId,
-  address: string,
-): PartialSigner {
-  if (!isPartialSignerChain(chain)) {
-    throw new Error('Unsupported signer chain');
-  }
-  if (typeof address !== 'string') {
-    throw new Error('Signer address must be a string');
-  }
-
-  async function signDigest(digest: Uint8Array): Promise<Uint8Array> {
-    assertPartialSignerDigest(digest);
-    return new Uint8Array(partialSignerSignatureLength(chain));
   }
 
   async function signMessage(message: Uint8Array): Promise<Uint8Array> {

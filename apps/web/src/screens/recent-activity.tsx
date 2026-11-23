@@ -67,6 +67,19 @@ export function RecentActivity() {
             history?.[chain]?.status === 'error',
         );
 
+        // A wallet with no activity anywhere shows the empty state only.
+        // A failed history fetch for a chain with no known transactions
+        // is not an error the user can act on, and its Retry is dead —
+        // a fresh wallet's Blockscout 429 would only 429 again. The
+        // unavailable + Retry block appears only once the wallet HAS
+        // activity (rows loaded somewhere, including a failed chain's
+        // retained transactions): a real failed fetch for a chain that
+        // has activity. While locked the per-chain text stays, with the
+        // Unlock prompt below it — the vault must open before any
+        // history can load at all.
+        const hasActivity = rows.length > 0;
+        const showUnavailable = hasActivity || isLocked;
+
         return (
           <>
             {rows.length > 0 ? (
@@ -126,7 +139,7 @@ export function RecentActivity() {
               <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
             )}
 
-            {unavailableChains.map((chain) => (
+            {showUnavailable && unavailableChains.map((chain) => (
               <div
                 key={`history-unavailable:${chain}`}
                 className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3"

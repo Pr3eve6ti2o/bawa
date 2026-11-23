@@ -102,6 +102,16 @@ describe('lock screen', () => {
     }
   });
 
+  it('renders no main landmark itself — the app shell provides the one main', async () => {
+    setWallet('locked', vi.fn(async () => {}));
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.querySelector('main')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the vault error and clears the field on a wrong password', async () => {
     setWallet('locked', async () => {
       throw new Error('Wrong password.');

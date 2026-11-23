@@ -27,6 +27,7 @@ import { CHAINS, resolveRpcEndpoints } from '../chains';
 import type { ChainId } from '../../engine/boundary';
 import { PRICE_PROVIDER_BASE_URL } from '../prices';
 import {
+  base64ToBytes,
   DEFAULT_TOKENS,
   isValidTronAddress,
   tokenKey,
@@ -103,13 +104,19 @@ export type MetadataResult =
  * owner's overrides) in order and reports the answering endpoint
  * through lastEndpoint, so a balance that came through the backup
  * never claims the primary. */
-export function evmClientForChain(
-  chain: ChainId,
-  rpcUrl?: string,
-  transport: FetchTransport = httpFetchTransport,
-): EvmRpcClient {
-  const urls =
-    rpcUrl !== undefined ? [rpcUrl] : resolveRpcEndpoints(chain);
+/**
+ * Shared JSON-RPC request loop behind evmClientForChain and
+ * solRpcClient: sweep the chain's endpoints with withRetry, parse the
+ * JSON-RPC envelope, remember the endpoint that answered.
+ */
+function createJsonRpcClient(
+  urls: string[],
+  operation: string,
+  transport: FetchTransport,
+): {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  lastEndpoint: () => string | undefined;
+} {
   let id = 0;
   let lastEndpoint: string | undefined;
   return {
@@ -141,13 +148,23 @@ export function evmClientForChain(
             }
             return body['result'];
           }),
-        { operation: `token-balances.${chain}.request` },
+        { operation },
       );
       lastEndpoint = endpoint;
       return result;
     },
     lastEndpoint: () => lastEndpoint,
   };
+}
+
+export function evmClientForChain(
+  chain: ChainId,
+  rpcUrl?: string,
+  transport: FetchTransport = httpFetchTransport,
+): EvmRpcClient {
+  const urls =
+    rpcUrl !== undefined ? [rpcUrl] : resolveRpcEndpoints(chain);
+  return createJsonRpcClient(urls, `token-balances.${chain}.request`, transport);
 }
 
 const UNREADABLE_TOKEN = 'Could not read this token — check the address and try again';
@@ -611,56 +628,17 @@ function solRpcClient(transport: FetchTransport = httpFetchTransport): {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   lastEndpoint: () => string | undefined;
 } {
-  const urls = resolveRpcEndpoints('sol');
-  let id = 0;
-  let lastEndpoint: string | undefined;
-  return {
-    request: async ({ method, params }) => {
-      const { result, endpoint } = await withRetry(
-        () =>
-          tryEndpoints(urls, async (url) => {
-            const body = await transport.request(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-              },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: (id += 1),
-                method,
-                params: params ?? [],
-              }),
-            });
-            if (!isRecord(body)) throw new Error('Invalid RPC response');
-            if ('error' in body) {
-              const error = body['error'];
-              const message =
-                isRecord(error) && typeof error['message'] === 'string'
-                  ? error['message']
-                  : 'RPC error';
-              throw new Error(message);
-            }
-            return body['result'];
-          }),
-        { operation: 'token-balances.sol.request' },
-      );
-      lastEndpoint = endpoint;
-      return result;
-    },
-    lastEndpoint: () => lastEndpoint,
-  };
+  return createJsonRpcClient(
+    resolveRpcEndpoints('sol'),
+    'token-balances.sol.request',
+    transport,
+  );
 }
 
 /** Base64 → bytes (atob is standard base64 only). Returns null on bad input. */
 function decodeBase64(value: string): Uint8Array | null {
   try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+    return base64ToBytes(atob(value));
   } catch {
     return null;
   }
@@ -877,6 +855,24 @@ async function fetchSplTokenBalance(input: {
 }
 
 /** Full SPL verification for the Add Token flow (same checks as EVM). */
+/**
+ * Shared tail of the four Add Token verifications (SPL, Jetton, EVM,
+ * TRON): a failed balance read is reported, never mapped to zero.
+ */
+function verificationOutcome(
+  metadata: TokenMetadata,
+  balance: AdapterResult<AdapterBalance>,
+): TokenVerification {
+  if (balance.status !== 'ok') {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  return {
+    ok: true,
+    metadata,
+    balanceBaseUnits: balance.data.valueBaseUnits,
+  };
+}
+
 export async function verifySplToken(input: {
   contract: string;
   ownerAddress: string;
@@ -895,14 +891,7 @@ export async function verifySplToken(input: {
     decimals: metadata.metadata.decimals,
     transport: input.transport,
   });
-  if (balance.status !== 'ok') {
-    return { ok: false, error: UNREADABLE_TOKEN };
-  }
-  return {
-    ok: true,
-    metadata: metadata.metadata,
-    balanceBaseUnits: balance.data.valueBaseUnits,
-  };
+  return verificationOutcome(metadata.metadata, balance);
 }
 
 // --- TON Jettons (UI/UX fixes, item 13) ---------------------------------
@@ -1049,14 +1038,7 @@ export async function verifyJettonToken(input: {
     decimals: metadata.metadata.decimals,
     transport: input.transport,
   });
-  if (balance.status !== 'ok') {
-    return { ok: false, error: UNREADABLE_TOKEN };
-  }
-  return {
-    ok: true,
-    metadata: metadata.metadata,
-    balanceBaseUnits: balance.data.valueBaseUnits,
-  };
+  return verificationOutcome(metadata.metadata, balance);
 }
 
 /**
@@ -1086,14 +1068,7 @@ export async function verifyEvmToken(input: {
     decimals: metadata.metadata.decimals,
     evmClient: input.evmClient,
   });
-  if (balance.status !== 'ok') {
-    return { ok: false, error: UNREADABLE_TOKEN };
-  }
-  return {
-    ok: true,
-    metadata: metadata.metadata,
-    balanceBaseUnits: balance.data.valueBaseUnits,
-  };
+  return verificationOutcome(metadata.metadata, balance);
 }
 
 /** Full TRON verification for the Add Token flow (same checks as EVM). */
@@ -1119,14 +1094,7 @@ export async function verifyTronToken(input: {
     transport: input.transport,
     baseUrl: input.baseUrl,
   });
-  if (balance.status !== 'ok') {
-    return { ok: false, error: UNREADABLE_TOKEN };
-  }
-  return {
-    ok: true,
-    metadata: metadata.metadata,
-    balanceBaseUnits: balance.data.valueBaseUnits,
-  };
+  return verificationOutcome(metadata.metadata, balance);
 }
 
 /**

@@ -38,17 +38,14 @@ import { messageOf } from '../wallet/adapters/types';
 import { availableFor } from '../wallet/chains';
 import { classifyRetryableError, withRetry } from '../wallet/retry';
 
-export type BalanceStatus = 'loading' | 'zero' | 'available' | 'unavailable' | 'error';
+// BalanceState/BalanceStatus are the canonical wallet shape (see
+// ../wallet/balance-state): createRefresh never sets refreshing/stale,
+// but sharing the type keeps the refresh module and the context from
+// drifting apart — one of the documented re-wire gaps. HistoryState
+// stays local: the context's HistoryState has no canonical home yet.
+import type { BalanceState, BalanceStatus } from '../wallet/balance-state';
 
-export interface BalanceState {
-  status: BalanceStatus;
-  /** Raw native balance as a decimal string, when a provider returned one. */
-  value?: string;
-  /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
-  reason?: string;
-  /** Epoch ms of the last successful adapter read, if any. */
-  fetchedAtMs?: number;
-}
+export type { BalanceState, BalanceStatus };
 
 export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
 

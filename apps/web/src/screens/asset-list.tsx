@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
-import { useWallet } from '../state/wallet-context';
-import { usePrices } from '../wallet/prices';
-import { useTokenPrices } from '../wallet/token-prices';
-import { DEFAULT_TOKENS } from '../wallet/tokens';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
+import { useLivePrices } from './use-live-prices';
 
 /**
  * Full asset list — the same real-balance rows as the dashboard, with the
@@ -19,66 +16,8 @@ import { AddTokenDialog } from './add-token';
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
-  const { customTokens } = useWallet();
-
-  const { state: pricesState, refresh: refreshPrices } = usePrices();
-  const pricesLoading = pricesState.status === 'loading';
-
-  // Token prices (token discovery): the same CoinGecko feed, one batched
-  // call for the default 7 tokens (six unique ids) plus user-added
-  // tokens. Same auto-fetch on mount and ~60 s refresh as the native
-  // feed — two calls a minute, inside the keyless ~5 calls/min budget.
-  const tokenList = useMemo(
-    () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
-    [customTokens],
-  );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
-  const tokenPricesLoading = tokenPricesState.status === 'loading';
-
-  useEffect(() => {
-    if (tokenPricesState.status === 'idle') {
-      refreshTokenPrices();
-    }
-  }, [tokenPricesState.status, refreshTokenPrices]);
-
-  const refreshTokenPricesRef = useRef(refreshTokenPrices);
-  useEffect(() => {
-    refreshTokenPricesRef.current = refreshTokenPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshTokenPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-fetch on mount, as on the dashboard: without this the rows
-  // would sit on idle entries and read "Price unavailable" forever.
-  // The hook's own guard prevents starting another fetch while one is
-  // in flight.
-  useEffect(() => {
-    if (pricesState.status === 'idle') {
-      refreshPrices();
-    }
-  }, [pricesState.status, refreshPrices]);
-
-  // Refresh about every 60 seconds while mounted (the price module
-  // documents "Refresh ~60s"), same cadence as the dashboard, so a
-  // failed feed recovers without a manual retry. The ref always holds
-  // the latest refresh callback, so the interval is set once and never
-  // resets on status changes.
-  const refreshPricesRef = useRef(refreshPrices);
-  useEffect(() => {
-    refreshPricesRef.current = refreshPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const { pricesState, pricesLoading, tokenPricesState, tokenPricesLoading } =
+    useLivePrices();
 
   return (
     <div className="space-y-6">

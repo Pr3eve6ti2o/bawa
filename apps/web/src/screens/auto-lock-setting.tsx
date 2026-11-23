@@ -20,6 +20,7 @@ export function AutoLockSetting() {
     autoLockMinutes,
     setAutoLockMinutes,
     setAutoLockEnabled,
+    lockVault,
     unlockVault,
   } = useWallet();
 
@@ -143,6 +144,17 @@ export function AutoLockSetting() {
                   : 'Auto-lock is on. Your wallet locks immediately when you leave this page. You will need your vault password to unlock it.'}
               </p>
             )}
+          </div>
+        )}
+
+        {vaultState === 'unlocked' && (
+          <div className="space-y-2">
+            <p className="text-sm text-ink">
+              Lock the vault now instead of waiting for the timer.
+            </p>
+            <Button type="button" variant="secondary" onClick={() => lockVault()}>
+              Lock now
+            </Button>
           </div>
         )}
 

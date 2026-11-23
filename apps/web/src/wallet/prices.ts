@@ -25,7 +25,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ownValue } from './guards';
+import { isPlainObject, ownValue } from './guards';
 import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
@@ -134,6 +134,261 @@ export function isFreshQuote(quote: PriceQuote, nowMs: number): boolean {
   );
 }
 
+/**
+ * True for an abort: the price fetch timed out (AbortController fired).
+ * One definition — prices.ts, token-prices.ts and dex-prices.ts each had
+ * their own copy with the same semantics (marketing-fix Lane 2).
+ */
+export function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
+}
+
+/**
+ * CoinGecko request headers: JSON accept plus the optional demo key.
+ * Read the key with a direct member access on the cast env object.
+ * Verified first-hand (2026-11-20): in this repo's Vitest, the direct form
+ * `(import.meta.env as Record).VITE_...` tracks vi.stubEnv and process env,
+ * while a cast on `import.meta` itself (or a bracket read) is statically
+ * replaced with undefined at transform time. In a production build
+ * import.meta.env is the inlined env object, so the same read works there.
+ */
+export function coingeckoHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const demoKey: unknown = (import.meta.env as Record<string, unknown>)
+    .VITE_COINGECKO_DEMO_KEY;
+  if (typeof demoKey === 'string' && demoKey.length > 0) {
+    headers['x-cg-demo-api-key'] = demoKey;
+  }
+  return headers;
+}
+
+export type FetchJsonResult =
+  | { status: 'ok'; payload: unknown }
+  | { status: 'error'; error: Extract<PriceEntry, { status: 'error' }> };
+
+/**
+ * One JSON GET with the price-feed timeout, shared by every price
+ * fetcher (native CoinGecko, token CoinGecko, DexScreener, TonAPI):
+ * 429 maps to rate-limited with Retry-After honoured, other non-OK to
+ * provider, a JSON parse failure to timeout/provider, a transport
+ * failure to timeout/network. The caller fans the single error entry
+ * out per key and parses the payload itself, so the fetch shape lives
+ * in exactly one place. Callers that need the CoinGecko demo-key header
+ * pass coingeckoHeaders(); the rest take the plain JSON accept header.
+ */
+export async function fetchJsonWithTimeout(
+  fetchFn: typeof fetch,
+  url: string,
+  headers: Record<string, string> = { Accept: 'application/json' },
+): Promise<FetchJsonResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetchFn(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      const seconds =
+        retryAfter !== null && retryAfter.trim() !== ''
+          ? Number(retryAfter)
+          : NaN;
+      const retryAfterMs = seconds * 1000;
+      return {
+        status: 'error',
+        error: {
+          status: 'error',
+          reason: 'rate-limited',
+          ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0
+            ? { retryAfterMs }
+            : {}),
+        },
+      };
+    }
+    if (!response.ok) {
+      return {
+        status: 'error',
+        error: { status: 'error', reason: 'provider' },
+      };
+    }
+    try {
+      return { status: 'ok', payload: await response.json() };
+    } catch (error: unknown) {
+      return {
+        status: 'error',
+        error: {
+          status: 'error',
+          reason: isAbortError(error) ? 'timeout' : 'provider',
+        },
+      };
+    }
+  } catch (error: unknown) {
+    return {
+      status: 'error',
+      error: {
+        status: 'error',
+        reason: isAbortError(error) ? 'timeout' : 'network',
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * One CoinGecko /simple/price entry, shared by parsePriceResponse
+ * (per chain) and parseTokenPriceResponse (per token): the payload
+ * shape, timestamp rule and freshness rule are identical — only the
+ * quote identity (chain, asset id, provider id) differs per caller.
+ * The caller checks the payload root (null means a provider error)
+ * and resolves the per-key entry before calling this.
+ */
+export function parseCoingeckoPriceEntry(
+  entry: unknown,
+  identity: {
+    chain: PriceQuote['chain'];
+    assetId: string;
+    providerAssetId: string;
+  },
+  nowMs: number,
+): PriceEntry {
+  if (!isPlainObject(entry)) {
+    return { status: 'unavailable', reason: 'missing' };
+  }
+  // A timestamp is mandatory, regardless of whether a price is present.
+  const updatedAt = ownValue(entry, 'last_updated_at');
+  if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) {
+    return { status: 'unavailable', reason: 'missing-timestamp' };
+  }
+  const price = ownValue(entry, 'usd');
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+    return { status: 'unavailable', reason: 'invalid-price' };
+  }
+  const quote: PriceQuote = {
+    chain: identity.chain,
+    assetId: identity.assetId,
+    providerAssetId: identity.providerAssetId,
+    usdPrice: String(price),
+    // CoinGecko timestamps are seconds, not milliseconds.
+    providerUpdatedAtMs: updatedAt * 1000,
+    fetchedAtMs: nowMs,
+    source: 'CoinGecko',
+  };
+  return isFreshQuote(quote, nowMs)
+    ? { status: 'fresh', quote }
+    : { status: 'expired', quote };
+}
+
+/** A USD price string is well-formed for caching: no surrounding space, decimal syntax, finite and positive. */
+export function isValidUsdPriceString(value: string): boolean {
+  return (
+    value.trim() === value &&
+    /^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) &&
+    Number.isFinite(Number(value)) &&
+    Number(value) > 0
+  );
+}
+
+/** A fresh quote with a well-formed price and finite timestamps may be cached. */
+export function isCacheableQuote(quote: PriceQuote, nowMs: number): boolean {
+  return (
+    typeof quote.usdPrice === 'string' &&
+    isValidUsdPriceString(quote.usdPrice) &&
+    Number.isFinite(quote.providerUpdatedAtMs) &&
+    Number.isFinite(quote.fetchedAtMs) &&
+    isFreshQuote(quote, nowMs)
+  );
+}
+
+/**
+ * Item 11/12: a failed refresh must not blank prices already on
+ * screen. Keep the last good quote for a key when the new fetch ends
+ * in error; only keys with no previous quote show the error. Generic
+ * over the map type so the native and token feeds share it.
+ */
+export function mergePreservingFreshEntries<
+  T extends Record<string, PriceEntry>,
+>(next: T, previous: T): T {
+  // A generic map cannot be indexed for writing (TS2862), so merge over
+  // a plain record and cast back: the keys are unchanged, only values
+  // are carried over from the previous map.
+  const merged: Record<string, PriceEntry> = { ...next };
+  for (const key of Object.keys(merged)) {
+    const current = merged[key];
+    const prev = previous[key];
+    if (current?.status === 'error' && prev?.status === 'fresh') {
+      merged[key] = prev;
+    }
+  }
+  return merged as T;
+}
+
+/**
+ * Retry delay for a failed price fetch: null when the fetch settled
+ * (not every entry is a retryable error, or attempts are exhausted),
+ * otherwise the backoff — 1s per attempt, or the provider's
+ * Retry-After capped at 30s when rate-limited. Shared by usePrices
+ * and useTokenPrices.
+ */
+export function priceRetryDelayMs(
+  values: readonly PriceEntry[],
+  attempt: number,
+): number | null {
+  if (
+    attempt >= 2 ||
+    values.length === 0 ||
+    !values.every(
+      (entry) =>
+        entry.status === 'error' &&
+        (entry.reason === 'rate-limited' ||
+          entry.reason === 'network' ||
+          entry.reason === 'timeout'),
+    )
+  ) {
+    return null;
+  }
+  let delayMs = 1000 * (attempt + 1);
+  const rateLimited = values.find(
+    (entry) => entry.status === 'error' && entry.reason === 'rate-limited',
+  );
+  if (
+    rateLimited?.status === 'error' &&
+    rateLimited.reason === 'rate-limited'
+  ) {
+    const retryAfterMs = rateLimited.retryAfterMs;
+    delayMs = Math.min(
+      30_000,
+      Math.max(
+        0,
+        typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs)
+          ? retryAfterMs
+          : 1000,
+      ),
+    );
+  }
+  return delayMs;
+}
+
+/** Sleep used by the price hooks: the injected one in tests, else setTimeout. */
+export function resolvePriceWait(
+  sleep?: (ms: number) => Promise<void>,
+): (ms: number) => Promise<void> {
+  return (
+    sleep ??
+    ((ms: number) =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+      }))
+  );
+}
+
 export const PRICE_CACHE_KEY = 'bawa:prices-cache:v1';
 
 export type PriceCacheStore = {
@@ -152,16 +407,7 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
       if (entry?.status !== 'fresh') continue;
 
       const quote = entry.quote;
-      if (
-        typeof quote.usdPrice !== 'string' ||
-        quote.usdPrice.trim() !== quote.usdPrice ||
-        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(quote.usdPrice) ||
-        !Number.isFinite(Number(quote.usdPrice)) ||
-        Number(quote.usdPrice) <= 0 ||
-        !Number.isFinite(quote.providerUpdatedAtMs) ||
-        !Number.isFinite(quote.fetchedAtMs) ||
-        !isFreshQuote(quote, nowMs)
-      ) {
+      if (!isCacheableQuote(quote, nowMs)) {
         continue;
       }
 
@@ -173,12 +419,7 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
       });
     }
 
-    if (quotes.length === 0) return;
-
-    const cacheStore = store ?? globalThis.localStorage;
-    if (!cacheStore) return;
-
-    cacheStore.setItem(PRICE_CACHE_KEY, JSON.stringify({ version: 1, quotes }));
+    writePriceCache(store, PRICE_CACHE_KEY, 1, quotes);
   } catch {
     // Cache persistence is best-effort, including access to localStorage.
   }
@@ -241,10 +482,7 @@ export function loadCachedPrices(nowMs: number, store?: PriceCacheStore): PriceM
         typeof chain !== 'string' ||
         !hasOwn.call(PRICE_IDS, chain) ||
         typeof usdPrice !== 'string' ||
-        usdPrice.trim() !== usdPrice ||
-        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(usdPrice) ||
-        !Number.isFinite(Number(usdPrice)) ||
-        Number(usdPrice) <= 0 ||
+        !isValidUsdPriceString(usdPrice) ||
         typeof providerUpdatedAtMs !== 'number' ||
         !Number.isFinite(providerUpdatedAtMs) ||
         typeof fetchedAtMs !== 'number' ||
@@ -280,27 +518,6 @@ export function parsePriceResponse(
   payload: unknown,
   nowMs: number,
 ): PriceMap {
-  // Guard inspection as well: unusual objects and proxies can throw.
-  const isPlainObject = (
-    value: unknown,
-  ): value is Record<string, unknown> => {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-
-    try {
-      if (Array.isArray(value)) {
-        return false;
-      }
-
-      const prototype: unknown = Object.getPrototypeOf(value);
-      return prototype === Object.prototype || prototype === null;
-    } catch {
-      return false;
-    }
-  };
-
-
   const root = isPlainObject(payload) ? payload : null;
 
   const parseChain = (chain: ChainId): PriceEntry => {
@@ -308,43 +525,11 @@ export function parsePriceResponse(
       return { status: 'error', reason: 'provider' };
     }
 
-    const entry = ownValue(root, PRICE_IDS[chain]);
-    if (!isPlainObject(entry)) {
-      return { status: 'unavailable', reason: 'missing' };
-    }
-
-    // A timestamp is mandatory, regardless of whether a price is present.
-    const updatedAt = ownValue(entry, 'last_updated_at');
-    if (
-      typeof updatedAt !== 'number' ||
-      !Number.isFinite(updatedAt)
-    ) {
-      return { status: 'unavailable', reason: 'missing-timestamp' };
-    }
-
-    const price = ownValue(entry, 'usd');
-    if (
-      typeof price !== 'number' ||
-      !Number.isFinite(price) ||
-      price <= 0
-    ) {
-      return { status: 'unavailable', reason: 'invalid-price' };
-    }
-
-    const quote: PriceQuote = {
+    return parseCoingeckoPriceEntry(ownValue(root, PRICE_IDS[chain]), {
       chain,
       assetId: PRICE_ASSET_IDS[chain],
       providerAssetId: PRICE_IDS[chain],
-      usdPrice: String(price),
-      // CoinGecko timestamps are seconds, not milliseconds.
-      providerUpdatedAtMs: updatedAt * 1000,
-      fetchedAtMs: nowMs,
-      source: 'CoinGecko',
-    };
-
-    return isFreshQuote(quote, nowMs)
-      ? { status: 'fresh', quote }
-      : { status: 'expired', quote };
+    }, nowMs);
   };
 
   return {
@@ -373,6 +558,42 @@ export function parsePriceResponse(
   };
 }
 
+/**
+ * Shared CoinGecko /simple/price fetch: build the URL from the ids,
+ * fetch with the demo-key header, map a transport failure to the
+ * all-error result, parse the payload on success. fetchPrices and
+ * fetchCoingeckoTokenPrices differ only in the ids, the all-error map
+ * and the parse step.
+ */
+export async function fetchCoingeckoSimplePrices<T>(
+  fetchFn: typeof fetch,
+  ids: string,
+  allError: (entry: Extract<PriceEntry, { status: 'error' }>) => T,
+  parse: (payload: unknown) => T,
+): Promise<T> {
+  const url =
+    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
+    '&vs_currencies=usd&include_last_updated_at=true';
+  const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
+  if (result.status === 'error') {
+    return allError(result.error);
+  }
+  return parse(result.payload);
+}
+
+/** Shared last-good-cache write tail (native v1, token v2). */
+export function writePriceCache(
+  store: PriceCacheStore | undefined,
+  key: string,
+  version: number,
+  quotes: unknown[],
+): void {
+  if (quotes.length === 0) return;
+  const cacheStore = store ?? globalThis.localStorage;
+  if (!cacheStore) return;
+  cacheStore.setItem(key, JSON.stringify({ version, quotes }));
+}
+
 export async function fetchPrices(
   fetchFn: typeof fetch,
   nowMs?: number,
@@ -382,75 +603,14 @@ export async function fetchPrices(
     entry: Extract<PriceEntry, { status: 'error' }>,
   ): PriceMap =>
     Object.fromEntries(chains.map((chain) => [chain, { ...entry }])) as PriceMap;
-  const isAbortError = (error: unknown): boolean =>
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    error.name === 'AbortError';
 
   const resolvedNowMs = nowMs ?? Date.now();
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  // Read the key with a direct member access on the cast env object.
-  // Verified first-hand (2026-11-20): in this repo's Vitest, the direct form
-  // `(import.meta.env as Record).VITE_...` tracks vi.stubEnv and process env,
-  // while a cast on `import.meta` itself (or a bracket read) is statically
-  // replaced with undefined at transform time. In a production build
-  // import.meta.env is the inlined env object, so the same read works there.
-  const demoKey: unknown = (import.meta.env as Record<string, unknown>)
-    .VITE_COINGECKO_DEMO_KEY;
-  if (typeof demoKey === 'string' && demoKey.length > 0) {
-    headers['x-cg-demo-api-key'] = demoKey;
-  }
-
-  const ids = [...new Set(Object.values(PRICE_IDS))].join(',');
-  const url =
-    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
-    '&vs_currencies=usd&include_last_updated_at=true';
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
-
-  try {
-    const response = await fetchFn(url, {
-      method: 'GET',
-      headers,
-      signal: controller.signal,
-    });
-
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const seconds =
-        retryAfter !== null && retryAfter.trim() !== ''
-          ? Number(retryAfter)
-          : NaN;
-      const retryAfterMs = seconds * 1000;
-      return allError({
-        status: 'error',
-        reason: 'rate-limited',
-        ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0
-          ? { retryAfterMs }
-          : {}),
-      });
-    }
-    if (!response.ok) {
-      return allError({ status: 'error', reason: 'provider' });
-    }
-
-    try {
-      return parsePriceResponse(await response.json(), resolvedNowMs);
-    } catch (error: unknown) {
-      return allError({
-        status: 'error',
-        reason: isAbortError(error) ? 'timeout' : 'provider',
-      });
-    }
-  } catch (error: unknown) {
-    return allError({
-      status: 'error',
-      reason: isAbortError(error) ? 'timeout' : 'network',
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetchCoingeckoSimplePrices(
+    fetchFn,
+    [...new Set(Object.values(PRICE_IDS))].join(','),
+    allError,
+    (payload) => parsePriceResponse(payload, resolvedNowMs),
+  );
 }
 
 export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {
@@ -554,12 +714,7 @@ export function unitPriceForChain(
   }
 }
 
-export function fiatValueForBalance(
-  chain: ChainId,
-  balance: BalanceState,
-  entry: PriceEntry,
-  nowMs: number,
-):
+export type FiatValueResult =
   | { kind: 'zero' }
   | { kind: 'fiat'; minorUnits: number; text: string }
   | { kind: 'unavailable' }
@@ -568,7 +723,20 @@ export function fiatValueForBalance(
       kind: 'error';
       reason: 'rate-limited' | 'network' | 'provider' | 'timeout';
     }
-  | { kind: 'balance-unavailable' } {
+  | { kind: 'balance-unavailable' };
+
+/**
+ * Fiat value of a priced balance, shared by fiatValueForBalance
+ * (native: decimals from the chain) and fiatValueForTokenBalance
+ * (token: decimals from the token record). An entry of undefined
+ * means the token was never fetched — unavailable, not an error.
+ */
+export function fiatValueForPricedBalance(
+  balance: BalanceState,
+  decimals: number,
+  entry: PriceEntry | undefined,
+  nowMs: number,
+): FiatValueResult {
   if (
     balance.status === 'loading' ||
     balance.status === 'unavailable' ||
@@ -587,6 +755,9 @@ export function fiatValueForBalance(
     return { kind: 'balance-unavailable' };
   }
 
+  if (entry === undefined) {
+    return { kind: 'unavailable' };
+  }
   if (entry.status === 'error') {
     return { kind: 'error', reason: entry.reason };
   }
@@ -599,10 +770,19 @@ export function fiatValueForBalance(
 
   const minorUnits = fiatMinorUnits(
     balance.value,
-    CHAIN_DECIMALS[chain],
+    decimals,
     usdPriceToMinorUnitsPerWhole(entry.quote.usdPrice),
   );
   return { kind: 'fiat', minorUnits, text: formatFiatUSD(minorUnits) };
+}
+
+export function fiatValueForBalance(
+  chain: ChainId,
+  balance: BalanceState,
+  entry: PriceEntry,
+  nowMs: number,
+): FiatValueResult {
+  return fiatValueForPricedBalance(balance, CHAIN_DECIMALS[chain], entry, nowMs);
 }
 
 /** Token fiat folded into the hero portfolio total (token gaps, item 7). */
@@ -717,14 +897,15 @@ export function portfolioTotal(
     // Nothing priced. A known non-zero amount with no fresh price makes
     // the total undecidable — never report $0.00 for it. But when every
     // balance that did load is zero and only failed loads are unknown,
-    // the loaded total is genuinely $0.00: report it as a partial total
-    // (the dashboard's "some balances are missing" note discloses the
-    // failed chains) instead of the bare 'Unavailable' a fresh wallet
-    // used to see. Nothing loaded at all stays 'unavailable'.
+    // the loaded total is genuinely $0.00: report it as a clean zero
+    // total with partial: true (the dashboard shows the plain $0.00
+    // hero plus a quiet "couldn't check every balance" note, never the
+    // alarming "$0.00 (Partial)" a fresh wallet used to see). Nothing
+    // loaded at all stays 'unavailable'.
     if (hasUnpricedNonzero || !loadedZero) {
       return { status: 'unavailable', text: 'Unavailable', partial: false };
     }
-    return { status: 'partial', text: '$0.00', partial: true };
+    return { status: 'zero', text: '$0.00', partial: true };
   }
   return {
     status: partial ? 'partial' : 'total',
@@ -781,24 +962,6 @@ export function idlePriceEntries(): PriceMap {
   };
 }
 
-/**
- * Item 11/12: a failed refresh must not blank prices that are already on
- * screen. Keep the last good quote for a chain when the new fetch ends in
- * error; only chains with no previous quote show the error.
- */
-function mergePreservingFresh(
-  next: PriceMap,
-  previous: PriceMap,
-): PriceMap {
-  const merged: PriceMap = { ...next };
-  for (const chain of Object.keys(merged) as Array<keyof PriceMap>) {
-    const prev = previous[chain];
-    if (merged[chain].status === 'error' && prev.status === 'fresh') {
-      merged[chain] = prev;
-    }
-  }
-  return merged;
-}
 
 export function usePrices(
   options?: { sleep?: (ms: number) => Promise<void> },
@@ -852,17 +1015,12 @@ export function usePrices(
     if (typeof globalThis.fetch !== 'function') {
       setState((previous) => ({
         ...networkError,
-        entries: mergePreservingFresh(networkEntries, previous.entries),
+        entries: mergePreservingFreshEntries(networkEntries, previous.entries),
       }));
       return;
     }
 
-    const wait =
-      sleep ??
-      ((ms: number) =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, ms);
-        }));
+    const wait = resolvePriceWait(sleep);
 
     inFlight.current = true;
     setState((previous) => ({ ...previous, status: 'loading' }));
@@ -876,46 +1034,15 @@ export function usePrices(
           if (!mounted.current) return;
 
           const values = Object.values(entries);
-          if (
-            attempt < 2 &&
-            values.length > 0 &&
-            values.every(
-              (entry) =>
-                entry.status === 'error' &&
-                (entry.reason === 'rate-limited' ||
-                  entry.reason === 'network' ||
-                  entry.reason === 'timeout'),
-            )
-          ) {
-            let delayMs = 1000 * (attempt + 1);
-            const rateLimited = values.find(
-              (entry) =>
-                entry.status === 'error' && entry.reason === 'rate-limited',
-            );
-
-            if (
-              rateLimited?.status === 'error' &&
-              rateLimited.reason === 'rate-limited'
-            ) {
-              const retryAfterMs = rateLimited.retryAfterMs;
-              delayMs = Math.min(
-                30_000,
-                Math.max(
-                  0,
-                  typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs)
-                    ? retryAfterMs
-                    : 1000,
-                ),
-              );
-            }
-
-            await wait(delayMs);
+          const retryDelayMs = priceRetryDelayMs(values, attempt);
+          if (retryDelayMs !== null) {
+            await wait(retryDelayMs);
             continue;
           }
 
           setState((previous) => ({
             status: 'ready',
-            entries: mergePreservingFresh(entries, previous.entries),
+            entries: mergePreservingFreshEntries(entries, previous.entries),
             lastFetchedAtMs: Date.now(),
           }));
 
@@ -932,7 +1059,7 @@ export function usePrices(
         if (mounted.current) {
           setState((previous) => ({
             ...networkError,
-            entries: mergePreservingFresh(networkEntries, previous.entries),
+            entries: mergePreservingFreshEntries(networkEntries, previous.entries),
           }));
         }
       } finally {

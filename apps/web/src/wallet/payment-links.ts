@@ -478,6 +478,17 @@ async function loadCardImageOrNull(
   }
 }
 
+/** canvas.toBlob as a promise: a null result (render failure) throws. */
+async function canvasToPngBlob(canvas: QrRenderCanvas): Promise<Blob> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), 'image/png');
+  });
+  if (blob === null) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  return blob;
+}
+
 /** Renders an SVG QR markup string to a PNG blob at the given pixel size. */
 export async function qrSvgToPngBlob(
   svgMarkup: string,
@@ -511,13 +522,7 @@ export async function qrSvgToPngBlob(
   ctx.fillStyle = QR_PAPER_COLOR;
   ctx.fillRect(0, 0, pixels, pixels);
   ctx.drawImage(image, 0, 0, pixels, pixels);
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((result) => resolve(result), 'image/png');
-  });
-  if (blob === null) {
-    throw new Error('The QR code could not be rendered on this device.');
-  }
-  return blob;
+  return canvasToPngBlob(canvas);
 }
 
 /** Renders an SVG QR markup string to a PNG File ready for navigator.share. */
@@ -696,13 +701,7 @@ export async function qrCardToPngBlob(
     ctx.drawImage(chainLogo, rowX, y, QR_CARD_LOGO, QR_CARD_LOGO);
   }
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((result) => resolve(result), 'image/png');
-  });
-  if (blob === null) {
-    throw new Error('The QR code could not be rendered on this device.');
-  }
-  return blob;
+  return canvasToPngBlob(canvas);
 }
 
 /** Renders the QR card to a PNG File ready for navigator.share. */

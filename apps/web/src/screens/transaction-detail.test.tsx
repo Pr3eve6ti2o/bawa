@@ -145,6 +145,9 @@ describe('transaction detail screen', () => {
     const mounted = await mountScreen('/transactions/0xabc');
     try {
       expect(mounted.div.textContent).toContain('Ethereum mainnet');
+      // The app shell provides the one main landmark; this screen must
+      // not render a second one.
+      expect(mounted.div.querySelector('main')).toBeNull();
       expect(mounted.div.textContent).toContain('Sent');
       expect(mounted.div.textContent).toContain('0.25 ETH');
       expect(mounted.div.textContent).toContain('0xRecipient');

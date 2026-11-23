@@ -4,7 +4,9 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import {
   RECEIVE_INDEX_KEY,
+  REFRESH_CONCURRENCY_LIMIT,
   WalletProvider,
+  createRefreshLimiter,
   nextReceiveIndex,
   readReceiveIndices,
   resetReceiveIndices,
@@ -288,6 +290,121 @@ describe('wallet context — balance before history (Lane B)', () => {
       expect(calls.indexOf('balance-end:ton')).toBeLessThan(
         calls.indexOf('history-start:ton'),
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet context — refresh concurrency cap (marketing fix, Lane 1)', () => {
+  // The 43-row dashboard used to fire every balance/history/token read
+  // at once (~50 requests in the first second); the free tiers 429 and
+  // the hero read "$0.00 (Partial)". One shared limiter caps all
+  // refresh network calls at REFRESH_CONCURRENCY_LIMIT.
+  it('caps createRefreshLimiter at the configured limit', async () => {
+    expect(REFRESH_CONCURRENCY_LIMIT).toBe(4);
+    const limiter = createRefreshLimiter(REFRESH_CONCURRENCY_LIMIT);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const task = async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
+      inFlight -= 1;
+      return 'done';
+    };
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => limiter.run(task)),
+    );
+    expect(results).toEqual(Array(10).fill('done'));
+    expect(maxInFlight).toBe(REFRESH_CONCURRENCY_LIMIT);
+  });
+
+  it('propagates a task rejection through the limiter and keeps serving', async () => {
+    const limiter = createRefreshLimiter(2);
+    await expect(
+      limiter.run(async () => {
+        throw new Error('boom');
+      }),
+    ).rejects.toThrow('boom');
+    await expect(limiter.run(async () => 'ok')).resolves.toBe('ok');
+  });
+
+  it('never runs more than the limit of balance reads at once', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let calls = 0;
+    vi.mocked(getAdapter).mockImplementation(
+      ((chain: string) => ({
+        chain,
+        networkId: `test:${chain}`,
+        getBalance: async () => {
+          calls += 1;
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50);
+          });
+          inFlight -= 1;
+          return {
+            status: 'ok' as const,
+            data: {
+              chain,
+              address: 'test-address',
+              networkId: `test:${chain}`,
+              valueBaseUnits: '0',
+              decimals: 9,
+              source: 'test',
+              fetchedAt: 0,
+            },
+            source: 'test',
+            fetchedAt: 0,
+          };
+        },
+        getHistory: async () => ({
+          status: 'ok' as const,
+          data: [],
+          source: 'test',
+          fetchedAt: 0,
+        }),
+        estimateFee: async () => ({
+          status: 'unavailable' as const,
+          reason: 'test',
+        }),
+        getTxInputs: async () => ({
+          status: 'unavailable' as const,
+          reason: 'test',
+        }),
+        broadcast: async () => {
+          throw new Error('disabled');
+        },
+      })) as unknown as typeof getAdapter,
+    );
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      // Let the background balances/history refresh settle.
+      await act(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 3000);
+        });
+      });
+      inFlight = 0;
+      maxInFlight = 0;
+      calls = 0;
+      await act(async () => {
+        await exposed!.refreshBalances();
+      });
+      // All 22 balance-verified chains read (more than one limiter
+      // window), yet no more than the limit ever ran at once.
+      expect(calls).toBeGreaterThan(REFRESH_CONCURRENCY_LIMIT);
+      expect(maxInFlight).toBeLessThanOrEqual(REFRESH_CONCURRENCY_LIMIT);
+      expect(maxInFlight).toBeGreaterThan(1);
     } finally {
       await mounted.cleanup();
     }

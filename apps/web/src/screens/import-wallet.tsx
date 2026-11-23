@@ -22,8 +22,8 @@ import {
   splitMnemonicAndPassphrase,
 } from '../wallet/bip39-validation';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
-import { readPendingSendLinkSearch } from '../wallet/payment-links';
 import { ChainSearchSelect } from './chain-search-select';
+import { WalletReadyActions } from './wallet-ready-actions';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
 import { Badge } from '../ui/components/badge';
@@ -131,6 +131,43 @@ const CHAIN_LABELS: Record<string, string> = {
 
 type ImportMode = 'phrase' | 'watch-only';
 type PhraseStep = 'enter' | 'preview' | 'saved' | 'same' | 'different';
+
+/**
+ * Derived-address list shared by the four phrase-step cards (same
+ * phrase, different phrase, preview, restored). The preview and
+ * restored cards offer a copy button per address; the comparison
+ * cards do not.
+ */
+function DerivedAddressesList({
+  derived,
+  copyable,
+}: {
+  derived: WalletAddresses;
+  copyable: boolean;
+}) {
+  return (
+    <ul className="space-y-3">
+      {DISPLAY_ORDER.map((chainId) => (
+        <li key={chainId} className="space-y-1">
+          {copyable ? (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+              <CopyButton
+                value={derived[chainId]}
+                label={`Copy ${CHAIN_LABELS[chainId]} address`}
+              />
+            </div>
+          ) : (
+            <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+          )}
+          <code className="block break-all rounded-md bg-muted p-3 text-sm">
+            {derived[chainId]}
+          </code>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function ImportWalletScreen() {
   const {
@@ -465,16 +502,7 @@ export function ImportWalletScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ul className="space-y-3">
-              {DISPLAY_ORDER.map((chainId) => (
-                <li key={chainId} className="space-y-1">
-                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
-                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                    {derived[chainId]}
-                  </code>
-                </li>
-              ))}
-            </ul>
+            <DerivedAddressesList derived={derived} copyable={false} />
             {addedAccount !== null ? (
               <>
                 <p role="status" className="text-sm leading-relaxed">
@@ -547,16 +575,7 @@ export function ImportWalletScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ul className="space-y-3">
-              {DISPLAY_ORDER.map((chainId) => (
-                <li key={chainId} className="space-y-1">
-                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
-                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                    {derived[chainId]}
-                  </code>
-                </li>
-              ))}
-            </ul>
+            <DerivedAddressesList derived={derived} copyable={false} />
             {compareUnavailable ? (
               <p className="text-sm leading-relaxed">
                 Unlock your wallet first, then restore this phrase again to
@@ -624,22 +643,7 @@ export function ImportWalletScreen() {
                 </AlertDescription>
               </Alert>
             )}
-            <ul className="space-y-3">
-              {DISPLAY_ORDER.map((chainId) => (
-                <li key={chainId} className="space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
-                    <CopyButton
-                      value={derived[chainId]}
-                      label={`Copy ${CHAIN_LABELS[chainId]} address`}
-                    />
-                  </div>
-                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                    {derived[chainId]}
-                  </code>
-                </li>
-              ))}
-             </ul>
+            <DerivedAddressesList derived={derived} copyable />
              <Button
                type="button"
                variant="outline"
@@ -698,41 +702,8 @@ export function ImportWalletScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ul className="space-y-3">
-              {DISPLAY_ORDER.map((chainId) => (
-                <li key={chainId} className="space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
-                    <CopyButton
-                      value={derived[chainId]}
-                      label={`Copy ${CHAIN_LABELS[chainId]} address`}
-                    />
-                  </div>
-                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                    {derived[chainId]}
-                  </code>
-                </li>
-              ))}
-            </ul>
-            {(() => {
-              // Deep-link continuation (UI/UX round 2, deep-link fix):
-              // this wallet was imported from a shared payment link.
-              // Offer to go straight to the Send screen with that
-              // payment filled in, mirroring the create-wallet ready
-              // screen — instead of leaving the user on the dashboard
-              // with the link lost. The stored query is re-validated
-              // by the Send screen on arrival.
-              const pendingSearch = readPendingSendLinkSearch();
-              if (pendingSearch === null || pendingSearch === '') return null;
-              return (
-                <Button asChild className="h-auto whitespace-normal py-3 text-center">
-                  <Link to={`/send?${pendingSearch}`}>Continue to your send</Link>
-                </Button>
-              );
-            })()}
-            <Button asChild className="h-auto whitespace-normal py-3 text-center">
-              <Link to="/mnemonic-backup">Review your backup checklist</Link>
-            </Button>
+            <DerivedAddressesList derived={derived} copyable />
+            <WalletReadyActions />
           </CardContent>
         </Card>
       )}

@@ -16,13 +16,20 @@
  * source (see asset-rows / asset-detail), never a hardcoded provider.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ownValue } from './guards';
+import { isPlainObject, ownValue } from './guards';
 import {
   PRICE_ATTRIBUTION_TEXT,
-  PRICE_FETCH_TIMEOUT_MS,
-  PRICE_PROVIDER_BASE_URL,
+  fetchCoingeckoSimplePrices,
+  fiatValueForPricedBalance,
+  isCacheableQuote,
   isFreshQuote,
-  usdPriceToMinorUnitsPerWhole,
+  isValidUsdPriceString,
+  mergePreservingFreshEntries,
+  parseCoingeckoPriceEntry,
+  priceRetryDelayMs,
+  resolvePriceWait,
+  writePriceCache,
+  type FiatValueResult,
   type PriceEntry,
   type PriceQuote,
   type PriceSource,
@@ -32,7 +39,6 @@ import {
   fetchDexScreenerPrices,
   fetchTonJettonPrices,
 } from './dex-prices';
-import { fiatMinorUnits, formatFiatUSD } from './money';
 import type { BalanceState } from './balance-state';
 import { DEFAULT_TOKENS, tokenKey, type TokenRecord } from './tokens';
 
@@ -96,17 +102,6 @@ export function tokenPriceRequestKey(request: TokenPriceRequest): string {
     : `${request.key}=${request.kind}:${request.contract}`;
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  try {
-    const prototype: unknown = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || prototype === null;
-  } catch {
-    return false;
-  }
-}
-
-
 function parseToken(
   root: Record<string, unknown> | null,
   request: Extract<TokenPriceRequest, { kind: 'coingecko' }>,
@@ -116,30 +111,11 @@ function parseToken(
   if (root === null) {
     return { status: 'error', reason: 'provider' };
   }
-  const entry = ownValue(root, request.coingeckoId);
-  if (!isPlainObject(entry)) {
-    return { status: 'unavailable', reason: 'missing' };
-  }
-  const updatedAt = ownValue(entry, 'last_updated_at');
-  if (typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) {
-    return { status: 'unavailable', reason: 'missing-timestamp' };
-  }
-  const price = ownValue(entry, 'usd');
-  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
-    return { status: 'unavailable', reason: 'invalid-price' };
-  }
-  const quote: PriceQuote = {
+  return parseCoingeckoPriceEntry(ownValue(root, request.coingeckoId), {
     chain: (token?.chain ?? 'eth') as PriceQuote['chain'],
     assetId: token?.contract ?? request.key,
     providerAssetId: request.coingeckoId,
-    usdPrice: String(price),
-    providerUpdatedAtMs: updatedAt * 1000,
-    fetchedAtMs: nowMs,
-    source: 'CoinGecko',
-  };
-  return isFreshQuote(quote, nowMs)
-    ? { status: 'fresh', quote }
-    : { status: 'expired', quote };
+  }, nowMs);
 }
 
 export function parseTokenPriceResponse(
@@ -176,68 +152,13 @@ async function fetchCoingeckoTokenPrices(
 ): Promise<TokenPriceMap> {
   const allError = (entry: Extract<PriceEntry, { status: 'error' }>): TokenPriceMap =>
     Object.fromEntries(requests.map((request) => [request.key, { ...entry }]));
-  const isAbortError = (error: unknown): boolean =>
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    error.name === 'AbortError';
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  const demoKey: unknown = (import.meta.env as Record<string, unknown>)
-    .VITE_COINGECKO_DEMO_KEY;
-  if (typeof demoKey === 'string' && demoKey.length > 0) {
-    headers['x-cg-demo-api-key'] = demoKey;
-  }
-
-  const ids = [...new Set(requests.map((request) => request.coingeckoId))].join(',');
-  const url =
-    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
-    '&vs_currencies=usd&include_last_updated_at=true';
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
-
-  try {
-    const response = await fetchFn(url, {
-      method: 'GET',
-      headers,
-      signal: controller.signal,
-    });
-
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const seconds =
-        retryAfter !== null && retryAfter.trim() !== ''
-          ? Number(retryAfter)
-          : NaN;
-      const retryAfterMs = seconds * 1000;
-      return allError({
-        status: 'error',
-        reason: 'rate-limited',
-        ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0
-          ? { retryAfterMs }
-          : {}),
-      });
-    }
-    if (!response.ok) {
-      return allError({ status: 'error', reason: 'provider' });
-    }
-
-    try {
-      return parseTokenPriceResponse(await response.json(), requests, nowMs, tokens);
-    } catch (error: unknown) {
-      return allError({
-        status: 'error',
-        reason: isAbortError(error) ? 'timeout' : 'provider',
-      });
-    }
-  } catch (error: unknown) {
-    return allError({
-      status: 'error',
-      reason: isAbortError(error) ? 'timeout' : 'network',
-    });
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetchCoingeckoSimplePrices(
+    fetchFn,
+    [...new Set(requests.map((request) => request.coingeckoId))].join(','),
+    allError,
+    (payload) => parseTokenPriceResponse(payload, requests, nowMs, tokens),
+  );
 }
 
 /**
@@ -284,55 +205,18 @@ export async function fetchTokenPrices(
 }
 
 /** Fiat value of a token balance, mirroring fiatValueForBalance in prices.ts. */
+/**
+ * Fiat value of a token balance, mirroring fiatValueForBalance in prices.ts.
+ * Implemented by the shared fiatValueForPricedBalance — same balance,
+ * entry and freshness rules, decimals from the token record.
+ */
 export function fiatValueForTokenBalance(
   balance: BalanceState,
   decimals: number,
   entry: PriceEntry | undefined,
   nowMs: number,
-):
-  | { kind: 'zero' }
-  | { kind: 'fiat'; minorUnits: number; text: string }
-  | { kind: 'unavailable' }
-  | { kind: 'expired' }
-  | {
-      kind: 'error';
-      reason: 'rate-limited' | 'network' | 'provider' | 'timeout';
-    }
-  | { kind: 'balance-unavailable' } {
-  if (
-    balance.status === 'loading' ||
-    balance.status === 'unavailable' ||
-    balance.status === 'error'
-  ) {
-    return { kind: 'balance-unavailable' };
-  }
-  if (
-    balance.status === 'zero' ||
-    (balance.status === 'available' && balance.value === '0')
-  ) {
-    return { kind: 'zero' };
-  }
-  if (balance.value === undefined) {
-    return { kind: 'balance-unavailable' };
-  }
-  if (entry === undefined) {
-    return { kind: 'unavailable' };
-  }
-  if (entry.status === 'error') {
-    return { kind: 'error', reason: entry.reason };
-  }
-  if (entry.status === 'unavailable') {
-    return { kind: 'unavailable' };
-  }
-  if (entry.status === 'expired' || !isFreshQuote(entry.quote, nowMs)) {
-    return { kind: 'expired' };
-  }
-  const minorUnits = fiatMinorUnits(
-    balance.value,
-    decimals,
-    usdPriceToMinorUnitsPerWhole(entry.quote.usdPrice),
-  );
-  return { kind: 'fiat', minorUnits, text: formatFiatUSD(minorUnits) };
+): FiatValueResult {
+  return fiatValueForPricedBalance(balance, decimals, entry, nowMs);
 }
 
 export type TokenPriceCacheStore = {
@@ -360,16 +244,7 @@ export function saveCachedTokenPrices(
     for (const [key, entry] of Object.entries(entries)) {
       if (entry?.status !== 'fresh') continue;
       const quote = entry.quote;
-      if (
-        typeof quote.usdPrice !== 'string' ||
-        quote.usdPrice.trim() !== quote.usdPrice ||
-        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(quote.usdPrice) ||
-        !Number.isFinite(Number(quote.usdPrice)) ||
-        Number(quote.usdPrice) <= 0 ||
-        !Number.isFinite(quote.providerUpdatedAtMs) ||
-        !Number.isFinite(quote.fetchedAtMs) ||
-        !isFreshQuote(quote, nowMs)
-      ) {
+      if (!isCacheableQuote(quote, nowMs)) {
         continue;
       }
       const token = tokens?.find(
@@ -386,10 +261,7 @@ export function saveCachedTokenPrices(
         fetchedAtMs: quote.fetchedAtMs,
       });
     }
-    if (quotes.length === 0) return;
-    const cacheStore = store ?? globalThis.localStorage;
-    if (!cacheStore) return;
-    cacheStore.setItem(TOKEN_PRICE_CACHE_KEY, JSON.stringify({ version: 2, quotes }));
+    writePriceCache(store, TOKEN_PRICE_CACHE_KEY, 2, quotes);
   } catch {
     // Cache persistence is best-effort, including access to localStorage.
   }
@@ -430,10 +302,7 @@ export function loadCachedTokenPrices(
         typeof providerAssetId !== 'string' ||
         (source !== 'CoinGecko' && source !== 'DexScreener' && source !== 'TonAPI') ||
         typeof usdPrice !== 'string' ||
-        usdPrice.trim() !== usdPrice ||
-        !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(usdPrice) ||
-        !Number.isFinite(Number(usdPrice)) ||
-        Number(usdPrice) <= 0 ||
+        !isValidUsdPriceString(usdPrice) ||
         typeof providerUpdatedAtMs !== 'number' ||
         !Number.isFinite(providerUpdatedAtMs) ||
         typeof fetchedAtMs !== 'number' ||
@@ -474,25 +343,6 @@ export type TokenPricesState = {
  * so user-added tokens join the batch; the hook refetches when the set
  * of requested ids changes.
  */
-/**
- * Item 11/12: same blanking bug as the native feed — a failed refresh
- * must not wipe token prices that are already on screen. Keep the last
- * good quote for a token when the new fetch ends in error.
- */
-function mergePreservingFreshTokenQuotes(
-  next: TokenPricesState['entries'],
-  previous: TokenPricesState['entries'],
-): TokenPricesState['entries'] {
-  const merged = { ...next };
-  for (const key of Object.keys(merged)) {
-    const current = merged[key];
-    const prev = previous[key];
-    if (current?.status === 'error' && prev?.status === 'fresh') {
-      merged[key] = prev;
-    }
-  }
-  return merged;
-}
 
 export function useTokenPrices(
   tokens: readonly TokenRecord[],
@@ -548,19 +398,14 @@ export function useTokenPrices(
     if (typeof globalThis.fetch !== 'function') {
       setState((previous) => ({
         ...networkError,
-        entries: mergePreservingFreshTokenQuotes(
+        entries: mergePreservingFreshEntries(
           networkEntries,
           previous.entries,
         ),
       }));
       return;
     }
-    const wait =
-      sleep ??
-      ((ms: number) =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, ms);
-        }));
+    const wait = resolvePriceWait(sleep);
     inFlight.current = true;
     setState((previous) => ({ ...previous, status: 'loading' }));
     void (async () => {
@@ -570,42 +415,14 @@ export function useTokenPrices(
           const entries = await fetchTokenPrices(globalThis.fetch, currentRequests, Date.now(), tokensRef.current);
           if (!mounted.current) return;
           const values = Object.values(entries);
-          if (
-            attempt < 2 &&
-            values.length > 0 &&
-            values.every(
-              (entry) =>
-                entry.status === 'error' &&
-                (entry.reason === 'rate-limited' ||
-                  entry.reason === 'network' ||
-                  entry.reason === 'timeout'),
-            )
-          ) {
-            let delayMs = 1000 * (attempt + 1);
-            const rateLimited = values.find(
-              (entry) => entry.status === 'error' && entry.reason === 'rate-limited',
-            );
-            if (
-              rateLimited?.status === 'error' &&
-              rateLimited.reason === 'rate-limited'
-            ) {
-              const retryAfterMs = rateLimited.retryAfterMs;
-              delayMs = Math.min(
-                30_000,
-                Math.max(
-                  0,
-                  typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs)
-                    ? retryAfterMs
-                    : 1000,
-                ),
-              );
-            }
-            await wait(delayMs);
+          const retryDelayMs = priceRetryDelayMs(values, attempt);
+          if (retryDelayMs !== null) {
+            await wait(retryDelayMs);
             continue;
           }
           setState((previous) => ({
             status: 'ready',
-            entries: mergePreservingFreshTokenQuotes(entries, previous.entries),
+            entries: mergePreservingFreshEntries(entries, previous.entries),
             lastFetchedAtMs: Date.now(),
           }));
           if (values.some((entry) => entry.status === 'fresh')) {
@@ -621,7 +438,7 @@ export function useTokenPrices(
         if (mounted.current) {
           setState((previous) => ({
             ...networkError,
-            entries: mergePreservingFreshTokenQuotes(
+            entries: mergePreservingFreshEntries(
               networkEntries,
               previous.entries,
             ),

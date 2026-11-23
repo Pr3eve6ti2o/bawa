@@ -222,7 +222,7 @@ export function LockScreen() {
   }
 
   return (
-    <main
+    <div
       className="bg-paper text-ink"
       aria-labelledby="lock-title"
       style={{
@@ -367,6 +367,6 @@ export function LockScreen() {
           </p>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

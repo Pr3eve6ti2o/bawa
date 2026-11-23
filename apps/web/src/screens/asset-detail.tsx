@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
@@ -13,12 +13,78 @@ import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 import { BawaLoading } from '../ui/components/loading';
+import { usePriceFeedAutoRefresh } from './use-live-prices';
 
 const DERIVATION_PATHS = {
   btc: "m/84'/0'/0'/0/i",
   eth: "m/44'/60'/0'/0/i",
   trx: "m/44'/195'/0'/0/i",
 } as const;
+
+/**
+ * One derived-address list item, shared by the vault-address list and
+ * the plain list below it.
+ */
+function DerivedAddressItems({
+  addresses,
+  copyAddress,
+}: {
+  addresses: Array<{ index: number; address: string }>;
+  copyAddress: (address: string) => Promise<void>;
+}) {
+  return (
+    <>
+      {addresses.map(({ index, address }) => (
+        <li
+          key={`${index}:${address}`}
+          className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
+        >
+          <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
+          {' '}
+          <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={`Copy address at index ${index}`}
+            onClick={() => void copyAddress(address)}
+          >
+            Copy
+          </Button>
+        </li>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Locked-state vs retry action shared by the balance and history
+ * sections: a locked vault shows the unlock action, an unlocked one
+ * shows Retry for the section's refresh.
+ */
+function LockedOrRetry({
+  lockedMessage,
+  onRetry,
+}: {
+  lockedMessage: string;
+  onRetry: () => void;
+}) {
+  const { vaultState } = useWallet();
+  if (vaultState === 'locked') {
+    return (
+      <>
+        <p className="text-sm text-panel-text-muted">{lockedMessage}</p>
+        <Button type="button" variant="outline" asChild>
+          <Link to="/lock">Unlock</Link>
+        </Button>
+      </>
+    );
+  }
+  return (
+    <Button type="button" variant="outline" onClick={onRetry}>
+      Retry
+    </Button>
+  );
+}
 
 export function AssetDetailScreen() {
   const { chain, token: tokenParam } = useParams<{ chain: string; token?: string }>();
@@ -72,26 +138,10 @@ export function AssetDetailScreen() {
   const isToken = tokenRecord !== undefined;
 
   // Per-unit price from the same live price feed as the dashboard
-  // strip and the asset list (usePrices pattern: auto-fetch on mount,
-  // refresh about every 60 seconds). No price is ever invented: a
+  // strip and the asset list. No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
   const { state: pricesState, refresh: refreshPrices } = usePrices();
-  useEffect(() => {
-    if (pricesState.status === 'idle') {
-      refreshPrices();
-    }
-  }, [pricesState.status, refreshPrices]);
-  const refreshPricesRef = useRef(refreshPrices);
-  useEffect(() => {
-    refreshPricesRef.current = refreshPrices;
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refreshPricesRef.current();
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, []);
+  usePriceFeedAutoRefresh(pricesState.status, refreshPrices);
 
   // Token price (token route only): the same price feed, one call
   // for the single token. Gated on the token existing — native routes
@@ -280,22 +330,10 @@ export function AssetDetailScreen() {
                 : 'Balance unavailable for this network.'}
               {balance.reason ? ` ${humanReasonMessage(balance.reason, 'balance')}` : ''}
             </p>
-            {vaultState === 'locked' ? (
-              <>
-                <p className="text-sm text-panel-text-muted">Locked. Unlock to see balances.</p>
-                <Button type="button" variant="outline" asChild>
-                  <Link to="/lock">Unlock</Link>
-                </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void (isToken ? refreshTokenBalances() : refreshBalances())}
-              >
-                Retry
-              </Button>
-            )}
+            <LockedOrRetry
+              lockedMessage="Locked. Unlock to see balances."
+              onRetry={() => void (isToken ? refreshTokenBalances() : refreshBalances())}
+            />
           </>
         )}
         {(balance.status === 'available' || balance.status === 'zero') && balance.stale === true ? (
@@ -481,7 +519,14 @@ export function AssetDetailScreen() {
               ))}
             </ul>
           </>
-        ) : chainHistory.status === 'empty' ? (
+        ) : chainHistory.status === 'empty' ||
+          (vaultState !== 'locked' && recentTxs.length === 0) ? (
+          // No known transactions for this chain (and the vault open):
+          // a failed history fetch is not an error the user can act on,
+          // so this reads as the empty state, never as "history
+          // unavailable" + a dead Retry. Only while locked does the
+          // failure surface — with an Unlock prompt, not a Retry — and
+          // only a chain with known transactions keeps its Retry.
           <p className="rounded-lg border p-4 text-sm text-muted-foreground">
             No transactions yet for this chain.
           </p>
@@ -493,18 +538,10 @@ export function AssetDetailScreen() {
                 : 'Transaction history is unavailable for this chain.'}
               {chainHistory.reason ? ` ${humanReasonMessage(chainHistory.reason, 'history')}` : ''}
             </p>
-            {vaultState === 'locked' ? (
-              <>
-                <p className="text-sm text-panel-text-muted">Locked. Unlock to see activity.</p>
-                <Button type="button" variant="outline" asChild>
-                  <Link to="/lock">Unlock</Link>
-                </Button>
-              </>
-            ) : (
-              <Button type="button" variant="outline" onClick={() => void refreshHistory()}>
-                Retry
-              </Button>
-            )}
+            <LockedOrRetry
+              lockedMessage="Locked. Unlock to see activity."
+              onRetry={() => void refreshHistory()}
+            />
           </div>
         )}
       </section>
@@ -530,21 +567,7 @@ export function AssetDetailScreen() {
                 </Button>
               </li>
             ))}
-            {addresses[chainId].map(({ index, address }) => (
-              <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
-                <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
-                {' '}
-                <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-label={`Copy address at index ${index}`}
-                  onClick={() => void copyAddress(address)}
-                >
-                  Copy
-                </Button>
-              </li>
-            ))}
+            <DerivedAddressItems addresses={addresses[chainId]} copyAddress={copyAddress} />
           </ul>
         ) : state === 'loading' ? (
           <BawaLoading label="Loading derived addresses…" />
@@ -563,21 +586,7 @@ export function AssetDetailScreen() {
           </Alert>
         ) : (
           <ul className="space-y-3">
-            {addresses[chainId].map(({ index, address }) => (
-              <li key={`${index}:${address}`} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
-                <span className="text-sm text-muted-foreground">{`Index ${index}`}</span>
-                {' '}
-                <code className="min-w-0 flex-1 break-all text-sm">{address}</code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-label={`Copy address at index ${index}`}
-                  onClick={() => void copyAddress(address)}
-                >
-                  Copy
-                </Button>
-              </li>
-            ))}
+            <DerivedAddressItems addresses={addresses[chainId]} copyAddress={copyAddress} />
           </ul>
         )}
         <p role="status" className="text-sm text-muted-foreground">{copyStatus}</p>
