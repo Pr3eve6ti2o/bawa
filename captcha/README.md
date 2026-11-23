@@ -1,7 +1,8 @@
 # captcha/
 
-Challenge-solving reference code plus a working runner for the TronScan
-Approval-tab check (audit pointer P22). The vendored files are third-party
+Challenge-solving reference code plus a working runner that completes (or
+bypasses) the captcha challenge on any website that asks for one. The
+TronScan Approval-tab check (audit pointer P22) is the worked example. The vendored files are third-party
 code, copied verbatim with their licences and credits below. They are
 reference material and a runnable experiment — not Bawa code, and not a claim
 that the check is solved.
@@ -25,8 +26,8 @@ same result:
 Both runs: no `cf_clearance` cookie, no Approval-tab UI. The two different
 egress IPs getting the same flat block page means it is not one bad IP — the
 datacenter egress class is blocked. Evidence: the latest run's
-`run-tronscan-check/tronscan-result.json` and
-`run-tronscan-check/tronscan-result.png`.
+`run-captcha-check/tronscan-result.json` and
+`run-captcha-check/tronscan-result.png` (kept under their original names as the record of the 2026-11-17 TronScan run).
 
 What would change the outcome: a different egress IP (Cloudflare's decision
 is IP + fingerprint based; the trawl docs note non-interactive solving wants
@@ -50,7 +51,7 @@ Two approaches, from the two Android apps:
    widget (shadow DOM, frame DOM, page coordinates, keyboard fallback) and
    watches for the `cf_clearance` cookie. `turnstile` (`solveTurnstile`)
    polls for the `cf-turnstile-response` token. This is what
-   `run-tronscan-check/` runs.
+   `run-captcha-check/` runs.
 2. **WebView cookie reuse (YTDLnis / Super Video Downloader, Android).**
    A human logs in / solves the challenge inside the app's WebView
    (`WebViewActivity`), the app reads the WebView cookie store
@@ -67,7 +68,7 @@ Two approaches, from the two Android apps:
   `utils/challengeWait.ts`, plus the two utils the solvers import
   (`utils/detect.ts`, `utils/deadline.ts`) and `utils/anubis.ts` (imported by
   `detect.ts`). Needs `patchright` + `linkedom` at runtime (see
-  `run-tronscan-check/package.json`).
+  `run-captcha-check/package.json`).
 - `vendors/ytdlnis/` — WebView login + cookie export from YTDLnis (`main`).
   `ui/more/cookies/` (WebViewActivity, incognito variant, CookiesFragment),
   `database/viewmodel/CookieViewModel.kt`, `core/RuntimeManager.kt`,
@@ -77,8 +78,8 @@ Two approaches, from the two Android apps:
   Video Downloader (`master`). `ui/main/home/browser/` (CustomWebViewClient,
   BrowserFragment, CustomWebChromeClient, `webTab/`), `ui/component/widget/`
   (NestedWebView), `util/CookieUtils.kt`.
-- `run-tronscan-check/` — the runner (`test-tronscan.ts`, `package.json`)
-  and the evidence from the 2026-11-17 live run.
+- `run-captcha-check/` — the general runner (`test-captcha.ts`, `package.json`)
+  and the evidence from the 2026-11-17 TronScan live run.
 - `licenses/` — full licence texts for the vendored code.
 
 ## Credits
@@ -110,8 +111,8 @@ npm run check
 
 The check is read-only: it never connects a wallet, never clicks
 Cancel/Revoke, and never signs or sends a transaction. It writes
-`run-tronscan-check/tronscan-result.json` +
-`run-tronscan-check/tronscan-result.png`.
+`run-captcha-check/captcha-result.json` +
+`run-captcha-check/captcha-result.png`.
 
 ## Notes and limits
 

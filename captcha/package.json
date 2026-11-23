@@ -4,11 +4,11 @@
     "patchright": "^1.64.3",
     "tsx": "^4.0.0"
   },
-  "description": "Read-only TronScan Approval-tab check using the vendored trawl Cloudflare solvers (patchright + headless Chromium).",
-  "name": "bawa-captcha-tronscan-check",
+  "description": "General captcha challenge-solving runner using the vendored trawl Cloudflare solvers (patchright + headless Chromium).",
+  "name": "bawa-captcha-check",
   "private": true,
   "scripts": {
-    "check": "tsx run-tronscan-check/test-tronscan.ts"
+    "check": "tsx run-captcha-check/test-captcha.ts"
   },
   "type": "module",
   "version": "1.0.0"

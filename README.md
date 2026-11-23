@@ -5,11 +5,15 @@
 
 Bawa is an HD-wallet reference and command-line launcher for generating encrypted seed files, deriving watch-only addresses, and security and recovery checks, with AI-guided build routes.
 
+![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
+
+![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
+
+How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
+
 ### Screenshots
 
-Real screenshots of the example web wallet running from this branch, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px.
-
-Two transient network states are visible and real, not defects in the shots: the mobile dashboard is marked "(Partial)" because some public balance and price feeds were rate-limited when it was captured, and the desktop recent-activity panel shows "Ethereum history unavailable" for the same reason.
+Real screenshots of the current example web wallet, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. The example web wallet is developed on the active development branch (`panel-rebuild/token-gaps`); these shots show its current state.
 
 ![Dashboard of the Bawa web wallet on desktop](docs/images/web-wallet-dashboard-desktop.png)
 
@@ -21,7 +25,7 @@ Two transient network states are visible and real, not defects in the shots: the
 
 ![Receive screen of the Bawa web wallet on desktop](docs/images/web-wallet-receive-desktop.png)
 
-*Receive on desktop — Bitcoin QR card for a fresh test address.*
+*Receive on desktop — the QR card with its three templates: address, payment request and share link.*
 
 <img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="390">
 
