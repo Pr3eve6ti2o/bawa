@@ -14,7 +14,7 @@ Bawa is a practical open-source reference for HD-wallet workflows and an AI Wall
 | Environment/runner | muse-vm |
 | Actually run | Differential test; live wallet creation and restore; TON fixture derivation; integrated browser flow; Web starter build + 25 tests; Android starter build + 17 unit tests + emulator install/launch |
 | Not run/unresolved | live testnet spend; recovery rehearsal; on-device Android Add-button acceptance; KVM-backed emulator run; mainnet use |
-| Evidence | Recorded in §11, §18, docs/android-evidence.md and docs/handoff.md |
+| Evidence | Recorded in §11, §18, docs/android-evidence.md and docs/archive/handoff-2026-11-10.md |
 | Sources fetched on | 2026-11-08 |
 
 ## 1. Scope and non-goals
@@ -1297,8 +1297,8 @@ H5 (`d2f0960c`) while `main` has advanced; refresh that SHA on the next Doc 4 re
 - [`WALLET_BUILDER.md`](../WALLET_BUILDER.md) — the starting point for the one-prompt builder workflow.
 - [`docs/AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md`](AI-WALLET-BUILDER-IMPLEMENTATION-PLAN.md) — programme scope, milestones and implementation work.
 - [`node scripts/build-wallet.mjs`](../scripts/build-wallet.mjs) — the builder workflow command; see [sample requests](sample-requests.md) for request examples.
-- [`docs/handoff.md`](handoff.md) — what to record and pass on with a build, including verification and remaining limits.
-- [`docs/security-release-gates.md`](security-release-gates.md) — security checks, release gates and approval requirements.
+- [`docs/archive/handoff-2026-11-10.md`](archive/handoff-2026-11-10.md) — what to record and pass on with a build, including verification and remaining limits.
+- [`docs/SECURITY-RELEASE-GATES.md`](SECURITY-RELEASE-GATES.md) — security checks, release gates and approval requirements.
 
 ## Prose credit
 
