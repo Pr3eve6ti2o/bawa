@@ -379,6 +379,27 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Round 2, item 7 (mobile-native §2, §5): no grey tap flash, and taps
+     fire immediately instead of waiting out the double-tap-zoom delay. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Controls are not selectable text (mobile-native §8): a long-press
+     on a button must not select its label. Content — addresses, error
+     messages, hashes — stays selectable. */
+  button,
+  [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
   ::selection {
     background-color: var(--bawa-sun);
     color: var(--bawa-ink);
@@ -429,6 +450,19 @@
 
   input {
     font-weight: var(--font-weight-normal);
+  }
+
+  /* Round 2, item 7 (mobile-native §4): iOS Safari zooms the page when
+     focus lands on an input under 16px, and does not zoom back out on
+     blur. Coarse pointers (touch) get 16px inputs; desktop keeps the
+     14px design size. Never disable zoom instead. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
   }
 
   :focus-visible {

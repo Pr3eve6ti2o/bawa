@@ -4,6 +4,7 @@ import { BawaIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor } from '../wallet/chains';
 import {
+  idlePriceEntries,
   portfolioTotal,
   usePrices,
   PRICE_ATTRIBUTION_TEXT,
@@ -68,7 +69,7 @@ export function DashboardScreen() {
     });
   };
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
 
   // Token prices (token discovery): the same CoinGecko feed, one batched
@@ -79,7 +80,7 @@ export function DashboardScreen() {
     () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
     [customTokens],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
   const tokenPricesLoading = tokenPricesState.status === 'loading';
 
   useEffect(() => {
@@ -218,9 +219,13 @@ export function DashboardScreen() {
   const nextHero: typeof lastHeroRef.current | null = heroLoading
     ? null
     : (() => {
+        // Round 2, item 6: in devnet mode the hero totals against idle
+        // entries, never against live prices — test tokens are valueless,
+        // so a funded test wallet must never show a dollar total. The
+        // per-unit prices still show on the rows below.
         const total = portfolioTotal(
           balances,
-          pricesState.entries,
+          devnetEnabled ? idlePriceEntries() : pricesState.entries,
           Date.now(),
           heroChains,
           tokenContribution,
@@ -324,11 +329,13 @@ export function DashboardScreen() {
           <p className="text-xs leading-[18px] text-panel-text-muted">
             {isLocked
               ? 'Locked. Unlock to see balances.'
-              : hero.balancesFailed
-                ? 'Balances could not be loaded, so the portfolio total is unavailable.'
-              : pricesState.status === 'idle'
-                ? 'No prices loaded yet. Refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
-                : 'No fresh prices, so the portfolio total is unavailable. Balances below are the exact amounts on each network.'}
+              : devnetEnabled
+                ? 'Devnet test mode — test tokens have no market value, so there is no portfolio total. Live market prices show on each asset below.'
+                : hero.balancesFailed
+                  ? 'Balances could not be loaded, so the portfolio total is unavailable.'
+                  : pricesState.status === 'idle'
+                    ? 'No prices loaded yet. Refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
+                    : 'No fresh prices, so the portfolio total is unavailable. Balances below are the exact amounts on each network.'}
           </p>
         )}
         {hero.priceError !== null && (
@@ -458,8 +465,10 @@ export function DashboardScreen() {
             <Card className="mt-4">
               {devnetEnabled && (
                 <p className="border-b px-4 pt-4 text-sm text-ink">
-                  Devnet test mode — token balances and prices are off here;
-                  only the four test networks show balances.
+                  Devnet test mode — only the four test networks show
+                  balances. Prices below are live market prices; test
+                  tokens have no market value, so there is no portfolio
+                  total.
                 </p>
               )}
               <AssetRows hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />

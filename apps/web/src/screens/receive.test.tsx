@@ -357,6 +357,33 @@ describe('receive screen', () => {
     }
   });
 
+  it('keeps every step compact: chain grid, 136 px QR, truncated share link', async () => {
+    // Round 2, item 8: the chain step is a two-column grid (not a
+    // 22-row list), the QR is 136 px, and the long share link shows as
+    // one truncated line — each step fits the viewport without scrolling
+    // to reach the next control. Layout heights are asserted in CDP;
+    // this test locks the structure that makes them fit.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      const chainList = mounted.div.querySelector(
+        'section[aria-labelledby="receive-addresses-heading"] ul',
+      );
+      expect(chainList).not.toBeNull();
+      expect(chainList?.className).toContain('grid-cols-2');
+      await reachDetails(mounted.div);
+      const qrSvg = mounted.div.querySelector('#receive-qr svg');
+      expect(qrSvg).not.toBeNull();
+      expect(qrSvg?.getAttribute('width')).toBe('136');
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link).not.toBeNull();
+      expect(link?.className).toContain('truncate');
+      expect(link?.textContent).toContain('chain=eth');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows three QR templates and swaps the main QR on a small QR tap', async () => {
     setWallet();
     const mounted = await mountScreen();

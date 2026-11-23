@@ -137,6 +137,7 @@ function getNativeRowModel(
   nowMs: number,
   pricesLoading: boolean | undefined,
   isLocked: boolean,
+  devnet = false,
 ): AssetRowModel {
   const { balances } = wallet;
   const config = chainConfig(chain);
@@ -202,10 +203,16 @@ function getNativeRowModel(
 
   if (entry !== undefined) {
     const fiat = fiatValueForBalance(chain, balance, entry, nowMs);
-    switch (fiat.kind) {
+    // Round 2, item 6: in devnet mode a non-zero test balance must never
+    // show a fiat value — test tokens are valueless, so pricing one at
+    // the mainnet rate would invent value. The row shows the live
+    // per-unit price instead, exactly as a zero-balance row does.
+    const effectiveFiat =
+      devnet && fiat.kind === 'fiat' ? { kind: 'zero' as const } : fiat;
+    switch (effectiveFiat.kind) {
       case 'fiat':
         if (entry.status === 'fresh') {
-          fiatText = fiat.text;
+          fiatText = effectiveFiat.text;
           // Item 12: a funded row shows the current per-unit price as
           // well as its fiat value — the same "per X" line the
           // zero-balance rows already show.
@@ -594,8 +601,10 @@ export interface AssetRowsProps {
  * A row appears for every enabled chain whose balance capability is
  * verified (availableFor('balance')), plus one row per enabled token
  * (the 7 defaults, then user-added tokens). A non-zero balance shows
- * its fiat value when the caller passes a fresh price. Every row also
- * shows the per-unit price ("$61,706.00", labelled "per BTC") whenever
+ * its fiat value when the caller passes a fresh price — except in
+ * devnet mode, where a test balance shows the live per-unit price
+ * instead: test tokens are valueless, so no fiat value is ever computed
+ * from a devnet balance (Round 2, item 6). Every row also shows the per-unit price ("$61,706.00", labelled "per BTC") whenever
  * a fresh price is available — including zero balances and unavailable
  * balances — so a working feed is visible and a failed one says so
  * ("Price unavailable" / "Price error" / "Price expired"), never a
@@ -672,10 +681,11 @@ export function AssetRows({
   const nowMs = pricesNowMs ?? Date.now();
   const tokenNowMs = tokenPricesNowMs ?? nowMs;
   const isLocked = wallet.vaultState === 'locked';
+  const devnet = wallet.devnetEnabled === true;
 
   const models: AssetRowModel[] = [
     ...chains.map((chain) =>
-      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked),
+      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked, devnet),
     ),
     ...tokens.map((token) =>
       getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, isLocked),

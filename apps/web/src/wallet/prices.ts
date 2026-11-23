@@ -760,7 +760,12 @@ export function quoteFreshnessLabel(quote: PriceQuote, nowMs: number): string {
   return `Updated ${time}`;
 }
 
-function idleEntries(): PriceMap {
+/**
+ * The all-unavailable price map (idle / no feed yet). Exported for the
+ * dashboard: in devnet mode the hero total is computed against idle
+ * entries, so test balances are never valued at mainnet prices.
+ */
+export function idlePriceEntries(): PriceMap {
   return {
     btc: { status: 'unavailable', reason: 'missing' },
     eth: { status: 'unavailable', reason: 'missing' },
@@ -807,20 +812,22 @@ function mergePreservingFresh(
 }
 
 export function usePrices(
-  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
+  options?: { sleep?: (ms: number) => Promise<void> },
 ): { state: PricesState; refresh: () => void } {
-  // TEMPORARY devnet mode: devnet tokens have no market price. Never
-  // load cached mainnet prices for testnet balances, and never fetch.
-  const devnet = options?.devnet === true;
+  // Round 2, item 6: the price feed is public market data for the native
+  // asset, so it loads in devnet mode too — a testnet BTC balance is
+  // still priced per BTC, and the rows show that per-unit price. What
+  // stays off in devnet is the FIAT VALUATION of test balances: the
+  // dashboard hero totals against idle entries, and the asset rows show
+  // the per-unit price instead of a fiat value (see dashboard.tsx and
+  // asset-rows.tsx). Test tokens are valueless, so no dollar value is
+  // ever computed from a devnet balance.
   const [state, setState] = useState<PricesState>(() => {
-    if (devnet) {
-      return { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null };
-    }
     let entries: PriceMap;
     try {
-      entries = loadCachedPrices(Date.now()) ?? idleEntries();
+      entries = loadCachedPrices(Date.now()) ?? idlePriceEntries();
     } catch {
-      entries = idleEntries();
+      entries = idlePriceEntries();
     }
     return {
       status: 'idle',
@@ -840,20 +847,10 @@ export function usePrices(
     };
   }, []);
 
-  // Reset to no-prices when devnet mode turns on; the caller re-fetches
-  // when it turns back off.
-  useEffect(() => {
-    if (devnet) {
-      setState({ status: 'idle', entries: idleEntries(), lastFetchedAtMs: null });
-    }
-  }, [devnet]);
-
   const refresh = useCallback(() => {
-    // Devnet tokens have no market price: refresh is a no-op.
-    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
 
-    const networkEntries: PriceMap = { ...idleEntries() };
+    const networkEntries: PriceMap = { ...idlePriceEntries() };
     for (const chain of Object.keys(networkEntries) as Array<keyof PriceMap>) {
       networkEntries[chain] = { status: 'error', reason: 'network' };
     }
@@ -953,7 +950,7 @@ export function usePrices(
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep, devnet]);
+  }, [state.status, sleep]);
 
   return { state, refresh };
 }

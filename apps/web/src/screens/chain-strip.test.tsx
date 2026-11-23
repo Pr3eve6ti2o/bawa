@@ -6,6 +6,8 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PopularChainsStrip } from "./chain-strip";
+import { chainStripDisplay } from "./chain-strip-display";
+import { parsePriceResponse } from "../wallet/prices";
 
 const mocks = vi.hoisted(() => ({
   useWallet: vi.fn(),
@@ -179,5 +181,43 @@ describe("PopularChainsStrip", () => {
     await renderStrip("/assets/eth");
 
     expect(linkTo("/assets/eth").getAttribute("aria-current")).toBe("page");
+  });
+});
+
+describe("chainStripDisplay devnet (Round 2, item 6)", () => {
+  it("shows the per-unit price, never a fiat value, for a test balance", () => {
+    const nowMs = Date.now();
+    const entries = parsePriceResponse(
+      {
+        bitcoin: { usd: 62683, last_updated_at: Math.floor(nowMs / 1000) - 30 },
+      },
+      nowMs,
+    );
+    const balance = { status: "available", value: "50000000" } as const;
+    // Mainnet: 0.5 BTC is worth $31,341.50 at the live price.
+    const mainnet = chainStripDisplay(
+      "btc",
+      balance,
+      entries.btc,
+      nowMs,
+      "unlocked",
+      false,
+      "dashboard",
+    );
+    expect(mainnet.secondary).toBe("$31,341.50");
+    // Devnet: the same balance is valueless test BTC — the card shows
+    // the live per-unit price instead, never the dollar value.
+    const devnet = chainStripDisplay(
+      "btc",
+      balance,
+      entries.btc,
+      nowMs,
+      "unlocked",
+      false,
+      "dashboard",
+      true,
+    );
+    expect(devnet.secondary).toBe("$62,683.00 per BTC");
+    expect(devnet.secondary).not.toContain("$31,341.50");
   });
 });

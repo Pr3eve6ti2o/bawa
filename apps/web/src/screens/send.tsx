@@ -1,6 +1,9 @@
 // Send screen (Phase 4, assembled hands-on from Sol p1/p2/p3/p5 + probes).
-// Multi-step flow: asset (chain + token) → recipient (+QR scanner) → amount/fees → review
-// (Sol p3 SendReview) → offline sign → result. Broadcast is DISABLED until
+// Stepped flow (Round 2, item 8): chain → token → address + amount in
+// one place → review → offline sign → result. Each step fits the
+// viewport without scrolling to reach the next control: the chain step
+// is chips only, the token step lists one chain's assets, and the
+// recipient and amount share one step. Broadcast is DISABLED until
 // separately authorised: the flow signs offline and stops there. Nothing
 // here broadcasts, and the UI never presents send as working — the review
 // and result both state the broadcast block plainly, and the only action
@@ -67,7 +70,7 @@ import type { ChainId } from '../engine/boundary';
 // pretending to send (token gaps, item 4).
 const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
-type Step = 'asset' | 'recipient' | 'amount' | 'review' | 'result';
+type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
 
 type SignState =
   | { status: 'idle' }
@@ -133,7 +136,7 @@ export function SendScreen() {
       ? selectedChain
       : (chainsWithWallet[0] ?? 'eth'),
   );
-  const [step, setStep] = useState<Step>('asset');
+  const [step, setStep] = useState<Step>('chain');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -185,7 +188,9 @@ export function SendScreen() {
   function selectChain(next: ChainId): void {
     setChain(next);
     setSelectedToken(null);
-    setStep('asset');
+    // Picking a chain advances to the token step (Round 2, item 8):
+    // chain and token are separate steps now.
+    setStep('token');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
@@ -205,7 +210,7 @@ export function SendScreen() {
 
   function selectToken(token: TokenRecord | null): void {
     setSelectedToken(token);
-    setStep('recipient');
+    setStep('details');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
@@ -247,7 +252,7 @@ export function SendScreen() {
     setSelectedToken(tokenRecord);
     setRecipient(prefill.to);
     if (prefill.amount !== undefined) setAmount(prefill.amount);
-    setStep('recipient');
+    setStep('details');
     setPreview(null);
     setSignState({ status: 'idle' });
     if (prefill.tokenContract !== undefined && tokenRecord === null) {
@@ -260,7 +265,6 @@ export function SendScreen() {
     const result = await validateRecipient(prefill.chain, prefill.to);
     if (result.ok) {
       setRecipientError(null);
-      setStep('amount');
     } else {
       setRecipientError(result.reason);
     }
@@ -382,14 +386,18 @@ export function SendScreen() {
     );
   }
 
-  async function handleRecipientNext(): Promise<void> {
-    const result = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
-    if (!result.ok) {
-      setRecipientError(result.reason);
+  // Round 2, item 8: recipient and amount share one step, so there is a
+  // single Continue: validate the recipient, then preview the amount.
+  // A bad recipient stops here with its error; a token or a chain
+  // without offline signing reports honestly instead of previewing.
+  async function handleDetailsNext(): Promise<void> {
+    const recipientResult = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
+    if (!recipientResult.ok) {
+      setRecipientError(recipientResult.reason);
       return;
     }
     setRecipientError(null);
-    setStep('amount');
+    await handleAmountNext();
   }
 
   async function handleScan(value: string): Promise<void> {
@@ -438,7 +446,8 @@ export function SendScreen() {
     setRecipient(value);
     const result = await validateRecipient(chain, value, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
-    if (result.ok) setStep('amount');
+    // The amount input shares this step, so a valid scan just fills
+    // the recipient — there is no step to advance to.
   }
 
   async function handleAmountNext(): Promise<void> {
@@ -678,7 +687,7 @@ export function SendScreen() {
   >(null);
 
   useEffect(() => {
-    if (step !== 'amount') return;
+    if (step !== 'details') return;
     let cancelled = false;
     setFeeEstimate(null);
     if (selectedToken !== null) {
@@ -850,9 +859,14 @@ export function SendScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {/* Round 2, item 8: the banner sets expectations at flow entry
+            (chain) and where the user acts (details onwards). The token
+            step is a pure picker — the banner hides there so all eight
+            token rows fit without scrolling. */}
+        {step !== 'token' && (
         <p
           role="note"
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
@@ -861,16 +875,19 @@ export function SendScreen() {
             ? `Devnet test mode. This send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
             : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
+        )}
       </header>
 
       {(() => {
-        const steps = ['Asset', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
+        // Round 2, item 8: chain → token → address + amount → review →
+        // sign → result. The recipient and amount are one step now.
+        const steps = ['Chain', 'Token', 'Address & amount', 'Review', 'Sign', 'Result'] as const;
         const activeIndex =
-          step === 'asset'
+          step === 'chain'
             ? 0
-            : step === 'recipient'
+            : step === 'token'
               ? 1
-              : step === 'amount'
+              : step === 'details'
               ? 2
               : step === 'review' || step === 'result'
                 ? {
@@ -915,8 +932,14 @@ export function SendScreen() {
         );
       })()}
 
-      {step === 'asset' && (
-        <>
+      {step === 'chain' && (
+        <section aria-labelledby="send-chain-heading" className="space-y-3">
+          <h2 id="send-chain-heading" className="text-lg font-semibold">
+            Choose a network
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Only networks with a wallet here can send.
+          </p>
       {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
           the network, token, amount and address by itself, so the
           scanner lives here too — not only on the recipient step,
@@ -950,42 +973,41 @@ export function SendScreen() {
           onCancel={() => setShowScanner(false)}
         />
       )}
-      <div
-        role="group"
-        aria-label="Chain"
-        className="flex flex-wrap gap-2"
-      >
-        {SUPPORTED_CHAINS.map((candidate) => {
-          const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
-          return (
-            <Button
-              key={candidate}
-              type="button"
-              variant={candidate === chain ? 'default' : 'outline'}
-              disabled={!hasWallet}
-              aria-pressed={candidate === chain}
-              title={
-                hasWallet
-                  ? undefined
-                  : `No ${chainConfig(candidate).displayName} wallet`
-              }
-              onClick={() => selectChain(candidate)}
-            >
-              {chainConfig(candidate).displayName}
-            </Button>
-          );
-        })}
-      </div>
+          <div
+            role="group"
+            aria-label="Chain"
+            className="flex flex-wrap gap-2"
+          >
+            {SUPPORTED_CHAINS.map((candidate) => {
+              const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
+              return (
+                <Button
+                  key={candidate}
+                  type="button"
+                  variant={candidate === chain ? 'default' : 'outline'}
+                  disabled={!hasWallet}
+                  aria-pressed={candidate === chain}
+                  className="h-9"
+                  title={
+                    hasWallet
+                      ? undefined
+                      : `No ${chainConfig(candidate).displayName} wallet`
+                  }
+                  onClick={() => selectChain(candidate)}
+                >
+                  {chainConfig(candidate).displayName}
+                </Button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
-      <section aria-labelledby="send-asset-heading" className="space-y-3">
-        <h2 id="send-asset-heading" className="text-lg font-semibold">
-          {`Asset · ${config.displayName}`}
+      {step === 'token' && (
+      <section aria-labelledby="send-token-heading" className="space-y-3">
+        <h2 id="send-token-heading" className="text-lg font-semibold">
+          {`Token · ${config.displayName}`}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          The native coin and every token on this network. Token sends are
-          not built yet — picking a token shows that honestly instead of
-          pretending to send it.
-        </p>
         <ul className="space-y-2">
           {orderAssetsByBalance([
             {
@@ -1015,7 +1037,7 @@ export function SendScreen() {
               return (
                 <li
                   key={token === null ? `native:${chain}` : `${token.chain}:${token.contract.toLowerCase()}`}
-                  className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                  className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
                     selected ? 'bg-sun' : 'bg-paper'
                   }`}
                 >
@@ -1023,28 +1045,26 @@ export function SendScreen() {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => selectToken(token)}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                   >
-                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                    <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
                         <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
                         <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
                       </svg>
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">
-                        {label}
-                        {token !== null && isVerifiedToken(token) && (
-                          <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                        )}
-                      </span>
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                      {label}
+                      {token !== null && isVerifiedToken(token) && (
+                        <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                      )}
                       {token !== null && (
-                        <span className="block text-sm text-ink">
-                          {config.displayName} · {shortContract(token.contract)}
+                        <span className="font-normal text-ink">
+                          {` · ${config.displayName} · ${shortContract(token.contract)}`}
                         </span>
                       )}
                       {token === null && (
-                        <span className="block text-sm text-ink">Native coin</span>
+                        <span className="font-normal text-ink"> · Native coin</span>
                       )}
                     </span>
                   </button>
@@ -1063,10 +1083,9 @@ export function SendScreen() {
           </p>
         )}
         </section>
-        </>
       )}
 
-      {step !== 'asset' && (
+      {step !== 'chain' && (
         <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
           <span>
             <span className="font-semibold">
@@ -1075,25 +1094,58 @@ export function SendScreen() {
                 : `${selectedToken.name} · ${selectedToken.symbol}`}
             </span>
           </span>
-          <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+          <Button type="button" variant="outline" onClick={() => setStep('chain')}>
             Change
           </Button>
         </p>
       )}
 
-      {step === 'recipient' && (
-        <section aria-labelledby="send-recipient-heading" className="space-y-4">
-          <h2 id="send-recipient-heading" className="text-lg font-semibold">
-            {`Recipient · ${config.displayName}`}
+      {step === 'details' && (
+        <section aria-labelledby="send-details-heading" className="space-y-3">
+          {/* Round 2, item 8: the step label above ("Step 3 of 6:
+              Address & amount") is the visible title; the heading stays
+              for screen readers so the section keeps its name. */}
+          <h2 id="send-details-heading" className="sr-only">
+            {`Address & amount · ${config.displayName}`}
           </h2>
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">From</dt>
+              <dd className="min-w-0 truncate font-mono" title={from}>{from}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">To</dt>
+              <dd className="min-w-0 truncate font-mono" title={recipient}>{recipient === '' ? '—' : recipient}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">Balance</dt>
+              <dd>{balanceText}</dd>
+            </div>
+          </dl>
           <p className="text-sm text-muted-foreground">
-            Sending from{' '}<span className="break-all font-mono">{from}</span>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Check the full address and network carefully — a transaction, once sent, cannot be reversed.
+            Check the address — sent funds cannot be reversed.
           </p>
           <div className="space-y-2">
-            <Label htmlFor="send-recipient">Recipient address</Label>
+            <div className="flex items-end justify-between gap-3">
+              <Label htmlFor="send-recipient">Recipient address</Label>
+              {/* Scan icon from the owner's reference (UI/UX Round 2,
+                  item 9): a black circle with white corner brackets.
+                  Same toggle as the chain-step scan card, with the
+                  item-9 label and expanded state. */}
+              <button
+                type="button"
+                aria-label="Scan QR code"
+                aria-expanded={showScanner}
+                title="Scan QR code"
+                onClick={() => {
+                  setScannerError(null);
+                  setShowScanner((current) => !current);
+                }}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+              >
+                <ScanIcon className="h-11 w-11 text-ink" />
+              </button>
+            </div>
             <Input
               id="send-recipient"
               type="text"
@@ -1113,56 +1165,17 @@ export function SendScreen() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" onClick={() => setStep('asset')}>
-              Back
-            </Button>
-            <Button type="button" onClick={() => void handleRecipientNext()}>
-              Continue
-            </Button>
-            {/* Scan icon from the owner's reference: a black circle with
-                white corner brackets. A camera failure no longer closes
-                the panel — QrScanner shows the failure and offers an
-                image upload instead. */}
-            <button
-              type="button"
-              aria-label="Scan QR code"
-              aria-expanded={showScanner}
-              title="Scan QR code"
-              onClick={() => setShowScanner((current) => !current)}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
-            >
-              <ScanIcon className="h-11 w-11 text-ink" />
-            </button>
-          </div>
           {showScanner && (
             <QrScanner
               onScan={(value) => void handleScan(value)}
               onCancel={() => setShowScanner(false)}
             />
           )}
-        </section>
-      )}
-
-      {step === 'amount' && (
-        <section aria-labelledby="send-amount-heading" className="space-y-4">
-          <h2 id="send-amount-heading" className="text-lg font-semibold">
-            {`Amount · ${config.displayName}`}
-          </h2>
-          <dl className="space-y-1 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">From</dt>
-              <dd className="min-w-0 break-all font-mono">{from}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">To</dt>
-              <dd className="min-w-0 break-all font-mono">{recipient}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">Balance</dt>
-              <dd>{balanceText}</dd>
-            </div>
-          </dl>
+          {scannerError && (
+            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              {scannerError}
+            </p>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="send-amount">{`Amount (${assetSymbol})`}</Label>
@@ -1190,8 +1203,7 @@ export function SendScreen() {
                 Estimated fee:{' '}
                 {/* Estimated fee is a preview: Decimal rounds display to 6 places; the review screen keeps the exact fee. */}
                 {formatFeePreview(feeEstimate.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}
-                . The fee may change before signing. Max leaves the estimated
-                fee in your wallet.
+                {' — it may change before signing.'}
               </p>
             )}
             {feeEstimate?.ok && chain !== 'eth' && chain !== 'ton' && (
@@ -1202,31 +1214,29 @@ export function SendScreen() {
                 {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
-            {!maxInfo.enabled && (
-              <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
-            )}
-            {preview && !preview.ok && (
-              <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-                {preview.reason}
-              </p>
-            )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep('recipient')}
-            >
+            <Button type="button" variant="outline" onClick={() => setStep('token')}>
               Back
             </Button>
             <Button
               type="button"
               disabled={previewBusy}
-              onClick={() => void handleAmountNext()}
+              onClick={() => void handleDetailsNext()}
             >
               {previewBusy ? 'Checking…' : 'Review'}
             </Button>
           </div>
+          {/* The Max and preview notes sit below the action row so the
+              Review button stays in view without scrolling. */}
+          {!maxInfo.enabled && (
+            <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
+          )}
+          {preview && !preview.ok && (
+            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              {preview.reason}
+            </p>
+          )}
         </section>
       )}
 
@@ -1270,7 +1280,7 @@ export function SendScreen() {
             devnetNetworkName={
               devnetEnabled ? devnetChainConfig(chain).devnetName : undefined
             }
-            onBack={() => setStep('amount')}
+            onBack={() => setStep('details')}
             onSign={() => void handleSign()}
           />
           {signState.status === 'signing' && (
@@ -1373,6 +1383,8 @@ export function SendScreen() {
         </section>
       )}
 
+      {/* The bottom nav is hidden on /send, so this is the in-flow way
+          across to Receive — kept, and the chain chips shrink instead. */}
       <Link
         to="/receive"
         className="inline-block text-sm font-medium underline underline-offset-4"

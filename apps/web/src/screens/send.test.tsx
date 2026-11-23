@@ -244,8 +244,10 @@ async function clickContaining(div: HTMLDivElement, text: string): Promise<void>
 }
 
 async function reachReview(div: HTMLDivElement): Promise<void> {
-  // Item 20: the flow starts on the asset step — pick the native asset
-  // first, which advances to the recipient step.
+  // Round 2, item 8: chain step, then token step, then the merged
+  // address + amount step — pick the native asset first, which lands
+  // on the details step with recipient and amount together.
+  await clickContaining(div, 'Ethereum');
   await clickContaining(div, 'Ethereum · ETH');
   const recipient = div.querySelector(
     '#send-recipient',
@@ -253,7 +255,6 @@ async function reachReview(div: HTMLDivElement): Promise<void> {
   await act(async () => {
     setInputValue(recipient, RECIPIENT);
   });
-  await click(div, 'Continue');
   const amount = await waitForInput(div, '#send-amount');
   await act(async () => {
     setInputValue(amount, '0.5');
@@ -327,6 +328,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       const recipient = mounted.div.querySelector(
         '#send-recipient',
@@ -334,12 +336,15 @@ describe('send screen', () => {
       await act(async () => {
         setInputValue(recipient, 'not-an-address');
       });
-      await click(mounted.div, 'Continue');
-      await waitForText(mounted.div, 'Invalid Ethereum address.');
-      expect(mounted.div.textContent).toContain('Invalid Ethereum address.');
+      // Recipient and amount share one step now: the amount input is
+      // already there, but Review must not advance with a bad recipient.
       expect(
         mounted.div.querySelector('#send-amount'),
-      ).toBeNull();
+      ).not.toBeNull();
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Invalid Ethereum address.');
+      expect(mounted.div.textContent).toContain('Invalid Ethereum address.');
+      expect(mounted.div.textContent).not.toContain('Review your send');
     } finally {
       await mounted.cleanup();
     }
@@ -349,6 +354,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       await clickLabel(mounted.div, 'Scan QR code');
       await waitForText(
@@ -393,17 +399,21 @@ describe('send screen', () => {
     }
   });
 
-  it('shows all thirteen chains and the selected chain’s tokens', async () => {
+  it('shows all thirteen chains on step 1, and the selected chain’s tokens on step 2', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // All 13 registry chains have a picker button (disabled without
-      // a wallet on that chain).
+      // Step 1 is chains only (Round 2, item 8): all 13 registry chains
+      // have a picker button (disabled without a wallet on that chain),
+      // and no token list yet.
       for (const name of ['Bitcoin', 'Ethereum', 'TRON', 'TON', 'Solana', 'BNB Smart Chain', 'Polygon', 'Arbitrum One', 'OP Mainnet', 'Base', 'Avalanche C-Chain', 'Litecoin', 'Dogecoin']) {
         expect(mounted.div.textContent).toContain(name);
       }
-      // The full token list for the selected chain, with the verified
-      // tick and short contract under each token.
+      expect(mounted.div.textContent).not.toContain('USD Coin');
+      // Picking a chain advances to the token step: the full token list
+      // for the selected chain, with the verified tick and short
+      // contract under each token.
+      await clickContaining(mounted.div, 'Ethereum');
       expect(mounted.div.textContent).toContain('USD Coin');
       expect(mounted.div.textContent).toContain('Tether USD');
       expect(mounted.div.textContent).toContain('ChainLink Token');
@@ -450,6 +460,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum');
       const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
         button.textContent?.includes('USD Coin'),
       );
@@ -463,7 +474,6 @@ describe('send screen', () => {
       await act(async () => {
         setInputValue(recipient, RECIPIENT);
       });
-      await click(mounted.div, 'Continue');
       const amount = await waitForInput(mounted.div, '#send-amount');
       expect(mounted.div.textContent).toContain('Amount (USDC)');
       await act(async () => {
@@ -480,18 +490,37 @@ describe('send screen', () => {
     }
   });
 
-  it('shows only the asset step on mount — no recipient, amount or action below it', async () => {
+  it('shows only the chain step on mount — no token list, recipient, amount or action below it', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      // Item 20: chain + asset pickers are step 1 of 6; the recipient
-      // input, amount input and send action must not be on the page
-      // until an asset is picked.
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Asset');
+      // Round 2, item 8: chain is step 1 of 6; the token list, the
+      // recipient input, the amount input and the send action must not
+      // be on the page until a chain is picked.
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       expect(mounted.div.querySelector('#send-recipient')).toBeNull();
       expect(mounted.div.querySelector('#send-amount')).toBeNull();
       expect(mounted.div.textContent).toContain('Bitcoin');
-      expect(mounted.div.textContent).toContain('USD Coin');
+      expect(mounted.div.textContent).not.toContain('USD Coin');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows recipient and amount together on step 3, with no separate amount step', async () => {
+    // Round 2, item 8: chain → token → address + amount in one place.
+    // Picking a token lands on the merged details step: both inputs are
+    // present at once, and the step label says so.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
+      await clickContaining(mounted.div, 'Ethereum');
+      expect(mounted.div.textContent).toContain('Step 2 of 6: Token');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
+      expect(mounted.div.querySelector('#send-recipient')).not.toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -510,8 +539,10 @@ describe('send screen', () => {
     });
     const mounted = await mountScreen();
     try {
+      // The token step lists the chain's assets: pick the chain first.
+      await clickContaining(mounted.div, 'Ethereum');
       const list = mounted.div.querySelector(
-        'section[aria-labelledby="send-asset-heading"] ul',
+        'section[aria-labelledby="send-token-heading"] ul',
       );
       expect(list).not.toBeNull();
       const rows = [...(list as HTMLUListElement).querySelectorAll('li')].map(

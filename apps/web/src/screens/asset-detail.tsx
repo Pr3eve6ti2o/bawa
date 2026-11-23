@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
+import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { useTokenPrices } from '../wallet/token-prices';
@@ -74,7 +75,7 @@ export function AssetDetailScreen() {
   // strip and the asset list (usePrices pattern: auto-fetch on mount,
   // refresh about every 60 seconds). No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
-  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
   useEffect(() => {
     if (pricesState.status === 'idle') {
       refreshPrices();
@@ -99,7 +100,7 @@ export function AssetDetailScreen() {
     () => (tokenRecord === undefined ? [] : [tokenRecord]),
     [tokenRecord],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
   useEffect(() => {
     if (tokenRecord === undefined || tokenPricesState.status !== 'idle') return;
     refreshTokenPrices();
@@ -168,10 +169,19 @@ export function AssetDetailScreen() {
   const displaySymbol = tokenRecord !== undefined ? tokenRecord.symbol : config.symbol;
   const displayDecimals = tokenRecord !== undefined ? tokenRecord.decimals : CHAIN_DECIMALS[chainId];
   const displayTitle = tokenRecord !== undefined ? tokenRecord.symbol : config.displayName;
+  // Round 2, item 6: in devnet mode the network is the test network, not
+  // mainnet — the label must say so, now that live prices show here too.
+  const devnetConfig = devnetEnabled
+    ? devnetChainConfigOrUndefined(chainId)
+    : undefined;
+  const networkLabel =
+    devnetConfig !== undefined
+      ? devnetConfig.devnetName
+      : `${config.displayName} mainnet`;
   const displaySubtitle =
     tokenRecord !== undefined
       ? `${tokenRecord.name} on ${config.displayName}`
-      : `${config.displayName} mainnet`;
+      : networkLabel;
   const unitPrice = tokenRecord !== undefined
     ? unitPriceForChain(tokenPricesState.entries[tokenKeyOf(tokenRecord)], Date.now())
     : unitPriceForChain(pricesState.entries[chainId], Date.now());
@@ -371,7 +381,7 @@ export function AssetDetailScreen() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Network</dt>
-                <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
+                <dd className="font-semibold">{networkLabel}</dd>
               </div>
               {tokenRecord !== undefined && (
                 <>

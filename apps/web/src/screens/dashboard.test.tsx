@@ -1082,7 +1082,11 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('never fetches mainnet prices and shows no Testnet label in devnet mode', async () => {
+  it('shows live per-unit prices in devnet mode but never values test balances', async () => {
+    // Round 2, item 6: the price feed loads in devnet mode too — the
+    // per-unit price is public market data. What stays off is the fiat
+    // valuation: 1.5 test ETH must never read as $2,662.40, and the
+    // hero shows no dollar total at all.
     setWallet(
       balancesFor({
         btc: { status: 'zero', value: '0' },
@@ -1092,12 +1096,30 @@ describe('dashboard screen', () => {
     );
     const mounted = await mountScreen();
     try {
+      // Wait for the price fetch to land (auto-fetch on mount).
+      const start = Date.now();
+      while (
+        !(mounted.div.textContent ?? '').includes('$1,774.93') &&
+        Date.now() - start < 5000
+      ) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+      }
       const text = mounted.div.textContent ?? '';
       // Real balances from the context, formatted from base units.
       expect(text).toContain('1.5 ETH');
       expect(text).toContain('Zero balance');
-      // Devnet tokens have no market price: the price feed is never hit.
-      expect(fetchMock).not.toHaveBeenCalled();
+      // The feed IS hit in devnet mode now, and the live per-unit
+      // price shows on the row and the strip.
+      expect(fetchMock).toHaveBeenCalled();
+      expect(text).toContain('$1,774.93');
+      expect(text).toContain('per ETH');
+      // ...but the test balance is never valued: no fiat value for the
+      // 1.5 ETH row, and no dollar total in the hero.
+      expect(text).not.toContain('$2,662.40');
+      expect(heroAmount(mounted)).toBe('Unavailable');
+      expect(text).toContain('test tokens have no market value');
       // The dashboard itself never invents a testnet label; the only
       // devnet marker is the app header pill.
       expect(text).not.toContain('Testnet');
