@@ -12,7 +12,9 @@ import {
   parseTokenPriceResponse,
   saveCachedTokenPrices,
   tokenPriceEntries,
+  tokenPriceRequests,
   type TokenPriceEntry,
+  type TokenPriceRequest,
 } from './token-prices';
 import { DEFAULT_TOKENS, tokenKey } from './tokens';
 
@@ -39,8 +41,9 @@ function freshTokenPayload(ageMs = 30_000): Record<string, { usd: number; last_u
   };
 }
 
-function tokenIds(): Array<{ key: string; coingeckoId: string }> {
+function tokenIds(): TokenPriceRequest[] {
   return DEFAULT_TOKENS.map((t) => ({
+    kind: 'coingecko',
     key: tokenKey(t.chain, t.contract),
     coingeckoId: t.coingeckoId ?? '',
   }));
@@ -257,6 +260,183 @@ describe('fiatValueForTokenBalance', () => {
   });
 });
 
+describe('tokenPriceRequests (unlisted-token fallback, item D)', () => {
+  const ANTS = '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4';
+  const NOT_MASTER = 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT';
+
+  it('sends a CoinGecko-listed token to CoinGecko', () => {
+    const requests = tokenPriceRequests([DEFAULT_TOKENS[0]!]);
+    expect(requests).toEqual([
+      {
+        kind: 'coingecko',
+        key: tokenKey('eth', DEFAULT_TOKENS[0]!.contract),
+        coingeckoId: 'usd-coin',
+      },
+    ]);
+  });
+
+  it('sends an unlisted BSC token to DexScreener, not CoinGecko', () => {
+    const requests = tokenPriceRequests([
+      {
+        chain: 'bsc',
+        contract: ANTS,
+        name: '蚂蚁',
+        symbol: 'ANTS',
+        decimals: 18,
+        coingeckoId: null,
+        addedAtMs: 1,
+      },
+    ]);
+    expect(requests).toEqual([
+      { kind: 'dexscreener', key: tokenKey('bsc', ANTS), chain: 'bsc', contract: ANTS },
+    ]);
+  });
+
+  it('sends an unlisted TON Jetton to TonAPI', () => {
+    const requests = tokenPriceRequests([
+      {
+        chain: 'ton',
+        contract: NOT_MASTER,
+        name: 'Notcoin',
+        symbol: 'NOT',
+        decimals: 9,
+        coingeckoId: null,
+        addedAtMs: 1,
+      },
+    ]);
+    expect(requests).toEqual([
+      { kind: 'tonapi', key: tokenKey('ton', NOT_MASTER), contract: NOT_MASTER },
+    ]);
+  });
+
+  it('sends an unlisted Gnosis token nowhere — DexScreener does not index Gnosis', () => {
+    const requests = tokenPriceRequests([
+      {
+        chain: 'gnosis',
+        contract: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d',
+        name: 'Wrapped XDAI',
+        symbol: 'WXDAI',
+        decimals: 18,
+        coingeckoId: null,
+        addedAtMs: 1,
+      },
+    ]);
+    expect(requests).toEqual([]);
+  });
+});
+
+describe('fetchTokenPrices with the fallback', () => {
+  const ANTS = '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4';
+  const antsKey = tokenKey('bsc', ANTS);
+
+  function routeFetch(calls: string[]) {
+    return vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.includes('api.coingecko.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => freshTokenPayload(),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      if (url.includes('api.dexscreener.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            {
+              chainId: 'bsc',
+              baseToken: { address: ANTS, name: '蚂蚁', symbol: 'ANTS' },
+              quoteToken: {
+                address: '0x55d398326f99059fF775485246999027B3197955',
+                name: 'Tether USD',
+                symbol: 'USDT',
+              },
+              priceUsd: '0.07673',
+              liquidity: { usd: 337847.7 },
+            },
+          ],
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+  }
+
+  it('prices a listed token from CoinGecko and an unlisted one from DexScreener', async () => {
+    const calls: string[] = [];
+    const fetchFn = routeFetch(calls);
+    const requests: TokenPriceRequest[] = [
+      ...tokenIds(),
+      { kind: 'dexscreener', key: antsKey, chain: 'bsc', contract: ANTS },
+    ];
+    const entries = await fetchTokenPrices(
+      fetchFn as unknown as typeof fetch,
+      requests,
+      NOW_MS,
+      DEFAULT_TOKENS,
+    );
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toContain('api.coingecko.com');
+    expect(calls[1]).toContain('api.dexscreener.com/tokens/v1/bsc/');
+    for (const key of TOKEN_KEYS) {
+      expect(entries[key]?.status).toBe('fresh');
+      expect(entries[key]).toMatchObject({ quote: { source: 'CoinGecko' } });
+    }
+    expect(entries[antsKey]).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '0.07673', source: 'DexScreener' },
+    });
+  });
+
+  it('a CoinGecko 429 does not take down the DexScreener price', async () => {
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('api.coingecko.com')) {
+        return {
+          ok: false,
+          status: 429,
+          json: async () => ({}),
+          headers: { get: (name: string) => (name === 'Retry-After' ? '5' : null) },
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [
+          {
+            chainId: 'bsc',
+            baseToken: { address: ANTS, name: '蚂蚁', symbol: 'ANTS' },
+            quoteToken: {
+              address: '0x55d398326f99059fF775485246999027B3197955',
+              name: 'Tether USD',
+              symbol: 'USDT',
+            },
+            priceUsd: '0.07673',
+            liquidity: { usd: 337847.7 },
+          },
+        ],
+        headers: { get: () => null },
+      };
+    });
+    const entries = await fetchTokenPrices(
+      fetchFn as unknown as typeof fetch,
+      [
+        ...tokenIds(),
+        { kind: 'dexscreener', key: antsKey, chain: 'bsc', contract: ANTS },
+      ],
+      NOW_MS,
+      DEFAULT_TOKENS,
+    );
+    expect(entries[antsKey]?.status).toBe('fresh');
+    expect(entries[TOKEN_KEYS[0]!]).toEqual({
+      status: 'error',
+      reason: 'rate-limited',
+      retryAfterMs: 5000,
+    });
+  });
+});
+
 describe('token price cache', () => {
   function makeStore(initial = ''): { getItem: () => string | null; setItem: (key: string, v: string) => void; value: string } {
     let value = initial;
@@ -276,6 +456,28 @@ describe('token price cache', () => {
     const store = makeStore();
     saveCachedTokenPrices(entries, NOW_MS, DEFAULT_TOKENS, store as never);
     const loaded = loadCachedTokenPrices(NOW_MS, TOKEN_KEYS, store as never);
+    expect(loaded).toEqual(entries);
+  });
+
+  it('round-trips a DexScreener quote with its source intact', () => {
+    const antsKey = tokenKey('bsc', '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4');
+    const entries = {
+      [antsKey]: {
+        status: 'fresh' as const,
+        quote: {
+          chain: 'bsc' as const,
+          assetId: '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4',
+          providerAssetId: '0x74346aE29A2823DA37695d35A6d47cC4F57C06b4',
+          usdPrice: '0.07673',
+          providerUpdatedAtMs: NOW_MS,
+          fetchedAtMs: NOW_MS,
+          source: 'DexScreener' as const,
+        },
+      },
+    };
+    const store = makeStore();
+    saveCachedTokenPrices(entries, NOW_MS, [], store as never);
+    const loaded = loadCachedTokenPrices(NOW_MS, [antsKey], store as never);
     expect(loaded).toEqual(entries);
   });
 

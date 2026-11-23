@@ -7,6 +7,16 @@ Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builde
 
 The single entry point for Bawa documentation is [docs/index.md](docs/index.md).
 
+## The example web wallet
+
+The web wallet in `apps/web` is a fully functional example wallet built using this guide. It runs entirely in the browser: create or import a wallet and see real balances. Broadcast stays disabled, so it cannot send funds.
+
+It ships with 22 chains enabled by default: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom. The list is `SUPPORTED_CHAINS` in `apps/web/src/wallet/chains.ts` and `chainSupport` in `registry/capabilities.json`.
+
+Do not confuse that number with the guide's number. The guide covers the full Trust Wallet Core registry of 168 chains. The example wallet enables 22 of them. Add Token adds more tokens by contract address and can enable any of the 22 chains; a chain outside the 22 cannot be added from the wallet, it needs a change to the registry first.
+
+To run the example wallet, follow [docs/CREATE-EXAMPLE-WALLET.md](docs/CREATE-EXAMPLE-WALLET.md).
+
 ## Quickstart
 
 [Install the requirements and clone this branch](#installation), then start the one-prompt workflow from the repo root:

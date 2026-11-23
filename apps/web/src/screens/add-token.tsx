@@ -9,8 +9,8 @@
  *   balance. Bad input gets a specific inline error (role="alert"),
  *   nothing is persisted, nothing is added, the input stays intact and
  *   keeps focus.
- * - "Add chain": enable one of the 13 registry chains. No free-text
- *   chain field — a 14th chain is impossible by design.
+ * - "Add chain": enable one of the 22 registry chains. No free-text
+ *   chain field — a 23rd chain is impossible by design.
  *
  * Built on the existing dialog.tsx / Button / Input / Label primitives
  * and the 4-colour drawing-illustration style; the chain picker is a
@@ -78,6 +78,7 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
     | 'metis'
     | 'aurora'
     | 'fantom'
+    | 'the-open-network'
   >
 > = {
   eth: 'ethereum',
@@ -99,6 +100,11 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
   metis: 'metis',
   aurora: 'aurora',
   fantom: 'fantom',
+  // Item D: TON was missing here, so every Jetton was stored with
+  // coingeckoId null and never priced — even listed ones (NOT resolves
+  // to 'notcoin' via /coins/the-open-network/contract/, verified live
+  // 2026-11-23, and the endpoint accepts the lowercased friendly form).
+  ton: 'the-open-network',
 };
 
 /**
@@ -162,7 +168,7 @@ export function AddTokenDialog({
   }, [open ]);
 
   // The addable chains are the registry chains with derivation —
-  // availableFor('derive') is the full 13 in production. The
+  // availableFor('derive') is the full 22 in production. The
   // screen layer only depends on the two chains-module names the
   // screen tests mock (availableFor, chainConfig); importing
   // SUPPORTED_CHAINS here broke those tests at module load even
@@ -333,8 +339,11 @@ export function AddTokenDialog({
         inputRef.current?.focus();
         return;
       }
-      // 5. CoinGecko id for the price feed; 404 → still added, price
-      // shows "Price unavailable".
+      // 5. CoinGecko id for the price feed; 404 → still added, and the
+      // price feed falls back to DexScreener (EVM/Solana/TRON) or
+      // TonAPI rates (TON Jettons) at refresh time — the price shows
+      // "Price unavailable" only when no source has it (see
+      // token-prices / dex-prices).
       const platform = COINGECKO_PLATFORM_FOR_CHAIN[chain];
       const coingeckoId =
         platform === undefined
