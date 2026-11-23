@@ -180,6 +180,26 @@ export async function fetchJson(
   init?: RequestInit,
   timeoutMs = 10000,
 ): Promise<unknown> {
+  const response = await fetchWithTimeout(url, init, timeoutMs);
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    throw new Error('Invalid response: expected JSON');
+  }
+}
+
+/**
+ * Single-attempt fetch with a timeout, returning the Response.
+ * Fix-all Lane H, item 12: fetchJson above and the devnet BTC
+ * broadcast each had this same timeout/abort/HTTP-error shape inline
+ * — one helper now owns it; callers only differ in how they read
+ * the body (JSON here, plain text there).
+ */
+export async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = 10000,
+): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -197,11 +217,7 @@ export async function fetchJson(
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    try {
-      return (await response.json()) as unknown;
-    } catch {
-      throw new Error('Invalid response: expected JSON');
-    }
+    return response;
   } finally {
     clearTimeout(timeout);
   }

@@ -96,6 +96,7 @@ export function preloadRoute(to: string): void {
   });
 }
 import { WalletProvider, useWallet } from '../state/wallet-context';
+import { useDevnetToggle } from '../state/use-devnet-toggle';
 import { appBasePath } from '../wallet/payment-links';
 import { accountName } from '../wallet/vault';
 import { ErrorBoundary } from './error-boundary';
@@ -127,26 +128,12 @@ function HomeScreen() {
 // kept on the button's title; the visible error copy lives on the
 // Networks screen's DevnetSetting, which shows the same failure.
 export function NetworkModePill() {
-  const { vaultState, devnetEnabled, setDevnetEnabled } = useWallet();
-  const [isToggling, setIsToggling] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const hasVault = vaultState !== 'no-vault';
-  const disabled = !hasVault || isToggling;
+  // Fix-all Lane H, item 12: the toggle state lives in
+  // useDevnetToggle, shared with the Networks screen's DevnetSetting.
+  const { devnetEnabled, disabled, actionError, toggle } = useDevnetToggle();
 
   async function handleToggle() {
-    if (disabled) return;
-    setActionError(null);
-    setIsToggling(true);
-    try {
-      await setDevnetEnabled(!devnetEnabled);
-    } catch (error: unknown) {
-      setActionError(
-        error instanceof Error ? error.message : String(error),
-      );
-    } finally {
-      setIsToggling(false);
-    }
+    await toggle(!devnetEnabled);
   }
 
   return (
@@ -239,9 +226,9 @@ function AppLayout() {
   // Narrow task screens get a local 480px cap inside the content frame;
   // /assets itself stays full-width, only /assets/<chain> is narrow.
   // Welcome self-caps in welcome.tsx (it also renders on the home route).
-  // /create-wallet and /security keep the 480px cap below lg only:
-  // at lg they go full content width so the screens can lay out in two
-  // columns (create-wallet, security).
+  // /create-wallet and /security keep the 480px cap below desktop:
+  // only: at desktop: they go full content width so the screens can
+  // lay out in two columns (create-wallet, security).
   const isNarrow =
     ['/send', '/receive', '/import-wallet', '/mnemonic-backup'].includes(
       pathname,
@@ -251,8 +238,7 @@ function AppLayout() {
   return (
     <div className="min-h-dvh bg-paper sm:py-6 desktop:py-0">
       {/* Desktop shell is full-bleed at desktop: (980px): below desktop: the app is a centred
-          430px phone frame, but at desktop: the frame used to cap at 1440px, so
-          on a 1919px viewport the content column sat in the left ~1230px
+          430px phone frame, but at desktop: the frame used to cap at 1440px, so          on a 1919px viewport the content column sat in the left ~1230px
           with dead paper on the right. The content column itself still
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never

@@ -2,24 +2,16 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor, chainConfig } from '../wallet/chains';
-import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import type { ChainId } from '../engine/boundary';
 import type { AdapterTx } from '../wallet/adapters/types';
 import { Button } from '../ui/components/button';
+import { TxRow } from './tx-row';
 import { Skeleton } from '../ui/components/skeleton';
 
 type Filter = 'all' | ChainId;
 
 interface RowTx extends AdapterTx {
   chain: ChainId;
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 function formatLastOk(lastOkAt: number): string {
@@ -132,39 +124,7 @@ export function TransactionHistoryScreen() {
           ) : (
             <ul className="space-y-3">
               {rows.map((tx) => (
-                <li key={`${tx.chain}:${tx.hash}`} className="rounded-lg border p-3">
-                  <Link
-                    to={`/transactions/${tx.hash}`}
-                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
-                  >
-                    <span className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-medium">
-                        {tx.direction === 'in'
-                          ? 'Received'
-                          : tx.direction === 'out'
-                            ? 'Sent'
-                            : 'Self transfer'}
-                        {' · '}
-                        {chainConfig(tx.chain).symbol}
-                      </span>
-                      {' '}
-                      <span className="text-sm font-semibold">
-                        {formatNativeWithSymbol(
-                          tx.amountBaseUnits,
-                          CHAIN_DECIMALS[tx.chain],
-                          chainConfig(tx.chain).symbol,
-                        )}
-                      </span>
-                    </span>
-                    <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                      {tx.hash}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {tx.timestamp === null ? 'Pending' : formatDate(tx.timestamp)}
-                      {tx.status === 'failed' ? ' · Failed' : tx.status === 'pending' ? ' · Pending' : ''}
-                    </span>
-                  </Link>
-                </li>
+                <TxRow key={`${tx.chain}:${tx.hash}`} tx={tx} chain={tx.chain} showChainSymbol />
               ))}
             </ul>
           )}

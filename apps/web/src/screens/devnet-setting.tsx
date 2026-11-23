@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -7,7 +6,7 @@ import {
 } from '../ui/components/card';
 import { Label } from '../ui/components/label';
 import { Switch } from '../ui/components/switch';
-import { useWallet } from '../state/wallet-context';
+import { useDevnetToggle } from '../state/use-devnet-toggle';
 import { DEVNET_CHAIN_CONFIGS } from '../wallet/devnet-endpoints';
 
 // TEMPORARY devnet mode (owner order 2026-11-22): a switch on the
@@ -19,27 +18,17 @@ import { DEVNET_CHAIN_CONFIGS } from '../wallet/devnet-endpoints';
 const DEVNET_CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 export function DevnetSetting() {
-  const { vaultState, devnetEnabled, setDevnetEnabled } = useWallet();
-
-  const [isToggling, setIsToggling] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const hasVault = vaultState !== 'no-vault';
-  const controlsDisabled = !hasVault || isToggling;
+  // Fix-all Lane H, item 12: shared with the header's NetworkModePill.
+  const {
+    devnetEnabled,
+    hasVault,
+    disabled: controlsDisabled,
+    actionError,
+    toggle,
+  } = useDevnetToggle();
 
   async function handleToggle(enabled: boolean) {
-    if (controlsDisabled) return;
-
-    setActionError(null);
-    setIsToggling(true);
-
-    try {
-      await setDevnetEnabled(enabled);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setIsToggling(false);
-    }
+    await toggle(enabled);
   }
 
   return (

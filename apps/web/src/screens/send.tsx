@@ -63,6 +63,7 @@ import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
 import { ChainLogo, TokenLogo } from './token-logo';
+import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
@@ -1039,42 +1040,36 @@ export function SendScreen() {
                   ? `${config.displayName} · ${config.symbol}`
                   : `${token.name} · ${token.symbol}`;
               return (
-                <li
+                <TokenPickerRow
                   key={token === null ? `native:${chain}` : `${token.chain}:${token.contract.toLowerCase()}`}
-                  className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
-                    selected ? 'bg-sun' : 'bg-paper'
-                  }`}
+                  selected={selected}
+                  onSelect={() => selectToken(token)}
+                  logo={
+                    <>
+                      {/* Lane G: the real chain/token mark — the
+                          hand-drawn blob with the ticker text inside
+                          rendered as a crossed-out logo. */}
+                      {token === null ? (
+                        <ChainLogo chain={chain} size={24} />
+                      ) : (
+                        <TokenLogo symbol={token.symbol} size={24} />
+                      )}
+                    </>
+                  }
                 >
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => selectToken(token)}
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                  >
-                    {/* Lane G: the real chain/token mark — the
-                        hand-drawn blob with the ticker text inside
-                        rendered as a crossed-out logo. */}
-                    {token === null ? (
-                      <ChainLogo chain={chain} size={24} />
-                    ) : (
-                      <TokenLogo symbol={token.symbol} size={24} />
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-                      {label}
-                      {token !== null && isVerifiedToken(token) && (
-                        <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                      )}
-                      {token !== null && (
-                        <span className="font-normal text-ink">
-                          {` · ${config.displayName} · ${shortContract(token.contract)}`}
-                        </span>
-                      )}
-                      {token === null && (
-                        <span className="font-normal text-ink"> · Native coin</span>
-                      )}
+                  {label}
+                  {token !== null && isVerifiedToken(token) && (
+                    <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                  )}
+                  {token !== null && (
+                    <span className="font-normal text-ink">
+                      {` · ${config.displayName} · ${shortContract(token.contract)}`}
                     </span>
-                  </button>
-                </li>
+                  )}
+                  {token === null && (
+                    <span className="font-normal text-ink"> · Native coin</span>
+                  )}
+                </TokenPickerRow>
               );
             })}
         </ul>

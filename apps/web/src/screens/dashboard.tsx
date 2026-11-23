@@ -94,6 +94,7 @@ export function DashboardScreen() {
     retry: boolean;
     partialNote: boolean;
     quietNote: boolean;
+    freshZeroNote: boolean;
     showAttribution: boolean;
     priceError: 'rate-limited' | 'network' | 'provider' | 'timeout' | null;
     balancesFailed: boolean;
@@ -103,6 +104,7 @@ export function DashboardScreen() {
     retry: false,
     partialNote: false,
     quietNote: false,
+    freshZeroNote: false,
     showAttribution: false,
     priceError: null,
     balancesFailed: false,
@@ -113,6 +115,14 @@ export function DashboardScreen() {
   // A token never fetched yet is skipped — not a failure — while a
   // token still loading holds the hero like a native chain does.
   const tokenContribution: PortfolioTokenContribution = useMemo(() => {
+    // Fix-all Lane H, item 2 (follow-up): in devnet mode test tokens
+    // contribute nothing to the hero — the same rule as the natives,
+    // whose hero totals against idle entries in devnet. Without this,
+    // 25 test USDC put a "$25.00 (Partial)" total in the hero even
+    // though the token row itself correctly suppressed the fiat value.
+    if (devnetEnabled) {
+      return { minorUnits: [], partial: false, loadedZero: false, unpricedNonzero: false };
+    }
     const minorUnits: number[] = [];
     let partial = false;
     let loadedZero = false;
@@ -142,7 +152,7 @@ export function DashboardScreen() {
       }
     }
     return { minorUnits, partial, loadedZero, unpricedNonzero };
-  }, [tokenList, tokenBalances, tokenPricesState.entries]);
+  }, [devnetEnabled, tokenList, tokenBalances, tokenPricesState.entries]);
 
   // Only chains with a verified balance adapter count toward the hero.
   // The multichain-extension chains have no balance adapter yet, so their
@@ -206,6 +216,11 @@ export function DashboardScreen() {
               retry: false,
               partialNote: false,
               quietNote: total.partial,
+              // Fix-all Lane H, item 4b: a genuinely fresh $0.00 (every
+              // balance loaded as zero, nothing failed) gets a quiet
+              // note saying so — the partial case keeps its failure
+              // note instead, never both.
+              freshZeroNote: !total.partial,
               showAttribution: false,
               priceError: null,
               balancesFailed: false,
@@ -217,6 +232,7 @@ export function DashboardScreen() {
               retry: false,
               partialNote: false,
               quietNote: false,
+              freshZeroNote: false,
               showAttribution: true,
               priceError: null,
               balancesFailed: false,
@@ -228,6 +244,7 @@ export function DashboardScreen() {
               retry: false,
               partialNote: true,
               quietNote: false,
+              freshZeroNote: false,
               showAttribution: true,
               priceError: null,
               balancesFailed: false,
@@ -239,6 +256,7 @@ export function DashboardScreen() {
               retry: allHeroFailed,
               partialNote: false,
               quietNote: false,
+              freshZeroNote: false,
               showAttribution: false,
               priceError: sharedPriceError,
               // Balances failed, not (only) prices: the message below names
@@ -304,6 +322,9 @@ export function DashboardScreen() {
         )}
         {hero.quietNote && (
           <p className="text-xs leading-[18px] text-panel-text-muted">Some balances or prices couldn&apos;t be checked just now.</p>
+        )}
+        {hero.freshZeroNote && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">Nothing here yet — receive on any chain to get started.</p>
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">

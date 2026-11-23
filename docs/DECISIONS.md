@@ -1553,3 +1553,282 @@ Hands-on Muse, 0 Sol calls, 0 AgentRouter calls. Worktree
   `generate-chains --check` 0. Root `npm run lint` cannot run here
   (no root `node_modules`, `eslint: not found`) — pre-existing, not
   a lane change.
+
+## §22 — Fix-all Lane H — the 13 "still needing your word" items (2026-11-23/24, branch panel-rebuild/fix-all-h)
+
+Lane H decided the 13 items by live preview (CDP against the statically
+served dist, served-JS hash verified against the dist hash) and code
+evidence. Hands-on Muse work, 0 Sol calls, 0 AgentRouter calls. Base:
+token-gaps 8191b2c. Gates on the lane tree: tsc 0, build 0, vitest 1808
+passed / 5 skipped / 0 failed (91 files), lint 0, npm audit 0
+vulnerabilities. Net diff (commit 1962d84): 46 files, +1,046 / -3,714 lines.
+
+### 1. 980 px breakpoint — DECIDED-AND-DONE
+Ported desktop-layout-v2's breakpoint, shell-only: `--breakpoint-desktop:
+61.25rem` in `apps/web/src/ui/styles/globals.css` (the token lives there,
+not in app.tsx as the brief said) and `lg:` → `desktop:` on the shell
+lines in `apps/web/src/app/app.tsx` and `sidebar-nav.tsx`. Verified live
+at exactly 980 px: the desktop shell renders (sidebar with Home, Assets,
+Receive, Send, Wallets, Transactions, Track, Import, Create, Security,
+Networks, Mnemonic backup, Welcome; Collapse sidebar) — final
+`final-nowallet-welcome-980.png`. Mobile at 390 px is unchanged (bottom
+nav, hero card). Deliberately NOT ported from v2: dvh → screen, the
+NetworkModePill removal, the BrowserRouter basename removal, the
+`/assets/:chain/:token` route removal, the Lane G zero-balance removal —
+that branch diverged in 283 files and carries regressions; those are a
+separate v2 follow-up, not the breakpoint.
+
+### 2. Devnet fiat suppression on token rows — DECIDED-AND-DONE (bug, fixed)
+Native rows suppressed fiat in devnet by design (`fiatDetail` returns
+zero when `devnet && fiat.kind === 'fiat'`); token rows hardcoded `false`
+in their `fiatDetail` call and `getTokenRowModel` took no devnet param —
+a latent bug, fixed by threading `devnet` through. The new test then
+caught a second instance: the hero ALSO valued test tokens
+(`tokenContribution` read live token prices with no devnet branch, putting
+"$25.00 (Partial)" in the hero for 25 test USDC) — fixed the same way
+(`tokenContribution` returns empty in devnet). Tests pin both: 25 USDC
+shows `$1.00` + `per USDC`, never `$25.00`; the hero is clean `$0.00`.
+
+### 3. Receive QR on step 1 — DECIDED-AND-RECORDED (leave the flow)
+Step 1 is a clean network picker (search + Popular + "All networks (18)")
+that fits at 390 px with no scroll; no network is chosen yet, so no
+address exists to encode — a QR here would show a default-chain address
+and risk a wrong-network payment. The QR is 2 taps away (network → token
+→ QR). The finish-product Lane H redesign already answered the underlying
+complaint. No change.
+
+### 4. Lane 3 questions — DECIDED-AND-DONE
+(a) The Create card back on Welcome STANDS: code in `welcome.tsx`,
+confirmed in preview at 1440 px (right column, coral button) — no change.
+(b) Quiet note under a genuinely fresh $0.00 ADDED: "Nothing here yet —
+receive on any chain to get started.", shown only when all balances
+loaded zero and nothing failed. A partial $0.00 still shows the failure
+note instead — the final CDP run confirmed that branch on the live egress
+(hero $0.00 + "Some balances or prices couldn't be checked just now.").
+(c) The four "Coming soon" cards (Android wallet, Smart contract creator,
+Multi-signature wallet, Connect an existing wallet) COLLAPSED into a
+native `<details>` (closed by default, "Coming soon" as `<summary>`,
+one tap away, no new dependency). Create at 390 px is now 1,276 px tall
+with one disclosure row instead of a whole extra screen of cards.
+
+### 5. Receive tagline — DECIDED-AND-DONE
+Restored from the Round 2 history (`git show d370c58`, Round 2 item 8,
+which removed it): "This is your address — share the drawing, keep the
+keys." It sits on the Receive DETAILS step, directly under the
+network/Back row, in the same `font-display text-xl` styling as before.
+Verified at 390 px: the QR card still sits above the fold (QR + "Any
+amount" + address + Ethereum/Native coin), the template minis still peek
+above the fold; the action row was already below the fold, so the cost
+is one line of scroll.
+
+### 6. The 12 EVM chains that are balance-only — DECIDED-AND-RECORDED (accept 6, count corrected)
+The "12" in the brief is stale: finish-product Lane B (2026-11-23) wired
+9 of the 15 non-ETH EVM chains — celo/op/scroll, aurora, avax/mantle,
+matic/arb/base. Truly unwired six: bsc, gnosis, linea, opbnb, metis,
+fantom (matches the `history-sources.test.ts` header comment). Live
+probes from gray-pinee (2026-11-23): Routescan
+`api.routescan.io/v2/network/mainnet/evm/{chainId}/etherscan/api`
+returns "chain not supported" for all 10 remaining chain IDs (56, 137,
+42161, 8453, 100, 59144, 204, 1088, 1313161554, 250); the avax control
+(43114) returns status 1 with real txs and CORS `*`, proving the probe
+format valid. Blockscout hosts with a browser UA: bsc/linea/opbnb/metis/
+fantom `.blockscout.com` 404; gnosis.blockscout.com 301 → gnosisscan.io
+(Etherscan-family, keyed). Metis `andromeda-explorer.metis.io/api`
+returns status '1' with 2 real txs but NO `Access-Control-Allow-Origin`
+header — one header away from wiring; record this. Aurora re-verified:
+status '1', 2 real txs, CORS `*`. Verdict: accept the six as balance-only
+with an honest note in the UI. `evm.ts` now renders: "History is not
+connected for {chain} yet — no keyless indexer covers this chain, so only
+the balance shows here." (rendered verbatim: `humanReasonMessage` shows a
+reason that already reads as a human sentence as-is).
+
+### 7. Rotation funds invisible in the dashboard — DECIDED-AND-DONE (stated-not-shown)
+Evidence: `refreshBalances` reads only `vaultAddresses[chain][0]`
+(`wallet-context.tsx`); `receiveAddresses` is consumed only by Receive.
+Funds paid to a rotated address (index ≥ 1) are never fetched — invisible
+in dashboard, rows, hero and history. Earlier indices are not even stored
+(only the current index, in `bawa-receive-index:v1`). Showing them needs
+persisting used indices per chain + multi-address refresh + history merge
+— refresh-path surgery of the same class Lane 2 / item 13 proved
+infeasible to re-wire without behaviour change. Implemented instead: a
+quiet note on the Receive details step by the "New address" rotation
+control (shown only when `canRotate`, verified in the final preview):
+"New addresses come from the same phrase. Funds sent to an earlier
+address still belong to this wallet, but the dashboard only shows your
+main address on each chain." Follow-up for the owner: aggregate rotated
+addresses into the hero + merge their history, or show per-address rows.
+
+### 8. Multi-phrase vaults — PLAN ONLY (recorded, decision needed)
+Architecture (grounded): single JSON envelope in localStorage under
+`bawa-vault` (v1, AES-GCM-256, PBKDF2-SHA-256 600k, 16-byte salt, 12-byte
+IV; never a mnemonic/key/password), backup `bawa-vault-backup` (verbatim
+copy), auto-unlock key `bawa-vault-key`. Module
+`apps/web/src/wallet/vault.ts` (874 lines): `migrateEnvelope` /
+`VAULT_MIGRATORS`, `createVault`, `unlock` / `lock` / `autoUnlock`,
+`withMnemonic` / `withMnemonicAsync` (the closure holds THE mnemonic),
+`changePassword`, `restoreVaultFromBackup`, `deleteVault`,
+`readVaultAccounts` / `writeVaultAccounts`, `vaultProfiles`,
+`vaultProvenance`. Docs: `docs/vault-design.md` (165 lines). The whole
+app assumes one vault (one vaultState, one closure mnemonic, single-vault
+backup/restore/delete/lock, auto-lock key-storage invariant per vault).
+Options: (A) multiple envelopes — registry `bawa-vaults` /
+`bawa-vault:<id>` + active-vault pointer; per-vault password/salt/key;
+migrate the existing envelope to vault #1; per-vault backup/restore/
+delete/auto-lock key; vault switcher UI. (B) one envelope holding multiple
+mnemonics — one password unlocks all; all-or-nothing backup/restore;
+envelope version bump via `VAULT_MIGRATORS`. (C) status quo. Decision
+needed from the owner: per-vault passwords? switching UI? migration?
+Implementing touches the vault crypto boundary and every vaultState
+consumer — it does not fit safely in this lane. NOT implemented.
+
+### 9. The 4 unwired modules (1,079 lines) — DECIDED-AND-DONE (all deleted)
+Exact total: `engine/destination.ts` 602 + `wallet/adapters/
+confirmation.ts` 302 + `wallet/evm-typed-data.ts` 121 +
+`wallet/secret-handoff.ts` 54 = 1,079. Each imported only by its own test
+file; zero production importers, zero doc references in docs/ or
+.github/. Per module: destination.ts DELETE — Send already validates via
+`validateRecipient` in `wallet/send.ts` (landed 2026-11-19, Wallet Core +
+devnet testnet forms, wired into Send steps + deep links); wiring a
+parallel validator into the money path is wrong, and `MAINNET_PARAMS`
+(confirmations 6/12/19/1, derivation prefixes) duplicates data in
+`core.ts` / `chains.ts` / `confirmation-policy.ts`. adapters/
+confirmation.ts DELETE — wraps `engine/confirmation-policy.ts` and needs
+an `ObserveFn` implementation that does not exist; the track screen reads
+indexer confirmations one-shot with no polling, so wiring it would be a
+new live-polling feature, not a wire-up. evm-typed-data.ts DELETE — EIP-712
+helpers (viem `hashTypedData`, domain Bawa v1); zero references outside
+itself; no dApp connect, no EIP-712 signing feature. secret-handoff.ts
+DELETE — single-use in-memory secret handoff (`storeSecret` /
+`takeSecret`); no consumer — mnemonic flows read from the vault closure
+(`withMnemonic`); navigation carries no secrets (only `lock.tsx` `from`
+state). Deleted via `git rm` with their tests. Consequential orphan (NOT
+deleted — out of scope, for Lane I / repo-cleanup):
+`engine/confirmation-policy.ts` (470 lines + 602-line test +
+`__typetests__`) — its only production importer was the deleted adapter.
+
+### 10. DOGE fallback — DECIDED-AND-RECORDED (owner decision needed)
+Live probes from gray-pinee, 2026-11-23 ~20:03 UTC, fixture address
+`DU5VEHzdNfQWUnonpHkXVchYqi1mqC3S8K`: SoChain quota exhausted —
+"Lookups without a key are 2,500 a day per IP, and today's are used up;
+they reset at 00:00 UTC. A free API key gives you 75,000 a month..."
+(Quota is per client IP, so it may work on the owner's own IP; the outage
+the owner saw was SoChain 429s.) BlockCypher CORS-blocked in the real
+browser (confirmed in the baseline and final CDP console errors) — dead
+as a browser fallback. dogechain.info → 301 to dogechain.com;
+dogechain.com `/api/v1/address/balance/{addr}` returns correct data with
+rate-limit headers (limit 120, remaining 29) but NO
+`Access-Control-Allow-Origin` header — browser-blocked. dogebook.com
+(Blockbook): 307 to domainmonkey.com — dead domain. Trezor
+`doge1.trezor.io`: 403. `blockbook.dogecoin.org`: connection failed.
+Blockchair no-key: 430 "Your IP address is temporary blacklisted due to
+exceeding usage of API resources. Please apply for an API key" — keyed +
+blacklisted. Verdict: no working keyless fallback the browser can read.
+Owner decision needed — free SoChain API key (owner creates it; 75k/month
+free tier) vs Blockchair key vs accept the outage. Do NOT ship a fallback
+that cannot work in-browser. The DOGE row already fails honestly
+("Balance unavailable", no fake zero). Note: the fixture address was
+emptied — BlockCypher says `final_balance: 0`, `total_received ==
+total_sent == 1000781125175`, 6 txs — so dogechain.com's 0 is correct and
+the adapter doc's "confirmed 10007.79125175 DOGE" example is stale.
+
+### 11. ci.yml defines the web job twice — DECIDED-AND-DONE
+Deleted the first `web:` job (10-min timeout, build + `npm test` only).
+One `web:` job remains (20-min, full gates: typecheck, lint, vitest,
+build, bundle-size, audit, pinned deps, cycles, crypto-architecture,
+chains drift). YAML parses; jobs = docs-checks, e2e, floor-guard,
+node-tests, python-tests, web. `e2e`'s `needs: web` still resolves.
+
+### 12. The 16 jscpd clone pairs — DECIDED-AND-DONE (20 → 1)
+Method: `npx jscpd src --min-lines 5 --min-tokens 50`, excluding
+`**/*.test.ts` / `**/*.test.tsx` — 20 clones, 267 duplicated lines. The
+brief's "16" does not reproduce exactly (likely jscpd version drift or
+pair-vs-group counting; several pairs overlap into single blocks). The
+independent repo-hygiene audit (2026-11-24) found the same 20 groups /
+267 lines on token-gaps, confirming the count. Without the test exclusion
+the count is 438 clones (117 ts + 321 tsx) — mostly test-file mirrors,
+which are not duplication. Consolidated 19, each verified
+behaviour-identical by tsc 0 + targeted tests: (H) `sameTokenAddress` /
+`validUsdPrice` / `liquidityUsd` / `freshQuote` byte-identical between
+`dex-prices.ts` and `price-fallbacks.ts` → new leaf module
+`wallet/price-helpers.ts` (imports only `guards` at runtime + erased
+types — adds no edge to the documented prices ↔ price-fallbacks ↔
+dex-prices cycle); (W) `watchChains` / `exportChains` in
+`wallet-management.tsx` were the same 22-chain literal twice → both
+derive from `SUPPORTED_CHAINS`; (P) dex-prices' `fetchJson` was a second
+copy of `prices.ts` `fetchJsonWithTimeout` → one call + remap; (ton)
+`devnet-endpoints.ts` had a private copy of the exported `ton.ts`
+`base64ToHex` → deleted, imported; (types) `adapters/types.ts`
+`fetchJson` and the devnet BTC broadcast's inline fetch shared the
+timeout/abort/HTTP-error shape → new `fetchWithTimeout` in
+`adapters/types.ts`; (confirmation-policy) `evaluateTron` / `evaluateTon`
+returned the same unknown-evaluation literal in five places → module-level
+`unknownEvaluation(reason)` helper; (useDevnetToggle) the toggle preamble
++ logic shared by `app.tsx` `NetworkModePill` and
+`devnet-setting.tsx` `DevnetSetting` → new `state/use-devnet-toggle.ts`
+hook; (J) Receive/Send token-picker rows shared the `<li>` + `<button>`
+shell → new `screens/token-picker-row.tsx` `TokenPickerRow`; (A)
+`asset-detail.tsx` history list vs `transaction-history.tsx` rows shared
+the tx `<li>` → new `screens/tx-row.tsx` `TxRow` + `formatDate` (moved
+from transaction-history); (sol/trx) `checkAddress` / `rpcErrorMessage` /
+`dataList` preambles deduplicated; (trx) the two `readJsonFrom` try/catch
+blocks → `tryRead` thunk helper; (R) `usePrices` / `useTokenPrices` were
+the same scaffolding (idle/loading/ready, mounted + in-flight guards,
+no-fetch network error, 3 attempts with the same backoff, cache saved when
+anything is fresh) → generic `usePriceRefresh<E>` in `prices.ts` with the
+four differing pieces injected through an `implRef` (latest-ref pattern),
+so the refresh callbacks keep the callers' exact dependencies. One
+deliberate micro-difference, documented in the hook comment: the native
+hook used to check mounted between its two per-attempt fetches (CoinGecko,
+then fallbacks); the shared loop checks before and after the combined
+fetch — the only effect is one fallback fetch still firing after an
+unmount, its result discarded by the post-fetch mounted check, so no state
+update and no cache write can follow an unmount in either version. One
+clone LEFT, with reason: `state/wallet-context.tsx:1725-1733` (8 lines, 50
+tokens) — the useMemo VALUE object literal vs its DEPS array listing the
+same identifiers is a FALSE POSITIVE for consolidation: React's useMemo
+contract requires the deps array to mirror the value; there is nothing to
+dedupe without breaking the hook.
+
+### 13. Wallet-refresh re-wire — DECIDED-AND-DONE (deleted)
+`apps/web/src/state/wallet-refresh.ts` (401 lines) + tests
+`wallet-refresh-characterisation.test.tsx` (280) +
+`wallet-refresh-import-failure.test.tsx` (142) = 823 lines, deleted via
+`git rm`. Zero production importers (only the two test files imported
+`createRefresh`); `wallet-context.tsx` owns refresh inline
+(`refreshBalances` / `refreshTokenBalances`). The 6 infeasibility reasons
+(from `docs/MARKETING-FIX-PROGRAMME.md` (c2)): 4 hardcoded chains vs 21
+registry chains; mainnet-only vs devnet-aware; different retry policy
+(observable under 429s); `refreshing` / `stale` flags the context sets
+and UI renders; `bawa:balances-cache:v1` the context writes; token
+balances not covered at all. Redesign would mean rewriting the live
+refresh path — the proved-infeasible work — so delete, with gate proof
+(tsc 0, full vitest 1808 passed / 5 skipped / 0 failed on the lane tree).
+Docs fixed: `docs/runbooks/refresh-failure.md` was stale (claimed
+wallet-refresh.ts is "wrapped and re-exported by wallet-context.tsx" —
+false; and referenced `sanitiseReason` in wallet-refresh.ts — that
+function existed ONLY there; the live path produces reason tokens inline,
+e.g. `wallet-context.tsx:883`); header now points at
+`wallet-context.tsx` inline with the deletion noted.
+`docs/HOW-IT-WORKS.md:222` refresh pointer wallet-refresh.ts →
+wallet-context.tsx. Historical programme records mentioning wallet-refresh
+(`docs/MARKETING-FIX-PROGRAMME.md:63`, `docs/DECISIONS.md:816,955,1021`,
+`docs/REVERIFY-PROGRAMME.md:155`, `docs/GAP-ANALYSIS.md:616,618`) left as
+dated records.
+
+### Open decisions carried forward (unchanged from §18, minus the items decided above)
+Live-camera scan (needs the owner's phone); review/sign (needs a funded
+wallet); README showcase link (owner never named the repo — do NOT invent
+it); Android Gradle (no SDK/JDK on gray-pinee); ECDSA confirmation;
+one-time password migration (NOT ordered — do NOT implement); broadcast
+authorisation (NOT authorised — do NOT implement); M-39 (needs
+desktop/device work); QR 136/192; Receive details scroll 426 px (smaller
+buttons vs top-stack rework); E2E-02 devnet-derivation race (real app
+bug); faucets (owner must complete captchas); TonCenter keyed tier;
+xDAI+MNT no keyless price fallback; FTM low-liquidity pair;
+devnet+unlocked-vault Retry; asset-detail sticky Refresh; Number Ticker
+CDP-unverified (nonzero hero needs a funded wallet, forbidden).
+NEW from this lane: `engine/confirmation-policy.ts` orphaned by the item-9
+deletion (for Lane I / repo-cleanup); multi-phrase vaults (owner decision
+on options A/B/C); DOGE fallback (owner key decision); rotation-funds
+aggregation (follow-up design); Metis history is one CORS header away
+from wiring.

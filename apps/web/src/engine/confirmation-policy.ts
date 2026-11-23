@@ -275,6 +275,20 @@ export interface TronObservation {
   stale: boolean;
 }
 
+/**
+ * Shared "unknown" result for the TRX/TON evaluators (Fix-all Lane H,
+ * item 12): the two evaluators check different observation fields, but
+ * the outcome — unknown, not confirmed, same reason — is one shape.
+ */
+function unknownEvaluation(reason: string): Evaluation {
+  return {
+    state: 'unknown',
+    confirmed: false,
+    reason,
+    policyVersion: POLICY_VERSION,
+  };
+}
+
 export function evaluateTron(obs: TronObservation): Evaluation {
   // Fail closed on unavailable or stale chain data, or on missing
   // inclusion/execution facts. The two solidification evidence paths
@@ -286,21 +300,11 @@ export function evaluateTron(obs: TronObservation): Evaluation {
     obs.blockNumber === null ||
     obs.contractRet === null
   ) {
-    return {
-      state: 'unknown',
-      confirmed: false,
-      reason: 'unavailable-chain-data',
-      policyVersion: POLICY_VERSION,
-    };
+    return unknownEvaluation('unavailable-chain-data');
   }
 
   if (!obs.included) {
-    return {
-      state: 'unknown',
-      confirmed: false,
-      reason: 'not-included',
-      policyVersion: POLICY_VERSION,
-    };
+    return unknownEvaluation('not-included');
   }
 
   if (obs.contractRet === 'FAILED') {
@@ -317,12 +321,7 @@ export function evaluateTron(obs: TronObservation): Evaluation {
     obs.solidifiedBlockNumber === null &&
     obs.distinctSolidifyingSRs === null
   ) {
-    return {
-      state: 'unknown',
-      confirmed: false,
-      reason: 'unavailable-chain-data',
-      policyVersion: POLICY_VERSION,
-    };
+    return unknownEvaluation('unavailable-chain-data');
   }
 
   const confirmed =
@@ -375,21 +374,11 @@ export function evaluateTon(obs: TonObservation): Evaluation {
     obs.shardBlockId === null ||
     obs.currentMasterchainSeqno === null
   ) {
-    return {
-      state: 'unknown',
-      confirmed: false,
-      reason: 'unavailable-chain-data',
-      policyVersion: POLICY_VERSION,
-    };
+    return unknownEvaluation('unavailable-chain-data');
   }
 
   if (!obs.included) {
-    return {
-      state: 'unknown',
-      confirmed: false,
-      reason: 'not-included',
-      policyVersion: POLICY_VERSION,
-    };
+    return unknownEvaluation('not-included');
   }
 
   const confirmed =

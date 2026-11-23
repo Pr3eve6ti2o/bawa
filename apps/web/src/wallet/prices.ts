@@ -1014,34 +1014,53 @@ export function idlePriceEntries(): PriceMap {
 }
 
 
-export function usePrices(
-  options?: { sleep?: (ms: number) => Promise<void> },
-): { state: PricesState; refresh: () => void } {
-  // Round 2, item 6: the price feed is public market data for the native
-  // asset, so it loads in devnet mode too — a testnet BTC balance is
-  // still priced per BTC, and the rows show that per-unit price. What
-  // stays off in devnet is the FIAT VALUATION of test balances: the
-  // dashboard hero totals against idle entries, and the asset rows show
-  // the per-unit price instead of a fiat value (see dashboard.tsx and
-  // asset-rows.tsx). Test tokens are valueless, so no dollar value is
-  // ever computed from a devnet balance.
-  const [state, setState] = useState<PricesState>(() => {
-    let entries: PriceMap;
-    try {
-      entries = loadCachedPrices(Date.now()) ?? idlePriceEntries();
-    } catch {
-      entries = idlePriceEntries();
-    }
-    return {
-      status: 'idle',
-      entries,
-      lastFetchedAtMs: null,
-    };
-  });
+export type PriceRefreshState<E extends Record<string, PriceEntry>> = {
+  status: 'idle' | 'loading' | 'ready';
+  entries: E;
+  lastFetchedAtMs: number | null;
+};
+
+/**
+ * Shared refresh loop for usePrices and useTokenPrices (Fix-all Lane H,
+ * item 12: jscpd family R). The two hooks were the same scaffolding —
+ * idle/loading/ready, mounted + in-flight guards, a network-error
+ * state when fetch is absent, 3 attempts with the same backoff, fresh
+ * entries merged over the previous set, cache saved when anything is
+ * fresh — and differed only in four injected pieces: the initial
+ * entries (with cache load), the network-error entries, the
+ * per-attempt fetch, and the cache save.
+ *
+ * The injected pieces are read through a ref so the refresh callback
+ * keeps the callers' exact dependencies (state.status, sleep, and the
+ * token requestKey) instead of being recreated every render. One
+ * deliberate micro-difference: the native hook used to check mounted
+ * between its two per-attempt fetches (CoinGecko, then fallbacks);
+ * the shared loop checks before and after the combined fetch. The
+ * only effect is one fallback fetch still firing after an unmount —
+ * its result is discarded by the post-fetch mounted check, so no
+ * state update and no cache write can follow an unmount in either
+ * version.
+ */
+export function usePriceRefresh<E extends Record<string, PriceEntry>>(args: {
+  initialEntries: () => E;
+  networkEntries: () => E;
+  fetchEntries: () => Promise<E>;
+  saveCache: (entries: E) => void;
+  sleep?: (ms: number) => Promise<void>;
+  refreshKey?: string;
+}): { state: PriceRefreshState<E>; refresh: () => void } {
+  const implRef = useRef(args);
+  implRef.current = args;
+  const [state, setState] = useState<PriceRefreshState<E>>(() => ({
+    status: 'idle',
+    entries: implRef.current.initialEntries(),
+    lastFetchedAtMs: null,
+  }));
 
   const inFlight = useRef(false);
   const mounted = useRef(true);
-  const sleep = options?.sleep;
+  const sleep = args.sleep;
+  const refreshKey = args.refreshKey;
 
   useEffect(() => {
     mounted.current = true;
@@ -1051,22 +1070,20 @@ export function usePrices(
   }, []);
 
   const refresh = useCallback(() => {
+    const impl = implRef.current;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
 
-    const networkEntries: PriceMap = { ...idlePriceEntries() };
-    for (const chain of Object.keys(networkEntries) as Array<keyof PriceMap>) {
-      networkEntries[chain] = { status: 'error', reason: 'network' };
-    }
-    const networkError: PricesState = {
+    const network = impl.networkEntries();
+    const networkError: PriceRefreshState<E> = {
       status: 'ready',
-      entries: networkEntries,
+      entries: network,
       lastFetchedAtMs: null,
     };
 
     if (typeof globalThis.fetch !== 'function') {
       setState((previous) => ({
         ...networkError,
-        entries: mergePreservingFreshEntries(networkEntries, previous.entries),
+        entries: mergePreservingFreshEntries(network, previous.entries),
       }));
       return;
     }
@@ -1081,20 +1098,7 @@ export function usePrices(
         for (let attempt = 0; attempt < 3; attempt += 1) {
           if (!mounted.current) return;
 
-          // Lane C: CoinGecko first, then the keyless fallbacks
-          // (price-fallbacks.ts) for every chain whose quote is
-          // not fresh — a 429, an error, or an expired quote such
-          // as Fantom's. A chain no fallback prices keeps its
-          // CoinGecko entry, so the retry/backoff below still sees
-          // the real all-error state when nothing resolved.
-          const cgEntries = await fetchPrices(globalThis.fetch, Date.now());
-          if (!mounted.current) return;
-
-          const entries = await applyPriceFallbacks(
-            globalThis.fetch,
-            cgEntries,
-            Date.now(),
-          );
+          const entries = await impl.fetchEntries();
           if (!mounted.current) return;
 
           const values = Object.values(entries);
@@ -1112,7 +1116,7 @@ export function usePrices(
 
           if (values.some((entry) => entry.status === 'fresh')) {
             try {
-              saveCachedPrices(entries, Date.now());
+              impl.saveCache(entries);
             } catch {
               // Cache writes are best-effort.
             }
@@ -1123,14 +1127,57 @@ export function usePrices(
         if (mounted.current) {
           setState((previous) => ({
             ...networkError,
-            entries: mergePreservingFreshEntries(networkEntries, previous.entries),
+            entries: mergePreservingFreshEntries(network, previous.entries),
           }));
         }
       } finally {
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep]);
+  }, [state.status, sleep, refreshKey]);
 
   return { state, refresh };
+}
+
+export function usePrices(
+  options?: { sleep?: (ms: number) => Promise<void> },
+): { state: PricesState; refresh: () => void } {
+  // Round 2, item 6: the price feed is public market data for the native
+  // asset, so it loads in devnet mode too — a testnet BTC balance is
+  // still priced per BTC, and the rows show that per-unit price. What
+  // stays off in devnet is the FIAT VALUATION of test balances: the
+  // dashboard hero totals against idle entries, and the asset rows show
+  // the per-unit price instead of a fiat value (see dashboard.tsx and
+  // asset-rows.tsx). Test tokens are valueless, so no dollar value is
+  // ever computed from a devnet balance.
+  return usePriceRefresh<PriceMap>({
+    initialEntries: () => {
+      try {
+        return loadCachedPrices(Date.now()) ?? idlePriceEntries();
+      } catch {
+        return idlePriceEntries();
+      }
+    },
+    networkEntries: () => {
+      const entries: PriceMap = { ...idlePriceEntries() };
+      for (const chain of Object.keys(entries) as Array<keyof PriceMap>) {
+        entries[chain] = { status: 'error', reason: 'network' };
+      }
+      return entries;
+    },
+    fetchEntries: async () => {
+      // Lane C: CoinGecko first, then the keyless fallbacks
+      // (price-fallbacks.ts) for every chain whose quote is
+      // not fresh — a 429, an error, or an expired quote such
+      // as Fantom's. A chain no fallback prices keeps its
+      // CoinGecko entry, so the retry/backoff below still sees
+      // the real all-error state when nothing resolved.
+      const cgEntries = await fetchPrices(globalThis.fetch, Date.now());
+      return applyPriceFallbacks(globalThis.fetch, cgEntries, Date.now());
+    },
+    saveCache: (entries) => {
+      saveCachedPrices(entries, Date.now());
+    },
+    sleep: options?.sleep,
+  });
 }

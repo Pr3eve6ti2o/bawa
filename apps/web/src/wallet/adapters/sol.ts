@@ -204,14 +204,32 @@ export function createSolanaAdapter(
     return null;
   };
 
-  const getBalance = async (
+  // Fix-all Lane H, item 12: getBalance/getHistory open identically
+  // (address check + mainnet identity + the same RPC-error record
+  // shape) — one helper each, so the shape is stated once.
+  const checkAddress = async (
     address: string,
-  ): Promise<AdapterResult<AdapterBalance>> => {
+  ): Promise<AdapterResult<never> | null> => {
     if (!isSolanaAddress(address)) {
       return { status: 'error', reason: 'Invalid Solana address' };
     }
-    const identity = await requireMainnet();
-    if (identity) return identity;
+    return requireMainnet();
+  };
+
+  const rpcErrorMessage = (raw: unknown): string | null => {
+    if (isRecord(raw) && isRecord(raw['error'])) {
+      const message =
+        typeof raw['error']['message'] === 'string' ? raw['error']['message'] : 'RPC error';
+      return message;
+    }
+    return null;
+  };
+
+  const getBalance = async (
+    address: string,
+  ): Promise<AdapterResult<AdapterBalance>> => {
+    const blocked = await checkAddress(address);
+    if (blocked) return blocked;
     let raw: unknown;
     let source = PRIMARY_SOURCE;
     try {
@@ -219,11 +237,8 @@ export function createSolanaAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (isRecord(raw) && isRecord(raw['error'])) {
-      const message =
-        typeof raw['error']['message'] === 'string' ? raw['error']['message'] : 'RPC error';
-      return { status: 'error', reason: message };
-    }
+    const rpcErr = rpcErrorMessage(raw);
+    if (rpcErr !== null) return { status: 'error', reason: rpcErr };
     const result = isRecord(raw) ? raw['result'] : undefined;
     const value = isRecord(result) ? result['value'] : undefined;
     if (typeof value !== 'number' && typeof value !== 'string') {
@@ -249,11 +264,8 @@ export function createSolanaAdapter(
     address: string,
     limit = 25,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isSolanaAddress(address)) {
-      return { status: 'error', reason: 'Invalid Solana address' };
-    }
-    const identity = await requireMainnet();
-    if (identity) return identity;
+    const blocked = await checkAddress(address);
+    if (blocked) return blocked;
     let raw: unknown;
     let source = PRIMARY_SOURCE;
     try {
@@ -265,13 +277,8 @@ export function createSolanaAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (isRecord(raw) && isRecord(raw['error'])) {
-      const message =
-        typeof raw['error']['message'] === 'string'
-          ? raw['error']['message']
-          : 'RPC error';
-      return { status: 'error', reason: message };
-    }
+    const rpcErr = rpcErrorMessage(raw);
+    if (rpcErr !== null) return { status: 'error', reason: rpcErr };
     const signatures =
       isRecord(raw) && Array.isArray(raw['result']) ? raw['result'] : null;
     if (signatures === null) {

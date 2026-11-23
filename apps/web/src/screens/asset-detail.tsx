@@ -5,6 +5,7 @@ import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
+import { TxRow } from './tx-row';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { useTokenPrices } from '../wallet/token-prices';
 import { DEFAULT_TOKENS, tokenKeyOf, tokenSlug, type TokenRecord } from '../wallet/tokens';
@@ -506,43 +507,7 @@ export function AssetDetailScreen() {
             ) : null}
             <ul className="space-y-3">
               {recentTxs.map((tx) => (
-                <li key={tx.hash} className="rounded-lg border p-3">
-                  <Link
-                    to={`/transactions/${tx.hash}`}
-                    className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-panel-accent"
-                  >
-                    <span className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-medium">
-                        {tx.direction === 'in'
-                          ? 'Received'
-                          : tx.direction === 'out'
-                            ? 'Sent'
-                            : 'Self transfer'}
-                      </span>
-                      {' '}
-                      <span className="text-sm font-semibold">
-                        {formatNativeWithSymbol(
-                          tx.amountBaseUnits,
-                          CHAIN_DECIMALS[chainId],
-                          config.symbol,
-                        )}
-                      </span>
-                    </span>
-                    <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
-                      {tx.hash}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {tx.timestamp === null
-                        ? 'Pending'
-                        : new Date(tx.timestamp).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                      {tx.status === 'failed' ? ' · Failed' : tx.status === 'pending' ? ' · Pending' : ''}
-                    </span>
-                  </Link>
-                </li>
+                <TxRow key={tx.hash} tx={tx} chain={chainId} />
               ))}
             </ul>
           </>

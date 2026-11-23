@@ -111,10 +111,15 @@ import {
   fetchTonJettonPrices,
 } from './dex-prices';
 import {
+  buildFreshQuote,
+  liquidityUsd,
+  sameTokenAddress,
+  validUsdPrice,
+} from './price-helpers';
+import {
   PRICE_ASSET_IDS,
   type PriceEntry,
   type PriceMap,
-  type PriceQuote,
   type PriceSource,
 } from './prices';
 
@@ -243,16 +248,6 @@ const COINBASE_PRODUCT_IDS: Partial<Record<ChainId, string>> = {
   ltc: 'LTC-USD',
 };
 
-/**
- * The price sources the wallet tries, in order, for one chain
- * (Lane F, FIX-ALL, 2026-11-24 — the Networks screen's Prices card
- * reads this, so the screen and the fallback code can never drift
- * apart). CoinGecko is always first; CoinLore second where it has
- * the chain (16 chains); DexScreener third where a wrapped contract
- * is verified (12 chains); TonAPI for TON and Coinbase for LTC, the
- * two chains CoinLore cannot cover. Gnosis and Mantle return
- * CoinGecko alone — no verified second source exists for them.
- */
 export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
   const sources: PriceSource[] = ['CoinGecko'];
   if (COINLORE_NATIVE_IDS[chain] !== undefined) sources.push('CoinLore');
@@ -262,60 +257,7 @@ export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
   if (chain === 'ton') sources.push('TonAPI');
   if (COINBASE_PRODUCT_IDS[chain] !== undefined) sources.push('Coinbase');
   return sources;
-}
-
-/**
- * Same token address: EVM hex compares case-insensitively
- * (checksummed vs lowercase), base58 (Solana) compares exactly —
- * lowercasing two different base58 strings could falsely equate
- * them. (Mirrors dex-prices.ts; that helper is not exported.)
- */
-function sameTokenAddress(left: string, right: string): boolean {
-  if (left.startsWith('0x') && right.startsWith('0x')) {
-    return left.toLowerCase() === right.toLowerCase();
-  }
-  return left === right;
-}
-
-/** A provider USD price: a finite number > 0, string or numeric. */
-function validUsdPrice(value: unknown): string | null {
-  const price =
-    typeof value === 'number'
-      ? value
-      : typeof value === 'string'
-        ? Number(value)
-        : NaN;
-  if (!Number.isFinite(price) || price <= 0) return null;
-  return String(price);
-}
-
-function freshQuote(
-  chain: ChainId,
-  providerAssetId: string,
-  usdPrice: string,
-  source: PriceSource,
-  nowMs: number,
-): PriceEntry {
-  const quote: PriceQuote = {
-    chain,
-    assetId: PRICE_ASSET_IDS[chain],
-    providerAssetId,
-    usdPrice,
-    providerUpdatedAtMs: nowMs,
-    fetchedAtMs: nowMs,
-    source,
-  };
-  return { status: 'fresh', quote };
-}
-
-function liquidityUsd(pair: Record<string, unknown>): number {
-  const liquidity = ownValue(pair, 'liquidity');
-  if (!isRecord(liquidity)) return 0;
-  const usd = ownValue(liquidity, 'usd');
-  return typeof usd === 'number' && Number.isFinite(usd) && usd > 0 ? usd : 0;
-}
-
-export function parseCoinLoreResponse(
+}export function parseCoinLoreResponse(
   payload: unknown,
   chains: readonly ChainId[],
   nowMs: number,
@@ -356,7 +298,7 @@ export function parseCoinLoreResponse(
       entries[chain] = { status: 'unavailable', reason: 'invalid-price' };
       continue;
     }
-    entries[chain] = freshQuote(chain, id, price, 'CoinLore', nowMs);
+    entries[chain] = buildFreshQuote(chain, PRICE_ASSET_IDS[chain], id, price, 'CoinLore', nowMs);
   }
   return entries;
 }
@@ -433,10 +375,10 @@ export function parseDexScreenerNativeResponse(
   }
 
   if (bestBase !== null) {
-    return freshQuote(chain, contract, bestBase.price, 'DexScreener', nowMs);
+    return buildFreshQuote(chain, PRICE_ASSET_IDS[chain], contract, bestBase.price, 'DexScreener', nowMs);
   }
   if (bestQuote !== null) {
-    return freshQuote(chain, contract, bestQuote.price, 'DexScreener', nowMs);
+    return buildFreshQuote(chain, PRICE_ASSET_IDS[chain], contract, bestQuote.price, 'DexScreener', nowMs);
   }
   // A quote-side pair existed but its numbers were unusable (e.g.
   // priceNative 0): an invalid price, not a missing pair.
@@ -475,7 +417,7 @@ export function parseCoinbaseResponse(
   if (price === null) {
     return { status: 'unavailable', reason: 'invalid-price' };
   }
-  return freshQuote(chain, productId, price, 'Coinbase', nowMs);
+  return buildFreshQuote(chain, PRICE_ASSET_IDS[chain], productId, price, 'Coinbase', nowMs);
 }
 
 type FetchFn = typeof fetch;

@@ -162,9 +162,10 @@ function noWalletBalance(balance: BalanceState): BalanceState {
  * balance must never show a fiat value — test tokens are valueless,
  * so pricing one at the mainnet rate would invent value; the row
  * shows the live per-unit price instead, exactly as a zero-balance
- * row does. The token rows do not apply the devnet suppression today
- * (they pass devnet=false), so this helper takes it as a parameter
- * rather than deciding it.
+ * row does. The token rows apply the same suppression — their row
+ * model passes devnet through (Fix-all Lane H, item 2: they used to
+ * hardcode devnet=false here) — so this helper takes it as a
+ * parameter rather than deciding it.
  */
 function fiatDetail(
   initialDetail: string,
@@ -338,6 +339,7 @@ function getTokenRowModel(
   tokenPrices: TokenPriceMap | undefined,
   nowMs: number,
   tokenPricesLoading: boolean | undefined,
+  devnet = false,
 ): AssetRowModel {
   const key = tokenKeyOf(token);
   const chainName = chainConfig(token.chain).displayName;
@@ -410,7 +412,7 @@ function getTokenRowModel(
       entry,
       token.symbol,
       nowMs,
-      false,
+      devnet,
     ));
   }
 
@@ -732,7 +734,7 @@ export function AssetRows({
       getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, devnet),
     ),
     ...tokens.map((token) =>
-      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading),
+      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, devnet),
     ),
   ];
   const visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;

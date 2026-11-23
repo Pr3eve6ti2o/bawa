@@ -20,7 +20,7 @@
  * feed never invents a price. The row label shows the quote's real
  * source (see asset-rows / asset-detail), never a hardcoded provider.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { isPlainObject, ownValue } from './guards';
 import {
   PRICE_ATTRIBUTION_TEXT,
@@ -29,10 +29,8 @@ import {
   isCacheableQuote,
   isFreshQuote,
   isValidUsdPriceString,
-  mergePreservingFreshEntries,
   parseCoingeckoPriceEntry,
-  priceRetryDelayMs,
-  resolvePriceWait,
+  usePriceRefresh,
   writePriceCache,
   type FiatValueResult,
   type PriceEntry,
@@ -419,95 +417,30 @@ export function useTokenPrices(
   requestsRef.current = requests;
   const tokensRef = useRef(tokens);
   tokensRef.current = tokens;
-  const [state, setState] = useState<TokenPricesState>(() => {
-    const keys = requests.map((r) => r.key);
-    let entries: TokenPriceMap;
-    try {
-      entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
-    } catch {
-      entries = tokenPriceEntries(keys);
-    }
-    return { status: 'idle', entries, lastFetchedAtMs: null };
-  });
-
-  const inFlight = useRef(false);
-  const mounted = useRef(true);
-  const sleep = options?.sleep;
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(() => {
-    if (!mounted.current || state.status === 'loading' || inFlight.current) return;
-    const currentRequests = requestsRef.current;
-    const keys = currentRequests.map((r) => r.key);
-    const networkEntries = tokenPriceEntries(keys);
-    for (const key of keys) {
-      networkEntries[key] = { status: 'error', reason: 'network' };
-    }
-    const networkError: TokenPricesState = {
-      status: 'ready',
-      entries: networkEntries,
-      lastFetchedAtMs: null,
-    };
-    if (typeof globalThis.fetch !== 'function') {
-      setState((previous) => ({
-        ...networkError,
-        entries: mergePreservingFreshEntries(
-          networkEntries,
-          previous.entries,
-        ),
-      }));
-      return;
-    }
-    const wait = resolvePriceWait(sleep);
-    inFlight.current = true;
-    setState((previous) => ({ ...previous, status: 'loading' }));
-    void (async () => {
+  return usePriceRefresh<TokenPriceMap>({
+    initialEntries: () => {
+      const keys = requests.map((r) => r.key);
       try {
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          if (!mounted.current) return;
-          const entries = await fetchTokenPrices(globalThis.fetch, currentRequests, Date.now(), tokensRef.current);
-          if (!mounted.current) return;
-          const values = Object.values(entries);
-          const retryDelayMs = priceRetryDelayMs(values, attempt);
-          if (retryDelayMs !== null) {
-            await wait(retryDelayMs);
-            continue;
-          }
-          setState((previous) => ({
-            status: 'ready',
-            entries: mergePreservingFreshEntries(entries, previous.entries),
-            lastFetchedAtMs: Date.now(),
-          }));
-          if (values.some((entry) => entry.status === 'fresh')) {
-            try {
-              saveCachedTokenPrices(entries, Date.now(), tokensRef.current);
-            } catch {
-              // Cache writes are best-effort.
-            }
-          }
-          return;
-        }
+        return loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
       } catch {
-        if (mounted.current) {
-          setState((previous) => ({
-            ...networkError,
-            entries: mergePreservingFreshEntries(
-              networkEntries,
-              previous.entries,
-            ),
-          }));
-        }
-      } finally {
-        inFlight.current = false;
+        return tokenPriceEntries(keys);
       }
-    })();
-  }, [state.status, sleep, requestKey]);
-
-  return { state, refresh };
+    },
+    networkEntries: () => {
+      const currentRequests = requestsRef.current;
+      const keys = currentRequests.map((r) => r.key);
+      const entries = tokenPriceEntries(keys);
+      for (const key of keys) {
+        entries[key] = { status: 'error', reason: 'network' };
+      }
+      return entries;
+    },
+    fetchEntries: () =>
+      fetchTokenPrices(globalThis.fetch, requestsRef.current, Date.now(), tokensRef.current),
+    saveCache: (entries) => {
+      saveCachedTokenPrices(entries, Date.now(), tokensRef.current);
+    },
+    sleep: options?.sleep,
+    refreshKey: requestKey,
+  });
 }

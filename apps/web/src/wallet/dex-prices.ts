@@ -49,11 +49,14 @@ import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
-  PRICE_FETCH_TIMEOUT_MS,
+  buildFreshQuote,
+  liquidityUsd,
+  sameTokenAddress,
+  validUsdPrice,
+} from './price-helpers';
+import {
   fetchJsonWithTimeout,
-  isFreshQuote,
   type PriceEntry,
-  type PriceQuote,
 } from './prices';
 
 export const DEXSCREENER_BASE_URL = 'https://api.dexscreener.com';
@@ -96,51 +99,6 @@ export interface TonPriceRequest {
 type PriceMap = Record<string, PriceEntry>;
 
 
-
-/**
- * Same token address: EVM hex compares case-insensitively (checksummed
- * vs lowercase), base58 (Solana/TRON) compares exactly — lowercasing
- * two different base58 strings could falsely equate them.
- */
-function sameTokenAddress(left: string, right: string): boolean {
-  if (left.startsWith('0x') && right.startsWith('0x')) {
-    return left.toLowerCase() === right.toLowerCase();
-  }
-  return left === right;
-}
-
-/** A DexScreener priceUsd: a finite number > 0, string or numeric. */
-function validUsdPrice(value: unknown): string | null {
-  const price = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
-  if (!Number.isFinite(price) || price <= 0) return null;
-  return String(price);
-}
-
-function freshQuote(
-  chain: ChainId,
-  contract: string,
-  usdPrice: string,
-  source: PriceQuote['source'],
-  nowMs: number,
-): PriceEntry {
-  const quote: PriceQuote = {
-    chain,
-    assetId: contract,
-    providerAssetId: contract,
-    usdPrice,
-    providerUpdatedAtMs: nowMs,
-    fetchedAtMs: nowMs,
-    source,
-  };
-  return isFreshQuote(quote, nowMs) ? { status: 'fresh', quote } : { status: 'expired', quote };
-}
-
-function liquidityUsd(pair: Record<string, unknown>): number {
-  const liquidity = ownValue(pair, 'liquidity');
-  if (!isRecord(liquidity)) return 0;
-  const usd = ownValue(liquidity, 'usd');
-  return typeof usd === 'number' && Number.isFinite(usd) && usd > 0 ? usd : 0;
-}
 
 export function parseDexScreenerResponse(
   payload: unknown,
@@ -216,7 +174,7 @@ export function parseDexScreenerResponse(
     entries[request.key] =
       best === null
         ? { status: 'unavailable', reason: 'missing' }
-        : freshQuote(request.chain, request.contract, best.price, 'DexScreener', nowMs);
+        : buildFreshQuote(request.chain, request.contract, request.contract, best.price, 'DexScreener', nowMs);
   }
   return entries;
 }
@@ -244,21 +202,12 @@ export function parseTonRatesResponse(
     entries[request.key] =
       price === null
         ? { status: 'unavailable', reason: 'missing' }
-        : freshQuote('ton', request.contract, price, 'TonAPI', nowMs);
+        : buildFreshQuote('ton', request.contract, request.contract, price, 'TonAPI', nowMs);
   }
   return entries;
 }
 
 type FetchFn = typeof fetch;
-
-function isAbortError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    (error as { name: unknown }).name === 'AbortError'
-  );
-}
 
 function errorEntries(
   requests: readonly { key: string }[],
@@ -279,46 +228,14 @@ export async function fetchJson(
   | { status: 'ok'; payload: unknown }
   | { status: 'error'; entries: Extract<PriceEntry, { status: 'error' }> }
 > {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetchFn(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const seconds = retryAfter !== null && retryAfter.trim() !== '' ? Number(retryAfter) : NaN;
-      const retryAfterMs = seconds * 1000;
-      return {
-        status: 'error',
-        entries: {
-          status: 'error',
-          reason: 'rate-limited',
-          ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0 ? { retryAfterMs } : {}),
-        },
-      };
-    }
-    if (!response.ok) {
-      return { status: 'error', entries: { status: 'error', reason: 'provider' } };
-    }
-    try {
-      return { status: 'ok', payload: await response.json() };
-    } catch (error: unknown) {
-      return {
-        status: 'error',
-        entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'provider' },
-      };
-    }
-  } catch (error: unknown) {
-    return {
-      status: 'error',
-      entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'network' },
-    };
-  } finally {
-    clearTimeout(timer);
-  }
+  // Fix-all Lane H, item 12 (jscpd family P): this was a second copy
+  // of fetchJsonWithTimeout's timeout/429/!ok/parse/catch shape with
+  // the error nested under `entries` instead of `error` — one call +
+  // remap now, same result in every branch (FetchJsonResult's error
+  // IS the entries type, and FetchFn IS typeof fetch).
+  const result = await fetchJsonWithTimeout(fetchFn, url);
+  if (result.status === 'ok') return { status: 'ok', payload: result.payload };
+  return { status: 'error', entries: result.error };
 }
 
 export async function fetchDexScreenerPrices(

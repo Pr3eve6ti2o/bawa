@@ -115,6 +115,15 @@ export function createTronAdapter(
   // endpoint list in order (SOL pattern), one withRetry around the
   // whole sweep. The attempt is a raw transport call — no per-endpoint
   // retry — so a dead primary fails over after one attempt, not nine.
+  const resolveBaseUrls = (): string[] =>
+    resolveEndpoints(overrides.baseUrls, [baseUrl]);
+  const readJsonFrom = createMempoolReader(transport, resolveBaseUrls);
+  // Chain-identity check result, cached per instance: TRON has no on-chain
+  // chain-id, so identity rests on the pinned endpoint responding
+  // with a well-formed block. The endpoint URL is fixed at
+  // construction and never changes, so one check per instance is enough.
+  let identityChecked = false;
+
   // Fix-All Lane A: the registry's second entry is PublicNode's TRON
   // full node (tron-rpc.publicnode.com). It answers the /wallet/*
   // full-node paths (identity, fee) but not Trongrid's /v1/* REST
@@ -291,53 +300,64 @@ export function createTronAdapter(
     return null;
   };
 
-  const getBalance = async (
+  // Fix-all Lane H, item 12: getBalance/getHistory open identically
+  // (address check + network identity + the same account-list shape)
+  // — one helper each, so the shape is stated once.
+  const checkAddress = async (
     address: string,
-  ): Promise<AdapterResult<AdapterBalance>> => {
+  ): Promise<AdapterResult<never> | null> => {
     if (!isTronAddress(address)) {
       return { status: 'error', reason: 'Invalid TRON address' };
     }
-    const identity = await requireNetwork();
-    if (identity) {
-      if (!tronScanEnabled) return identity;
-      // Trongrid identity failed (429 on the shared egress IP): a live
-      // TronScan account read proves TRON mainnet the same way TonAPI
-      // does for TON. When TronScan fails too, the Trongrid error is
-      // reported — the primary failure is the one the owner needs to see.
-      const fallback = await getTronScanBalance(address);
-      return fallback.status === 'ok' ? fallback : identity;
-    }
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    let primaryError: AdapterResult<AdapterBalance> | null = null;
+    return requireNetwork();
+  };
+
+  const dataList = (raw: unknown): unknown[] | undefined =>
+    isRecord(raw) && Array.isArray(raw['data']) ? raw['data'] : undefined;
+
+  // The two readJsonFrom calls differ only in the URL + op name —
+  // the try/catch + error mapping is one helper taking the call as a
+  // thunk. (Fix-all Lane H, item 12.)
+  const tryRead = async (
+    call: () => Promise<{ raw: unknown; endpoint: string }>,
+  ): Promise<{ raw: unknown; endpoint: string } | AdapterResult<never>> => {
     try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/v1/accounts/${address}`,
-        'trx.getBalance',
-      ));
+      return await call();
     } catch (error: unknown) {
-      primaryError = toAdapterError(error);
+      return toAdapterError(error);
     }
-    const data =
-      primaryError === null && isRecord(raw) && Array.isArray(raw['data'])
-        ? raw['data']
-        : undefined;
-    if (data === undefined) {
+  };
+
+  const getBalance = async (
+    address: string,
+  ): Promise<AdapterResult<AdapterBalance>> => {
+    const blocked = await checkAddress(address);
+    if (blocked) {
+      // Identity failure (Trongrid 429 on the shared egress IP) falls
+      // back to TronScan on mainnet (Fix-All Lane A); an invalid
+      // address never falls back.
+      if (!tronScanEnabled || !isTronAddress(address)) return blocked;
+      const fallback = await getTronScanBalance(address);
+      return fallback.status === 'ok' ? fallback : blocked;
+    }
+    const read = await tryRead(() =>
+      readJsonFrom((base) => `${base}/v1/accounts/${address}`, 'trx.getBalance'),
+    );
+    if ('status' in read) {
+      if (!tronScanEnabled) return read;
+      const fallback = await getTronScanBalance(address);
+      return fallback.status === 'ok' ? fallback : read;
+    }
+    const { raw, endpoint } = read;
+    const data = dataList(raw);
+    if (!data) {
       if (!tronScanEnabled) {
-        return (
-          primaryError ?? {
-            status: 'error',
-            reason: 'Invalid response: expected an account list',
-          }
-        );
+        return { status: 'error', reason: 'Invalid response: expected an account list' };
       }
       const fallback = await getTronScanBalance(address);
       return fallback.status === 'ok'
         ? fallback
-        : (primaryError ?? {
-            status: 'error',
-            reason: 'Invalid response: expected an account list',
-          });
+        : { status: 'error', reason: 'Invalid response: expected an account list' };
     }
     const first = data[0];
     // An account that was never funded has no data entry: exact zero.
@@ -368,47 +388,37 @@ export function createTronAdapter(
     address: string,
     limit = 20,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isTronAddress(address)) {
-      return { status: 'error', reason: 'Invalid TRON address' };
-    }
-    const identity = await requireNetwork();
-    if (identity) {
-      if (!tronScanEnabled) return identity;
+    const blocked = await checkAddress(address);
+    if (blocked) {
+      // Identity failure (Trongrid 429 on the shared egress IP) falls
+      // back to TronScan on mainnet (Fix-All Lane A); an invalid
+      // address never falls back.
+      if (!tronScanEnabled || !isTronAddress(address)) return blocked;
       const fallback = await getTronScanHistory(address, limit);
-      return fallback.status === 'ok' ? fallback : identity;
+      return fallback.status === 'ok' ? fallback : blocked;
     }
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    let primaryError: AdapterResult<AdapterTx[]> | null = null;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
+    const read = await tryRead(() =>
+      readJsonFrom(
         (base) =>
           `${base}/v1/accounts/${address}/transactions?limit=${limit}&order_by=block_timestamp,desc`,
         'trx.getHistory',
-      ));
-    } catch (error: unknown) {
-      primaryError = toAdapterError(error);
+      ),
+    );
+    if ('status' in read) {
+      if (!tronScanEnabled) return read;
+      const fallback = await getTronScanHistory(address, limit);
+      return fallback.status === 'ok' ? fallback : read;
     }
-    const data =
-      primaryError === null && isRecord(raw) && Array.isArray(raw['data'])
-        ? raw['data']
-        : undefined;
+    const { raw, endpoint } = read;
+    const data = dataList(raw);
     if (!data) {
       if (!tronScanEnabled) {
-        return (
-          primaryError ?? {
-            status: 'error',
-            reason: 'Invalid response: expected a transaction list',
-          }
-        );
+        return { status: 'error', reason: 'Invalid response: expected a transaction list' };
       }
       const fallback = await getTronScanHistory(address, limit);
       return fallback.status === 'ok'
         ? fallback
-        : (primaryError ?? {
-            status: 'error',
-            reason: 'Invalid response: expected a transaction list',
-          });
+        : { status: 'error', reason: 'Invalid response: expected a transaction list' };
     }
     const txs: AdapterTx[] = [];
     for (const entry of data) {

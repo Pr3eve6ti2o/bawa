@@ -212,8 +212,32 @@ describe('dashboard screen', () => {
     try {
       expect(heroAmount(mounted)).toBe('$0.00');
       expect(mounted.div.textContent).not.toContain('(Partial)');
+      expect(mounted.div.textContent).not.toContain('Nothing here yet');
       expect(mounted.div.textContent).not.toContain('Partial total. Some balances or prices are missing');
       expect(mounted.div.textContent).toContain("Some balances or prices couldn't be checked just now.");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a quiet note under a genuinely fresh $0.00', async () => {
+    // Fix-all Lane H, item 4b: every balance loaded as zero and nothing
+    // failed — the hero is a clean $0.00, and the note under it says the
+    // wallet holds nothing yet (as opposed to the partial case above,
+    // where the same $0.00 carries the failure note instead).
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    const mounted = await mountScreen();
+    try {
+      expect(heroAmount(mounted)).toBe('$0.00');
+      expect(mounted.div.textContent).not.toContain('(Partial)');
+      expect(mounted.div.textContent).toContain('Nothing here yet — receive on any chain to get started.');
     } finally {
       await mounted.cleanup();
     }
@@ -1240,6 +1264,71 @@ describe('dashboard screen', () => {
       // devnet marker is the app header pill.
       expect(text).not.toContain('Testnet');
       expect(text).not.toContain('TESTNET');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('suppresses fiat on token rows in devnet mode but keeps the live per-unit price', async () => {
+    // Fix-all Lane H, item 2: token rows had the devnet suppression
+    // missing (they hardcoded devnet=false in fiatDetail), so 25 test
+    // USDC would have read as $25.00. Same rule as the native rows:
+    // the per-unit price is public market data and shows; the test
+    // balance is never valued.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () =>
+          url.includes('usd-coin')
+            ? {
+                ...freshPayload(),
+                'usd-coin': { usd: 1, last_updated_at: Math.floor(Date.now() / 1000) - 30 },
+              }
+            : freshPayload(),
+        headers: { get: () => null },
+      })),
+    );
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        devnetEnabled: true,
+        tokenBalances: {
+          'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+            status: 'available',
+            value: '25000000',
+          },
+        },
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const start = Date.now();
+      while (
+        !(mounted.div.textContent ?? '').includes('$1.00') &&
+        Date.now() - start < 5000
+      ) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+      }
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('25 USDC');
+      expect(text).toContain('$1.00');
+      expect(text).toContain('per USDC');
+      expect(text).not.toContain('$25.00');
+      // All-zero natives + a valueless test token: the hero is a clean
+      // $0.00 (the same rule as the natives in devnet — zero values to
+      // $0.00, only a nonzero test balance reads Unavailable), with the
+      // fresh-wallet note, never a $25.00 valuation of the test token.
+      expect(heroAmount(mounted)).toBe('$0.00');
+      expect(text).toContain('Nothing here yet — receive on any chain to get started.');
     } finally {
       await mounted.cleanup();
     }

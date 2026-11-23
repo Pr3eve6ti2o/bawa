@@ -1,9 +1,12 @@
 # Runbook — refresh failure (balances / history)
 
 Applies to `refreshBalances()` and `refreshHistory()` in
-`apps/web/src/state/wallet-refresh.ts` (wrapped and re-exported by
-`apps/web/src/state/wallet-context.tsx`), and to the screens that show
-their state (`screens/dashboard.tsx`, `screens/transaction-history.tsx`).
+`apps/web/src/state/wallet-context.tsx` (they live there inline; the
+standalone `apps/web/src/state/wallet-refresh.ts` module was deleted
+in the fix-all programme, Lane H item 13 — it was never wired in, and
+its re-wire was proved infeasible without behaviour change), and to
+the screens that show their state (`screens/dashboard.tsx`,
+`screens/transaction-history.tsx`).
 
 ## What the states mean
 
@@ -22,7 +25,9 @@ Rules that never change:
   read failure; a transaction failure is a different outcome.
 - The reason shown is a short machine-readable token, never a raw error payload,
   address, or balance. The tokens the refresh actually produces (see
-  `sanitiseReason` in `wallet-refresh.ts`): `no-adapter`,
+  set inline in `wallet-context.tsx` — there is no single sanitiser
+  function; the dead `sanitiseReason` lived only in the deleted
+  `wallet-refresh.ts`): `no-adapter`,
   `adapter-load-failed` (report only), `timeout`, `network`,
   `rate-limited` (HTTP 429), `not-found`, `bad-request`,
   `provider-unavailable` (HTTP 502/503/504), `provider`,

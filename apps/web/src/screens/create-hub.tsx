@@ -128,11 +128,15 @@ export function CreateScreen() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        <h2 id="coming-soon" className="text-lg font-semibold text-ink">
+      {/* Fix-all Lane H, item 4c: the four Coming soon cards filled a
+          whole screen on Create and pushed the screen's one action out
+          of balance — collapsed into a disclosure, one tap away, so
+          Create ends after the wallet identity section. */}
+      <details className="rounded-bawa border-2 border-ink bg-paper p-4">
+        <summary id="coming-soon" className="cursor-pointer text-lg font-semibold text-ink">
           Coming soon
-        </h2>
-        <ul className="space-y-3">
+        </summary>
+        <ul className="mt-3 space-y-3">
           {comingSoon.map((tool) => (
             <li key={tool.name} className="flex min-w-0 items-start gap-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
@@ -145,7 +149,7 @@ export function CreateScreen() {
             </li>
           ))}
         </ul>
-      </div>
+      </details>
     </section>
   );
 }

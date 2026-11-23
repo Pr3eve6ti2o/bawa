@@ -168,8 +168,7 @@ describe.sequential('App', () => {
     // the sidebar width, the nav fills it, the wrapper clips x, the
     // frame is full-bleed at desktop: (980px, the width a phone in
     // desktop mode is forced to — below Tailwind lg, 1024px), and the
-    // content cap steps up at 2xl. Ported from desktop-layout-v2 bf00f54.
-    await withRenderedApp('/', (div) => {
+    // content cap steps up at 2xl. Ported from desktop-layout-v2 bf00f54.    await withRenderedApp('/', (div) => {
       const frame = Array.from(div.querySelectorAll('div')).find((el) =>
         el.className.includes('desktop:flex-row'),
       );
@@ -181,7 +180,7 @@ describe.sequential('App', () => {
       const shellAside = asides[0] as Element;
       expect(shellAside.className).toContain('desktop:w-[224px]');
       expect(shellAside.className).not.toContain('lg:border-r-2');
-      const stickyWrapper = shellAside.children[0] as Element;
+      expect(shellAside.className).not.toContain('desktop:border-r-2');      const stickyWrapper = shellAside.children[0] as Element;
       expect(stickyWrapper?.className).toContain('overflow-x-hidden');
       expect(stickyWrapper?.className).toContain('overflow-y-auto');
       const innerAside = asides[1] as Element;

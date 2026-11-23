@@ -20,6 +20,8 @@
 
 import type { ChainId } from '../engine/boundary';
 import { isRecord } from './guards';
+import { base64ToHex } from './adapters/ton';
+import { fetchWithTimeout } from './adapters/types';
 import type {
   BroadcastResult,
   FetchTransport,
@@ -143,16 +145,6 @@ export function devnetExplorerTxUrl(
 }
 
 
-/** Base64 (TonCenter tx hashes) to lowercase hex, without Buffer. */
-function base64ToHex(base64: string): string {
-  const binary = globalThis.atob(base64);
-  let hex = '';
-  for (let i = 0; i < binary.length; i++) {
-    hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
-  }
-  return hex;
-}
-
 /**
  * BTC testnet4 broadcast: POST the raw transaction hex (no 0x) to
  * mempool.space/testnet4/api/tx; the response body is the txid as
@@ -172,36 +164,20 @@ export function createDevnetBtcBroadcast(): (
       throw new Error('Invalid signed BTC transaction: expected hex.');
     }
     const hex = signedTx.replace(/^0x/, '');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
-    try {
-      let response: Response;
-      try {
-        response = await fetch(`${config.apiBaseUrl}/tx`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: hex,
-          signal: controller.signal,
-        });
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw new Error('Network error: request timed out');
-        }
-        throw new Error(
-          `Network error: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const txid = (await response.text()).trim().toLowerCase();
-      if (!/^[0-9a-f]{64}$/.test(txid)) {
-        throw new Error('Invalid response: expected a transaction id');
-      }
-      return { txHash: txid, explorerUrl: devnetExplorerTxUrl('btc', txid) };
-    } finally {
-      clearTimeout(timeout);
+    const response = await fetchWithTimeout(
+      `${config.apiBaseUrl}/tx`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: hex,
+      },
+      10_000,
+    );
+    const txid = (await response.text()).trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(txid)) {
+      throw new Error('Invalid response: expected a transaction id');
     }
+    return { txHash: txid, explorerUrl: devnetExplorerTxUrl('btc', txid) };
   };
 }
 

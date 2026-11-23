@@ -406,9 +406,8 @@
  * outlet cap). Every in-page lg: grid stays at 1024px, and genuine
  * phone/tablet browsing below 980px is untouched. Nothing here keys
  * off the user-agent string. Ported from desktop-layout-v2 bf00f54
- * (Fix-All Lane I); the Retry-gate half of that commit is superseded
- * by the finish-product Lane J Retry work already on this tree.
- */
+ * (Fix-All Lanes H and I); the Retry-gate half of that commit is superseded
+ * by the finish-product Lane J Retry work already on this tree. */
 @theme {
   --breakpoint-desktop: 61.25rem;
 }

@@ -7,7 +7,9 @@
  * touches a mnemonic, a private key, or the WASM core handle — the
  * key-touching operations (createPartialSigner, withSigningKey) stay
  * in wallet/core.ts and import the helpers they need from here.
- * send.ts and evm-typed-data.ts depend on this module, not on core.
+ * send.ts depends on this module, not on core. (Fix-all Lane H,
+ * item 9: evm-typed-data.ts used to depend on it too; the module was
+ * deleted — it had no consumer and no dApp-connect feature to serve.)
  */
 
 import { hashMessage, hexToBytes, sha256, stringToHex } from 'viem';

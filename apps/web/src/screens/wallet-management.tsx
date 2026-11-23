@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ensureAdapters, useWallet } from "../state/wallet-context";
-import { accountPathFor, chainConfig, type ChainId } from "../wallet/chains";
+import { accountPathFor, chainConfig, SUPPORTED_CHAINS, type ChainId } from "../wallet/chains";
 import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
@@ -24,61 +24,19 @@ const chains = [
 // Token gaps, item 6 + item 8, extended by Lane C to all 22 registry
 // chains: the WATCH-ONLY list used to cover 13 chains, so a watch-only
 // wallet imported for any of the nine newer chains (e.g. Gnosis) was
-// stored but invisible here. The xpub map, validation and derivation
-// already cover all 22. The vault section keeps the original four —
-// its address list is out of this item's scope.
-const watchChains = [
-  { id: "btc", name: "Bitcoin" },
-  { id: "eth", name: "Ethereum" },
-  { id: "trx", name: "TRON" },
-  { id: "ton", name: "TON" },
-  { id: "sol", name: "Solana" },
-  { id: "bsc", name: "BNB Smart Chain" },
-  { id: "matic", name: "Polygon" },
-  { id: "arb", name: "Arbitrum One" },
-  { id: "op", name: "OP Mainnet" },
-  { id: "base", name: "Base" },
-  { id: "avax", name: "Avalanche C-Chain" },
-  { id: "ltc", name: "Litecoin" },
-  { id: "doge", name: "Dogecoin" },
-  { id: "gnosis", name: "Gnosis" },
-  { id: "celo", name: "Celo" },
-  { id: "linea", name: "Linea" },
-  { id: "mantle", name: "Mantle" },
-  { id: "scroll", name: "Scroll" },
-  { id: "opbnb", name: "opBNB" },
-  { id: "metis", name: "Metis" },
-  { id: "aurora", name: "Aurora" },
-  { id: "fantom", name: "Fantom" },
-] as const;
+// stored but invisible here. Fix-all Lane H, item 12 (jscpd family W):
+// the watch-only and export lists were the same 22-chain literal
+// twice — both now derive from SUPPORTED_CHAINS (same order, same
+// display names, verified against chains.ts), so a new registry chain
+// appears in both automatically. The vault section keeps the original
+// four — its address list is out of this item's scope.
+const watchChains = SUPPORTED_CHAINS.map((id) => ({ id, name: chainConfig(id).displayName }));
 
 // Lane C (bot use case): every chain the vault can export an extended
 // public key for, plus TON and SOL, which have no extended public key
 // (fully hardened paths) — the address itself is what the bot uses.
-const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = [
-  { id: "btc", name: "Bitcoin" },
-  { id: "eth", name: "Ethereum" },
-  { id: "trx", name: "TRON" },
-  { id: "ton", name: "TON" },
-  { id: "sol", name: "Solana" },
-  { id: "bsc", name: "BNB Smart Chain" },
-  { id: "matic", name: "Polygon" },
-  { id: "arb", name: "Arbitrum One" },
-  { id: "op", name: "OP Mainnet" },
-  { id: "base", name: "Base" },
-  { id: "avax", name: "Avalanche C-Chain" },
-  { id: "ltc", name: "Litecoin" },
-  { id: "doge", name: "Dogecoin" },
-  { id: "gnosis", name: "Gnosis" },
-  { id: "celo", name: "Celo" },
-  { id: "linea", name: "Linea" },
-  { id: "mantle", name: "Mantle" },
-  { id: "scroll", name: "Scroll" },
-  { id: "opbnb", name: "opBNB" },
-  { id: "metis", name: "Metis" },
-  { id: "aurora", name: "Aurora" },
-  { id: "fantom", name: "Fantom" },
-];
+// Same 22 as watchChains above — one list, not a second literal.
+const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = watchChains;
 
 // Lane B (Finish the Product, 2026-11-23): the balance of a watched
 // address, on its own row. balances[chain] is vault-shadowed —

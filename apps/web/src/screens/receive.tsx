@@ -19,6 +19,7 @@ import { AddTokenDialog } from './add-token';
 import { filterChains } from './chain-search-select';
 import { QrCard, qrCardTokenLabel } from './qr-card';
 import { ChainLogo, TokenLogo, chainLogoFor, tokenLogoFor } from './token-logo';
+import { TokenPickerRow } from './token-picker-row';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
@@ -729,33 +730,27 @@ export function ReceiveScreen() {
                 effectiveToken.chain === token.chain &&
                 effectiveToken.contract.toLowerCase() === token.contract.toLowerCase();
               return (
-                <li
+                <TokenPickerRow
                   key={`${token.chain}:${token.contract.toLowerCase()}`}
-                  className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
-                    selected ? 'bg-sun' : 'bg-paper'
-                  }`}
+                  selected={selected}
+                  onSelect={() => selectToken(token)}
+                  logo={
+                    <>
+                      {/* Lane G: the real token mark (see above) —
+                          WETH and the USDT variants resolve to real
+                          logos now instead of the yellow ticker badge. */}
+                      <TokenLogo symbol={token.symbol} size={24} />
+                    </>
+                  }
                 >
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => selectToken(token)}
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
-                  >
-                    {/* Lane G: the real token mark (see above) —
-                        WETH and the USDT variants resolve to real
-                        logos now instead of the yellow ticker badge. */}
-                    <TokenLogo symbol={token.symbol} size={24} />
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-                      {token.name} · {token.symbol}
-                      {isVerifiedToken(token) && (
-                        <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                      )}
-                      <span className="font-normal text-ink">
-                        {` · ${tokenConfig.displayName} · ${shortContract(token.contract)}`}
-                      </span>
-                    </span>
-                  </button>
-                </li>
+                  {token.name} · {token.symbol}
+                  {isVerifiedToken(token) && (
+                    <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                  )}
+                  <span className="font-normal text-ink">
+                    {` · ${tokenConfig.displayName} · ${shortContract(token.contract)}`}
+                  </span>
+                </TokenPickerRow>
               );
             })}
           </ul>
@@ -775,6 +770,11 @@ export function ReceiveScreen() {
           Back
         </Button>
       </p>
+
+      {/* Fix-all Lane H, item 5: the Receive tagline, removed in Round 2
+          item 8 to make the steps fit — restored on the details step,
+          where the address it names is shown. */}
+      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
 
       <Alert>
         <AlertDescription>
@@ -902,6 +902,17 @@ export function ReceiveScreen() {
                 Download card
               </Button>
             </div>
+            {/* Fix-all Lane H, item 7: rotated addresses are not
+                aggregated into the dashboard — it shows only the main
+                address on each chain — so the note says so plainly
+                next to the control that rotates them. */}
+            {canRotate && (
+              <p className="w-full text-center text-xs leading-[18px] text-muted-foreground">
+                New addresses come from the same phrase. Funds sent to an
+                earlier address still belong to this wallet, but the
+                dashboard only shows your main address on each chain.
+              </p>
+            )}
             {/* Lane 7: the amount sits under the templates — the QR
                 and its three types are the point of this step, and
                 the amount is the optional refinement that enables
