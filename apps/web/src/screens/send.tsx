@@ -229,8 +229,8 @@ export function SendScreen() {
   // Prefill a payment from a Bawa web link (/send?chain=&to=&amount=
   // &token=) or a scanned payment URI (token gaps, item 3). The link
   // opens this screen with chain, recipient, amount and token filled
-  // in; when the recipient validates, the flow moves to the amount
-  // step so both are visible prefilled. Returns false when the
+  // in; the flow lands on the details step so both are visible
+  // prefilled. Returns false when the
   // payment's chain has no wallet here — the caller says so, instead
   // of the scan silently doing nothing (UI/UX Round 2, item 1).
   async function applyPrefill(prefill: {
@@ -1138,7 +1138,6 @@ export function SendScreen() {
                 aria-expanded={showScanner}
                 title="Scan QR code"
                 onClick={() => {
-                  setScannerError(null);
                   setShowScanner((current) => !current);
                 }}
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
@@ -1170,11 +1169,6 @@ export function SendScreen() {
               onScan={(value) => void handleScan(value)}
               onCancel={() => setShowScanner(false)}
             />
-          )}
-          {scannerError && (
-            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-              {scannerError}
-            </p>
           )}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">

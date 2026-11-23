@@ -235,12 +235,12 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('send screen — scanning a QR from the asset step (Round 2, item 1)', () => {
+describe('send screen — scanning a QR from the chain step (Round 2, item 1)', () => {
   it('offers the scanner before any chain or token is picked', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Asset');
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       expect(
         mounted.div.querySelector('button[aria-label="Scan QR code"]'),
       ).not.toBeNull();
@@ -258,11 +258,11 @@ describe('send screen — scanning a QR from the asset step (Round 2, item 1)', 
       await clickText(mounted.div, 'Simulate Base USDC scan');
       const amount = await waitForInput(mounted.div, '#send-amount');
       // The QR picked the chain and the token: Base, USDC, 25.
-      expect(mounted.div.textContent).toContain('Amount · Base');
+      expect(mounted.div.textContent).toContain('Address & amount · Base');
       expect(mounted.div.textContent).toContain('USD Coin · USDC');
       expect(amount.value).toBe('25');
       expect(mounted.div.textContent).toContain(RECIPIENT);
-      expect(mounted.div.textContent).toContain('Step 3 of 6: Amount');
+      expect(mounted.div.textContent).toContain('Step 3 of 6: Address & amount');
     } finally {
       await mounted.cleanup();
     }
@@ -286,7 +286,7 @@ describe('send screen — scanning a QR from the asset step (Round 2, item 1)', 
         mounted.div,
         'This QR is for Solana, which has no wallet here yet.',
       );
-      expect(mounted.div.textContent).toContain('Step 1 of 6: Asset');
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       expect(mounted.div.querySelector('#send-amount')).toBeNull();
     } finally {
       await mounted.cleanup();

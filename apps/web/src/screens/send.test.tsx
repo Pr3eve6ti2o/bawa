@@ -377,6 +377,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum');
       await clickContaining(mounted.div, 'Ethereum · ETH');
       const button = mounted.div.querySelector(
         'button[aria-label="Scan QR code"]',
