@@ -2,7 +2,7 @@
 
 This index is the single entry point for Bawa documentation; the root [README.md](../README.md), [WALLET_BUILDER.md](../WALLET_BUILDER.md), and [docs/README.md](README.md) each point here.
 
-This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with the 20 November 2026 re-verifications named below (engine smoke 217, web vitest 68 files, 1148 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
+This index maps Bawa's wallet reference and AI Wallet Builder: where to start, where the implementation lives, what has been checked and what remains open. It is organised by purpose, after Diátaxis: tutorials teach by doing, how-to guides solve a task, reference states facts, explanation builds understanding. Statuses reflect the evidence recorded on 10 November 2026, with the 20 November 2026 re-verifications and the 23 November 2026 re-verifications named below (engine smoke 217, web vitest 90 files, 1718 passed + 5 skipped, quality-gates run); passing local checks does not establish mainnet readiness.
 
 ## Start here
 
@@ -31,6 +31,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Doc 10 — Operations & Testing](10-operations-and-testing/README.md) — `DOCUMENTED_NOT_TESTED`.
 - [Doc 14 — Wallet App Implementation](14-wallet-app-implementation/README.md) — `DOCUMENTED_NOT_TESTED`.
 - [RECOVERY](RECOVERY.md) — `DOCUMENTED_NOT_TESTED`: recovery guidance, via the reference catalogue.
+- [Create the example wallet](CREATE-EXAMPLE-WALLET.md) — `DOCUMENTED_NOT_TESTED`: create the pre-built example web wallet from a clean checkout.
 
 ## Reference — accurate information
 
@@ -42,7 +43,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [FAQ](FAQ.md) — `DOCUMENTED_NOT_TESTED`: common questions, via the reference catalogue.
 - [FURTHER-READING](FURTHER-READING.md) — `DOCUMENTED_NOT_TESTED`: supporting reading, via the reference catalogue.
 - [References](REFERENCES.md) — `DOCUMENTED_NOT_TESTED`: supporting sources.
-- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 217 checks pass (verified 2026-11-20 on this tree); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
+- [Engine reproducibility](engine-reproducibility.md) — `IMPLEMENTED_AND_VERIFIED`: engine smoke suite 217 checks pass (verified 2026-11-23 on this tree); the H7 92/92 figure inside that document is the older recorded baseline. This does not verify on-device Android derivation.
 - [External tools](EXTERNAL-TOOLS.md) — `DOCUMENTED_NOT_TESTED`: evaluated external repositories and packages for building with Bawa.
 - [UI/UX catalogue](UI-UX-CATALOGUE.md) — `DOCUMENTED_NOT_TESTED`: design reference and the route into `docs/ui-ux-assets/`.
 - [UI template registry](UI-TEMPLATE-REGISTRY.yaml) — `DOCUMENTED_NOT_TESTED`: template metadata.
@@ -74,7 +75,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [UI candidates](../research/ui-candidates.md) — `PROPOSED`: candidate research, not implementation evidence.
 - [Web template upstream](../templates/web/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
 - [Android template upstream](../templates/android/UPSTREAM.md) — `DOCUMENTED_NOT_TESTED`: upstream provenance.
-- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 68 files, 1148 passed + 5 skipped (verified 2026-11-22 on this tree) and a successful build.
+- [Web starter](../apps/web/README.md) — `IMPLEMENTED_AND_VERIFIED`: `apps/web/`, web vitest 90 files, 1718 passed + 5 skipped (verified 2026-11-23 on this tree) and a successful build (Round 2 gates, 2026-11-23).
 - [Android starter](../apps/android/README.md) — `IMPLEMENTED_AND_VERIFIED` for the starter build scope only: `apps/android/`, 57 `@Test` annotations counted across 5 test files (re-counted 2026-11-20); the executed passing count was NOT re-established here — no Android SDK on this machine, so Gradle tests are `NOT-RUN`. The earlier "57/57 pass by a clean Gradle run" note is unsourced in `docs/android-evidence.md`. APK build and emulator install/launch; Add remains `UNVERIFIED`.
 - [Contracts](../packages/contracts/src/index.ts) — `IMPLEMENTED_AND_VERIFIED` for compilation: imported by `apps/web` and checked by the web typecheck and build. One consumer today (`apps/web`); see `ARCHITECTURE.md`.
 - Scripts — `IMPLEMENTED_AND_VERIFIED` for the exercised workflow: [setup](../scripts/setup.mjs), [build](../scripts/build-platforms.mjs), [test](../scripts/run-test-suites.mjs) and [wallet build](../scripts/build-wallet.mjs) (web 3/3, multi-chain 6/6 steps VERIFIED).
@@ -96,6 +97,9 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Security guidance](SECURITY.md) — `DOCUMENTED_NOT_TESTED`: security documentation, not independent approval.
 - [Quality gates](../scripts/quality-gates.mjs) — `FAIL` on the 2026-11-20 run on this tree (`--skip-android`): 2 gates failed — `phase9-tests` (stale-data: Mainnet guide §21 M-31 disposition; the test still asserts OPEN, the guide correctly records CLOSED) and `secret-scan`; 4 skipped (android-tests, audit-pip, sast-bandit, sast-ruff). The earlier 11/11 and 13/13 figures are earlier runs, not this tree's current result; not mainnet or independent-review clearance.
 - [Handoff](archive/handoff-2026-11-10.md) — `DOCUMENTED_NOT_TESTED`: handover record and unresolved work.
+- [Launch checklist](launch-checklist.md) — `DOCUMENTED_NOT_TESTED`: pre-B-1 checklist.
+- [Release procedure](release-procedure.md) — `DOCUMENTED_NOT_TESTED`: tagged baseline + rollback (full ceremony deferred).
+- [Gap analysis](GAP-ANALYSIS.md) — `DOCUMENTED_NOT_TESTED`: what the wallet still lacks, which public repositories solve each gap (stars and licences checked live 2026-11-23), and where the fix belongs in the guide (Lane E, Deep Audit + Devnet E2E programme, 2026-11-23; gaps 21+ added by the coordinator from Lane B findings).
 
 ## Open items
 
@@ -107,4 +111,4 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [R-01 invalid-point validation](archive/handoff-2026-11-10.md) — `RESOLVED`: implemented in the shared validator (`tools/hdwallet-gen/extended-key.js`, bad-point rejection) and mirrored in `apps/web/src/engine/boundary.ts` (R-01). The earlier OPEN note in this index was stale.
 - [Android Add path](android-evidence.md) — `UNVERIFIED`: APK installation and launch do not verify Add.
 
-The registry covers 13 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 9 additional chains are scoped to the multichain-extended-wallet profile. The 13-chain registry in registry/capabilities.json (chainSupport) was merged into adopt-proper from panel-rebuild/multichain-create. It is not a separate branch.
+The registry covers 22 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 18 additional chains are scoped to the multichain-extended-wallet profile. The 13-chain registry in registry/capabilities.json (chainSupport) was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
