@@ -1,200 +1,224 @@
-# Reverify checklist — every owner order, 2026-11-22 to 2026-11-23 ~18:14 IST
+# Reverify checklist — every owner order, 2026-11-22 to 2026-11-23 ~19:17 IST
 
-Lane 1 of the Reverify + Professional Polish programme (coordinator
-`3e052fbd`). Hands-on Muse, 0 Sol calls, 0 AgentRouter calls.
-Base: `panel-rebuild/token-gaps` tip `b089c28`. Worktree:
-`/home/boxd/workspace/bawa-reverify-l1-worktree` on gray-pinee.
+**CORRECTED by Lane 8 of the Marketing Fix + Found-Bugs programme
+(coordinator `308b6734`). Hands-on Muse, 0 Sol calls, 0 AgentRouter calls,
+0 runner invocations. Base: `panel-rebuild/token-gaps` tip `71326e1`.
+Worktree: `/home/boxd/workspace/bawa-mkt-l8-worktree` on gray-pinee.**
 
-## Method
+This document REPLACES the first checklist's verdicts (same file, written by
+Reverify Lane 1, coordinator `3e052fbd`, base `b089c28`). The old verdicts
+are kept in the table's "Old verdict" column so every correction is visible;
+nothing was silently overwritten. The old checklist's "Fixes made by this
+lane" (F-1 40 px, F-2 import Continue, F-3 item-14 record) are NOT reverted
+— F-1 and F-2 are re-verified in CDP below and stand; F-3 is a docs record
+and stands.
 
-Sources, in priority order: (1) `~/MEMORY.md` plus the daily logs
-`~/memory/2026-11-22.md` and `~/memory/2026-11-23.md` (the fullest
-record of the owner's words — every order below was traced to a dated
-entry there, not to MEMORY.md alone); (2) the programme records on
-gray-pinee under `/home/boxd/workspace/bawa-*/` (token-discovery,
-token-gaps, ui-ux-fixes, ui-ux-round2, readme-showcase, captcha-faucet,
-devnet-temp, desktop-v2, desktop-v2-followup, desktop-mode, pages,
-fix-both, merge-adopt-proper); (3) `docs/DECISIONS.md`,
-`docs/UI-UX-FIXES-PROGRAMME.md`, `docs/UI-UX-ROUND2-PROGRAMME.md` at
-the tip; (4) the git log of `panel-rebuild/token-gaps` and the other
-branches named below.
+## Method — browser-first (this lane)
 
-Verdict rule: an order is **implemented** only if the code at the tip
-(or the named branch, where the order lives there) proves it — checked
-first-hand by `grep` / `git show` / `ls-remote` in this lane. A claim
-resting only on a lane report was re-checked first-hand; where the
-re-check contradicted the report, the report is marked wrong and the
-item is listed under "Missed — fixed by this lane". Nothing below is
-"implemented" on a report's word alone.
+The ONLY evidence that counts for a feature is using the app in CDP and
+seeing it work on a rendered screen. Code presence, test existence and lane
+reports are NOT evidence. If a feature cannot be verified in the browser
+(needs a funded wallet, a real camera, a faucet, a real phone, or is a
+docs / merge / push / process claim), it is marked **not verifiable in CDP**
+with the exact reason and what proof exists instead.
 
-What this lane did NOT re-prove live: full CDP runs and fresh preview
-serves (the parallel deep-audit programme, Lane A, is re-verifying
-Round 2 + showcase claims in CDP right now — duplicating that here
-would double-run the same live checks on a shared VM); the E2E suite
-(2 specs are environment-blocked — see O-01 — and the stable-network
-run for E2E-03/06 is still open). The full vitest suite, `tsc`,
-`build`, `lint` and `npm audit` were run first-hand on this lane's
-worktree after the fixes (see "Gates" below).
+- Built the exact tree under test: `npm run build` passed (`tsc --noEmit`
+  0, vite built, palette audit passed: 29 approved colour literals).
+  Dist JS `assets/index-Co_iBr5E.js`.
+- Served the built dist statically (`serve-dir.cjs` pattern, port 4222,
+  dist at `/` and under `/bawa/` with SPA fallback — **not** `vite preview`,
+  which 404s `/bawa/assets/*.js` with base `/bawa/`). Served JS hash
+  verified to match the dist hash before capturing.
+- CDP: Playwright (Node 22) scripts
+  `/home/boxd/workspace/bawa-mkt-l8/l8-cdp-verify.mjs`,
+  `l8b-`, `l8c-`, `l8d-`, `l8e-`, `l8f-`, `l8g-`, `l8h-cdp-verify.mjs`
+  (results JSONs + screenshots in
+  `/home/boxd/workspace/bawa-mkt-l8/cdp/`). Fresh disposable wallets only;
+  nothing sent or broadcast. Viewports 390 / 820 / 980 / 1024 / 1440 / 1919.
+  States covered: no-wallet, wallet-ready (fresh zero-balance), locked vault
+  (via the 1-minute auto-lock timer), devnet, watch-only, import flow.
+- Screenshots VIEWED by eye (not summarised from text reports):
+  `l8-receive-390.png`, `l8-dash-390.png`, `l8-home-980.png`,
+  `l8-dash-1440.png`, `l8-dash-1919.png`, `l8e-empty-save-390.png`.
 
-## Summary counts
+Order sources, in priority order: (1) `~/MEMORY.md` plus the daily logs
+`~/memory/2026-11-22.md` and `~/memory/2026-11-23.md`; (2) the programme
+records on gray-pinee under `/home/boxd/workspace/bawa-*/`; (3)
+`docs/DECISIONS.md` at the tip; (4) fresh `git ls-remote` / ancestry checks.
+Rows C-01–C-39 are the old checklist's order set, re-verified. Rows C-40–
+C-42 are the owner orders since the old checklist closed (~18:14 IST).
+
+## What the first checklist got wrong
+
+Plainly: **it judged a visual product by reading code.** Five specific
+flaws, all in the old checklist's own "Method" section:
+
+1. **Code presence counted as proof.** Its verdict rule said an order is
+   "implemented" if "the code at the tip … proves it — checked first-hand
+   by `grep` / `git show` / `ls-remote`". For UI orders that rule is wrong:
+   code present does not mean working on screen. The QR templates are the
+   proof — `QrTemplate`, `qrTemplates`, `smallQrs` and tap-to-swap all exist
+   in `receive.tsx`, and the old method would pass them, while on a 390 px
+   screen the template buttons sit below the fold (top 786, bottom 862 in
+   an 844 px viewport) and no label says which template the main QR
+   currently shows. The owner, looking at the screen, correctly said they
+   are not there as asked.
+2. **CDP was explicitly deferred, then never done for these rows.** The old
+   checklist wrote: "What this lane did NOT re-prove live: full CDP runs …
+   the parallel deep-audit programme, Lane A, is re-verifying Round 2 +
+   showcase claims in CDP right now". Lane A never re-verified this
+   checklist's rows; the deferral became the verdict.
+3. **State blindness.** No row recorded which state the claim lives in
+   (no-wallet vs wallet-ready vs locked vs devnet). A fix that exists only
+   in wallet-ready state is invisible to an owner in the no-wallet state —
+   and the owner's two corrections (QR templates, this reverify) both came
+   from the screen they were actually looking at.
+4. **Branch confusion.** Evidence from one branch was recorded as proof for
+   another tree. C-16 ("still mobile layout in desktop mode") was marked
+   Implemented on `desktop-layout-v2` `bf00f54` evidence, but that branch
+   was never merged into token-gaps — in this tree, at 980 px, the app
+   still shows the mobile layout (sidebar `display=none`, bottom nav).
+   The old checklist's own C-10 says the desktop layout lives on that
+   branch, unmerged; C-16 ignored that boundary.
+5. **It violated its own skills.** The reverify programme created
+   `order-traceability-checklist` (UI claims need a screenshot you viewed
+   yourself; "never mark `implemented` from a coordinator's word alone")
+   and `cdp-visual-verification` (the screenshot, viewed by eye, is the
+   ground truth). The first checklist used neither for its verdicts. Both
+   skills carry Lane 8 corrections now (see "Skills used"): the CDP skill
+   no longer suggests `vite preview` (it 404s with base `/bawa/`), and the
+   traceability skill now admits the `in progress` and `not verifiable in
+   CDP` verdicts a browser-first brief requires.
+
+## Summary counts (corrected, 42 rows)
 
 | Verdict | Rows |
 |---|---|
-| Implemented | 28 |
-| Partially implemented | 3 |
-| Missed — fixed by this lane | 2 |
-| In progress (parallel programme) | 2 |
-| Standing rule — complied with | 4 |
-| **Total table rows** | **39** |
+| Done (seen working in CDP) | 8 |
+| Partial (some sub-items seen working, some not) | 7 |
+| Missed | 1 |
+| Not verifiable in CDP (reason + alternate proof in evidence) | 25 |
+| In progress (parallel programme / this lane) | 1 |
+| **Total table rows** | **42** |
 
-39 rows cover 38 distinct orders: C-14 and C-33 are one item (the 40 px
-question opened 2026-11-22 ~19:17, decided 2026-11-23 ~14:17). The 12
-open follow-ups O-01–O-12 below are separate from the 39 — they are
-carried-forward gaps and decisions still awaiting the owner, not
-orders in the table.
-
-The three missed items are the point of this lane: the owner suspected
-something from 2026-11-22 had been dropped between programmes, and
-three things had been — the 40 px Receive fix lost from the token-gaps
-tree, the import-path "Continue to your send" button never built, and
-the item-14 cannot-add chain list never recorded. All three are fixed
-in this lane (see "Fixes made by this lane").
+42 rows cover 41 distinct orders: C-14 and C-33 are one item (the 40 px
+question, decided 2026-11-23 ~14:17). The old checklist claimed 28
+implemented of 39; browser-first re-verification confirms **6 done** of 42.
+That is not a claim that 22 orders regressed — most of the difference is
+the old method counting code, merges, pushes and process answers as
+"implemented", where this lane marks those rows "not verifiable in CDP"
+with the alternate proof instead. The genuinely wrong old verdicts are the
+five listed under "Wrong old verdicts" below.
 
 ## Checklist
 
-| # | Order (owner's words, short) | Date | Verdict | Evidence |
-|---|---|---|---|---|
-| C-01 | Display method B — the 9 README diagrams become static SVGs | 2026-11-22 ~01:59 | Implemented | Main `431a1a9`; 9 `.mmd` + 9 `.svg` in `docs/diagrams/` on main; README width caps on the `<img>` tags. Verified on main. |
-| C-02 | Fix all four rebuild preview issues: sidebar scrollbar, "All networks" clipped, narrow column, dead Retry while locked | 2026-11-22 ~01:59 | Implemented | `layout-rebuild 9da911b`, merged into adopt-proper `4862ba8`, ancestor of the tip (`67c48e2` is an ancestor of token-gaps). Locked-state Unlock checks present in the tip's `apps/web/src/screens/asset-detail.tsx` (lines 283, 334, 496). |
-| C-03 | Merge BOTH (repo-study + layout-rebuild) into adopt-proper; do NOT merge adopt-proper into main | 2026-11-22 ~01:59 | Implemented | Adopt-proper `4862ba8`; `git ls-remote` confirms main still at `ad77cce`, adopt-proper at `67c48e2`; no merge into main. |
-| C-04 | "Push which is not pushed and work on what is still not fixed" | 2026-11-22 ~02:0x | Implemented | Push check 2026-11-22 ~15:00 found nothing to push (adopt-proper `67c48e2`, main `ad77cce` in sync); fixing continued through the day. |
-| C-05 | Accept F7 (~8.1 px) as best achievable for D1 | 2026-11-22 ~02:32 | Implemented | Main `ad77cce`; `docs/diagrams/architecture.svg` root `viewBox` width 571.406, README `<img width="571">`; accDescr prose verbatim under the image (README lines 68–70 on main); live 9.1 px at 390 px, still under the 10 px bar, accepted as best achievable. |
-| C-06 | "Fix both": (1) sticky Refresh dead while locked on /assets/:chain; (2) verify the 5-minute auto-lock timer end to end (show the fix first if it fails) | 2026-11-22 ~14:17 | Implemented | Adopt-proper `4862ba8 → 67c48e2`. (1) Sticky bar renders Unlock while locked (`asset-detail.tsx`, present in the tip). (2) Timer passed at 300.3 s in the real app — no fix needed, nothing applied silently. `autoLockDurationMs` in `apps/web/src/wallet/auto-lock.ts:85` in the tip. |
-| C-07 | "Preview link not working fix it. And push what is not pushed" | 2026-11-22 ~15:00 | Implemented | Dead gvgvc tunnel killed, fresh vbmvg tunnel minted, JS hash matched the dist; push check found nothing to push. |
-| C-08 | Preview link still fails — ERR_NAME_NOT_RESOLVED | 2026-11-22 ~15:14 | Implemented | Diagnosed first-hand: Pinggy free domains resolve IPv6-only, the owner's DNS cannot resolve them. Resolved by the Pages publish (C-11). |
-| C-09 | "Save it and never touch it. Mobile layout is really good" — save + lock the mobile UI/UX | 2026-11-22 ~15:28 | Implemented | Tag `save/mobile-loved-2026-11-22` on adopt-proper `67c48e2`, `ls-remote`-verified this lane (`4cce9bbd → 67c48e2`). Honest caveat, recorded by the programmes: strict pixel-identical is unachievable with live prices/clocks (control: the branch vs itself differed by up to 687 px); mobile is verified structure-identical (widths, columns, order, overflow) at 390/820 instead. |
-| C-10 | A DIFFERENT desktop layout with the SAME UI/UX (1440/1919 px, layout change only) | 2026-11-22 ~15:28 | Implemented | `panel-rebuild/desktop-layout-v2` `ed0abba → 0e194f4 → bf00f54`; no merge into adopt-proper or main; mobile structure-identical vs the saved tag. |
-| C-11 | "Publish to GitHub Pages" (tapped option) | 2026-11-22 ~15:36 | Implemented | `panel-rebuild/pages-base` `cd39306` (deliberately unpushed — `ls-remote` returns no pages-base ref, verified this lane); `gh-pages` `ee63a13`, verified still current this lane; live at https://pr3eve6ti2o.github.io/bawa/. |
-| C-12 | "Progress update?" | 2026-11-22 ~16:37 | Implemented | Status answered from a first-hand subagent-list check. |
-| C-13 | "Check in your live browser. Use puppeteer or something like this to check if you have to. And fix minor defects you find on the way so it looks more polished." | 2026-11-22 ~16:47 | Implemented | Desktop follow-up `0e194f4`: dashboard quick-actions rail, P10 trailing-slash fix (`outletWrapperClass`), polish P1–P10, all CDP-verified with screenshots viewed. |
-| C-14 | Mobile Receive 40 px — "Keep the 40 px fix" (question opened 2026-11-22 ~19:17, decided 2026-11-23 ~14:17) | 2026-11-23 ~14:17 | Missed — fixed by this lane | The decision is real and the fix is in `desktop-layout-v2` (`bf00f54`, `receive.tsx:282` renders the status `<p>` only when `copyStatus !== ''`). But the token-gaps tree had LOST it: the UI/UX Receive rework left the status `<p>` rendering unconditionally (`receive.tsx:678-680` at the tip), reintroducing the dead space the owner ordered kept. Fixed in place by this lane — see F-1. |
-| C-15 | "Show live preview" | 2026-11-22 ~19:11 | Implemented | Fresh icxql tunnel minted on the `0e194f4` dist, JS hash matched; expired since, as free tunnels do — the durable link is Pages (C-11). |
-| C-16 | Phone screenshot: "still mobile layout in desktop mode" + "use top GitHub repos with stars and forks … why is there a Retry icon, is it really needed there, do some finishing and it should not break" | 2026-11-22 ~19:28 | Implemented | `bf00f54`: root cause proven in CDP (phone "Desktop site" mode = forced 980 px viewport; app keyed the desktop shell off `lg:` = 1024 px). Shell-only 980 px breakpoint (`@theme --breakpoint-desktop: 61.25rem` in `globals.css:382`, 15 `desktop:` uses in `app.tsx`, verified in the tree). Retry gated on `balance.reason !== 'no-address'` (verified in `asset-detail.tsx` at `bf00f54`); no-wallet state shows one empty-state block. Repos mined: MetaMask, shadcn-ui, BlueWallet, RainbowKit. Caveat carried honestly: final confirmation rests on the owner's phone — a VM cannot run Brave on a real phone. |
-| C-17 | "Add devnet temporary so we can test send and receive … get some devnet token for each chain yourself. And tell me how it went. Devnet will be temporary" | 2026-11-22 ~19:53 | Partially implemented | Mode built and pushed (`devnet-temp 1b04269`, merged into the token-gaps tree via ui-ux-fixes `dfa2de5`; `8994584` is an ancestor of the tip). TON receive/send/track proven by real devnet transactions. BTC/ETH/TRX NOT proven — unfunded, all no-account faucets captcha-blocked. 9 derive-only chains + 6 logo-only ERC-20s not testable (no adapter). Issues written down in `DEVNET-ISSUES.md` (240 lines). "Tell me how it went" was delivered. Remainder is O-02/O-03/O-04. |
-| C-18 | Token discovery: wallet loads with 20 tokens from different chains; one "Add token" button that adds a whole chain and adds a token by contract address | 2026-11-22 ~20:51 | Implemented | `panel-rebuild/token-discovery f76245a`. In the tip: 22 chains (`SUPPORTED_CHAINS`, `chains.ts:675`) + 21 default tokens (`DEFAULT_TOKENS`, `tokens.ts:31`) = 43 dashboard rows; Add Token flow with contract validation, CoinGecko prices, Trust Wallet logos. |
-| C-19 | Devnet scope expanded to ALL tokens: send, receive and track each one, write issues down at the end | 2026-11-22 ~20:54 | Partially implemented | Same scope limit as C-17: only TON proven; BTC/ETH/TRX unfunded; 9 chains + 6 ERC-20s not testable. The parallel deep-audit programme (Lane B) retries the faucets and checks Issues 5–10 — in progress, not duplicated here. |
-| C-20 | "Try these repos for captcha but check these chains too" (5 captcha repos, 4 blocked faucets) | 2026-11-22 ~22:01 | Implemented | Attempted and honestly reported: **0 test tokens obtained** on all four faucets; `DEVNET-ISSUES.md` Issue 7 updated (`devnet-temp 8994584`, docs-only). No paid solver, sign-up, payment or owner account used; no new wallets; no app code changed. Unblock is owner-side (O-04). |
-| C-21 | Token gaps: free SOL/DOGE RPCs that work from a browser, Base USDC as #21, Receive fix, QR + amount + share + deep link with chooser and prefill, Send showing only four tokens, Wallets explanation, watch wallet test, portfolio "Unavailable" — plus live-browser bug hunt, duplicate Create buttons, multichain + HD verified, skills/repos | 2026-11-22 ~23:21 + ~23:26 + ~23:27 | Implemented | `panel-rebuild/token-gaps 488f644`. Spot-verified first-hand in the tip: SOL `solana-rpc.publicnode.com` + Vibe Station fallback and DOGE sochain + BlockCypher fallback in `chains.ts:388,516`; Base USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` in `tokens.ts:100`; `wallet/payment-links.ts` (BIP-21, EIP-681, Solana Pay, `ton://`, no invented `tron:` URI); 15-word import gate (`import-wallet.tsx:194,427`); watch-only hydration iterates `ALL_CHAIN_IDS` (`wallet-context.tsx:491,544`); duplicate Create removed (welcome CTA settled by UI/UX item 9). Known sub-gaps carried as O-01, O-05, O-06. |
-| C-22 | "Is there anything that is still not pushed?" | 2026-11-22 ~23:35 | Implemented | Answered first-hand from fresh `ls-remote` + ancestry checks; nothing unpushed except deliberate (`pages-base`, old local-only lane branches). |
-| C-23 | "Is there anything that is still not pushed?" (asked again) | 2026-11-23 ~01:35 | Implemented | Answered first-hand; same state as C-22. |
-| C-24 | "Working?" | 2026-11-23 ~01:44 | Implemented | Status answered (token-gaps programme then running). |
-| C-25 | UI/UX Fixes + Build programme, 21 items | 2026-11-23 ~04:40 | Implemented | `panel-rebuild/ui-ux-fixes a9eb6aa` merged into token-gaps (`4eb0242`). All 21 items. Spot-verified first-hand in the tip: `dvh` layout (`app.tsx:251,259,276`); devnet pill + Networks switch; QR-as-image share; import 24/25 in one section; same-phrase second account; bulk accounts; HD rotation; Welcome rebuilt with no Create button; "SOON" fixed for the web wallet; price-blanking fix; asset rows with balance + value + price; Add Token all chains; +9 chains (C-18); copy button; watch wallet all chains; multi-account without deleting; HD primary tokens (21 defaults, 43 rows); RPC failover (`RpcEndpointManager` in `network-selection.tsx`); stepped Send/Receive; programme doc. Sub-gaps: item-14 record (fixed by this lane, F-3), E2E-03/06 (O-01), non-zero DOGE watch row (O-05), 1919 widths (O-06). |
-| C-26 | CORRECTION: "You never said about waiting for my review?" — do not state token-gaps is "waiting for your review" | 2026-11-23 ~04:48 | Implemented | Standing correction recorded in MEMORY.md; nothing is "pending review" unless the owner says so. No code involved. |
-| C-27 | "Merge it and do this on top of that branch after current is done by you" / "Add wherever you feel like it" — merge destination delegated | 2026-11-23 ~05:11 | Implemented | `ui-ux-fixes` merged into `token-gaps` (`4eb0242`); further work continues on top of token-gaps; the tip `b089c28` is that line. Adopt-proper and main untouched for code. |
-| C-28 | In-place fix rule (standing): edit the existing sections where bugs live; new files only when genuinely needed | 2026-11-23 ~05:11 | Standing rule — complied with | This lane fixed in place: `receive.tsx`, `import-wallet.tsx`, three programme docs. The only new file is this checklist, which the lane brief orders. |
-| C-29 | Skills (standing): keep using the skill library — read each SKILL.md in full on the VM, mine public wallet repos, report skills/repos actually used, no verbatim copying without a licence check | 2026-11-23 ~05:11 | Standing rule — complied with | Read in full on gray-pinee: `test-driven-development` (400 lines — RED-first tests for both fixes) and `code-review-and-quality` (402 lines — five-axis method for this reverify). No repo code copied; no new dependency. |
-| C-30 | UI/UX preview link dead — fresh tunnel | 2026-11-23 ~10:25 | Implemented | Renewed and sent ~10:30–10:31 IST (qdcqx). |
-| C-31 | Two open decisions asked via tap widgets: (a) five new-chain stables as defaults? (b) 40 px keep or revert? | 2026-11-23 ~10:3x | Implemented | Both answered by the owner 2026-11-23 ~14:17 (C-32, C-33). Stale widgets must not be re-presented. |
-| C-32 | "Leave them in Add Token" — the 5 verified new-chain stables (Gnosis USDC, Celo USDm, Linea USDC, Scroll USDC, Fantom USDC) stay in Add Token, NOT defaults; dashboard stays at 43 rows | 2026-11-23 ~14:17 | Implemented | Verified first-hand in the tip: `DEFAULT_TOKENS` has 21 entries on chains eth/arb/avax/base/matic/op/bsc/sol/ton/trx only — no Gnosis/Celo/Linea/Scroll/Fantom stable; the five chains are Add Token chains (`EVM_TOKEN_CHAINS`, `tokens.ts:324-340`); 22 chains + 21 tokens = 43 rows. No code change was needed. |
-| C-33 | "Keep the 40 px fix" | 2026-11-23 ~14:17 | Missed — fixed by this lane | Same item as C-14 (one question, one decision). The fix was kept on `desktop-layout-v2` but lost from the token-gaps tree; restored by this lane (F-1). Do not re-ask. |
-| C-34 | UI/UX Round 2 programme, 10 items | 2026-11-23 ~15:28 | Implemented | `panel-rebuild/ui-ux-round2 5da29a8` merged into token-gaps (`6147b74`). All 10 items. Spot-verified first-hand in the tip: QrCard (`screens/qr-card.tsx`); pending-link helpers + "Continue to your send" on the create ready screen (`create-wallet.tsx:599-608`); watch search combobox (`screens/chain-search-select.tsx`, WAI-ARIA combobox, `bawa:watch-only-recent-chains`); Baloo 2 display font (`globals.css:11,327`) with zero Caveat references in `apps/web/src`; copy rewrite; devnet prices (fetch gate lifted, fiat valuation suppressed — `wallet/prices.ts:820-826`); 16 px inputs on coarse pointers (`globals.css:459`) + `viewport-fit=cover` (`index.html:5`); no-scroll stepped flow; ScanIcon. Sub-gaps: import-path continue button (fixed by this lane, F-2), review/sign CDP-unverified (O-07), live camera unverified (O-08), Receive tagline removed (O-09), token-contract tail truncation (known cosmetic), word grid at 1024 px (O-10), E2E harness (O-01). |
-| C-35 | README showcase + Add Token programme: (A) README wallet-UI showcase like another repo's README; (B) wording — fully functional example wallet, never "template", chain count stated properly; (C) separate create instructions; (D) Add Token — any token by contract, price detected live | 2026-11-23 ~15:37 | Partially implemented | (A) BLOCKED — the owner never named the repo or attached a link; nothing invented, nothing built. (B) Implemented: zero "template" in `README.md`; "22 chains" + "the guide covers … 168 chains" (`README.md:14,16`). (C) Implemented: `docs/CREATE-EXAMPLE-WALLET.md`, linked from `README.md:18`. (D) Implemented: `wallet/dex-prices.ts` (DexScreener) + TonAPI fallback, `screens/add-token.tsx`; honest "price unavailable" when no source has it. Merged into token-gaps (`5b84b72`, `eab8861`). |
-| C-36 | Deep audit + devnet E2E programme, 5 lanes (bug hunt + reverify, devnet E2E all chains, HD verification incl. bot use case, multichain start to finish, gap analysis) | 2026-11-23 ~18:10 | In progress (parallel programme) | Coordinator `16bb9f99`, branch `panel-rebuild/deep-audit-devnet`, dispatched 2026-11-23 ~18:10. Not this lane's to verify; this checklist does not duplicate its CDP work. |
-| C-37 | Reverify + professional polish programme, 5 lanes | 2026-11-23 ~18:14 | In progress (this programme) | Coordinator `3e052fbd`, branch `panel-rebuild/reverify-pro`. Lane 1 is this checklist; lanes 2–5 report separately. |
-| C-38 | Bawa work by Muse hands-on on gray-pinee, 0 Sol calls while the API is below $1 (confirmed for the desktop-layout work) | 2026-11-22 | Standing rule — complied with | This lane: hands-on Muse on gray-pinee, **0 Sol calls, 0 AgentRouter calls, 0 runner invocations**. Stated plainly here as the owner asked. |
-| C-39 | API $1 stop rule: stop if the API goes below $1; do not switch to API 1 | 2026-11-21 ~04:09 (standing, in force throughout) | Standing rule — complied with | Sol stays stopped in this lane; no Sol call was made or attempted. |
+| # | Order (owner's words, short) | Date | New verdict | Old verdict | Evidence (browser-first) |
+|---|---|---|---|---|---|
+| C-01 | Display method B — the 9 README diagrams become static SVGs | 2026-11-22 ~01:59 | Not verifiable in CDP | Implemented | Docs claim, not a feature. Git readback on `origin/main`: 9 `.mmd` + 9 `.svg` in `docs/diagrams/`, 9 svg refs in README. |
+| C-02 | Fix all four rebuild preview issues: sidebar scrollbar, "All networks" clipped, narrow column, dead Retry while locked | 2026-11-22 ~01:59 | Done | Implemented | CDP 1440/1919: sidebar renders, "All networks" card fully visible, content spans the width, no horizontal scrollbar. Locked (1-min auto-lock test): asset detail shows "Locked. Unlock to see balances." + Unlock, **0 Retry** buttons, addresses hidden. Screenshots `l8-dash-1440.png`, `l8-dash-1919.png`, `l8g-locked-asset-390.png`. |
+| C-03 | Merge BOTH (repo-study + layout-rebuild) into adopt-proper; do NOT merge adopt-proper into main | 2026-11-22 ~01:59 | Not verifiable in CDP | Implemented | Merge claim. Git: `4862ba8` is an ancestor of HEAD; fresh `ls-remote`: main `ed26765`, adopt-proper `ae189db` (doc pushes only since the old check — no code merge into main). |
+| C-04 | "Push which is not pushed and work on what is still not fixed" | 2026-11-22 ~02:0x | Not verifiable in CDP | Implemented | Process order, answered at the time. Re-checked now: `ls-remote` shows token-gaps `71326e1`, reverify-pro `ccb8195`, desktop-layout-v2 `0baf11b`, devnet-temp `54e2fbf`, token-discovery `24f9502`; deep-audit-devnet + marketing-fix branches are local-only (in progress, unpushed). |
+| C-05 | Accept F7 (~8.1 px) as best achievable for D1 | 2026-11-22 ~02:32 | Not verifiable in CDP | Implemented | Docs claim. Git readback on `origin/main`: `docs/diagrams/architecture.svg` root `viewBox` width 571.406. The live 9.1 px measurement was not re-run by this lane. |
+| C-06 | "Fix both": (1) sticky Refresh dead while locked on /assets/:chain; (2) verify the 5-minute auto-lock timer end to end | 2026-11-22 ~14:17 | Done | Implemented | CDP, 1-minute timer (same mechanism as 5-minute): auto-lock on, duration 1 min selected, waited 75 s — vault locked; `/assets/eth` shows Unlock, 0 Retry, addresses hidden, history "Locked. Unlock to see activity." The 5-minute duration itself was proven at 300.3 s by the earlier programme and was not re-run; the lock mechanism is the same. |
+| C-07 | "Preview link not working fix it. And push what is not pushed" | 2026-11-22 ~15:00 | Not verifiable in CDP | Implemented | Process order; tunnels expire by design. Durable link is Pages (C-11). |
+| C-08 | Preview link still fails — ERR_NAME_NOT_RESOLVED | 2026-11-22 ~15:14 | Not verifiable in CDP | Implemented | Process/diagnosis order; diagnosis stands (Pinggy free domains resolve IPv6-only). Pages is the durable link (C-11). |
+| C-09 | "Save it and never touch it. Mobile layout is really good" — save + lock the mobile UI/UX | 2026-11-22 ~15:28 | Not verifiable in CDP | Implemented | Standing rule + tag. Git: tag `save/mobile-loved-2026-11-22` → `67c48e2`, `ls-remote`-verified. CDP spot check: mobile 390 renders the same layout (no horizontal overflow). |
+| C-10 | A DIFFERENT desktop layout with the SAME UI/UX (1440/1919 px, layout change only) | 2026-11-22 ~15:28 | Not verifiable in CDP (from this tree) | Implemented | Lives on `panel-rebuild/desktop-layout-v2` (`0baf11b` on remote), never merged. Cannot be CDP-verified from this worktree (brief: work only here). Desktop at 1440/1919 in THIS tree is the token-gaps layout, verified separately (C-02). |
+| C-11 | "Publish to GitHub Pages" (tapped option) | 2026-11-22 ~15:36 | Not verifiable in CDP | Implemented | Publish claim. Live check: `https://pr3eve6ti2o.github.io/bawa/` returns 200; served JS `assets/index-CJcjZBf5.js` matches `origin/gh-pages` (`ee63a13`) exactly. Pages still serves the saved `67c48e2` build, not token-gaps. |
+| C-12 | "Progress update?" | 2026-11-22 ~16:37 | Not verifiable in CDP | Implemented | Status question, answered at the time. |
+| C-13 | "Check in your live browser. Use puppeteer or something like this to check if you have to. And fix minor defects you find on the way so it looks more polished." | 2026-11-22 ~16:47 | Partial | Implemented | CDP confirms the visible parts: dashboard quick-actions rail (Send/Receive/Activity) beside the hero at 1440/1919, and the `/bawa/` subpath working (deep link V5a/V5b). P1–P10 were NOT individually re-proven item by item in this lane either — Lane D could not locate the P1–P10 list in the worktree docs (only the W-5 reference to it), so the old "Implemented" still over-claims CDP coverage. |
+| C-14 | Mobile Receive 40 px — "Keep the 40 px fix" (question opened 2026-11-22 ~19:17, decided 2026-11-23 ~14:17) | 2026-11-23 ~14:17 | Done | Missed — fixed by Lane 1 | CDP: `p[role="status"]` count is **0** before any copy action and **1** after Copy (status line appears with the copy message). The F-1 fix holds on screen. |
+| C-15 | "Show live preview" | 2026-11-22 ~19:11 | Not verifiable in CDP | Implemented | Process order; tunnel expired since, as free tunnels do. Durable link is Pages (C-11). |
+| C-16 | Phone screenshot: "still mobile layout in desktop mode" + "use top GitHub repos … why is there a Retry icon, is it really needed there, do some finishing and it should not break" | 2026-11-22 ~19:28 | Missed (in this tree) | Implemented | **CDP at 980 px: the app still shows the MOBILE layout** — narrow centred column, mobile bottom nav, sidebar `display=none`. At 1440 the sidebar is `display=block`. This tree's shell keys the desktop layout off `lg:` (1024 px); there is no 980 px `desktop:` breakpoint here. The fix exists only on unmerged `desktop-layout-v2` (`0baf11b`). Screenshot `l8-home-980.png` (viewed). See D-01 — needs the owner's decision, not a silent port. The Retry part of this order is Lane 1's (see below). |
+| C-17 | "Add devnet temporary so we can test send and receive … get some devnet token for each chain yourself. And tell me how it went. Devnet will be temporary" | 2026-11-22 ~19:53 | Partial | Partially implemented | Unchanged in substance. CDP confirms the devnet toggle works both ways (Mainnet ↔ Devnet, no leakage — asset shows "Ethereum mainnet" after switching back) and devnet shows live per-unit prices. TON send/receive was proven by the earlier programme and was NOT re-run here (no devnet tokens obtained in this lane); BTC/ETH/TRX remain unfunded (faucets captcha-blocked, O-04). |
+| C-18 | Token discovery: wallet loads with 20 tokens from different chains; one "Add token" button that adds a whole chain and adds a token by contract address | 2026-11-22 ~20:51 | Done | Implemented | CDP: **43 rows render** on the dashboard — 42 asset links + the DOGE row in its failed/unavailable state (no link by design for unavailable rows). `DEFAULT_TOKENS` has 21 entries (code count, matches the screen). Add Token dialog lists all 22 chains; adding PEPE by contract returns "Token added". |
+| C-19 | Devnet scope expanded to ALL tokens: send, receive and track each one, write issues down at the end | 2026-11-22 ~20:54 | Partial | Partially implemented | Same scope limit as C-17. Issues are written down (`DEVNET-ISSUES.md`); per-token send/receive beyond TON is unproven (faucets blocked, O-04). |
+| C-20 | "Try these repos for captcha but check these chains too" (5 captcha repos, 4 blocked faucets) | 2026-11-22 ~22:01 | Not verifiable in CDP | Implemented | Process outcome: 0 test tokens obtained; honestly reported. Nothing new to verify in the browser. |
+| C-21 | Token gaps: free SOL/DOGE RPCs that work from a browser, Base USDC as #21, Receive fix, QR + amount + share + deep link with chooser and prefill, Send showing only four tokens, Wallets explanation, watch wallet test, portfolio "Unavailable" | 2026-11-22 ~23:21 + ~23:26 + ~23:27 | Partial | Implemented | CDP confirms most of it: Base USDC row exists (`/bawa/assets/base/usdc`); Send token step lists **8** Ethereum tokens (not four); payment QR encodes the `ethereum:` URI; share link present; deep link keeps the payment cold-start; Wallets screen explains account vs phrase vs HD vs multichain; watch-only search + recent work; portfolio shows `$0.00 (Partial)`, not "Unavailable". **NOT confirmed:** SOL/DOGE live balances. The DOGE row renders "Balance unavailable" — the adapter calls the correct sochain `/balance/` path, but the shared VM IP has exhausted sochain's 2,500/day keyless quota (429) and BlockCypher is 429 "Limits reached" too. Environmental on this VM, not a code bug — but the screen does not show working DOGE balances, so "Implemented" overstates it. |
+| C-22 | "Is there anything that is still not pushed?" | 2026-11-22 ~23:35 | Not verifiable in CDP | Implemented | Status question, answered at the time; re-checked now (see C-04). |
+| C-23 | "Is there anything that is still not pushed?" (asked again) | 2026-11-23 ~01:35 | Not verifiable in CDP | Implemented | Status question, answered at the time; re-checked now (see C-04). |
+| C-24 | "Working?" | 2026-11-23 ~01:44 | Not verifiable in CDP | Implemented | Status question, answered at the time. |
+| C-25 | UI/UX Fixes + Build programme, 21 items | 2026-11-23 ~04:40 | Partial | Implemented | CDP confirms on screen: (2) devnet pill toggles both ways; (4) Download card produces a real PNG (`bawa-receive-eth.png`, 37,223 bytes) — the Web Share API files path cannot run in headless Chromium, so the share half is unverified in CDP; (5) one import field ("12, 15, 18, 21 or 24 words"); (6) same-phrase offers "Add as Account N" ("This is the same recovery phrase… there is no need to delete anything"); (7) bulk create 10 → Account 11 shown; (8) HD rotation: New address changes the QR address, "Receiving address 2 of this account"; (9) Welcome rebuilt, no Create button; (10) Create hub: Web wallet "Available" (Coming soon only for genuinely-unavailable items); (12) asset rows show balance + fiat value + per-unit price; (13) Add Token dialog lists all 22 chains; (14) 9 chains added, record exists; (15) Copy button on the create words screen; (16) watch-only all chains searchable; (17) multi-account without deleting + naming explained; (18) 21 default tokens / 43 rows. **Lane D update:** (19) live RPC failover RE-PROVEN — E2E-19 specs passed in Lane D's full-suite runs (Ethereum falls back to the backup RPC, 6.2 s; RPC manager add/remove). **Lane F update (2026-11-23): the Solana half no longer passes** — E2E-19 Solana failover fails in the full suite AND alone AND on the pristine `d47d282` baseline (1.5 min timeout, identical); the Solana backup RPC (`public.rpc.solanavibestation.com`) is currently unreachable from this egress (probed empty), so the failover has nowhere to fall back to. The Ethereum half still passes (2.7–2.9 s, alone and in the suite). **NOT re-proven in CDP:** (1) the scroll-jump behaviour itself (only the `min-h-dvh` classes in the DOM); (3) mobile "every section" (spot-checked at 390 across screens, no horizontal overflow — not an exhaustive pass); (20) QR templates — see C-41 (Done in this lane) — and balance-aware ordering, unobservable with an all-zero fresh wallet; (21) docs (done — see C-37). |
+| C-26 | CORRECTION: "You never said about waiting for my review?" — do not state token-gaps is "waiting for your review" | 2026-11-23 ~04:48 | Not verifiable in CDP | Implemented | Standing correction. Complied with: this lane makes no "waiting for review" claim. |
+| C-27 | "Merge it and do this on top of that branch after current is done by you" / "Add wherever you feel like it" — merge destination delegated | 2026-11-23 ~05:11 | Not verifiable in CDP | Implemented | Merge claim. Git: `ui-ux-fixes` merge `4eb0242` is an ancestor of HEAD; work continues on token-gaps. |
+| C-28 | In-place fix rule (standing): edit the existing sections where bugs live; new files only when genuinely needed | 2026-11-23 ~05:11 | Not verifiable in CDP | Standing rule — complied with | Standing rule. This lane changed no app code; its only repo change is this document, in place. |
+| C-29 | Skills (standing): keep using the skill library — read each SKILL.md in full on the VM, mine public wallet repos, report skills/repos actually used, no verbatim copying without a licence check | 2026-11-23 ~05:11 | Not verifiable in CDP | Standing rule — complied with | Standing rule. Skills read in full on the VM (see "Skills used"). No repo code copied; no new dependency. The CDP harness was adapted from the Round 2 lane-E script, not written from scratch. |
+| C-30 | UI/UX preview link dead — fresh tunnel | 2026-11-23 ~10:25 | Not verifiable in CDP | Implemented | Process order; tunnel expired since, as free tunnels do. |
+| C-31 | Two open decisions asked via tap widgets: (a) five new-chain stables as defaults? (b) 40 px keep or revert? | 2026-11-23 ~10:3x | Not verifiable in CDP | Implemented | Process order; both answered by the owner 2026-11-23 ~14:17 (C-32, C-33). |
+| C-32 | "Leave them in Add Token" — the 5 verified new-chain stables stay in Add Token, NOT defaults; dashboard stays at 43 rows | 2026-11-23 ~14:17 | Done | Implemented | CDP: `DEFAULT_TOKENS` has 21 entries; the five stables' chains (Gnosis/Celo/Linea/Scroll/Fantom) appear in the Add Token dialog's chain list, not in the defaults. 43 rows render (C-18). |
+| C-33 | "Keep the 40 px fix" | 2026-11-23 ~14:17 | Done | Missed — fixed by Lane 1 | Same item as C-14. CDP-confirmed (see C-14). Do not re-ask. |
+| C-34 | UI/UX Round 2 programme, 10 items | 2026-11-23 ~15:28 | Partial | Implemented | CDP confirms: (1) QrCard (QR, amount, address, token + chain, logos) and QR auto-select — a Base USDC EIP-681 QR upload prefills chain + token + amount 25 + recipient and lands on step 3; (2) deep link cold start keeps the payment, "Continue to your send" after create (amount 0.5 prefilled) AND after import (see F-2 note below); (3) watch search combobox filters + recent persists across reload; (4) headings render in Baloo 2; (6) devnet shows live per-unit prices; (9) scan icon is 44×44 with an upload fallback that decodes QR images — live camera not verifiable in CDP (O-08). (5) copy rewrite sampled only (plain en-GB on the screens visited, no AI tells spotted — not an exhaustive pass). (7) mobile pass sampled (no horizontal overflow at 390; 16 px inputs not measured). **(8) FAILS on the Receive step:** the amount + QR step scrolls at 390×844 — the template buttons are below the fold (see C-41). (10) docs done; push audit re-verified (see C-04). |
+| C-35 | README showcase + Add Token programme: (A) README wallet-UI showcase like another repo's README; (B) wording — fully functional example wallet, never "template", chain count stated properly; (C) separate create instructions; (D) Add Token — any token by contract, price detected live | 2026-11-23 ~15:37 | Partial | Partially implemented | (A) Still blocked — the owner never named the repo or attached a link; nothing invented. (B) Done in substance: README states "22 chains" + "the guide covers … 168 chains"; the single "template" in README is "bug report template" (GitHub Issues), not the wallet called a template — the old "zero 'template'" was literally off by one word in an unrelated sentence. (C) `docs/CREATE-EXAMPLE-WALLET.md` exists (4,076 bytes) and is linked from README:18; the clean-checkout follow-through was NOT re-done by this lane. (D) CDP: Add Token dialog accepts a contract address and returns "Token added" (PEPE on Ethereum); the live price on the added token's row was not confirmed in CDP — but E2E itemD proves it (SHIB via CoinGecko, ANTS/DISC via DexScreener, aGnoGHO honestly "Price unavailable"; all 8 itemD specs passed across Lane D's full-suite runs, the two 2.0 m timeouts being live-network flakes that passed alone). **Lane F update (2026-11-23):** itemD in this lane's runs — ANTS, SHIB and aGnoGHO pass in the full suite; DISC fails in the full suite AND alone AND on the pristine `d47d282` baseline (2.0 min, Solana-side); MY fails in the full suite but passes alone (suite-load flake); SHIB/NOT flip by run (CoinGecko 429s). |
+| C-36 | Deep audit + devnet E2E programme, 5 lanes (bug hunt + reverify, devnet E2E all chains, HD verification incl. bot use case, multichain start to finish, gap analysis) | 2026-11-23 ~18:10 | Not verifiable in CDP | In progress (parallel programme) | Parallel programme, merged into token-gaps (via the marketing-fix merge `571f0fb`; token-gaps tip `d47d282`, fresh `ls-remote` 2026-11-23). `docs/GAP-ANALYSIS.md` exists on this tree with all 24 gaps. |
+| C-37 | Reverify + professional polish programme, 5 lanes | 2026-11-23 ~18:14 | Not verifiable in CDP | In progress (this programme) | This programme. Lane 1 is the checklist corrected here; lanes 2–5 report separately; merged into token-gaps at `ccb8195` → `71326e1`. |
+| C-38 | Bawa work by Muse hands-on on gray-pinee, 0 Sol calls while the API is below $1 (confirmed for the desktop-layout work) | 2026-11-22 | Not verifiable in CDP | Standing rule — complied with | Standing rule. This lane: hands-on Muse on gray-pinee, **0 Sol calls, 0 AgentRouter calls, 0 runner invocations**. |
+| C-39 | API $1 stop rule: stop if the API goes below $1; do not switch to API 1 | 2026-11-21 ~04:09 (standing, in force throughout) | Not verifiable in CDP | Standing rule — complied with | Standing rule. Sol stays stopped in this lane; no Sol call was made or attempted. |
+| C-40 | Marketing fix + found-bugs programme, 6 lanes (owner order with phone screenshots: mobile '$0.00 (Partial)' + desktop 'Ethereum history unavailable' + Retry) | 2026-11-23 ~19:14 | Not verifiable in CDP | — (new) | This programme. Merged into token-gaps (merge `571f0fb` + follow-up; tip `d47d282`, fresh `ls-remote` 2026-11-23); branch `panel-rebuild/marketing-fix` at `a8018fd`. Lane 1 owns the (Partial)/Retry/history defects; Lane 7 owns the QR templates. |
+| C-41 | CORRECTION: the three QR templates (Address, Payment request, Share link) are NOT done | 2026-11-23 ~19:16 | Done | — (new) | **Lane D CDP, this tree:** fixed by marketing-fix Lane 7 and verified live. Details step at 390 px (screenshot `11-receive-details-390.png`, viewed): main QR 136×136 measured, two 64×64 template QRs (Address, Share link) visible, and the heading now labels the shown template — "QR type: Payment request — tap another to switch" — the exact defect this row cited. The details step still scrolls 426 px at 390 px (content 1,270 px in an 844 px viewport; action buttons below the fold) — that is gap 14, not this row. **Lane F (2026-11-23): re-measured live on the merged tree** — main QR 136×136, all three template segments present (Address / Payment request / Share link), QR decodes via jsQR to the rotated SOL address. |
+| C-42 | CORRECTION: the re-verification was NOT properly checked — redo it browser-first | 2026-11-23 ~19:17 | Done | — (new) | **Lane F (merge lane, 2026-11-23): redone browser-first.** Every lane headline re-verified live in CDP on the merged tree (root-base build, Playwright chromium-1255, 390/820/1440/1919): SOL rotation + QR decode, TON second address, CELO shared address, LTC zpub import, Vitalik 16/16 fan-out, CoinGecko-blocked prices + Fantom, Celo history empty state, Transactions honest empty state, Receive redesign + 136 px QR + 3 templates, single Create button, no Popular chains + Scan tile, cold load 1,376,967 bytes, both SVGs render. Full evidence: `docs/FINISH-PRODUCT-PROGRAMME.md`; screenshots `/home/boxd/workspace/bawa-finish-f-shots/` (viewed). E2E full suite 15/24 (live-network failures, reproduced identically on the pristine `d47d282` baseline; E2E-02 is the known real bug). |
 
-## Missed — fixed by this lane
+## Wrong old verdicts (old verdict vs browser reality vs why)
 
-### F-1 — P8: the 40 px Receive fix was missing from the token-gaps tree (C-14 / C-33)
+- **W-1 — C-16 (Implemented → Missed in this tree).** Old: "Implemented", evidence `bf00f54` on `desktop-layout-v2`. Browser reality: at 980 px this tree shows the mobile layout (sidebar `display=none`, bottom nav, narrow column — screenshot `l8-home-980.png`, viewed). Why: the evidence came from a different, unmerged branch; the token-gaps tree never got the 980 px breakpoint.
+- **W-2 — C-25 (Implemented → Partial).** Old: "All 21 items", evidence code spots. Browser reality: 15–17 of 21 confirmed on screen; the Web Share files path, live RPC failover, balance-aware ordering and the QR templates were not shown working in CDP. Why: code spots were treated as screen proof.
+- **W-3 — C-34 (Implemented → Partial).** Old: "All 10 items", evidence code spots. Browser reality: item 8 fails on the Receive step — the amount + QR step scrolls at 390×844 and the template buttons are below the fold. Why: the no-scroll claim was never measured on the rendered step.
+- **W-4 — C-21 (Implemented → Partial).** Old: "Implemented", evidence endpoint strings in `chains.ts`. Browser reality: the DOGE row renders "Balance unavailable" and the dashboard shows 3 Retry buttons on failed rows; sochain and BlockCypher both 429 the shared VM IP. Why: endpoint strings were treated as working balances; live delivery from this VM was never checked.
+- **W-5 — C-13 (Implemented → Partial).** Old: "Implemented", evidence the follow-up's CDP screenshots. Browser reality: this lane re-confirmed the rail and the subpath, but P1–P10 were not individually re-proven. Why: a prior lane's screenshots were inherited as this checklist's evidence without re-checking each item.
+- **Precision correction, not a verdict change — C-35 (B).** Old: 'zero "template" in `README.md`'. Reality: one occurrence — "bug report template" (GitHub Issues). The wallet is never called a template; the substance holds.
 
-**What was wrong.** On `desktop-layout-v2` (`bf00f54`) the Receive
-status line renders only when there is something to report
-(`{copyStatus !== '' && (...)}`, `receive.tsx:282`). In the token-gaps
-tip the UI/UX rework of Receive left it unconditional
-(`receive.tsx:678-680`): an always-rendered empty `<p role="status">`
-under the Copy/Share buttons — the exact ~40 px of dead space P8
-removed and the owner ordered kept on 2026-11-23 ~14:17. The 14:17
-decision note ("the fix is already in the desktop-layout-v2 /
-token-gaps trees") was wrong for token-gaps; this lane re-checked the
-code first-hand instead of trusting it.
+**NOT wrong, now CDP-backed:** F-2 (import "Continue to your send") — confirmed end to end in CDP, with one probe trap worth recording: the import flow's "Check the restored addresses" step has its OWN vault-password fields, and "Save to vault" does nothing visible until they are filled (an empty save shows "Vault password must be at least 8 characters." — screenshot `l8e-empty-save-390.png`, viewed). Two of this lane's early probes stopped at that step and wrongly recorded the link as absent; the completed flow shows "Wallet restored" → "Continue to your send" → amount 0.5 + recipient prefilled.
 
-**Fix (in place).** `apps/web/src/screens/receive.tsx`: the status
-`<p>` now renders only when `copyStatus !== ''`, with a comment
-naming P8 and the 2026-11-23 decision.
+## Fixes made by this lane
 
-**Proof (TDD, RED first).** New tests in
-`apps/web/src/screens/receive.test.tsx`: "renders no empty status line
-before any copy action (P8 dead-space fix)" — FAILED before the fix
-(the empty `<p role="status">` was in the DOM) and passes after; "shows
-the status line once a copy action reports" — passes (the line still
-appears after Copy, with the copy message). Both files: 47 tests pass
-together (see Gates).
+**No app-code changes.** The two live defects this re-verification found are
+already owned by parallel lanes in this programme — the "(Partial)" hero +
+"history unavailable" + Retry (Lane 1) and the QR templates / Receive
+no-scroll step (Lane 7) — and the brief forbids re-fixing them. The one
+other missed item (C-16, the 980 px breakpoint) needs the owner's decision
+(D-01 below), not a silent port: porting it would ship part of the
+unreviewed desktop-layout programme into token-gaps. Nothing else missed
+that is in scope for this lane was found.
 
-### F-2 — Import path had no "Continue to your send" button (Round 2, item 2)
+**Method fixes (skills, VM copy only):**
 
-**What was wrong.** Round 2 fixed the shared-link deep-link failure
-for the create flow (`create-wallet.tsx:599-608`) but the import flow
-never got the same button — the Round 2 record itself lists it as
-still open ("The import-wallet path has no 'Continue to your send'
-button"). A user who opens a payment link and then imports a wallet
-had no way back to the send; the link only resumed via the Send tab.
+- `custom-skills/cdp-visual-verification/SKILL.md` — the skill suggested
+  `vite preview` for local CDP; with base `/bawa/` that 404s
+  `/bawa/assets/*.js` (O-01). Now says: serve the built dist statically
+  (`serve-dir.cjs` pattern), hash-verify before capturing.
+- `custom-skills/order-traceability-checklist/SKILL.md` — the verdict table
+  forbade "in progress" and had no browser-first verdict; now admits `in
+  progress (parallel programme)` and `not verifiable in CDP` (with the rule
+  that a UI claim checked only in code is `missed` in the browser-first
+  sense, not `implemented`).
 
-**Fix (in place, mirroring create).**
-`apps/web/src/screens/import-wallet.tsx`: imports
-`readPendingSendLinkSearch` from `../wallet/payment-links` and renders
-the same "Continue to your send" button on the "Wallet restored" step
-whenever a pending send link is stored. The stored query is
-re-validated by the Send screen on arrival, exactly as in create.
-Scope kept minimal: only the fresh-import restored screen (the direct
-mirror of create step 4). The same-phrase "add as Account N" path
-lands on the wallets list, where the stored link still resumes via the
-Send tab — noted, not rebuilt here.
+The sandbox copies of these two skills still carry the old text — the
+coordinator should sync them. No other skill was used. No repo code was
+copied verbatim; no new dependency was added.
 
-**Proof (TDD, RED first).** Two new tests in
-`apps/web/src/screens/import-wallet.test.tsx`: "offers to continue to a
-pending send link after restoring" — FAILED before the fix (no link in
-the DOM) and passes after; "shows no continue-to-send link after
-restoring without a pending send link" — passes. Both files: 47 tests
-pass together (see Gates).
-
-### F-3 — Item-14 cannot-add chain list was never recorded (UI/UX Fixes, item 14)
-
-**What was wrong.** Both programme records carried the same open
-bullet: "the chains that could not be added and why are not recorded
-in the repo". No lane report on the VM preserves a per-chain
-enumeration of the 146 remaining Trust Wallet Core chains, and none
-is invented here.
-
-**Fix (doc, in place).** `docs/UI-UX-FIXES-PROGRAMME.md` now records
-the 9 added chains with chainId and both verified keyless endpoints
-(read first-hand from `apps/web/src/wallet/chains.ts`): Scroll 534352,
-Mantle 5000, Metis 1088, opBNB 204, Aurora 1313161554, Fantom 250,
-Linea 59144, Celo 42220, Gnosis 100 — plus the bar (two keyless
-endpoints, both answering live) and the exclusion reasons as recorded
-in the 2026-11-23 ~09:29 completion (single/no keyless endpoint,
-403/401, dead provider). The same stale "40 px question awaits the
-owner's pick" bullets were corrected in the same pass in
-`docs/UI-UX-FIXES-PROGRAMME.md`, `docs/UI-UX-ROUND2-PROGRAMME.md` and
-`docs/DECISIONS.md` §§10–11 (decision 2026-11-23 ~14:17: keep the fix;
-the import-path button is now built — F-2).
+**Open items resolved by CDP evidence (no code change):** O-06 (1919
+settled-dashboard widths — screenshots `l8-dash-1919.png` viewed: no
+clipping, full-width layout) and O-10 (word grid at 1024 px — grid 524 px
+wide, 3 columns, widest word 67 px, no horizontal overflow).
 
 ## Still open — needs the owner's decision or action
 
 | # | Item | Why it needs the owner | Status |
 |---|---|---|---|
-| O-01 | E2E harness vs `base: '/bawa/'` — 2 specs fail at boot because `vite preview` 404s `/bawa/assets/*.js` | Needs a decision: serve the bawa-layout static server for E2E, or build with `--base /` for E2E runs | Open; needs owner decision. Not a code defect — the harness, not round-2 code. |
-| O-02 | Devnet Issue 5 — TON first send from a fresh wallet cannot deploy (signed BOC carries no state init); blocks first TON send on mainnet too | Needs a design decision (V4R2 state-init BOC builder) | Open; deep-audit Lane B checks Issues 5–10. |
-| O-03 | Devnet Issue 6 — `/track` cannot resolve a TON message hash, but the result screen displays the message hash as "Transaction" | Needs a fix decision | Open; deep-audit Lane B checks Issues 5–10. |
+| O-01 | E2E harness vs `base: '/bawa/'` — 2 specs fail at boot because `vite preview` 404s `/bawa/assets/*.js` | Needs a decision: serve the bawa-layout static server for E2E, or build with `--base /` for E2E runs | **Resolved (Lane E, ADR-0011 + this lane):** root-base build for E2E (`build:e2e`, `preview:e2e`, `E2E_PORT` in `playwright.config.ts`; CI e2e job builds with `build:e2e`). Lane D ran the full suite 4 times on token-gaps `d47d282`: 22/24, 23/24, 22/24 (killed run 19/20 before that). E2E-05 was a stale test contradicting the app's deliberate rule — rewritten in place, green alone (56.2 s) and in run 3. E2E-02 exposes a real devnet-derivation race (see GAP-ANALYSIS gap 4). Item D Jetton timeouts are live-network flakes (pass alone). |
+| O-02 | Devnet Issue 5 — TON first send from a fresh wallet cannot deploy (signed BOC carries no state init); blocks first TON send on mainnet too | Needs a design decision (V4R2 state-init BOC builder) | **Resolved (Lane B, verified by Lane D):** closed — the 2026-11-22 inference was wrong; the init IS present in the app-signed BOC (TonViewer tx `4f35a862...fe4a42c0`). No BOC builder needed; no app code carries `state_init` (Wallet Core sets it). `DEVNET-ISSUES.md` Issue 5 updated to [CLOSED]. |
+| O-03 | Devnet Issue 6 — `/track` cannot resolve a TON message hash, but the result screen displays the message hash as "Transaction" | Needs a fix decision | **Resolved (Lane B, verified in code by Lane D):** fixed — `apps/web/src/wallet/tracker.ts:300-305` matches both the transaction hash and the base64 `in_msg.hash`. `DEVNET-ISSUES.md` Issue 6 updated to [FIXED]. |
 | O-04 | BTC/ETH/TRX devnet faucets — captcha-blocked; 0 tokens obtained after the captcha-bypass programme | Owner-side only: complete the captchas in their own browser with the wallet-A devnet addresses, or accept BTC/ETH/TRX as unproven | Open; owner action. Wallet-A addresses are in `DEVNET-ISSUES.md` Issue 7. |
-| O-05 | Non-zero DOGE watch-row render unproven (no funded DOGE xpub for the fixture address; SOL proves the render path) | Needs a funded DOGE xpub or an accept | Open since token-gaps; carried through every programme since. |
-| O-06 | E2E-03/06 need a stable-network run; 1919 settled-dashboard widths not captured | Environment-blocked (shared-VM egress will not hold ~90 s) | Open; deep-audit Lane D's start-to-finish journey covers the dashboard widths. |
-| O-07 | Review + sign steps CDP-unverified (vitest-covered only — a fresh disposable wallet holds no funds, so any positive amount is honestly stopped at the details step) | Needs a funded test wallet or an accept | Partial; vitest covers the flow. |
-| O-08 | Live camera scan path unverified (headless Chromium denies `getUserMedia`; image-upload fallback verified instead) | Needs the owner's phone | Open; needs owner action. |
-| O-09 | Receive tagline removed in Round 2 item 8 to make the no-scroll steps fit | Owner may miss it — restore it somewhere, or leave it removed | Open; needs owner word. Flagged, not rebuilt without that word. |
-| O-10 | Word grid at exactly 1024 px has ~34 px slack for the worst-case word | Worth one glance if the owner checks a 1024 px viewport | Open, minor; deep-audit Lane A is re-verifying Round 2 claims in CDP. |
-| O-11 | Publish the new desktop build to GitHub Pages vs leave Pages on the saved `67c48e2` build (offered 2026-11-22 ~18:26, never answered; proactive re-offer 2026-11-23 ~15:29 expired unsent) | Needs the owner's pick | Open; needs owner decision. Pages still serves the saved build (`gh-pages ee63a13`, verified this lane). |
+| O-05 | Non-zero DOGE watch-row render unproven | Needs a funded DOGE xpub or an accept | Open since token-gaps. Note from this lane's CDP: watch-only DOGE takes an **xpub**, not a plain address ("Only extended PUBLIC keys or TON public addresses are accepted"). |
+| O-06 | E2E-03/06 need a stable-network run; 1919 settled-dashboard widths not captured | — | **Resolved by this lane (CDP):** 1919 widths captured and viewed (`l8-dash-1919.png` — no clipping, full-width layout). E2E-03/06 stay environment-blocked. |
+| O-07 | Review + sign steps CDP-unverified (vitest-covered only — a fresh disposable wallet holds no funds, so any positive amount is honestly stopped at the details step) | Needs a funded test wallet or an accept | Open; unchanged by this lane. |
+| O-08 | Live camera scan path unverified (headless Chromium denies `getUserMedia`; image-upload fallback verified instead) | Needs the owner's phone | Open; unchanged. Upload fallback CDP-proven again this lane (Base USDC QR prefills). |
+| O-09 | Receive tagline removed in Round 2 item 8 to make the no-scroll steps fit | Owner may miss it — restore it somewhere, or leave it removed | Open; needs owner word. Flagged, not rebuilt without that word. (Note: the no-scroll fit it was removed for does not hold on the Receive QR step — see C-34/C-41.) |
+| O-10 | Word grid at exactly 1024 px has ~34 px slack for the worst-case word | — | **Resolved by this lane (CDP):** at 1024 px the recovery-word grid is 524 px wide, 3 columns, widest word 67 px, no horizontal overflow. |
+| O-11 | Publish the new desktop build to GitHub Pages vs leave Pages on the saved `67c48e2` build | Needs the owner's pick | Open; needs owner decision. Pages still serves the saved build (`gh-pages ee63a13`, live-verified this lane: 200, JS hash matches the branch). |
 | O-12 | README wallet-UI showcase (showcase programme item A) | Blocked: the owner never named the reference repo or attached a link | Open; needs owner input. Nothing invented. |
+| D-01 | **NEW — C-16:** the 980 px breakpoint exists only on unmerged `desktop-layout-v2`. Port just the breakpoint to token-gaps, merge that branch's breakpoint, or accept the mobile layout at 980 px? | Owner decision — porting pre-empts the owner's pending review of the desktop-layout programme | Open; needs owner decision. This lane did not port it. |
+| D-02 | **NEW — found bug, not an owner order:** `/lock` renders TWO `<main>` landmarks (the app shell's plus the lock screen's `aria-labelledby="lock-title"`), a duplicate-main accessibility defect. No manual "Lock now" control exists anywhere in the UI — the vault locks only via the auto-lock timer. | Referred to Lane 2 (found-bugs lane) — not fixed by this lane | **Resolved (marketing-fix, verified first-hand by Lane D in CDP on this tree):** `/lock` renders exactly 1 `<main>` (measured + screenshot `09-lock-390.png` viewed — clean unlock card) and `/security` has a "Lock now" button (measured `hasLockNow: true`). |
+| D-03 | **NEW — scope note:** the deep-audit programme (C-36) and the marketing-fix programme (C-40) run in parallel; their branches are local-only and unpushed. | Coordinator's call when they land | **Landed (Lane D, 2026-11-23):** both merged into token-gaps — deep-audit via the marketing-fix merge `571f0fb`, marketing-fix at `a8018fd`; token-gaps tip is now `d47d282` (fresh `ls-remote`). |
 
 ## Not ordered — no action taken
 
@@ -212,57 +236,87 @@ the import-path button is now built — F-2).
 - Token contract tail truncated on one-line rows (Round 2 item 8):
   name, symbol and verified tick stay readable; the full contract
   stays in the DOM and in Add Token. Cosmetic, recorded.
-- CoinGecko keyless feed rate-limits on the shared VM IP (429s): the
-  app retries and degrades honestly ("Price error", "Partial total").
-  Environmental, not a code miss.
+- CoinGecko keyless feed rate-limits on the shared VM IP (429s) and
+  sochain / BlockCypher keyless quotas are exhausted on the shared VM IP
+  (both 429 at the time of this lane's checks): the app retries and
+  degrades honestly ("Price error", "Partial total", "Balance
+  unavailable"). Environmental, not a code miss — but it is exactly what
+  the owner sees on a fresh wallet, which is why Lane 1 exists.
 - External wallet apps not tested for deep links: cannot be tested
   from the VM. The Bawa web link is CDP-proven.
 - `/assets` deep links on Pages return HTTP 404 status while rendering
   via the `404.html` fallback — cosmetic, browsers render the app.
 - E2E-03/06 environment-blocked (see O-01/O-06).
+- Review + sign steps and the live camera path cannot be verified in
+  headless CDP (O-07, O-08) — they need a funded test wallet and the
+  owner's phone respectively.
+- The Web Share API files path cannot run in headless Chromium (no share
+  target); only the download fallback was CDP-proven (C-25 item 4).
 
 ## Gates (this lane's worktree, first-hand)
 
-Run on `/home/boxd/workspace/bawa-reverify-l1-worktree`, Node
-22.23.4, `apps/web`, after the fixes (F-1, F-2) and doc updates (F-3):
+Run on `/home/boxd/workspace/bawa-mkt-l8-worktree`, Node 22.23.4,
+`apps/web`, on the untouched tip `71326e1` (this lane changed no app code):
 
-- `npx vitest run src/screens/receive.test.tsx
-  src/screens/import-wallet.test.tsx`: 2 files, **47 passed** (24 +
-  23), including the 4 new tests — each new test was run RED first
-  and failed as expected before its fix.
-- `npx tsc --noEmit`: 0.
-- `npm run build`: 0 (palette audit passed: 29 approved colour
-  literals).
-- Full vitest suite: 90 files, **1722 passed / 5 skipped** (1727
-  total). Untouched-baseline comparison, first-hand: the tip before
-  this lane's changes runs 90 files, **1718 passed / 5 skipped** — the
-  delta is exactly the 4 new regression tests, zero regressions.
-- `npm run lint`: 0.
-- `npm audit`: 0 vulnerabilities.
-- Root `npm test`: 0 ("All register-links checks passed"; `npm ci` in
-  `tools/hdwallet-gen` first — the fresh worktree had no
-  `node_modules` there, not a code failure).
-
-Baseline rule applied: no failure was waived — there were no failures
-to waive. The only suite run on a modified tree that could have hidden
-a regression (the full vitest run) was repeated on the untouched tip
-via `git stash` / `git stash pop`, and the worktree was verified
-restored afterwards (same 7 modified files).
+- `npm run build`: 0 (`tsc --noEmit` 0, vite built in 1.68 s, palette
+  audit passed: 29 approved colour literals). Dist JS
+  `assets/index-Co_iBr5E.js`, served and hash-verified for every CDP run.
+- Full vitest suite: **not re-run by this lane** — no code was changed, so
+  there is nothing to regress; the base tree's gates stand (reverify
+  programme: 1,722 passed / 5 skipped, 90 files). The checklist and skill
+  edits in this lane are docs-only.
+- CDP: 8 scripts, all completed (`LANE8_CDP_DONE` … `LANE8H_CDP_DONE`);
+  every section that failed did so for a recorded probe reason (wrong
+  route, wrong selector, or a step the probe had not reached), and each
+  was re-probed with corrected selectors — no CDP failure was left
+  unexplained. Console errors per section were captured in the results
+  JSONs (no page errors that change a verdict; the copy action reports
+  "Unable to copy. Please copy it manually." in headless Chromium, where
+  there is no clipboard — the status line itself still appears, which is
+  what the 40 px check needs).
 
 ## Skills used (read in full on gray-pinee)
 
-- **test-driven-development** (400 lines,
-  `/home/boxd/workspace/custom-skills/test-driven-development/SKILL.md`):
-  the Prove-It pattern — a failing reproduction test before each fix
-  (F-1, F-2), GREEN after, full-suite verification. Changed: the 4 new
-  regression tests and the two fixes they guard.
-- **code-review-and-quality** (402 lines,
-  `/home/boxd/workspace/custom-skills/code-review-and-quality/SKILL.md`):
-  five-axis review method for the reverify itself — correctness first
-  (every "implemented" verdict re-checked against code, not reports),
-  no rubber-stamping. Changed: the verdicts in this checklist,
-  including the three missed items the reports had called done or
-  left unrecorded.
+- **order-traceability-checklist**
+  (`/home/boxd/workspace/custom-skills/order-traceability-checklist/SKILL.md`):
+  the order-set-first method and the fix-or-record loop. Changed: the
+  verdicts in this checklist, and a small addition to the skill itself
+  (the `in progress` / `not verifiable in CDP` verdicts a browser-first
+  brief requires).
+- **cdp-visual-verification**
+  (`/home/boxd/workspace/custom-skills/cdp-visual-verification/SKILL.md`):
+  build + hash-verify, serve fresh, capture at the owner's viewports, check
+  the state the owner is actually in, view the screenshot. Changed: the
+  verdicts in this checklist, and the skill's `vite preview` line (now
+  bans it for this repo — static serve instead).
 
 No other skill was used. No repo code was copied verbatim; no new
-dependency was added.
+dependency was added. Public wallet repos were not re-mined by this lane
+(the CDP harness was adapted from the Round 2 lane-E script in
+`/home/boxd/workspace/bawa-uiux-round2/cdp-lane-e-verify.mjs`, and the
+static server from `/home/boxd/workspace/bawa-deep-audit/serve-dir.cjs`).
+
+## CDP evidence index
+
+All under `/home/boxd/workspace/bawa-mkt-l8/cdp/` on gray-pinee:
+
+- Scripts + results: `l8-cdp-verify.mjs` / `l8-results.json`,
+  `l8b-…`, `l8c-…`, `l8d-…` (import Continue proof), `l8e-…`,
+  `l8f-…`, `l8g-…` (auto-lock proof), `l8h-…` (same-phrase + rotation).
+- Screenshots viewed by eye: `l8-receive-390.png` (templates below the
+  fold), `l8-dash-390.png` ("$0.00 (Partial)"), `l8-home-980.png` (mobile
+  layout at 980 px), `l8-dash-1440.png`, `l8-dash-1919.png`,
+  `l8e-empty-save-390.png` ("Vault password must be at least 8
+  characters.").
+- Screenshots captured (not all individually viewed): `l8-dash-820.png`,
+  `l8-receive-1440.png`, `l8-send-chain-390.png`,
+  `l8-send-after-base-usdc-390.png`, `l8-deeplink-*.png`,
+  `l8-watch-*.png`, `l8-wallets-*.png`, `l8-devnet-dashboard-390.png`,
+  `l8-asset-eth-390.png`, `l8-history-390.png`, `l8-mnemonic-1024.png`,
+  `l8b-dash-assets-390.png`, `l8b-receive-amount-390.png`,
+  `l8b-import-*.png`, `l8b-watch-doge-result-390.png`,
+  `l8b-wallets-bulk-390.png`, `l8b-devnet-dashboard-390.png`,
+  `l8b-asset-eth-mainnet-390.png`, `l8b-transactions-390.png`,
+  `l8b-add-token-*.png`, `l8b-send-token-step-390.png`,
+  `l8c-downloaded-card.png`, `l8d-*.png`, `l8e-*.png`, `l8f-*.png`,
+  `l8g-locked-asset-390.png`, `l8h-*.png`.
