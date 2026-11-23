@@ -3,7 +3,7 @@
 This is the Web starter for Bawa AI Wallet Builder, built on the vendored token-ui
 foundation. It supports in-browser wallet generation and recovery, watch-only import,
 offline signing with broadcast disabled, and read-only balances and transaction history
-via chain adapters. No price feed is connected, so there is no portfolio fiat total.
+via chain adapters. Prices come from CoinGecko, with DexScreener and TonAPI as fallback for tokens CoinGecko does not list, so there is a portfolio fiat total.
 Secrets never leave the browser.
 
 It ships with 22 chains enabled by default; the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet enables 22 of them.
