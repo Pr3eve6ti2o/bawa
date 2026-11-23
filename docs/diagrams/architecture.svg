@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="726" viewBox="0 0 900 726" role="img" aria-labelledby="archTitle archDesc">
+  <title id="archTitle">Bawa architecture — guide, HD core, vault, providers, flows and storage</title>
+  <desc id="archDesc">The guide and registry build the example web wallet. One 24-word phrase derives addresses on 22 chains through Trust Wallet Core 4.9.3. The phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from public RPCs and prices from CoinGecko with DexScreener and TonAPI fallbacks. Send signs offline and mainnet broadcast stays disabled. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
+  <style>
+    .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
+    .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
+    .m { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; fill: #2B2B2B; }
+    .panel { fill: #FFFDF7; stroke: #2B2B2B; stroke-width: 2; }
+    .accent { fill: #FF6B4A; }
+    .sun { fill: #FFD93B; }
+    .arrow { stroke: #2B2B2B; stroke-width: 2; fill: none; }
+    .lbl { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; paint-order: stroke; stroke: #FFFDF7; stroke-width: 4; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 z" fill="#2B2B2B"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="726" fill="#FFFDF7"/>
+
+  <!-- Title -->
+  <text class="t" x="16" y="32" font-size="23" font-weight="700">How Bawa fits together</text>
+  <text class="b" x="884" y="30" font-size="11.5" text-anchor="end">Trust Wallet Core 4.9.3 · 22 chains · mainnet</text>
+  <path d="M16,42 q12,-5 24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0 t24,0" fill="none" stroke="#FF6B4A" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Panel A : Guide -->
+  <rect class="panel" x="16" y="60" width="410" height="180" rx="12"/>
+  <rect class="accent" x="30" y="76" width="11" height="11" rx="2"/>
+  <text class="t" x="48" y="87" font-size="15.5" font-weight="700">Guide — one prompt in</text>
+  <text class="b" x="30" y="114" font-size="12">docs/ 01–16 — sixteen sections, how to build a wallet</text>
+  <text class="b" x="30" y="134" font-size="12">registry/*.json — capabilities, engines, profiles, ui</text>
+  <text class="b" x="30" y="154" font-size="12">WALLET_BUILDER.md — the entry point</text>
+  <text class="b" x="30" y="174" font-size="12">scripts/build-wallet.mjs — one prompt → a real project</text>
+  <text class="b" x="30" y="194" font-size="12">tools/bawa_cli.py — menu launcher</text>
+  <text class="b" x="30" y="214" font-size="12">Guide covers 168 chains (Trust Wallet Core registry)</text>
+
+  <!-- Panel B : HD core -->
+  <rect class="panel" x="474" y="60" width="410" height="180" rx="12"/>
+  <rect class="sun" x="488" y="76" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="506" y="87" font-size="15.5" font-weight="700">HD core — one phrase, 22 addresses</text>
+  <text class="m" x="488" y="112" font-size="11">createWallet() — 32 random bytes → 24 words</text>
+  <text class="m" x="488" y="131" font-size="11">HDWallet.createWithMnemonic(mnemonic)</text>
+  <text class="m" x="488" y="150" font-size="11">getAddressForCoin(chain) — once per chain</text>
+  <text class="m" x="488" y="169" font-size="11">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0</text>
+  <text class="m" x="488" y="188" font-size="11">ETH + 15 EVM m/44'/60'/0'/0/0 — one shared address</text>
+  <text class="m" x="488" y="207" font-size="11">TRX m/44'/195'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
+  <text class="m" x="488" y="226" font-size="11">TON m/44'/607'/0' (V4R2) · SOL m/44'/501'/0'</text>
+
+  <!-- Arrow A -> B : builds -->
+  <path class="arrow" d="M426,150 L466,150" marker-end="url(#ah)"/>
+  <text class="lbl" x="446" y="140" font-size="10.5" text-anchor="middle">builds</text>
+
+  <!-- Panel C : Vault -->
+  <rect class="panel" x="16" y="284" width="410" height="180" rx="12"/>
+  <rect class="accent" x="30" y="300" width="11" height="11" rx="2"/>
+  <text class="t" x="48" y="311" font-size="15.5" font-weight="700">Vault — keys never leave the device</text>
+  <text class="b" x="30" y="338" font-size="12">Password → PBKDF2 600,000 · SHA-256 → AES-GCM-256</text>
+  <text class="m" x="30" y="358" font-size="11">bawa-vault: { version, kdf, saltB64, ivB64, … }</text>
+  <text class="b" x="30" y="378" font-size="12">ciphertextB64 · profileIds — no plaintext, ever</text>
+  <text class="b" x="30" y="398" font-size="12">bawa-vault-key — raw key, auto-unlock only</text>
+  <text class="b" x="30" y="418" font-size="12">bawa-vault-backup · bawa-vault-accounts:v1</text>
+  <text class="b" x="30" y="438" font-size="12">Watch-only: bawa-watch-only-xpubs — public keys only</text>
+
+  <!-- Panel D : Providers -->
+  <rect class="panel" x="474" y="284" width="410" height="180" rx="12"/>
+  <rect class="sun" x="488" y="300" width="11" height="11" rx="2" stroke="#2B2B2B" stroke-width="1.5"/>
+  <text class="t" x="506" y="311" font-size="15.5" font-weight="700">Providers — public endpoints only</text>
+  <text class="b" x="488" y="338" font-size="12">Balances — public RPCs, up to 3 per chain</text>
+  <text class="m" x="488" y="358" font-size="11">resolveRpcEndpoints() · 9 adapter modules</text>
+  <text class="m" x="488" y="378" font-size="11">btc eth evm trx ton sol ltc doge + token-balances</text>
+  <text class="b" x="488" y="398" font-size="12">Prices — CoinGecko first, 10-minute cache</text>
+  <text class="b" x="488" y="418" font-size="12">Unlisted → DexScreener (EVM · SOL · TRX) · TonAPI (TON)</text>
+  <text class="b" x="488" y="438" font-size="12">Unreachable = unavailable. Never invented.</text>
+
+  <!-- Arrow B -> D : 22 addresses -->
+  <path class="arrow" d="M679,240 L679,276" marker-end="url(#ah)"/>
+  <text class="lbl" x="672" y="262" font-size="10.5" text-anchor="end">22 addresses</text>
+
+  <!-- Panel : Flows -->
+  <rect class="panel" x="16" y="488" width="868" height="150" rx="12"/>
+  <rect class="accent" x="30" y="504" width="11" height="11" rx="2"/>
+  <text class="t" x="48" y="515" font-size="15.5" font-weight="700">Flows — what you can do</text>
+  <g font-size="12">
+    <circle cx="42" cy="536" r="9.5" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
+    <text class="b" x="42" y="540" font-size="11" font-weight="700" text-anchor="middle">1</text>
+    <text class="b" x="60" y="540" font-weight="700">Create / Import / Watch-only</text>
+    <text class="m" x="288" y="540" font-size="10.5">createWallet() · import · validateWatchOnlyImport()</text>
+
+    <circle cx="42" cy="558" r="9.5" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
+    <text class="b" x="42" y="562" font-size="11" font-weight="700" text-anchor="middle">2</text>
+    <text class="b" x="60" y="562" font-weight="700">Receive</text>
+    <text class="m" x="288" y="562" font-size="10.5">address + QR card, any chain</text>
+
+    <circle cx="42" cy="580" r="9.5" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
+    <text class="b" x="42" y="584" font-size="11" font-weight="700" text-anchor="middle">3</text>
+    <text class="b" x="60" y="584" font-weight="700">Send</text>
+    <text class="m" x="288" y="584" font-size="10.5">build + sign offline (createTransactionIntent)</text>
+
+    <circle cx="42" cy="602" r="9.5" fill="#FF6B4A" stroke="#2B2B2B" stroke-width="1.5"/>
+    <text class="b" x="42" y="606" font-size="11" font-weight="700" text-anchor="middle">4</text>
+    <text class="b" x="60" y="606" font-weight="700">Broadcast?</text>
+    <text class="m" x="288" y="606" font-size="10.5">NO on mainnet (isBroadcastAllowedFor) — devnet only, valueless tokens</text>
+
+    <circle cx="42" cy="624" r="9.5" fill="#FFD93B" stroke="#2B2B2B" stroke-width="1.5"/>
+    <text class="b" x="42" y="628" font-size="11" font-weight="700" text-anchor="middle">5</text>
+    <text class="b" x="60" y="628" font-weight="700">Track + Add Token</text>
+    <text class="m" x="288" y="628" font-size="10.5">parseBtcTx · parseEthTx · parseTrxTx · parseTonTxEntry; contract → name, symbol, balance</text>
+  </g>
+
+  <!-- Arrows C -> Flows, D -> Flows -->
+  <path class="arrow" d="M200,464 L200,480" marker-end="url(#ah)"/>
+  <text class="lbl" x="193" y="478" font-size="10.5" text-anchor="end">vault signs</text>
+  <path class="arrow" d="M679,464 L679,480" marker-end="url(#ah)"/>
+  <text class="lbl" x="672" y="478" font-size="10.5" text-anchor="end">balances + prices</text>
+
+  <!-- Storage strip -->
+  <rect class="panel" x="16" y="650" width="868" height="64" rx="12"/>
+  <text class="t" x="30" y="672" font-size="13" font-weight="700">Stored on your device — localStorage</text>
+  <text class="m" x="30" y="692" font-size="10.5">bawa-vault · bawa-vault-key · bawa-vault-backup · bawa-vault-accounts:v1 · bawa-watch-only-xpubs</text>
+  <text class="m" x="30" y="708" font-size="10.5">bawa:prices-cache:v1 · bawa:token-prices-cache:v2 · bawa:custom-tokens:v1 · bawa-devnet-enabled</text>
+</svg>

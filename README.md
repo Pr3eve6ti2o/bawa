@@ -5,6 +5,12 @@
 
 **One plain request in, a real, buildable wallet project out.**
 
+![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
+
+![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
+
+How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
+
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. Give it one plain request — "Create a Web wallet" — and it produces a real project from resources that actually exist: real derivation, real balances and prices from public endpoints, no invented figures, no fake money. The example wallet cannot send funds: broadcast stays disabled.
 
 - **Self-custodial by construction.** Keys are generated and held locally in the browser; your recovery phrase never leaves your machine.
