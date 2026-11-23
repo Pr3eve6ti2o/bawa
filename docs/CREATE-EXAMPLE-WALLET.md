@@ -77,9 +77,9 @@ shown as an invented figure.
 | Check | Command | Expected result |
 | --- | --- | --- |
 | Build passes | `npm run build` | Exit `0`, `dist/index.html` exists |
-| Preview serves the app | `curl -s -o /dev/null -w "%{http_code}" http://localhost:4173/` | `200` |
+| Preview serves the app | `curl -s -L -o /dev/null -w "%{http_code}" http://localhost:4173/` | `200` (the preview root redirects to `/bawa/`, so follow it with `-L`) |
 | App mounts | Open `http://localhost:4173` in a browser | Welcome screen with Create, Import, and watch-only options |
-| Wallet engine loads | `curl -s -o /dev/null -w "%{http_code}" http://localhost:4173/wallet-core.wasm` | `200` |
+| Wallet engine loads | `curl -s -o /dev/null -w "%{http_code}" http://localhost:4173/bawa/wallet-core.wasm` | `200` |
 
 ## Troubleshooting
 
