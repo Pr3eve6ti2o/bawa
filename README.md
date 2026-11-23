@@ -210,7 +210,8 @@ The five-lane Reverify + Professional Polish programme (reverify
 checklist of every owner order from 2026-11-22 through 2026-11-23,
 real wallet screenshots in the README, professional polish of the
 README and docs, architecture/duplicates/dead-code pass, skills gap)
-is complete and merged into `panel-rebuild/token-gaps`. It fixed
+is complete and merged into `panel-rebuild/token-gaps` (fast-forward
+to `ccb8195`). It fixed
 three genuinely missed items in place: the 40 px Receive fix
 restored to the token-gaps tree, a "Continue to your send" button
 added to the import flow, and the item-14 chain list recorded. Full
