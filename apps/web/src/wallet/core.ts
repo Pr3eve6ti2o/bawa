@@ -532,6 +532,70 @@ async function deriveDevnetBtcAddress(
   }
 }
 
+/**
+ * Lane C (bot use case): export the account-level extended public key for
+ * one chain, so the owner can take it to their bot and derive many
+ * receiving addresses from it (m/<account path>/0/<index>) without the
+ * recovery phrase. The key is public data — it reveals addresses,
+ * balances and history — but it can never sign, so it is safe to copy
+ * out of the vault. The vault must be unlocked; the mnemonic never
+ * leaves this function. TON and SOL have no extended public key: their
+ * paths are fully hardened Ed25519, so one wallet has exactly one
+ * address — export that address instead (see deriveAddresses).
+ * The serialisation is per chain: BTC zpub (BIP-84), LTC Ltub (BIP-84),
+ * DOGE dpub (BIP-44), every other secp256k1 chain xpub (BIP-44).
+ */
+export async function getAccountExtendedPublicKey(
+  mnemonic: string,
+  passphrase: string,
+  chain: ChainId,
+  account: number,
+): Promise<string> {
+  if (chain === 'ton') {
+    throw new Error(
+      'TON uses fully hardened Ed25519 derivation and cannot derive children from an xpub.',
+    );
+  }
+  if (chain === 'sol') {
+    throw new Error('SOL uses fully hardened Ed25519 derivation and cannot derive children from an xpub.');
+  }
+  assertAccountIndex(account, 0);
+
+  const core = await loadCore();
+  assertValidMnemonic(core, mnemonic);
+  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
+  if (!wallet) {
+    throw new Error('Unable to restore wallet.');
+  }
+
+  try {
+    const coin = coinForChain(core, chain);
+    const purpose =
+      chain === 'btc' || chain === 'ltc'
+        ? core.Purpose.bip84
+        : core.Purpose.bip44;
+    const derivation =
+      chain === 'btc' ? core.Derivation.bitcoinSegwit : core.Derivation.default;
+    const version =
+      chain === 'btc'
+        ? core.HDVersion.zpub
+        : chain === 'ltc'
+          ? core.HDVersion.ltub
+          : chain === 'doge'
+            ? core.HDVersion.dpub
+            : core.HDVersion.xpub;
+    return wallet.getExtendedPublicKeyAccount(
+      purpose,
+      coin,
+      derivation,
+      version,
+      account,
+    );
+  } finally {
+    wallet.delete();
+  }
+}
+
 /** Derive an external-chain address from an account-level extended public key. */
 export async function deriveFromXpub(
   chain: ChainId,

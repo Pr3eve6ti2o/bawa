@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
+import { accountPathFor, type ChainId } from "../wallet/chains";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
 import { ChainLogo } from "./asset-rows";
 import { Badge } from "../ui/components/badge";
@@ -16,12 +17,12 @@ const chains = [
   { id: "ton", name: "TON" },
 ] as const;
 
-// Token gaps, item 6 + item 8: the WATCH-ONLY list covers all 13
-// registry chains. It used to be the same four as the vault section
-// above, so a watch-only wallet imported for any other chain (e.g.
-// SOL) was stored but invisible here. The xpub map, validation and
-// derivation already cover all 13. The vault section keeps the
-// original four — its address list is out of this item's scope.
+// Token gaps, item 6 + item 8, extended by Lane C to all 22 registry
+// chains: the WATCH-ONLY list used to cover 13 chains, so a watch-only
+// wallet imported for any of the nine newer chains (e.g. Gnosis) was
+// stored but invisible here. The xpub map, validation and derivation
+// already cover all 22. The vault section keeps the original four —
+// its address list is out of this item's scope.
 const watchChains = [
   { id: "btc", name: "Bitcoin" },
   { id: "eth", name: "Ethereum" },
@@ -36,7 +37,44 @@ const watchChains = [
   { id: "avax", name: "Avalanche C-Chain" },
   { id: "ltc", name: "Litecoin" },
   { id: "doge", name: "Dogecoin" },
+  { id: "gnosis", name: "Gnosis" },
+  { id: "celo", name: "Celo" },
+  { id: "linea", name: "Linea" },
+  { id: "mantle", name: "Mantle" },
+  { id: "scroll", name: "Scroll" },
+  { id: "opbnb", name: "opBNB" },
+  { id: "metis", name: "Metis" },
+  { id: "aurora", name: "Aurora" },
+  { id: "fantom", name: "Fantom" },
 ] as const;
+
+// Lane C (bot use case): every chain the vault can export an extended
+// public key for, plus TON and SOL, which have one address per wallet
+// and no extended public key — the address itself is what the bot uses.
+const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = [
+  { id: "btc", name: "Bitcoin" },
+  { id: "eth", name: "Ethereum" },
+  { id: "trx", name: "TRON" },
+  { id: "ton", name: "TON" },
+  { id: "sol", name: "Solana" },
+  { id: "bsc", name: "BNB Smart Chain" },
+  { id: "matic", name: "Polygon" },
+  { id: "arb", name: "Arbitrum One" },
+  { id: "op", name: "OP Mainnet" },
+  { id: "base", name: "Base" },
+  { id: "avax", name: "Avalanche C-Chain" },
+  { id: "ltc", name: "Litecoin" },
+  { id: "doge", name: "Dogecoin" },
+  { id: "gnosis", name: "Gnosis" },
+  { id: "celo", name: "Celo" },
+  { id: "linea", name: "Linea" },
+  { id: "mantle", name: "Mantle" },
+  { id: "scroll", name: "Scroll" },
+  { id: "opbnb", name: "opBNB" },
+  { id: "metis", name: "Metis" },
+  { id: "aurora", name: "Aurora" },
+  { id: "fantom", name: "Fantom" },
+];
 
 export function WalletManagementScreen() {
   const {
@@ -49,6 +87,7 @@ export function WalletManagementScreen() {
     vaultPassphraseNeeded: vaultPassphraseNeededRaw,
     createVaultAccounts,
     selectVaultAccount,
+    exportAccountExtendedPublicKey,
   } = useWallet();
   const hasWallets = watchChains.some(({ id }) => Boolean(xpubs[id]));
   // Older mocked contexts may not provide the new fields; default them
@@ -68,13 +107,54 @@ export function WalletManagementScreen() {
   const [isDeriving, setIsDeriving] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
 
-  // Lane C, items 7 + 17: bulk account creation and switching.
+  // Lane C, item 8: bulk account creation and switching.
   const [countInput, setCountInput] = useState("1");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [switchingAccount, setSwitchingAccount] = useState<number | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
+
+  // Lane C (bot use case): extended public keys are shown only on
+  // demand, one chain at a time, and only while the vault is unlocked.
+  // They are public data, but they reveal every address, balance and
+  // transaction — so they are never rendered unprompted and never stored.
+  const [shownKeys, setShownKeys] = useState<Record<string, string>>({});
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [copiedChain, setCopiedChain] = useState<string | null>(null);
+
+  async function showExtendedKey(chain: ChainId) {
+    if (loadingKey !== null || !exportAccountExtendedPublicKey) return;
+    setExportError(null);
+    setCopiedChain(null);
+    setLoadingKey(chain);
+    try {
+      const key = await exportAccountExtendedPublicKey(chain);
+      if (key === null) {
+        setExportError(
+          "Unlock your vault first — see security settings.",
+        );
+      } else {
+        setShownKeys((previous) => ({ ...previous, [chain]: key }));
+      }
+    } catch (cause) {
+      setExportError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLoadingKey(null);
+    }
+  }
+
+  async function copyExtendedKey(chain: ChainId) {
+    const key = shownKeys[chain];
+    if (!key) return;
+    try {
+      await navigator.clipboard.writeText(key);
+      setCopiedChain(chain);
+    } catch {
+      setExportError("Unable to copy. Please copy it manually.");
+    }
+  }
 
   useEffect(() => {
     setAccountInput(String(vaultAccount.account));
@@ -346,7 +426,7 @@ export function WalletManagementScreen() {
                     <dt className="text-sm font-semibold">{name}</dt>
                     <dd>
                       <code className="block break-all rounded-md bg-muted p-3 text-sm">
-                        {vaultAddresses[id][0] ?? "—"}
+                        {vaultAddresses[id]?.[0] ?? "—"}
                       </code>
                     </dd>
                   </div>
@@ -356,6 +436,86 @@ export function WalletManagementScreen() {
                 Solana and TON have one address per wallet, so changing the
                 numbers above does not change the Solana or TON address.
               </p>
+
+              <div className="space-y-3">
+                <h2 className="text-sm font-semibold">
+                  Account public keys for your bot
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  An extended public key lets your bot work out many
+                  receiving addresses for this account without your
+                  recovery phrase. It can see addresses, balances and
+                  history, but it can never spend — no private key is in
+                  it. Keep it to systems you trust. Solana and TON have
+                  no extended public key: they have one address per
+                  wallet, so use the address itself.
+                </p>
+                <ul className="space-y-2">
+                  {exportChains.map(({ id, name }) => {
+                    const isSingleAddress = id === "ton" || id === "sol";
+                    const shown = shownKeys[id];
+                    return (
+                      <li
+                        key={id}
+                        className="space-y-2 rounded-md border px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <span className="flex items-center gap-2 text-sm font-medium">
+                            <ChainLogo chain={id} />
+                            {name}
+                          </span>
+                          {!isSingleAddress && !shown && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void showExtendedKey(id)}
+                              disabled={
+                                loadingKey !== null ||
+                                !exportAccountExtendedPublicKey
+                              }
+                            >
+                              {loadingKey === id
+                                ? "Showing…"
+                                : "Show extended public key"}
+                            </Button>
+                          )}
+                          {!isSingleAddress && shown && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void copyExtendedKey(id)}
+                            >
+                              {copiedChain === id ? "Copied" : "Copy"}
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          <code>
+                            {accountPathFor(id, vaultAccount.account)}
+                          </code>
+                          {isSingleAddress
+                            ? " — one address per wallet, so there is no extended public key. Use the address itself."
+                            : " — your bot derives receiving addresses as this path plus /0/0, /0/1, /0/2…"}
+                        </p>
+                        {isSingleAddress ? (
+                          <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                            {vaultAddresses[id]?.[0] ?? "—"}
+                          </code>
+                        ) : shown ? (
+                          <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                            {shown}
+                          </code>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {exportError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {exportError}
+                  </p>
+                )}
+              </div>
             </>
           ) : (
             <div className="space-y-3">

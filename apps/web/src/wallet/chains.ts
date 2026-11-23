@@ -740,6 +740,19 @@ export function pathFor(chain: ChainId, account: number, index: number): string 
 }
 
 /**
+ * Lane C (bot use case): the account-level path an extended public key
+ * covers — the path the bot appends `/0/<index>` to for receiving
+ * addresses. BTC `m/84'/0'/0'`, LTC `m/84'/2'/0'`, DOGE `m/44'/3'/0'`,
+ * every EVM chain and TRX `m/44'/60'/0'` / `m/44'/195'/0'`. TON and SOL
+ * have no account path: their path is already the single address path.
+ */
+export function accountPathFor(chain: ChainId, account: number): string {
+  const path = pathFor(chain, account, 0);
+  if (chain === 'ton' || chain === 'sol') return path;
+  return path.replace(/\/0\/0$/u, '');
+}
+
+/**
  * Whether a fresh receive address can be derived for this chain (Lane C,
  * item 8 — HD rotation). Solana and TON have one address per wallet by
  * design: their paths are fully hardened (`m/44'/501'/0'` and

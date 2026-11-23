@@ -27,6 +27,12 @@ const ltcLtub =
   'Ltub2ZANw57Fi4JfMGenngwfZMqDrsccTf2m3qEjvLuk8faGXB973sSqGttAdKBvGSCLG9DXh2yxaUB9qpwQUe2zCCtrZPhjxGuMAWqL6F7Xrpd';
 const dogeDgub =
   'dgub8rUhDtD3YFGZTUphBfpBbzvFxSMKQXYLzg87Me2ta78r2SdVLmypBUkkxrrn9RTnchsyiJSkHZyLWxD13ibBiXtuFWktBoDaGaZjQUBLNLs';
+// Lane C: Wallet Core serialises the DOGE account key as dpub (version
+// 02fda926); the dgub above (02facafd) is the same key in the other
+// serialisation. Both are DOGE-only versions. The wallet's own export
+// is the dpub, so its own watch-only validation must accept it.
+const dogeDpub =
+  'dpubZG2yVAE9cxzbb951cYM2av1gxG46wXAdAKDDJEcTLC7cSFUvHbVo8mMYqZDAe2dPyigxSve76Kvi537CVzxjyhZnNPCRBCm6HJKTqYSjKSn';
 
 const fixtures = [
   {
@@ -166,6 +172,31 @@ describe.sequential('watch-only engine boundary', () => {
   it('recognises the DOGE fixture on its own chain', async () => {
     await expect(validateExtendedKey(dogeDgub, 'doge')).resolves.toMatchObject({
       ok: true,
+    });
+  });
+
+  it('recognises the Wallet Core DOGE dpub serialisation on its own chain (Lane C)', async () => {
+    await expect(validateExtendedKey(dogeDpub, 'doge')).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(validateAccountKey(dogeDpub, 'doge')).resolves.toMatchObject({
+      ok: true,
+    });
+  });
+
+  it('derives DOGE addresses from the dpub exactly like from the dgub (Lane C)', async () => {
+    expect(await deriveAddress('doge', dogeDpub, 0)).toBe(
+      'DTkd5ZVxsernAkEVuvyp7bAW3oMYz9nH5H',
+    );
+    expect(await deriveAddress('doge', dogeDpub, 1)).toBe(
+      'DTZz4xP4sUGxfRrzkRapvXjN335EtPKsED',
+    );
+  });
+
+  it('still rejects a BTC version when validating for DOGE (Lane C)', async () => {
+    await expect(validateExtendedKey(btcZpub, 'doge')).resolves.toMatchObject({
+      ok: false,
+      reason: 'version-not-allowed',
     });
   });
 

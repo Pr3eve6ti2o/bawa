@@ -97,6 +97,7 @@ export function preloadRoute(to: string): void {
 }
 import { WalletProvider, useWallet } from '../state/wallet-context';
 import { appBasePath } from '../wallet/payment-links';
+import { accountName } from '../wallet/vault';
 import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
@@ -180,7 +181,7 @@ export function NetworkModePill() {
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { vaultState } = useWallet();
+  const { vaultState, vaultAccount } = useWallet();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   // Escape closes the More menu and returns focus to its trigger.
   useEffect(() => {
@@ -293,7 +294,7 @@ function AppLayout() {
               onFocus={() => preloadRoute('/wallets')}
               className="truncate text-sm font-medium text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
             >
-              {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+              {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
             </Link>
             <NetworkModePill />
           </header>
@@ -313,7 +314,7 @@ function AppLayout() {
                   onFocus={() => preloadRoute('/wallets')}
                   className="block truncate text-xs leading-tight text-ink hover:underline hover:decoration-wavy hover:decoration-coral hover:underline-offset-4"
                 >
-                  {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
+                  {vaultState === 'no-vault' ? 'No wallet' : accountName(vaultAccount.account)} &#8250;
                 </Link>
               </div>
             </div>

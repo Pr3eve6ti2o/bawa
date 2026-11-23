@@ -10,6 +10,7 @@ import {
   chainConfig,
   chainConfigForNetwork,
   GENERATED_CHAIN_FACTS,
+  accountPathFor,
   pathFor,
   profileFor,
   promoteBackupEndpoint,
@@ -159,6 +160,19 @@ describe('chains registry', () => {
   it('uses a fully hardened TON path with no index suffix', () => {
     expect(pathFor('ton', 0, 1)).toBe("m/44'/607'/0'");
     expect(pathFor('ton', 1, 0)).toBe("m/44'/607'/0'");
+  });
+
+  it('returns the account-level path an extended public key covers (Lane C)', () => {
+    expect(accountPathFor('btc', 0)).toBe("m/84'/0'/0'");
+    expect(accountPathFor('eth', 0)).toBe("m/44'/60'/0'");
+    expect(accountPathFor('trx', 0)).toBe("m/44'/195'/0'");
+    expect(accountPathFor('ltc', 0)).toBe("m/84'/2'/0'");
+    expect(accountPathFor('doge', 0)).toBe("m/44'/3'/0'");
+    expect(accountPathFor('base', 0)).toBe("m/44'/60'/0'");
+    expect(accountPathFor('btc', 1)).toBe("m/84'/0'/1'");
+    // TON and SOL have no account path: the single address path itself.
+    expect(accountPathFor('ton', 0)).toBe("m/44'/607'/0'");
+    expect(accountPathFor('sol', 0)).toBe("m/44'/501'/0'");
   });
 
   it('uses a fully hardened SOL path with no index suffix', () => {

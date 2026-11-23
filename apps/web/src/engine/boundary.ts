@@ -47,7 +47,12 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   aurora: ['0488b21e'],
   fantom: ['0488b21e'],
   ltc: ['019da462'],
-  doge: ['02facafd'],
+  // Lane C: DOGE accepts both serialisations of the same account key —
+  // dgub (02facafd, what bip_utils emits) and dpub (02fda926, what Trust
+  // Wallet Core's HDVersion.dpub emits and what the wallet itself exports).
+  // Both versions are DOGE-only, so accepting both cannot confuse chains
+  // the way accepting BTC's zpub for LTC would (see the ltc entry).
+  doge: ['02facafd', '02fda926'],
   btc: ['0488b21e', '049d7cb2', '04b24746'],
   eth: ['0488b21e'],
   trx: ['0488b21e'],

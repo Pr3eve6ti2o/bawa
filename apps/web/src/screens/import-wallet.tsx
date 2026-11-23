@@ -115,7 +115,9 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   aurora: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   fantom: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   ltc: { label: 'Account public key (Ltub)', placeholder: 'Ltub…' },
-  doge: { label: 'Account public key (dgub)', placeholder: 'dgub…' },
+  // Lane C: both DOGE serialisations are accepted (dpub, what Trust
+  // Wallet Core emits, and dgub, what bip_utils emits) — same key.
+  doge: { label: 'Account public key (dpub or dgub)', placeholder: 'dpub… or dgub…' },
 };
 
 const MIN_PASSWORD_LENGTH = 8;
