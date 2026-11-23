@@ -63,7 +63,11 @@ on them:
 | 17 | Old-address balance/history after rotation; 18/21-word phrases (Lane C) | Verification |
 | 18 | ETH history dual state: "No transactions yet" + "history unavailable" together (Lane D) | Decision needed |
 | 19 | Copy gaps: Networks "Mainnet only" above the devnet switch; Receive tagline (Lanes A, D) | Open |
-| 20 | Known cosmetic/verification limits: truncated chain names, review/sign, watch-only (Lane D) | Verification |
+| 20 | Known cosmetic and verification limits: truncated chain names, review/sign, watch-only (Lane D) | Verification |
+| 21 | Watch-only rejects devnet TON addresses (Lane B, new) | Decision needed |
+| 22 | Faucets retried 2026-11-23: still 0 tokens, blocks moved (Lane B) | Decision needed |
+| 23 | TonCenter keyless 429s on devnet sends, measured (Lane B) | Decision needed |
+| 24 | Result-screen copy tension on a failed broadcast (Lane B) | Open |
 
 ```mermaid
 flowchart LR
@@ -629,8 +633,8 @@ first eleven were written. Lane A is the deep bug hunt (commits
 that the nine newer EVM chains genuinely work for
 derive/balance/receive — they lack send (blocked honestly),
 history (gap 1) and, for Fantom, a live price (gap 13). Lane B
-(devnet E2E) had not arrived when this file was finalised; see the
-"Awaiting Lane B input" section at the end.
+(devnet E2E) arrived after finalisation; see the "Lane B arrived"
+section at the end and gaps 21–24 above.
 
 ## 12. DOGE has no working browser fallback (Lane A)
 
@@ -986,29 +990,116 @@ Live endpoint checks, same day, from the build machine:
     above with the Trust Wallet registry citations; the owner
     confirms them as final.
 
-## Awaiting Lane B input
+## Lane B — added 2026-11-23
 
-Lanes A, C and D arrived with the coordinator's follow-up on
-2026-11-23 and are in the file above as gaps 12–20 (numbered from
-12, as this section originally promised). What is still missing:
+The gaps below arrived with the coordinator's follow-up after Lane E
+finalised. Lane B is the devnet E2E lane (commit `7b6e4c0`). Its
+report is in `/home/boxd/workspace/bawa-deep-audit/` as
+`LANE-B-REPORT.md`. Two of the gaps above change status on Lane B's
+evidence: gap 6 (TON first send and message-hash tracking) is now
+closed for the first send and fixed for the message hash, and gap 9
+(faucets) was retried on 2026-11-23 and still blocks. The sections
+above are left as written; this section records what changed.
 
-- **Lane B (devnet E2E):** per-chain send/receive results once the
-  faucets unblock (or stay blocked), and any new gap the live runs
-  expose — particularly whether the 9 derive-only chains behave the
-  same on devnet as on mainnet, and the ETH history dual state in
-  gap 18, which sits in Lane B's area too. When it arrives, extend
-  this file in place: add the new gaps to the summary table,
-  numbered from 21, and record that Lane B found them. Do not
-  rewrite the sections above to fit the new findings; append a
-  dated entry that says what changed.
+## 21. Watch-only rejects devnet TON addresses (Lane B, new finding)
 
-Lanes A, C and D are closed as inputs. What each one left behind
-is recorded where it belongs: Lane A's E2E-02 harness block is
-resolved by gap 4 (the root-base build); its "E2E-03/06 need a
-stable-network run" is noted in gap 5 alongside the 429 counts;
-Lane C's bot use case is YES for 20 chains with the xpub export in
-place, and its four derivation decisions are gap 15; Lane D's
-"zero scroll" correction is gap 14.
+Adding a devnet TON address (for example wallet B's `0QCCLv...`)
+as watch-only fails with `Testnet TON addresses are not
+supported.` The input is cleared. The root cause is a deliberate
+boundary: `validateTonAddress(value, {devnet})` already accepts
+testnet when passed the flag, but `validateWatchOnlyImport`
+(`boundary.ts:568`) and `deriveAddress` (`boundary.ts:673`) call
+it with no option, and the boundary doc explicitly notes that the
+watch-only call sites stay mainnet-only. A mainnet TON address for
+the same wallet IS accepted and listed, but shows no balance for
+the watch entry.
+
+Why it matters: the devnet watch-only row is untestable until this
+is resolved, so the devnet E2E loop (fund, send, receive, watch)
+cannot be closed for TON, the one chain with live devnet funds.
+The fix threads devnet through validation, derivation and the
+imported-wallet balance adapters — multi-site, with mainnet safety
+implications, and it overrides a recorded deliberate decision from
+the devnet programme. That is why Lane B did not fix it in place.
+A fix sketch is in the Lane B report.
+
+Repos that solve it: the parsing itself needs nothing new —
+`@ton/core` (already a dependency) re-encodes mainnet and testnet
+forms of the same address, which Lane B verified by hand. For the
+pattern, Trust Wallet's watch-only import (trustwallet/wallet-core,
+Apache 2.0) treats the network as part of the imported record, not
+as a global; BlueWallet (bluewallet/bluewallet, MIT) keeps
+watch-only wallets per network in the same list. What to take: the
+network flag on the imported-wallet record, not the address
+format. Where it belongs: Doc 02 (chain guides, TON section) and
+Doc 13 (architecture, the watch-only boundary).
+
+## 22. Faucets retried 2026-11-23: still 0 tokens, blocks moved (Lane B)
+
+Gap 9, retried. Six attempts on 2026-11-23 (headless Playwright,
+VM egress 185.209.179.229), 0 tokens obtained anywhere:
+
+- Sepolia pk910: the 2026-11-22 IP block is GONE. The new block
+  is `Could not start session [INVALID_CAPTCHA] captcha check
+  failed: invalid token`.
+- TRX nileex: `Please perform human-machine authentication
+  first.` (Turnstile never completes).
+- BTC coinfaucet.eu: hCaptcha image grid, `Please try again.`
+- BTC/TRX ZalalenA: Turnstile "Secure Access" gate never clears.
+- GetSepolia: `getsepolia.pages.dev` ERR_NAME_NOT_RESOLVED.
+
+Owner action, unchanged: complete the captchas in their own
+browser with the wallet-A addresses — BTC
+`tb1qthpp9j0xe2a2lu92rlma8wavza4c4dnr3t9dv7`, ETH
+`0x5FB142843960B2B122d0D8BE5d23A663aB8cF478`, TRX
+`TKY5iG6YnXToWLau6X9AirpvioevEmbLFy` (or `!nile <address>` to
+TronFAQBot for TRX). Until then BTC/ETH/TRX stay NOT PROVEN on
+devnet. Where it belongs: Doc 10 (operations and testing, the
+faucet runbook).
+
+## 23. TonCenter keyless 429s on devnet sends, measured (Lane B)
+
+Gap 10, with fresh numbers. Wallet C's first send hit
+`sendBoc` 429 four times in a row; the app-signed BOC landed
+only when sent through keyless TonAPI transport. Wallet A's send
+landed on the 3rd attempt after a 9-minute idle. The 429 window
+clears after roughly 10–15 minutes of zero traffic and closes
+again within minutes of resuming. The app handles every 429
+honestly ("signed but was not broadcast"). The caveat this leaves:
+the app's own broadcast path for a first send is proven only by
+the A to B landing (seqno 5), not by a C landing through the app.
+
+What closes it: a keyed TonCenter key (owner decision, not
+requested here) or off-peak retries. Where it belongs: Doc 02
+(TON chain guide) and Doc 10 (operations, rate-limit runbook).
+
+## 24. Result-screen copy tension on a failed broadcast (Lane B)
+
+When a send is signed but the broadcast 429s, the result screen
+header says "broadcast" while the body says "not broadcast". Both
+cannot be true, and the header is the one the eye reads first.
+Small copy fix, flagged for Lane A: the header should say the
+send was signed and held, not that it was broadcast. Also flagged
+in the same pass: mainnet TRON `getnowblock` CORS errors in the
+console (balances only, not a user-facing defect). Where it
+belongs: Doc 10 (operations) for the copy rule — no screen renders
+a state its own body contradicts — and the TRON CORS note to gap
+10's follow-up list.
+
+## Lane B arrived — 2026-11-23 (coordinator follow-up)
+
+Lane B arrived after this file was finalised and is in the file
+above as gaps 21–24, numbered from 21 as this section originally
+promised. Its headline results: TON first send is proven live
+(gap 6, Issue 5 closed — TonViewer tx `4f35a862...fe4a42c0`,
+contract deploy, wallet_v4r2, C uninit to active) and the
+message-hash lookup is fixed in place (gap 6, Issue 6, commit
+`7b6e4c0`); the faucets were retried and still yield 0 tokens
+(gap 22); the 9 derive-only chains and 6 logo-only ERC-20s are
+unchanged and not a bug (gap 3). The ETH history dual state in
+gap 18 sits in Lane B's area too and is still open — Lane B did
+not pick a winning state. All five lanes are now closed as
+inputs.
 
 ## Lane record
 
@@ -1061,5 +1152,6 @@ place, and its four derivation decisions are gap 15; Lane D's
   failing tests were re-run individually and passed. No full-suite
   re-run after the last spec fix was done, for the reason given in
   gap 4.
-- Lane B input had not arrived when this file was finalised; see
-  "Awaiting Lane B input" above.
+- Lane B arrived after finalisation; gaps 21–24 added by the
+  coordinator on 2026-11-23 (commit to follow in the programme
+  branch).
