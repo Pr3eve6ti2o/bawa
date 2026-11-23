@@ -82,7 +82,7 @@ vi.mock('../wallet/send', async (importOriginal) => {
     await importOriginal<typeof import('../wallet/send')>();
   return {
     ...actual,
-    signEthOffline: vi.fn(async () => ({
+    signEvmOffline: vi.fn(async () => ({
       ok: true,
       signedTxHex: '0xdeadbeef',
       txHash: '0xhash1234',
@@ -311,6 +311,88 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('0xdeadbeef');
       expect(mounted.div.textContent).toContain('Signed transaction (hex)');
       expect(mounted.div.textContent).toContain('not sent anywhere');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('walks the BSC flow to a signed, not-sent result', async () => {
+    setWallet({
+      vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], bsc: [FROM] },
+      balances: {
+        btc: { status: 'unavailable', reason: 'no-adapter' },
+        eth: { status: 'available', value: '1000000000000000000' },
+        trx: { status: 'unavailable', reason: 'no-adapter' },
+        ton: { status: 'unavailable', reason: 'no-adapter' },
+        bsc: { status: 'available', value: '1000000000000000000' },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'BNB Smart Chain');
+      await clickContaining(mounted.div, 'BNB Smart Chain · BNB');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      await act(async () => {
+        setInputValue(amount, '0.5');
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, 'Review your send');
+      expect(mounted.div.textContent).toContain('Review your send');
+      expect(mounted.div.textContent).toContain('BNB Smart Chain · BNB');
+      expect(mounted.div.textContent).toContain('0.5 BNB');
+      expect(mounted.div.textContent).toContain('0.00042 BNB');
+      expect(mounted.div.textContent).toContain('0.50042 BNB');
+      expect(mounted.div.textContent).not.toContain("isn't available yet");
+      await click(mounted.div, 'Sign offline');
+      await waitForText(mounted.div, 'Send signed, not sent');
+      expect(mounted.div.textContent).toContain('Send signed, not sent');
+      expect(mounted.div.textContent).toContain('0xhash1234');
+      expect(mounted.div.textContent).toContain('0xdeadbeef');
+      expect(mounted.div.textContent).toContain('Signed transaction (hex)');
+      expect(mounted.div.textContent).toContain('not sent anywhere');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a still-unsupported chain (Polygon) shows the honest unavailable state', async () => {
+    setWallet({
+      vaultAddresses: { btc: [], eth: [FROM], trx: [], ton: [], matic: [FROM] },
+      balances: {
+        btc: { status: 'unavailable', reason: 'no-adapter' },
+        eth: { status: 'available', value: '1000000000000000000' },
+        trx: { status: 'unavailable', reason: 'no-adapter' },
+        ton: { status: 'unavailable', reason: 'no-adapter' },
+        matic: { status: 'available', value: '1000000000000000000' },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'Polygon');
+      await clickContaining(mounted.div, 'Polygon · POL');
+      const recipient = mounted.div.querySelector(
+        '#send-recipient',
+      ) as HTMLInputElement;
+      await act(async () => {
+        setInputValue(recipient, RECIPIENT);
+      });
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      await act(async () => {
+        setInputValue(amount, '0.5');
+      });
+      await click(mounted.div, 'Review');
+      await waitForText(mounted.div, "Sending on Polygon isn't available yet");
+      expect(mounted.div.textContent).toContain(
+        "Sending on Polygon isn't available yet",
+      );
+      expect(mounted.div.textContent).toContain('BTC, ETH, BNB, TRX and TON');
+      expect(mounted.div.textContent).not.toContain('Review your send');
     } finally {
       await mounted.cleanup();
     }

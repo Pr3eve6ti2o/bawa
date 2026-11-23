@@ -48,7 +48,7 @@ import {
   validateRecipient,
   previewSendAmount,
   simulateSend,
-  signEthOffline,
+  signEvmOffline,
   signBtcOffline,
   signTrxOffline,
   signTonOffline,
@@ -67,11 +67,13 @@ import { TokenPickerRow } from './token-picker-row';
 import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
-// Chains with offline signing today (wallet/send.ts). Token sends and
-// native sends on the other registry chains are not built: the asset
-// picker shows them, but the amount step says so honestly instead of
-// pretending to send (token gaps, item 4).
-const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
+// Chains with offline signing today (wallet/send.ts). BSC joined
+// 2026-11-24: it is EVM, so the general EVM signer covers it with
+// chain id 56. Token sends and native sends on the other registry
+// chains are not built: the asset picker shows them, but the amount
+// step says so honestly instead of pretending to send (token gaps,
+// item 4).
+const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'bsc'];
 
 type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
 
@@ -479,7 +481,7 @@ export function SendScreen() {
       setPreview({
         ok: false,
         code: 'adapter-unavailable',
-        reason: `Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only — token sending is not built yet.`,
+        reason: `Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only — token sending is not built yet.`,
       });
       return;
     }
@@ -487,7 +489,7 @@ export function SendScreen() {
       setPreview({
         ok: false,
         code: 'adapter-unavailable',
-        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only.`,
+        reason: `Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only.`,
       });
       return;
     }
@@ -541,20 +543,21 @@ export function SendScreen() {
       const signed = await withMnemonicAsync(async (mnemonic) => {
         const adapter = getAdapterForMode(chain, devnetEnabled);
         if (!adapter) throw new Error("Sending isn't available for this network.");
-        if (chain === 'eth') {
+        if (chain === 'eth' || chain === 'bsc') {
           const inputs = await adapter.getTxInputs(from);
           if (inputs.status !== 'ok') throw new Error(inputs.reason);
           if (inputs.data.kind !== 'nonce') {
-            throw new Error("We couldn't prepare your Ethereum transaction. Please retry.");
+            throw new Error(`We couldn't prepare your ${config.displayName} transaction. Please retry.`);
           }
           const fee = BigInt(previewOk.feeBaseUnits);
-          // The ETH fee quote is gasPrice * 21000 (see adapters/eth.ts);
+          // The EVM fee quote is gasPrice * 21000 (see adapters/evm.ts);
           // the gas price is recovered by exact division.
           if (fee % 21000n !== 0n) {
             throw new Error('Fee quote does not match a 21000-gas transfer.');
           }
           const gasPrice = (fee / 21000n).toString();
-          const result = await signEthOffline(
+          const result = await signEvmOffline(
+            chain,
             mnemonic,
             getSessionPassphrase(),
             recipient,
@@ -1075,12 +1078,12 @@ export function SendScreen() {
         </ul>
         {selectedToken !== null && (
           <p className="text-sm text-ink">
-            {`Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only — token sending is not built yet.`}
+            {`Sending ${selectedToken.symbol} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only — token sending is not built yet.`}
           </p>
         )}
         {!SIGNING_CHAINS.includes(chain) && selectedToken === null && (
           <p className="text-sm text-ink">
-            {`Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only.`}
+            {`Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, BNB, TRX and TON transfers offline only.`}
           </p>
         )}
         </section>

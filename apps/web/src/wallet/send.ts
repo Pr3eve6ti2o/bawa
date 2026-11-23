@@ -14,7 +14,7 @@ import {
   assertIntentMatchesTransaction,
   createTransactionIntent,
 } from './signing-intent';
-import { pathFor } from './chains';
+import { chainConfig, pathFor } from './chains';
 import { getAdapterForMode, getDevnetAdapter } from './adapters';
 import {
   chainConfigForDevnetNetwork,
@@ -577,7 +577,7 @@ export async function simulateSend(
   }
 
   // BTC/TRX freshness checks (S4b): UTXO coverage and account inputs.
-  if (chain !== 'eth' && chain !== 'ton') {
+  if (chain !== 'eth' && chain !== 'ton' && chain !== 'bsc') {
     const adapter = getAdapterForMode(chain, devnet);
     if (!adapter) {
       return simulationFailed(
@@ -684,7 +684,7 @@ export async function simulateSend(
     }
   }
 
-  const kind = chain === 'eth' ? 'nonce' : 'seqno';
+  const kind = chain === 'ton' ? 'seqno' : 'nonce';
   const fallbackCode = kind === 'nonce' ? 'stale-nonce' : 'stale-seqno';
   const fallbackReason = `The ${chain} adapter did not return a live ${kind}.`;
 
@@ -703,13 +703,13 @@ export async function simulateSend(
 
   const data = inputs.data;
   const live =
-    chain === 'eth'
-      ? data.kind === 'nonce' &&
-        Number.isSafeInteger(data.nonce) &&
-        data.nonce >= 0
-      : data.kind === 'seqno' &&
+    chain === 'ton'
+      ? data.kind === 'seqno' &&
         Number.isSafeInteger(data.seqno) &&
-        data.seqno >= 0;
+        data.seqno >= 0
+      : data.kind === 'nonce' &&
+        Number.isSafeInteger(data.nonce) &&
+        data.nonce >= 0;
 
   // Zero is valid for both nonce and seqno.
   if (!live) {
@@ -892,22 +892,23 @@ export async function verifyEthSignedTx(
 }
 
 /**
- * Offline ETH native-transfer signing (Sol p4, landed 2026-11-19 in 197.4s;
- * corrected hands-on). Sol called key.data(), but withSigningKey already
- * passes the raw 32 key bytes, so .data() would throw and the function
- * would always fail; this version uses the bytes directly. Dynamic imports
- * converted to static; an invalid mnemonic now returns its own reason.
- * Signing happens inside the withSigningKey callback: the key bytes are a
- * WASM-memory view freed when it returns (proven by the /tmp probe — a
- * copy-then-delete-first attempt failed with invalid-key error 15).
- * The encoded protobuf input (which contains a key copy) is zero-filled
- * after use. Nothing here broadcasts.
- * S6a (2026-11-20): the signing core now uses the PartialSigner facade
- * (createPartialSigner + signDigest) with viem reassembly; the
- * withSigningKey/AnySigner path is gone. Output is byte-identical to the
- * old path (probe-verified against the pre-facade signer).
+ * Offline EVM native-transfer signing (generalised from signEthOffline,
+ * BSC send 2026-11-24). The same code signs any EVM chain: the chain id
+ * comes from the registry (chains.ts evmChainId), the from address from
+ * deriveAddresses()[chain], and the signing intent names the actual
+ * chain, so the fingerprint binds it. The signing key is always the ETH
+ * key — all 16 EVM chains share m/44'/60', so the BSC key IS the ETH
+ * key (createPartialSigner takes 'eth' for every EVM chain). The
+ * transaction is a legacy EIP-155 transfer (21000 gas, no data); v is
+ * 27/28 + 2 * chainId. Devnet: only Ethereum Sepolia exists — any other
+ * chain + devnet is refused, there is no BSC test network in this
+ * wallet. Nothing here broadcasts.
+ * (signEthOffline history: Sol p4, landed 2026-11-19; corrected
+ * hands-on; S6a 2026-11-20: PartialSigner facade + viem reassembly,
+ * byte-identical output to the old path.)
  */
-export async function signEthOffline(
+export async function signEvmOffline(
+  chain: ChainId,
   mnemonic: string,
   passphrase: string,
   to: string,
@@ -917,8 +918,29 @@ export async function signEthOffline(
   options?: SendDevnetOptions,
 ): Promise<EthSignedTx> {
   const devnet = options?.devnet === true;
-  // Sepolia chain id in devnet mode; mainnet chain id otherwise.
-  const chainId = devnet ? 11155111 : 1;
+  // Mainnet chain id from the registry; Sepolia in devnet mode (ETH
+  // only — no other EVM chain has a devnet here).
+  let chainId: number;
+  if (devnet) {
+    if (chain !== 'eth') {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: `${chainConfig(chain).displayName} has no devnet network in this wallet.`,
+      };
+    }
+    chainId = 11155111;
+  } else {
+    const evmChainId = chainConfig(chain).evmChainId;
+    if (evmChainId === null) {
+      return {
+        ok: false,
+        code: 'invalid-input',
+        reason: `${chainConfig(chain).displayName} is not an EVM chain.`,
+      };
+    }
+    chainId = evmChainId;
+  }
   if (
     ![amountBaseUnits, nonce, gasPriceBaseUnits].every(
       (value) => typeof value === 'string' && /^[0-9]+$/.test(value),
@@ -936,7 +958,7 @@ export async function signEthOffline(
   try {
     from = devnet
       ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).eth
-      : (await deriveAddresses(mnemonic, passphrase)).eth;
+      : (await deriveAddresses(mnemonic, passphrase))[chain];
   } catch (error: unknown) {
     return {
       ok: false,
@@ -947,14 +969,14 @@ export async function signEthOffline(
       reason:
         error instanceof Error && error.message === 'Invalid mnemonic.'
           ? 'Invalid mnemonic.'
-          : 'Failed to sign ETH transaction offline.',
+          : `Failed to sign ${chainConfig(chain).displayName} transaction offline.`,
     };
   }
 
-  const intent = createTransactionIntent('eth', to, amountBaseUnits, nonce);
+  const intent = createTransactionIntent(chain, to, amountBaseUnits, nonce);
   try {
     assertIntentMatchesTransaction(intent, {
-      chain: 'eth',
+      chain,
       to,
       amountBaseUnits,
       sequence: nonce,
@@ -985,11 +1007,12 @@ export async function signEthOffline(
     return {
       ok: false,
       code: 'invalid-input',
-      reason: 'Invalid Ethereum transaction input.',
+      reason: `Invalid ${chainConfig(chain).displayName} transaction input.`,
     };
   }
 
   const digest = hexToBytes(keccak256(unsignedHex));
+  // The ETH key signs for every EVM chain: all 16 share m/44'/60'.
   const signer = await createPartialSigner(mnemonic, passphrase, 'eth');
   const sig = await signer.signDigest(digest);
   const r = bytesToHex(sig.slice(0, 32));
@@ -1008,9 +1031,34 @@ export async function signEthOffline(
     return {
       ok: false,
       code: 'invalid-input',
-      reason: 'Invalid Ethereum transaction input.',
+      reason: `Invalid ${chainConfig(chain).displayName} transaction input.`,
     };
   }
+}
+
+/**
+ * Ethereum entry point of the general EVM signer above. Same signature
+ * as before, so existing callers and tests keep working unchanged.
+ */
+export async function signEthOffline(
+  mnemonic: string,
+  passphrase: string,
+  to: string,
+  amountBaseUnits: string,
+  nonce: string,
+  gasPriceBaseUnits: string,
+  options?: SendDevnetOptions,
+): Promise<EthSignedTx> {
+  return signEvmOffline(
+    'eth',
+    mnemonic,
+    passphrase,
+    to,
+    amountBaseUnits,
+    nonce,
+    gasPriceBaseUnits,
+    options,
+  );
 }
 
 /**

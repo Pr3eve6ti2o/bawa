@@ -11,6 +11,7 @@ import {
   validateRecipient,
   previewSendAmount,
   signEthOffline,
+  signEvmOffline,
   signBtcOffline,
   signTrxOffline,
   signTonOffline,
@@ -423,6 +424,84 @@ describe('signEthOffline (Sol p4, corrected hands-on)', () => {
       code: 'invalid-input',
       reason:
         'Amount, nonce and gas price must be unsigned decimal integer strings.',
+    });
+  });
+});
+
+describe('signEvmOffline BSC (native BNB, chain id 56)', () => {
+  const TO = '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+
+  it('signs 0.01 BNB offline; chain id is 56 and the sender is the BSC address (same as ETH)', async () => {
+    const mnemonic = await createWallet();
+    const addresses = await deriveAddresses(mnemonic, '');
+    const signed = await signEvmOffline(
+      'bsc',
+      mnemonic,
+      '',
+      TO,
+      '10000000000000000',
+      '0',
+      '20000000000',
+    );
+    expect(signed.ok).toBe(true);
+    if (!signed.ok) return;
+    // BSC shares m/44'/60' with ETH: the BSC address IS the ETH address.
+    expect(signed.from).toBe(addresses.bsc);
+    expect(signed.from).toBe(addresses.eth);
+    expect(signed.txHash).toBe(keccak256(signed.signedTxHex));
+    const parsed = parseTransaction(signed.signedTxHex);
+    expect(parsed.to?.toLowerCase()).toBe(TO.toLowerCase());
+    expect(parsed.value).toBe(10000000000000000n);
+    expect(parsed.nonce).toBe(0);
+    expect(parsed.chainId).toBe(56);
+    expect(parsed.gas).toBe(21000n);
+    expect(parsed.gasPrice).toBe(20000000000n);
+    // The in-module verifier accepts the signed tx against its intent (chain 56).
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 56,
+      }),
+    ).resolves.toEqual({ ok: true });
+    // And it rejects the same tx against the ETH chain id.
+    await expect(
+      verifyEthSignedTx(signed.signedTxHex, {
+        from: signed.from,
+        to: TO,
+        amountBaseUnits: '10000000000000000',
+        nonce: '0',
+        chainId: 1,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'Signed ETH transaction chain id does not match the signing intent.',
+    });
+  });
+
+  it('refuses a non-EVM chain', async () => {
+    const mnemonic = await createWallet();
+    expect(
+      await signEvmOffline('sol', mnemonic, '', TO, '1000', '0', '1'),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Solana is not an EVM chain.',
+    });
+  });
+
+  it('refuses BSC in devnet mode (no BSC test network)', async () => {
+    const mnemonic = await createWallet();
+    expect(
+      await signEvmOffline('bsc', mnemonic, '', TO, '1000', '0', '1', {
+        devnet: true,
+      }),
+    ).toEqual({
+      ok: false,
+      code: 'invalid-input',
+      reason: 'BNB Smart Chain has no devnet network in this wallet.',
     });
   });
 });

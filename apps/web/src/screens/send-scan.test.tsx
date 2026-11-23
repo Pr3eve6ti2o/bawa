@@ -80,7 +80,7 @@ vi.mock('../wallet/send', async (importOriginal) => {
     await importOriginal<typeof import('../wallet/send')>();
   return {
     ...actual,
-    signEthOffline: vi.fn(async () => ({
+    signEvmOffline: vi.fn(async () => ({
       ok: true,
       signedTxHex: '0xdeadbeef',
       txHash: '0xhash1234',
