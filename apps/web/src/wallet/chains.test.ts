@@ -157,9 +157,10 @@ describe('chains registry', () => {
     expect(profileFor('doge')).toBe('bawa-doge-bip44-v1');
   });
 
-  it('uses a fully hardened TON path with no index suffix', () => {
-    expect(pathFor('ton', 0, 1)).toBe("m/44'/607'/0'");
-    expect(pathFor('ton', 1, 0)).toBe("m/44'/607'/0'");
+  it('derives TON addresses per account and index on hardened paths (Lane A)', () => {
+    expect(pathFor('ton', 0, 1)).toBe("m/44'/607'/0'/1'");
+    expect(pathFor('ton', 1, 0)).toBe("m/44'/607'/1'");
+    expect(pathFor('ton', 1, 2)).toBe("m/44'/607'/1'/2'");
   });
 
   it('returns the account-level path an extended public key covers (Lane C)', () => {
@@ -170,14 +171,18 @@ describe('chains registry', () => {
     expect(accountPathFor('doge', 0)).toBe("m/44'/3'/0'");
     expect(accountPathFor('base', 0)).toBe("m/44'/60'/0'");
     expect(accountPathFor('btc', 1)).toBe("m/84'/0'/1'");
-    // TON and SOL have no account path: the single address path itself.
+    // TON and SOL have no extended public key: the (account, 0) path is
+    // itself the address path.
     expect(accountPathFor('ton', 0)).toBe("m/44'/607'/0'");
     expect(accountPathFor('sol', 0)).toBe("m/44'/501'/0'");
+    expect(accountPathFor('ton', 1)).toBe("m/44'/607'/1'");
+    expect(accountPathFor('sol', 1)).toBe("m/44'/501'/1'/0'");
   });
 
-  it('uses a fully hardened SOL path with no index suffix', () => {
-    expect(pathFor('sol', 0, 1)).toBe("m/44'/501'/0'");
-    expect(pathFor('sol', 1, 0)).toBe("m/44'/501'/0'");
+  it('derives SOL addresses per account and index on hardened paths (Lane A)', () => {
+    expect(pathFor('sol', 0, 1)).toBe("m/44'/501'/0'/0'/1'");
+    expect(pathFor('sol', 1, 0)).toBe("m/44'/501'/1'/0'");
+    expect(pathFor('sol', 1, 2)).toBe("m/44'/501'/1'/0'/2'");
   });
 
   it('lists all twenty-two chains for derive, restore and receive', () => {
@@ -1666,13 +1671,11 @@ describe('UI/UX fixes item 14 — nine new EVM chains', () => {
 });
 
 describe('canRotateReceiveAddress', () => {
-  // Lane C, item 8: every chain rotates except SOL and TON, whose paths
-  // are fully hardened (one address per wallet by design).
-  it('rotates every chain except SOL and TON', () => {
+  // Lane C, item 8; Lane A: every chain rotates — SOL and TON derive
+  // additional addresses on distinct hardened paths now.
+  it('rotates every chain, SOL and TON included', () => {
     for (const chain of SUPPORTED_CHAINS) {
-      expect(canRotateReceiveAddress(chain)).toBe(
-        chain !== 'sol' && chain !== 'ton',
-      );
+      expect(canRotateReceiveAddress(chain)).toBe(true);
     }
   });
 });

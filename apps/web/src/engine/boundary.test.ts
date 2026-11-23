@@ -33,6 +33,13 @@ const dogeDgub =
 // is the dpub, so its own watch-only validation must accept it.
 const dogeDpub =
   'dpubZG2yVAE9cxzbb951cYM2av1gxG46wXAdAKDDJEcTLC7cSFUvHbVo8mMYqZDAe2dPyigxSve76Kvi537CVzxjyhZnNPCRBCm6HJKTqYSjKSn';
+// Lane A: the LTC account key above (ltcLtub) re-versioned to zpub
+// (04b24746) — Trust Wallet lists zpub as Litecoin's segwit xpub, so
+// other LTC wallets export it. Same 78 payload bytes, new checksum
+// (Python oracle); the test below re-derives it in-test, so a typo in
+// the fixture cannot hide.
+const ltcZpub =
+  'zpub6rPo5mF47z5coVm5rvWv7fv181awb7Vckn5Cf3xQXBVKu18kuBHDhNi1Jrb4br6vVD3ZbrnXemEsWJoR18mZwkUdzwD8TQnHDUCGxqZ6swA';
 
 const fixtures = [
   {
@@ -207,10 +214,15 @@ describe.sequential('watch-only engine boundary', () => {
     });
   });
 
-  it('rejects a BTC version when validating for LTC', async () => {
+  it('accepts a BTC-version zpub when validating for LTC (Lane A)', async () => {
+    // Lane A: zpub (04b24746) is BTC's version too, and LTC accepts it —
+    // the version alone cannot tell a BTC zpub from an LTC zpub, so the
+    // chain chosen at import is the disambiguator. The same key derives
+    // LTC addresses when imported as LTC (see the Lane A LTC zpub tests)
+    // and BTC addresses when imported as BTC. This supersedes the old
+    // rejection recorded in docs/DECISIONS.md (deep audit, Lane C).
     await expect(validateExtendedKey(btcZpub, 'ltc')).resolves.toMatchObject({
-      ok: false,
-      reason: 'version-not-allowed',
+      ok: true,
     });
   });
 
@@ -408,6 +420,33 @@ describe.sequential('watch-only engine boundary', () => {
   it('derives the ypub key to the verified BTC address at index 0 (F-17)', async () => {
     await expect(deriveAddress('btc', btcYpub, 0)).resolves.toBe(
       'bc1qpsp72plnsqe6e2dvtsetxtww2cz36ztmfxghpd',
+    );
+  });
+
+  it('recognises the zpub serialisation for LTC (Lane A)', async () => {
+    await expect(validateAccountKey(ltcZpub, 'ltc')).resolves.toMatchObject({
+      ok: true,
+    });
+    // The fixture is the Ltub re-versioned: same payload, zpub version.
+    const decoded = decodeBase58(ltcLtub);
+    expect(decoded.subarray(0, 4).toString('hex')).toBe('019da462');
+    const reversion = Buffer.concat([
+      Buffer.from('04b24746', 'hex'),
+      decoded.subarray(4, 78),
+    ]);
+    const checksum = createHash('sha256')
+      .update(createHash('sha256').update(reversion).digest())
+      .digest()
+      .subarray(0, 4);
+    expect(encodeBase58(Buffer.concat([reversion, checksum]))).toBe(ltcZpub);
+  });
+
+  it('derives the zpub key to the verified LTC address at index 0 (Lane A)', async () => {
+    await expect(deriveAddress('ltc', ltcZpub, 0)).resolves.toBe(
+      'ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh',
+    );
+    await expect(deriveAddress('ltc', ltcZpub, 1)).resolves.toBe(
+      await deriveAddress('ltc', ltcLtub, 1),
     );
   });
 

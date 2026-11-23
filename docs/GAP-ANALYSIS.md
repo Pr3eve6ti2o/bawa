@@ -752,38 +752,50 @@ constraint for the details step).
 
 ## 15. HD and bot derivation decisions (Lane C)
 
-**What is missing.** Nothing is missing in the code — Lane C
-verified the bot use case as YES for 20 chains after the xpub
-export was added. What is missing is the record of four decisions
-the owner needs to confirm, because each one locks in addresses
-that already exist.
+**What is missing.** Nothing — resolved by Lane A of FINISH THE
+PRODUCT (2026-11-23, hands-on Muse, 0 Sol calls). The four
+decisions below were recorded here as "confirm as final"; Lane A
+found real fixes for three of them and pinned the fourth, instead
+of re-stating them. Full record: `docs/DECISIONS.md` §13 (Lane A
+bullet); oracle proof in
+`apps/web/src/wallet/lane-a-derivation.test.ts` (14 tests, Python
+bip_utils 2.13.0 + Wallet Core 4.9.3); CDP proof on the built app
+(SOL rotation, CELO export, LTC zpub import).
 
 **Why it matters.** A derivation-path change moves every existing
-user's addresses. These four are the kind of decision that is cheap
-to record now and expensive to revisit after launch.
+user's addresses. Each fix below keeps account 0 index 0
+byte-identical, so no existing address moves.
 
-**The four decisions, with the verification behind each.**
+**The four decisions, resolved.**
 
-- **SOL multi-address: no.** The Solana derivation path ignores
-  account and index by design, so one wallet has one Solana
-  address. Changing it would move existing users' addresses.
-  Trust Wallet's own registry (`registry.json`, master,
-  2026-11-23) lists Solana at `m/44'/501'/0'` and
-  `m/44'/501'/0'/0'` — account-level only, no address index —
-  which is the same shape.
-- **TON one address by design.** The registry lists TON at
-  `m/44'/607'/0'` — account-level only. One address per wallet
-  is the design, not a gap.
-- **CELO uses the shared `m/44'/60'`, not SLIP-44 527.** The bot
-  must derive Celo from the Ethereum path. The registry confirms
-  it: Celo is listed at `m/44'/60'/0'/0/0`, the same path as
-  Ethereum, not 527.
-- **LTC zpub is intentionally still rejected.** A `zpub` is
-  Bitcoin's native-segwit version, so accepting one for Litecoin
-  cannot tell the two chains apart. Note the wrinkle, verified in
-  the same registry: Trust Wallet lists `zpub` as Litecoin's
-  segwit xpub too — which is exactly why the prefix alone cannot
-  distinguish them, and why the rejection stands.
+- **SOL multi-address: FIXED.** Account 0 index 0 keeps
+  `m/44'/501'/0'`; new accounts use `m/44'/501'/<account>'/0'`
+  (the Phantom template) and rotations
+  `m/44'/501'/<account>'/0'/<index>'`. Trust Wallet's registry
+  (`registry.json`, master, 2026-11-23) lists Solana at
+  `m/44'/501'/0'` and `m/44'/501'/0'/0'` — account-level only —
+  which is the same shape as the new account paths.
+- **TON second address: FIXED.** (0,0) keeps `m/44'/607'/0'`;
+  accounts `m/44'/607'/<account>'` (Tonkeeper template),
+  rotations `m/44'/607'/<account>'/<index>'`. A second key gives
+  a distinct V4R2 wallet contract, so the one-address limit was
+  a Wallet Core default-path convention, not a protocol limit.
+  `signTonOffline` now signs from the selected account's key.
+- **CELO uses the shared `m/44'/60'`, not SLIP-44 527: PINNED.**
+  Derivation, export and the bot agreement already used the
+  shared path at the programme base; regression tests now pin
+  all three (CELO == ETH addresses, CELO xpub == ETH xpub,
+  export/import round-trip). The registry confirms it: Celo is
+  listed at `m/44'/60'/0'/0/0`, the same path as Ethereum.
+- **LTC zpub: FIXED — now accepted.** A `zpub` is Bitcoin's
+  native-segwit version AND Trust Wallet's listed Litecoin
+  segwit xpub, so the prefix alone cannot distinguish them;
+  the chain chosen at import is the disambiguator — the same
+  accepted semantics as the `0488b21e` xpub shared by
+  BTC/ETH/TRX. Wallet Core already derived LTC addresses from
+  a zpub before the fix; only the validator allowlist blocked
+  it. The old "intentionally still rejected" decision is
+  superseded.
 
 **Where in the guide.** Doc 02 §6 (per-chain derivation paths,
 including the Celo note); `docs/DECISIONS.md` (the four decisions,

@@ -48,12 +48,23 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   metis: ['0488b21e'],
   aurora: ['0488b21e'],
   fantom: ['0488b21e'],
-  ltc: ['019da462'],
+  // Lane A: LTC accepts both serialisations of the same account key —
+  // Ltub (019da462, what this wallet exports) and zpub (04b24746, what
+  // Trust Wallet lists as Litecoin's segwit xpub and what other LTC
+  // wallets export). The version alone cannot tell a BTC zpub from an
+  // LTC zpub; the chain is chosen explicitly at import, exactly as for
+  // the 0488b21e xpub shared by BTC/ETH/TRX — so this is the same
+  // accepted semantics, not a new ambiguity. A BTC key pasted as LTC
+  // derives LTC addresses from it; that is user error with an explicit
+  // chain choice, and the derived addresses are still valid LTC
+  // addresses of that key.
+  ltc: ['019da462', '04b24746'],
   // Lane C: DOGE accepts both serialisations of the same account key —
   // dgub (02facafd, what bip_utils emits) and dpub (02fda926, what Trust
   // Wallet Core's HDVersion.dpub emits and what the wallet itself exports).
-  // Both versions are DOGE-only, so accepting both cannot confuse chains
-  // the way accepting BTC's zpub for LTC would (see the ltc entry).
+  // Both versions are DOGE-only, so accepting both cannot confuse chains.
+  // LTC is the shared-version case: zpub (04b24746) is BTC's version too,
+  // and the chain chosen at import is the disambiguator (see the ltc entry).
   doge: ['02facafd', '02fda926'],
   btc: ['0488b21e', '049d7cb2', '04b24746'],
   eth: ['0488b21e'],
@@ -651,8 +662,9 @@ export async function deriveAddress(
     throw new Error('index out of range');
   }
 
-  // TON and SOL each have exactly one address per wallet (fully hardened
-  // path): the imported public address itself, at index 0 only. No WASM call.
+  // TON and SOL have no xpub (fully hardened paths), so a watch-only
+  // import is one public address, usable at index 0 only — siblings
+  // cannot be derived from it. No WASM call.
   if (chain === 'sol' || chain === 'ton') {
     if (index !== 0) {
       throw new Error('index out of range');
@@ -699,7 +711,7 @@ export async function deriveAddresses(
     throw new Error('count out of range');
   }
 
-  // TON and SOL each have one address; callers must use derivedCount 1.
+  // TON and SOL watch-only imports hold one address; callers must use derivedCount 1.
   // The count is still range-checked above so a bad count fails the same way.
   if (chain === 'sol' || chain === 'ton') {
     return [await deriveAddress(chain, xpub, 0)];

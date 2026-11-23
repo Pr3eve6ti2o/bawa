@@ -114,7 +114,10 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   metis: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   aurora: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   fantom: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  ltc: { label: 'Account public key (Ltub)', placeholder: 'Ltub…' },
+  // Lane A: both LTC serialisations are accepted (Ltub, what this
+  // wallet exports, and zpub, what Trust Wallet lists as Litecoin's
+  // segwit xpub) — same key.
+  ltc: { label: 'Account public key (Ltub or zpub)', placeholder: 'Ltub… or zpub…' },
   // Lane C: both DOGE serialisations are accepted (dpub, what Trust
   // Wallet Core emits, and dgub, what bip_utils emits) — same key.
   doge: { label: 'Account public key (dpub or dgub)', placeholder: 'dpub… or dgub…' },

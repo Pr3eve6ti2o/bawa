@@ -609,7 +609,7 @@ export function SendScreen() {
           recipient,
           previewOk.amountBaseUnits,
           inputs.data.seqno,
-          { devnet: devnetEnabled },
+          { devnet: devnetEnabled, account: vaultAccount.account },
         );
         if (!result.ok) return result;
         return signedTxResult(result.messageHash, result.signedBocBase64, 'Signed message (base64 BOC)');

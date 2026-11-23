@@ -172,13 +172,14 @@ describe('wallet/core', () => {
     expect(next.trx.startsWith('T')).toBe(true);
     expect(next.ltc.startsWith('ltc1')).toBe(true);
     expect(next.doge.startsWith('D')).toBe(true);
-    // TON has one address per wallet: account and index do not change it.
-    expect(next.ton).toBe(base.ton);
-    // SOL, like TON, has one address per wallet.
-    expect(next.sol).toBe(base.sol);
+    // Lane A: TON and SOL rotate too — a new index gives a new address.
+    expect(next.ton).not.toBe(base.ton);
+    expect(next.sol).not.toBe(base.sol);
+    expect(next.ton.startsWith('UQ')).toBe(true);
+    expect(next.sol.length).toBeGreaterThan(30);
     const other = await deriveAddressesAt(mnemonic, '', 2, 3);
-    expect(other.ton).toBe(base.ton);
-    expect(other.sol).toBe(base.sol);
+    expect(other.ton).not.toBe(base.ton);
+    expect(other.sol).not.toBe(base.sol);
   });
 
   it('deriveAddressesAt rejects out-of-range account/index', async () => {
@@ -210,9 +211,13 @@ describe('wallet/core', () => {
     expect(await deriveAddressAt(mnemonic, '', 'eth', 0, 1)).not.toBe(
       all.eth,
     );
-    // TON and SOL ignore the index: one address per wallet.
-    expect(await deriveAddressAt(mnemonic, '', 'ton', 0, 5)).toBe(all.ton);
-    expect(await deriveAddressAt(mnemonic, '', 'sol', 0, 5)).toBe(all.sol);
+    // Lane A: TON and SOL rotate too — index 5 differs from index 0,
+    // and the single-chain entry point agrees with the all-chain one.
+    const next5 = await deriveAddressesAt(mnemonic, '', 0, 5);
+    expect(await deriveAddressAt(mnemonic, '', 'ton', 0, 5)).toBe(next5.ton);
+    expect(await deriveAddressAt(mnemonic, '', 'sol', 0, 5)).toBe(next5.sol);
+    expect(next5.ton).not.toBe(all.ton);
+    expect(next5.sol).not.toBe(all.sol);
   });
 
   it('deriveAddressAt rejects out-of-range account/index', async () => {
@@ -800,12 +805,13 @@ describe('deriveDevnetAddressesAt (temporary devnet mode)', () => {
     expect(devnet.doge).toBe(mainnet.doge);
   });
 
-  it('changes BTC at index 1 but not TON', async () => {
+  it('changes BTC and TON at index 1 (Lane A: TON rotates too)', async () => {
     const base = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 0);
     const next = await deriveDevnetAddressesAt(TEST_VECTOR_MNEMONIC, '', 0, 1);
     expect(next.btc).not.toBe(base.btc);
     expect(next.btc.startsWith('tb1q')).toBe(true);
-    expect(next.ton).toBe(base.ton);
+    expect(next.ton).not.toBe(base.ton);
+    expect(next.ton.startsWith('0Q')).toBe(true);
     expect(next.eth).not.toBe(base.eth);
   });
 

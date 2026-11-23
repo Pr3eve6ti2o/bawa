@@ -1264,7 +1264,49 @@ describe('offline signing — determinism and TON external signer', () => {
       '63f00fb7de318a1bd06644760ea3dca504af953457345e37787885d0a754dab7',
     );
   });
+
+  it('signs TON from account 1 with the account-1 key (Lane A)', async () => {
+    const result = await signTonOffline(...tonArgs, { account: 1 });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('Expected TON offline signing to succeed');
+    }
+    // bip_utils 2.13.0 oracle: abandon mnemonic + TREZOR passphrase,
+    // m/44'/607'/1' — distinct from the account-0 address.
+    expect(result.from).toBe(
+      'UQDyAtYEkrFti_NE7wQb-7rJS_W9w7VwQcqYdmIRQepWr56T',
+    );
+    const decoded = Buffer.from(result.signedBocBase64, 'base64');
+    expect(decoded.subarray(0, 4).toString('hex')).toBe('b5ee9c72');
+  });
+
+  it('rejects a negative TON signing account (Lane A)', async () => {
+    const result = await signTonOffline(...tonArgs, { account: -1 });
+    expect(result.ok).toBe(false);
+  });
 });
+
+// Evidence-presence gate, shared by the skipped manual qualification
+// below and the active validation test after it: a receipt record is
+// valid only with a non-empty txid and an https explorer URL. The
+// skipped block applies it to the real (still empty) records; the active
+// test applies the same gate to synthetic records, so the gate logic
+// itself is covered without a mainnet broadcast.
+function assertReceiptRecord(record: {
+  explorerUrl: string;
+  txid: string;
+}): void {
+  expect(
+    record.txid.trim(),
+    'Paste the actual manually confirmed mainnet txid',
+  ).not.toBe('');
+  expect(
+    record.explorerUrl.trim(),
+    'Paste the actual explorer URL',
+  ).not.toBe('');
+  expect(new URL(record.explorerUrl.trim()).protocol).toBe('https:');
+}
 
 describe.skip('mainnet qualification (item 23) — manual step, never in routine runs', () => {
   /*
@@ -1327,10 +1369,36 @@ describe.skip('mainnet qualification (item 23) — manual step, never in routine
   ];
 
   // Evidence-presence gate only; authenticity/inclusion verification is manual.
-  it.each(records)('$chain — manually verified receipt is recorded', ({ explorerUrl, txid }) => {
-    expect(txid.trim(), 'Paste the actual manually confirmed mainnet txid').not.toBe('');
-    expect(explorerUrl.trim(), 'Paste the actual explorer URL').not.toBe('');
-    expect(new URL(explorerUrl.trim()).protocol).toBe('https:');
+  it.each(records)('$chain — manually verified receipt is recorded', assertReceiptRecord);
+});
+
+describe('mainnet qualification receipt gate (validation)', () => {
+  // Lane A: the gate logic is covered with synthetic records — the real
+  // records above stay empty (and skipped) because filling them needs a
+  // real mainnet broadcast, which the programme forbids.
+  it('accepts a well-formed receipt record', () => {
+    assertReceiptRecord({
+      explorerUrl: `https://example.com/tx/${'a'.repeat(64)}`,
+      txid: 'a'.repeat(64),
+    });
+  });
+
+  it('rejects empty txids, empty URLs and non-https URLs', () => {
+    expect(() =>
+      assertReceiptRecord({
+        explorerUrl: 'https://example.com/tx/abc',
+        txid: '  ',
+      }),
+    ).toThrow();
+    expect(() =>
+      assertReceiptRecord({ explorerUrl: '  ', txid: 'abc' }),
+    ).toThrow();
+    expect(() =>
+      assertReceiptRecord({
+        explorerUrl: 'http://example.com/tx/abc',
+        txid: 'abc',
+      }),
+    ).toThrow();
   });
 });
 

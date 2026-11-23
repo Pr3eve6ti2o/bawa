@@ -99,7 +99,7 @@ describe('wallet management — vault account selection', () => {
       expect(mounted.div.textContent).toContain('TTestTrxAddress');
       expect(mounted.div.textContent).toContain('UQTestTonAddress');
       expect(mounted.div.textContent).toContain(
-        'Solana and TON have one address per wallet',
+        'Solana and TON addresses change with the account as well',
       );
     } finally {
       await mounted.cleanup();

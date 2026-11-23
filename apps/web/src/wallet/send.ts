@@ -6,6 +6,7 @@ import type { ChainId } from '../engine/boundary';
 import {
   createPartialSigner,
   deriveAddresses,
+  deriveAddressesAt,
   deriveDevnetAddressesAt,
   withSigningKey,
 } from './core';
@@ -13,6 +14,7 @@ import {
   assertIntentMatchesTransaction,
   createTransactionIntent,
 } from './signing-intent';
+import { pathFor } from './chains';
 import { getAdapterForMode, getDevnetAdapter } from './adapters';
 import {
   chainConfigForDevnetNetwork,
@@ -1577,6 +1579,10 @@ export async function signTonOffline(
     signer?: TonExternalSigner;
     domain?: SignatureDomain;
     devnet?: boolean;
+    // Lane A: the vault account to sign from (default 0). The key path
+    // and the from address follow it, so a send from account 1 signs
+    // with the account-1 key (m/44'/607'/1'), not the account-0 key.
+    account?: number;
   },
 ): Promise<TonSignedTx> {
   const devnet = options?.devnet === true;
@@ -1604,11 +1610,19 @@ export async function signTonOffline(
     return { ok: false, code: 'invalid-input', reason: 'Invalid TON signing inputs.' };
   }
 
+  const account = options?.account ?? 0;
+  if (!Number.isSafeInteger(account) || account < 0) {
+    return {
+      ok: false,
+      code: 'invalid-input',
+      reason: 'Invalid TON signing account.',
+    };
+  }
   let from: string;
   try {
     from = devnet
-      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, 0, 0)).ton
-      : (await deriveAddresses(mnemonic, passphrase)).ton;
+      ? (await deriveDevnetAddressesAt(mnemonic, passphrase, account, 0)).ton
+      : (await deriveAddressesAt(mnemonic, passphrase, account, 0)).ton;
   } catch (error: unknown) {
     return {
       ok: false,
@@ -1672,7 +1686,10 @@ export async function signTonOffline(
   try {
     wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
     if (!wallet) throw new Error('Unable to restore wallet.');
-    const key = wallet.getKey(core.CoinType.ton, "m/44'/607'/0'");
+    const key = wallet.getKey(
+      core.CoinType.ton,
+      pathFor('ton', account, 0),
+    );
     try {
       const seed = key.data();
       const pubkeyObj = key.getPublicKeyEd25519();

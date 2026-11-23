@@ -200,7 +200,9 @@ export async function restoreWallet(
 /**
  * Derive account-zero, index-zero addresses using DEFAULT_PATHS.
  * Wallet Core 4.9.3's TON default is a workchain-zero V4R2 wallet, using the
- * single fully hardened path m/44'/607'/0', with no change/index suffix.
+ * fully hardened path m/44'/607'/0', with no change/index suffix. Lane A
+ * derives further SOL/TON addresses on distinct hardened paths;
+ * account 0 index 0 is unchanged.
  */
 /**
  * All 22 registry chains' addresses from one address function. The
@@ -264,9 +266,10 @@ export async function deriveAddresses(
 
 /**
  * Derive one chain's address at a non-default account/index.
- * Paths come from pathFor(chain, account, index) — except TON, which always
- * uses m/44'/607'/0' and ignores account/index (one address per wallet),
- * and SOL, whose path is likewise fully hardened (one address per wallet).
+ * Paths come from pathFor(chain, account, index). SOL and TON use the
+ * Lane A Ed25519 scheme (see chains.ts ed25519PathFor): account 0
+ * index 0 keeps the legacy path, new accounts and rotations derive
+ * additional addresses on distinct hardened paths.
  * Pubkey form is normalised at the deriveAddressFromPublicKey call site
  * (Phase 3, Lane H): the secp256k1 key is always extracted compressed,
  * then .uncompressed() for ETH/TRX/EVM chains — the 65-byte
@@ -284,8 +287,7 @@ function deriveOneAddress(
   index: number,
 ): string {
   const coin = coinForChain(core, chain);
-  const path =
-    chain === 'ton' ? "m/44'/607'/0'" : pathFor(chain, account, index);
+  const path = pathFor(chain, account, index);
   const key = wallet.getKey(coin, path);
 
   try {
@@ -346,8 +348,9 @@ function assertAccountIndex(account: number, index: number): void {
 
 /**
  * Derive addresses at a non-default account/index.
- * Paths come from pathFor(chain, account, index) — except TON, which always
- * uses m/44'/607'/0' and ignores account/index (one address per wallet).
+ * Paths come from pathFor(chain, account, index) — SOL and TON included
+ * (Lane A Ed25519 scheme: legacy address at account 0 index 0, distinct
+ * addresses for new accounts and rotations).
  * At account 0 index 0 the result equals deriveAddresses() exactly.
  */
 export async function deriveAddressesAt(
@@ -466,8 +469,9 @@ async function deriveDevnetBtcAddress(
  * balances and history — but it can never sign, so it is safe to copy
  * out of the vault. The vault must be unlocked; the mnemonic never
  * leaves this function. TON and SOL have no extended public key: their
- * paths are fully hardened Ed25519, so one wallet has exactly one
- * address — export that address instead (see deriveAddresses).
+ * paths are fully hardened Ed25519, so no non-hardened children can be
+ * derived from a public key — export the address itself instead (one
+ * per account/index; see deriveAddressesAt).
  * The serialisation is per chain: BTC zpub (BIP-84), LTC Ltub (BIP-84),
  * DOGE dpub (BIP-44), every other secp256k1 chain xpub (BIP-44).
  */

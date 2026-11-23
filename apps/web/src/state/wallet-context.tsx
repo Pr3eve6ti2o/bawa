@@ -170,8 +170,8 @@ interface WalletState {
   errors: PerChain<string | null>;
   // Vault-backed accounts. vaultAddresses are public derived addresses
   // (the selected vaultAccount, default account 0, index 0), safe in state.
-  // The mnemonic never enters state. TON has one address per wallet and
-  // ignores account/index.
+  // The mnemonic never enters state. SOL and TON addresses now vary
+  // with account/index (Lane A); account 0 index 0 is unchanged.
   vaultState: VaultState;
   vaultAccount: { account: number; index: number };
   // Lane C, items 6/7/17: the accounts created from this vault's phrase
@@ -232,7 +232,7 @@ export interface WalletContextValue extends WalletState {
    * Lane C (bot use case): export the current account's extended public
    * key for one chain, so the owner can derive many receiving addresses
    * in their bot. Returns null when the vault is locked; throws for
-   * TON/SOL, which have no extended public key (one address per wallet).
+   * TON/SOL, which have no extended public key (fully hardened paths).
    * The key is public data — it can never sign — but it reveals
    * addresses, balances and history, so the screen shows it only on
    * demand and never stores it.
@@ -1336,9 +1336,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Lane C, item 8: (re-)derive the HD receive addresses for the current
   // account. Chains sharing one receive index are derived in a single
-  // deriveAddressesAt call; SOL/TON have one address per wallet, so
-  // their receive address is the vault address. A locked vault, or a
-  // passphrase the session does not know, leaves every address unknown.
+  // deriveAddressesAt call; Lane A: SOL and TON rotate through the same
+  // call. A locked vault, or a passphrase the session does not know,
+  // leaves every address unknown.
   const refreshReceiveAddresses = useCallback(async () => {
     const request = ++vaultDerivations.current;
     const selection = current.current.vaultAccount;
@@ -1357,8 +1357,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return;
     }
     const out: PerChain<string | null> = perChain<string | null>(() => null);
-    out.sol = current.current.vaultAddresses.sol[0] ?? null;
-    out.ton = current.current.vaultAddresses.ton[0] ?? null;
     const rotatable = ALL_CHAIN_IDS.filter(
       (chain) => canRotateReceiveAddress(chain),
     );
@@ -1405,13 +1403,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   // Lane C, item 8: advance one chain's receive index and derive its
-  // fresh address. SOL and TON have no next address.
+  // fresh address. Lane A: every chain rotates, SOL and TON included.
   const nextReceiveAddress = useCallback(async (chain: ChainId) => {
-    if (!canRotateReceiveAddress(chain)) {
-      throw new Error(
-        `${chain === 'sol' ? 'Solana' : 'TON'} has one address per wallet, so there is no next address.`,
-      );
-    }
     const indices = {
       ...current.current.receiveIndices,
       [chain]: nextReceiveIndex(chain, current.current.receiveIndices),

@@ -192,8 +192,9 @@ describe('wallet context — vault account selection', () => {
       expect(exposed!.vaultAddresses.eth[0]).toBe(expected.eth);
       expect(exposed!.vaultAddresses.btc[0]).toBe(expected.btc);
       expect(exposed!.vaultAddresses.trx[0]).toBe(expected.trx);
-      // TON has one address per wallet: account and index do not change it.
-      expect(exposed!.vaultAddresses.ton[0]).toBe(tonBefore);
+      // Lane A: TON rotates with the index too.
+      expect(exposed!.vaultAddresses.ton[0]).toBe(expected.ton);
+      expect(exposed!.vaultAddresses.ton[0]).not.toBe(tonBefore);
     } finally {
       await mounted.cleanup();
     }

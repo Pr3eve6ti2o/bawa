@@ -14,8 +14,8 @@ vi.mock('../state/wallet-context', () => ({
 vi.mock('../wallet/chains', () => ({
   availableFor: vi.fn(),
   chainConfig: vi.fn(),
-  // Lane C, item 8: SOL and TON have one address per wallet by design.
-  canRotateReceiveAddress: (chain: string) => chain !== 'sol' && chain !== 'ton',
+  // Lane A: every chain rotates, SOL and TON included.
+  canRotateReceiveAddress: () => true,
   SUPPORTED_CHAINS: [
     'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
   ],
@@ -627,7 +627,7 @@ describe('receive screen', () => {
   });
 
 
-  it('shows the one-address note for Solana instead of New address', async () => {
+  it('shows New address for Solana now that it rotates (Lane A)', async () => {
     vi.mocked(availableFor).mockReturnValue(['sol', 'eth']);
     setWallet({
       selectedChain: 'sol',
@@ -648,13 +648,13 @@ describe('receive screen', () => {
       await clickButton(mounted.div, 'Solana');
       await clickButton(mounted.div, 'Solana · SOL');
       expect(mounted.div.textContent).toContain(
-        'Solana has one address per wallet',
+        'Receiving address 1 of this account.',
       );
       expect(
         [...mounted.div.querySelectorAll('button')].some(
           (candidate) => candidate.textContent === 'New address',
         ),
-      ).toBe(false);
+      ).toBe(true);
     } finally {
       await mounted.cleanup();
     }

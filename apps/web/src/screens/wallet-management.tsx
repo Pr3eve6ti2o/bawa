@@ -49,8 +49,8 @@ const watchChains = [
 ] as const;
 
 // Lane C (bot use case): every chain the vault can export an extended
-// public key for, plus TON and SOL, which have one address per wallet
-// and no extended public key — the address itself is what the bot uses.
+// public key for, plus TON and SOL, which have no extended public key
+// (fully hardened paths) — the address itself is what the bot uses.
 const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = [
   { id: "btc", name: "Bitcoin" },
   { id: "eth", name: "Ethereum" },
@@ -433,8 +433,8 @@ export function WalletManagementScreen() {
                 ))}
               </dl>
               <p className="text-sm text-muted-foreground">
-                Solana and TON have one address per wallet, so changing the
-                numbers above does not change the Solana or TON address.
+                Solana and TON addresses change with the account as well;
+                account 0 keeps its original address.
               </p>
 
               <div className="space-y-3">
@@ -447,8 +447,8 @@ export function WalletManagementScreen() {
                   recovery phrase. It can see addresses, balances and
                   history, but it can never spend — no private key is in
                   it. Keep it to systems you trust. Solana and TON have
-                  no extended public key: they have one address per
-                  wallet, so use the address itself.
+                  no extended public key — their paths are fully hardened
+                  — so use the address itself.
                 </p>
                 <ul className="space-y-2">
                   {exportChains.map(({ id, name }) => {
@@ -494,7 +494,7 @@ export function WalletManagementScreen() {
                             {accountPathFor(id, vaultAccount.account)}
                           </code>
                           {isSingleAddress
-                            ? " — one address per wallet, so there is no extended public key. Use the address itself."
+                            ? " — no extended public key (fully hardened path). Use the address itself."
                             : " — your bot derives receiving addresses as this path plus /0/0, /0/1, /0/2…"}
                         </p>
                         {isSingleAddress ? (

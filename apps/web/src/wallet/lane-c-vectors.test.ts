@@ -8,8 +8,11 @@
 //
 // Fixture: 'ripple scissors kick mammal hire column oak again sun offer
 // wealth tomorrow wagon turn fatal' (BIP-39 test vector, empty
-// passphrase). Indexes 0, 1, 2, 5; account 1 index 0. TON/SOL repeat
-// their single address at every index by design (fully hardened paths).
+// passphrase). Indexes 0, 1, 2, 5; account 1 index 0. TON/SOL follow
+// the Lane A Ed25519 scheme: account 0 index 0 keeps the legacy
+// address; new accounts and rotations derive distinct addresses on
+// hardened paths (SOL m/44'/501'/<account>'/0'/<index>', TON
+// m/44'/607'/<account>'/<index>').
 import { describe, expect, it } from 'vitest';
 import {
   deriveAddresses,
@@ -67,8 +70,8 @@ const EXPECTED: Record<string, Record<string, string>> = {
     op: '0xD6c3112a8Db4991a7359018F15e501dfEE316d59',
     opbnb: '0xD6c3112a8Db4991a7359018F15e501dfEE316d59',
     scroll: '0xD6c3112a8Db4991a7359018F15e501dfEE316d59',
-    sol: 'DrKpwo8t8SihRstTGNeeEHu1PAcu6QThyvegqDMXiroF',
-    ton: 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+    sol: 'AU4y4CsLpaVSVSN5q7yxRFVmhyq7aVZYRCJ4FjyVtx6e',
+    ton: 'UQCxyaBqitW8KZHU6Q3buXaThb5q_dLacLHFeSx2Id-gJ-qR',
     trx: 'TWuKAx5ibV2fa65UL4Rg4W4hke3LdE2G8B',
   },
   '2': {
@@ -91,8 +94,8 @@ const EXPECTED: Record<string, Record<string, string>> = {
     op: '0x86E2Caa79Ed5bF6DB3Edd320bB1570506FaeFc4e',
     opbnb: '0x86E2Caa79Ed5bF6DB3Edd320bB1570506FaeFc4e',
     scroll: '0x86E2Caa79Ed5bF6DB3Edd320bB1570506FaeFc4e',
-    sol: 'DrKpwo8t8SihRstTGNeeEHu1PAcu6QThyvegqDMXiroF',
-    ton: 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+    sol: 'FtnuwnUeWYR2YsmXpc278TM4RP1SPBuzvi62F7nxup82',
+    ton: 'UQBZCscMtjcU4EEQ0qpo5i52bbIyNmAxSJkCPqNAFWpTL8B6',
     trx: 'TRjqesRhNSRch2KTzjAAnYZ2pMTWnRzgnv',
   },
   '5': {
@@ -115,8 +118,8 @@ const EXPECTED: Record<string, Record<string, string>> = {
     op: '0xAb119efEbeB7D26E78F041b15AB01CfFf873a5B6',
     opbnb: '0xAb119efEbeB7D26E78F041b15AB01CfFf873a5B6',
     scroll: '0xAb119efEbeB7D26E78F041b15AB01CfFf873a5B6',
-    sol: 'DrKpwo8t8SihRstTGNeeEHu1PAcu6QThyvegqDMXiroF',
-    ton: 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+    sol: '6cAMZZRPiC6nWrci1ogUuFDMfP2MTt1uAeSUt5Z8Hb4v',
+    ton: 'UQBK12yq57L4vc3gW3s5b-g1AktxvSM_teNX9Q_I4a9PpnpI',
     trx: 'TYRyHLdXNdsKxLZyJqMVxvCXE1tLSDEHQt',
   },
 };
@@ -149,8 +152,8 @@ const ACCOUNT1_INDEX0: Record<string, string> = {
   doge: 'DPn7x7zqf9cVbSrdXUDua9JUy7dZwmPF4E',
   eth: '0x68eF4e5660620976a5968c7d7925753D3Cc40809',
   ltc: 'ltc1qs37jsrxd2ehfv3yehn2qk67w239nk0tr4cn2t7',
-  sol: 'DrKpwo8t8SihRstTGNeeEHu1PAcu6QThyvegqDMXiroF',
-  ton: 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn',
+  sol: 'BZbH77EFbwUfzYhz89qvnQdrx8y1tXxofJNbj7YsjqUj',
+  ton: 'UQBE_LQuVmQ1Ya6f419kJ57KSmyNuQ5SAtWj73uPei7P-mff',
   trx: 'TTb87dRxjSTruAk7dMsfVhdEYENjpdWmvn',
 };
 
@@ -221,13 +224,11 @@ describe('lane-c vectors (ripple fixture, all 22 chains)', () => {
     }
   });
 
-  it('account 1 differs from account 0 except SOL/TON', async () => {
+  it('account 1 differs from account 0 on every chain (Lane A: SOL/TON too)', async () => {
     const acc1 = await deriveAddressesAt(RIPPLE_MNEMONIC, '', 1, 0);
-    for (const chain of ['btc', 'eth', 'trx', 'ltc', 'doge'] as ChainId[]) {
+    for (const chain of ['btc', 'eth', 'trx', 'ltc', 'doge', 'sol', 'ton'] as ChainId[]) {
       expect(acc1[chain], `${chain} account 1`).toBe(account1Address(chain));
       expect(acc1[chain]).not.toBe(expected(0, chain));
     }
-    expect(acc1.sol).toBe(expected(0, 'sol'));
-    expect(acc1.ton).toBe(expected(0, 'ton'));
   });
 });

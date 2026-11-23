@@ -855,6 +855,34 @@ Decisions and findings recorded here:
   version prefix, intentionally. SOL multi-address and TON
   one-address are by design (owner decisions to confirm as final);
   the bot must use shared `m/44'/60'` for CELO, not SLIP-44 527.
+- **Lane A (FINISH THE PRODUCT, 2026-11-23) — the four "confirm as
+  final" derivation items are FIXED, not confirmed.** Hands-on Muse,
+  0 Sol calls. (1) SOL multi-address: account 0 index 0 keeps
+  `m/44'/501'/0'` byte-identical, so existing users' addresses do not
+  move; new accounts use `m/44'/501'/<account>'/0'` (the Phantom
+  template already recorded in `SOLANA_PROFILES`) and rotations
+  `m/44'/501'/<account>'/0'/<index>'`. (2) TON second address: the
+  same scheme — (0,0) keeps `m/44'/607'/0'`, accounts
+  `m/44'/607'/<account>'` (Tonkeeper template), rotations
+  `m/44'/607'/<account>'/<index>'`; a second key gives a distinct
+  V4R2 wallet contract (same code hash, wallet ID 698983191), so the
+  one-address limit was a Wallet Core default-path convention, not a
+  protocol limit. `signTonOffline` now signs from the selected
+  account's key (`options.account`, default 0). (3) CELO: derivation,
+  export and the bot agreement already used the shared `m/44'/60'`
+  at the programme base; pinned by regression tests (CELO == ETH
+  addresses at (0,0)/(0,1)/(1,0), CELO xpub == ETH xpub,
+  export/import round-trip). (4) LTC zpub accepted alongside Ltub:
+  the version prefix alone cannot tell a BTC zpub from an LTC zpub,
+  so the chain chosen at import is the disambiguator — the same
+  accepted semantics as the `0488b21e` xpub shared by BTC/ETH/TRX.
+  This supersedes the "LTC zpub stays rejected" line above and the
+  GAP-ANALYSIS §15 rejection. Oracle proof: Python bip_utils 2.13.0
+  + Wallet Core 4.9.3 (`apps/web/src/wallet/lane-a-derivation.test.ts`,
+  14 tests; full suite 1758 passed / 5 skipped). CDP proof: SOL
+  rotation changes the Receive address; /wallets shows CELO
+  `m/44'/60'/0'` with an xpub identical to ETH's; the
+  ripple-fixture LTC zpub imports as a watch-only LTC wallet.
 - **Devnet Issue 5 CLOSED with live proof.** The TON first-send
   state init IS present in the app-signed BOC (code hash
   `feb5ff68...`, V4R2, init address == wallet C's address exactly;

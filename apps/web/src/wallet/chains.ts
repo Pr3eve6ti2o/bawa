@@ -50,7 +50,11 @@ export interface ChainConfig {
   assetId: string;
   /** Pinned recovery profile. A path change changes recovered addresses. */
   profileId: string;
-  /** Derivation path builder. TON ignores index: fully hardened, one address. */
+  /**
+   * Derivation path builder. SOL/TON use the Lane A Ed25519 scheme
+   * (see ed25519PathFor): account 0 index 0 keeps the legacy path,
+   * new accounts and rotations derive distinct hardened paths.
+   */
   pathFor: (account: number, index: number) => string;
   /** Mainnet RPC endpoints. Empty means no endpoint configured yet. */
   rpcEndpoints: string[];
@@ -257,6 +261,37 @@ function assertAccountIndex(account: number, index: number): void {
 }
 
 /**
+ * Lane A: Ed25519 (SOL/TON) derivation. SLIP-0010 allows hardened-only
+ * children, so every component stays hardened. Account 0 index 0 keeps
+ * the legacy single path (SOL m/44'/501'/0', TON m/44'/607'/0') so
+ * existing users' addresses do not move. New accounts use the account
+ * component — SOL m/44'/501'/<account>'/0' (the Phantom template
+ * already recorded in SOLANA_PROFILES) and TON m/44'/607'/<account>'
+ * (the Tonkeeper template) — and rotation within an account appends a
+ * hardened index after the change slot (SOL
+ * m/44'/501'/<account>'/0'/<index>', TON m/44'/607'/<account>'/<index>').
+ * No (account, index) pair collides with another.
+ */
+function ed25519PathFor(
+  coinType: 501 | 607,
+  account: number,
+  index: number,
+): string {
+  assertAccountIndex(account, index);
+  if (account === 0 && index === 0) {
+    return `m/44'/${coinType}'/0'`;
+  }
+  if (coinType === 501) {
+    return index === 0
+      ? `m/44'/501'/${account}'/0'`
+      : `m/44'/501'/${account}'/0'/${index}'`;
+  }
+  return index === 0
+    ? `m/44'/607'/${account}'`
+    : `m/44'/607'/${account}'/${index}'`;
+}
+
+/**
  * Capability registry, not a chain list: listing a chain never implies it can
  * do an operation. A chain is available for an operation only when
  * availableFor(capability) returns it (status verified).
@@ -365,11 +400,13 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
   ton: {
     ...GENERATED_CHAIN_FACTS.ton,
     id: 'ton',
-    pathFor: (account) => {
-      assertAccountIndex(account, 0);
-      // Fully hardened: one address per wallet, no index suffix.
-      // Wallet V4 R2, workchain 0, wallet ID 698983191.
-      return "m/44'/607'/0'";
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      // Lane A: see ed25519PathFor — account 0 index 0 keeps the
+      // legacy m/44'/607'/0' (Wallet V4 R2, workchain 0, wallet ID
+      // 698983191); new accounts and rotations derive additional
+      // addresses on distinct hardened paths.
+      return ed25519PathFor(607, account, index);
     },
     capabilities: capabilitiesForAdapterChain('ton', false),
   },
@@ -383,7 +420,10 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     profileId: 'bawa-sol-bip44-v1',
     pathFor: (account, index) => {
       assertAccountIndex(account, index);
-      return "m/44'/501'/0'";
+      // Lane A: see ed25519PathFor — account 0 index 0 keeps the
+      // legacy m/44'/501'/0'; new accounts and rotations derive
+      // additional addresses on distinct hardened paths.
+      return ed25519PathFor(501, account, index);
     },
     rpcEndpoints: ['https://solana-rpc.publicnode.com', 'https://public.rpc.solanavibestation.com'],
     evmChainId: null,
@@ -716,9 +756,15 @@ export function assertHardenedEd25519Path(path: string): void {
 }
 
 // Module-load enforcement: a non-hardened ed25519 path fails import, never
-// derivation. The TON path and every Solana profile path ({i} expanded to 0)
-// are fully hardened; no existing path value is changed.
+// derivation. The TON/SOL paths at account 0 index 0, account 1 index 0
+// and account 0 index 1, and every Solana profile path ({i} expanded to
+// 0), are fully hardened; no existing path value is changed.
 assertHardenedEd25519Path(CHAINS.ton.pathFor(0, 0));
+assertHardenedEd25519Path(CHAINS.ton.pathFor(1, 0));
+assertHardenedEd25519Path(CHAINS.ton.pathFor(0, 1));
+assertHardenedEd25519Path(CHAINS.sol.pathFor(0, 0));
+assertHardenedEd25519Path(CHAINS.sol.pathFor(1, 0));
+assertHardenedEd25519Path(CHAINS.sol.pathFor(0, 1));
 for (const profile of Object.values(SOLANA_PROFILES)) {
   assertHardenedEd25519Path(profile.path.replace('{i}', '0'));
 }
@@ -744,7 +790,8 @@ export function pathFor(chain: ChainId, account: number, index: number): string 
  * covers — the path the bot appends `/0/<index>` to for receiving
  * addresses. BTC `m/84'/0'/0'`, LTC `m/84'/2'/0'`, DOGE `m/44'/3'/0'`,
  * every EVM chain and TRX `m/44'/60'/0'` / `m/44'/195'/0'`. TON and SOL
- * have no account path: their path is already the single address path.
+ * have no extended public key: their (account, 0) path is itself the
+ * address path (Lane A: it varies with the account now).
  */
 export function accountPathFor(chain: ChainId, account: number): string {
   const path = pathFor(chain, account, 0);
@@ -754,14 +801,13 @@ export function accountPathFor(chain: ChainId, account: number): string {
 
 /**
  * Whether a fresh receive address can be derived for this chain (Lane C,
- * item 8 — HD rotation). Solana and TON have one address per wallet by
- * design: their paths are fully hardened (`m/44'/501'/0'` and
- * `m/44'/607'/0'`) and ignore the account and index, so rotating would
- * change nothing — and changing the path would change existing users'
- * addresses. Every other chain rotates: a new index gives a new address.
+ * item 8 — HD rotation). Lane A: every chain rotates, including SOL and
+ * TON — their fully hardened paths now carry the account and the index
+ * (see ed25519PathFor), so a new index gives a new address while
+ * account 0 index 0 keeps the legacy address.
  */
 export function canRotateReceiveAddress(chain: ChainId): boolean {
-  return chain !== 'sol' && chain !== 'ton';
+  return SUPPORTED_CHAINS.includes(chain);
 }
 
 export function capabilitiesFor(chain: ChainId): Capabilities {

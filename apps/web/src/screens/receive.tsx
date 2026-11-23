@@ -120,8 +120,8 @@ export function ReceiveScreen() {
   const isWatchOnly = address !== undefined && vaultAddress === undefined;
   const receiveIndex = chain ? receiveIndices[chain] ?? 0 : 0;
   // Rotation only applies to the vault's own addresses: a watch-only
-  // address has no phrase to derive from, and SOL/TON have one address
-  // per wallet by design.
+  // address has no phrase to derive from. Lane A: every chain rotates,
+  // SOL and TON included.
   const canRotate =
     chain !== undefined &&
     vaultAddress !== undefined &&
@@ -701,9 +701,7 @@ export function ReceiveScreen() {
                 one line. */}
             {vaultAddress !== undefined && !isWatchOnly && (
               <p className="w-full text-center text-xs text-ink">
-                {canRotate
-                  ? `Receiving address ${receiveIndex + 1} of this account.`
-                  : `${config.displayName} has one address per wallet.`}
+                {`Receiving address ${receiveIndex + 1} of this account.`}
               </p>
             )}
             {/* The share link is long; the row shows one truncated line
