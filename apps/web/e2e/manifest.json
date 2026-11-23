@@ -67,7 +67,7 @@
     },
     {
       "asserts": [
-        "adding WETH by its real Ethereum contract adds the token with a real (zero) balance from a live eth_call",
+        "adding SHIB by its real Ethereum contract adds the token with a real (zero) balance from a live eth_call",
         "a bad contract is rejected with a specific inline error and nothing is added",
         "adding a chain re-enables a disabled chain and its row returns"
       ],

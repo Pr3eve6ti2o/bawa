@@ -211,8 +211,8 @@ function getNativeRowModel(
           // zero-balance rows already show.
           detail =
             displayUnit.kind === 'fresh'
-              ? `${displayUnit.text} per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`
-              : `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+              ? `${displayUnit.text} per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
+              : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
         }
         break;
       case 'zero':
@@ -222,7 +222,7 @@ function getNativeRowModel(
         // state stays visible instead of a silent empty.
         if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
           fiatText = displayUnit.text;
-          detail = `per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+          detail = `per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
         } else if (displayUnit.kind === 'expired') {
           detail = 'Price expired';
         } else if (displayUnit.kind === 'unavailable') {
@@ -337,15 +337,15 @@ function getTokenRowModel(
           // Item 12: see the native-row note above.
           detail =
             displayUnit.kind === 'fresh'
-              ? `${displayUnit.text} per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`
-              : `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+              ? `${displayUnit.text} per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`
+              : `${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
         }
         break;
       case 'zero':
       case 'balance-unavailable':
         if (displayUnit.kind === 'fresh' && entry.status === 'fresh') {
           fiatText = displayUnit.text;
-          detail = `per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+          detail = `per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · ${entry.quote.source}`;
         } else if (displayUnit.kind === 'expired') {
           detail = 'Price expired';
         } else if (displayUnit.kind === 'unavailable') {

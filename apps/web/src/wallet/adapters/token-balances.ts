@@ -15,7 +15,9 @@
  *   is-it-a-contract, on-chain name/symbol/decimals, balance sanity.
  *   Nothing is added until every check passes.
  * - CoinGecko contract lookup for the added token's price id (404 →
- *   null: the token is still added, its price shows "Price unavailable").
+ *   null: the token is still added; its price then comes from the
+ *   DexScreener / TonAPI fallback in token-prices, or shows
+ *   "Price unavailable" when no source has it).
  *
  * Read-only throughout. No signing, no broadcast, no funds moved.
  */
@@ -1132,11 +1134,14 @@ export async function verifyTronToken(input: {
 /**
  * Resolves a token's CoinGecko id via /coins/{platform}/contract/{address}.
  * 404 (unknown token) → null: the token is still added, its price shows
- * "Price unavailable". Never throws: network failure also yields null.
+ * "Price unavailable" unless the DexScreener / TonAPI fallback has it
+ * (see token-prices). Never throws: network failure also yields null.
  * Platform ids are CoinGecko's per-chain slugs (ethereum, tron,
  * binance-smart-chain, polygon-pos, arbitrum-one, optimistic-ethereum,
  * base, avalanche, solana, xdai, celo, linea, mantle, scroll, opbnb,
- * metis, aurora, fantom).
+ * metis, aurora, fantom, the-open-network). The endpoint accepts the
+ * lowercased address for every platform — verified live 2026-11-23 for
+ * Solana, TRON and TON (the friendly EQ… form lowercased still resolves).
  */
 export async function resolveTokenCoingeckoId(input: {
   platform:
@@ -1157,7 +1162,8 @@ export async function resolveTokenCoingeckoId(input: {
     | 'opbnb'
     | 'metis'
     | 'aurora'
-    | 'fantom';
+    | 'fantom'
+    | 'the-open-network';
   contract: string;
   fetchFn?: typeof fetch;
 }): Promise<string | null> {

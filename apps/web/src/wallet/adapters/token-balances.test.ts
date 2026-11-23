@@ -332,6 +332,22 @@ describe('resolveTokenCoingeckoId', () => {
     expect(id).toBe('usd-coin');
   });
 
+  it('returns the CoinGecko id for a Jetton via the-open-network', async () => {
+    const NOT_MASTER = 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT';
+    const fetchFn = vi.fn(async (url: string) => {
+      expect(url).toContain(
+        '/coins/the-open-network/contract/eqavlwfdxgf2lxm67y4yzc17wykd9a0guwpkms1gosm__not',
+      );
+      return { ok: true, status: 200, json: async () => ({ id: 'notcoin' }) };
+    });
+    const id = await resolveTokenCoingeckoId({
+      platform: 'the-open-network',
+      contract: NOT_MASTER,
+      fetchFn: fetchFn as unknown as typeof fetch,
+    });
+    expect(id).toBe('notcoin');
+  });
+
   it('returns null on 404 (unknown token still addable, price unavailable)', async () => {
     const fetchFn = vi.fn(async () => ({
       ok: false,

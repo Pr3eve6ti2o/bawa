@@ -78,6 +78,7 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
     | 'metis'
     | 'aurora'
     | 'fantom'
+    | 'the-open-network'
   >
 > = {
   eth: 'ethereum',
@@ -99,6 +100,11 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
   metis: 'metis',
   aurora: 'aurora',
   fantom: 'fantom',
+  // Item D: TON was missing here, so every Jetton was stored with
+  // coingeckoId null and never priced — even listed ones (NOT resolves
+  // to 'notcoin' via /coins/the-open-network/contract/, verified live
+  // 2026-11-23, and the endpoint accepts the lowercased friendly form).
+  ton: 'the-open-network',
 };
 
 /**
@@ -333,8 +339,11 @@ export function AddTokenDialog({
         inputRef.current?.focus();
         return;
       }
-      // 5. CoinGecko id for the price feed; 404 → still added, price
-      // shows "Price unavailable".
+      // 5. CoinGecko id for the price feed; 404 → still added, and the
+      // price feed falls back to DexScreener (EVM/Solana/TRON) or
+      // TonAPI rates (TON Jettons) at refresh time — the price shows
+      // "Price unavailable" only when no source has it (see
+      // token-prices / dex-prices).
       const platform = COINGECKO_PLATFORM_FOR_CHAIN[chain];
       const coingeckoId =
         platform === undefined
