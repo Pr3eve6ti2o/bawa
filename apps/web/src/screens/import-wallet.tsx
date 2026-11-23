@@ -22,6 +22,7 @@ import {
   splitMnemonicAndPassphrase,
 } from '../wallet/bip39-validation';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
+import { readPendingSendLinkSearch } from '../wallet/payment-links';
 import { ChainSearchSelect } from './chain-search-select';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
@@ -711,6 +712,22 @@ export function ImportWalletScreen() {
                 </li>
               ))}
             </ul>
+            {(() => {
+              // Deep-link continuation (UI/UX round 2, deep-link fix):
+              // this wallet was imported from a shared payment link.
+              // Offer to go straight to the Send screen with that
+              // payment filled in, mirroring the create-wallet ready
+              // screen — instead of leaving the user on the dashboard
+              // with the link lost. The stored query is re-validated
+              // by the Send screen on arrival.
+              const pendingSearch = readPendingSendLinkSearch();
+              if (pendingSearch === null || pendingSearch === '') return null;
+              return (
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to={`/send?${pendingSearch}`}>Continue to your send</Link>
+                </Button>
+              );
+            })()}
             <Button asChild className="h-auto whitespace-normal py-3 text-center">
               <Link to="/mnemonic-backup">Review your backup checklist</Link>
             </Button>

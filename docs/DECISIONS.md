@@ -683,8 +683,12 @@ Still open after the programme: E2E-03/06 need a stable-network run;
 non-zero DOGE watch-row render unproven; 1919 settled widths not
 captured; TON Issue 5 (first-send state init) and Issue 6 (`/track`
 message hash) in `DEVNET-ISSUES.md`; devnet exception E1 expires
-2027-02-20; the mobile Receive 40 px question awaits the owner's pick;
-the item-14 cannot-add chain list is not recorded in the repo.
+2027-02-20; the mobile Receive 40 px question was decided 2026-11-23
+~14:17 IST (owner: keep the fix — do not re-ask; the fix itself was
+restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); the item-14 cannot-add chain
+list is now recorded in `docs/UI-UX-FIXES-PROGRAMME.md` (reverify lane
+1, item R-16).
 
 ## 11. UI/UX Round 2 programme — 10 items, merged into token-gaps (2026-11-23)
 
@@ -756,7 +760,11 @@ Still open after the programme: the E2E harness versus `base:
 device (items 1 and 9); the Receive tagline removed in item 8; the
 token contract tail truncated on one-line rows; review and sign steps
 not CDP-verified; CoinGecko 429s on the shared VM IP; the word grid at
-1024 px is tight; the import path has no "Continue to your send"
-button; external wallet apps not tested for deep links; the mobile
-Receive 40 px question still awaits the owner's pick; devnet exception
+1024 px is tight; the import path now has a "Continue to your send"
+button on the restored screen (reverify lane 1, 2026-11-23, see
+`docs/REVERIFY-CHECKLIST.md` item R-15); external wallet apps not
+tested for deep links; the mobile Receive 40 px question was decided
+2026-11-23 ~14:17 IST (owner: keep the fix — do not re-ask; the fix
+itself was restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); devnet exception
 E1 expires 2027-02-20; TON Issues 5 and 6 in `DEVNET-ISSUES.md`.

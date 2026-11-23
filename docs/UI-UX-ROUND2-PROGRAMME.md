@@ -148,8 +148,11 @@ its vite config change was reconciled into this tree instead.
 - External wallet apps were not tested for deep links (item 2). This
   lane covers the Bawa web link only.
 - Mobile Receive screen 40 px shorter than the saved mobile build —
-  owner decision pending (keep or revert). Carried forward from the
-  UI/UX Fixes programme.
+  DECIDED 2026-11-23 ~14:17 IST: the owner tapped "Keep the 40 px
+  fix". The P8 dead-space removal stays; do not re-ask. (Reverify
+  lane 1, 2026-11-23: the fix itself had been lost from the token-gaps
+  tree by the Receive rework — restored in `receive.tsx`, see
+  `docs/REVERIFY-CHECKLIST.md` item R-14.)
 - Devnet exception E1 expires 2027-02-20 — renew or remove devnet by
   then (removal checklist in `docs/DECISIONS.md` §9).
 - TON Issue 5 (first send from a fresh wallet cannot deploy — no

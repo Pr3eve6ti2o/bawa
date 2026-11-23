@@ -171,6 +171,39 @@ describe('receive screen', () => {
     }
   });
 
+  it('renders no empty status line before any copy action (P8 dead-space fix)', async () => {
+    // Reverify lane 1: the owner kept the 40 px Receive fix
+    // (2026-11-23), but the UI/UX rework of this screen reintroduced
+    // the always-rendered empty status <p> under the buttons — the
+    // exact dead space P8 removed on desktop-layout-v2. The status
+    // line must exist only once a copy/share action reports something.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      expect(mounted.div.querySelector('[role="status"]')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the status line once a copy action reports', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      await clickButton(mounted.div, 'Copy address');
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      const status = mounted.div.querySelector('[role="status"]');
+      expect(status).not.toBeNull();
+      expect(status?.textContent?.length).toBeGreaterThan(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the watch-only alert when falling back to an imported address', async () => {
     setWallet({
       vaultAddresses: { btc: [], eth: [], trx: [], ton: [] },
