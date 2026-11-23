@@ -297,6 +297,68 @@ describe('wallet context — balance before history (Lane B)', () => {
   });
 });
 
+describe('wallet context — balance source (Lane F, FIX-ALL)', () => {
+  // The Networks screen shows which host answered the last balance
+  // ("Last balance from …"), so refreshBalances must keep the
+  // adapter's answering source on the balance state — not just the
+  // value. The adapter below answers from a named host.
+  it('records the answering host on the balance state', async () => {
+    const adapter = (chain: string) => ({
+      chain,
+      networkId: `test:${chain}`,
+      getBalance: async () => ({
+        status: 'ok' as const,
+        data: {
+          chain,
+          address: 'test-address',
+          networkId: `test:${chain}`,
+          valueBaseUnits: '0',
+          decimals: 18,
+          source: '1rpc.io',
+          fetchedAt: 0,
+        },
+        source: '1rpc.io',
+        fetchedAt: 0,
+      }),
+      getHistory: async () => ({
+        status: 'ok' as const,
+        data: [],
+        source: '1rpc.io',
+        fetchedAt: 0,
+      }),
+      estimateFee: async () => ({ status: 'unavailable' as const, reason: 'test' }),
+      getTxInputs: async () => ({ status: 'unavailable' as const, reason: 'test' }),
+      broadcast: async () => {
+        throw new Error('disabled');
+      },
+    });
+    vi.mocked(getAdapter).mockImplementation(
+      ((chain: string) => adapter(chain)) as unknown as typeof getAdapter,
+    );
+    await createVault(VECTOR_MNEMONIC, TEST_PASSWORD, TEST_PROFILES, 'TREZOR');
+    const mounted = await mountProvider();
+    try {
+      await act(async () => {
+        await exposed!.refreshVaultAccounts();
+      });
+      // refreshVaultAccounts refreshes balances in the background;
+      // wait for the ETH balance to settle before asserting.
+      await act(async () => {
+        for (let i = 0; i < 100; i += 1) {
+          if (exposed?.balances.eth.status === 'zero') break;
+          await new Promise((resolve) => {
+            setTimeout(resolve, 100);
+          });
+        }
+      });
+      expect(exposed?.balances.eth.status).toBe('zero');
+      expect(exposed?.balances.eth.source).toBe('1rpc.io');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
 describe('wallet context — refresh concurrency cap (marketing fix, Lane 1)', () => {
   // The 43-row dashboard used to fire every balance/history/token read
   // at once (~50 requests in the first second); the free tiers 429 and

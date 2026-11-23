@@ -914,7 +914,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (request !== balanceRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
-        const next = balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs);
+        // Lane F (FIX-ALL): keep the answering host on the state, so
+        // the Networks screen can show which RPC served this balance
+        // (result.source is the adapter's answering endpoint — the
+        // failover loop reports its own hostname, never the primary).
+        const next = {
+          ...balanceStateFromValue(result.data.valueBaseUnits, fetchedAtMs),
+          source: result.source,
+        };
         setBalance(next);
         try {
           const cached = readCachedBalances();

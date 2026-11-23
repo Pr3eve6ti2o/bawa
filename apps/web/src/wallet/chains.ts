@@ -997,6 +997,16 @@ export function chainConfigForNetwork(networkId: string): ChainConfig {
  * refresh without rebuilding any adapter. Dogecoin is NOT managed here:
  * its adapter has a built-in SoChain/BlockCypher pair with different
  * API shapes, so a custom URL could not be applied honestly.
+ *
+ * Lane F (FIX-ALL, 2026-11-24) — the CSP limit: the browser only
+ * allows fetches to origins in the CSP connect-src allowlist baked
+ * into the built index.html (security-headers.ts). A custom RPC whose
+ * origin is not in that list would be stored and listed but refused
+ * on every fetch, so the Networks screen only accepts origins
+ * isCustomRpcOriginUsable reports (registry origins + the suggested
+ * public RPCs) and says so in plain language. makePrimaryEndpoint
+ * exists because promoteBackupEndpoint only swaps the first two —
+ * a custom RPC added third could otherwise never become primary.
  */
 export const RPC_OVERRIDES_KEY = 'bawa-rpc-overrides:v1';
 export const MAX_RPC_ENDPOINTS_PER_CHAIN = 3;
@@ -1190,6 +1200,86 @@ export function promoteBackupEndpoint(
   if (current.length < 2) return false;
   const next = [current[1] as string, current[0] as string, ...current.slice(2)];
   return persistRpcEndpoints(chain, next, storage);
+}
+
+/**
+ * Moves any listed endpoint to the front of the chain's list (Lane F,
+ * FIX-ALL, 2026-11-24). promoteBackupEndpoint only swaps the first
+ * two, so a custom RPC added third could never become the one the
+ * wallet actually uses — "Use this one" in the Networks screen calls
+ * this instead. False when the URL is not in the chain's list; a
+ * no-op (still true) when it is already first.
+ */
+export function makePrimaryEndpoint(
+  chain: ChainId,
+  url: string,
+  storage?: RpcOverrideStorage,
+): boolean {
+  const current = resolveRpcEndpoints(chain, storage);
+  if (!current.includes(url)) return false;
+  if (current[0] === url) return true;
+  const next = [url, ...current.filter((entry) => entry !== url)];
+  return persistRpcEndpoints(chain, next, storage);
+}
+
+/**
+ * Well-known public RPCs the owner can add in one tap (Lane F,
+ * FIX-ALL, 2026-11-24). Both are keyless, no-registration ETH
+ * gateways, verified live from gray-pinee 2026-11-24 (eth_chainId
+ * returns 0x1, eth_blockNumber returns the live tip):
+ * - Flashbots Protect RPC (https://rpc.flashbots.net)
+ * - dRPC public (https://eth.drpc.org)
+ *
+ * Rejected live the same day, do not re-add without fresh evidence:
+ * - LlamaRPC (https://eth.llamarpc.com): HTTP 525 from this egress,
+ *   twice.
+ * - Ankr public (https://rpc.ankr.com/eth): now keyed — "You must
+ *   authenticate your request with an API key".
+ * - Cloudflare (https://cloudflare-eth.com): answers eth_chainId but
+ *   refuses eth_blockNumber (-32046 "Cannot fulfill request").
+ * - 1rpc.io/aurora is a registry backup, not a suggestion: it answers
+ *   -32001 "usage limit" (2026-11-24, twice) — see Lane A.
+ *
+ * Each suggestion's origin is pinned in the CSP connect-src
+ * (security-headers.ts) and guarded by the drift test there: the
+ * browser refuses any fetch to an origin outside that list, so a
+ * custom RPC outside it could be stored but never used.
+ */
+export const SUGGESTED_CUSTOM_RPCS: readonly {
+  chain: ChainId;
+  label: string;
+  url: string;
+}[] = [
+  { chain: 'eth', label: 'Flashbots', url: 'https://rpc.flashbots.net' },
+  { chain: 'eth', label: 'dRPC', url: 'https://eth.drpc.org' },
+];
+
+/**
+ * Whether a custom RPC URL could actually be used by the browser
+ * (Lane F, FIX-ALL). The app's CSP connect-src is a static allowlist
+ * baked into the built index.html at build time — it cannot learn a
+ * new host at runtime — so a URL whose origin is neither a registry
+ * endpoint nor a suggested public RPC would be stored, listed, and
+ * then refused on every fetch. The Networks screen rejects those
+ * with a plain message instead of storing a dead entry. The
+ * allowlist itself is guarded in security-headers.test.ts (every
+ * registry origin + every suggestion origin must be in connect-src).
+ */
+export function isCustomRpcOriginUsable(url: string): boolean {
+  let origin: string;
+  try {
+    origin = new URL(url).origin;
+  } catch {
+    return false;
+  }
+  for (const chain of SUPPORTED_CHAINS) {
+    for (const endpoint of CHAINS[chain].rpcEndpoints) {
+      if (new URL(endpoint).origin === origin) return true;
+    }
+  }
+  return SUGGESTED_CUSTOM_RPCS.some(
+    (suggestion) => new URL(suggestion.url).origin === origin,
+  );
 }
 
 /** Promotes the backup for every managed chain that has one. Returns the chains changed. */

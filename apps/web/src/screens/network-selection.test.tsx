@@ -26,6 +26,10 @@ function setWallet(enabledChains: string[], overrides: Partial<Wallet> = {}) {
     vaultState: 'unlocked',
     devnetEnabled: false,
     setDevnetEnabled: vi.fn(async () => {}),
+    refreshBalances: vi.fn(async () => {}),
+    refreshHistory: vi.fn(async () => {}),
+    balances: {},
+    history: {},
     ...overrides,
   };
   vi.mocked(useWallet).mockReturnValue(
@@ -265,14 +269,50 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
             window.HTMLInputElement.prototype,
             'value',
           )?.set;
-          setter?.call(input, 'https://custom.invalid/eth');
+          // Lane F: only origins on the wallet's allowed connection
+          // list can be added — Flashbots is one of the one-tap
+          // suggestions, so it is accepted.
+          setter?.call(input, 'https://rpc.flashbots.net');
           input.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
       await clickButton(add!);
       const eth = rowFor(mounted, 'Ethereum');
-      expect(eth.textContent).toContain('custom.invalid');
+      expect(eth.textContent).toContain('rpc.flashbots.net');
       expect(eth.textContent).toContain('Custom');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('rejects a custom RPC outside the allowed connection list and stores nothing', async () => {
+    // Lane F: the browser refuses fetches to origins outside the CSP
+    // connect-src allowlist, so such a URL is rejected with a plain
+    // message instead of being stored as a dead entry.
+    const wallet = setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const input = mounted.div.querySelector(
+        'input[placeholder^="https://"]',
+      ) as HTMLInputElement | null;
+      const add = [...mounted.div.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Add RPC',
+      );
+      await act(async () => {
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value',
+          )?.set;
+          setter?.call(input, 'https://custom.invalid/eth');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      await clickButton(add!);
+      expect(mounted.div.textContent).toMatch(/allowed connection list/i);
+      const eth = rowFor(mounted, 'Ethereum');
+      expect(eth.textContent).not.toContain('custom.invalid');
+      expect(wallet.refreshBalances).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }
@@ -345,6 +385,218 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(eth.textContent).toContain('ethereum-rpc.publicnode.com');
     } finally {
       await mounted.cleanup();
+    }
+  });
+});
+
+describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  /** The RPC row for a chain: the Mainnet card rows never mention Primary. */
+  function rpcRow(mounted: { div: HTMLDivElement }, chainName: string): HTMLLIElement {
+    const rows = [...mounted.div.querySelectorAll('li')].filter((li) =>
+      li.textContent?.includes('Primary'),
+    );
+    const row = rows.find((li) => li.textContent?.includes(chainName));
+    if (!row) throw new Error(`no RPC row for ${chainName}`);
+    return row;
+  }
+
+  async function fillCustomRpc(
+    mounted: { div: HTMLDivElement },
+    url: string,
+  ): Promise<void> {
+    const input = mounted.div.querySelector(
+      'input[placeholder^="https://"]',
+    ) as HTMLInputElement | null;
+    const add = [...mounted.div.querySelectorAll('button')].find(
+      (b) => b.textContent === 'Add RPC',
+    );
+    expect(input).not.toBeNull();
+    expect(add).toBeDefined();
+    await act(async () => {
+      if (input) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(input, url);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    await act(async () => {
+      add!.click();
+    });
+  }
+
+  it('Use backup refreshes balances straight away', async () => {
+    const wallet = setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const ethRow = rpcRow(mounted, 'Ethereum');
+      const button = [...ethRow.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Use backup',
+      );
+      expect(button).toBeDefined();
+      await act(async () => {
+        button!.click();
+      });
+      await vi.waitFor(() =>
+        expect(wallet.refreshBalances).toHaveBeenCalled(),
+      );
+      expect(mounted.div.textContent).toMatch(
+        /Switched Ethereum to its backup endpoint\. Balance refreshed\./,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('Use this one moves a custom endpoint to primary and refreshes balances', async () => {
+    const wallet = setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      await fillCustomRpc(mounted, 'https://rpc.flashbots.net');
+      const eth = rpcRow(mounted, 'Ethereum');
+      expect(eth.textContent).toContain('rpc.flashbots.net');
+      // The Flashbots chip is the span holding its host text: the
+      // inner host span's parent is the chip. (The endpoint wrapper
+      // span also contains the host text, so an includes-match would
+      // find the wrapper and its first "Use this one" — the wrong
+      // chain's button.)
+      const host = [...eth.querySelectorAll('span')].find(
+        (s) => s.textContent === 'rpc.flashbots.net',
+      );
+      const chip = host?.parentElement ?? undefined;
+      const useThisOne = [...(chip?.querySelectorAll('button') ?? [])].find(
+        (b) => b.textContent === 'Use this one',
+      );
+      expect(useThisOne).toBeDefined();
+      await act(async () => {
+        useThisOne!.click();
+      });
+      await vi.waitFor(() =>
+        expect(wallet.refreshBalances).toHaveBeenCalled(),
+      );
+      const updated = rpcRow(mounted, 'Ethereum');
+      const primary = [...updated.querySelectorAll('span')].find(
+        (s) => s.textContent === 'Primary',
+      );
+      expect(primary?.previousSibling?.textContent).toContain(
+        'rpc.flashbots.net',
+      );
+      expect(mounted.div.textContent).toMatch(
+        /Switched Ethereum to rpc\.flashbots\.net\. Balance refreshed\./,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('the one-tap suggestion adds the well-known public RPC', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      const suggestion = [...mounted.div.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Add Flashbots',
+      );
+      expect(suggestion).toBeDefined();
+      await act(async () => {
+        suggestion!.click();
+      });
+      const eth = rpcRow(mounted, 'Ethereum');
+      expect(eth.textContent).toContain('rpc.flashbots.net');
+      expect(eth.textContent).toContain('Custom');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows which host answered the last balance, and the history source per chain', async () => {
+    setWallet(
+      [...SUPPORTED_CHAINS],
+      {
+        balances: {
+          eth: { status: 'zero', value: '0', fetchedAtMs: 1795446545000, source: '1rpc.io' },
+        },
+        history: {
+          eth: { status: 'loaded', txs: [], fetchedAtMs: 1795446545000 },
+        },
+      } as unknown as Partial<Wallet>,
+    );
+    const mounted = await mountScreen();
+    try {
+      const eth = rpcRow(mounted, 'Ethereum');
+      expect(eth.textContent).toContain('Last balance from 1rpc.io');
+      expect(eth.textContent).toContain('History: eth.blockscout.com');
+      expect(eth.textContent).toContain('working');
+      const gnosis = rpcRow(mounted, 'Gnosis');
+      expect(gnosis.textContent).toContain(
+        'History: no working source — history unavailable for this chain.',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('Prices card shows the fallback chain in order and the live line', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Prices come from CoinGecko first.',
+      );
+      expect(mounted.div.textContent).toContain('CoinLore');
+      expect(mounted.div.textContent).toContain('DexScreener');
+      expect(mounted.div.textContent).toContain('TonAPI');
+      expect(mounted.div.textContent).toContain('Coinbase');
+      expect(mounted.div.textContent).toContain(
+        'Gnosis and Mantle have no second source.',
+      );
+      expect(mounted.div.textContent).toContain('No prices fetched yet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('Check probes each endpoint and reports working with the block height', async () => {
+    setWallet([...SUPPORTED_CHAINS]);
+    const stub = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as {
+        method?: string;
+      };
+      if (body.method === 'eth_chainId') {
+        return new Response(
+          JSON.stringify({ jsonrpc: '2.0', result: '0x1', id: 1 }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({ jsonrpc: '2.0', result: '0x1940ddc', id: 2 }),
+        { status: 200 },
+      );
+    });
+    vi.stubGlobal('fetch', stub);
+    const mounted = await mountScreen();
+    try {
+      const ethRow = rpcRow(mounted, 'Ethereum');
+      const check = [...ethRow.querySelectorAll('button')].find(
+        (b) => b.textContent === 'Check',
+      );
+      expect(check).toBeDefined();
+      await act(async () => {
+        check!.click();
+      });
+      await vi.waitFor(() =>
+        expect(mounted.div.textContent).toContain('Working · block'),
+      );
+      expect(stub).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+      vi.unstubAllGlobals();
     }
   });
 });

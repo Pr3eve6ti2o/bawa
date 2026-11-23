@@ -20,8 +20,7 @@
 // - img-src 'self' data:: QR codes are inline SVG (no raster fetch); data:
 //   is kept for favicon-style assets. font-src 'self' data:: @fontsource
 //   woff2 is self-hosted; data: covers inlined font subsets if any.
-// - connect-src 'self' plus the sixty-one pinned provider origins: the
-//   same-origin wallet-core.wasm fetch plus the read-only balance/history
+// - connect-src 'self' plus the sixty-two pinned provider origins: the//   same-origin wallet-core.wasm fetch plus the read-only balance/history
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
 //   (history), TRX https://api.trongrid.io, TON https://toncenter.com, and
@@ -94,8 +93,21 @@
 //   refuses every devnet fetch and devnet mode is dead in the app even
 //   though the endpoints answer curl. Devnet is TEMPORARY: the removal
 //   checklist in docs/DECISIONS.md reverts this line and the test to the
-//   fifty-six mainnet origins.
-//   No other origin, no wildcard. Explorer links (tronscan.org,
+//   fifty-seven mainnet origins.
+//   Lane F (FIX-ALL, 2026-11-24): two more mainnet origins for the
+//   one-tap custom RPCs on the Networks screen — Flashbots
+//   https://rpc.flashbots.net and dRPC https://eth.drpc.org, both
+//   keyless public ETH gateways verified live (eth_chainId 0x1 +
+//   eth_blockNumber at the live tip). The CSP is baked into the built
+//   index.html and cannot learn a new host at runtime, so a custom
+//   RPC outside this list would be stored but refused on every fetch
+//   — the Networks screen only accepts origins in this list (see
+//   isCustomRpcOriginUsable in wallet/chains.ts) and the test below
+//   pins the suggestion origins here. Rejected the same day:
+//   LlamaRPC (HTTP 525), Ankr public (now keyed), Cloudflare-eth
+//   (refuses eth_blockNumber).
+//   Lane A (FIX-ALL, 2026-11-24) removed 1rpc.io from this list: both
+//   1RPC backups returned -32001 usage-limit and were replaced by dRPC.//   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
 // - frame-ancestors 'none' is in the shared string: it is ignored when the
@@ -108,8 +120,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.drpc.org https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.etherscan.io https://lineascan.build https://api.trongrid.io https://apilist.tronscanapi.com https://tron-rpc.publicnode.com https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://aurora.drpc.org https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
-  "object-src 'none'",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.drpc.org https://rpc.flashbots.net https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.etherscan.io https://lineascan.build https://api.trongrid.io https://apilist.tronscanapi.com https://tron-rpc.publicnode.com https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://aurora.drpc.org https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",  "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   // frame-ancestors is ignored when this policy is delivered via a <meta>

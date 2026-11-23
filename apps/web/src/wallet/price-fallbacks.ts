@@ -244,6 +244,27 @@ const COINBASE_PRODUCT_IDS: Partial<Record<ChainId, string>> = {
 };
 
 /**
+ * The price sources the wallet tries, in order, for one chain
+ * (Lane F, FIX-ALL, 2026-11-24 — the Networks screen's Prices card
+ * reads this, so the screen and the fallback code can never drift
+ * apart). CoinGecko is always first; CoinLore second where it has
+ * the chain (16 chains); DexScreener third where a wrapped contract
+ * is verified (12 chains); TonAPI for TON and Coinbase for LTC, the
+ * two chains CoinLore cannot cover. Gnosis and Mantle return
+ * CoinGecko alone — no verified second source exists for them.
+ */
+export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
+  const sources: PriceSource[] = ['CoinGecko'];
+  if (COINLORE_NATIVE_IDS[chain] !== undefined) sources.push('CoinLore');
+  if (NATIVE_WRAPPED_TOKENS[chain] !== undefined) {
+    sources.push('DexScreener');
+  }
+  if (chain === 'ton') sources.push('TonAPI');
+  if (COINBASE_PRODUCT_IDS[chain] !== undefined) sources.push('Coinbase');
+  return sources;
+}
+
+/**
  * Same token address: EVM hex compares case-insensitively
  * (checksummed vs lowercase), base58 (Solana) compares exactly —
  * lowercasing two different base58 strings could falsely equate

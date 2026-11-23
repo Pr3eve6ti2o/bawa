@@ -161,6 +161,27 @@ describe('security settings screen', () => {
     }
   });
 
+  it('points at Networks for connections instead of duplicating the RPC screen', async () => {
+    // Lane F: the RPC manager lives on Networks, not here — Security
+    // carries one pointer to it, not a second copy of the controls.
+    setWallet('unlocked');
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('Connections');
+      expect(text).toContain('live on the Networks screen');
+      const link = mounted.div.querySelector(
+        'a[href="/networks"]',
+      ) as HTMLAnchorElement | null;
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Open Networks');
+      expect(text).not.toContain('RPC endpoints');
+      expect(text).not.toContain('Use backup');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('lays out in two desktop columns with the reading panels spanning both', async () => {
     setWallet('unlocked');
     const mounted = await mountScreen();

@@ -43,6 +43,25 @@ export function SecuritySettingsScreen() {
 
       <Card className="rounded-xl lg:col-span-2">
         <CardHeader>
+          <CardTitle>Connections</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="max-w-[75ch] text-sm text-ink">
+            Which network the wallet talks to, which backup it uses, and
+            where prices come from live on the Networks screen — they are
+            connection settings, not vault settings.
+          </p>
+          <Link
+            to="/networks"
+            className="inline-block text-sm font-medium text-ink bawa-squiggle-underline"
+          >
+            Open Networks
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl lg:col-span-2">
+        <CardHeader>
           <CardTitle><span className="bawa-marker">Backup</span> procedure</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

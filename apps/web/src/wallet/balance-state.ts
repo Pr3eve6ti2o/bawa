@@ -22,4 +22,13 @@ export interface BalanceState {
   stale?: boolean;
   /** Epoch ms when the last good value was fetched (cache freshness). */
   fetchedAtMs?: number;
+  /**
+   * Lane F (FIX-ALL, 2026-11-24): the hostname that answered the last
+   * good balance (the AdapterResult `source` — e.g. `1rpc.io`). The
+   * Networks screen shows it so the owner can see which RPC is
+   * actually serving them, not just which one is listed first.
+   * Undefined until the first successful refresh; never persisted in
+   * the balance cache, which carries value + time only.
+   */
+  source?: string;
 }

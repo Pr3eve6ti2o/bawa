@@ -181,6 +181,56 @@ What each part means, in the wallet's own terms:
   wallet reads its real name, symbol, and balance from the chain, and
   its price where a source has one. Custom tokens are stored in
   `bawa:custom-tokens:v1`.
+- **Networks — connections** — the Networks screen (`/networks`) is the
+  one place to see and change how the wallet connects: every chain's
+  RPC endpoints, the price sources, and the history source per chain.
+  See "Networks: connections, prices and history" below.
+
+### Networks: connections, prices and history
+
+The Networks screen is where the wallet's connections live — not the
+Security screen, which is about the vault and the recovery phrase.
+Everything here is plain language, one screen, no jargon.
+
+- **RPC endpoints** — for each chain, the addresses the wallet asks for
+  balances, in the order it tries them. The first one is labelled
+  Primary, the next ones Backup. When one is down the wallet tries the
+  next on its own. Dogecoin keeps its built-in pair and takes no custom
+  address.
+- **Use backup** — switches one chain to its backup address, and
+  refreshes the balance straight away so you can see it work. **Switch
+  all to backup** does the same for every chain that has a backup.
+- **Use this one** — makes any listed address the one the wallet tries
+  first. This is how a custom address you added becomes the one in use.
+- **Add RPC** — add your own address for the chosen chain. It must be
+  `https`, with no key or password in it. Only addresses on the wallet's
+  built-in allowed list can be used — the browser blocks any other
+  address, so the screen says so instead of storing an entry that could
+  never work. The well-known public addresses that are allowed
+  (Flashbots and dRPC for Ethereum) are offered as one-tap buttons.
+- **Check / Check all connections** — asks each address, live from this
+  browser, whether it answers for the right chain, and shows the answer
+  next to it: "Working · block 26,480,090 · 74 ms", or "Not answering"
+  with the reason. A dead backup shows up here honestly instead of
+  hiding behind its Backup label.
+- **Last balance from …** — under each chain, the address that actually
+  answered the last balance, with the time. This is the proof a switch
+  worked, not just the label.
+- **History** — under each chain, the source the wallet reads past
+  transactions from, or "no working source — history unavailable for
+  this chain" where none is wired. Six chains have no working history
+  source (BNB Chain, Gnosis, Linea, opBNB, Metis, Fantom); their
+  history stays unavailable, never faked.
+- **Prices** — the order the wallet tries for prices: CoinGecko first
+  for every chain, then CoinLore (16 chains), then DexScreener (12
+  chains, from the on-chain price of the wrapped coin), then TonAPI for
+  TON and Coinbase for Litecoin. Gnosis and Mantle have no second
+  source. The card also counts, from the prices already on this device,
+  which source is pricing each chain right now; each asset row names the
+  source that priced it.
+- **Reset all to defaults** — puts every chain back to the addresses the
+  wallet ships with. Changes are stored on this device only
+  (`bawa-rpc-overrides:v1`).
 
 ## Running it
 
@@ -226,6 +276,7 @@ locally; balances come from public read-only endpoints.
 | Watch-only — xpubs only, no secret | `apps/web/src/engine/boundary.ts:553` (`validateWatchOnlyImport`), `apps/web/src/state/wallet-context.tsx:75` (`bawa-watch-only-xpubs`) | Public extended keys only; mainnet-only |
 | Addresses on 22 chains | As "22 addresses" above | The addresses every flow starts from |
 | Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:821` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:902` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:44` (`registerAllAdapters`), `apps/web/src/state/wallet-refresh.ts` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
+| Networks — connections, prices, history | `apps/web/src/screens/network-selection.tsx` (`RpcEndpointManager`, `PriceSourcesCard`), `apps/web/src/wallet/chains.ts` (`makePrimaryEndpoint`, `isCustomRpcOriginUsable`, `SUGGESTED_CUSTOM_RPCS`), `apps/web/src/wallet/rpc-probe.ts` (`probeRpcEndpoint`), `apps/web/src/wallet/price-fallbacks.ts` (`priceFallbackSourcesFor`), `apps/web/src/state/wallet-context.tsx` (`BalanceState.source`) | One screen to see and switch RPCs, check them live, and see price and history sources; every switch refreshes balances at once |
 | Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:35` (CoinGecko base), `prices.ts:87` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:91` (`PriceSource`), `prices.ts:392` (`PRICE_CACHE_KEY`), `prices.ts:597` (`fetchPrices`), `prices.ts:966` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:48`, `apps/web/src/wallet/token-prices.ts:165-166` (fallback order), `token-prices.ts:347` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
 | Receive — address + QR | `apps/web/src/screens/receive.tsx` | Address + QR card for any chain |
 | Track — by transaction hash | `apps/web/src/screens/track-transaction.tsx`, `apps/web/src/wallet/tracker.ts:56` (`parseBtcTx`), `tracker.ts:119` (`parseEthTx`), `tracker.ts:162` (`parseTrxTx`), `tracker.ts:225` (`parseTonTxEntry`) | Transaction lookup and confirmation status per chain |
