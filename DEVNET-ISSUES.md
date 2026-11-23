@@ -1,3 +1,12 @@
+
+> Update 2026-11-23 (Lane E): the token-discovery note below is stale —
+> `panel-rebuild/token-discovery` HAS since landed on the remote
+> (`f76245a`), and the UI/UX Fixes programme is complete and merged
+> into `panel-rebuild/token-gaps` (`4eb0242`). Gates on the merged tree:
+> tsc 0, build 0, vitest 86 files / 1644 passed + 5 skipped, lint 0,
+> audit 0. Full record: `docs/UI-UX-FIXES-PROGRAMME.md`. The rest of
+> this file is Lane D's record as written and is left unchanged.
+
 # Devnet issues — temporary devnet programme (Lane D, 2026-11-22)
 
 Hands-on Muse testing on `panel-rebuild/devnet-temp`, worktree
