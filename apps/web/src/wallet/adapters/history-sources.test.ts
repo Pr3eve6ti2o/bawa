@@ -2,8 +2,10 @@
  * Gap 1 (Lane D, 2026-11-23): keyless EVM history for Celo, Optimism
  * and Scroll. The three hosts were probed live from gray-pinee on
  * 2026-11-23 and answer the Blockscout `?module=account&action=txlist`
- * shape with real transactions; the other twelve non-ETH EVM chains
- * stay unwired (403/404 per host — see EVM_HISTORY_SOURCES).
+ * shape with real transactions. (Merge: Lane B wired six more the same
+ * day, so nine of fifteen non-ETH EVM chains are wired and six stay
+ * unwired — bsc, gnosis, linea, opbnb, metis, fantom; see
+ * EVM_HISTORY_SOURCES and docs/GAP-ANALYSIS.md §1.)
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicClient } from 'viem';

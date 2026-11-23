@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="726" viewBox="0 0 900 726" role="img" aria-labelledby="archTitle archDesc">
   <title id="archTitle">Bawa architecture — guide, HD core, vault, providers, flows and storage</title>
-  <desc id="archDesc">The guide and registry build the example web wallet. One 24-word phrase derives addresses on 22 chains through Trust Wallet Core 4.9.3. The phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from public RPCs and prices from CoinGecko with DexScreener and TonAPI fallbacks. Send signs offline and mainnet broadcast stays disabled. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
+  <desc id="archDesc">The guide and registry build the example web wallet. One 24-word phrase derives addresses on 22 chains through Trust Wallet Core 4.9.3. The phrase is kept in an encrypted vault (PBKDF2 600,000, AES-GCM-256). Balances come from public RPCs and prices from CoinGecko with CoinLore, Coinbase, DexScreener and TonAPI fallbacks. Send signs offline and mainnet broadcast stays disabled. Every box traces to a real file in docs/HOW-IT-WORKS.md.</desc>
   <style>
     .t { font-family: "Baloo 2", "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
     .b { font-family: Inter, "Trebuchet MS", Verdana, sans-serif; fill: #2B2B2B; }
@@ -45,7 +45,7 @@
   <text class="m" x="488" y="169" font-size="11">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0</text>
   <text class="m" x="488" y="188" font-size="11">ETH + 15 EVM m/44'/60'/0'/0/0 — one shared address</text>
   <text class="m" x="488" y="207" font-size="11">TRX m/44'/195'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
-  <text class="m" x="488" y="226" font-size="11">TON m/44'/607'/0' (V4R2) · SOL m/44'/501'/0'</text>
+  <text class="m" x="488" y="226" font-size="11">TON m/44'/607'/0' (V4R2) · SOL m/44'/501'/0' — per-account, rotatable</text>
 
   <!-- Arrow A -> B : builds -->
   <path class="arrow" d="M426,150 L466,150" marker-end="url(#ah)"/>
@@ -70,7 +70,7 @@
   <text class="m" x="488" y="358" font-size="11">resolveRpcEndpoints() · 9 adapter modules</text>
   <text class="m" x="488" y="378" font-size="11">btc eth evm trx ton sol ltc doge + token-balances</text>
   <text class="b" x="488" y="398" font-size="12">Prices — CoinGecko first, 10-minute cache</text>
-  <text class="b" x="488" y="418" font-size="12">Unlisted → DexScreener (EVM · SOL · TRX) · TonAPI (TON)</text>
+  <text class="b" x="488" y="418" font-size="12">Fallbacks: CoinLore · Coinbase · DexScreener · TonAPI</text>
   <text class="b" x="488" y="438" font-size="12">Unreachable = unavailable. Never invented.</text>
 
   <!-- Arrow B -> D : 22 addresses -->

@@ -67,22 +67,25 @@ export function RecentActivity() {
             history?.[chain]?.status === 'error',
         );
 
-        // Merge (Lane C + marketing-fix): both gates apply - the empty
-        // message is earned by a chain that actually loaded, and the
-        // unavailable block appears only once the wallet has activity
-        // (or is locked).
-        // A wallet with no activity anywhere shows the empty state only.
-        // A failed history fetch for a chain with no known transactions
-        // is not an error the user can act on, and its Retry is dead —
-        // a fresh wallet's Blockscout 429 would only 429 again. The
-        // unavailable + Retry block appears only once the wallet HAS
-        // activity (rows loaded somewhere, including a failed chain's
-        // retained transactions): a real failed fetch for a chain that
-        // has activity. While locked the per-chain text stays, with the
-        // Unlock prompt below it — the vault must open before any
-        // history can load at all.
+        // Merge decision (Lane C + marketing-fix, both tests kept): the
+        // unavailable block renders when the wallet has activity, while
+        // locked, or when any chain's history REALLY failed. 'no-address'
+        // is not a failure — it is the initial state for every chain
+        // (wallet-context.tsx:165: no fetch can run yet), so a fresh
+        // wallet whose only failed chain is 'no-address' shows the empty
+        // state only, never a dead Retry (dashboard.test.tsx). A failed
+        // fetch ('down' and friends) is different: when every chain
+        // failed the unavailable rows win over "No activity yet"
+        // (text-spacing.test.tsx, Lane C). While locked the per-chain
+        // text stays, with the Unlock prompt below it — the vault must
+        // open before any history can load at all.
         const hasActivity = rows.length > 0;
-        const showUnavailable = hasActivity || isLocked;
+        const showUnavailable =
+          hasActivity ||
+          isLocked ||
+          unavailableChains.some(
+            (chain) => history?.[chain]?.reason !== 'no-address',
+          );
 
         // Lane C: "No activity yet" is earned only by a chain that
         // actually loaded (loaded/empty) with zero transactions. A

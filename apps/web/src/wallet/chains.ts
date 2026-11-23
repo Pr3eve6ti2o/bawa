@@ -246,7 +246,6 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * history stays blocked, never faked. (Merge: matic, arb and base
  * were listed here as blocked, but were verified the same day via
  * a headless-Chromium fetch — see HISTORY_EVIDENCE_2026_11_23_BROWSER below.)
- * indexer). Their history stays blocked, never faked.
  */
 const HISTORY_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Blockscout-shaped history) + '
@@ -258,10 +257,6 @@ const BALANCE_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
   + 'live mainnet cross-check 2026-11-23 (two independent RPC endpoints agree '
   + 'on chain id and balance) for balance.';
-
-const HISTORY_EVIDENCE_2026_11_23 =
-  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
-  + 'live mainnet cross-check 2026-11-23 (keyless public indexer returns real transactions for a funded address) for history.';
 
 // Lane B, same day: the three Cloudflare-blocked Blockscout hosts
 // (polygon/base/arbitrum) answer HTTP 403 to plain curl but return

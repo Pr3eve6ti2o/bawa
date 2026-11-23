@@ -87,7 +87,7 @@ flowchart TB
     accDescr: Addresses feed public RPC balances and cached prices; Receive, Track and Add Token read them, and Send stops at a disabled broadcast.
 
     addrs2["Addresses on 22 chains"] --> balances["Balances — public RPCs, up to 3 per chain"]
-    balances --> prices["Prices — CoinGecko, DexScreener, TonAPI"]
+    balances --> prices["Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI"]
     balances --> receive["Receive — address + QR"]
     balances --> track["Track — by transaction hash"]
     balances --> addtoken["Add Token — by contract address"]
@@ -134,7 +134,11 @@ What each part means, in the wallet's own terms:
   `m/44'/60'/0'/0/0`, so they share one address. The rest have their own
   paths: Bitcoin `m/84'/0'/0'/0/0`, Litecoin `m/84'/2'/0'/0/0`, TRON
   `m/44'/195'/0'/0/0`, Dogecoin `m/44'/3'/0'/0/0`, TON `m/44'/607'/0'`
-  (Wallet V4 R2, workchain 0), Solana `m/44'/501'/0'`.
+  (Wallet V4 R2, workchain 0), Solana `m/44'/501'/0'`. Both are
+  account-0 paths: per-account derivation rotates them — Solana to a
+  fresh address per account, TON to a second address — while the phrase
+  stays the same (`deriveAddressesAt`, `core.ts:369`; `pathFor`,
+  `chains.ts:888`).
 - **Vault** — the phrase is stored in `bawa-vault` as an envelope
   (`version`, `kdf`, `saltB64`, `ivB64`, `ciphertextB64`) encrypted with
   AES-GCM-256 under a key derived by PBKDF2 with 600,000 iterations
@@ -155,9 +159,10 @@ What each part means, in the wallet's own terms:
   chain's balance from its adapter. A failed fetch shows as unavailable,
   never as zero or as a made-up number.
 - **Prices** — CoinGecko first for listed assets, with a 10-minute
-  cache. Unlisted tokens fall back to DexScreener (EVM, Solana, TRON)
-  and TonAPI rates (TON Jettons). When no source has a price, the wallet
-  says the price is unavailable.
+  cache. When a CoinGecko quote is stale or missing, native assets fall
+  back to CoinLore and Coinbase (LTC only); unlisted tokens fall back to
+  DexScreener (EVM, Solana, TRON) and TonAPI rates (TON Jettons). When
+  no source has a price, the wallet says the price is unavailable.
 - **Receive and Send** — Receive shows the address and QR code for any
   chain. Send builds the transaction offline and signs it
   (`createTransactionIntent`) — but mainnet broadcast stays **disabled**
@@ -207,7 +212,7 @@ locally; balances come from public read-only endpoints.
 | Dashboard — 22 chains, 43 rows | `apps/web/src/screens/dashboard.tsx`, `apps/web/src/wallet/chains.ts:675` (`SUPPORTED_CHAINS`, 22 entries), `apps/web/src/wallet/tokens.ts:32` (`DEFAULT_TOKENS`, 21 entries) | 22 native assets + 21 default tokens |
 | 24-word phrase | `apps/web/src/wallet/core.ts:138` (`createWallet`), `core.ts:154` (`HDWallet.createWithEntropy`, 32 bytes) | 24-word BIP-39 phrase from secure entropy |
 | HDWallet.createWithMnemonic | `apps/web/src/wallet/core.ts:246` (`deriveAddresses`), `apps/web/src/engine/boundary.ts:693` (`deriveAddresses`) | Opens the one HD wallet from the phrase |
-| 22 addresses | `apps/web/src/wallet/core.ts:239` (`deriveAddresses`), `core.ts:256` (`getAddressForCoin`), `core.ts:24-47` (`DEFAULT_PATHS`), `apps/web/src/wallet/chains.ts:336` (`CHAINS`) | One address per chain from one phrase |
+| 22 addresses | `apps/web/src/wallet/core.ts:239` (`deriveAddresses`), `core.ts:256` (`getAddressForCoin`), `core.ts:24-47` (`DEFAULT_PATHS`), `core.ts:369` (`deriveAddressesAt`, per-account SOL/TON), `apps/web/src/wallet/chains.ts:336` (`CHAINS`), `chains.ts:888` (`pathFor`) | One address per chain from one phrase; SOL/TON rotate per account |
 | Vault — bawa-vault | `apps/web/src/wallet/vault.ts:79` (`VAULT_STORAGE_KEY`), `vault.ts:80` (`bawa-vault-backup`), `vault.ts:82` (`bawa-vault-key`), `vault.ts:739` (`bawa-vault-accounts:v1`) | Encrypted on-device vault; localStorage keys |
 | PBKDF2 600,000 → AES-GCM-256 | `apps/web/src/wallet/vault.ts:84` (`PBKDF2_ITERATIONS = 600_000`), `vault.ts:85` (`SHA-256`), `vault.ts:88` (`AES-GCM`), `vault.ts:96-109` (`VaultEnvelope`) | Key derivation and envelope fields |
 | 16 EVM chains — one shared address | `apps/web/src/wallet/core.ts:24-47` (`DEFAULT_PATHS`: all 16 EVM chains `m/44'/60'/0'/0/0`) | One address across all EVM chains |
@@ -215,7 +220,7 @@ locally; balances come from public read-only endpoints.
 | Watch-only — xpubs only, no secret | `apps/web/src/engine/boundary.ts:553` (`validateWatchOnlyImport`), `apps/web/src/state/wallet-context.tsx:75` (`bawa-watch-only-xpubs`) | Public extended keys only; mainnet-only |
 | Addresses on 22 chains | As "22 addresses" above | The addresses every flow starts from |
 | Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:821` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:902` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:44` (`registerAllAdapters`), `apps/web/src/state/wallet-refresh.ts` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
-| Prices — CoinGecko, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:35` (CoinGecko base), `prices.ts:87` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:91` (`PriceSource`), `prices.ts:392` (`PRICE_CACHE_KEY`), `prices.ts:597` (`fetchPrices`), `prices.ts:966` (`usePrices`), `apps/web/src/wallet/dex-prices.ts:48`, `apps/web/src/wallet/token-prices.ts:165-166` (fallback order), `token-prices.ts:347` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
+| Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:35` (CoinGecko base), `prices.ts:87` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:91` (`PriceSource`), `prices.ts:392` (`PRICE_CACHE_KEY`), `prices.ts:597` (`fetchPrices`), `prices.ts:966` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:48`, `apps/web/src/wallet/token-prices.ts:165-166` (fallback order), `token-prices.ts:347` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
 | Receive — address + QR | `apps/web/src/screens/receive.tsx` | Address + QR card for any chain |
 | Track — by transaction hash | `apps/web/src/screens/track-transaction.tsx`, `apps/web/src/wallet/tracker.ts:56` (`parseBtcTx`), `tracker.ts:119` (`parseEthTx`), `tracker.ts:162` (`parseTrxTx`), `tracker.ts:225` (`parseTonTxEntry`) | Transaction lookup and confirmation status per chain |
 | Add Token — by contract address | `apps/web/src/screens/add-token.tsx`, `apps/web/src/wallet/tokens.ts:599` (`CUSTOM_TOKENS_KEY`) | Any token by contract address; real name, symbol, balance |

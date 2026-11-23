@@ -39,6 +39,7 @@
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
+  PRICE_FETCH_TIMEOUT_MS,
   fetchJsonWithTimeout,
   isFreshQuote,
   type PriceEntry,
@@ -200,6 +201,15 @@ export function parseTonRatesResponse(
 }
 
 type FetchFn = typeof fetch;
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name: unknown }).name === 'AbortError'
+  );
+}
 
 function errorEntries(
   requests: readonly { key: string }[],

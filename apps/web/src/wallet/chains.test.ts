@@ -437,9 +437,6 @@ describe('chains registry', () => {
       ) {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
-      } else if (chain === 'op') {
-        expect(caps.history.status).toBe('verified');
-        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else {
         expect(caps.history.status).toBe('blocked');
         expect(caps.history.evidence).toContain('never faked');
