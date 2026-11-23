@@ -100,40 +100,23 @@ For the detailed design, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Repository structure
 
-### Overview
+The diagram below is text (Mermaid), so it reads in the source as well as on GitHub. It shows `main` as it is: `apps/web`, `apps/android` and `registry/` are planned and not in this tree yet.
 
-*Diagrams are rendered as static SVG images so they display in every viewer, including the GitHub mobile app; the editable Mermaid sources are in [docs/diagrams/](docs/diagrams/).*
+```mermaid
+flowchart TB
+    accTitle: Bawa repository structure on main
+    accDescr: Top-level layout of the main branch. The wallet apps and the machine-readable registry are planned and not in this tree yet.
 
-<img src="docs/diagrams/structure-overview.svg" alt="Bawa main structure at commit 667527e" width="400">
-
-### Root files (1 of 2)
-
-<img src="docs/diagrams/root-files-1.svg" alt="Bawa Root files at commit 667527e, part 1 of 2" width="451">
-
-### Root files (2 of 2)
-
-<img src="docs/diagrams/root-files-2.svg" alt="Bawa Root files at commit 667527e, part 2 of 2" width="475">
-
-### tools/ - files
-
-<img src="docs/diagrams/tools-files.svg" alt="Bawa tools/ files at commit 667527e" width="360">
-
-### tools/ - hdwallet-gen/
-
-<img src="docs/diagrams/tools-hdwallet-gen.svg" alt="Bawa tools/ hdwallet-gen/ at commit 667527e" width="422">
-
-### test/
-
-<img src="docs/diagrams/test.svg" alt="Bawa main structure at commit 667527e - test/" width="423">
-
-### docs/
-
-<img src="docs/diagrams/docs.svg" alt="Bawa main structure at commit 667527e - docs/" width="444">
-
-### captcha/
-
-<img src="docs/diagrams/captcha.svg" alt="Bawa main structure at commit 667527e - captcha/" width="400">
-
+    root["bawa/ — guide and blueprint first"]
+    root --> rootfiles["Root files<br/>AGENTS.md · ARCHITECTURE.md · CHANGELOG.md<br/>CONTRIBUTING.md · IMPLEMENTATION.md · SECURITY.md<br/>LICENSE · README.md · package.json · requirements.txt<br/>.env.example · .editorconfig · .gitignore · .github/"]
+    root --> tools["tools/<br/>bawa_cli.py · make_wallet.py · decrypt_seed.py<br/>hdwallet-gen/ — derive.js · derive_daemon.js<br/>compare.js · extended-key.js · generate.js · package.json"]
+    root --> docs["docs/<br/>Guides 01–16 · HOW-IT-WORKS.md · FAQ.md<br/>GLOSSARY.md · DECISIONS.md · diagrams/"]
+    root --> captcha["captcha/<br/>run-captcha-check · package.json · vendors/<br/>Vendored third-party reference code"]
+    root --> test["test/<br/>test_bawa_cli.py · test_make_wallet.py<br/>differential_test.py · smoke.test.js<br/>fixture-oracle-vectors.json"]
+    root --> appsweb["apps/web — planned<br/>Web wallet starter; not on main yet"]
+    root --> appsandroid["apps/android — planned<br/>Android wallet starter; not on main yet"]
+    root --> registry["registry/ — planned<br/>Machine-readable chain registry;<br/>registry content now lives in docs/12"]
+```
 
 ## Why this exists
 
