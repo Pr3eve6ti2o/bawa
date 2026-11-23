@@ -783,6 +783,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const changed = useRef(perChain(() => false));
   const derivations = useRef(perChain(() => 0));
   const vaultDerivations = useRef(0);
+  // Lane D (FIX-ALL): receive-address derivations have their own
+  // generation. They used to share vaultDerivations with
+  // refreshVaultAccounts, so when both ran concurrently the first
+  // finisher's result was discarded as stale by the second one's
+  // increment. lockVault bumps both (a lock invalidates either kind).
+  const receiveDerivations = useRef(0);
   const balanceRequests = useRef(perChain(() => 0));
   const historyRequests = useRef(perChain(() => 0));
   // Per-token request generations (same stale-write guard as the
@@ -1222,6 +1228,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     index: number;
   }) => {
     const request = ++vaultDerivations.current;
+    // Lane D (FIX-ALL): attempt autoUnlock FIRST. The old order read
+    // computeVaultState() (in-memory lock state) before awaiting
+    // autoUnlock(), and || short-circuited - so a call made before the
+    // mount auto-unlock effect finished bailed to the persisted-restore
+    // path without ever attempting the unlock, even though the comment
+    // below promised autoUnlock restores the mnemonic. That made a boot
+    // re-derivation silently no-op. autoUnlock is idempotent: an already
+    // open vault returns true at once.
+    const unlocked = await vault.autoUnlock();
     const vaultState = computeVaultState();
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
     const selected = selection ?? current.current.vaultAccount;
@@ -1242,7 +1257,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (
       vaultState !== 'unlocked' ||
       !passphraseKnown ||
-      !(await vault.autoUnlock())
+      !unlocked
     ) {
       const persisted = readPersistedVaultAddresses(
         devnetEnabledRef.current ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
@@ -1407,15 +1422,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // call. A locked vault, or a passphrase the session does not know,
   // leaves every address unknown.
   const refreshReceiveAddresses = useCallback(async () => {
-    const request = ++vaultDerivations.current;
+    // Lane D (FIX-ALL): own generation counter (see vaultDerivations
+    // above) and autoUnlock attempted before the state check, for the
+    // same short-circuit reason as refreshVaultAccounts.
+    const request = ++receiveDerivations.current;
     const selection = current.current.vaultAccount;
     const indices = current.current.receiveIndices;
     const passphraseKnown =
       !isPassphraseUsed() || vault.getSessionPassphrase() !== '';
+    const unlocked = await vault.autoUnlock();
     if (
       computeVaultState() !== 'unlocked' ||
       !passphraseKnown ||
-      !(await vault.autoUnlock())
+      !unlocked
     ) {
       update(previous => ({
         ...previous,
@@ -1458,14 +1477,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       });
     } catch {
-      if (request !== vaultDerivations.current) return;
+      if (request !== receiveDerivations.current) return;
       update(previous => ({
         ...previous,
         receiveAddresses: perChain<string | null>(() => null),
       }));
       return;
     }
-    if (request !== vaultDerivations.current) return;
+    if (request !== receiveDerivations.current) return;
     update(previous => ({ ...previous, receiveAddresses: out }));
   }, [update]);
 
@@ -1530,6 +1549,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const lockVault = useCallback(() => {
     ++vaultDerivations.current;
+    ++receiveDerivations.current;
     vault.lock();
     update(previous => ({
       ...previous,
@@ -1716,10 +1736,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // history load for the rehydrated vault or watch-only addresses, so a
   // direct load or reload shows data without an unlock. History starts
   // only after balances settle (the Lane B balance-before-history rule).
+  // Lane D (FIX-ALL): the boot ALSO re-derives the vault addresses when
+  // the persisted record for the current mode/selection cannot serve
+  // them - otherwise a reload strands the wallet with no addresses at
+  // all. The strand is real: the devnet pill flips before its
+  // re-derivation finishes, so navigating (or reloading) mid-derivation
+  // kills the derivation before it persists the devnet record, and
+  // nothing on the boot path re-derived - Receive settled on 'No
+  // receiving address available for this chain' forever (E2E-02, 3 of 4
+  // full runs; the immediate-reload probe reproduced 3/3). The
+  // re-derivation runs beside the balance refresh, not before it, so
+  // boot is not delayed behind a full derivation when the record is
+  // present.
   useEffect(() => {
     if (!hydrated) return;
+    void (async () => {
+      await vault.autoUnlock();
+      if (computeVaultState() !== 'unlocked') return;
+      // A passphrase wallet whose passphrase is unknown must not
+      // re-derive: deriving with '' would produce (and persist) the
+      // wrong addresses (same guard as refreshVaultAccounts).
+      if (isPassphraseUsed() && vault.getSessionPassphrase() === '') return;
+      const persisted = readPersistedVaultAddresses(
+        devnetEnabledRef.current ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
+      );
+      const selection = current.current.vaultAccount;
+      const hasAddresses =
+        persisted !== null
+        && persisted.account === selection.account
+        && persisted.index === selection.index
+        && ALL_CHAIN_IDS.some((chain) => persisted.addresses[chain].length > 0);
+      if (!hasAddresses) {
+        await refreshVaultAccounts().catch(() => {});
+      }
+    })();
     void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
-  }, [hydrated, refreshBalances, refreshHistory]);
+  }, [hydrated, refreshBalances, refreshHistory, refreshVaultAccounts]);
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain,
