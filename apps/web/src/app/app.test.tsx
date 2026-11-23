@@ -77,7 +77,7 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Bawa Web Wallet');
       expect(div.textContent).toContain('Welcome to Bawa');
       expect(div.textContent).toContain(
-        'Mainnet only — this wallet never connects to a test network',
+        'Mainnet only. This wallet never connects to a test network',
       );
       expect(div.textContent).not.toContain('No wallet yet');
     });
@@ -198,12 +198,12 @@ describe.sequential('App', () => {
     window.localStorage.setItem('bawa-devnet-enabled', '1');
     try {
       await withRenderedApp('/', (div) => {
-        expect(div.textContent).toContain('Devnet — test mode');
+        expect(div.textContent).toContain('Devnet test mode');
         expect(div.textContent).toContain(
-          'Devnet — test mode. This wallet connects to a test network',
+          'Devnet test mode. This wallet connects to a test network',
         );
         expect(div.textContent).not.toContain(
-          'Mainnet only — this wallet never connects to a test network',
+          'Mainnet only. This wallet never connects to a test network',
         );
       });
     } finally {

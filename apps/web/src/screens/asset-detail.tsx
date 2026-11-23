@@ -227,7 +227,7 @@ export function AssetDetailScreen() {
           <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
             <svg viewBox="0 0 48 48" aria-hidden="true" className="size-10 rotate-3">
               <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={24}>{displaySymbol}</text>
+              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={24}>{displaySymbol}</text>
             </svg>
           </span>
           <div>
@@ -263,7 +263,7 @@ export function AssetDetailScreen() {
             </p>
             {vaultState === 'locked' ? (
               <>
-                <p className="text-sm text-panel-text-muted">Locked — unlock to see balances.</p>
+                <p className="text-sm text-panel-text-muted">Locked. Unlock to see balances.</p>
                 <Button type="button" variant="outline" asChild>
                   <Link to="/lock">Unlock</Link>
                 </Button>
@@ -476,7 +476,7 @@ export function AssetDetailScreen() {
             </p>
             {vaultState === 'locked' ? (
               <>
-                <p className="text-sm text-panel-text-muted">Locked — unlock to see activity.</p>
+                <p className="text-sm text-panel-text-muted">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="outline" asChild>
                   <Link to="/lock">Unlock</Link>
                 </Button>
@@ -586,7 +586,7 @@ export function AssetDetailScreen() {
               <dt className="text-sm text-muted-foreground">Derivation</dt>
               <dd className="break-all text-sm">
                 {chain === 'ton' ? (
-                  'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
+                  'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
                 ) : (
                   // The three documented templates first; every other
                   // chain falls back to its registry path (account 0,

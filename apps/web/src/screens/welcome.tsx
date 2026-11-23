@@ -27,10 +27,9 @@ export function WelcomeScreen() {
           Welcome to <span className="bawa-marker">Bawa</span>
         </h1>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          Bawa is a guide made for humans and AI agents to create crypto
+          Bawa is a guide for humans and AI agents. It builds crypto
           wallets, web wallets, Android wallets, HD wallets and smart
-          contracts easily — with just a few prompts, explained in the
-          guide.
+          contracts from a few prompts.
         </p>
         <p className="mt-2 max-w-xl text-body-md text-ink">
           This web wallet is the wallet the guide builds: a self-custodial
@@ -51,24 +50,24 @@ export function WelcomeScreen() {
         </h2>
         <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink">
           <li>
-            <strong>Create a crypto wallet</strong> — a self-custodial
+            <strong>Create a crypto wallet</strong>. One self-custodial
             multi-chain wallet, with one address per chain.
           </li>
           <li>
-            <strong>Create a web wallet</strong> — this one. It runs in
-            your browser, with nothing to install.
+            <strong>Create a web wallet</strong>. This one runs in your
+            browser. Nothing to install.
           </li>
           <li>
-            <strong>Create an Android wallet</strong> — the same wallet on
-            your phone.
+            <strong>Create an Android wallet</strong>. The same wallet
+            on your phone.
           </li>
           <li>
-            <strong>Create an HD wallet</strong> — a fresh receiving
-            address for every payment.
+            <strong>Create an HD wallet</strong>. A fresh receiving address
+            for every payment.
           </li>
           <li>
-            <strong>Create a smart contract</strong> — guided, step by
-            step, from a prompt.
+            <strong>Create a smart contract</strong>. Guided step by step,
+            from a prompt.
           </li>
         </ul>
       </div>
@@ -95,8 +94,8 @@ export function WelcomeScreen() {
       <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <p>
           {devnetEnabled
-            ? "Devnet — test mode. This wallet connects to a test network with valueless test tokens."
-            : "Mainnet only — this wallet never connects to a test network."}
+            ? "Devnet test mode. This wallet connects to a test network with valueless test tokens."
+            : "Mainnet only. This wallet never connects to a test network."}
         </p>
         <p>
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.

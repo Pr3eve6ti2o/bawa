@@ -199,7 +199,7 @@ export function SendScreen() {
     setSignState({ status: 'idle' });
     if (prefill.tokenContract !== undefined && tokenRecord === null) {
       setPrefillNote(
-        'This link pays a token that is not in your wallet yet — add it from its contract address first.',
+        'This link pays a token that is not in your wallet yet. Add it from its contract address first.',
       );
     } else {
       setPrefillNote(null);
@@ -623,8 +623,8 @@ export function SendScreen() {
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
         >
           {devnetEnabled
-            ? `Devnet test mode — this send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
-            : 'Sending funds is switched off until it is separately approved. This flow signs offline only — nothing here sends cryptocurrency anywhere.'}
+            ? `Devnet test mode. This send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
+            : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
       </header>
 
@@ -793,7 +793,7 @@ export function SendScreen() {
                     <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                       <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
                         <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
+                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
                       </svg>
                     </span>
                     <span className="min-w-0 flex-1">
@@ -1009,7 +1009,7 @@ export function SendScreen() {
             )}
             fee={
               preview.feeUnknown
-                ? 'Unknown — charged by the network at broadcast'
+                ? 'Unknown. Charged by the network at broadcast.'
                 : formatNativeWithSymbol(
                     preview.feeBaseUnits,
                     CHAIN_DECIMALS[chain],
@@ -1064,12 +1064,12 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed — not sent'}
+            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed, not sent'}
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {devnetEnabled
               ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
-              : 'The transaction was signed offline with your vault key. It was not sent anywhere: sending funds is switched off until it is separately approved.'}
+              : 'The transaction was signed offline with your vault key. It was not sent anywhere. Sending funds is switched off until it is separately approved.'}
           </p>
           {devnetEnabled && devnetBroadcast.status === 'broadcasting' && (
             <p aria-live="polite" className="text-sm text-muted-foreground">

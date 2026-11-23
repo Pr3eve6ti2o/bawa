@@ -290,21 +290,21 @@ describe('text spacing', () => {
       // introduction now. The spacing check moves to the new list and
       // intro line: words must not run together.
       expect(mounted.div.textContent).toContain(
-        'Bawa is a guide made for humans and AI agents to create crypto wallets, web wallets, Android wallets, HD wallets and smart contracts easily',
+        'Bawa is a guide for humans and AI agents. It builds crypto wallets, web wallets, Android wallets, HD wallets and smart contracts from a few prompts',
       );
       expect(mounted.div.textContent).not.toContain('Bawais a guide');
       expect(mounted.div.textContent).toContain(
-        'Create a crypto wallet — a self-custodial multi-chain wallet, with one address per chain.',
+        'Create a crypto wallet. One self-custodial multi-chain wallet, with one address per chain.',
       );
       expect(mounted.div.textContent).not.toContain('Createa crypto wallet');
       expect(mounted.div.textContent).toContain(
-        'Create a web wallet — this one. It runs in your browser, with nothing to install.',
+        'Create a web wallet. This one runs in your browser. Nothing to install.',
       );
       expect(mounted.div.textContent).toContain(
-        'Create an HD wallet — a fresh receiving address for every payment.',
+        'Create an HD wallet. A fresh receiving address for every payment.',
       );
       expect(mounted.div.textContent).toContain(
-        'Create a smart contract — guided, step by step, from a prompt.',
+        'Create a smart contract. Guided step by step, from a prompt.',
       );
     } finally {
       await mounted.cleanup();

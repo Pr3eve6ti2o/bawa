@@ -260,7 +260,7 @@ export function ReceiveScreen() {
       try {
         downloadBlob(file, file.name);
         setCopyStatus(
-          'Sharing is not available here — the card was downloaded instead.',
+          'Sharing is not available here. The QR code was downloaded instead.',
         );
         return;
       } catch {
@@ -369,7 +369,7 @@ export function ReceiveScreen() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-ink">Receive</h1>
-      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
+      <p className="font-display text-xl text-ink">This is your address. Share it to receive funds, and keep your keys safe.</p>
       <p className="text-body-sm font-medium text-panel-text-muted">
         {step === 'chain'
           ? 'Step 1 of 3: Network'
@@ -406,7 +406,7 @@ export function ReceiveScreen() {
                   <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                     <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
                       <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                      <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={20}>{listConfig.symbol}</text>
+                      <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={20}>{listConfig.symbol}</text>
                     </svg>
                   </span>
                   <span className="min-w-0 flex-1">
@@ -475,7 +475,7 @@ export function ReceiveScreen() {
                       <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                         <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
                           <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                          <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{config.symbol}</text>
+                          <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{config.symbol}</text>
                         </svg>
                       </span>
                       <span className="min-w-0 flex-1">
@@ -509,7 +509,7 @@ export function ReceiveScreen() {
                     <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
                       <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
                         <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{token.symbol}</text>
+                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token.symbol}</text>
                       </svg>
                     </span>
                     <span className="min-w-0 flex-1">

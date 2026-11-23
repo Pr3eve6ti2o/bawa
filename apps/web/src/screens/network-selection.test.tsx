@@ -140,7 +140,7 @@ describe('NetworkSelectionScreen', () => {
       expect(mounted.div.textContent).toContain(
         'Mainnet only. This wallet never connects to a test network.',
       );
-      expect(mounted.div.textContent).toContain('Devnet — temporary test mode');
+      expect(mounted.div.textContent).toContain('Temporary devnet test mode');
       expect(mounted.div.textContent).not.toContain('Devnet test mode is on.');
     } finally {
       await mounted.cleanup();

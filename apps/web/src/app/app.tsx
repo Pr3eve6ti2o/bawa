@@ -156,8 +156,8 @@ export function NetworkModePill() {
         title={
           actionError ??
           (devnetEnabled
-            ? 'Devnet test mode — tap to switch back to mainnet'
-            : 'Mainnet — tap to switch to devnet test mode')
+            ? 'Devnet test mode. Tap to switch back to mainnet'
+            : 'Mainnet. Tap to switch to devnet test mode.')
         }
         disabled={disabled}
         onClick={() => {
@@ -165,7 +165,7 @@ export function NetworkModePill() {
         }}
         className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink disabled:opacity-60"
       >
-        {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
+        {devnetEnabled ? 'Devnet test mode' : 'Mainnet'}
       </button>
       {actionError !== null && (
         <span role="alert" className="sr-only">

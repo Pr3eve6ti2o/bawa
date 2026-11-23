@@ -488,17 +488,17 @@ export function CreateWalletScreen() {
                 or website.
               </AlertDescription>
             </Alert>
-            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2 lg:grid-cols-4">
+            <ol aria-label="Recovery phrase" className="grid grid-cols-2 gap-2 lg:grid-cols-3">
               {words.map((word, index) => (
                 <li
                   key={index}
-                  className="flex h-12 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-3"
+                  className="flex h-12 min-w-0 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-2"
                 >
                   <span className="text-body-sm font-medium text-ink">
                     {index + 1}.
                   </span>
                   {' '}
-                  <span className="font-display text-xl font-semibold text-ink">{word}</span>
+                  <span className="font-display text-base font-semibold text-ink">{word}</span>
                 </li>
               ))}
             </ol>

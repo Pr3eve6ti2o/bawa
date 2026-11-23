@@ -87,7 +87,7 @@ describe('security settings screen', () => {
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Auto-lock off');
+      expect(text).toContain('Auto-lock is off');
       expect(text).not.toContain('Vault stays unlocked');
       expect(mounted.div.querySelector('select#auto-lock')).toBeNull();
     } finally {

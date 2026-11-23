@@ -211,7 +211,7 @@ describe('dashboard screen', () => {
     const mounted = await mountScreen();
     try {
       expect(heroAmount(mounted)).toBe('$0.00 (Partial)');
-      expect(mounted.div.textContent).toContain('Partial total — some balances or prices are missing');
+      expect(mounted.div.textContent).toContain('Partial total. Some balances or prices are missing');
     } finally {
       await mounted.cleanup();
     }
@@ -990,7 +990,7 @@ describe('dashboard screen', () => {
       expect(retryButtons).toHaveLength(0);
       expect(mockRefreshBalances).not.toHaveBeenCalled();
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
-      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see balances.');
     } finally {
       await mounted.cleanup();
     }
@@ -1075,7 +1075,7 @@ describe('dashboard screen', () => {
       );
       expect(retryButtons).toHaveLength(0);
       expect(mockRefreshHistory).not.toHaveBeenCalled();
-      expect(mounted.div.textContent).toContain('Locked — unlock to see activity.');
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see activity.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();

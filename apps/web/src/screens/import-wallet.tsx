@@ -361,7 +361,7 @@ export function ImportWalletScreen() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
-            <Badge variant="secondary">WATCH-ONLY LABELLED BELOW</Badge>
+            <Badge variant="secondary">Watch-only labelled below</Badge>
           </div>
           <CardDescription>
             Restore a wallet from its recovery phrase, or track a wallet
@@ -424,7 +424,7 @@ export function ImportWalletScreen() {
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="12, 15, 18, 21 or 24 words — or 25 words if your wallet uses an extra word"
+                    placeholder="12, 15, 18, 21 or 24 words, or 25 if your wallet uses an extra word"
                     required
                   />
                   <p className="text-sm text-muted-foreground">
@@ -786,7 +786,7 @@ export function ImportWalletScreen() {
                 placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
                 maxLength={40}
               />
-              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
+              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser. Do not enter secrets.</p>
             </div>
 
             {error && (

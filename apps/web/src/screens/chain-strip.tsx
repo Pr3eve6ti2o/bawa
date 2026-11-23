@@ -134,7 +134,7 @@ export function PopularChainsStrip({
                           textAnchor="middle"
                           dominantBaseline="central"
                           fill="currentColor"
-                          fontFamily="Caveat, cursive"
+                          fontFamily="Baloo 2, Inter, sans-serif"
                           fontSize={24}
                         >
                           {config.symbol}

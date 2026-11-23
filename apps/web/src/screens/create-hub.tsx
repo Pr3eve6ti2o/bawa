@@ -3,7 +3,6 @@ import { BawaIcon, type BawaIconName } from '../ui/components/icons';
 import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
 import {
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -29,7 +28,7 @@ const tools: readonly Tool[] = [
   {
     name: 'Multichain wallet',
     description:
-      'Create one wallet for Bitcoin, Ethereum, TRON and TON with one recovery phrase. This opens the same wallet setup as HD wallet.',
+      'One wallet for Bitcoin, Ethereum, TRON and TON, with one recovery phrase. Same setup as the HD wallet.',
     status: 'working',
     href: '/create-wallet',
     action: 'Open Multichain wallet creation',
@@ -38,7 +37,7 @@ const tools: readonly Tool[] = [
   {
     name: 'HD wallet',
     description:
-      'One recovery phrase covers every account and address. Opens the same creation flow as Multichain wallet.',
+      'One recovery phrase covers every account and address. Same setup as the Multichain wallet.',
     status: 'working',
     href: '/create-wallet',
     action: 'Open HD wallet creation',
@@ -46,7 +45,7 @@ const tools: readonly Tool[] = [
   },
   {
     name: 'Web wallet',
-    description: 'A wallet that runs in your browser — this one. Open it to see your dashboard, balances and history.',
+    description: 'This wallet runs in your browser. Open it to see your dashboard, balances and history.',
     status: 'working',
     href: '/',
     action: 'Open web wallet',
@@ -61,7 +60,7 @@ const tools: readonly Tool[] = [
   {
     name: 'Smart contract creator',
     description:
-      'A tool that will create a contract from a reviewed standard template.',
+      'Creates a contract from a reviewed standard template.',
     status: 'brief',
     icon: 'wrench',
   },
@@ -106,13 +105,6 @@ function ToolContents({ tool }: { tool: Tool }) {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="min-w-0 space-y-4 p-0">
-        {tool.status === 'brief' ? (
-          <p className="text-sm text-ink">
-            Coming soon. This isn't available yet.
-          </p>
-        ) : null}
-      </CardContent>
     </div>
   );
 }
@@ -166,8 +158,7 @@ export function CreateScreen() {
         ))}
       </ul>
       <p className="text-sm text-ink">
-        Your wallet dashboard stays separate. Creating a wallet here does not
-        replace it.
+        Creating a wallet here does not replace your dashboard.
       </p>
     </section>
   );

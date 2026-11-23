@@ -394,7 +394,7 @@ describe.sequential('ImportWalletScreen (T41)', () => {
         watchOnlyTab!.click();
       });
       expect(div.textContent).toContain('Labels are stored in plain text in this browser');
-      expect(div.textContent).toContain('do not enter secrets');
+      expect(div.textContent).toContain('Do not enter secrets');
     } finally {
       try {
         await act(async () => {

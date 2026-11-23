@@ -280,9 +280,9 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain('stub fee');
       expect(mounted.div.textContent).toContain('Sending is switched off');
       await click(mounted.div, 'Sign offline');
-      await waitForText(mounted.div, 'Send signed — not sent');
+      await waitForText(mounted.div, 'Send signed, not sent');
       expect(mounted.div.textContent).toContain(
-        'Send signed — not sent',
+        'Send signed, not sent',
       );
       expect(mounted.div.textContent).toContain('0xhash1234');
       expect(mounted.div.textContent).toContain('0xdeadbeef');

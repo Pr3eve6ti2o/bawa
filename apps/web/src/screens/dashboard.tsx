@@ -313,22 +313,22 @@ export function DashboardScreen() {
           </button>
         </div>
         <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker">{heroText}</span></p>
-        <p className="font-display text-xl text-ink">Your coins, drawn to scale — almost</p>
+        <p className="font-display text-xl text-ink">Your coins, drawn to scale. Almost.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}
         {hero.partialNote && (
-          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total — some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
+          <p className="text-xs leading-[18px] text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">
             {isLocked
-              ? 'Locked — unlock to see balances.'
+              ? 'Locked. Unlock to see balances.'
               : hero.balancesFailed
                 ? 'Balances could not be loaded, so the portfolio total is unavailable.'
               : pricesState.status === 'idle'
-                ? 'No prices loaded yet — refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
-                : 'No fresh prices — portfolio total unavailable. Balances below are the exact amounts on each network.'}
+                ? 'No prices loaded yet. Refresh prices to see the portfolio total. Balances below are the exact amounts on each network.'
+                : 'No fresh prices, so the portfolio total is unavailable. Balances below are the exact amounts on each network.'}
           </p>
         )}
         {hero.priceError !== null && (

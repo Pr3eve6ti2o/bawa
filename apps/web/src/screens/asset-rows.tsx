@@ -725,7 +725,7 @@ export function AssetRows({
   const lockedNotice =
     isLocked && hasFailedRow ? (
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <p className="text-sm text-muted-foreground">Locked — unlock to see balances.</p>
+        <p className="text-sm text-muted-foreground">Locked. Unlock to see balances.</p>
         <Button type="button" variant="outline" asChild>
           <Link to="/lock">Unlock</Link>
         </Button>

@@ -15,10 +15,10 @@ import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
 const guidanceItems = [
-  { id: 'paper', label: 'Words written on paper', description: 'Guidance — not verified by this app.' },
-  { id: 'offline', label: 'Stored offline in two places', description: 'Guidance — not verified by this app.' },
-  { id: 'sharing', label: 'Never shared', description: 'Guidance — not verified by this app.' },
-  { id: 'photo', label: 'Never photographed', description: 'Guidance — not verified by this app.' },
+  { id: 'paper', label: 'Words written on paper', description: 'Guidance. Not verified by this app.' },
+  { id: 'offline', label: 'Stored offline in two places', description: 'Guidance. Not verified by this app.' },
+  { id: 'sharing', label: 'Never shared', description: 'Guidance. Not verified by this app.' },
+  { id: 'photo', label: 'Never photographed', description: 'Guidance. Not verified by this app.' },
 ];
 
 const PROFILE_LABELS: Record<string, string> = {
@@ -185,7 +185,7 @@ export function MnemonicBackupScreen() {
             <>
               <p className="text-sm leading-relaxed">
                 Create a wallet or restore one from its recovery phrase
-                first. Until then there is no recovery phrase to back up.
+                first.
               </p>
               <Button asChild className="h-auto whitespace-normal py-3 text-center">
                 <Link to="/create-wallet">Create a wallet</Link>
@@ -238,7 +238,7 @@ export function MnemonicBackupScreen() {
                   <div className="mt-1 text-xs leading-relaxed text-ink">
                     {stored
                       ? 'Stored with this vault.'
-                      : 'Not stored with this vault — restoring with this profile would recover different addresses.'}
+                      : 'Not stored with this vault. Restoring with this profile would recover different addresses.'}
                   </div>
                 </li>
               );
@@ -250,7 +250,7 @@ export function MnemonicBackupScreen() {
       {profiles !== null && (
         <section aria-label="Backup guidance" className="space-y-3">
           <p className="text-sm text-ink">
-            These items are reminders, not a record of completed steps. This
+            These are reminders, not proof that the steps are done. This
             app cannot verify that you have followed them.
           </p>
           {guidanceItems.map((item) => (
