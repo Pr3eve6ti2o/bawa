@@ -5,6 +5,32 @@
 
 **One plain request in, a real, buildable wallet project out.**
 
+## Showcase
+
+Real screenshots of the example web wallet running from this branch, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px. Both shots show the dashboard, the wallet homepage.
+
+<!-- To extend this grid, add a row to the table below: one image per cell, height="360" on every image so all shots render at the same height. -->
+
+| Dashboard (desktop) | Dashboard (mobile) |
+| --- | --- |
+| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" height="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" height="360"> |
+| Portfolio, assets and recent activity. | The same wallet on mobile. |
+
+### Create your own
+
+Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:
+
+```sh
+git clone --branch panel-rebuild/readme-marketing https://github.com/Pr3eve6ti2o/bawa.git
+cd bawa
+cd apps/web
+npm ci
+npm run build
+npm run preview
+```
+
+Then open <http://localhost:4173>. No account, no API key, no funds needed — everything runs locally, and broadcast stays disabled so the wallet cannot send funds.
+
 ![Bawa architecture: guide, HD core, vault, providers, flows and storage](docs/diagrams/architecture.svg)
 
 ![One phrase, one account, 22 chains](docs/diagrams/explainer.svg)
@@ -19,15 +45,6 @@ Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builde
 - **Open source, MIT.** The guide, the registries, the starters, and the example wallet.
 
 If you arrived looking for a wallet to hold funds, read [If you want a wallet to use](#if-you-want-a-wallet-to-use) first. Bawa is builder material, not a wallet product.
-
-## Screenshots
-
-Real screenshots of the example web wallet running from this branch, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px.
-
-| Dashboard (desktop) | Dashboard (mobile) | Receive (desktop) | Receive (mobile) |
-| --- | --- | --- | --- |
-| <img src="docs/images/web-wallet-dashboard-desktop.png" alt="Dashboard of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" width="180"> | <img src="docs/images/web-wallet-receive-desktop.png" alt="Receive screen of the Bawa web wallet on desktop" width="360"> | <img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="180"> |
-| Portfolio, assets and recent activity. | The same wallet on mobile. | The QR card with its three templates: address, payment request and share link. | The QR card, amount and full address. |
 
 ## Quickstart
 
