@@ -6,6 +6,8 @@ offline signing with broadcast disabled, and read-only balances and transaction 
 via chain adapters. No price feed is connected, so there is no portfolio fiat total.
 Secrets never leave the browser.
 
+It ships with 22 chains enabled by default; the list is `SUPPORTED_CHAINS` in `src/wallet/chains.ts`. The guide covers the full Trust Wallet Core registry of 168 chains, and this wallet enables 22 of them.
+
 ## Install, develop, build and test
 
 Use Node.js `>=22 <23`. The range is enforced: `apps/web/.npmrc` sets `engine-strict=true`, so `npm ci` fails with `EBADENGINE` on any other Node release. The package is `@bawa/web` and is private. Run these commands from the
