@@ -320,3 +320,41 @@ All under `/home/boxd/workspace/bawa-mkt-l8/cdp/` on gray-pinee:
   `l8b-add-token-*.png`, `l8b-send-token-step-390.png`,
   `l8c-downloaded-card.png`, `l8d-*.png`, `l8e-*.png`, `l8f-*.png`,
   `l8g-locked-asset-390.png`, `l8h-*.png`.
+
+## FIX-ALL re-verification (Lane J, 2026-11-24)
+
+Browser-first re-verification of the merged fix-all tree
+(`panel-rebuild/token-gaps` `343cd3a`, then `dccc99c` doc-only).
+CDP scripts + shots: `/home/boxd/workspace/bawa-fix-all/
+lane-j-shots.mjs`, `lane-j-followup.mjs`, `probe-btc-switch.mjs`,
+`probe-linea-final.mjs`; shots in `lane-j/`.
+
+- Viewed by eye at 390/820/980/1440/1919: Welcome, Create (one
+  "Create your wallet" button, "One recovery phrase, one wallet —
+  22 chains"), Receive step 1 (search + Popular + "All networks
+  (18)"), Receive details (tagline restored, QR 136 px, template
+  row at the fold bottom), Dashboard (sidebar at desktop widths,
+  real logos, live prices, Scan as 4th tile, no Retry buttons),
+  Networks (chain rows, backup switch proven live: BTC mempool →
+  blockstream, ETH publicnode → eth.drpc.org), Assets with
+  CoinGecko blocked (0 price errors; BTC $61,284.26, ETH $1,720.70,
+  TRX $0.309491 via CoinLore).
+- Watch-only proven live: TRX 20,044,337.675202 (three-way ground
+  truth); Vitalik's one EVM address fans out to all 16 EVM chains
+  with real balances (5.799 ETH, 0.17 BNB, 592.7 POL, …).
+- Linea history: rendered "No transactions yet" on first pass —
+  root cause proven live (Etherscan V2 keyless tier: 1 request per
+  5 s per IP, NOTOK "Missing/Invalid API Key" inside the window;
+  the app fires the refresh twice). Fix: one 6 s-delayed retry in
+  the EVM adapter (+ regression test). Proved live: NOTOK, NOTOK,
+  then status 1; 0x75dfb5f5... renders, five real Linea txs.
+- Gates on the merged tree (code tip `62abe11`; later commits
+  docs-only): tsc 0, build 0, vitest 1,859 passed / 5 skipped /
+  0 failed (94 files), lint 0, audit 0.
+- E2E on the merged tree: 23/27 verified passing; the 4 never
+  passing are all live-network (E2E-06 SHIB dialog, Item D DISC,
+  E2E-13 SPL USDT, E2E-19 SOL fallback — backup
+  public.rpc.solanavibestation.com unreachable).
+- Pre-existing nits confirmed visible, not fixed: chain names
+  truncate on narrow card ("Ethere…"); Linea hero balance clips
+  at the 390 px card edge.
