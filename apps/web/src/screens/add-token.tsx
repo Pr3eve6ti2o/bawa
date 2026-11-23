@@ -30,6 +30,8 @@ import {
   shortContract,
   tokenStandardFor,
   validateEvmContractAddress,
+  validateSolMintAddress,
+  validateTonJettonAddress,
   validateTronContractAddress,
   type TokenRecord,
 } from '../wallet/tokens';
@@ -66,6 +68,16 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
     | 'optimistic-ethereum'
     | 'base'
     | 'avalanche'
+    | 'solana'
+    | 'xdai'
+    | 'celo'
+    | 'linea'
+    | 'mantle'
+    | 'scroll'
+    | 'opbnb'
+    | 'metis'
+    | 'aurora'
+    | 'fantom'
   >
 > = {
   eth: 'ethereum',
@@ -76,6 +88,17 @@ const COINGECKO_PLATFORM_FOR_CHAIN: Partial<
   op: 'optimistic-ethereum',
   base: 'base',
   avax: 'avalanche',
+  // UI/UX fixes, item 13: SPL on Solana + ERC-20 on the 9 new EVM chains.
+  sol: 'solana',
+  gnosis: 'xdai',
+  celo: 'celo',
+  linea: 'linea',
+  mantle: 'mantle',
+  scroll: 'scroll',
+  opbnb: 'opbnb',
+  metis: 'metis',
+  aurora: 'aurora',
+  fantom: 'fantom',
 };
 
 /**
@@ -218,11 +241,36 @@ export function AddTokenDialog({
     event.preventDefault();
     setError(null);
     setStatus(null);
+    // TEMPORARY devnet mode (UI/UX fixes, item 2): token verification
+    // reads mainnet contracts on mainnet RPCs. Adding a token in
+    // devnet mode would verify — and persist — a mainnet token while
+    // the wallet is on test networks, so the submit is off here; the
+    // button is disabled too, this is the programmatic backstop.
+    if (wallet.devnetEnabled) {
+      setError('Adding tokens is off in devnet test mode.');
+      return;
+    }
     const raw = contract.trim();
     // 1. Format + checksum (no network on bad input).
     let normalized: string;
     if (chain === 'trx') {
       const format = validateTronContractAddress(raw);
+      if (!format.ok) {
+        setError(format.error);
+        inputRef.current?.focus();
+        return;
+      }
+      normalized = format.normalized;
+    } else if (chain === 'sol') {
+      const format = validateSolMintAddress(raw);
+      if (!format.ok) {
+        setError(format.error);
+        inputRef.current?.focus();
+        return;
+      }
+      normalized = format.normalized;
+    } else if (chain === 'ton') {
+      const format = validateTonJettonAddress(raw);
       if (!format.ok) {
         setError(format.error);
         inputRef.current?.focus();
@@ -258,12 +306,28 @@ export function AddTokenDialog({
     // the top of this file) — verification only runs on submit.
     setChecking(true);
     try {
-      const { verifyEvmToken, verifyTronToken, resolveTokenCoingeckoId } =
-        await import('../wallet/adapters/token-balances');
+      const {
+        verifyEvmToken,
+        verifyTronToken,
+        verifySplToken,
+        verifyJettonToken,
+        resolveTokenCoingeckoId,
+      } = await import('../wallet/adapters/token-balances');
       const verification =
         chain === 'trx'
           ? await verifyTronToken({ contract: normalized, ownerAddress })
-          : await verifyEvmToken({ chain, contract: normalized, ownerAddress });
+          : chain === 'sol'
+            ? await verifySplToken({ contract: normalized, ownerAddress })
+            : chain === 'ton'
+              ? await verifyJettonToken({
+                  contract: normalized,
+                  ownerAddress,
+                })
+              : await verifyEvmToken({
+                  chain,
+                  contract: normalized,
+                  ownerAddress,
+                });
       if (!verification.ok) {
         setError(verification.error);
         inputRef.current?.focus();
@@ -358,6 +422,12 @@ export function AddTokenDialog({
           </ul>
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            {wallet.devnetEnabled && (
+              <p className="text-sm font-medium text-ink">
+                Adding tokens is off in devnet test mode — switch back to
+                mainnet to add a token.
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               <Label htmlFor="add-token-search">Find by name or ticker</Label>
               <div className="flex gap-2">
@@ -439,13 +509,27 @@ export function AddTokenDialog({
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="add-token-contract">{chainDisplayName} contract address</Label>
+              <Label htmlFor="add-token-contract">
+                {chain === 'sol'
+                  ? 'Solana mint address'
+                  : chain === 'ton'
+                    ? 'TON Jetton master address'
+                    : `${chainDisplayName} contract address`}
+              </Label>
               <Input
                 id="add-token-contract"
                 ref={inputRef}
                 value={contract}
                 onChange={(event) => setContract(event.target.value)}
-                placeholder={chain === 'trx' ? 'T…' : '0x…'}
+                placeholder={
+                  chain === 'trx'
+                    ? 'T…'
+                    : chain === 'sol'
+                      ? 'EPjF…'
+                      : chain === 'ton'
+                        ? 'EQ…'
+                        : '0x…'
+                }
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
@@ -460,7 +544,7 @@ export function AddTokenDialog({
               </p>
             )}
 
-            <Button type="submit" disabled={checking}>
+            <Button type="submit" disabled={checking || wallet.devnetEnabled}>
               {checking ? 'Checking…' : 'Add'}
             </Button>
           </form>

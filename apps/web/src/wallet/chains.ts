@@ -43,7 +43,7 @@ export interface ChainConfig {
   displayName: string;
   symbol: string;
   /** Wallet Core CoinType property name. */
-  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton' | 'solana' | 'smartChain' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'avalancheCChain' | 'litecoin' | 'dogecoin';
+  coinTypeName: 'bitcoin' | 'ethereum' | 'tron' | 'ton' | 'solana' | 'smartChain' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'avalancheCChain' | 'litecoin' | 'dogecoin' | 'xdai' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opBNB' | 'metis' | 'aurora' | 'fantom';
   /** CAIP-2 network identifier (mainnet only). */
   networkId: string;
   /** CAIP-19 native asset identifier (slip44 namespace). */
@@ -206,7 +206,12 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * either do not implement them or they have no live cross-check yet —
  * and are never faked.
  */
-function capabilitiesForBalanceChain(chain: ChainId): Capabilities {
+const BALANCE_EVIDENCE_2026_11_23 =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
+  + 'live mainnet cross-check 2026-11-23 (two independent RPC endpoints agree '
+  + 'on chain id and balance) for balance.';
+
+function capabilitiesForBalanceChain(chain: ChainId, balanceEvidence?: string): Capabilities {
   const base = capabilitiesForExtendedChain(chain);
   return {
     ...base,
@@ -214,6 +219,7 @@ function capabilitiesForBalanceChain(chain: ChainId): Capabilities {
       status: 'verified',
       evidenceLevel: 'mainnet-confirmed',
       evidence:
+        balanceEvidence ??
         `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
         `mainnet cross-check 2026-11-22 (second source) for balance.`,
     },
@@ -267,7 +273,10 @@ export const GENERATED_CHAIN_FACTS: Record<
     networkId: 'bip122:000000000019d6689c085ae165831e93',
     assetId: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
     profileId: 'bawa-btc-bip84-v1',
-    rpcEndpoints: ['https://mempool.space/api'],
+    rpcEndpoints: [
+      'https://mempool.space/api',
+      'https://blockstream.info/api',
+    ],
     evmChainId: null,
   },
   eth: {
@@ -277,7 +286,10 @@ export const GENERATED_CHAIN_FACTS: Record<
     networkId: 'eip155:1',
     assetId: 'eip155:1/slip44:60',
     profileId: 'bawa-evm-bip44-v1',
-    rpcEndpoints: ['https://ethereum-rpc.publicnode.com'],
+    rpcEndpoints: [
+      'https://ethereum-rpc.publicnode.com',
+      'https://1rpc.io/eth',
+    ],
     evmChainId: 1,
   },
   trx: {
@@ -370,7 +382,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: ['https://bsc-rpc.publicnode.com'],
+    rpcEndpoints: ['https://bsc-rpc.publicnode.com', 'https://bsc-dataseed.binance.org'],
     evmChainId: 56,
     capabilities: capabilitiesForBalanceChain('bsc'),
   },
@@ -418,7 +430,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: ['https://optimism-rpc.publicnode.com'],
+    rpcEndpoints: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
     evmChainId: 10,
     capabilities: capabilitiesForBalanceChain('op'),
   },
@@ -450,7 +462,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
-    rpcEndpoints: ['https://avalanche-rpc.publicnode.com'],
+    rpcEndpoints: ['https://avalanche-rpc.publicnode.com', 'https://api.avax.network/ext/bc/C/rpc'],
     evmChainId: 43114,
     capabilities: capabilitiesForBalanceChain('avax'),
   },
@@ -486,9 +498,162 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     evmChainId: null,
     capabilities: capabilitiesForBalanceChain('doge'),
   },
+  gnosis: {
+    id: 'gnosis',
+    displayName: 'Gnosis',
+    symbol: 'XDAI',
+    coinTypeName: 'xdai',
+    networkId: 'eip155:100',
+    assetId: 'eip155:100/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://gnosis-rpc.publicnode.com',
+      'https://rpc.gnosischain.com'],
+    evmChainId: 100,
+    capabilities: capabilitiesForBalanceChain('gnosis', BALANCE_EVIDENCE_2026_11_23),
+  },
+  celo: {
+    id: 'celo',
+    displayName: 'Celo',
+    symbol: 'CELO',
+    coinTypeName: 'celo',
+    networkId: 'eip155:42220',
+    assetId: 'eip155:42220/slip44:527',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://celo-rpc.publicnode.com',
+      'https://forno.celo.org'],
+    evmChainId: 42220,
+    capabilities: capabilitiesForBalanceChain('celo', BALANCE_EVIDENCE_2026_11_23),
+  },
+  linea: {
+    id: 'linea',
+    displayName: 'Linea',
+    symbol: 'ETH',
+    coinTypeName: 'linea',
+    networkId: 'eip155:59144',
+    assetId: 'eip155:59144/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://linea-rpc.publicnode.com',
+      'https://rpc.linea.build'],
+    evmChainId: 59144,
+    capabilities: capabilitiesForBalanceChain('linea', BALANCE_EVIDENCE_2026_11_23),
+  },
+  mantle: {
+    id: 'mantle',
+    displayName: 'Mantle',
+    symbol: 'MNT',
+    coinTypeName: 'mantle',
+    networkId: 'eip155:5000',
+    assetId: 'eip155:5000/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://mantle-rpc.publicnode.com',
+      'https://rpc.mantle.xyz'],
+    evmChainId: 5000,
+    capabilities: capabilitiesForBalanceChain('mantle', BALANCE_EVIDENCE_2026_11_23),
+  },
+  scroll: {
+    id: 'scroll',
+    displayName: 'Scroll',
+    symbol: 'ETH',
+    coinTypeName: 'scroll',
+    networkId: 'eip155:534352',
+    assetId: 'eip155:534352/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://scroll-rpc.publicnode.com',
+      'https://rpc.scroll.io'],
+    evmChainId: 534352,
+    capabilities: capabilitiesForBalanceChain('scroll', BALANCE_EVIDENCE_2026_11_23),
+  },
+  opbnb: {
+    id: 'opbnb',
+    displayName: 'opBNB',
+    symbol: 'BNB',
+    coinTypeName: 'opBNB',
+    networkId: 'eip155:204',
+    assetId: 'eip155:204/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://opbnb-rpc.publicnode.com',
+      'https://opbnb-mainnet-rpc.bnbchain.org'],
+    evmChainId: 204,
+    capabilities: capabilitiesForBalanceChain('opbnb', BALANCE_EVIDENCE_2026_11_23),
+  },
+  metis: {
+    id: 'metis',
+    displayName: 'Metis',
+    symbol: 'METIS',
+    coinTypeName: 'metis',
+    networkId: 'eip155:1088',
+    assetId: 'eip155:1088/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://metis-rpc.publicnode.com',
+      'https://andromeda.metis.io'],
+    evmChainId: 1088,
+    capabilities: capabilitiesForBalanceChain('metis', BALANCE_EVIDENCE_2026_11_23),
+  },
+  aurora: {
+    id: 'aurora',
+    displayName: 'Aurora',
+    symbol: 'ETH',
+    coinTypeName: 'aurora',
+    networkId: 'eip155:1313161554',
+    assetId: 'eip155:1313161554/slip44:60',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://mainnet.aurora.dev',
+      'https://1rpc.io/aurora'],
+    evmChainId: 1313161554,
+    capabilities: capabilitiesForBalanceChain('aurora', BALANCE_EVIDENCE_2026_11_23),
+  },
+  fantom: {
+    id: 'fantom',
+    displayName: 'Fantom',
+    symbol: 'FTM',
+    coinTypeName: 'fantom',
+    networkId: 'eip155:250',
+    assetId: 'eip155:250/slip44:250',
+    profileId: 'bawa-evm-bip44-v1',
+    pathFor: (account, index) => {
+      assertAccountIndex(account, index);
+      return `m/44'/60'/${account}'/0/${index}`;
+    },
+    rpcEndpoints: ['https://rpc.fantom.network',
+      'https://rpc2.fantom.network'],
+    evmChainId: 250,
+    capabilities: capabilitiesForBalanceChain('fantom', BALANCE_EVIDENCE_2026_11_23),
+  },
 };
 
-export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'];
+export const SUPPORTED_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'];
 
 // The Wallet Core default Solana profile is now supported as bawa-sol-bip44-v1; only the Phantom bip44Change profile stays unsupported.
 export interface UnsupportedProfile {
@@ -594,4 +759,247 @@ export function chainConfigForNetwork(networkId: string): ChainConfig {
     throw new Error(`Unsupported network: ${networkId}.`);
   }
   return CHAINS[found];
+}
+
+/**
+ * RPC endpoint overrides (UI/UX fixes, item 19).
+ *
+ * The registry lists each chain's known-good endpoints (primary first,
+ * backup second where one was verified live). The owner can add a custom
+ * RPC, promote a backup to primary, or reset — stored per chain under
+ * one localStorage key. Adapters resolve their endpoint list lazily
+ * through resolveRpcEndpoints, so a change applies on the next balance
+ * refresh without rebuilding any adapter. Dogecoin is NOT managed here:
+ * its adapter has a built-in SoChain/BlockCypher pair with different
+ * API shapes, so a custom URL could not be applied honestly.
+ */
+export const RPC_OVERRIDES_KEY = 'bawa-rpc-overrides:v1';
+export const MAX_RPC_ENDPOINTS_PER_CHAIN = 3;
+
+/** The chains whose adapters consume resolveRpcEndpoints (all but Dogecoin). */
+export const RPC_MANAGED_CHAINS: readonly ChainId[] = SUPPORTED_CHAINS.filter(
+  (chain) => chain !== 'doge',
+);
+
+export interface RpcOverrideStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+function defaultStorage(): RpcOverrideStorage | undefined {
+  try {
+    const storage = globalThis.localStorage;
+    return storage === undefined ? undefined : storage;
+  } catch {
+    return undefined;
+  }
+}
+
+function readStoredOverrides(
+  storage?: RpcOverrideStorage,
+): Partial<Record<ChainId, string[]>> {
+  const store = storage ?? defaultStorage();
+  if (store === undefined) return {};
+  let raw: string | null;
+  try {
+    raw = store.getItem(RPC_OVERRIDES_KEY);
+  } catch {
+    return {};
+  }
+  if (raw === null || raw === '') return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return {};
+  }
+  const out: Partial<Record<ChainId, string[]>> = {};
+  for (const chain of SUPPORTED_CHAINS) {
+    const list = (parsed as Record<string, unknown>)[chain];
+    if (!Array.isArray(list)) continue;
+    const urls = list.filter(
+      (entry): entry is string =>
+        typeof entry === 'string' && validateRpcEndpoint(entry) === null,
+    );
+    if (urls.length > 0) {
+      out[chain] = urls.slice(0, MAX_RPC_ENDPOINTS_PER_CHAIN);
+    }
+  }
+  return out;
+}
+
+function writeStoredOverrides(
+  overrides: Partial<Record<ChainId, string[]>>,
+  storage?: RpcOverrideStorage,
+): void {
+  const store = storage ?? defaultStorage();
+  if (store === undefined) return;
+  const entries = Object.entries(overrides).filter(
+    ([, list]) => list !== undefined && list.length > 0,
+  );
+  try {
+    if (entries.length === 0) {
+      store.removeItem(RPC_OVERRIDES_KEY);
+    } else {
+      store.setItem(RPC_OVERRIDES_KEY, JSON.stringify(Object.fromEntries(entries)));
+    }
+  } catch {
+    // Storage full or unavailable: the in-memory list still applies for
+    // this session's resolve calls through the passed storage; a
+    // browser write failure never breaks a balance refresh.
+  }
+}
+
+/** The effective endpoint list for a chain: the stored override, else the registry. */
+export function resolveRpcEndpoints(
+  chain: ChainId,
+  storage?: RpcOverrideStorage,
+): string[] {
+  const stored = readStoredOverrides(storage)[chain];
+  return stored !== undefined ? [...stored] : [...CHAINS[chain].rpcEndpoints];
+}
+
+/**
+ * Validates a custom RPC URL. Returns null when valid, else a message
+ * for the owner. Only https, no embedded credentials, no query or
+ * fragment — a keyed RPC (one with ?apikey=) is out of scope by owner
+ * rule, and credentials in a stored URL would leak into request logs.
+ */
+export function validateRpcEndpoint(url: string): string | null {
+  if (url.length === 0 || url.length > 256) return 'Enter a valid RPC URL.';
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'Enter a valid RPC URL.';
+  }
+  if (parsed.protocol !== 'https:') return 'RPC URLs must use https.';
+  if (parsed.username !== '' || parsed.password !== '') {
+    return 'RPC URLs must not contain credentials.';
+  }
+  if (parsed.hostname === '') return 'Enter a valid RPC URL.';
+  if (parsed.search !== '' || parsed.hash !== '') {
+    return 'RPC URLs must not contain a query or fragment.';
+  }
+  return null;
+}
+
+export function addCustomRpcEndpoint(
+  chain: ChainId,
+  url: string,
+  storage?: RpcOverrideStorage,
+): { ok: true } | { ok: false; reason: string } {
+  const invalid = validateRpcEndpoint(url);
+  if (invalid !== null) return { ok: false, reason: invalid };
+  const current = resolveRpcEndpoints(chain, storage);
+  if (current.includes(url)) {
+    return {
+      ok: false,
+      reason: 'That RPC endpoint is already listed for this chain.',
+    };
+  }
+  if (current.length >= MAX_RPC_ENDPOINTS_PER_CHAIN) {
+    return {
+      ok: false,
+      reason: `At most ${MAX_RPC_ENDPOINTS_PER_CHAIN} endpoints per chain.`,
+    };
+  }
+  const overrides = readStoredOverrides(storage);
+  overrides[chain] = [...current, url];
+  writeStoredOverrides(overrides, storage);
+  return { ok: true };
+}
+
+/**
+ * Removes a custom endpoint. Registry endpoints are never removed —
+ * the registry is the known-good set; a registry endpoint the owner
+ * distrusts is demoted with promoteBackupEndpoint, not deleted.
+ */
+export function removeRpcEndpoint(
+  chain: ChainId,
+  url: string,
+  storage?: RpcOverrideStorage,
+): boolean {
+  if (CHAINS[chain].rpcEndpoints.includes(url)) return false;
+  const current = resolveRpcEndpoints(chain, storage);
+  if (!current.includes(url)) return false;
+  const next = current.filter((entry) => entry !== url);
+  if (next.length === 0) return false;
+  const overrides = readStoredOverrides(storage);
+  const defaults = CHAINS[chain].rpcEndpoints;
+  if (
+    next.length === defaults.length &&
+    next.every((entry, index) => entry === defaults[index])
+  ) {
+    delete overrides[chain];
+  } else {
+    overrides[chain] = next;
+  }
+  writeStoredOverrides(overrides, storage);
+  return true;
+}
+
+/** Swaps the first two endpoints of the effective list (backup becomes primary). */
+export function promoteBackupEndpoint(
+  chain: ChainId,
+  storage?: RpcOverrideStorage,
+): boolean {
+  const current = resolveRpcEndpoints(chain, storage);
+  if (current.length < 2) return false;
+  const next = [current[1] as string, current[0] as string, ...current.slice(2)];
+  const overrides = readStoredOverrides(storage);
+  const defaults = CHAINS[chain].rpcEndpoints;
+  if (
+    next.length === defaults.length &&
+    next.every((entry, index) => entry === defaults[index])
+  ) {
+    delete overrides[chain];
+  } else {
+    overrides[chain] = next;
+  }
+  writeStoredOverrides(overrides, storage);
+  return true;
+}
+
+/** Promotes the backup for every managed chain that has one. Returns the chains changed. */
+export function promoteBackupEndpointsAll(
+  storage?: RpcOverrideStorage,
+): ChainId[] {
+  const changed: ChainId[] = [];
+  for (const chain of RPC_MANAGED_CHAINS) {
+    if (promoteBackupEndpoint(chain, storage)) changed.push(chain);
+  }
+  return changed;
+}
+
+export function resetRpcEndpoints(
+  chain: ChainId,
+  storage?: RpcOverrideStorage,
+): void {
+  const overrides = readStoredOverrides(storage);
+  delete overrides[chain];
+  writeStoredOverrides(overrides, storage);
+}
+
+export function resetAllRpcEndpoints(storage?: RpcOverrideStorage): void {
+  const store = storage ?? defaultStorage();
+  if (store === undefined) return;
+  try {
+    store.removeItem(RPC_OVERRIDES_KEY);
+  } catch {
+    // Ignore: the defaults apply when the key cannot be read anyway.
+  }
+}
+
+/** The hostname of an endpoint URL, for display; the raw string when unparseable. */
+export function rpcEndpointHost(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }

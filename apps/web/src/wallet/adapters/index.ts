@@ -1,7 +1,7 @@
 import { createPublicClient, http } from 'viem';
 import { sepolia } from 'viem/chains';
 import type { ChainId } from '../../engine/boundary';
-import { CHAINS } from '../chains';
+import { CHAINS, resolveRpcEndpoints } from '../chains';
 import type { ChainAdapter } from './types';
 import { httpFetchTransport } from './types';
 import {
@@ -42,41 +42,65 @@ export function registeredChains(): ChainId[] {
  * adapter registered before lazy loading ran).
  */
 export function registerAllAdapters(): void {
-  for (const create of [
-    createEthAdapter,
-    createTronAdapter,
-    createTonAdapter,
-    createBtcAdapter,
-  ]) {
-    const adapter = create();
-    if (!adapters.has(adapter.chain)) {
-      registerAdapter(adapter);
-    }
+  // The four Phase 2 adapters, each with a lazily-resolved RPC list
+  // (item 19): the owner's manager changes apply on the next call.
+  if (!adapters.has('btc')) {
+    registerAdapter(
+      createBtcAdapter({ baseUrls: () => resolveRpcEndpoints('btc') }),
+    );
+  }
+  if (!adapters.has('trx')) {
+    registerAdapter(
+      createTronAdapter({ baseUrls: () => resolveRpcEndpoints('trx') }),
+    );
+  }
+  if (!adapters.has('ton')) {
+    registerAdapter(
+      createTonAdapter({ baseUrls: () => resolveRpcEndpoints('ton') }),
+    );
+  }
+  // Ethereum: the RPC list resolves lazily from the registry + the
+  // owner's overrides (item 19), so a manager change applies without
+  // rebuilding the adapter.
+  if (!adapters.has('eth')) {
+    registerAdapter(
+      createEthAdapter({ rpcUrls: () => resolveRpcEndpoints('eth') }),
+    );
   }
   // EVM natives from the registry: the RPC is pinned once, in chains.ts,
   // and the adapter config is derived from it — never duplicated here.
-  for (const chain of ['bsc', 'matic', 'arb', 'op', 'base', 'avax'] as const) {
+  for (const chain of ['bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const) {
     if (adapters.has(chain)) continue;
     const config = CHAINS[chain];
     const rpcUrl = config.rpcEndpoints[0];
     if (rpcUrl === undefined || config.evmChainId === null) continue;
     registerAdapter(
-      createEvmAdapter({
-        chain,
-        networkId: config.networkId,
-        rpcUrl,
-        evmChainId: config.evmChainId,
-        chainName: config.displayName,
-        nativeSymbol: config.symbol,
-        source: 'publicnode',
-      }),
+      createEvmAdapter(
+        {
+          chain,
+          networkId: config.networkId,
+          rpcUrl,
+          evmChainId: config.evmChainId,
+          chainName: config.displayName,
+          nativeSymbol: config.symbol,
+          source: 'publicnode',
+        },
+        { rpcUrls: () => resolveRpcEndpoints(chain) },
+      ),
     );
   }
-  for (const create of [createSolanaAdapter, createLtcAdapter, createDogeAdapter]) {
-    const adapter = create();
-    if (!adapters.has(adapter.chain)) {
-      registerAdapter(adapter);
-    }
+  if (!adapters.has('sol')) {
+    registerAdapter(
+      createSolanaAdapter({ rpcUrls: () => resolveRpcEndpoints('sol') }),
+    );
+  }
+  if (!adapters.has('ltc')) {
+    registerAdapter(
+      createLtcAdapter({ baseUrls: () => resolveRpcEndpoints('ltc') }),
+    );
+  }
+  if (!adapters.has('doge')) {
+    registerAdapter(createDogeAdapter());
   }
 }
 

@@ -424,11 +424,63 @@ describe('ton adapter — retry (item 2)', () => {
   });
 
   it('does not retry a terminal 404', async () => {
-    const fetchMock = mockFetchRawSequence([okRpc(MASTERCHAIN), http404()]);
+    const fetchMock = mockFetchRawSequence([
+      okRpc(MASTERCHAIN),
+      http404(),
+      http404(),
+    ]);
     const adapter = createTonAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
-    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 1 identity + 1 TonCenter balance attempt + 1 TonAPI fallback
+    // attempt: a 404 is terminal, never retried — the TonAPI call is a
+    // different endpoint, not a retry of the same one.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('ton adapter — TonAPI balance fallback (UI/UX fixes, item 19)', () => {
+  const TONAPI = 'https://tonapi.invalid';
+
+  /** TonCenter is down; TonAPI answers the account + head reads. */
+  function mockTonApiFallback(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith('https://toncenter.com')) {
+          throw new Error('Network error: toncenter down');
+        }
+        if (url.startsWith(`${TONAPI}/v2/accounts/`)) {
+          return { ok: true, status: 200, json: async () => ({ balance: '987654321' }) };
+        }
+        if (url.startsWith(`${TONAPI}/v2/blockchain/masterchain-head`)) {
+          return { ok: true, status: 200, json: async () => ({ seqno: 107174694 }) };
+        }
+        throw new Error(`unexpected url ${url}`);
+      }),
+    );
+  }
+
+  it('loads a balance through TonAPI when TonCenter is down', async () => {
+    mockTonApiFallback();
+    const adapter = createTonAdapter({ tonApiBaseUrl: TONAPI });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('987654321');
+      expect(result.data.source).toBe('tonapi');
+    }
+  });
+
+  it('errors when TonCenter and TonAPI are both down', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('Network error: all endpoints down');
+      }),
+    );
+    const adapter = createTonAdapter({ tonApiBaseUrl: TONAPI });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
   });
 });

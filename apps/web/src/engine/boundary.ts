@@ -7,7 +7,7 @@
 import { initWasm } from '@trustwallet/wallet-core';
 import type { TonAddressValidation } from '@bawa/contracts';
 
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -37,6 +37,15 @@ const ALLOWED_VERSIONS: Readonly<Record<ChainId, readonly string[]>> = {
   op: ['0488b21e'],
   base: ['0488b21e'],
   avax: ['0488b21e'],
+  gnosis: ['0488b21e'],
+  celo: ['0488b21e'],
+  linea: ['0488b21e'],
+  mantle: ['0488b21e'],
+  scroll: ['0488b21e'],
+  opbnb: ['0488b21e'],
+  metis: ['0488b21e'],
+  aurora: ['0488b21e'],
+  fantom: ['0488b21e'],
   ltc: ['019da462'],
   doge: ['02facafd'],
   btc: ['0488b21e', '049d7cb2', '04b24746'],
@@ -57,6 +66,15 @@ const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, stri
   op: "m/44'/60'/0'/0",
   base: "m/44'/60'/0'/0",
   avax: "m/44'/60'/0'/0",
+  gnosis: "m/44'/60'/0'/0",
+  celo: "m/44'/60'/0'/0",
+  linea: "m/44'/60'/0'/0",
+  mantle: "m/44'/60'/0'/0",
+  scroll: "m/44'/60'/0'/0",
+  opbnb: "m/44'/60'/0'/0",
+  metis: "m/44'/60'/0'/0",
+  aurora: "m/44'/60'/0'/0",
+  fantom: "m/44'/60'/0'/0",
   btc: "m/84'/0'/0'/0",
   eth: "m/44'/60'/0'/0",
   trx: "m/44'/195'/0'/0",
@@ -588,6 +606,24 @@ function coinTypeForChain(core: WalletCore, chain: Exclude<ChainId, 'ton'>) {
       return core.CoinType.base;
     case 'avax':
       return core.CoinType.avalancheCChain;
+    case 'gnosis':
+      return core.CoinType.xdai;
+    case 'celo':
+      return core.CoinType.celo;
+    case 'linea':
+      return core.CoinType.linea;
+    case 'mantle':
+      return core.CoinType.mantle;
+    case 'scroll':
+      return core.CoinType.scroll;
+    case 'opbnb':
+      return core.CoinType.opBNB;
+    case 'metis':
+      return core.CoinType.metis;
+    case 'aurora':
+      return core.CoinType.aurora;
+    case 'fantom':
+      return core.CoinType.fantom;
     default:
       throw new Error('unsupported chain for WASM coin mapping: ' + chain);
   }

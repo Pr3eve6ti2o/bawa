@@ -277,3 +277,68 @@ describe('trx adapter — latest block header', () => {
     expect(result.status).toBe('error');
   });
 });
+
+describe('trx adapter — RPC failover (UI/UX fixes, item 19)', () => {
+  const PRIMARY = 'https://primary.invalid';
+  const SECONDARY = 'https://secondary.invalid';
+
+  const ok = (body: unknown) => ({
+    ok: true,
+    status: 200,
+    json: async () => body,
+  });
+
+  /** The primary host is down; the secondary answers every path. */
+  function mockTrxFailover(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith(PRIMARY)) {
+          throw new Error('Network error: primary down');
+        }
+        if (url.endsWith('/wallet/getnowblock')) return ok(NOW_BLOCK);
+        if (url.includes('/v1/accounts/')) {
+          return ok({ data: [{ balance: 123456789 }], success: true });
+        }
+        if (url.endsWith('/wallet/getchainparameters')) {
+          return ok({ chainParameter: [{ key: 'getEnergyFee', value: 420 }] });
+        }
+        throw new Error(`unexpected url ${url}`);
+      }),
+    );
+  }
+
+  it('loads a balance through the second endpoint when the first is down', async () => {
+    mockTrxFailover();
+    const adapter = createTronAdapter({ baseUrls: [PRIMARY, SECONDARY] });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('123456789');
+      expect(result.data.source).toBe('secondary.invalid');
+    }
+  });
+
+  it('reads the energy fee through the second endpoint', async () => {
+    mockTrxFailover();
+    const adapter = createTronAdapter({ baseUrls: [PRIMARY, SECONDARY] });
+    const result = await adapter.estimateFee();
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.feeBaseUnits).toBe('420');
+      expect(result.data.source).toBe('secondary.invalid');
+    }
+  });
+
+  it('errors when every endpoint is down', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('Network error: all endpoints down');
+      }),
+    );
+    const adapter = createTronAdapter({ baseUrls: [PRIMARY, SECONDARY] });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+  });
+});

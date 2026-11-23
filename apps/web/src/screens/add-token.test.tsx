@@ -7,6 +7,8 @@ import { useWallet } from '../state/wallet-context';
 import {
   resolveTokenCoingeckoId,
   verifyEvmToken,
+  verifyJettonToken,
+  verifySplToken,
   verifyTronToken,
 } from '../wallet/adapters/token-balances';
 import type { TokenRecord } from '../wallet/tokens';
@@ -18,6 +20,8 @@ vi.mock('../state/wallet-context', () => ({
 vi.mock('../wallet/adapters/token-balances', () => ({
   verifyEvmToken: vi.fn(),
   verifyTronToken: vi.fn(),
+  verifySplToken: vi.fn(),
+  verifyJettonToken: vi.fn(),
   resolveTokenCoingeckoId: vi.fn(),
 }));
 
@@ -27,8 +31,12 @@ const testGlobal = globalThis as typeof globalThis & {
 
 const ETH_ADDRESS = '0xA3Dcd899C0f3832DFDFed9479a9d828c6A4EB2A7';
 const TRON_ADDRESS = 'TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9';
+const SOL_ADDRESS = 'DFeDnNjEonL96pQywDtanNuVGxSnjjq1aHjGGLjtxset';
+const TON_ADDRESS = 'UQBfcPvE9ZZ0VXxBN_8zs7oJpf9q6ta8p7GZaaB97uWzvH5M';
 const USDC_CONTRACT = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 const TRON_USDT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+const SOL_USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const TON_USDT_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
 const USDC_RECORD: TokenRecord = {
   chain: 'eth',
@@ -145,6 +153,16 @@ beforeEach(() => {
     metadata: { name: 'Tether USD', symbol: 'USDT', decimals: 6 },
     balanceBaseUnits: '5000000',
   });
+  vi.mocked(verifySplToken).mockResolvedValue({
+    ok: true,
+    metadata: { name: 'USD Coin', symbol: 'USDC', decimals: 6 },
+    balanceBaseUnits: '2500000',
+  });
+  vi.mocked(verifyJettonToken).mockResolvedValue({
+    ok: true,
+    metadata: { name: 'Tether USD', symbol: 'USD₮', decimals: 6 },
+    balanceBaseUnits: '1000000',
+  });
   setWallet();
 });
 
@@ -153,7 +171,7 @@ afterEach(() => {
 });
 
 describe('AddTokenDialog — add chain mode', () => {
-  it('lists all 13 registry chains and adds a disabled one', async () => {
+  it('lists all 22 registry chains and adds a disabled one', async () => {
     const mounted = await mountDialog();
     try {
       clickButton(document, 'Add chain');
@@ -358,19 +376,117 @@ describe('AddTokenDialog — add token mode', () => {
     }
   });
 
-  it('shows native-coin-only chains as disabled options with the reason', async () => {
+  it('shows native-coin-only chains as disabled options with the reason, and SPL/Jetton chains as enabled', async () => {
     const mounted = await mountDialog();
     try {
       const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
-      const btcOption = [...(select?.options ?? [])].find((option) => option.value === 'btc');
-      expect(btcOption?.disabled).toBe(true);
-      expect(btcOption?.textContent).toContain('Native coin only');
+      for (const value of ['btc', 'ltc', 'doge']) {
+        const option = [...(select?.options ?? [])].find(
+          (candidate) => candidate.value === value,
+        );
+        expect(option?.disabled).toBe(true);
+        expect(option?.textContent).toContain('Native coin only');
+      }
+      // UI/UX fixes, item 13: Solana (SPL) and TON (Jetton) are selectable.
       const tonOption = [...(select?.options ?? [])].find((option) => option.value === 'ton');
-      expect(tonOption?.disabled).toBe(true);
-      expect(tonOption?.textContent).toContain('Jetton');
+      expect(tonOption?.disabled).toBe(false);
       const solOption = [...(select?.options ?? [])].find((option) => option.value === 'sol');
-      expect(solOption?.disabled).toBe(true);
-      expect(solOption?.textContent).toContain('SPL');
+      expect(solOption?.disabled).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('adds a verified SPL token by mint with its real metadata', async () => {
+    setWallet({
+      vaultAddresses: {
+        eth: [ETH_ADDRESS],
+        trx: [TRON_ADDRESS],
+        sol: [SOL_ADDRESS],
+        ton: [TON_ADDRESS],
+        btc: [],
+        bsc: [],
+        matic: [],
+        arb: [],
+        op: [],
+        base: [],
+        avax: [],
+        ltc: [],
+        doge: [],
+      },
+    });
+    const mounted = await mountDialog();
+    try {
+      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
+      setSelectValue(select!, 'sol');
+      const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(input!, SOL_USDC_MINT);
+      await submitForm(document);
+      expect(verifySplToken).toHaveBeenCalledTimes(1);
+      expect(verifySplToken).toHaveBeenCalledWith({
+        contract: SOL_USDC_MINT,
+        ownerAddress: SOL_ADDRESS,
+      });
+      expect(resolveTokenCoingeckoId).toHaveBeenCalledWith({
+        platform: 'solana',
+        contract: SOL_USDC_MINT,
+      });
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record).toMatchObject({
+        chain: 'sol',
+        contract: SOL_USDC_MINT,
+        name: 'USD Coin',
+        symbol: 'USDC',
+        decimals: 6,
+        coingeckoId: 'usd-coin',
+      });
+      expect(document.body.textContent).toContain('Token added');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('adds a verified Jetton token by master with its real metadata', async () => {
+    setWallet({
+      vaultAddresses: {
+        eth: [ETH_ADDRESS],
+        trx: [TRON_ADDRESS],
+        sol: [SOL_ADDRESS],
+        ton: [TON_ADDRESS],
+        btc: [],
+        bsc: [],
+        matic: [],
+        arb: [],
+        op: [],
+        base: [],
+        avax: [],
+        ltc: [],
+        doge: [],
+      },
+    });
+    const mounted = await mountDialog();
+    try {
+      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
+      setSelectValue(select!, 'ton');
+      const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(input!, TON_USDT_MASTER);
+      await submitForm(document);
+      expect(verifyJettonToken).toHaveBeenCalledTimes(1);
+      expect(verifyJettonToken).toHaveBeenCalledWith({
+        contract: TON_USDT_MASTER,
+        ownerAddress: TON_ADDRESS,
+      });
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record).toMatchObject({
+        chain: 'ton',
+        contract: TON_USDT_MASTER,
+        name: 'Tether USD',
+        symbol: 'USD₮',
+        decimals: 6,
+      });
+      expect(document.body.textContent).toContain('Token added');
     } finally {
       await mounted.cleanup();
     }
@@ -432,6 +548,32 @@ describe('AddTokenDialog — find by ticker or name', () => {
       });
       const alert = document.querySelector('[role="alert"]');
       expect(alert?.textContent).toContain('No token found for "zzzznonexistent"');
+      expect(mockAddCustomToken).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('AddTokenDialog — devnet mode', () => {
+  it('blocks adding a mainnet token while devnet is on and verifies nothing', async () => {
+    setWallet({ devnetEnabled: true });
+    const mounted = await mountDialog();
+    try {
+      // DialogContent portals to document.body, not the mount div.
+      expect(document.body.textContent).toContain(
+        'Adding tokens is off in devnet test mode',
+      );
+      const addButton = [...document.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent?.trim() === 'Add',
+      );
+      expect(addButton).not.toBeUndefined();
+      expect(addButton!.disabled).toBe(true);
+      const contract =
+        document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(contract!, USDC_CONTRACT);
+      await submitForm(document);
+      expect(verifyEvmToken).not.toHaveBeenCalled();
       expect(mockAddCustomToken).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();

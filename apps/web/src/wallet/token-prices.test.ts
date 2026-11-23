@@ -25,6 +25,13 @@ function freshTokenPayload(ageMs = 30_000): Record<string, { usd: number; last_u
     chainlink: { usd: 8.79, last_updated_at: secondsBefore(ageMs) },
     uniswap: { usd: 4.69, last_updated_at: secondsBefore(ageMs) },
     'wrapped-bitcoin': { usd: 60950, last_updated_at: secondsBefore(ageMs) },
+    // UI/UX fixes, item 18: the five new CoinGecko ids the 13 extra
+    // defaults add (the other eight reuse the six above).
+    weth: { usd: 1704.9, last_updated_at: secondsBefore(ageMs) },
+    usdt0: { usd: 0.999, last_updated_at: secondsBefore(ageMs) },
+    'bridged-usdt': { usd: 0.999, last_updated_at: secondsBefore(ageMs) },
+    'l2-standard-bridged-usdt-base': { usd: 0.999, last_updated_at: secondsBefore(ageMs) },
+    'binance-bridged-usdt-bnb-smart-chain': { usd: 0.999, last_updated_at: secondsBefore(ageMs) },
   };
 }
 
@@ -72,7 +79,7 @@ describe('native price-id trap (regression)', () => {
 });
 
 describe('TOKEN_PRICE_IDS', () => {
-  it('covers exactly the 7 default tokens', () => {
+  it('covers exactly the 21 default tokens', () => {
     expect(Object.keys(TOKEN_PRICE_IDS).sort()).toEqual([...TOKEN_KEYS].sort());
     expect(TOKEN_PRICE_IDS['eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48']).toBe('usd-coin');
     expect(TOKEN_PRICE_IDS['trx:tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t']).toBe('tether');
@@ -86,7 +93,7 @@ describe('TOKEN_PRICE_IDS', () => {
 });
 
 describe('parseTokenPriceResponse', () => {
-  it('returns fresh quotes for all 7 default tokens', () => {
+  it('returns fresh quotes for all 21 default tokens', () => {
     const entries = parseTokenPriceResponse(freshTokenPayload(), tokenIds(), NOW_MS);
     for (const key of TOKEN_KEYS) {
       expect(entries[key]?.status).toBe('fresh');
@@ -128,7 +135,7 @@ describe('parseTokenPriceResponse', () => {
 });
 
 describe('fetchTokenPrices', () => {
-  it('makes one batched call carrying all six token ids', async () => {
+  it('makes one batched call carrying all eleven token ids', async () => {
     const calls: string[] = [];
     const fetchFn = vi.fn(async (url: string) => {
       calls.push(url);
@@ -146,7 +153,7 @@ describe('fetchTokenPrices', () => {
     );
     expect(calls).toHaveLength(1);
     expect(calls[0]).toBe(
-      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether,dai,chainlink,uniswap,wrapped-bitcoin&vs_currencies=usd&include_last_updated_at=true',
+      'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin,tether,dai,chainlink,uniswap,wrapped-bitcoin,weth,usdt0,bridged-usdt,l2-standard-bridged-usdt-base,binance-bridged-usdt-bnb-smart-chain&vs_currencies=usd&include_last_updated_at=true',
     );
     for (const key of TOKEN_KEYS) {
       expect(entries[key]?.status).toBe('fresh');

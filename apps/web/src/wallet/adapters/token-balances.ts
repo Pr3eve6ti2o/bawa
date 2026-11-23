@@ -20,7 +20,7 @@
  * Read-only throughout. No signing, no broadcast, no funds moved.
  */
 import { hexToBytes, isAddress } from 'viem';
-import { CHAINS } from '../chains';
+import { CHAINS, resolveRpcEndpoints } from '../chains';
 import type { ChainId } from '../../engine/boundary';
 import { PRICE_PROVIDER_BASE_URL } from '../prices';
 import {
@@ -29,12 +29,17 @@ import {
   tokenKey,
   tronAddressToHex,
   validateEvmContractAddress,
+  validateSolMintAddress,
   validateTokenMetadata,
+  validateTonJettonAddress,
   validateTronContractAddress,
 } from '../tokens';
 import {
+  endpointHost,
   httpFetchTransport,
+  messageOf,
   toAdapterError,
+  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type FetchTransport,
@@ -49,6 +54,8 @@ export type FetchTransportLike = FetchTransport;
  * dispatches on the JSON-RPC method and the calldata selector. */
 export interface EvmRpcClient {
   request(args: { method: string; params?: unknown[] }): Promise<unknown>;
+  /** The endpoint that answered the last request, when known. */
+  lastEndpoint?: () => string | undefined;
 }
 
 const TRONGRID_BASE_URL = 'https://api.trongrid.io';
@@ -91,38 +98,55 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * not a viem client: the token path only needs `request`, and a viem
  * PublicClient's narrow method union is not assignable to EvmRpcClient
  * — and the viem client would pull the `call` action machinery back
- * into the shared chunks. */
+ * into the shared chunks. RPC failover (UI/UX fixes, item 19): each
+ * request sweeps the chain's resolved endpoint list (registry +
+ * owner's overrides) in order and reports the answering endpoint
+ * through lastEndpoint, so a balance that came through the backup
+ * never claims the primary. */
 export function evmClientForChain(
   chain: ChainId,
   rpcUrl?: string,
   transport: FetchTransport = httpFetchTransport,
 ): EvmRpcClient {
-  const config = CHAINS[chain];
-  const url = rpcUrl ?? config.rpcEndpoints[0] ?? '';
+  const urls =
+    rpcUrl !== undefined ? [rpcUrl] : resolveRpcEndpoints(chain);
   let id = 0;
+  let lastEndpoint: string | undefined;
   return {
     request: async ({ method, params }) => {
-      const body = await transport.request(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: (id += 1),
-          method,
-          params: params ?? [],
-        }),
-      });
-      if (!isRecord(body)) throw new Error('Invalid RPC response');
-      if ('error' in body) {
-        const error = body['error'];
-        const message =
-          isRecord(error) && typeof error['message'] === 'string'
-            ? error['message']
-            : 'RPC error';
-        throw new Error(message);
-      }
-      return body['result'];
+      const { result, endpoint } = await withRetry(
+        () =>
+          tryEndpoints(urls, async (url) => {
+            const body = await transport.request(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: (id += 1),
+                method,
+                params: params ?? [],
+              }),
+            });
+            if (!isRecord(body)) throw new Error('Invalid RPC response');
+            if ('error' in body) {
+              const error = body['error'];
+              const message =
+                isRecord(error) && typeof error['message'] === 'string'
+                  ? error['message']
+                  : 'RPC error';
+              throw new Error(message);
+            }
+            return body['result'];
+          }),
+        { operation: `token-balances.${chain}.request` },
+      );
+      lastEndpoint = endpoint;
+      return result;
     },
+    lastEndpoint: () => lastEndpoint,
   };
 }
 
@@ -319,7 +343,10 @@ export async function fetchTronTokenMetadata(input: {
   baseUrl?: string;
 }): Promise<MetadataResult> {
   const transport = input.transport ?? httpFetchTransport;
-  const baseUrl = input.baseUrl ?? TRONGRID_BASE_URL;
+  // The owner's RPC list applies here too (item 19): a custom
+  // Trongrid-shaped endpoint replaces the default for token reads.
+  const baseUrl =
+    input.baseUrl ?? resolveRpcEndpoints('trx')[0] ?? TRONGRID_BASE_URL;
   // Probe first: a non-contract / nonexistent address fails here.
   const probe = await triggerConstant({
     contract: input.contract,
@@ -439,6 +466,9 @@ async function fetchErc20Balance(input: {
     if (decimals === undefined) {
       return { status: 'error', reason: UNREADABLE_TOKEN };
     }
+    const lastEndpoint = client.lastEndpoint?.();
+    const source =
+      lastEndpoint !== undefined ? endpointHost(lastEndpoint) : rpcHost(chain);
     return {
       status: 'ok',
       data: {
@@ -447,10 +477,10 @@ async function fetchErc20Balance(input: {
         networkId: config.networkId,
         valueBaseUnits: balance.toString(),
         decimals,
-        source: rpcHost(chain),
+        source,
         fetchedAt: Date.now(),
       },
-      source: rpcHost(chain),
+      source,
       fetchedAt: Date.now(),
     };
   } catch (error: unknown) {
@@ -467,7 +497,10 @@ async function fetchTrc20Balance(input: {
   baseUrl?: string;
 }): Promise<AdapterResult<AdapterBalance>> {
   const transport = input.transport ?? httpFetchTransport;
-  const baseUrl = input.baseUrl ?? TRONGRID_BASE_URL;
+  // The owner's RPC list applies here too (item 19): a custom
+  // Trongrid-shaped endpoint replaces the default for token reads.
+  const baseUrl =
+    input.baseUrl ?? resolveRpcEndpoints('trx')[0] ?? TRONGRID_BASE_URL;
   const parameter = tronAddressParameter(input.ownerAddress);
   if (parameter === null) {
     return { status: 'error', reason: 'Invalid owner address' };
@@ -508,10 +541,10 @@ async function fetchTrc20Balance(input: {
       networkId: CHAINS.trx.networkId,
       valueBaseUnits: balance.toString(),
       decimals,
-      source: 'trongrid',
+      source: endpointHost(baseUrl),
       fetchedAt: Date.now(),
     },
-    source: 'trongrid',
+    source: endpointHost(baseUrl),
     fetchedAt: Date.now(),
   };
 }
@@ -519,12 +552,30 @@ async function fetchTrc20Balance(input: {
 /**
  * Token balance for one token record + owner address. EVM chains read
  * ERC-20 balanceOf on the token chain's pinned RPC; TRON reads TRC-20
- * balanceOf via TronGrid. A zero balance is a real balance (status ok).
+ * balanceOf via TronGrid; Solana reads SPL token accounts on the SOL
+ * RPC; TON reads the Jetton balance via TonAPI. A zero balance is a
+ * real balance (status ok).
  */
 export async function fetchTokenBalance(
   input: TokenBalanceInput,
   deps: TokenBalanceDeps = {},
 ): Promise<AdapterResult<AdapterBalance>> {
+  if (input.chain === 'sol') {
+    return fetchSplTokenBalance({
+      contract: input.contract,
+      ownerAddress: input.ownerAddress,
+      decimals: input.decimals,
+      transport: deps.transport,
+    });
+  }
+  if (input.chain === 'ton') {
+    return fetchJettonTokenBalance({
+      contract: input.contract,
+      ownerAddress: input.ownerAddress,
+      decimals: input.decimals,
+      transport: deps.transport,
+    });
+  }
   if (input.chain === 'trx') {
     return fetchTrc20Balance({
       contract: input.contract,
@@ -541,6 +592,471 @@ export async function fetchTokenBalance(
     decimals: input.decimals,
     evmClient: deps.evmClient,
   });
+}
+
+// --- Solana SPL tokens (UI/UX fixes, item 13) ---------------------------
+// Read-only JSON-RPC against the SOL endpoints (primary + fallback,
+// item-19 sweep): the mint account proves the mint exists and carries
+// the decimals; the Metaplex metadata account carries the name/symbol;
+// getTokenAccountsByOwner sums the owner's token accounts. No ATA PDA
+// math is needed — the RPC finds the accounts by owner + mint filter.
+
+const SOL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const SOL_TOKEN_2022_PROGRAM = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
+const METAPLEX_METADATA_PROGRAM =
+  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
+
+/** Minimal Solana JSON-RPC client, mirroring evmClientForChain. */
+function solRpcClient(transport: FetchTransport = httpFetchTransport): {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  lastEndpoint: () => string | undefined;
+} {
+  const urls = resolveRpcEndpoints('sol');
+  let id = 0;
+  let lastEndpoint: string | undefined;
+  return {
+    request: async ({ method, params }) => {
+      const { result, endpoint } = await withRetry(
+        () =>
+          tryEndpoints(urls, async (url) => {
+            const body = await transport.request(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: (id += 1),
+                method,
+                params: params ?? [],
+              }),
+            });
+            if (!isRecord(body)) throw new Error('Invalid RPC response');
+            if ('error' in body) {
+              const error = body['error'];
+              const message =
+                isRecord(error) && typeof error['message'] === 'string'
+                  ? error['message']
+                  : 'RPC error';
+              throw new Error(message);
+            }
+            return body['result'];
+          }),
+        { operation: 'token-balances.sol.request' },
+      );
+      lastEndpoint = endpoint;
+      return result;
+    },
+    lastEndpoint: () => lastEndpoint,
+  };
+}
+
+/** Base64 → bytes (atob is standard base64 only). Returns null on bad input. */
+function decodeBase64(value: string): Uint8Array | null {
+  try {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * One length-prefixed (u32 LE + bytes) string from a Metaplex metadata
+ * account: name at offset 65, symbol after it, uri after that. The
+ * offsets are the field starts (length prefix included). Real accounts
+ * pad the strings to fixed widths (name 32, symbol 10, uri 200) with
+ * trailing NUL bytes — the length prefix records the padded length, so
+ * the decoded value is stripped of trailing NULs (verified live
+ * against the real USDC metadata account, 2026-11-23).
+ */
+function parseMetaplexString(
+  data: Uint8Array,
+  offset: number,
+): { value: string; next: number } | null {
+  if (offset + 4 > data.length) return null;
+  const length = new DataView(
+    data.buffer,
+    data.byteOffset + offset,
+    4,
+  ).getUint32(0, true);
+  if (length > 200 || offset + 4 + length > data.length) return null;
+  try {
+    const raw = new TextDecoder('utf-8', { fatal: true }).decode(
+      data.subarray(offset + 4, offset + 4 + length),
+    );
+    const value = raw.replace(/\0+$/, '');
+    if (value === '') return null;
+    return { value, next: offset + 4 + length };
+  } catch {
+    return null;
+  }
+}
+
+/** SPL metadata: the mint account's decimals + the Metaplex name/symbol. */
+export async function fetchSplTokenMetadata(input: {
+  contract: string;
+  transport?: FetchTransport;
+}): Promise<MetadataResult> {
+  const { contract } = input;
+  const client = solRpcClient(input.transport);
+  let account: unknown;
+  try {
+    account = await client.request({
+      method: 'getAccountInfo',
+      params: [contract, { encoding: 'jsonParsed' }],
+    });
+  } catch {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  const value = isRecord(account) ? account['value'] : undefined;
+  if (!isRecord(value)) {
+    return {
+      ok: false,
+      error: 'This address is not a token mint on Solana',
+    };
+  }
+  const owner = typeof value['owner'] === 'string' ? value['owner'] : '';
+  if (
+    owner !== SOL_TOKEN_PROGRAM &&
+    owner !== SOL_TOKEN_2022_PROGRAM
+  ) {
+    return {
+      ok: false,
+      error: 'This address is not a token mint on Solana',
+    };
+  }
+  const data = isRecord(value['data']) ? value['data'] : undefined;
+  const parsed = isRecord(data) ? data['parsed'] : undefined;
+  const info = isRecord(parsed) ? parsed['info'] : undefined;
+  const decimals =
+    isRecord(info) && typeof info['decimals'] === 'number'
+      ? info['decimals']
+      : undefined;
+  if (decimals === undefined) {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  let accounts: unknown;
+  try {
+    accounts = await client.request({
+      method: 'getProgramAccounts',
+      params: [
+        METAPLEX_METADATA_PROGRAM,
+        {
+          encoding: 'base64',
+          filters: [{ memcmp: { offset: 33, bytes: contract } }],
+        },
+      ],
+    });
+  } catch {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  // getProgramAccounts returns a bare array (unlike getAccountInfo /
+  // getTokenAccountsByOwner, whose result is { context, value }).
+  const list = Array.isArray(accounts) ? accounts : undefined;
+  if (list === undefined || list.length === 0) {
+    return {
+      ok: false,
+      error: 'No Metaplex metadata found for this mint',
+    };
+  }
+  const first = list[0];
+  const accountData = isRecord(first)
+    ? isRecord(first['account'])
+      ? first['account']['data']
+      : undefined
+    : undefined;
+  if (
+    !Array.isArray(accountData) ||
+    typeof accountData[0] !== 'string'
+  ) {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  const bytes = decodeBase64(accountData[0]);
+  // Metaplex MetadataV1: 1-byte key (4), 32-byte update authority,
+  // 32-byte mint, then length-prefixed name, symbol, uri. The memcmp
+  // filter above already constrains the account to this mint.
+  if (bytes === null || bytes.length < 69 || bytes[0] !== 4) {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  const name = parseMetaplexString(bytes, 65);
+  if (name === null) return { ok: false, error: UNREADABLE_TOKEN };
+  const symbol = parseMetaplexString(bytes, name.next);
+  if (symbol === null) return { ok: false, error: UNREADABLE_TOKEN };
+  const metadata = { name: name.value, symbol: symbol.value, decimals };
+  const problem = validateTokenMetadata(
+    metadata.name,
+    metadata.symbol,
+    metadata.decimals,
+  );
+  if (problem !== null) return { ok: false, error: problem };
+  return { ok: true, metadata };
+}
+
+/** SPL balanceOf: sums the owner's token accounts for the mint. */
+async function fetchSplTokenBalance(input: {
+  contract: string;
+  ownerAddress: string;
+  decimals?: number;
+  transport?: FetchTransport;
+}): Promise<AdapterResult<AdapterBalance>> {
+  const client = solRpcClient(input.transport);
+  try {
+    const raw = await client.request({
+      method: 'getTokenAccountsByOwner',
+      params: [
+        input.ownerAddress,
+        { mint: input.contract },
+        { encoding: 'jsonParsed' },
+      ],
+    });
+    const list = isRecord(raw) ? raw['value'] : undefined;
+    if (!Array.isArray(list)) {
+      return { status: 'error', reason: 'Invalid response: expected a balance' };
+    }
+    let total = 0n;
+    for (const entry of list) {
+      const data = isRecord(entry)
+        ? isRecord(entry['account'])
+          ? isRecord(entry['account']['data'])
+            ? entry['account']['data']['parsed']
+            : undefined
+          : undefined
+        : undefined;
+      const info = isRecord(data) ? data['info'] : undefined;
+      const tokenAmount = isRecord(info) ? info['tokenAmount'] : undefined;
+      const amount =
+        isRecord(tokenAmount) && typeof tokenAmount['amount'] === 'string'
+          ? tokenAmount['amount']
+          : undefined;
+      if (amount === undefined || !/^[0-9]+$/.test(amount)) {
+        return {
+          status: 'error',
+          reason: 'Invalid response: expected a balance',
+        };
+      }
+      total += BigInt(amount);
+    }
+    let decimals = input.decimals;
+    if (decimals === undefined) {
+      const metadata = await fetchSplTokenMetadata({
+        contract: input.contract,
+        transport: input.transport,
+      });
+      if (!metadata.ok) {
+        return { status: 'error', reason: metadata.error };
+      }
+      decimals = metadata.metadata.decimals;
+    }
+    const source =
+      client.lastEndpoint() !== undefined
+        ? endpointHost(client.lastEndpoint() as string)
+        : rpcHost('sol');
+    return {
+      status: 'ok',
+      data: {
+        chain: 'sol',
+        address: input.ownerAddress,
+        networkId: CHAINS.sol.networkId,
+        valueBaseUnits: total.toString(),
+        decimals,
+        source,
+        fetchedAt: Date.now(),
+      },
+      source,
+      fetchedAt: Date.now(),
+    };
+  } catch (error: unknown) {
+    return toAdapterError(error);
+  }
+}
+
+/** Full SPL verification for the Add Token flow (same checks as EVM). */
+export async function verifySplToken(input: {
+  contract: string;
+  ownerAddress: string;
+  transport?: FetchTransport;
+}): Promise<TokenVerification> {
+  const format = validateSolMintAddress(input.contract);
+  if (!format.ok) return { ok: false, error: format.error };
+  const metadata = await fetchSplTokenMetadata({
+    contract: format.normalized,
+    transport: input.transport,
+  });
+  if (!metadata.ok) return { ok: false, error: metadata.error };
+  const balance = await fetchSplTokenBalance({
+    contract: format.normalized,
+    ownerAddress: input.ownerAddress,
+    decimals: metadata.metadata.decimals,
+    transport: input.transport,
+  });
+  if (balance.status !== 'ok') {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  return {
+    ok: true,
+    metadata: metadata.metadata,
+    balanceBaseUnits: balance.data.valueBaseUnits,
+  };
+}
+
+// --- TON Jettons (UI/UX fixes, item 13) ---------------------------------
+// TonAPI (keyless, already the TON balance fallback in item 19 and
+// already in the CSP): structured Jetton metadata + the owner's Jetton
+// balance, no BOC cell parsing. TonCenter runGetMethod would return the
+// metadata as a BOC cell needing a full cell parser; TonAPI answers the
+// same facts as JSON.
+
+const TONAPI_BASE_URL = 'https://tonapi.io';
+
+async function tonApiGet(
+  path: string,
+  transport: FetchTransport,
+): Promise<unknown> {
+  return withRetry(
+    () =>
+      transport.request(`${TONAPI_BASE_URL}${path}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      }),
+    { operation: 'token-balances.tonapi' },
+  );
+}
+
+/** Jetton metadata from TonAPI. 404 → not a Jetton master. */
+export async function fetchJettonTokenMetadata(input: {
+  contract: string;
+  transport?: FetchTransport;
+}): Promise<MetadataResult> {
+  const transport = input.transport ?? httpFetchTransport;
+  let body: unknown;
+  try {
+    body = await tonApiGet(`/v2/jettons/${input.contract}`, transport);
+  } catch (error: unknown) {
+    if (messageOf(error).includes('HTTP 404')) {
+      return {
+        ok: false,
+        error: 'This address is not a Jetton master on TON',
+      };
+    }
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  if (!isRecord(body)) return { ok: false, error: UNREADABLE_TOKEN };
+  const metadata = isRecord(body['metadata']) ? body['metadata'] : undefined;
+  const name =
+    metadata !== undefined && typeof metadata['name'] === 'string'
+      ? metadata['name']
+      : undefined;
+  const symbol =
+    metadata !== undefined && typeof metadata['symbol'] === 'string'
+      ? metadata['symbol']
+      : undefined;
+  const decimalsRaw = metadata !== undefined ? metadata['decimals'] : undefined;
+  const decimals =
+    typeof decimalsRaw === 'number'
+      ? decimalsRaw
+      : typeof decimalsRaw === 'string'
+        ? Number(decimalsRaw)
+        : undefined;
+  if (
+    name === undefined ||
+    symbol === undefined ||
+    decimals === undefined ||
+    !Number.isInteger(decimals)
+  ) {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  const meta = { name, symbol, decimals };
+  const problem = validateTokenMetadata(meta.name, meta.symbol, meta.decimals);
+  if (problem !== null) return { ok: false, error: problem };
+  return { ok: true, metadata: meta };
+}
+
+/** Jetton balanceOf via TonAPI. A missing jetton wallet is a real zero. */
+async function fetchJettonTokenBalance(input: {
+  contract: string;
+  ownerAddress: string;
+  decimals?: number;
+  transport?: FetchTransport;
+}): Promise<AdapterResult<AdapterBalance>> {
+  const transport = input.transport ?? httpFetchTransport;
+  let balance = '0';
+  try {
+    const body = await tonApiGet(
+      `/v2/accounts/${input.ownerAddress}/jettons/${input.contract}`,
+      transport,
+    );
+    const raw = isRecord(body) ? body['balance'] : undefined;
+    if (typeof raw !== 'string' || !/^[0-9]+$/.test(raw)) {
+      return { status: 'error', reason: 'Invalid response: expected a balance' };
+    }
+    balance = raw;
+  } catch (error: unknown) {
+    if (messageOf(error).includes('HTTP 404')) {
+      balance = '0';
+    } else {
+      return toAdapterError(error);
+    }
+  }
+  let decimals = input.decimals;
+  if (decimals === undefined) {
+    const metadata = await fetchJettonTokenMetadata({
+      contract: input.contract,
+      transport,
+    });
+    if (!metadata.ok) {
+      return { status: 'error', reason: metadata.error };
+    }
+    decimals = metadata.metadata.decimals;
+  }
+  return {
+    status: 'ok',
+    data: {
+      chain: 'ton',
+      address: input.ownerAddress,
+      networkId: CHAINS.ton.networkId,
+      valueBaseUnits: balance,
+      decimals,
+      source: 'tonapi',
+      fetchedAt: Date.now(),
+    },
+    source: 'tonapi',
+    fetchedAt: Date.now(),
+  };
+}
+
+/** Full Jetton verification for the Add Token flow (same checks as EVM). */
+export async function verifyJettonToken(input: {
+  contract: string;
+  ownerAddress: string;
+  transport?: FetchTransport;
+}): Promise<TokenVerification> {
+  const format = validateTonJettonAddress(input.contract);
+  if (!format.ok) return { ok: false, error: format.error };
+  const metadata = await fetchJettonTokenMetadata({
+    contract: format.normalized,
+    transport: input.transport,
+  });
+  if (!metadata.ok) return { ok: false, error: metadata.error };
+  const balance = await fetchJettonTokenBalance({
+    contract: format.normalized,
+    ownerAddress: input.ownerAddress,
+    decimals: metadata.metadata.decimals,
+    transport: input.transport,
+  });
+  if (balance.status !== 'ok') {
+    return { ok: false, error: UNREADABLE_TOKEN };
+  }
+  return {
+    ok: true,
+    metadata: metadata.metadata,
+    balanceBaseUnits: balance.data.valueBaseUnits,
+  };
 }
 
 /**
@@ -619,7 +1135,8 @@ export async function verifyTronToken(input: {
  * "Price unavailable". Never throws: network failure also yields null.
  * Platform ids are CoinGecko's per-chain slugs (ethereum, tron,
  * binance-smart-chain, polygon-pos, arbitrum-one, optimistic-ethereum,
- * base, avalanche).
+ * base, avalanche, solana, xdai, celo, linea, mantle, scroll, opbnb,
+ * metis, aurora, fantom).
  */
 export async function resolveTokenCoingeckoId(input: {
   platform:
@@ -630,7 +1147,17 @@ export async function resolveTokenCoingeckoId(input: {
     | 'arbitrum-one'
     | 'optimistic-ethereum'
     | 'base'
-    | 'avalanche';
+    | 'avalanche'
+    | 'solana'
+    | 'xdai'
+    | 'celo'
+    | 'linea'
+    | 'mantle'
+    | 'scroll'
+    | 'opbnb'
+    | 'metis'
+    | 'aurora'
+    | 'fantom';
   contract: string;
   fetchFn?: typeof fetch;
 }): Promise<string | null> {

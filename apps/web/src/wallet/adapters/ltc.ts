@@ -9,12 +9,16 @@
 import {
   BROADCAST_DISABLED_MESSAGE,
   assertNetworkId,
+  endpointHost,
   httpFetchTransport,
+  resolveEndpoints,
   toAdapterError,
+  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
+  type EndpointList,
   type FeeEstimate,
   type FetchTransport,
   type TxInput,
@@ -25,11 +29,23 @@ const NETWORK_ID =
   'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2';
 const GENESIS_HASH = '12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2';
 const BASE_URL = 'https://litecoinspace.org/api';
-const SOURCE = 'litecoinspace';
+// BlockCypher is a different API shape (DOGE precedent): balance-only
+// fallback, verified live 2026-11-23 — /addrs/{address}/balance returns
+// final_balance in litoshi, and the chain endpoint reports name
+// 'LTC.main'. History, fees and UTXOs stay mempool-only.
+const BLOCKCYPHER_BASE = 'https://api.blockcypher.com/v1/ltc/main';
+const BLOCKCYPHER_SOURCE = 'blockcypher';
 const DECIMALS = 8;
 
 export interface LtcAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Ordered mempool-shaped base URLs, or a resolver re-read on every
+   * call (the RPC manager). Defaults to [baseUrl].
+   */
+  baseUrls?: EndpointList;
+  /** BlockCypher base URL (balance fallback). */
+  blockcypherBaseUrl?: string;
   /**
    * Injectable transport (item 2). Defaults to the single-attempt HTTP
    * transport; tests inject a fake instead of stubbing the global fetch.
@@ -56,10 +72,24 @@ export function createLtcAdapter(
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
-  // Idempotent reads only: every network read below is bounded-retry via
-  // withRetry (item 2). Broadcast is never retried — it stays disabled.
-  const readJson = (url: string, operation: string): Promise<unknown> =>
-    withRetry(() => transport.request(url), { operation });
+  const blockcypherBaseUrl = overrides.blockcypherBaseUrl ?? BLOCKCYPHER_BASE;
+  // RPC failover (UI/UX fixes, item 19): every mempool-shaped read
+  // sweeps the endpoint list in order (SOL pattern), one withRetry
+  // around the whole sweep. BlockCypher is the balance-only fallback
+  // when the mempool list is exhausted.
+  const resolveBaseUrls = (): string[] =>
+    resolveEndpoints(overrides.baseUrls, [baseUrl]);
+  const readJsonFrom = (
+    urlFor: (base: string) => string,
+    operation: string,
+  ): Promise<{ raw: unknown; endpoint: string }> =>
+    withRetry(
+      () =>
+        tryEndpoints(resolveBaseUrls(), (base) =>
+          transport.request(urlFor(base)),
+        ),
+      { operation },
+    ).then(({ result, endpoint }) => ({ raw: result, endpoint }));
   // Chain-identity check result, cached per instance: the genesis block
   // hash proves the endpoint serves Litecoin mainnet. The endpoint URL is
   // fixed at construction, so one check per instance is enough.
@@ -67,28 +97,72 @@ export function createLtcAdapter(
 
   const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
-    let raw: unknown;
+    let mempoolError: AdapterResult<never> | null = null;
     try {
-      raw = await readJson(`${baseUrl}/v1/blocks/0`, 'ltc.identity');
+      // /blocks/0 is the Esplora path every mempool instance serves
+      // (the old /v1/blocks/0 is mempool-only).
+      const { raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/blocks/0`,
+        'ltc.identity',
+      );
+      const blocks = Array.isArray(raw) ? raw : [];
+      const genesis = isRecord(blocks[0]) ? blocks[0]['id'] : undefined;
+      if (typeof genesis !== 'string') {
+        return {
+          status: 'error',
+          reason: 'Network identity check failed: no genesis block returned.',
+        };
+      }
+      try {
+        assertNetworkId(genesis, GENESIS_HASH, endpointHost(endpoint));
+      } catch (error: unknown) {
+        // A wrong genesis is a chain mismatch, not a transient failure:
+        // fail closed, never fall back to BlockCypher for identity.
+        return toAdapterError(error);
+      }
+      identityChecked = true;
+      return null;
     } catch (error: unknown) {
-      return toAdapterError(error);
+      mempoolError = toAdapterError(error);
     }
-    const blocks = Array.isArray(raw) ? raw : [];
-    const genesis = isRecord(blocks[0]) ? blocks[0]['id'] : undefined;
-    if (typeof genesis !== 'string') {
-      return {
-        status: 'error',
-        reason: 'Network identity check failed: no genesis block returned.',
-      };
-    }
+    // Mempool list exhausted: BlockCypher's chain endpoint must report
+    // name 'LTC.main'. A failure here reports the mempool error — the
+    // primary failure is the one the owner needs to see.
     try {
-      assertNetworkId(genesis, GENESIS_HASH, SOURCE);
-    } catch (error: unknown) {
-      return toAdapterError(error);
+      const raw = await transport.request(blockcypherBaseUrl);
+      const name = isRecord(raw) ? raw['name'] : undefined;
+      if (name !== 'LTC.main') {
+        return {
+          status: 'error',
+          reason:
+            'Network identity check failed: BlockCypher did not report LTC.main.',
+        };
+      }
+    } catch {
+      return mempoolError;
     }
     identityChecked = true;
     return null;
   };
+
+  const balanceResult = (
+    valueBaseUnits: string,
+    source: string,
+    address: string,
+  ): AdapterResult<AdapterBalance> => ({
+    status: 'ok',
+    data: {
+      chain: 'ltc',
+      address,
+      networkId: NETWORK_ID,
+      valueBaseUnits,
+      decimals: DECIMALS,
+      source,
+      fetchedAt: Date.now(),
+    },
+    source,
+    fetchedAt: Date.now(),
+  });
 
   const getBalance = async (
     address: string,
@@ -98,38 +172,44 @@ export function createLtcAdapter(
     }
     const identity = await requireMainnet();
     if (identity) return identity;
+    try {
+      const { raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}`,
+        'ltc.getBalance',
+      );
+      const stats = isRecord(raw) ? raw['chain_stats'] : undefined;
+      if (!isRecord(stats)) {
+        return { status: 'error', reason: 'Invalid response: expected chain stats' };
+      }
+      const funded = stats['funded_txo_sum'];
+      const spent = stats['spent_txo_sum'];
+      if (typeof funded !== 'number' || typeof spent !== 'number') {
+        return { status: 'error', reason: 'Invalid response: expected txo sums' };
+      }
+      // JSON numbers lose precision above Number.MAX_SAFE_INTEGER; fine for a
+      // personal wallet, recorded limitation.
+      const balance = BigInt(Math.trunc(funded)) - BigInt(Math.trunc(spent));
+      return balanceResult(balance.toString(), endpointHost(endpoint), address);
+    } catch {
+      // Mempool list exhausted: BlockCypher balance (final_balance).
+    }
     let raw: unknown;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}`, 'ltc.getBalance');
+      raw = await transport.request(
+        `${blockcypherBaseUrl}/addrs/${address}/balance`,
+      );
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    const stats = isRecord(raw) ? raw['chain_stats'] : undefined;
-    if (!isRecord(stats)) {
-      return { status: 'error', reason: 'Invalid response: expected chain stats' };
+    const finalBalance = isRecord(raw) ? raw['final_balance'] : undefined;
+    if (typeof finalBalance !== 'number') {
+      return { status: 'error', reason: 'Invalid response: expected final_balance' };
     }
-    const funded = stats['funded_txo_sum'];
-    const spent = stats['spent_txo_sum'];
-    if (typeof funded !== 'number' || typeof spent !== 'number') {
-      return { status: 'error', reason: 'Invalid response: expected txo sums' };
-    }
-    // JSON numbers lose precision above Number.MAX_SAFE_INTEGER; fine for a
-    // personal wallet, recorded limitation.
-    const balance = BigInt(Math.trunc(funded)) - BigInt(Math.trunc(spent));
-    return {
-      status: 'ok',
-      data: {
-        chain: 'ltc',
-        address,
-        networkId: NETWORK_ID,
-        valueBaseUnits: balance.toString(),
-        decimals: DECIMALS,
-        source: SOURCE,
-        fetchedAt: Date.now(),
-      },
-      source: SOURCE,
-      fetchedAt: Date.now(),
-    };
+    return balanceResult(
+      String(Math.trunc(finalBalance)),
+      BLOCKCYPHER_SOURCE,
+      address,
+    );
   };
 
   const getHistory = async (
@@ -142,8 +222,12 @@ export function createLtcAdapter(
     const identity = await requireMainnet();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}/txs`, 'ltc.getHistory');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}/txs`,
+        'ltc.getHistory',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -220,15 +304,19 @@ export function createLtcAdapter(
         explorerUrl: `https://litecoinspace.org/tx/${txid}`,
       });
     }
-    return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
+    return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
     const identity = await requireMainnet();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/v1/fees/recommended`, 'ltc.estimateFee');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/v1/fees/recommended`,
+        'ltc.estimateFee',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -244,10 +332,10 @@ export function createLtcAdapter(
         feeBaseUnits: String(Math.trunc(fastest)),
         unit: 'sat/vB',
         note: 'Rate per virtual byte; multiply by tx vsize in Phase 4',
-        source: SOURCE,
+        source: endpointHost(endpoint),
         fetchedAt: Date.now(),
       },
-      source: SOURCE,
+      source: endpointHost(endpoint),
       fetchedAt: Date.now(),
     };
   };
@@ -261,8 +349,12 @@ export function createLtcAdapter(
     const identity = await requireMainnet();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}/utxo`, 'ltc.getTxInputs');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}/utxo`,
+        'ltc.getTxInputs',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -281,7 +373,7 @@ export function createLtcAdapter(
     return {
       status: 'ok',
       data: { kind: 'utxo', utxos },
-      source: SOURCE,
+      source: endpointHost(endpoint),
       fetchedAt: Date.now(),
     };
   };

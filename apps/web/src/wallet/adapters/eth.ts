@@ -10,6 +10,7 @@ import { createEvmAdapter } from './evm';
 import type {
   BroadcastResult,
   ChainAdapter,
+  EndpointList,
   FetchTransport,
 } from './types';
 
@@ -17,6 +18,8 @@ export interface EthAdapterOverrides {
   client?: PublicClient;
   historyBaseUrl?: string;
   rpcUrl?: string;
+  /** Ordered RPC list, or a resolver re-read on every call (item 19). */
+  rpcUrls?: EndpointList;
   /**
    * Injectable transport for the Blockscout history read (item 2).
    * Defaults to the single-attempt HTTP transport.
@@ -54,6 +57,7 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
     {
       client: overrides.client,
       rpcUrl: overrides.rpcUrl,
+      rpcUrls: overrides.rpcUrls,
       historyBaseUrl: overrides.historyBaseUrl,
       transport: overrides.transport,
       networkId: overrides.networkId,

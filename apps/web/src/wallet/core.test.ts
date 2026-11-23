@@ -63,7 +63,7 @@ describe('wallet/core', () => {
     expect(core.Mnemonic.isValid(mnemonic)).toBe(true);
   });
 
-  it('restores with identical derived addresses on all thirteen chains', async () => {
+  it('restores with identical derived addresses on all twenty-two chains', async () => {
     const mnemonic = await createWallet();
     const first = await deriveAddresses(mnemonic);
     const restored = await restoreWallet(mnemonic);
@@ -82,6 +82,15 @@ describe('wallet/core', () => {
     expect(first.op.startsWith('0x')).toBe(true);
     expect(first.base.startsWith('0x')).toBe(true);
     expect(first.avax.startsWith('0x')).toBe(true);
+    expect(first.gnosis.startsWith('0x')).toBe(true);
+    expect(first.celo.startsWith('0x')).toBe(true);
+    expect(first.linea.startsWith('0x')).toBe(true);
+    expect(first.mantle.startsWith('0x')).toBe(true);
+    expect(first.scroll.startsWith('0x')).toBe(true);
+    expect(first.opbnb.startsWith('0x')).toBe(true);
+    expect(first.metis.startsWith('0x')).toBe(true);
+    expect(first.aurora.startsWith('0x')).toBe(true);
+    expect(first.fantom.startsWith('0x')).toBe(true);
     expect(first.ltc.startsWith('ltc1')).toBe(true);
     expect(first.doge.startsWith('D')).toBe(true);
   });
@@ -91,7 +100,7 @@ describe('wallet/core', () => {
     expect(addresses.eth).toBe(ETH_VECTOR_ADDRESS);
   });
 
-  it('derives the Wallet Core probe test-vector addresses on all thirteen chains', async () => {
+  it('derives the Wallet Core probe test-vector addresses on all twenty-two chains', async () => {
     const addresses = await deriveAddresses(TEST_VECTOR_MNEMONIC);
     expect(addresses.btc).toBe('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
     expect(addresses.eth).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
@@ -104,6 +113,15 @@ describe('wallet/core', () => {
     expect(addresses.op).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
     expect(addresses.base).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
     expect(addresses.avax).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.gnosis).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.celo).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.linea).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.mantle).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.scroll).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.opbnb).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.metis).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.aurora).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
+    expect(addresses.fantom).toBe('0x9858EfFD232B4033E47d90003D41EC34EcaEda94');
     expect(addresses.ltc).toBe('ltc1qjmxnz78nmc8nq77wuxh25n2es7rzm5c2rkk4wh');
     expect(addresses.doge).toBe('DBus3bamQjgJULBJtYXpEzDWQRwF5iwxgC');
   });

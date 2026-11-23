@@ -1,13 +1,18 @@
 import {
   BROADCAST_DISABLED_MESSAGE,
   assertNetworkId,
+  endpointHost,
   httpFetchTransport,
+  messageOf,
+  resolveEndpoints,
   toAdapterError,
+  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type BroadcastResult,
   type ChainAdapter,
+  type EndpointList,
   type FeeEstimate,
   type FetchTransport,
   type TxInput,
@@ -17,11 +22,21 @@ import { withRetry } from '../retry';
 const NETWORK_ID = 'bip122:000000000019d6689c085ae165831e93';
 const GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
 const BASE_URL = 'https://mempool.space/api';
-const SOURCE = 'mempool.space';
+// Esplora-shaped backup, verified live 2026-11-23: /blocks/0 returns the
+// mainnet genesis hash, /address/ returns chain_stats, /fee-estimates
+// returns the per-target sat/vB map. It has no /v1/fees/recommended
+// (mempool-only), so the fee read shape-falls-back per endpoint.
+const FALLBACK_URL = 'https://blockstream.info/api';
 const DECIMALS = 8;
 
 export interface BtcAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Ordered Esplora-shaped base URLs, or a resolver re-read on every
+   * call (the RPC manager). Defaults to [baseUrl, blockstream] on
+   * mainnet, [baseUrl] when a baseUrl override is given (devnet).
+   */
+  baseUrls?: EndpointList;
   /**
    * Injectable transport (item 2). Defaults to the single-attempt HTTP
    * transport; tests inject a fake instead of stubbing the global fetch.
@@ -75,10 +90,27 @@ export function createBtcAdapter(
   const genesisHash = overrides.genesisHash ?? GENESIS_HASH;
   const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://mempool.space';
   const acceptTestnet = overrides.acceptTestnetAddresses ?? false;
-  // Idempotent reads only: every network read below is bounded-retry via
-  // withRetry (item 2). Broadcast is never retried — it stays disabled.
-  const readJson = (url: string, operation: string): Promise<unknown> =>
-    withRetry(() => transport.request(url), { operation });
+  // RPC failover (UI/UX fixes, item 19): every read sweeps the endpoint
+  // list in order (SOL pattern). The sweep itself is a raw transport
+  // call per endpoint — no per-endpoint retry — and one withRetry wraps
+  // the whole sweep, so a dead primary costs one attempt, not three.
+  const defaultBaseUrls =
+    overrides.baseUrl !== undefined ? [baseUrl] : [BASE_URL, FALLBACK_URL];
+  const resolveBaseUrls = (): string[] =>
+    overrides.baseUrls !== undefined
+      ? resolveEndpoints(overrides.baseUrls, defaultBaseUrls)
+      : [...defaultBaseUrls];
+  const readJsonFrom = (
+    urlFor: (base: string) => string,
+    operation: string,
+  ): Promise<{ raw: unknown; endpoint: string }> =>
+    withRetry(
+      () =>
+        tryEndpoints(resolveBaseUrls(), (base) =>
+          transport.request(urlFor(base)),
+        ),
+      { operation },
+    ).then(({ result, endpoint }) => ({ raw: result, endpoint }));
   // Chain-identity check result, cached per instance: the genesis block
   // hash proves the endpoint serves the pinned network. The endpoint URL
   // is fixed at construction, so one check per instance is enough.
@@ -87,8 +119,14 @@ export function createBtcAdapter(
   const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/v1/blocks/0`, 'btc.identity');
+      // /blocks/0 is the Esplora path both mempool.space and
+      // blockstream.info serve (the old /v1/blocks/0 is mempool-only).
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/blocks/0`,
+        'btc.identity',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -101,7 +139,7 @@ export function createBtcAdapter(
       };
     }
     try {
-      assertNetworkId(genesis, genesisHash, SOURCE);
+      assertNetworkId(genesis, genesisHash, endpointHost(endpoint));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -118,8 +156,12 @@ export function createBtcAdapter(
     const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}`, 'btc.getBalance');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}`,
+        'btc.getBalance',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -135,6 +177,7 @@ export function createBtcAdapter(
     // JSON numbers lose precision above Number.MAX_SAFE_INTEGER; fine for a
     // personal wallet, recorded limitation.
     const balance = BigInt(Math.trunc(funded)) - BigInt(Math.trunc(spent));
+    const source = endpointHost(endpoint);
     return {
       status: 'ok',
       data: {
@@ -143,10 +186,10 @@ export function createBtcAdapter(
         networkId,
         valueBaseUnits: balance.toString(),
         decimals: DECIMALS,
-        source: SOURCE,
+        source,
         fetchedAt: Date.now(),
       },
-      source: SOURCE,
+      source,
       fetchedAt: Date.now(),
     };
   };
@@ -161,8 +204,12 @@ export function createBtcAdapter(
     const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}/txs`, 'btc.getHistory');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}/txs`,
+        'btc.getHistory',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -239,34 +286,57 @@ export function createBtcAdapter(
         explorerUrl: `${explorerBaseUrl}/tx/${txid}`,
       });
     }
-    return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
+    return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
+  };
+
+  /**
+   * Fee rate for one endpoint: mempool's /v1/fees/recommended first,
+   * Esplora's /fee-estimates map second (blockstream has no /v1 path —
+   * a 404 there is a shape miss, not a failure). Any other error
+   * aborts this endpoint so the sweep can try the next one.
+   */
+  const readFeeFor = async (base: string): Promise<number> => {
+    try {
+      const raw = await transport.request(`${base}/v1/fees/recommended`);
+      const fastest = isRecord(raw) ? raw['fastestFee'] : undefined;
+      if (typeof fastest === 'number') return Math.trunc(fastest);
+    } catch (error: unknown) {
+      if (messageOf(error) !== 'HTTP 404') throw error;
+    }
+    const raw = await transport.request(`${base}/fee-estimates`);
+    const one = isRecord(raw) ? raw['1'] : undefined;
+    if (typeof one === 'number' && Number.isFinite(one)) {
+      return Math.max(1, Math.ceil(one));
+    }
+    throw new Error('Invalid response: expected a fee rate');
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
     const identity = await requireNetwork();
     if (identity) return identity;
-    let raw: unknown;
+    let fee: number;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/v1/fees/recommended`, 'btc.estimateFee');
+      ({ result: fee, endpoint } = await withRetry(
+        () => tryEndpoints(resolveBaseUrls(), readFeeFor),
+        { operation: 'btc.estimateFee' },
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    const fastest = isRecord(raw) ? raw['fastestFee'] : undefined;
-    if (typeof fastest !== 'number') {
-      return { status: 'error', reason: 'Invalid response: expected a fee rate' };
-    }
+    const source = endpointHost(endpoint);
     return {
       status: 'ok',
       data: {
         chain: 'btc',
         networkId,
-        feeBaseUnits: String(Math.trunc(fastest)),
+        feeBaseUnits: String(fee),
         unit: 'sat/vB',
         note: 'Rate per virtual byte; multiply by tx vsize in Phase 4',
-        source: SOURCE,
+        source,
         fetchedAt: Date.now(),
       },
-      source: SOURCE,
+      source,
       fetchedAt: Date.now(),
     };
   };
@@ -280,8 +350,12 @@ export function createBtcAdapter(
     const identity = await requireNetwork();
     if (identity) return identity;
     let raw: unknown;
+    let endpoint = BASE_URL;
     try {
-      raw = await readJson(`${baseUrl}/address/${address}/utxo`, 'btc.getTxInputs');
+      ({ raw, endpoint } = await readJsonFrom(
+        (base) => `${base}/address/${address}/utxo`,
+        'btc.getTxInputs',
+      ));
     } catch (error: unknown) {
       return toAdapterError(error);
     }
@@ -300,7 +374,7 @@ export function createBtcAdapter(
     return {
       status: 'ok',
       data: { kind: 'utxo', utxos },
-      source: SOURCE,
+      source: endpointHost(endpoint),
       fetchedAt: Date.now(),
     };
   };

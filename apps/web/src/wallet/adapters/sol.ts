@@ -15,12 +15,15 @@
  */
 import {
   BROADCAST_DISABLED_MESSAGE,
+  endpointHost,
   httpFetchTransport,
+  resolveEndpoints,
   toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
   type ChainAdapter,
+  type EndpointList,
   type FeeEstimate,
   type FetchTransport,
   type TxInput,
@@ -37,6 +40,11 @@ const DECIMALS = 9;
 export interface SolanaAdapterOverrides {
   baseUrl?: string;
   fallbackUrl?: string;
+  /**
+   * Ordered RPC list, or a resolver re-read on every call (the RPC
+   * manager). Defaults to [baseUrl, fallbackUrl].
+   */
+  rpcUrls?: EndpointList;
   /** Injectable transport; defaults to the single-attempt HTTP transport. */
   transport?: FetchTransport;
 }
@@ -68,9 +76,18 @@ export function createSolanaAdapter(
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
     });
-  // Each RPC call tries the primary first and falls back once — on a
-  // transport failure (e.g. the old 403) or on a JSON-RPC error object.
-  // The withRetry wrapper still bounds the whole attempt.
+  // Each RPC call tries the endpoints in order — on a transport
+  // failure or a JSON-RPC error object — and reports the endpoint that
+  // answered (UI/UX fixes, item 19: the list is resolver-supplied, so
+  // the RPC manager's list applies without rebuilding the adapter).
+  // The withRetry wrapper still bounds the whole sweep.
+  const labelForEndpoint = (url: string): string => {
+    if (url === PRIMARY_URL) return PRIMARY_SOURCE;
+    if (url === FALLBACK_URL) return FALLBACK_SOURCE;
+    return endpointHost(url);
+  };
+  const resolveRpcUrls = (): string[] =>
+    resolveEndpoints(overrides.rpcUrls, [baseUrl, fallbackUrl]);
   const rpc = (
     method: string,
     params: unknown[],
@@ -78,18 +95,26 @@ export function createSolanaAdapter(
   ): Promise<{ raw: unknown; source: string }> =>
     withRetry(
       async () => {
-        let raw: unknown;
-        try {
-          raw = await post(baseUrl, method, params);
-        } catch {
-          raw = await post(fallbackUrl, method, params);
-          return { raw, source: FALLBACK_SOURCE };
+        let lastError: unknown = new Error('No Solana endpoints configured.');
+        for (const url of resolveRpcUrls()) {
+          let raw: unknown;
+          try {
+            raw = await post(url, method, params);
+          } catch (error: unknown) {
+            lastError = error;
+            continue;
+          }
+          if (isRecord(raw) && isRecord(raw['error'])) {
+            lastError = new Error(
+              typeof raw['error']['message'] === 'string'
+                ? raw['error']['message']
+                : 'RPC error',
+            );
+            continue;
+          }
+          return { raw, source: labelForEndpoint(url) };
         }
-        if (isRecord(raw) && isRecord(raw['error'])) {
-          const fallbackRaw = await post(fallbackUrl, method, params);
-          return { raw: fallbackRaw, source: FALLBACK_SOURCE };
-        }
-        return { raw, source: PRIMARY_SOURCE };
+        throw lastError;
       },
       { operation },
     );

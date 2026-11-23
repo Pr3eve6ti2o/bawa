@@ -63,13 +63,22 @@ const chains: ChainId[] = [
   'op',
   'base',
   'avax',
+  'gnosis',
+  'celo',
+  'linea',
+  'mantle',
+  'scroll',
+  'opbnb',
+  'metis',
+  'aurora',
+  'fantom',
   'ltc',
   'doge',
 ];
 // Token gaps, item 6 + item 8: the picker used to list only the first
 // four chains even though validation (validateWatchOnlyImport), address
 // derivation (deriveAddresses, incl. the single-address SOL/TON path)
-// and the input labels below already cover all 13 registry chains. A
+// and the input labels below already cover all 22 registry chains. A
 // Solana or Dogecoin address could not be watched at all.
 
 type ImportInputConfig = {
@@ -89,6 +98,15 @@ const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
   op: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   base: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   avax: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  gnosis: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  celo: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  linea: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  mantle: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  scroll: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  opbnb: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  metis: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  aurora: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  fantom: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
   ltc: { label: 'Account public key (Ltub)', placeholder: 'Ltub…' },
   doge: { label: 'Account public key (dgub)', placeholder: 'dgub…' },
 };

@@ -309,3 +309,125 @@ export function parseBawaSendLink(
   const token = params.get('token') ?? undefined;
   return { chain, to, amount, token };
 }
+
+// QR as a shareable image (UI/UX fixes, item 4).
+//
+// Sharing used to send only the link + address text. The Receive
+// screen's QR is an inline SVG (qrcode.react); this renders it to a
+// PNG so the Web Share API can attach it as a file — the pattern
+// MetaMask Mobile and BlueWallet use for "share my address" (a QR
+// image, not a link). The paper background (#FFFDF7) is painted first
+// so the ink modules stay scannable on any chat background, matching
+// the on-screen QR surround.
+//
+// The render deps are injectable (the adapters' FetchTransport
+// precedent): jsdom has no canvas and its Image never loads, so tests
+// inject fakes; the production call site uses the browser globals.
+
+export interface QrRenderImage {
+  onload: (() => void) | null;
+  onerror: (() => void) | null;
+  width: number;
+  height: number;
+  src: string;
+}
+
+export interface QrRenderContext {
+  fillStyle: string;
+  fillRect(x: number, y: number, width: number, height: number): void;
+  drawImage(
+    image: QrRenderImage,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void;
+}
+
+export interface QrRenderCanvas {
+  width: number;
+  height: number;
+  getContext(kind: '2d'): QrRenderContext | null;
+  toBlob(callback: (blob: Blob | null) => void, type?: string): void;
+}
+
+export interface QrRenderDeps {
+  createCanvas(): QrRenderCanvas;
+  createImage(): QrRenderImage;
+}
+
+const QR_PAPER_COLOR = '#FFFDF7';
+
+const browserQrRenderDeps: QrRenderDeps = {
+  createCanvas: () =>
+    document.createElement('canvas') as unknown as QrRenderCanvas,
+  createImage: () => new Image() as unknown as QrRenderImage,
+};
+
+/** Renders an SVG QR markup string to a PNG blob at the given pixel size. */
+export async function qrSvgToPngBlob(
+  svgMarkup: string,
+  pixels = 512,
+  deps: QrRenderDeps = browserQrRenderDeps,
+): Promise<Blob> {
+  if (
+    typeof svgMarkup !== 'string' ||
+    svgMarkup.trim() === '' ||
+    !svgMarkup.includes('<svg')
+  ) {
+    throw new Error('Cannot share the QR code: no QR image was rendered.');
+  }
+  if (!Number.isSafeInteger(pixels) || pixels <= 0 || pixels > 4096) {
+    throw new Error('Cannot share the QR code: invalid image size.');
+  }
+  const canvas = deps.createCanvas();
+  canvas.width = pixels;
+  canvas.height = pixels;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  // A data URL, not a blob URL: an SVG loaded from a blob URL hangs
+  // (neither onload nor onerror) in headless Chromium 1255 — proved
+  // live 2026-11-23, where Share fell through to copying the link —
+  // while the same SVG loads from a data URL. The 10 s timeout keeps
+  // the share from hanging silently if a browser stalls the load.
+  const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+  const image = deps.createImage();
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('The QR code image could not be loaded.')),
+      10_000,
+    );
+    image.onload = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    image.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('The QR code image could not be loaded.'));
+    };
+    image.src = svgUrl;
+  });
+  ctx.fillStyle = QR_PAPER_COLOR;
+  ctx.fillRect(0, 0, pixels, pixels);
+  ctx.drawImage(image, 0, 0, pixels, pixels);
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), 'image/png');
+  });
+  if (blob === null) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  return blob;
+}
+
+/** Renders an SVG QR markup string to a PNG File ready for navigator.share. */
+export async function qrSvgToPngFile(
+  svgMarkup: string,
+  fileName: string,
+  pixels = 512,
+  deps: QrRenderDeps = browserQrRenderDeps,
+): Promise<File> {
+  const blob = await qrSvgToPngBlob(svgMarkup, pixels, deps);
+  return new File([blob], fileName, { type: 'image/png' });
+}

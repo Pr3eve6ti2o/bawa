@@ -2,7 +2,7 @@
   "registry": "capabilities",
   "version": 3,
   "updated": "2026-11-22",
-  "iv-semantics": "IMPLEMENTED_AND_VERIFIED in chainSupport means verified in at least one explicitly identified profile in that chain's profiles list, not repo-wide verification. chainSupport covers 13 chains (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge); the 9 additional chains (sol, bsc, matic, arb, op, base, avax, ltc, doge) are scoped to the multichain-extended-wallet profile, with create, derive, restore, receive and balance IMPLEMENTED_AND_VERIFIED and the other five operations NOT_SUPPORTED. The entries array has 8 entries covering only the 4 chains (btc, eth, trx, ton). In entries, send/sign/broadcast/confirm mean the end-to-end flow including broadcast, which is not implemented anywhere; plan-transfer and local-sign in chainSupport are the implemented offline steps (transaction construction and local signing without broadcast).",
+  "iv-semantics": "IMPLEMENTED_AND_VERIFIED in chainSupport means verified in at least one explicitly identified profile in that chain's profiles list, not repo-wide verification. chainSupport covers 22 chains (btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom); the 18 additional chains (sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom) are scoped to the multichain-extended-wallet profile, with create, derive, restore, receive and balance IMPLEMENTED_AND_VERIFIED and the other five operations NOT_SUPPORTED. The entries array has 8 entries covering only the 4 chains (btc, eth, trx, ton). In entries, send/sign/broadcast/confirm mean the end-to-end flow including broadcast, which is not implemented anywhere; plan-transfer and local-sign in chainSupport are the implemented offline steps (transaction construction and local signing without broadcast).",
   "chainSupport": {
     "btc": {
       "profiles": [
@@ -241,6 +241,159 @@
         "local-sign": "NOT_SUPPORTED",
         "verify-signature": "NOT_SUPPORTED"
       }
+    },
+    "gnosis": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "celo": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "linea": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "mantle": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "scroll": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "opbnb": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "metis": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "aurora": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
+    },
+    "fantom": {
+      "profiles": [
+        "multichain-extended-wallet"
+      ],
+      "operations": {
+        "create": "IMPLEMENTED_AND_VERIFIED",
+        "derive": "IMPLEMENTED_AND_VERIFIED",
+        "restore": "IMPLEMENTED_AND_VERIFIED",
+        "receive": "IMPLEMENTED_AND_VERIFIED",
+        "balance": "IMPLEMENTED_AND_VERIFIED",
+        "history": "NOT_SUPPORTED",
+        "fee-quote": "NOT_SUPPORTED",
+        "plan-transfer": "NOT_SUPPORTED",
+        "local-sign": "NOT_SUPPORTED",
+        "verify-signature": "NOT_SUPPORTED"
+      }
     }
   },
   "coins": {
@@ -263,7 +416,8 @@
       "assetId": "bip122:000000000019d6689c085ae165831e93/slip44:0",
       "profileId": "bawa-btc-bip84-v1",
       "rpcEndpoints": [
-        "https://mempool.space/api"
+        "https://mempool.space/api",
+        "https://blockstream.info/api"
       ]
     },
     "ethereum": {
@@ -285,7 +439,8 @@
       "assetId": "eip155:1/slip44:60",
       "profileId": "bawa-evm-bip44-v1",
       "rpcEndpoints": [
-        "https://ethereum-rpc.publicnode.com"
+        "https://ethereum-rpc.publicnode.com",
+        "https://1rpc.io/eth"
       ]
     },
     "tron": {
@@ -352,6 +507,26 @@
       "profileId": null,
       "rpcEndpoints": null
     },
+    "scroll": {
+      "registryId": "scroll",
+      "bawaChainId": null,
+      "coinTypeName": "scroll",
+      "coinId": 534352,
+      "slip44": 60,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 534352,
+      "status": "prospective",
+      "displayName": "Scroll",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
     "smartchain": {
       "registryId": "smartchain",
       "bawaChainId": null,
@@ -412,6 +587,66 @@
       "profileId": null,
       "rpcEndpoints": null
     },
+    "mantle": {
+      "registryId": "mantle",
+      "bawaChainId": null,
+      "coinTypeName": "mantle",
+      "coinId": 5000,
+      "slip44": null,
+      "symbol": "MNT",
+      "registrySymbol": "MNT",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 5000,
+      "status": "prospective",
+      "displayName": "Mantle",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "metis": {
+      "registryId": "metis",
+      "bawaChainId": null,
+      "coinTypeName": "metis",
+      "coinId": 10001088,
+      "slip44": null,
+      "symbol": "METIS",
+      "registrySymbol": "METIS",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 1088,
+      "status": "prospective",
+      "displayName": "Metis",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "opbnb": {
+      "registryId": "opbnb",
+      "bawaChainId": null,
+      "coinTypeName": "opBNB",
+      "coinId": 204,
+      "slip44": null,
+      "symbol": "BNB",
+      "registrySymbol": "BNB",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 204,
+      "status": "prospective",
+      "displayName": "opBNB",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
     "optimism": {
       "registryId": "optimism",
       "bawaChainId": null,
@@ -452,6 +687,26 @@
       "profileId": null,
       "rpcEndpoints": null
     },
+    "aurora": {
+      "registryId": "aurora",
+      "bawaChainId": null,
+      "coinTypeName": "aurora",
+      "coinId": 1323161554,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 1313161554,
+      "status": "prospective",
+      "displayName": "Aurora",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
     "avalanchec": {
       "registryId": "avalanchec",
       "bawaChainId": null,
@@ -467,6 +722,46 @@
       "evmChainId": 43114,
       "status": "prospective",
       "displayName": "Avalanche C-Chain",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "fantom": {
+      "registryId": "fantom",
+      "bawaChainId": null,
+      "coinTypeName": "fantom",
+      "coinId": 10000250,
+      "slip44": null,
+      "symbol": "FTM",
+      "registrySymbol": "FTM",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 250,
+      "status": "prospective",
+      "displayName": "Fantom",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
+    "linea": {
+      "registryId": "linea",
+      "bawaChainId": null,
+      "coinTypeName": "linea",
+      "coinId": 59144,
+      "slip44": null,
+      "symbol": "ETH",
+      "registrySymbol": "ETH",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 59144,
+      "status": "prospective",
+      "displayName": "Linea",
       "networkId": null,
       "assetId": null,
       "profileId": null,
@@ -492,6 +787,26 @@
       "profileId": null,
       "rpcEndpoints": null
     },
+    "celo": {
+      "registryId": "celo",
+      "bawaChainId": null,
+      "coinTypeName": "celo",
+      "coinId": 52752,
+      "slip44": null,
+      "symbol": "CELO",
+      "registrySymbol": "CELO",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 42220,
+      "status": "prospective",
+      "displayName": "Celo",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    },
     "doge": {
       "registryId": "doge",
       "bawaChainId": null,
@@ -507,6 +822,27 @@
       "evmChainId": null,
       "status": "prospective",
       "displayName": "Dogecoin",
+      "networkId": null,
+      "assetId": null,
+      "profileId": null,
+      "rpcEndpoints": null
+    }
+,
+    "xdai": {
+      "registryId": "xdai",
+      "bawaChainId": null,
+      "coinTypeName": "xdai",
+      "coinId": 10000100,
+      "slip44": null,
+      "symbol": "XDAI",
+      "registrySymbol": "XDAI",
+      "decimals": 18,
+      "curve": "secp256k1",
+      "derivationTemplate": "m/44'/60'/{account}'/0/{index}",
+      "xpubVersion": null,
+      "evmChainId": 100,
+      "status": "prospective",
+      "displayName": "Gnosis",
       "networkId": null,
       "assetId": null,
       "profileId": null,
@@ -544,7 +880,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/84'/0'/0'/0/i, not live-network flows. M-38 requires 6 confirmations as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/84'/0'/0'/0/i, not live-network flows. M-38 requires 6 confirmations as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 22 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "btc-testnet4",
@@ -608,7 +944,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i, not live-network flows. M-38 requires finalised status as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/60'/0'/0/i, not live-network flows. M-38 requires finalised status as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 22 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "eth-testnet",
@@ -672,7 +1008,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i, not live-network flows. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
+      "notes": "Mainnet is the default (ADR-0003); verification covers network-independent repo tools for 24-word BIP-39 generation with an empty passphrase and watch-only derivation at the fixed path m/44'/195'/0'/0/i, not live-network flows. M-38 requires confirmation by 19 distinct SRs of 27 as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere; BTC/ETH/TRX share xpub version 0488b21e, so cross-chain xpub misuse is undetectable from serialisation alone. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 22 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "trx-testnet",
@@ -736,7 +1072,7 @@
         "broadcast": "DOCUMENTED_NOT_TESTED",
         "confirm": "DOCUMENTED_NOT_TESTED"
       },
-      "notes": "Mainnet is the default (ADR-0003); verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub; TON watch-only derivation is a public-key-only route via tools/hdwallet-gen/derive-ton.js (single V4 R2 address from a 32-byte Ed25519 public key, no index). M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 13 chains and is IMPLEMENTED_AND_VERIFIED."
+      "notes": "Mainnet is the default (ADR-0003); verified repo tooling is network-independent and generation-only, using 24-word BIP-39 with an empty passphrase and fixed path m/44'/607'/0'; TON has no xpub; TON watch-only derivation is a public-key-only route via tools/hdwallet-gen/derive-ton.js (single V4 R2 address from a 32-byte Ed25519 public key, no index). M-38 requires 1 masterchain seqno plus an outgoing-message outcome check as policy only, without enforcement code; transaction construction and local signing are implemented in the web profile (offline, wallet-core AnySigner); local signing also exists as a test-only signer in tools/mainnet-signing (temporary unfunded credentials only); broadcast is not implemented anywhere. The CoinGecko price feed via apps/web/src/wallet/prices.ts covers all 22 chains and is IMPLEMENTED_AND_VERIFIED."
     },
     {
       "id": "ton-testnet",

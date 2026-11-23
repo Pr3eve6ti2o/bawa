@@ -29,6 +29,15 @@ const DEFAULT_PATHS: Readonly<Record<ChainId, string>> = Object.freeze({
   op: "m/44'/60'/0'/0/0",
   base: "m/44'/60'/0'/0/0",
   avax: "m/44'/60'/0'/0/0",
+  gnosis: "m/44'/60'/0'/0/0",
+  celo: "m/44'/60'/0'/0/0",
+  linea: "m/44'/60'/0'/0/0",
+  mantle: "m/44'/60'/0'/0/0",
+  scroll: "m/44'/60'/0'/0/0",
+  opbnb: "m/44'/60'/0'/0/0",
+  metis: "m/44'/60'/0'/0/0",
+  aurora: "m/44'/60'/0'/0/0",
+  fantom: "m/44'/60'/0'/0/0",
   ltc: "m/84'/2'/0'/0/0",
   doge: "m/44'/3'/0'/0/0",
 });
@@ -57,6 +66,24 @@ function coinForChain(core: WalletCore, chain: ChainId): WalletCoin {
       return core.CoinType.base;
     case 'avax':
       return core.CoinType.avalancheCChain;
+    case 'gnosis':
+      return core.CoinType.xdai;
+    case 'celo':
+      return core.CoinType.celo;
+    case 'linea':
+      return core.CoinType.linea;
+    case 'mantle':
+      return core.CoinType.mantle;
+    case 'scroll':
+      return core.CoinType.scroll;
+    case 'opbnb':
+      return core.CoinType.opBNB;
+    case 'metis':
+      return core.CoinType.metis;
+    case 'aurora':
+      return core.CoinType.aurora;
+    case 'fantom':
+      return core.CoinType.fantom;
     case 'ltc':
       return core.CoinType.litecoin;
     case 'doge':
@@ -257,6 +284,15 @@ export async function deriveAddresses(
       op: addressFor('op'),
       base: addressFor('base'),
       avax: addressFor('avax'),
+      gnosis: addressFor('gnosis'),
+      celo: addressFor('celo'),
+      linea: addressFor('linea'),
+      mantle: addressFor('mantle'),
+      scroll: addressFor('scroll'),
+      opbnb: addressFor('opbnb'),
+      metis: addressFor('metis'),
+      aurora: addressFor('aurora'),
+      fantom: addressFor('fantom'),
       ltc: addressFor('ltc'),
       doge: addressFor('doge'),
     };
@@ -361,6 +397,15 @@ export async function deriveAddressesAt(
       op: addressFor('op'),
       base: addressFor('base'),
       avax: addressFor('avax'),
+      gnosis: addressFor('gnosis'),
+      celo: addressFor('celo'),
+      linea: addressFor('linea'),
+      mantle: addressFor('mantle'),
+      scroll: addressFor('scroll'),
+      opbnb: addressFor('opbnb'),
+      metis: addressFor('metis'),
+      aurora: addressFor('aurora'),
+      fantom: addressFor('fantom'),
       ltc: addressFor('ltc'),
       doge: addressFor('doge'),
     };
