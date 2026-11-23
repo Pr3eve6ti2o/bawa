@@ -27,7 +27,7 @@ test('E2E-02 vault stays unlocked (no lock screen)', async ({ page }) => {
   await gotoInApp(page, 'Security');
   await expect(
     page.getByText(
-      'Auto-lock off — your wallet stays unlocked on this device.',
+      'Auto-lock is off. Your wallet stays unlocked on this device.',
     ),
   ).toBeVisible();
   await expect(page.locator('#auto-lock')).toHaveCount(0);

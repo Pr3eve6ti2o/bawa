@@ -114,10 +114,14 @@ test('E2E-04 shared/downloaded QR is a real PNG encoding the payment URI', async
   test.setTimeout(180_000);
   await createTestWallet(page);
   await gotoInApp(page, 'Receive');
-  await page.getByRole('button', { name: /Ethereum · ETH/ }).click();
+  // The chain buttons are named "Ethereum ETH" (no separator dot):
+  // the earlier /Ethereum · ETH/ pattern never matched the rendered
+  // accessible name and the spec timed out waiting for it.
+  await page.getByRole('button', { name: /Ethereum ETH/ }).click();
   // Item 20 stepped flow: the chain button lands on the token step;
   // the native coin opens the details step where the QR renders.
-  await page.getByRole('button', { name: /Ethereum · ETH/ }).click();
+  // The token-step button carries the dot: "Ethereum · ETH · Native coin".
+  await page.getByRole('button', { name: /Ethereum · ETH · Native coin/ }).click();
 
   // Ground truth: the payment URI the on-screen QR was rendered from.
   const qrTitle = page.locator('div.bg-paper svg title').first();
@@ -142,9 +146,11 @@ test('E2E-04 shared/downloaded QR is a real PNG encoding the payment URI', async
   expect(sharedCode, 'shared PNG must decode as a QR code').not.toBeNull();
   expect(sharedCode!.data).toBe(expectedUri);
 
-  // Download QR directly: same PNG, same payload.
+  // Download QR directly: same PNG, same payload. The button is
+  // named "Download card" — the earlier 'Download QR' name never
+  // matched and the click timed out waiting for it.
   const directDownload = page.waitForEvent('download', { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Download QR' }).click();
+  await page.getByRole('button', { name: 'Download card' }).click();
   const direct = await directDownload;
   expect(direct.suggestedFilename()).toMatch(/\.png$/);
   const directPath = `test-results/lane-b/${direct.suggestedFilename()}`;
