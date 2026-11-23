@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
+import { BawaIcon } from '../ui/components/icons';
+import { useWallet } from '../state/wallet-context';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { useLivePrices } from './use-live-prices';
@@ -16,6 +19,7 @@ import { useLivePrices } from './use-live-prices';
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
+  const { vaultState } = useWallet();
   const { pricesState, pricesLoading, tokenPricesState, tokenPricesLoading } =
     useLivePrices();
 
@@ -43,6 +47,26 @@ export function AssetListScreen() {
           </Button>
         </div>
       </div>
+
+      {/* No-wallet empty state (Aceternity Empty States structure,
+          RESEARCH.md §11: illustration + one plain line + one action).
+          The rows below already show honest zero balances; this banner
+          says why, so 43 zero rows are not mistaken for a loaded
+          wallet. Locked and unlocked vaults never see it. */}
+      {vaultState === 'no-vault' && (
+        <div className="flex flex-wrap items-center gap-3 rounded-bawa border-2 border-ink bg-paper p-4 shadow-bawa">
+          <span className="flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
+            <BawaIcon name="wallet" className="size-6" />
+          </span>
+          <p className="min-w-40 flex-1 text-sm leading-5 font-medium text-ink">
+            No wallet yet — these are zero balances, not your money. Create
+            a wallet to see your real balances.
+          </p>
+          <Button type="button" asChild>
+            <Link to="/create-wallet">Create a wallet</Link>
+          </Button>
+        </div>
+      )}
 
       <Card>
         <AssetRows variant="table" hideZero={hideZero} onShowAll={() => setHideZero(false)} prices={pricesState.entries} pricesNowMs={Date.now()} pricesLoading={pricesLoading} tokenPrices={tokenPricesState.entries} tokenPricesNowMs={Date.now()} tokenPricesLoading={tokenPricesLoading} />

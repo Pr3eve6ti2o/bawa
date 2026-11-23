@@ -163,7 +163,7 @@ async function mountScreen() {
 }
 
 describe('welcome screen — Popular chains strip (Lane A)', () => {
-  it('shows the strip as navigation with dashes when there is no vault', async () => {
+  it('shows the strip as navigation with the price state when there is no vault', async () => {
     const refresh = vi.fn();
     setWallet('no-vault', balancesFor({}));
     setPrices(
@@ -192,7 +192,8 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
         stripText.indexOf('TRON'),
       );
       expect(stripText.indexOf('TRON')).toBeLessThan(stripText.indexOf('TON'));
-      // No vault: every entry shows a dash, never a fabricated balance.
+      // No vault: no balance exists, so the cards show the price state
+      // instead of a bare dash, never a fabricated balance.
       expect(mounted.div.querySelectorAll('a[href="/assets/btc"]')).toHaveLength(1);
       expect(mounted.div.querySelectorAll('a[href="/assets/eth"]')).toHaveLength(1);
       expect(mounted.div.querySelectorAll('a[href="/assets/trx"]')).toHaveLength(1);
@@ -200,8 +201,11 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
       expect(
         mounted.div.querySelectorAll('a[href="/networks"]'),
       ).not.toHaveLength(0);
-      // The no-vault strip makes no price fetch.
-      expect(refresh).not.toHaveBeenCalled();
+      expect(stripText).not.toContain('—');
+      expect(stripText).toContain('Price unavailable');
+      // Lane G: prices are public, so the no-vault strip fetches the
+      // price feed once to fill the cards.
+      expect(refresh).toHaveBeenCalledTimes(1);
       // Marketing-fix Lane 3: the welcome offers both ways in without
       // scrolling the desktop layout — the Create card (reversing Lane C
       // item 9, which had removed it: a fresh user choosing a wallet

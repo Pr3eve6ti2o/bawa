@@ -62,6 +62,7 @@ import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
+import { ChainLogo, TokenLogo } from './token-logo';
 import type { SendApprovalStage } from './send-approval';
 import type { ChainId } from '../engine/boundary';
 
@@ -1045,12 +1046,14 @@ export function SendScreen() {
                     onClick={() => selectToken(token)}
                     className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                   >
-                    <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
-                        <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
-                      </svg>
-                    </span>
+                    {/* Lane G: the real chain/token mark — the
+                        hand-drawn blob with the ticker text inside
+                        rendered as a crossed-out logo. */}
+                    {token === null ? (
+                      <ChainLogo chain={chain} size={24} />
+                    ) : (
+                      <TokenLogo symbol={token.symbol} size={24} />
+                    )}
                     <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
                       {label}
                       {token !== null && isVerifiedToken(token) && (

@@ -141,16 +141,23 @@ describe("PopularChainsStrip", () => {
     }
   });
 
-  it("shows an SVG coin doodle and display name for every chain, without images", async () => {
+  it("shows a real chain logo image and display name for every chain", async () => {
+    // Lane G: the hand-drawn blob with the ticker text inside rendered
+    // as a crossed-out logo on the owner's phone. Every card shows the
+    // real Trust Wallet chain mark now, never the doodle.
     await renderStrip();
 
     for (const [chain, name] of chains) {
       const link = linkTo(`/assets/${chain}`);
-      expect(link.querySelector("svg")).not.toBeNull();
+      const img = link.querySelector("img");
+      expect(img).not.toBeNull();
+      // The four strip chains resolve through the symbol map, so the
+      // alt names the ticker ("BTC logo"), not the display name.
+      expect(img?.alt).toContain(chain.toUpperCase());
+      expect(img?.getAttribute("src")).not.toBe("");
+      expect(link.querySelector("svg")).toBeNull();
       expect(link.textContent).toContain(name);
     }
-
-    expect(container.querySelectorAll("img")).toHaveLength(0);
   });
 
   it("distinguishes unavailable and zero balances without showing $0.00", async () => {
@@ -164,7 +171,11 @@ describe("PopularChainsStrip", () => {
     }
   });
 
-  it("shows an em dash for every chain when there is no vault", async () => {
+  it("shows the price state, never a bare dash, when there is no vault", async () => {
+    // Lane G: with no wallet the cards showed a bare "□ —" — an empty
+    // freshness square and an em dash. The price feed is public, so
+    // the card shows its state instead; with the mocked feed idle and
+    // no entries that state is "Price unavailable".
     mocks.useWallet.mockReturnValue({
       balances,
       vaultState: "no-vault",
@@ -173,7 +184,9 @@ describe("PopularChainsStrip", () => {
     await renderStrip();
 
     for (const [chain] of chains) {
-      expect(linkTo(`/assets/${chain}`).textContent).toContain("—");
+      const text = linkTo(`/assets/${chain}`).textContent ?? "";
+      expect(text).not.toContain("—");
+      expect(text).toContain("Price unavailable");
     }
   });
 
@@ -181,6 +194,46 @@ describe("PopularChainsStrip", () => {
     await renderStrip("/assets/eth");
 
     expect(linkTo("/assets/eth").getAttribute("aria-current")).toBe("page");
+  });
+});
+
+describe("chainStripDisplay no-vault (Lane G)", () => {
+  it("shows the live per-unit price as the primary when there is no vault", () => {
+    const nowMs = Date.now();
+    const entries = parsePriceResponse(
+      {
+        bitcoin: { usd: 62683, last_updated_at: Math.floor(nowMs / 1000) - 30 },
+      },
+      nowMs,
+    );
+    const balance = { status: "unavailable", reason: "no-address" } as const;
+    const result = chainStripDisplay(
+      "btc",
+      balance,
+      entries.btc,
+      nowMs,
+      "no-vault",
+      false,
+      "welcome",
+    );
+    expect(result.loading).toBe(false);
+    expect(result.primary).toBe("$62,683.00");
+    expect(result.secondary).toBe("per BTC");
+  });
+
+  it("says the price is unavailable, never a bare dash, when there is no vault and no price", () => {
+    const result = chainStripDisplay(
+      "btc",
+      { status: "unavailable", reason: "no-address" } as const,
+      undefined,
+      Date.now(),
+      "no-vault",
+      false,
+      "welcome",
+    );
+    expect(result.loading).toBe(false);
+    expect(result.primary).toBe("Price unavailable");
+    expect(result.primary).not.toContain("—");
   });
 });
 

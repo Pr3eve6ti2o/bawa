@@ -28,34 +28,7 @@ import { AssetRow } from '../ui/components/asset-row';
 import { Button } from '../ui/components/button';
 import { Skeleton } from '../ui/components/skeleton';
 import type { ChainId } from '../engine/boundary';
-import { TokenLogo, chainLogoFor } from './token-logo';
-
-/**
- * Native chain logo (40px default), rendered through TokenLogo so the
- * asset rows, asset detail and wallet management all share one logo
- * path: a real Trust Wallet logo when registered, a readable ticker
- * badge otherwise. Chain-keyed (token discovery): Arbitrum, OP Mainnet
- * and Base have their own marks — a symbol-keyed lookup would show the
- * Ethereum logo for all three. See ./token-logo for the source and
- * attribution.
- */
-export function ChainLogo({ chain, size = 40 }: { chain: ChainId; size?: number }) {
-  const logo = chainLogoFor(chain);
-  if (logo !== undefined) {
-    return (
-      <img
-        src={logo}
-        alt={`${chainConfig(chain).displayName} logo`}
-        width={size}
-        height={size}
-        decoding="async"
-        className="size-10 shrink-0 rounded-full"
-        style={size === 40 ? undefined : { width: size, height: size }}
-      />
-    );
-  }
-  return <TokenLogo symbol={chainConfig(chain).symbol} size={size} />;
-}
+import { ChainLogo, TokenLogo } from './token-logo';
 
 /**
  * Per-unit price cell: a fresh per-unit price, a price-feed state label,
@@ -133,6 +106,53 @@ type AssetRowModel =
 function RowLogo({ model }: { model: AssetRowModel }) {
   if (model.logoChain !== null) return <ChainLogo chain={model.logoChain} />;
   return <TokenLogo symbol={model.logoSymbol} />;
+}
+
+/**
+ * Lane G: "no wallet for this chain" — the vault does not exist and no
+ * watch-only address was imported for the chain, so no balance fetch
+ * can ever run. The check is per chain, not per screen: a watch-only
+ * xpub for one chain still loads real balances for that chain, while
+ * the other chains show zero. The vaultState test matters — a locked
+ * vault also has no addresses in state (locking clears them), and a
+ * locked vault must keep its unavailable state and Unlock prompt, never
+ * a zero that would hide real funds.
+ */
+function hasAddressForChain(
+  wallet: ReturnType<typeof useWallet>,
+  chain: ChainId,
+): boolean {
+  const vaultList = wallet.vaultAddresses?.[chain] ?? [];
+  const watchList = wallet.addresses?.[chain] ?? [];
+  return vaultList.length > 0 || watchList.length > 0;
+}
+
+function noWalletForChain(
+  wallet: ReturnType<typeof useWallet>,
+  chain: ChainId,
+): boolean {
+  return wallet.vaultState === 'no-vault' && !hasAddressForChain(wallet, chain);
+}
+
+/**
+ * Lane G: the balance a no-wallet row renders. A balance that can never
+ * be fetched — still loading before the first refresh, or unavailable
+ * with no-address after it — is zero: a wallet that does not exist
+ * holds nothing, and a Retry for it could only fail again (the owner
+ * saw 43 of them on /assets). A devnet token with no contract is zero
+ * the same way: test mode has no token contracts by construction. Any
+ * other failure (a real fetch that failed, a disabled chain) keeps its
+ * unavailable state and its Retry — retrying those may succeed.
+ */
+function noWalletBalance(balance: BalanceState): BalanceState {
+  if (balance.status === 'loading') return { status: 'zero', value: '0' };
+  if (
+    (balance.status === 'unavailable' || balance.status === 'error') &&
+    (balance.reason === 'no-address' || balance.reason === 'devnet-no-tokens')
+  ) {
+    return { status: 'zero', value: '0' };
+  }
+  return balance;
 }
 
 /**
@@ -223,7 +243,12 @@ function getNativeRowModel(
 ): AssetRowModel {
   const { balances } = wallet;
   const config = chainConfig(chain);
-  const balance: BalanceState = balances[chain];
+  // Lane G: no wallet for this chain — a balance that can never be
+  // fetched renders as zero, never as "Balance unavailable" + Retry.
+  const rawBalance: BalanceState = balances[chain];
+  const balance: BalanceState = noWalletForChain(wallet, chain)
+    ? noWalletBalance(rawBalance)
+    : rawBalance;
   const entry: PriceEntry | undefined = prices?.[chain];
   const unit = unitPriceForChain(entry, nowMs);
   // While the first fetch is still in flight, idle entries read as
@@ -331,8 +356,12 @@ function getTokenRowModel(
   const verified = isVerifiedToken(token);
   // Before the first token refresh lands, the entry is missing: show
   // the loading skeleton, not a premature failure (same rule as
-  // natives — see getNativeRowModel).
-  const balance: BalanceState = wallet.tokenBalances?.[key] ?? { status: 'loading' };
+  // natives — see getNativeRowModel). Lane G: no wallet for this
+  // chain — a balance that can never be fetched renders as zero.
+  const rawBalance: BalanceState = wallet.tokenBalances?.[key] ?? { status: 'loading' };
+  const balance: BalanceState = noWalletForChain(wallet, token.chain)
+    ? noWalletBalance(rawBalance)
+    : rawBalance;
   const entry: PriceEntry | undefined = tokenPrices?.[key];
   const unit = unitPriceForChain(entry, nowMs);
   const displayUnit: UnitPrice =
@@ -543,19 +572,17 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
     );
   }
 
-  // No fiat value exists for a zero balance, so the Value column shows
-  // "—" there — but the per-unit price's source still belongs on the
-  // row (Lane C): when the quote is fresh, the detail line ("per BTC ·
-  // Updated just now · CoinGecko") renders under the "—", exactly as
-  // it does under a funded row's fiat value. Without it the fallback
-  // source was invisible on /assets — the list variant shows it, the
-  // table variant did not. Non-fresh rows show nothing extra: the
-  // Price column already states "Price expired" / "Price error".
-  // The detail WRAPS instead of truncating: at 1440 the Value column
-  // clipped "CoinLore" to "Coi…", and the long line squeezed the
-  // asset names to one letter at 390. The cell is capped at 11rem
-  // below the @md breakpoint so the left column keeps its width;
-  // above it the 1fr track constrains the wrap instead.
+  // Merge (Lane C + Lane G): a zero balance shows $0.00 in the Value
+  // column (0 x any price is $0.00 - Lane G), and when the quote is
+  // fresh the per-unit price source detail ("per BTC - Updated just
+  // now - CoinGecko") renders under it (Lane C), exactly as under a
+  // funded row's fiat value. An unknown balance (unavailable / error)
+  // still shows a dash: its value genuinely is not known. The detail
+  // WRAPS instead of truncating: at 1440 the Value column clipped
+  // "CoinLore" to "Coi...", and the long line squeezed the asset names
+  // to one letter at 390. The cell is capped at 11rem below the @md
+  // breakpoint so the left column keeps its width; above it the 1fr
+  // track constrains the wrap instead.
   const valueText = model.balanceStatus === 'zero' ? undefined : model.valueText;
 
   return (
@@ -588,7 +615,11 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
           <span className="col-start-2 row-start-1 min-w-0 max-w-[11rem] text-right @md:col-start-auto @md:row-start-auto @md:max-w-none">
             {valueText === undefined ? (
               <>
-                <span className="text-[15px] font-semibold text-muted-foreground">—</span>
+                {model.balanceStatus === 'zero' ? (
+                  <span className="text-[15px] font-bold text-foreground">$0.00</span>
+                ) : (
+                  <span className="text-[15px] font-semibold text-muted-foreground">—</span>
+                )}
                 {model.price.kind === 'fresh' ? (
                   <span className="block text-xs text-muted-foreground">
                     {model.detail}

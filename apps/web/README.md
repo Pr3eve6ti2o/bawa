@@ -118,17 +118,25 @@ logo's upstream `info.json` name was verified at fetch time. They are
 rendered by the chain-keyed `chainLogoFor` map in
 `src/screens/token-logo.tsx` (so Arbitrum, Optimism and Base no longer
 all fall back to the Ethereum logo) and by the `ChainLogo` component
-(`src/screens/asset-rows.tsx`) in place of ticker-letter chips.
+(`src/screens/token-logo.tsx`) in place of ticker-letter chips.
 Each logo is stored twice: the original PNG (canonical source, 303,787
 bytes total) and a 96 px WebP at quality 85 (39,670 bytes total, -87%),
-matching the existing chain-logo convention.
+matching the existing chain-logo convention. Lane G (2026-11-23) adds
+the nine late-registry chain logos from the same source and pinned
+commit (Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora,
+Fantom), with one directory correction: Gnosis is `blockchains/xdai`
+(not `blockchains/gnosis`, which does not exist). Each logo's upstream
+`info.json` name was verified at fetch time. The chain strip and the
+receive/send pickers use `ChainLogo` now too — the hand-drawn blob
+with the ticker text inside rendered as a crossed-out logo, so it is
+gone from every screen.
 
 ### Token logos
 
 Token logos live in `src/assets/tokens/` and are rendered by the `TokenLogo`
-component (`src/screens/token-logo.tsx`); `ChainLogo` in
-`src/screens/asset-rows.tsx` is a thin wrapper over `TokenLogo`, so the
-asset rows, asset detail and wallet management all share one logo path.
+component (`src/screens/token-logo.tsx`); `ChainLogo` in the same file
+is a thin wrapper over `TokenLogo`, so the asset rows, asset detail and
+wallet management all share one logo path.
 The four native assets (BTC, ETH, TRX, TON) reuse the chain logos above.
 The six ERC-20 logos (USDC, USDT, DAI, LINK, UNI, WBTC) are copied from
 [`trustwallet/assets`](https://github.com/trustwallet/assets),
@@ -140,7 +148,14 @@ DAI 0x6B175474E89094C44Da98b954EedeAC495271d0F,
 LINK 0x514910771AF9Ca656af840dff83E8264EcF986CA,
 UNI 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984,
 WBTC 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599), each verified against
-its upstream `info.json` name at fetch time. The seven default tokens
+its upstream `info.json` name at fetch time. Lane G (2026-11-23) adds
+WETH (`blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png`,
+upstream name WETH) and USDT0 (`blockchains/arbitrum/assets/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png`,
+upstream name Tether USD, symbol USDT — the USDT0 contract on Arbitrum),
+plus a symbol-alias map for the on-chain spellings the registry reports
+(`USD₮` → USDT, `USD₮0` → USDT0; `USDt` already uppercases to USDT).
+Trust Wallet resolves logos by contract address, not by symbol; the
+symbol map plus aliases is this wallet's simplification of that. The seven default tokens
 (USDC, USDT, DAI, LINK, UNI, WBTC on Ethereum; USDT on TRON) are
 displayed in the asset rows with real balances from
 `src/wallet/adapters/token-balances.ts` (ERC-20 `balanceOf` via viem,
@@ -148,6 +163,46 @@ TRC-20 `balanceOf` via TronGrid) and real prices from the CoinGecko
 token feed (`src/wallet/token-prices.ts`); they must never be shown with
 a fabricated balance. A token with no registered logo renders a readable
 ticker badge, never a broken image.
+
+### Design tokens and UI patterns (Lane G research, 2026-11-23)
+
+Sources: `~/workspace/bawa-uiux-sources/RESEARCH.md` (13 sources, all
+fetched and read). What Lane G applied, and where:
+
+- **Card treatment** — instalanding.ai `systems/oishi` (cream paper, ink
+  borders, hard offset shadows) and `systems/linework` (dot-grid paper,
+  66 tokens; the closest match to Bawa's drawing-illustration style).
+  Bawa's tokens are formalised on Linework's roles in
+  `src/ui/styles/globals.css` (paper / ink / coral + sun accents / mono
+  for technical annotations) with a new `--bawa-shadow` token
+  (`4px 4px 0 var(--bawa-ink)`, Tailwind `shadow-bawa`). The Popular
+  chains cards use it, with a press state (translate + shadow off, the
+  OJO 8-state active state). No new colours: the 4-colour cap holds.
+- **Row anatomy** — Ivy Wallet `feature/accounts` (patterns only;
+  Kotlin/Compose, GPL-3.0, no code copied): icon + name + balance, no
+  Retry. Bawa's no-wallet rows follow it (zero balance, real logo, real
+  price state). Ivy `feature/exchange-rates` (price with source +
+  freshness) is the strip's price + "per BTC" + CoinGecko attribution.
+- **Hero number** — Magic UI Number Ticker (MIT; re-implemented, not
+  copied) in `src/ui/components/number-ticker.tsx`: the dashboard hero
+  total counts to its value on load and ticks to a new value on change.
+  Number Flow (UI Vault registry) was the alternative; one was picked,
+  not both. Static under `prefers-reduced-motion` and when no
+  `matchMedia` API exists.
+- **Empty state** — Aceternity Empty States (structure only, re-skinned
+  to ink): illustration + one plain line + one action. The no-vault
+  asset list shows it above the zero rows; locked and unlocked vaults
+  never see it.
+- **Gate** — ui-ux-pro-max-skill pre-delivery checklist (Fintech/Crypto
+  rule): SVG icons only (token logos are real imagery, not icons —
+  OJO-Design-Skills real-imagery rule, which is what kills the yellow
+  text-square badges), 4.5:1 text contrast (ink on paper measures
+  13.92:1), `prefers-reduced-motion` respected, responsive check at
+  375 / 390 / 1440 px.
+- **Not used** — Aureon Wealth Dashboard sparklines/allocation card
+  (dashboard rework, out of this lane); shop-app (5 years stale);
+  liquid-glass/aurora/neon styling and OJO pixel-paper-editorial
+  (clash with the hand-drawn ink look); Ivy Wallet code (GPL-3.0).
 
 ## Evidence
 

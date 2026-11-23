@@ -14,6 +14,8 @@ import { Button } from '../ui/components/button';
 import { Card, CardContent } from '../ui/components/card';
 import { BawaLoading } from '../ui/components/loading';
 import { usePriceFeedAutoRefresh } from './use-live-prices';
+import { ChainLogo, TokenLogo } from './token-logo';
+import type { BalanceState } from '../state/wallet-context';
 
 const DERIVATION_PATHS = {
   btc: "m/84'/0'/0'/0/i",
@@ -59,7 +61,11 @@ function DerivedAddressItems({
 /**
  * Locked-state vs retry action shared by the balance and history
  * sections: a locked vault shows the unlock action, an unlocked one
- * shows Retry for the section's refresh.
+ * shows Retry for the section's refresh. Lane G: with no vault and no
+ * address for the chain there is no Retry to offer — the balance
+ * section shows zero instead (see effectiveBalance below) and the
+ * history section shows its empty state — so this never renders a
+ * dead Retry in the no-wallet state.
  */
 function LockedOrRetry({
   lockedMessage,
@@ -213,6 +219,23 @@ export function AssetDetailScreen() {
   const hasVaultAddress = vaultList.length > 0;
   const firstVaultAddress = vaultList[0];
   const hasWallet = hasVaultAddress || (addresses[chainId]?.length ?? 0) > 0;
+  // Lane G: with no vault and no address for this chain, a balance
+  // that can never be fetched renders as zero — the same rule as the
+  // asset rows. A locked vault also has no addresses in state, so the
+  // vaultState test is load-bearing: locked keeps "Balance
+  // unavailable" with its Unlock prompt, never a zero that would hide
+  // real funds. A watch-only address keeps the real fetch (and its
+  // Retry on a genuine failure).
+  const noWallet =
+    vaultState === 'no-vault' && !hasWallet;
+  const effectiveBalance: BalanceState =
+    noWallet &&
+    (balance.status === 'loading' ||
+      ((balance.status === 'unavailable' || balance.status === 'error') &&
+        (balance.reason === 'no-address' ||
+          balance.reason === 'devnet-no-tokens')))
+      ? { status: 'zero', value: '0' }
+      : balance;
   const showHistoryList =
     chainHistory.status === 'loaded'
     || (chainHistory.status === 'loading' && recentTxs.length > 0);
@@ -245,19 +268,19 @@ export function AssetDetailScreen() {
   const priceSource =
     priceEntryForSource?.status === 'fresh' ? priceEntryForSource.quote.source : 'CoinGecko';
   const detailsBalance =
-    balance.status === 'loading'
+    effectiveBalance.status === 'loading'
       ? 'Loading…'
-      : balance.status === 'zero'
+      : effectiveBalance.status === 'zero'
         ? `0 ${displaySymbol}`
-        : balance.status === 'available'
+        : effectiveBalance.status === 'available'
           ? formatNativeWithSymbol(
-              balance.value ?? '0',
+              effectiveBalance.value ?? '0',
               displayDecimals,
               displaySymbol,
             )
           : 'Balance unavailable';
   const detailsBalanceStale =
-    (balance.status === 'available' || balance.status === 'zero') && balance.stale === true
+    (effectiveBalance.status === 'available' || effectiveBalance.status === 'zero') && effectiveBalance.stale === true
       ? ' (stale)'
       : '';
 
@@ -293,30 +316,34 @@ export function AssetDetailScreen() {
 
       <div className="space-y-4 rounded-bawa border-2 border-ink bg-paper p-4">
         <div className="flex items-center gap-3">
+          {/* Lane G: the real chain/token mark — the hand-drawn blob
+              with the ticker text inside rendered as a crossed-out
+              logo. The bordered tile stays (the brand frame). */}
           <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
-            <svg viewBox="0 0 48 48" aria-hidden="true" className="size-10 rotate-3">
-              <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={24}>{displaySymbol}</text>
-            </svg>
+            {isToken ? (
+              <TokenLogo symbol={displaySymbol} size={40} />
+            ) : (
+              <ChainLogo chain={chainId} size={40} />
+            )}
           </span>
           <div>
             <h1 className="text-2xl font-semibold text-ink">{displayTitle}</h1>
             <p className="text-sm text-ink">{displaySubtitle}</p>
           </div>
         </div>
-        {balance.status === 'loading' ? (
+        {effectiveBalance.status === 'loading' ? (
           <BawaLoading label="Loading balance…" />
-        ) : balance.status === 'zero' ? (
+        ) : effectiveBalance.status === 'zero' ? (
           <>
             <p className="text-[32px] font-semibold leading-10 text-ink">
               {`0 ${displaySymbol}`}
             </p>
             <p className="text-sm text-ink">Zero balance</p>
           </>
-        ) : balance.status === 'available' ? (
+        ) : effectiveBalance.status === 'available' ? (
           <p className="text-[32px] font-semibold leading-10 text-panel-text">
             {formatNativeWithSymbol(
-              balance.value ?? '0',
+              effectiveBalance.value ?? '0',
               displayDecimals,
               displaySymbol,
             )}
@@ -325,10 +352,10 @@ export function AssetDetailScreen() {
           <>
             <p className="text-lg font-semibold text-panel-text">Balance unavailable</p>
             <p className="text-sm text-panel-text-muted">
-              {balance.status === 'error'
+              {effectiveBalance.status === 'error'
                 ? 'Could not load the balance.'
                 : 'Balance unavailable for this network.'}
-              {balance.reason ? ` ${humanReasonMessage(balance.reason, 'balance')}` : ''}
+              {effectiveBalance.reason ? ` ${humanReasonMessage(effectiveBalance.reason, 'balance')}` : ''}
             </p>
             <LockedOrRetry
               lockedMessage="Locked. Unlock to see balances."
@@ -336,7 +363,7 @@ export function AssetDetailScreen() {
             />
           </>
         )}
-        {(balance.status === 'available' || balance.status === 'zero') && balance.stale === true ? (
+        {(effectiveBalance.status === 'available' || effectiveBalance.status === 'zero') && effectiveBalance.stale === true ? (
           <p className="text-sm text-panel-text-muted">
             Showing the last loaded balance — it may be out of date.
           </p>

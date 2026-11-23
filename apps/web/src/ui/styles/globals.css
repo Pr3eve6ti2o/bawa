@@ -16,7 +16,17 @@
 @source "../**/*.{ts,tsx}";
 
 :root {
-  /* Paper, Ink, Coral, Sun; only Ink is text on Paper. */
+  /* Bawa design tokens, formalised on the Linework structure
+     (instalanding.ai systems/linework, RESEARCH.md §6): paper, ink,
+     accent, and mono annotation — paper is the only surface, ink is
+     the only text/border colour, coral and sun are the two accents
+     (one job each: coral = primary action / danger, sun = highlight /
+     selected), and the mono face is reserved for technical
+     annotations (addresses, hashes, contracts). Cards sit on the
+     paper with a real ink border and a hard offset shadow (the Oishi
+     treatment, systems/oishi): flat cards looked crossed-out and
+     placeholder-grade, so a card is never border-only. Only Ink is
+     text on Paper. */
   --bawa-paper: #FFFDF7;
   --bawa-ink: #2B2B2B;
   --bawa-coral: #FF6B4A;
@@ -27,6 +37,7 @@
   --bawa-border-dashed: 2px dashed var(--bawa-ink);
   --bawa-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   --bawa-radius-sm: 15px 225px 15px 255px / 255px 15px 225px 15px;
+  --bawa-shadow: 4px 4px 0 var(--bawa-ink);
 
   --background: var(--bawa-paper);
   --card: var(--bawa-paper);
@@ -306,6 +317,8 @@
 
   --radius-bawa: var(--bawa-radius);
   --radius-bawa-sm: var(--bawa-radius-sm);
+
+  --shadow-bawa: var(--bawa-shadow);
   --radius-xs: var(--bawa-radius-sm);
   --radius-sm: var(--bawa-radius-sm);
   --radius-10: var(--bawa-radius-sm);

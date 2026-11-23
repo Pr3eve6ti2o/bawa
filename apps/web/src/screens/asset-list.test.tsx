@@ -378,6 +378,92 @@ describe('asset list screen', () => {
       expect(unlock).not.toBeNull();
       expect(unlock?.textContent).toContain('Unlock');
       expect(mounted.div.textContent).toContain('Locked. Unlock to see balances.');
+      // The no-wallet empty state is strictly no-vault: a locked vault
+      // never shows "No wallet yet".
+      expect(mounted.div.textContent).not.toContain('No wallet yet');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('with no vault and no address, rows show zero with no Retry and no Balance unavailable', async () => {
+    // Lane G: with no wallet there is no address, so no balance fetch
+    // can ever run — every row showed "Balance unavailable" with a
+    // Retry that could only fail again (43 of them on /assets). A
+    // wallet that does not exist holds zero, so the rows show zero.
+    // A locked vault keeps its unavailable state and Unlock prompt
+    // (previous test); only the no-vault state becomes zero.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mockRefreshBalances = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        btc: { status: 'unavailable', reason: 'no-address' },
+        eth: { status: 'unavailable', reason: 'no-address' },
+        trx: { status: 'unavailable', reason: 'no-address' },
+        ton: { status: 'unavailable', reason: 'no-address' },
+      }),
+      refreshBalances: mockRefreshBalances,
+      vaultState: 'no-vault',
+      customTokens: [],
+      tokenBalances: {},
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      expect(mounted.div.textContent).not.toContain('Balance unavailable');
+      expect(mounted.div.textContent).not.toContain('Could not load balance');
+      expect(mounted.div.textContent).toContain('Zero balance');
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
+        (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      // The live per-unit price still shows: zero balance, real price.
+      expect(mounted.div.textContent).toContain('per BTC');
+      // Lane G (research follow-up): a zero balance is worth $0.00
+      // whatever the price feed says, so the Value column shows $0.00
+      // on every row — never a bare "—" in the value slot.
+      expect(mounted.div.textContent).toContain('$0.00');
+      const bareDashes = [...mounted.div.querySelectorAll('span')].filter(
+        (candidate) => candidate.textContent === '—',
+      );
+      expect(bareDashes).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('with no vault, shows the no-wallet empty state with one action', async () => {
+    // Lane G + RESEARCH.md §11 (Aceternity Empty States): illustration
+    // + one plain line + one action, so 43 zero rows are not mistaken
+    // for a loaded wallet. The rows still show zero; this banner says
+    // why, and the one action goes to Create wallet.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        btc: { status: 'unavailable', reason: 'no-address' },
+      }),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'no-vault',
+      customTokens: [],
+      tokenBalances: {},
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'No wallet yet');
+      expect(mounted.div.textContent).toContain(
+        'zero balances, not your money',
+      );
+      const action = mounted.div.querySelector('a[href="/create-wallet"]');
+      expect(action).not.toBeNull();
+      expect(action?.textContent).toBe('Create a wallet');
     } finally {
       await mounted.cleanup();
     }

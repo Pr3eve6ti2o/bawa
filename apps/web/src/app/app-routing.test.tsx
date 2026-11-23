@@ -90,7 +90,11 @@ describe('app routing — asset detail (Lane B)', () => {
       expect(window.location.pathname).toBe('/assets/btc');
       expect(mounted.div.textContent).toContain('Bitcoin');
       expect(mounted.div.textContent).toContain('Recent transactions');
-      expect(mounted.div.textContent).toContain('Balance unavailable');
+      // Lane G: with no vault and no address the detail shows zero,
+      // never "Balance unavailable" + a dead Retry.
+      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).toContain('0 BTC');
+      expect(mounted.div.textContent).not.toContain('Balance unavailable');
       expect(mounted.div.textContent).not.toContain('Loading…');
       expect(mounted.div.textContent).not.toContain(
         'Welcome to Bawa',
@@ -105,7 +109,11 @@ describe('app routing — asset detail (Lane B)', () => {
     try {
       expect(mounted.div.textContent).toContain('Bitcoin');
       expect(mounted.div.textContent).toContain('Recent transactions');
-      expect(mounted.div.textContent).toContain('Balance unavailable');
+      // Lane G: with no vault and no address the detail shows zero,
+      // never "Balance unavailable" + a dead Retry.
+      expect(mounted.div.textContent).toContain('Zero balance');
+      expect(mounted.div.textContent).toContain('0 BTC');
+      expect(mounted.div.textContent).not.toContain('Balance unavailable');
       expect(mounted.div.textContent).not.toContain('Portfolio balance');
     } finally {
       await mounted.cleanup();

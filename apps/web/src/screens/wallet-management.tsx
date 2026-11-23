@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { useWallet } from "../state/wallet-context";
 import { accountPathFor, type ChainId } from "../wallet/chains";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
-import { ChainLogo } from "./asset-rows";
+import { ChainLogo } from "./token-logo";
 import { Badge } from "../ui/components/badge";
 import { Button } from "../ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/components/card";

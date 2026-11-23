@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, NavLink } from "react-router";
 
+import { ChainLogo } from "./token-logo";
 import { chainStripDisplay } from "./chain-strip-display";
 import { useWallet } from "../state/wallet-context";
 import {
@@ -14,7 +15,7 @@ import { BawaIcon } from "../ui/components/icons";
 import { BawaLoading } from "../ui/components/loading";
 
 const TILE_CLASS_NAME =
-  "flex h-full flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-4 py-4 text-center text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink";
+  "flex h-full flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-4 py-4 text-center text-ink shadow-bawa focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink active:translate-x-1 active:translate-y-1 active:shadow-none";
 
 export function PopularChainsStrip({
   mode,
@@ -34,15 +35,15 @@ export function PopularChainsStrip({
   const vaultState = wallet?.vaultState ?? "no-vault";
   const { state: pricesState, refresh: refreshPrices } = usePrices();
 
+  // Lane G: prices are public — the welcome strip fetches them even
+  // with no vault, so the no-vault cards show the live per-unit price
+  // instead of a bare dash. (The old gate skipped the fetch with no
+  // vault, which is exactly why the cards could only show "—".)
   useEffect(() => {
-    if (
-      mode === "welcome" &&
-      vaultState !== "no-vault" &&
-      pricesState.status === "idle"
-    ) {
+    if (mode === "welcome" && pricesState.status === "idle") {
       void refreshPrices();
     }
-  }, [mode, vaultState, pricesState.status, refreshPrices]);
+  }, [mode, pricesState.status, refreshPrices]);
 
   // Popular chains are the four original adapter chains. The full
   // 13-chain registry belongs on /assets and /networks; the strip
@@ -112,35 +113,18 @@ export function PopularChainsStrip({
               >
                 {({ isActive }) => (
                   <>
+                    {/* Lane G: the real chain mark. The hand-drawn blob
+                        with the ticker text inside rendered as a
+                        crossed-out logo on the owner's phone; the
+                        bordered tile stays (the brand frame), the
+                        doodle inside it goes. */}
                     <span
                       aria-hidden="true"
                       className={`inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink text-ink ${
                         isActive ? "bg-sun" : "bg-paper"
                       }`}
                     >
-                      <svg
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
-                        className="size-10 rotate-3"
-                      >
-                        <path
-                          d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        />
-                        <text
-                          x="24"
-                          y="24"
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fill="currentColor"
-                          fontFamily="Baloo 2, Inter, sans-serif"
-                          fontSize={24}
-                        >
-                          {config.symbol}
-                        </text>
-                      </svg>
+                      <ChainLogo chain={chain} size={40} />
                     </span>
 
                     <span
@@ -154,10 +138,17 @@ export function PopularChainsStrip({
                     </span>
 
                     <div className="flex min-h-5 items-center justify-center gap-2 text-sm text-ink">
-                      <span
-                        aria-hidden="true"
-                        className={`size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink ${freshnessClassName}`}
-                      />
+                      {/* Lane G: no freshness square with no vault —
+                          it marks whether a shown balance's price is
+                          fresh, and with no wallet the primary IS the
+                          price. With no price at all the square
+                          rendered as an empty "□" next to the dash. */}
+                      {vaultState !== "no-vault" && (
+                        <span
+                          aria-hidden="true"
+                          className={`size-2.5 shrink-0 rounded-bawa-sm border-2 border-ink ${freshnessClassName}`}
+                        />
+                      )}
 
                       {display.loading ? (
                         <BawaLoading />

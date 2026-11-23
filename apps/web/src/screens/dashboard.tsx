@@ -12,6 +12,7 @@ import {
 import { fiatValueForTokenBalance } from '../wallet/token-prices';
 import { tokenKey } from '../wallet/tokens';
 import { Button } from '../ui/components/button';
+import { NumberTicker } from '../ui/components/number-ticker';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
@@ -30,7 +31,9 @@ const ACTIONS = [
  * total is the whole portfolio — natives plus priced token balances —
  * and reads Partial when incomplete. Missing, expired, or failed prices
  * are shown as unavailable or an error, never as $0.00 and never as
- * fabricated prices.
+ * fabricated prices. The hero total counts to its value (Magic UI Number
+ * Ticker pattern, RESEARCH.md §12) and stays static under
+ * prefers-reduced-motion.
  */
 export function DashboardScreen() {
   const {
@@ -279,7 +282,7 @@ export function DashboardScreen() {
             )}
           </button>
         </div>
-        <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker">{heroText}</span></p>
+        <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker"><NumberTicker text={heroText} /></span></p>
         <p className="font-display text-xl text-ink">The total value of your coins, in US dollars.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>

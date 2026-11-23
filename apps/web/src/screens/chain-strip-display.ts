@@ -44,8 +44,32 @@ export function chainStripDisplay(
     freshnessLabel: freshness === 'fresh' ? 'Fresh' : freshness === 'expired' ? 'Price expired' : 'Price unavailable',
   };
 
+  const { symbol } = chainConfig(chain);
+
+  // Lane G: with no wallet there is no balance to show — but the live
+  // per-unit price is public data, so the card shows the price, never
+  // a bare "—" (the owner saw "□ —" on every card). While the first
+  // price fetch is still in flight the card shows the loader, not a
+  // premature failure; a failed feed says so in words.
   if (vaultState === "no-vault") {
-    return { loading: false, primary: "—", ...metadata };
+    if (pricesLoading && unitPrice.kind === "unavailable") {
+      return { loading: true, primary: "—", ...metadata };
+    }
+    if (unitPrice.kind === "fresh") {
+      return {
+        loading: false,
+        primary: unitPrice.text,
+        secondary: `per ${symbol}`,
+        ...metadata,
+      };
+    }
+    if (unitPrice.kind === "expired") {
+      return { loading: false, primary: "Price expired", ...metadata };
+    }
+    if (unitPrice.kind === "error") {
+      return { loading: false, primary: "Price error", ...metadata };
+    }
+    return { loading: false, primary: "Price unavailable", ...metadata };
   }
 
   if (vaultState === "locked") {
@@ -60,7 +84,6 @@ export function chainStripDisplay(
     return { loading: false, primary: "Unavailable", ...metadata };
   }
 
-  const { symbol } = chainConfig(chain);
   const decimals = CHAIN_DECIMALS[chain];
 
   const hasFreshPrice =
