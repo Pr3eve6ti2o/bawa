@@ -1246,7 +1246,7 @@ from token-gaps `e290654`; commit SHA in the lane report.
 Hands-on Muse, 0 Sol calls. Worktree `bawa-finish-product-worktree`.
 Cherry-picked all 10 lane commits onto `panel-rebuild/finish-product`
 (`d47d282` base) in order E, A, C, K, G, H, I, J, D, B-last; follow-up
-commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as [SHA TBD].
+commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as `8191b2c`.
 
 - **Merge order.** B last because its base was `e290654` (rebase onto
   `d47d282`, 11 conflicts). C and A merged before K's follow-ups so the
@@ -1326,3 +1326,35 @@ commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as [SHA TBD].
   Receive tagline (owner must say which line goes); README showcase link
   (item A waits on the owner's link); `ci.yml` defines the `web` job
   twice (second shadows the first — owner/merge-lane decision).
+
+## §19 — FIX-ALL programme, Lane G (skills archive + final-SHA record fix) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls, 0 runner invocations.
+Worktree `bawa-fixall-g`, branch `panel-rebuild/fix-all-g`, base `8191b2c`
+(`token-gaps` tip). No merge; no code touched on any branch.
+
+- **Skills are for Orion's use, not for the repo (owner order 2026-11-24).**
+  No plan to add skills into the repo. The three new skills
+  (`order-traceability-checklist`, `cdp-visual-verification`,
+  `repo-hygiene-scan`) stay live in `/home/boxd/workspace/custom-skills/`
+  on gray-pinee and `~/workspace/custom-skills/` in the sandbox, and are
+  archived at `/home/boxd/workspace/bawa-fix-all/skills-archive/` (copies +
+  README) for future use when skills are added to the repo. Verified: no
+  skills directory exists anywhere in the repo tree (the only `*skill*`
+  path is Playwright's own tooling inside `apps/web/node_modules`).
+- **Second honest gap fixed (Lane G).** The finish-product record as pushed
+  to the five branches carried the final SHAs as unfilled placeholders
+  because the coordinator reasoned re-pushing would recurse. That reasoning was wrong — a document
+  cannot contain its own commit hash, and that is normal: the record lists
+  the SHAs of the other pushes, and its own commit gets a new hash, which is
+  fine. `docs/FINISH-PRODUCT-PROGRAMME.md` now lists the final SHAs
+  (`finish-product` `8191b2c`, `token-gaps` `8191b2c`, `main` `6af3daf`,
+  `desktop-layout-v2` `3c1a6df`, `devnet-temp` `db221c4`,
+  `token-discovery` `84142e2`, `ui-ux-fixes` `d4ea91d`;
+  `adopt-proper` `47fe6c6` and `gh-pages` `ee63a13` untouched) and was
+  re-pushed doc-only to the five branches (fresh `ls-remote` verified, no
+  unfilled placeholder remains in the file on any of the five branches).
+  This section's §18 placeholder is likewise fixed to `8191b2c` on the
+  fix-all branch only; the five branches' `DECISIONS.md` copies still carry
+  the §18 placeholder, out of scope for this lane's doc-only push (only the
+  programme-record file was re-pushed there).

@@ -3,7 +3,7 @@
 **Owner order:** 2026-11-23 ~20:34 IST. Coordinator: hands-on Muse, 0 Sol calls,
 0 AgentRouter calls, 0 runner invocations. Branch `panel-rebuild/finish-product`,
 from `token-gaps` `e290654`, rebased onto `d47d282` (marketing-fix merge) before
-the merge lane started. Merged into `token-gaps` as [SHA TBD — see Pushes].
+the merge lane started. Merged into `token-gaps` as `8191b2c` (see Pushes).
 No code merged into `adopt-proper` or `main`.
 
 **Method:** cherry-pick each lane's single verified commit onto
@@ -211,11 +211,19 @@ durable link remains GitHub Pages (which still serves the saved
 
 ## Pushes
 
-- `panel-rebuild/finish-product`: `d47d282..bdb8fa8`, pushed via PAT
-  protocol, fresh `ls-remote` read-back `bdb8fa827d46d643f431ca37c2f37966326d268c`.
+- Lane G (FIX-ALL programme, 2026-11-24) updated this section to the final
+  SHAs. The record as pushed to the five branches below listed `bdb8fa8`
+  and left the final SHAs unfilled; both `finish-product` and `token-gaps`
+  now stand at `8191b2c` (verified by fresh `ls-remote`). A document cannot
+  contain its own commit hash — the SHAs below are the pushes as made, and
+  this update's own commit gets a new hash, which is normal.
+- `panel-rebuild/finish-product`: `d47d282..8191b2c`, pushed via PAT
+  protocol, fresh `ls-remote` read-back `8191b2c1fc00881d115c75c0a60dc738480c446e`.
+  (Tip was `bdb8fa8` when the doc-only pushes below were made; final commit
+  `8191b2c` is the Lane F docs record itself.)
 - `panel-rebuild/token-gaps`: fast-forward merge of finish-product
-  (`d47d282..bdb8fa8`, no merge commit — token-gaps was an ancestor),
-  pushed via PAT protocol, fresh `ls-remote` read-back `bdb8fa8` on both
+  (`d47d282..8191b2c`, no merge commit — token-gaps was an ancestor),
+  pushed via PAT protocol, fresh `ls-remote` read-back `8191b2c` on both
   branches.
 - Doc-only pushes (programme record + DECISIONS §§15–18 + checklist + gap
   analysis, verified docs-only by `git diff --stat` on each branch, fresh
