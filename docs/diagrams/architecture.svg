@@ -45,7 +45,7 @@
   <text class="m" x="488" y="169" font-size="11">BTC m/84'/0'/0'/0/0 · LTC m/84'/2'/0'/0/0</text>
   <text class="m" x="488" y="188" font-size="11">ETH + 15 EVM m/44'/60'/0'/0/0 — one shared address</text>
   <text class="m" x="488" y="207" font-size="11">TRX m/44'/195'/0'/0/0 · DOGE m/44'/3'/0'/0/0</text>
-  <text class="m" x="488" y="226" font-size="11">TON m/44'/607'/0' (V4R2) · SOL m/44'/501'/0' — per-account, rotatable</text>
+  <text class="m" x="488" y="226" font-size="11">TON m/44'/607'/0' · SOL m/44'/501'/0' — per-account</text>
 
   <!-- Arrow A -> B : builds -->
   <path class="arrow" d="M426,150 L466,150" marker-end="url(#ah)"/>
