@@ -291,6 +291,57 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('shows the full token name on the row, not just the symbol (Lane 4)', async () => {
+    // Owner report: the complete token name was not displayed on the
+    // mobile homepage — a token row showed only its symbol (USDC),
+    // never its name (USD Coin). The row title is the full name; the
+    // symbol stays visible in the subline with the chain and the
+    // short contract. The title element must not truncate: a name
+    // that does not fit wraps instead of hiding behind an ellipsis.
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+      {
+        tokenBalances: {
+          'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+            status: 'zero',
+            value: '0',
+          },
+          'eth:0xdac17f958d2ee523a2206206994597c13d831ec7': {
+            status: 'zero',
+            value: '0',
+          },
+        },
+      },
+    );
+    const mounted = await mountScreen();
+    try {
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const usdcRow = rows.find((row) =>
+        (row.textContent ?? '').includes('USDC · Ethereum'),
+      );
+      expect(usdcRow).not.toBeUndefined();
+      // The first .text-base in the row is the title (the value is the
+      // second): it carries the full name, in full, with no truncate.
+      const title = usdcRow?.querySelectorAll('.text-base')[0] as HTMLElement | undefined;
+      expect(title?.textContent).toContain('USD Coin');
+      expect(title?.className).not.toContain('truncate');
+      expect(usdcRow?.textContent).toContain('USDC · Ethereum · 0xA0b8…eB48');
+      const usdtRow = rows.find((row) =>
+        (row.textContent ?? '').includes('USDT · Ethereum'),
+      );
+      expect(usdtRow).not.toBeUndefined();
+      const usdtTitle = usdtRow?.querySelectorAll('.text-base')[0] as HTMLElement | undefined;
+      expect(usdtTitle?.textContent).toContain('Tether USD');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('shows the empty state when no balances are available', async () => {
     vi.mocked(availableFor).mockReturnValue([]);
     setWallet(balancesFor({}));

@@ -560,4 +560,55 @@ describe('asset list screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('shows the full token name on token rows, never truncated (Lane 4)', async () => {
+    // Owner report: the complete token name was not displayed on the
+    // mobile homepage — rows showed only the symbol. The table variant
+    // also ellipsised long names ("Ethere…"). The row title is the
+    // full name and wraps instead of truncating; the symbol stays in
+    // the subline with the chain and the short contract.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+      vaultState: 'unlocked',
+      customTokens: [],
+      tokenBalances: {
+        'eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {
+          status: 'zero',
+          value: '0',
+        },
+        'eth:0xdac17f958d2ee523a2206206994597c13d831ec7': {
+          status: 'zero',
+          value: '0',
+        },
+      },
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, 'USDC');
+      const titles = [...mounted.div.querySelectorAll('span')].filter(
+        (candidate) =>
+          candidate.className.includes('text-[15px]') &&
+          candidate.className.includes('font-bold'),
+      );
+      const usdcTitle = titles.find((candidate) =>
+        (candidate.textContent ?? '').includes('USD Coin'),
+      );
+      expect(usdcTitle).not.toBeUndefined();
+      expect(usdcTitle?.className).not.toContain('truncate');
+      const usdtTitle = titles.find((candidate) =>
+        (candidate.textContent ?? '').includes('Tether USD'),
+      );
+      expect(usdtTitle).not.toBeUndefined();
+      expect(usdtTitle?.className).not.toContain('truncate');
+      expect(mounted.div.textContent).toContain('USDC · Ethereum · 0xA0b8…eB48');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

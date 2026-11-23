@@ -346,7 +346,10 @@ function getTokenRowModel(
   const link = `/assets/${token.chain}/${tokenSlug(token)}`;
   // Token gaps, item 2: the short contract sits just below the token
   // (subtitle), and official tokens carry the VERIFIED tick.
-  const subtitle = `${chainName} · ${shortContract(token.contract)}`;
+  // Lane 4: the subtitle keeps the symbol too — the row title is the
+  // full token name (below), so the symbol must stay visible
+  // somewhere on the row.
+  const subtitle = `${token.symbol} · ${chainName} · ${shortContract(token.contract)}`;
   const verified = isVerifiedToken(token);
   // Before the first token refresh lands, the entry is missing: show
   // the loading skeleton, not a premature failure (same rule as
@@ -367,7 +370,10 @@ function getTokenRowModel(
     return {
       kind: 'loading',
       key,
-      title: token.symbol,
+      // Lane 4: the row title is the full token name ("USD Coin"),
+      // not just the symbol — the owner reported the complete token
+      // name was not displayed on the mobile homepage.
+      title: token.name,
       subtitle,
       link,
       isToken: true,
@@ -380,7 +386,7 @@ function getTokenRowModel(
     return {
       kind: 'unavailable',
       key,
-      title: token.symbol,
+      title: token.name,
       subtitle,
       symbol: token.symbol,
       statusText:
@@ -419,7 +425,7 @@ function getTokenRowModel(
   return {
     kind: 'ready',
     key,
-    title: token.symbol,
+    title: token.name,
     subtitle,
     symbol: token.symbol,
     balanceStatus: balance.status,
@@ -448,7 +454,10 @@ function ListRow({ model }: { model: AssetRowModel }) {
           <span className="block text-[15px] font-bold text-foreground">
             {model.title}
             {model.verified === true && (
-              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+              // Lane 4: the tick never splits from its label — "✓" on
+              // one line and "Verified" on the next was the cramped
+              // mobile row the owner saw.
+              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
             )}
           </span>
           {' '}
@@ -531,10 +540,13 @@ function TableRow({ model }: { model: AssetRowModel }) {
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
             <RowLogo model={model} />
             <span className="min-w-0">
-              <span className="block truncate text-[15px] font-bold text-foreground">
+              {/* Lane 4: the name wraps instead of truncating — the
+                  narrow table used to ellipsise chain names ("Ethere…")
+                  and hide the rest of the name. */}
+              <span className="block text-[15px] font-bold text-foreground">
                 {model.title}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 {model.statusText}
               </span>
             </span>
@@ -573,13 +585,18 @@ function TableRow({ model }: { model: AssetRowModel }) {
           <span className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 @md:col-start-auto @md:row-start-auto">
             <RowLogo model={model} />
             <span className="min-w-0">
-              <span className="block truncate text-[15px] font-bold text-foreground">
+              {/* Lane 4: the name wraps instead of truncating — the
+                  narrow table used to ellipsise chain names ("Ethere…")
+                  and hide the rest of the name. */}
+              <span className="block text-[15px] font-bold text-foreground">
                 {model.title}
                 {model.verified === true && (
-                  <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+                  // Lane 4: the tick never splits from its label (see
+                  // the list row above).
+                  <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
                 )}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
+              <span className="block text-xs text-muted-foreground">
                 {model.subtitle}
               </span>
             </span>

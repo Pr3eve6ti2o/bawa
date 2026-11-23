@@ -27,16 +27,23 @@ function AssetRow({
   return (
     <div
       data-slot="asset-row"
-      className={cn('flex min-h-[68px] items-center justify-between rounded-lg px-4 py-3', className)}
+      // Lane 4: the two columns keep their own width on a narrow row —
+      // the left (name + amount) flexes and shrinks, the right (value
+      // + price detail) keeps a capped width below the desktop
+      // breakpoint, so a long price line can no longer squeeze the
+      // name into "BNB Smart / Chain" and "Zero / balance". The cap is
+      // mobile-only: the desktop row keeps its old unconstrained shape.
+      className={cn('flex min-h-[68px] items-center justify-between gap-3 rounded-lg px-4 py-3', className)}
       {...props}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {avatar}
-        <div>
+        <div className="min-w-0">
           <div className="text-base font-semibold">
             {symbol}
             {verified === true && (
-              <span className="ml-2 text-sm font-normal" aria-label="Verified token">✓ Verified</span>
+              // Lane 4: the tick never splits from its label.
+              <span className="ml-2 whitespace-nowrap text-sm font-normal" aria-label="Verified token">✓ Verified</span>
             )}
           </div>
           {' '}
@@ -48,7 +55,7 @@ function AssetRow({
       </div>
       {' '}
       {(value || detail) && (
-        <div className="text-right">
+        <div className="max-desktop:max-w-[7rem] max-desktop:shrink-0 text-right">
           {value ? <div className="text-base font-semibold">{value}</div> : null}
           {' '}
           {detail ? (
