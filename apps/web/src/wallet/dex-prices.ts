@@ -39,7 +39,7 @@
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
-  PRICE_FETCH_TIMEOUT_MS,
+  fetchJsonWithTimeout,
   isFreshQuote,
   type PriceEntry,
   type PriceQuote,
@@ -201,15 +201,6 @@ export function parseTonRatesResponse(
 
 type FetchFn = typeof fetch;
 
-function isAbortError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    (error as { name: unknown }).name === 'AbortError'
-  );
-}
-
 function errorEntries(
   requests: readonly { key: string }[],
   reason: 'rate-limited' | 'network' | 'provider' | 'timeout',
@@ -220,55 +211,6 @@ function errorEntries(
       ? { status: 'error', reason, retryAfterMs }
       : { status: 'error', reason };
   return Object.fromEntries(requests.map((request) => [request.key, { ...entry }]));
-}
-
-async function fetchJson(
-  fetchFn: FetchFn,
-  url: string,
-): Promise<
-  | { status: 'ok'; payload: unknown }
-  | { status: 'error'; entries: Extract<PriceEntry, { status: 'error' }> }
-> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetchFn(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    });
-    if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After');
-      const seconds = retryAfter !== null && retryAfter.trim() !== '' ? Number(retryAfter) : NaN;
-      const retryAfterMs = seconds * 1000;
-      return {
-        status: 'error',
-        entries: {
-          status: 'error',
-          reason: 'rate-limited',
-          ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0 ? { retryAfterMs } : {}),
-        },
-      };
-    }
-    if (!response.ok) {
-      return { status: 'error', entries: { status: 'error', reason: 'provider' } };
-    }
-    try {
-      return { status: 'ok', payload: await response.json() };
-    } catch (error: unknown) {
-      return {
-        status: 'error',
-        entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'provider' },
-      };
-    }
-  } catch (error: unknown) {
-    return {
-      status: 'error',
-      entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'network' },
-    };
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 export async function fetchDexScreenerPrices(
@@ -299,11 +241,11 @@ export async function fetchDexScreenerPrices(
       for (let offset = 0; offset < chainRequests.length; offset += DEXSCREENER_MAX_ADDRESSES_PER_CALL) {
         const chunk = chainRequests.slice(offset, offset + DEXSCREENER_MAX_ADDRESSES_PER_CALL);
         const addresses = chunk.map((request) => request.contract).join(',');
-        const result = await fetchJson(fetchFn, `${DEXSCREENER_BASE_URL}/tokens/v1/${dexChain}/${addresses}`);
+        const result = await fetchJsonWithTimeout(fetchFn, `${DEXSCREENER_BASE_URL}/tokens/v1/${dexChain}/${addresses}`);
         if (result.status === 'error') {
           const retryAfterMs =
-            'retryAfterMs' in result.entries ? result.entries.retryAfterMs : undefined;
-          Object.assign(merged, errorEntries(chunk, result.entries.reason, retryAfterMs));
+            'retryAfterMs' in result.error ? result.error.retryAfterMs : undefined;
+          Object.assign(merged, errorEntries(chunk, result.error.reason, retryAfterMs));
         } else {
           Object.assign(merged, parseDexScreenerResponse(result.payload, chunk, resolvedNowMs));
         }
@@ -322,11 +264,11 @@ export async function fetchTonJettonPrices(
   if (requests.length === 0) return {};
   const masters = requests.map((request) => request.contract).join(',');
   const url = `${TONAPI_RATES_BASE_URL}/v2/rates?tokens=${masters}&currencies=usd`;
-  const result = await fetchJson(fetchFn, url);
+  const result = await fetchJsonWithTimeout(fetchFn, url);
   if (result.status === 'error') {
     const retryAfterMs =
-      'retryAfterMs' in result.entries ? result.entries.retryAfterMs : undefined;
-    return errorEntries(requests, result.entries.reason, retryAfterMs);
+      'retryAfterMs' in result.error ? result.error.retryAfterMs : undefined;
+    return errorEntries(requests, result.error.reason, retryAfterMs);
   }
   return parseTonRatesResponse(result.payload, requests, resolvedNowMs);
 }
