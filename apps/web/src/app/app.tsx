@@ -96,6 +96,7 @@ export function preloadRoute(to: string): void {
   });
 }
 import { WalletProvider, useWallet } from '../state/wallet-context';
+import { appBasePath } from '../wallet/payment-links';
 import { ErrorBoundary } from './error-boundary';
 import { Toaster } from '../ui/components/sonner';
 import { MORE_LINKS, SidebarNav } from './sidebar-nav';
@@ -444,8 +445,18 @@ function NotFound() {
 }
 
 export function App() {
+  // Subpath deployments (UI/UX round 2, deep-link fix): Vite `base`
+  // controls asset paths, BrowserRouter `basename` controls routing
+  // paths, and both must match — the mined SPA-on-Pages pattern. With
+  // no basename, /bawa/send?... boots the app through the 404.html
+  // fallback but the router sees /bawa/send, matches nothing, and
+  // renders the app's own "Page not found" instead of the Send screen.
+  // Read at render time so tests can stub import.meta.env.BASE_URL.
+  // useLocation() returns the basename-stripped path and navigate()
+  // re-adds it, so the lock-return-to round trip is unaffected.
+  const base = appBasePath();
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={base === '' ? undefined : base}>
       <ErrorBoundary fallbackTitle="Unable to show your wallet">
         <WalletProvider>
         <Suspense fallback={<BawaLoading />}>

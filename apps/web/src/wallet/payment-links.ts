@@ -285,15 +285,33 @@ export interface BawaSendLinkParams {
  * The Bawa web deep link: opens this app's Send screen with the payment
  * prefilled. Works on desktop browsers too (no app install needed), and
  * covers chains with no payment-URI standard (TRON). The Send screen
- * parses it on mount (see send.tsx).
+ * parses it on mount (see send.tsx). The deployment subpath is kept
+ * (see appBasePath): a link shared from the Pages preview reads
+ * https://pr3eve6ti2o.github.io/bawa/send?... — without the /bawa/
+ * prefix it points at the domain root and never reaches the app.
  */
+/**
+ * The deployment subpath (Vite `base`): '' at the domain root, '/bawa'
+ * on the GitHub Pages project site. A shared link must keep it — a
+ * link built from window.location.origin alone points at the domain
+ * root and never reaches the app on a subpath deployment (the shared
+ * link from the Pages preview was exactly that: /send?... with the
+ * /bawa/ prefix missing). Read at call time so tests can stub
+ * import.meta.env.BASE_URL.
+ */
+export function appBasePath(): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  if (base === '/') return '';
+  return base.replace(/\/$/, '');
+}
+
 export function buildBawaSendLink(origin: string, params: BawaSendLinkParams): string {
   const query = new URLSearchParams();
   query.set('chain', params.chain);
   query.set('to', params.to);
   if (params.amount !== undefined) query.set('amount', params.amount);
   if (params.token !== undefined) query.set('token', params.token);
-  return `${origin.replace(/\/$/, '')}/send?${query.toString()}`;
+  return `${origin.replace(/\/$/, '')}${appBasePath()}/send?${query.toString()}`;
 }
 
 export function parseBawaSendLink(
@@ -308,6 +326,53 @@ export function parseBawaSendLink(
   const amount = params.get('amount') ?? undefined;
   const token = params.get('token') ?? undefined;
   return { chain, to, amount, token };
+}
+
+// Pending send link (UI/UX round 2, deep-link fix): the payment a
+// shared link asked for, kept across the cold-start gap.
+//
+// The Send screen parses the link from the URL on mount, but on a
+// cold start the wallet may not exist yet (or the vault may be
+// locked), so there is nothing to prefill into. The link is stored
+// here so creating or importing a wallet — or unlocking — does not
+// lose it: the Send screen resumes it on its next mount, and the
+// create-wallet ready screen offers to continue straight to it.
+//
+// sessionStorage, not localStorage, so the intent dies with the tab
+// (the lock-return-to precedent in app.tsx). The stored value is the
+// raw query string, re-validated through parseBawaSendLink on read,
+// so a hand-edited or stale value can never inject an invalid link.
+// All access is guarded: private-mode storage must never break Send.
+export const PENDING_SEND_LINK_KEY = 'bawa-pending-send-link';
+
+export function savePendingSendLink(search: string): void {
+  try {
+    sessionStorage.setItem(PENDING_SEND_LINK_KEY, search.replace(/^\?/, ''));
+  } catch {
+    // Storage unavailable — the link still applies from the URL.
+  }
+}
+
+export function readPendingSendLinkSearch(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_SEND_LINK_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function readPendingSendLink(): BawaSendLinkParams | null {
+  const search = readPendingSendLinkSearch();
+  if (search === null || search === '') return null;
+  return parseBawaSendLink(search);
+}
+
+export function clearPendingSendLink(): void {
+  try {
+    sessionStorage.removeItem(PENDING_SEND_LINK_KEY);
+  } catch {
+    // Nothing to clear.
+  }
 }
 
 // QR as a shareable image (UI/UX fixes, item 4).

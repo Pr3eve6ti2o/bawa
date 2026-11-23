@@ -85,15 +85,19 @@ vi.mock('../wallet/send', async (importOriginal) => {
   };
 });
 
-vi.mock('../wallet/vault', () => ({
-  getSessionPassphrase: vi.fn(() => ''),
-  withMnemonicAsync: vi.fn(
-    async (fn: (mnemonic: string) => Promise<unknown>) =>
-      fn(
-        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
-      ),
-  ),
-}));
+vi.mock('../wallet/vault', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../wallet/vault')>();
+  return {
+    ...actual,
+    getSessionPassphrase: vi.fn(() => ''),
+    withMnemonicAsync: vi.fn(
+      async (fn: (mnemonic: string) => Promise<unknown>) =>
+        fn(
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        ),
+    ),
+  };
+});
 
 const testGlobal = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -164,6 +168,17 @@ async function mountScreen(initialEntries: string[] = ['/send']) {
   });
   return {
     div,
+    rerender: async () => {
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={initialEntries}>
+            <Routes>
+              <Route path="/send" element={<SendScreen />} />
+            </Routes>
+          </MemoryRouter>,
+        );
+      });
+    },
     cleanup: async () => {
       try {
         await act(async () => {
@@ -249,6 +264,7 @@ async function reachReview(div: HTMLDivElement): Promise<void> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sessionStorage.clear();
 });
 
 describe('send screen', () => {
@@ -506,6 +522,147 @@ describe('send screen', () => {
       expect(dai).toBeGreaterThanOrEqual(0);
       expect(usdc).toBeGreaterThanOrEqual(0);
       expect(dai).toBeLessThan(usdc);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the pending payment and keeps the link with no wallet yet', async () => {
+    // Cold start, fresh profile (UI/UX round 2, deep-link fix): the
+    // old screen said only "No wallet yet" and the link was lost.
+    setWallet({
+      vaultState: 'no-vault',
+      vaultAddresses: { btc: [], eth: [], trx: [], ton: [] },
+    });
+    const mounted = await mountScreen([
+      `/send?chain=eth&to=${RECIPIENT}&amount=0.5`,
+    ]);
+    try {
+      expect(mounted.div.textContent).toContain('No wallet yet');
+      expect(mounted.div.textContent).toContain(
+        'This link asks to send 0.5 ETH',
+      );
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+      expect(
+        mounted.div.querySelector('a[href="/create-wallet"]'),
+      ).not.toBeNull();
+      expect(
+        mounted.div.querySelector('a[href="/import-wallet"]'),
+      ).not.toBeNull();
+      // The link survives in session storage for the create flow.
+      expect(sessionStorage.getItem('bawa-pending-send-link')).toBe(
+        `chain=eth&to=${RECIPIENT}&amount=0.5`,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the unlock panel while locked, then prefills after unlock', async () => {
+    // Cold start, vault locked at boot (UI/UX round 2, deep-link
+    // fix): the old screen said "No wallet yet" even though the
+    // header showed Account 01, and the link never retried.
+    setWallet({
+      vaultState: 'locked',
+      vaultAddresses: { btc: [], eth: [], trx: [], ton: [] },
+    });
+    const mounted = await mountScreen([
+      `/send?chain=eth&to=${RECIPIENT}&amount=0.5`,
+    ]);
+    try {
+      expect(mounted.div.textContent).toContain(
+        'This link asks to send 0.5 ETH',
+      );
+      expect(mounted.div.textContent).toContain('Your wallet is locked');
+      expect(
+        mounted.div.querySelector('a[href="/lock"]'),
+      ).not.toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).toBeNull();
+      // Unlocking (same mounted screen, new wallet snapshot) retries
+      // the link instead of needing a remount.
+      setWallet({ vaultState: 'unlocked' });
+      await mounted.rerender();
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('0.5');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('asks which wallet to use with more than one account, then prefills from the chosen one', async () => {
+    // (UI/UX round 2, deep-link fix): the old screen silently used
+    // whichever account was selected; the link never asked.
+    const selectVaultAccount = vi.fn(async () => undefined);
+    const account2 = '0x1111111111111111111111111111111111111111';
+    setWallet({
+      vaultAccount: { account: 0, index: 0 },
+      vaultAccounts: [0, 1],
+      selectVaultAccount,
+    });
+    const mounted = await mountScreen([
+      `/send?chain=eth&to=${RECIPIENT}&amount=0.5`,
+    ]);
+    try {
+      await waitForText(mounted.div, 'Choose which wallet sends this payment');
+      expect(mounted.div.textContent).toContain('Account 1');
+      expect(mounted.div.textContent).toContain('Account 2');
+      expect(mounted.div.textContent).toContain('Current wallet');
+      expect(mounted.div.textContent).toContain(FROM);
+      expect(mounted.div.querySelector('#send-amount')).toBeNull();
+      await clickContaining(mounted.div, 'Account 2');
+      expect(selectVaultAccount).toHaveBeenCalledWith(1);
+      // The switch lands: the new account's addresses arrive and the
+      // link prefills from the chosen wallet.
+      setWallet({
+        vaultAccount: { account: 1, index: 0 },
+        vaultAccounts: [0, 1],
+        selectVaultAccount,
+        vaultAddresses: { btc: [], eth: [account2], trx: [], ton: [] },
+      });
+      await mounted.rerender();
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('0.5');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+      expect(mounted.div.textContent).toContain(account2);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('does not show the chooser for a single account', async () => {
+    setWallet({
+      vaultAccount: { account: 0, index: 0 },
+      vaultAccounts: [0],
+      selectVaultAccount: vi.fn(async () => undefined),
+    });
+    const mounted = await mountScreen([
+      `/send?chain=eth&to=${RECIPIENT}&amount=0.5`,
+    ]);
+    try {
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('0.5');
+      expect(mounted.div.textContent).not.toContain(
+        'Choose which wallet sends this payment',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('resumes a stored link when the URL has none (back from create/import)', async () => {
+    sessionStorage.setItem(
+      'bawa-pending-send-link',
+      `chain=eth&to=${RECIPIENT}&amount=0.5`,
+    );
+    setWallet();
+    const mounted = await mountScreen(['/send']);
+    try {
+      const amount = await waitForInput(mounted.div, '#send-amount');
+      expect((amount as HTMLInputElement).value).toBe('0.5');
+      expect(mounted.div.textContent).toContain(RECIPIENT);
+      // Applied links clear the stored copy.
+      expect(sessionStorage.getItem('bawa-pending-send-link')).toBeNull();
     } finally {
       await mounted.cleanup();
     }

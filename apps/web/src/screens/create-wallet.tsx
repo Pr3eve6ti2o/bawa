@@ -8,6 +8,7 @@ import { BawaIcon } from '../ui/components/icons';
 import { loadCore } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
+import { readPendingSendLinkSearch } from '../wallet/payment-links';
 import { createVault, hasVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
@@ -588,6 +589,21 @@ export function CreateWalletScreen() {
               Keep your written recovery phrase safe. If you lose this device,
               it is the only way to recover your wallet.
             </p>
+            {(() => {
+              // Deep-link continuation (UI/UX round 2, deep-link fix):
+              // this wallet was created from a shared payment link. Offer
+              // to go straight to the Send screen with that payment
+              // filled in, instead of leaving the user on the dashboard
+              // with the link lost. The stored query is re-validated by
+              // the Send screen on arrival.
+              const pendingSearch = readPendingSendLinkSearch();
+              if (pendingSearch === null || pendingSearch === '') return null;
+              return (
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to={`/send?${pendingSearch}`}>Continue to your send</Link>
+                </Button>
+              );
+            })()}
             <Button asChild className="h-auto whitespace-normal py-3 text-center">
               <Link to="/mnemonic-backup">Review your backup checklist</Link>
             </Button>

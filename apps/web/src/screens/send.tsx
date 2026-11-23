@@ -9,7 +9,7 @@
 // when devnet is on, the signed transaction broadcasts to the test
 // network via broadcastSignedDevnet. Mainnet still never broadcasts.
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
 import { ScanIcon } from '../ui/components/icons';
 import { Input } from '../ui/components/input';
@@ -24,8 +24,12 @@ import { DEVNET_CHAIN_CONFIGS, devnetChainConfig } from '../wallet/devnet-endpoi
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { formatFeePreview } from '../wallet/money';
 import {
+  clearPendingSendLink,
   parseBawaSendLink,
   parsePaymentUri,
+  readPendingSendLink,
+  savePendingSendLink,
+  type BawaSendLinkParams,
 } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
@@ -50,7 +54,7 @@ import {
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
 import { getAdapterForMode } from '../wallet/adapters';
 import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
-import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
+import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
@@ -84,9 +88,43 @@ type DevnetBroadcastState =
   | { status: 'submitted'; txHash: string; explorerUrl: string }
   | { status: 'error'; reason: string };
 
+// Field-by-field link equality: the sync effect below re-runs when
+// state changes, and must not re-set state with a fresh-but-equal
+// object (that would loop).
+function sameLink(
+  a: BawaSendLinkParams | null,
+  b: BawaSendLinkParams | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.chain === b.chain &&
+    a.to === b.to &&
+    a.amount === b.amount &&
+    a.token === b.token
+  );
+}
+
 export function SendScreen() {
-  const { vaultState, vaultAddresses, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
+  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Older mocked contexts may not provide the account fields; default
+  // them so the screen still renders (wallet-management.tsx does the
+  // same). In production the provider always supplies them.
+  const vaultAccounts = vaultAccountsRaw ?? [];
+  // Pending deep link (UI/UX round 2, deep-link fix): the payment the
+  // link that opened this screen asked for. Starts from the URL; the
+  // sync effect below resumes a stored one when the URL has none (the
+  // user came back from creating, importing or unlocking a wallet).
+  const [pendingLink, setPendingLink] = useState<BawaSendLinkParams | null>(() =>
+    parseBawaSendLink(`?${searchParams.toString()}`),
+  );
+  // The vault account chosen for this link. Null until the chooser is
+  // resolved (or the link needs none — a single account applies at
+  // once). Kept in state, not a ref, so choosing re-renders.
+  const [chosenAccount, setChosenAccount] = useState<number | null>(null);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+  const [chooserError, setChooserError] = useState<string | null>(null);
   const chainsWithWallet: ChainId[] = SUPPORTED_CHAINS.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
   );
@@ -155,6 +193,14 @@ export function SendScreen() {
     setSignState({ status: 'idle' });
     setPrefillNote(null);
     setDevnetBroadcast({ status: 'idle' });
+    // A manual chain change abandons the deep link: it must not
+    // re-apply on the next mount. The link params leave the URL too,
+    // or the sync effect above would resurrect the link from them.
+    if (pendingLink !== null) {
+      setPendingLink(null);
+      clearPendingSendLink();
+      navigate('/send', { replace: true });
+    }
   }
 
   function selectToken(token: TokenRecord | null): void {
@@ -166,6 +212,13 @@ export function SendScreen() {
     setPreview(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
+    // A manual token change abandons the deep link, same as a chain
+    // change above: clear it and strip its params from the URL.
+    if (pendingLink !== null) {
+      setPendingLink(null);
+      clearPendingSendLink();
+      navigate('/send', { replace: true });
+    }
   }
 
   // Prefill a payment from a Bawa web link (/send?chain=&to=&amount=
@@ -214,30 +267,120 @@ export function SendScreen() {
     return true;
   }
 
+  // Deep-link sync (UI/UX round 2, deep-link fix): a link in the URL
+  // becomes the pending link and is stored, so it survives the trip
+  // to create, import or unlock. With no link in the URL, a stored
+  // one is resumed (the user came back from one of those screens).
   useEffect(() => {
-    if (prefillApplied.current) return;
     const search = searchParams.toString();
-    if (search === '') return;
-    const link = parseBawaSendLink(`?${search}`);
-    if (link === null) return;
+    if (search !== '') {
+      const link = parseBawaSendLink(`?${search}`);
+      if (link !== null) {
+        savePendingSendLink(search);
+        setPendingLink((current) => (sameLink(current, link) ? current : link));
+        return;
+      }
+    }
+    if (pendingLink === null) {
+      const stored = readPendingSendLink();
+      if (stored !== null) setPendingLink(stored);
+    }
+  }, [searchParams, pendingLink]);
+
+  // Deep-link apply (UI/UX round 2, deep-link fix): the pending link
+  // prefills once the wallet can actually send from its chain. The
+  // old code applied once, on mount, against the mount render's
+  // vaultAddresses — on a cold start the vault is locked (or absent)
+  // at mount, so the addresses are empty, the apply bailed out, and
+  // the once-only guard meant it never retried after unlock or
+  // hydration. This effect re-runs whenever the wallet state changes
+  // and applies the first time the address is there; the flag is set
+  // only when the apply really runs, and cleared again if it reports
+  // no address yet. While the vault is locked or there is no vault
+  // the link waits (the panels below explain that) — it is never
+  // dropped. With more than one vault account the chooser must
+  // resolve first, and the apply waits until the chosen account's
+  // addresses are in state.
+  useEffect(() => {
+    if (pendingLink === null || prefillApplied.current) return;
+    if (vaultState !== 'unlocked') return;
+    if ((vaultAddresses[pendingLink.chain] ?? []).length === 0) return;
+    if (vaultAccounts.length > 1 && selectVaultAccount !== undefined) {
+      if (chosenAccount === null) return;
+      if (vaultAccount?.account !== chosenAccount) return;
+    }
     prefillApplied.current = true;
     void applyPrefill({
-      chain: link.chain,
-      to: link.to,
-      amount: link.amount,
-      tokenContract: link.token,
+      chain: pendingLink.chain,
+      to: pendingLink.to,
+      amount: pendingLink.amount,
+      tokenContract: pendingLink.token,
     }).then((applied) => {
-      if (!applied) {
+      if (applied) {
+        clearPendingSendLink();
+      } else {
+        prefillApplied.current = false;
         setPrefillNote(
-          `This link is for ${chainConfig(link.chain).displayName}, which has no wallet here yet.`,
+          `This link is for ${chainConfig(pendingLink.chain).displayName}, which has no wallet here yet.`,
         );
       }
     });
-    // The link is applied once, on mount, from the URL that opened
-    // this screen. applyPrefill is stable by construction (it only
-    // reads the wallet snapshot from the mount render), so the empty
-    // dependency list is intentional.
-  }, []);
+    // applyPrefill reads the wallet snapshot from this render; the
+    // effect re-runs when that snapshot changes, so the closure is
+    // always fresh enough — the dependency list names exactly the
+    // values the decision reads.
+  }, [pendingLink, vaultState, vaultAddresses, vaultAccount, vaultAccounts, selectVaultAccount, chosenAccount]);
+
+  // Wallet chooser (UI/UX round 2, deep-link fix): with more than one
+  // vault account the link asks which wallet sends it, instead of
+  // silently using whichever account is selected. Choosing switches
+  // the account (the apply effect above then prefills once the new
+  // account's addresses are in state); picking the current account
+  // just resolves the chooser. A failed switch leaves the chooser up
+  // with the reason.
+  async function chooseAccountForLink(account: number): Promise<void> {
+    if (switchingAccount) return;
+    setChooserError(null);
+    if (account === vaultAccount?.account || selectVaultAccount === undefined) {
+      setChosenAccount(account);
+      return;
+    }
+    setSwitchingAccount(true);
+    try {
+      await selectVaultAccount(account);
+      setChosenAccount(account);
+    } catch (error: unknown) {
+      setChooserError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSwitchingAccount(false);
+    }
+  }
+
+  // The payment a pending link asks for, in plain words. Shown on
+  // the no-wallet, locked and chooser panels so the link is never a
+  // silent redirect: the user always sees what it asked for before
+  // anything else happens.
+  function pendingLinkSummary(link: BawaSendLinkParams) {
+    const tokenForLink =
+      link.token === undefined
+        ? null
+        : (allTokens.find(
+            (token) =>
+              token.chain === link.chain &&
+              token.contract.toLowerCase() === link.token!.toLowerCase(),
+          ) ?? null);
+    const symbol = tokenForLink?.symbol ?? chainConfig(link.chain).symbol;
+    const amountText =
+      link.amount === undefined ? `some ${symbol}` : `${link.amount} ${symbol}`;
+    return (
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        This link asks to send{' '}
+        <span className="font-semibold text-ink">{amountText}</span> to{' '}
+        <code className="break-all font-mono text-ink">{link.to}</code> on{' '}
+        {chainConfig(link.chain).displayName}.
+      </p>
+    );
+  }
 
   async function handleRecipientNext(): Promise<void> {
     const result = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
@@ -589,9 +732,36 @@ export function SendScreen() {
   }
 
   if (chainsWithWallet.length === 0 || !from) {
+    // Locked vault, no addresses in state (UI/UX round 2, deep-link
+    // fix): the vault exists — the header says so — so "No wallet
+    // yet" is the wrong message here. The link waits until the vault
+    // is unlocked; the lock screen returns to this URL, and the apply
+    // effect above then prefills.
+    if (vaultState === 'locked') {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+          {pendingLink !== null && pendingLinkSummary(pendingLink)}
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {pendingLink !== null
+              ? 'Your wallet is locked. Unlock it to continue with this send.'
+              : 'Your wallet is locked. Unlock it to send.'}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/lock"
+              className="text-sm font-medium text-primary underline underline-offset-4"
+            >
+              Unlock your wallet
+            </Link>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {pendingLink !== null && pendingLinkSummary(pendingLink)}
         <p className="text-sm leading-relaxed text-muted-foreground">
           No wallet yet. Create or import a wallet first — sending needs a
           vault address to send from.
@@ -610,6 +780,71 @@ export function SendScreen() {
             Import a wallet
           </Link>
         </div>
+        {pendingLink !== null && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This payment is kept — once your wallet is ready, open Send
+            and it will be filled in.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Wallet chooser (UI/UX round 2, deep-link fix): more than one
+  // vault account, and the link has not picked one yet. The current
+  // account shows its address on the link's chain; the other
+  // accounts' addresses appear once they are chosen (only the
+  // selected account's addresses are in state).
+  if (
+    pendingLink !== null &&
+    vaultState === 'unlocked' &&
+    vaultAccounts.length > 1 &&
+    selectVaultAccount !== undefined &&
+    chosenAccount === null
+  ) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {pendingLinkSummary(pendingLink)}
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Choose which wallet sends this payment.
+        </p>
+        <ul className="space-y-2">
+          {vaultAccounts.map((account) => {
+            const isCurrent = account === vaultAccount?.account;
+            const address = isCurrent
+              ? (vaultAddresses[pendingLink.chain] ?? [])[0]
+              : undefined;
+            return (
+              <li key={account}>
+                <button
+                  type="button"
+                  disabled={switchingAccount}
+                  onClick={() => void chooseAccountForLink(account)}
+                  className="flex w-full flex-col gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
+                >
+                  <span className="text-sm font-semibold">
+                    {accountName(account)}
+                    {isCurrent ? ' · Current wallet' : ''}
+                  </span>
+                  {address !== undefined && (
+                    <span className="break-all font-mono text-sm">{address}</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {switchingAccount && (
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            Switching wallet…
+          </p>
+        )}
+        {chooserError && (
+          <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+            {chooserError}
+          </p>
+        )}
       </div>
     );
   }

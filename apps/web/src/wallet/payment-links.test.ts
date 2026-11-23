@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Payment-request URIs (token gaps, item 3) — one format per chain,
 // each verified against its real spec, never invented:
 // - BTC/LTC/DOGE: BIP-21 (bips.dev/21) — bitcoin:<addr>?amount=<decimal>
@@ -16,16 +17,21 @@
 // -> switch to the requested chain -> open the Send screen) and the
 // erc681.org adoption audit (native + ERC-20 transfer only; any other
 // function name is rejected) — see WORK-LOG.md.
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  appBasePath,
   buildBawaSendLink,
   buildPaymentUri,
+  clearPendingSendLink,
   parseBawaSendLink,
   parsePaymentUri,
   qrCardToPngBlob,
   qrCardToPngFile,
   qrSvgToPngBlob,
   qrSvgToPngFile,
+  readPendingSendLink,
+  readPendingSendLinkSearch,
+  savePendingSendLink,
   wrapCardText,
   type QrCardPngDetails,
   type QrRenderDeps,
@@ -310,24 +316,45 @@ describe('parsePaymentUri — round-trips and rejection', () => {
 describe('Bawa web send link', () => {
   it('builds a /send link carrying chain, address, amount and token', () => {
     expect(
-      buildBawaSendLink('https://pr3eve6ti2o.github.io/bawa', {
+      buildBawaSendLink('https://pr3eve6ti2o.github.io', {
         chain: 'eth',
         to: '0x0000000000000000000000000000000000000001',
         amount: '0.5',
       }),
     ).toBe(
-      'https://pr3eve6ti2o.github.io/bawa/send?chain=eth&to=0x0000000000000000000000000000000000000001&amount=0.5',
+      'https://pr3eve6ti2o.github.io/send?chain=eth&to=0x0000000000000000000000000000000000000001&amount=0.5',
     );
     expect(
-      buildBawaSendLink('https://pr3eve6ti2o.github.io/bawa', {
+      buildBawaSendLink('https://pr3eve6ti2o.github.io', {
         chain: 'eth',
         to: '0x0000000000000000000000000000000000000001',
         amount: '25',
         token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
       }),
     ).toBe(
-      'https://pr3eve6ti2o.github.io/bawa/send?chain=eth&to=0x0000000000000000000000000000000000000001&amount=25&token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      'https://pr3eve6ti2o.github.io/send?chain=eth&to=0x0000000000000000000000000000000000000001&amount=25&token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     );
+  });
+
+  it('keeps the deployment subpath on a subpath build (Pages)', () => {
+    // The shared link from the Pages preview used to drop /bawa/:
+    // the call site passed window.location.origin alone. The link
+    // builder now keeps Vite's base, so the same bare origin builds
+    // a link that reaches the app under /bawa/.
+    vi.stubEnv('BASE_URL', '/bawa/');
+    try {
+      expect(
+        buildBawaSendLink('https://pr3eve6ti2o.github.io', {
+          chain: 'eth',
+          to: '0x0000000000000000000000000000000000000001',
+          amount: '0.5',
+        }),
+      ).toBe(
+        'https://pr3eve6ti2o.github.io/bawa/send?chain=eth&to=0x0000000000000000000000000000000000000001&amount=0.5',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('parses a /send link back into its parameters', () => {
@@ -341,6 +368,52 @@ describe('Bawa web send link', () => {
   it('returns null for a link without a recipient', () => {
     expect(parseBawaSendLink('?chain=eth&amount=1')).toBeNull();
     expect(parseBawaSendLink('')).toBeNull();
+  });
+});
+
+describe('appBasePath — deployment subpath (UI/UX round 2, deep-link fix)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('is empty at the domain root', () => {
+    vi.stubEnv('BASE_URL', '/');
+    expect(appBasePath()).toBe('');
+  });
+
+  it('keeps the Pages subpath with or without a trailing slash', () => {
+    vi.stubEnv('BASE_URL', '/bawa/');
+    expect(appBasePath()).toBe('/bawa');
+    vi.stubEnv('BASE_URL', '/bawa');
+    expect(appBasePath()).toBe('/bawa');
+  });
+});
+
+describe('pending send link — survives the cold-start gap (UI/UX round 2, deep-link fix)', () => {
+  afterEach(() => {
+    clearPendingSendLink();
+  });
+
+  it('round-trips a link through session storage', () => {
+    savePendingSendLink(
+      'chain=eth&to=0x0000000000000000000000000000000000000001&amount=0.5',
+    );
+    expect(readPendingSendLinkSearch()).toBe(
+      'chain=eth&to=0x0000000000000000000000000000000000000001&amount=0.5',
+    );
+    expect(readPendingSendLink()).toEqual({
+      chain: 'eth',
+      to: '0x0000000000000000000000000000000000000001',
+      amount: '0.5',
+    });
+    clearPendingSendLink();
+    expect(readPendingSendLink()).toBeNull();
+    expect(readPendingSendLinkSearch()).toBeNull();
+  });
+
+  it('returns null for a stored value that no longer parses', () => {
+    savePendingSendLink('chain=eth&amount=1');
+    expect(readPendingSendLink()).toBeNull();
   });
 });
 
