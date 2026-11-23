@@ -154,7 +154,12 @@ export function SendScreen() {
   const [step, setStep] = useState<Step>('chain');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
-  const [showScanner, setShowScanner] = useState(false);
+  // Lane J: the dashboard Scan tile links to /send?scan=1, so the
+  // scanner opens on arrival. Unknown params are ignored by
+  // parseBawaSendLink, so ?scan=1 alone never becomes a send link.
+  const [showScanner, setShowScanner] = useState(
+    () => searchParams.get('scan') === '1',
+  );
   const [amount, setAmount] = useState('');
   const [preview, setPreview] = useState<SendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);

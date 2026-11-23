@@ -146,7 +146,7 @@ function setWallet(overrides: Record<string, unknown> = {}): void {
   } as unknown as ReturnType<typeof useWallet>);
 }
 
-async function mountScreen() {
+async function mountScreen(entry = '/send') {
   const div = document.createElement('div');
   document.body.appendChild(div);
   const root = createRoot(div);
@@ -154,7 +154,7 @@ async function mountScreen() {
   testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/send']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/send" element={<SendScreen />} />
         </Routes>
@@ -288,6 +288,23 @@ describe('send screen — scanning a QR from the chain step (Round 2, item 1)', 
       );
       expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
       expect(mounted.div.querySelector('#send-amount')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('opens the scanner on arrival when the URL carries ?scan=1', async () => {
+    // Lane J: the dashboard Scan tile links here, so the scanner must
+    // already be open — no extra tap. The stub scanner renders its
+    // simulate-scan buttons only while the panel is open.
+    setWallet();
+    const mounted = await mountScreen('/send?scan=1');
+    try {
+      const simulate = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Simulate Base USDC scan',
+      );
+      expect(simulate).not.toBeUndefined();
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Chain');
     } finally {
       await mounted.cleanup();
     }

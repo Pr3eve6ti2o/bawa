@@ -4,28 +4,21 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/app'
 
-// Start the 10.4 MB wallet engine in the background once the browser is
-// idle, so Generate in create-wallet pays compile only, not the download
-// (measured 52.4 s on Slow 4G). This MUST go through loadCore(): its
-// promise is cached, so the idle warm-up, the create-screen mount preload
-// and Generate share ONE download. A separate warm-up fetch races
-// loadCore's fetch on the same URL and doubles the Slow 4G download
-// (measured 84.8 s WASM / 104.7 s Generate after the first warm-up landed).
-// The engine module is dynamic-imported so it never joins the first-paint
-// chunk; this never blocks first paint. Failures are swallowed: Generate
-// still loads the engine on demand.
-function scheduleWarmCore(): void {
-  const warm = () => {
-    void import('./engine/boundary').then((m) => m.loadCore()).catch(() => {});
-  };
-  if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(warm, { timeout: 2000 });
-  } else {
-    setTimeout(warm, 1000);
-  }
-}
-
-scheduleWarmCore();
+// No idle warm-up of the wallet engine (Lane J, perf, attempt 2).
+// There used to be one: start the 10.4 MB engine once the browser is
+// idle, so Generate in create-wallet pays compile only, not the
+// download (measured 52.4 s on Slow 4G). It was removed because the
+// cost landed on EVERY cold load: the gated version still fetched the
+// 10.4 MB WASM on every cold load in measurement (CDP network
+// emulation does not change navigator.connection, so the connection
+// gate never fired there) and Slow 4G settle went from 55.1 s to
+// 69.0 s (medians) — the later start finished later. The engine now
+// loads only on demand, through loadCore(): its promise is cached, so
+// the create-screen mount preload and Generate share ONE download.
+// Generate keeps its honest "Loading wallet engine..." state for the
+// on-demand download. Do not re-add an idle warm-up without a cold-load
+// measurement proving the settle cost is gone. No keys are involved
+// either way: the engine download never carries a vault or a mnemonic.
 
 const rootElement = document.getElementById('root')
 

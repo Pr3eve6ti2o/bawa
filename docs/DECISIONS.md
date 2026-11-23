@@ -1000,3 +1000,68 @@ byte-identical to the verified `a8018fd` tree).
   (90 files), lint 25 errors all pre-existing in `apps/web/scripts/*.mjs`,
   npm audit 0, root `npm test` 0. E2E not run on this tree (deep-audit ran
   23/24 on its own tree; this tree covered by vitest + CDP).
+
+## §15 — Finish-the-product programme, Lane J (homepage + 4-token sweep + Retry + performance + Scan)
+
+- **Popular chains removed from the homepage (both states).** The
+  `PopularChainsStrip` is gone from `welcome.tsx` (no vault) and
+  `dashboard.tsx` (vault) — the homepage is the hero total, the four
+  actions, then the rows. The `chain-strip.tsx` /
+  `chain-strip-display.ts` files are left in place, now unused: Lane G
+  owns the component machinery, so the merge lane deletes them if G
+  does not re-home the component.
+- **4-token sweep — two real bugs fixed, the rest honest labels.**
+  `transaction-detail.tsx` hardcoded the four chains for its history
+  lookup; it now iterates `availableFor('history')` (7 chains).
+  `mnemonic-backup.tsx` showed 4 recovery profiles; the create/import
+  flows already store 7 distinct profiles, so the screen now shows all
+  7 (EVM collapsed to one Ethereum row). Genuinely-4 screens are
+  labelled, not silently 4: `SIGNING_CHAINS` (the wallet signs native
+  BTC/ETH/TRX/TON only) and `DEVNET_CHAINS` (4 test networks) both say
+  so in their copy. `wallet-refresh.ts` (`CHAINS = 4`) is dead
+  production code — imported only by its own tests — reported, not
+  rewritten; repo-cleanup owns deletion.
+- **Per-row Retry removed entirely from asset rows.** The fetch layer
+  already retries silently with backoff and keeps the last good value,
+  so a row button could only fail again — the Dogecoin row proved it
+  (SoChain 429s, BlockCypher CORS-blocked). The row model is MetaMask's
+  standardised unavailable display plus Ivy Wallet's
+  `feature/accounts` pattern (icon + name + balance + one status line,
+  no Retry — patterns only, GPL-3.0, no code copied); a failed row is
+  an Aceternity Empty States shape (real logo, one plain line, one
+  action — the list-level Refresh). The single retry path is the
+  list-level "Refresh balances" on the hosting screen; the /assets one
+  is a Stateful Button (busy + disabled while the refetch is in
+  flight). Deliberately kept: the dashboard hero Retry (only when every
+  hero balance failed), `asset-detail.tsx` LockedOrRetry, the
+  history Retry in `recent-activity.tsx`, and the Transactions-screen
+  Retry in `refresh-failure.spec.ts`.
+- **Scan on the homepage (dashboard only).** Fourth action tile
+  (Send / Receive / Scan / Activity) linking to `/send?scan=1`, which
+  opens the Round 2 QR scanner on arrival. No Scan tile on the welcome
+  screen: without a vault there is nothing to send from.
+- **Performance (measured, see `PERF.md`).** Cold-load fix, two
+  attempts. Attempt 1 (gated warm-up + lazy engine) won first paint
+  but made Slow 4G settle worse (55.1 s → 69.0 s), so the warm-up was
+  removed: attempt 2 loads the engine only on demand. Final medians:
+  FCP -33% to -45%, heading visible -38% to -71%, Slow 4G settle
+  55.1 s → 3.8 s (mobile) and 55.5 s → 3.8 s (desktop); cold-load
+  bytes 14,698,005 → 1,369,955. The 2.9 MB engine chunk left the
+  first-paint modulepreload graph (dynamic `loadCore` in
+  `create-wallet.tsx` and `wallet/core.ts`, plus the coin-type key
+  table moved to the leaf module `engine/coin-type-keys.ts`).
+  Trade-off: Generate pays the engine download on first use on a
+  slow connection, behind its honest loading state. Keys are never
+  cached: the engine download never carries a vault or a mnemonic.
+- **UI/UX research applied (see `bawa-uiux-sources/RESEARCH.md`).**
+  Linework token structure formalised Bawa's tokens as a comment in
+  `globals.css` (no value changes); Magic UI Number Ticker picked over
+  Number Flow for the hero, honest variant (counts only between
+  settled dollar values, never from $0.00, immediate under
+  reduced motion); the ui-ux-pro-max pre-delivery checklist adopted as
+  the gate (SVG icons only, 4.5:1 contrast via existing tokens,
+  375 px check); OJO 8-state model on the new Scan tile and Refresh
+  button. NOT applied: Animated List (activity feed is not this
+  lane's screen), the Send Stateful Button (Send screen is not this
+  lane's screen), liquid-glass/aurora/neon styling (clashes with the
+  hand-drawn ink look).

@@ -320,7 +320,13 @@ describe('asset list screen', () => {
     }
   });
 
-  it('retries a failed balance while unlocked', async () => {
+  it('shows no per-row Retry for a failed balance; the list Refresh re-fetches', async () => {
+    // Lane J (MetaMask pattern: unavailable data is standardised in
+    // the token list, with one list-level refresh — a per-row Retry on
+    // a rate-limited provider only fails again, e.g. the Dogecoin row
+    // on SoChain 429s with a CORS-blocked BlockCypher fallback). The
+    // fetch layer already retries silently with backoff and keeps the
+    // last good value; the row itself offers no dead button.
     stubPriceFetch({
       ok: true,
       status: 200,
@@ -336,14 +342,69 @@ describe('asset list screen', () => {
     try {
       await waitForText(mounted, '$62,683.00');
       expect(mounted.div.textContent).toContain('Balance unavailable');
-      const retry = [...mounted.div.querySelectorAll('button')].find(
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      const refresh = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refresh balances',
       ) as HTMLButtonElement;
-      expect(retry).not.toBeUndefined();
+      expect(refresh).not.toBeUndefined();
       await act(async () => {
-        retry.click();
+        refresh.click();
       });
       expect(mockRefreshBalances).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a busy Refresh while the refetch is in flight', async () => {
+    // Aceternity Stateful Button pattern (structure only): an async
+    // action shows its loading state, then settles — no fake success,
+    // the rows settle visibly when the refetch lands. The button is
+    // disabled while busy so it cannot be double-clicked.
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    let resolveRefresh!: () => void;
+    const refreshGate = new Promise<void>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const mockRefreshBalances = vi.fn(() => refreshGate);
+    const mockRefreshTokens = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({}),
+      refreshBalances: mockRefreshBalances,
+      refreshTokenBalances: mockRefreshTokens,
+      vaultState: 'unlocked',
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      const refresh = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refresh balances',
+      ) as HTMLButtonElement;
+      expect(refresh).not.toBeUndefined();
+      await act(async () => {
+        refresh.click();
+      });
+      expect(mockRefreshBalances).toHaveBeenCalled();
+      const busy = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refreshing…',
+      ) as HTMLButtonElement;
+      expect(busy).not.toBeUndefined();
+      expect(busy.disabled).toBe(true);
+      await act(async () => {
+        resolveRefresh();
+      });
+      const done = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refresh balances',
+      ) as HTMLButtonElement;
+      expect(done).not.toBeUndefined();
+      expect(done.disabled).toBe(false);
     } finally {
       await mounted.cleanup();
     }

@@ -5,7 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { TransactionDetailScreen } from './transaction-detail';
 import { useWallet } from '../state/wallet-context';
-import { chainConfig } from '../wallet/chains';
+import { availableFor, chainConfig } from '../wallet/chains';
 import type { HistoryState } from '../state/wallet-context';
 
 vi.mock('../state/wallet-context', () => ({
@@ -99,6 +99,14 @@ beforeEach(() => {
   vi.mocked(chainConfig).mockImplementation(
     (chain: ChainKey) => CHAINS[chain] as unknown as ReturnType<typeof chainConfig>,
   );
+  // History is verified for the original four chains plus SOL, LTC and
+  // DOGE (chains.ts: capabilitiesForBalanceChain with historyVerified).
+  vi.mocked(availableFor).mockImplementation(
+    (capability) =>
+      (capability === 'history'
+        ? ['btc', 'eth', 'trx', 'ton', 'sol', 'ltc', 'doge']
+        : []) as unknown as ReturnType<typeof availableFor>,
+  );
 });
 
 describe('transaction detail screen', () => {
@@ -158,6 +166,62 @@ describe('transaction detail screen', () => {
       expect(explorerLink?.textContent).toContain('View on explorer');
       expect(mounted.div.textContent).toContain('confirmed as reported by the network');
       expect(mounted.div.textContent).toContain('Checked at');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('finds a transaction on a history chain beyond the original four', async () => {
+    // Lane J: the lookup used to iterate only BTC/ETH/TRX/TON, so a
+    // Dogecoin transaction sitting in loaded history reported "not in
+    // the loaded history". History is verified for SOL, LTC and DOGE
+    // too (chains.ts), and refreshHistory loads it for all of them.
+    setWallet({
+      btc: emptyHistory,
+      eth: emptyHistory,
+      trx: emptyHistory,
+      ton: emptyHistory,
+      sol: emptyHistory,
+      bsc: emptyHistory,
+      matic: emptyHistory,
+      arb: emptyHistory,
+      op: emptyHistory,
+      base: emptyHistory,
+      avax: emptyHistory,
+      gnosis: emptyHistory,
+      celo: emptyHistory,
+      linea: emptyHistory,
+      mantle: emptyHistory,
+      scroll: emptyHistory,
+      opbnb: emptyHistory,
+      metis: emptyHistory,
+      aurora: emptyHistory,
+      fantom: emptyHistory,
+      ltc: emptyHistory,
+      doge: {
+        status: 'loaded',
+        txs: [
+          {
+            hash: 'doge-tx-hash',
+            chain: 'doge',
+            networkId:
+              'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691',
+            direction: 'in',
+            amountBaseUnits: '250000000',
+            counterparty: 'DH5yaieqoZN36fDVgNNW9K2dLyBnK4oP9m',
+            timestamp: 1700000000000,
+            status: 'confirmed',
+            explorerUrl: null,
+          },
+        ],
+      },
+    });
+    const mounted = await mountScreen('/transactions/doge-tx-hash');
+    try {
+      expect(mounted.div.textContent).toContain('Dogecoin mainnet');
+      expect(mounted.div.textContent).toContain('Received');
+      expect(mounted.div.textContent).toContain('2.5 DOGE');
+      expect(mounted.div.textContent).toContain('DH5yaieqoZN36fDVgNNW9K2dLyBnK4oP9m');
     } finally {
       await mounted.cleanup();
     }

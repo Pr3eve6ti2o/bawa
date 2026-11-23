@@ -5,7 +5,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { BawaIcon } from '../ui/components/icons';
-import { loadCore } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
 import { createVault, hasVault } from '../wallet/vault';
@@ -26,6 +25,17 @@ import { Checkbox } from '../ui/components/checkbox';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import { StepCard } from '../ui/components/step-card';
+
+// Lane J (perf): the wallet engine is dynamic-imported here, not
+// statically imported, so the 2.9 MB engine chunk never joins the
+// first-paint modulepreload graph (CreateWalletScreen is an eager
+// route). The promise cache inside loadCore still shares one download
+// across this mount preload and Generate (there is no idle warm-up:
+// see main.tsx).
+async function loadEngineCore() {
+  const { loadCore } = await import('../engine/boundary');
+  return loadCore();
+}
 
 function yieldFrame(): Promise<void> {
   // One macrotask yield: lets React commit the progress label before the
@@ -96,7 +106,7 @@ export function CreateWalletScreen() {
   useEffect(() => {
     // Preload the engine while the user types. Failure is fine because
     // handleGenerate loads it on demand.
-    void loadCore().catch(() => {});
+    void loadEngineCore().catch(() => {});
 
     // Clear the mnemonic when the screen unmounts.
     return () => {
@@ -130,7 +140,7 @@ export function CreateWalletScreen() {
     try {
       setProgress('Loading wallet engine…');
       await yieldFrame();
-      await loadCore();
+      await loadEngineCore();
 
       setProgress('Generating recovery phrase…');
       await yieldFrame();

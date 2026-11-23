@@ -1,5 +1,5 @@
 import { bytesToBase64Url, crc16Xmodem } from '../engine/address-codecs';
-import { COIN_TYPE_KEY_FOR_CHAIN, loadCore } from '../engine/boundary';
+import { COIN_TYPE_KEY_FOR_CHAIN } from '../engine/coin-type-keys';
 import type { ChainId } from '../engine/boundary';
 import { pathFor } from './chains';
 import {
@@ -17,7 +17,20 @@ import {
 
 export type { ChainId };
 
-type WalletCore = Awaited<ReturnType<typeof loadCore>>;
+type WalletCore = Awaited<
+  ReturnType<typeof import('../engine/boundary').loadCore>
+>;
+
+// Lane J (perf): loadCore is dynamic-imported, not statically
+// imported — wallet/core is in the eager graph (create-wallet route,
+// wallet context), and a static import pulled the 2.9 MB engine chunk
+// into the first-paint modulepreload graph. loadCore's internal promise
+// cache still shares ONE download across the warm-up, the create-screen
+// preload and every caller here.
+async function loadCore(): Promise<WalletCore> {
+  const { loadCore: load } = await import('../engine/boundary');
+  return load();
+}
 export type WalletAddresses = Record<ChainId, string>;
 export type WalletCoin = Parameters<
   WalletCore['HDWallet']['getPublicKeyFromExtended']

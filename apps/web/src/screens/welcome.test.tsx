@@ -162,8 +162,8 @@ async function mountScreen() {
   };
 }
 
-describe('welcome screen — Popular chains strip (Lane A)', () => {
-  it('shows the strip as navigation with the price state when there is no vault', async () => {
+describe('welcome screen \u2014 Popular chains strip removed (Lane J)', () => {
+  it('shows no Popular chains strip when there is no vault', async () => {
     const refresh = vi.fn();
     setWallet('no-vault', balancesFor({}));
     setPrices(
@@ -173,39 +173,15 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('Popular chains');
-      expect(text).toContain('Bitcoin');
-      expect(text).toContain('Ethereum');
-      expect(text).toContain('TRON');
-      expect(text).toContain('TON');
-      expect(text).toContain('All networks');
-      // Fixed registry order, not value-sorted: BTC before ETH before TRX.
-      const strip = mounted.div.querySelector(
-        '[aria-labelledby="popular-chains-title"]',
-      );
-      expect(strip).not.toBeNull();
-      const stripText = strip?.textContent ?? '';
-      expect(stripText.indexOf('Bitcoin')).toBeLessThan(
-        stripText.indexOf('Ethereum'),
-      );
-      expect(stripText.indexOf('Ethereum')).toBeLessThan(
-        stripText.indexOf('TRON'),
-      );
-      expect(stripText.indexOf('TRON')).toBeLessThan(stripText.indexOf('TON'));
-      // No vault: no balance exists, so the cards show the price state
-      // instead of a bare dash, never a fabricated balance.
-      expect(mounted.div.querySelectorAll('a[href="/assets/btc"]')).toHaveLength(1);
-      expect(mounted.div.querySelectorAll('a[href="/assets/eth"]')).toHaveLength(1);
-      expect(mounted.div.querySelectorAll('a[href="/assets/trx"]')).toHaveLength(1);
-      expect(mounted.div.querySelectorAll('a[href="/assets/ton"]')).toHaveLength(1);
+      expect(text).not.toContain('Popular chains');
       expect(
-        mounted.div.querySelectorAll('a[href="/networks"]'),
-      ).not.toHaveLength(0);
-      expect(stripText).not.toContain('—');
-      expect(stripText).toContain('Price unavailable');
-      // Lane G: prices are public, so the no-vault strip fetches the
-      // price feed once to fill the cards.
-      expect(refresh).toHaveBeenCalledTimes(1);
+        mounted.div.querySelector('[aria-labelledby="popular-chains-title"]'),
+      ).toBeNull();
+      // No chain cards: the strip's links are gone with it.
+      expect(mounted.div.querySelectorAll('a[href="/assets/btc"]')).toHaveLength(0);
+      expect(mounted.div.querySelectorAll('a[href="/assets/eth"]')).toHaveLength(0);
+      expect(mounted.div.querySelectorAll('a[href="/assets/trx"]')).toHaveLength(0);
+      expect(mounted.div.querySelectorAll('a[href="/assets/ton"]')).toHaveLength(0);
       // Marketing-fix Lane 3: the welcome offers both ways in without
       // scrolling the desktop layout — the Create card (reversing Lane C
       // item 9, which had removed it: a fresh user choosing a wallet
@@ -213,12 +189,17 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
       // card.
       expect(text).toContain('Create a wallet');
       expect(text).toContain('Import a wallet');
+      // The welcome makes no price fetch of its own.
+      expect(refresh).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('shows real balances and fiat values with a vault and fresh prices', async () => {
+  it('shows no strip balances with a vault and fresh prices', async () => {
+    // The dashboard owns balances; the welcome screen (reachable at
+    // /welcome even with a vault) shows the intro and the two ways in,
+    // never the strip's balances.
     setWallet(
       'unlocked',
       balancesFor({
@@ -237,25 +218,21 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
     const mounted = await mountScreen();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).toContain('0.123 BTC');
-      // A real fiat value, never $0.00 for a missing value.
-      expect(text).toMatch(/\$\d[\d,]*\.\d{2}/);
-      expect(text).not.toContain('$0.00');
-      // Zero balance keeps the asset-row wording and the per-unit price.
-      expect(text).toContain('Zero balance');
-      expect(text).toContain('per ETH');
-      // A loading balance shows the loading indicator, never a blank or a zero.
-      expect(mounted.div.querySelector('[role="status"]')).not.toBeNull();
-      // An unavailable balance says so.
-      expect(text).toContain('Unavailable');
+      expect(text).not.toContain('Popular chains');
+      expect(text).not.toContain('0.123 BTC');
+      expect(text).not.toContain('Zero balance');
+      expect(text).not.toContain('per ETH');
+      expect(text).toContain('Welcome to Bawa');
+      expect(text).toContain('Create a wallet');
+      expect(text).toContain('Import a wallet');
     } finally {
       await mounted.cleanup();
     }
   });
 
-  // Vault-lock removal: the strip used to point at unlocking when the
-  // vault was locked. There is no locked state any more — an existing
-  // vault always shows its balances, so no such test remains.
+  // Lane J: the strip is gone from the homepage entirely — the
+  // dashboard owns balances, and the welcome keeps the intro plus the
+  // Create and Import ways in.
 });
 
 describe('welcome screen — introduction (Lane C, item 9)', () => {

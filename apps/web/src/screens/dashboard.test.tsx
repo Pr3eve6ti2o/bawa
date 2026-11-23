@@ -521,7 +521,9 @@ describe('dashboard screen', () => {
   it('shows a Partial total when one balance has failed', async () => {
     // Phase 3, Lane H: one chain's failure no longer blanks the hero —
     // the loaded chains sum to a partial total and only the failed row
-    // is marked Unavailable.
+    // is marked. (Lane J: the 'Unavailable' wording used to come from
+    // the removed Popular chains strip; the row itself says
+    // 'Could not load balance'.)
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -542,7 +544,7 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).toContain('Partial total');
       expect(mounted.div.textContent).toContain('Powered by CoinGecko');
       // Only the failed chain is marked; the hero itself is a total.
-      expect(mounted.div.textContent).toContain('Unavailable');
+      expect(mounted.div.textContent).toContain('Could not load balance');
       expect(mounted.div.textContent).not.toContain('Balances could not be loaded');
     } finally {
       vi.unstubAllGlobals();
@@ -955,10 +957,11 @@ describe('dashboard screen', () => {
     }
   });
 
-  it('retries a failed asset row while unlocked', async () => {
-    // The hero is a Partial total here, so its button reads
-    // "Refresh balances" — the only Retry on the page is the failed
-    // ETH row's, and clicking it refreshes balances.
+  it('shows no per-row Retry for a failed asset row; the hero Refresh re-fetches', async () => {
+    // Lane J: the failed ETH row shows "Could not load balance" with
+    // no Retry button — the hero's "Refresh balances" is the one retry
+    // path on the page (the hero is a Partial total here, so its button
+    // reads "Refresh balances", never "Retry").
     setWallet(
       balancesFor({
         btc: { status: 'available', value: '100000000' },
@@ -970,14 +973,51 @@ describe('dashboard screen', () => {
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('Could not load balance');
-      const retry = [...mounted.div.querySelectorAll('button')].find(
+      const retryButtons = [...mounted.div.querySelectorAll('button')].filter(
         (candidate) => candidate.textContent === 'Retry',
+      );
+      expect(retryButtons).toHaveLength(0);
+      const refresh = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'Refresh balances',
       ) as HTMLButtonElement;
-      expect(retry).not.toBeUndefined();
+      expect(refresh).not.toBeUndefined();
       await act(async () => {
-        retry.click();
+        refresh.click();
       });
       expect(mockRefreshBalances).toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows a Scan action on the homepage that opens the QR scanner', async () => {
+    // Lane J: the Scan tile is the fourth action on the dashboard
+    // (Send / Receive / Scan / Activity) and links to /send?scan=1,
+    // which opens the Round 2 QR scanner on arrival. SVG icon only
+    // (ui-ux-pro-max checklist); no new colours.
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '100000000' },
+        eth: { status: 'available', value: '0' },
+        trx: { status: 'available', value: '0' },
+        ton: { status: 'available', value: '0' },
+      }),
+    );
+    const mounted = await mountScreen();
+    try {
+      const scan = mounted.div.querySelector(
+        'a[href="/send?scan=1"]',
+      ) as HTMLAnchorElement | null;
+      expect(scan).not.toBeNull();
+      expect(scan?.textContent).toContain('Scan');
+      const actions = [...mounted.div.querySelectorAll('a')].filter(
+        (candidate) =>
+          candidate.textContent === 'Send' ||
+          candidate.textContent === 'Receive' ||
+          candidate.textContent === 'Scan' ||
+          candidate.textContent === 'Activity',
+      );
+      expect(actions).toHaveLength(4);
     } finally {
       await mounted.cleanup();
     }

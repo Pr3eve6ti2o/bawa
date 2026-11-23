@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/components/button';
+import { useWallet } from '../state/wallet-context';
 import { Card } from '../ui/components/card';
 import { BawaIcon } from '../ui/components/icons';
-import { useWallet } from '../state/wallet-context';
 import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { useLivePrices } from './use-live-prices';
@@ -19,15 +19,44 @@ import { useLivePrices } from './use-live-prices';
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
-  const { vaultState } = useWallet();
+  const { vaultState, refreshBalances, refreshTokenBalances } = useWallet();
+  // Lane J: the rows carry no per-row Retry (see asset-rows.tsx), so
+  // this is the screen's one retry path — the same "Refresh balances"
+  // the dashboard hero offers. It re-fetches natives and tokens.
+  // Aceternity Stateful Button pattern (structure only, re-skinned to
+  // Bawa's Button): while the refetch is in flight the button shows its
+  // loading state and cannot be double-clicked; it settles back to
+  // "Refresh balances" when the rows land — no fake success state.
+  const [refreshing, setRefreshing] = useState(false);
+  async function handleRefresh(): Promise<void> {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshBalances();
+      await refreshTokenBalances?.();
+    } finally {
+      setRefreshing(false);
+    }
+  }
   const { pricesState, pricesLoading, tokenPricesState, tokenPricesLoading } =
     useLivePrices();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-panel-text">Assets</h1>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              void handleRefresh();
+            }}
+            disabled={refreshing}
+            variant="outline"
+            className="h-11 shrink-0 rounded-[22px] px-3 text-sm font-medium"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh balances'}
+          </Button>
           <Button
             type="button"
             onClick={() => setAddTokenOpen(true)}

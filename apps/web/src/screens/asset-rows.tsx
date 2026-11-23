@@ -76,7 +76,6 @@ type AssetRowModel =
       symbol: string;
       statusText: string;
       price: PriceCell;
-      showRetry: boolean;
       link: string;
       isToken: boolean;
       logoChain: ChainId | null;
@@ -238,7 +237,6 @@ function getNativeRowModel(
   prices: PriceMap | undefined,
   nowMs: number,
   pricesLoading: boolean | undefined,
-  isLocked: boolean,
   devnet = false,
 ): AssetRowModel {
   const { balances } = wallet;
@@ -285,11 +283,6 @@ function getNativeRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
-      // No Retry while locked: a refetch needs a derived address and
-      // there is none in state while locked (refreshBalances resolves
-      // to no-address), so Retry could only fail again. AssetRows
-      // shows one Unlock prompt for the list instead.
-      showRetry: !isLocked,
       link,
       isToken: false,
       logoChain: chain,
@@ -345,7 +338,6 @@ function getTokenRowModel(
   tokenPrices: TokenPriceMap | undefined,
   nowMs: number,
   tokenPricesLoading: boolean | undefined,
-  isLocked: boolean,
 ): AssetRowModel {
   const key = tokenKeyOf(token);
   const chainName = chainConfig(token.chain).displayName;
@@ -394,7 +386,6 @@ function getTokenRowModel(
           ? 'Balance unavailable'
           : 'Could not load balance',
       price: priceCell(displayUnit),
-      showRetry: !isLocked,
       link,
       isToken: true,
       logoChain: null,
@@ -442,7 +433,7 @@ function getTokenRowModel(
   };
 }
 
-function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void }) {
+function ListRow({ model }: { model: AssetRowModel }) {
   if (model.kind === 'loading') {
     return <RowLoadingStatus title={model.title} />;
   }
@@ -475,11 +466,6 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
         ) : model.price.kind === 'state' ? (
           <span className="shrink-0 text-xs text-muted-foreground">{model.price.text}</span>
         ) : null}
-        {model.showRetry && (
-          <Button type="button" variant="outline" onClick={onRetry}>
-            Retry
-          </Button>
-        )}
       </li>
     );
   }
@@ -531,7 +517,7 @@ function TablePriceCell({ price, symbol }: { price: PriceCell; symbol: string })
   return <span className="text-xs text-muted-foreground">—</span>;
 }
 
-function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void }) {
+function TableRow({ model }: { model: AssetRowModel }) {
   if (model.kind === 'loading') {
     return <RowLoadingStatus title={model.title} />;
   }
@@ -557,16 +543,6 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
           <span className="col-start-1 row-start-2 @md:col-start-auto @md:row-start-auto @md:text-right">
             <TablePriceCell price={model.price} symbol={model.symbol} />
           </span>
-          {model.showRetry && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onRetry}
-              className="col-start-2 row-start-1 justify-self-end @md:col-start-auto @md:row-start-auto"
-            >
-              Retry
-            </Button>
-          )}
         </div>
       </li>
     );
@@ -670,9 +646,18 @@ export interface AssetRowsProps {
  * ("Price unavailable" / "Price error" / "Price expired"), never a
  * silent empty and never a fabricated number. While the first fetch is
  * still in flight, idle entries read as unavailable, so no price state
- * is shown rather than a premature failure. While the vault is locked,
- * a failed row shows no Retry — a refetch cannot succeed without a
- * derived address — and the list shows one Unlock prompt instead.
+ * is shown rather than a premature failure. A failed row never shows
+ * a per-row Retry (Lane J, MetaMask pattern): the fetch layer already
+ * retries silently with backoff and keeps the last good value, so a row
+ * button could only fail again — the Dogecoin row proved it. The retry
+ * path is the single list-level Refresh on the hosting screen. The row
+ * model itself is Ivy Wallet's feature/accounts pattern (icon + name +
+ * balance + one status line, no Retry — patterns only, GPL-3.0, no code
+ * copied), and a failed row is an Aceternity Empty States shape
+ * (real logo, one plain line, one action — the action being the
+ * list-level Refresh). While the vault is locked, a failed row shows
+ * no retry affordance at all and the list shows one Unlock prompt
+ * instead.
  *
  * Token balances refresh when these rows mount (and when the vault
  * addresses change): the wallet context refreshes them on demand, not
@@ -697,7 +682,6 @@ export function AssetRows({
   variant,
 }: AssetRowsProps) {
   const wallet = useWallet();
-  const { refreshBalances } = wallet;
   // Defensive defaults: the existing screen tests mock useWallet with
   // only { balances, refreshBalances, vaultState } — token fields are
   // absent there, and the rows must still render the natives.
@@ -745,10 +729,10 @@ export function AssetRows({
 
   const models: AssetRowModel[] = [
     ...chains.map((chain) =>
-      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, isLocked, devnet),
+      getNativeRowModel(chain, wallet, prices, nowMs, pricesLoading, devnet),
     ),
     ...tokens.map((token) =>
-      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading, isLocked),
+      getTokenRowModel(token, wallet, tokenPrices, tokenNowMs, tokenPricesLoading),
     ),
   ];
   const visible = hideZero ? models.filter((model) => !isZeroBalance(model)) : models;
@@ -772,23 +756,13 @@ export function AssetRows({
     );
   }
 
-  const onRetryFor = (model: AssetRowModel) => {
-    if (model.isToken) {
-      void refreshTokenBalances?.();
-    } else {
-      void refreshBalances();
-    }
-  };
-
   // While the vault is locked there is no derived address in state, so
   // a balance refetch can only fail again with no-address (see
-  // refreshBalances in state/wallet-context). The per-row Retry is
-  // suppressed while locked (showRetry in getRowModel) and this one
-  // Unlock prompt replaces it for the whole list, using the same copy
+  // refreshBalances in state/wallet-context). This one Unlock prompt
+  // replaces any retry affordance for the whole list, using the same copy
   // as the dashboard hero's locked message. It shows only when a row
   // actually failed — a locked vault with nothing to retry gets no
-  // prompt. 'no-vault' keeps its Retry: a watch-only xpub address can
-  // still load, so a refetch there may succeed.
+  // prompt.
   const hasFailedRow = visible.some(
     (model) => model.kind === 'unavailable',
   );
@@ -818,11 +792,7 @@ export function AssetRows({
         </div>
         <ul className="divide-y divide-border">
           {visible.map((model) => (
-            <TableRow
-              key={model.key}
-              model={model}
-              onRetry={() => onRetryFor(model)}
-            />
+            <TableRow key={model.key} model={model} />
           ))}
         </ul>
         </div>
@@ -835,11 +805,7 @@ export function AssetRows({
       {lockedNotice}
       <ul className="divide-y divide-border">
         {visible.map((model) => (
-          <ListRow
-            key={model.key}
-            model={model}
-            onRetry={() => onRetryFor(model)}
-          />
+          <ListRow key={model.key} model={model} />
         ))}
       </ul>
     </>

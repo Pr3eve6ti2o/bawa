@@ -15,6 +15,19 @@
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
 
+/* Bawa design tokens, formalised in the instalanding.ai Linework
+ * structure (dot-grid paper + architectural line drawing, 66 tokens):
+ *   Paper    — the page and every surface (--bawa-paper, and every
+ *              --surface-* / --card / --popover alias, all paper).
+ *   Ink      — the one drawing colour: all text, borders, marks
+ *              (--bawa-ink and every --foreground/--border alias).
+ *   Accent   — the two drawing inks used sparingly, never as text on
+ *              paper except Ink: Coral (primary action) and Sun
+ *              (highlight, hover, the action-tile disc).
+ *   Shape    — the hand-drawn stroke: --bawa-stroke, --bawa-border
+ *              (solid/dashed), --bawa-radius/--bawa-radius-sm.
+ * Only Ink is text on Paper. No token value changes with this comment.
+ */
 :root {
   /* Bawa design tokens — formalised after instalanding.ai's Linework
      system (dot-grid paper, architectural line drawing, 66 tokens):

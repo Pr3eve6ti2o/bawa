@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/components/card";
-import { PopularChainsStrip } from "./chain-strip";
 import { useWallet } from "../state/wallet-context";
 
 export function WelcomeScreen() {
@@ -123,8 +122,6 @@ export function WelcomeScreen() {
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.
         </p>
       </aside>
-
-      <PopularChainsStrip mode="welcome" />
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { initWasm } from '@trustwallet/wallet-core';
 import type { TonAddressValidation } from '@bawa/contracts';
 
 import { crc16Xmodem } from './address-codecs';
+import { COIN_TYPE_KEY_FOR_CHAIN } from './coin-type-keys';
 
 export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
 
@@ -98,7 +99,7 @@ const DERIVATION_PREFIXES: Readonly<Record<Exclude<ChainId, 'ton' | 'sol'>, stri
   trx: "m/44'/195'/0'/0",
 };
 
-type WalletCore = Awaited<ReturnType<typeof initWasm>>;
+export type WalletCore = Awaited<ReturnType<typeof initWasm>>;
 
 let wasmPromise: Promise<WalletCore> | undefined;
 let engineReady = false;
@@ -579,45 +580,10 @@ export async function validateWatchOnlyImport(
   return validateAccountKey(value, chain);
 }
 
-/**
- * WASM CoinType key per chain (all chains except TON, which has no
- * Wallet Core coin mapping in the engine). Shared by coinTypeForChain
- * here and coinForChain in wallet/core.ts (which adds the TON case).
- * The table holds key NAMES only — the CoinType values themselves
- * stay inside this file, per the facade contract above; callers
- * resolve `core.CoinType[key]` on their own core handle.
- *
- * Merge 1 (Lane B): the 9 extra chains adopt-proper added via the
- * inline coin map in deriveAddress. Repo-study's deriveAddressWithCore
- * helper only mapped btc/eth/trx, so the mappings move here instead
- * of re-adding the inline map. Values verified against HEAD's map.
- */
-export const COIN_TYPE_KEY_FOR_CHAIN: Record<
-  Exclude<ChainId, 'ton'>,
-  keyof WalletCore['CoinType']
-> = {
-  btc: 'bitcoin',
-  eth: 'ethereum',
-  trx: 'tron',
-  sol: 'solana',
-  bsc: 'smartChain',
-  matic: 'polygon',
-  arb: 'arbitrum',
-  op: 'optimism',
-  base: 'base',
-  avax: 'avalancheCChain',
-  gnosis: 'xdai',
-  celo: 'celo',
-  linea: 'linea',
-  mantle: 'mantle',
-  scroll: 'scroll',
-  opbnb: 'opBNB',
-  metis: 'metis',
-  aurora: 'aurora',
-  fantom: 'fantom',
-  ltc: 'litecoin',
-  doge: 'dogecoin',
-};
+// The coin-type key table lives in ./coin-type-keys (Lane J, perf):
+// a leaf module with no engine dependency. Re-exported here so the
+// existing import path keeps working.
+export { COIN_TYPE_KEY_FOR_CHAIN };
 
 function coinTypeForChain(core: WalletCore, chain: Exclude<ChainId, 'ton'>) {
   const key = COIN_TYPE_KEY_FOR_CHAIN[chain];

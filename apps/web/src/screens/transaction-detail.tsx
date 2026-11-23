@@ -9,13 +9,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { useWallet } from '../state/wallet-context';
-import { chainConfig } from '../wallet/chains';
+import { availableFor, chainConfig } from '../wallet/chains';
 import {
   CHAIN_DECIMALS,
   formatNativeWithSymbol,
 } from '../wallet/chain-amount-format';
-
-const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
 
 const STATUS_CLASSES = {
   pending: 'text-warning-text',
@@ -130,7 +128,12 @@ export function TransactionDetailScreen() {
 
   const found = (() => {
     if (!id) return null;
-    for (const chain of CHAINS) {
+    // Lane J: look up the hash on every history-verified chain, not
+    // just the original four. refreshHistory loads history for all of
+    // these (SOL, LTC and DOGE included), and transaction-history.tsx
+    // already lists the same set — a Dogecoin transaction in loaded
+    // history used to report "not in the loaded history" here.
+    for (const chain of availableFor('history')) {
       const tx = history[chain]?.txs.find((candidate) => candidate.hash === id);
       if (tx) return { tx, chain };
     }

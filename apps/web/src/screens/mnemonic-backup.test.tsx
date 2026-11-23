@@ -28,13 +28,27 @@ const TEST_MNEMONIC =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const TEST_PASSWORD = 'correct horse battery staple';
 
-// The four engine-chain profiles (layout-rebuild's local list): the
-// backup screen shows only these four chains.
+// A vault created with only the original four profiles (the
+// layout-rebuild fixture): the screen must still list all seven
+// profiles the wallet uses, marking the three missing ones as not
+// stored with this vault.
 const TEST_PROFILES = [
   'bawa-btc-bip84-v1',
   'bawa-evm-bip44-v1',
   'bawa-trx-bip44-v1',
   'bawa-ton-v4r2-v1',
+];
+
+// Every distinct derivation profile across all 22 supported chains —
+// the same dedup the create and import flows store in the vault.
+const ALL_SEVEN_PROFILES = [
+  'bawa-btc-bip84-v1',
+  'bawa-evm-bip44-v1',
+  'bawa-trx-bip44-v1',
+  'bawa-ton-v4r2-v1',
+  'bawa-sol-bip44-v1',
+  'bawa-ltc-bip84-v1',
+  'bawa-doge-bip44-v1',
 ];
 
 async function mountBackupScreen() {
@@ -205,20 +219,40 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     }
   });
 
-  it('shows only the four wallet chains, never a duplicate Ethereum or an extended chain', async () => {
+  it('shows every distinct recovery profile, with the EVM chains collapsed to one Ethereum row', async () => {
     await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_PROFILES);
     const { div, cleanup } = await mountBackupScreen();
     try {
       const text = div.textContent ?? '';
+      // The fifteen EVM chains share one profile, so Ethereum appears once.
       expect((text.match(/Ethereum/g) ?? []).length).toBe(1);
-      expect(text).not.toContain('Solana');
-      expect(text).not.toContain('Litecoin');
-      expect(text).not.toContain('Dogecoin');
-      expect(text).not.toContain('bawa-sol');
-      expect(text).not.toContain('bawa-ltc');
-      expect(text).not.toContain('bawa-doge');
+      // Solana, Litecoin and Dogecoin have their own profiles: they get
+      // their own rows. A vault created with only the original four
+      // profiles honestly marks them as not stored with this vault.
+      expect(text).toContain('Solana');
+      expect(text).toContain('Litecoin');
+      expect(text).toContain('Dogecoin');
+      expect(text).toContain('bawa-sol-bip44-v1');
+      expect(text).toContain('bawa-ltc-bip84-v1');
+      expect(text).toContain('bawa-doge-bip44-v1');
       const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
-      expect(profiles?.querySelectorAll('li').length).toBe(4);
+      expect(profiles?.querySelectorAll('li').length).toBe(7);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('marks all seven profiles stored for a vault created with them', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, ALL_SEVEN_PROFILES);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const text = div.textContent ?? '';
+      for (const profileId of ALL_SEVEN_PROFILES) {
+        expect(text).toContain(profileId);
+      }
+      expect(text).not.toContain('Not stored with this vault');
+      const profiles = div.querySelector('[aria-labelledby="backup-profiles"]');
+      expect(profiles?.querySelectorAll('li').length).toBe(7);
     } finally {
       await cleanup();
     }

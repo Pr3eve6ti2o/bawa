@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { BawaIcon } from '../ui/components/icons';
+import { BawaIcon, ScanIcon } from '../ui/components/icons';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import { availableFor } from '../wallet/chains';
 import {
@@ -17,13 +17,19 @@ import { AssetRows } from './asset-rows';
 import { AddTokenDialog } from './add-token';
 import { RecentActivity } from './recent-activity';
 import { Card } from '../ui/components/card';
-import { PopularChainsStrip } from './chain-strip';
 import { useLivePrices } from './use-live-prices';
+import { useAnimatedHeroValue } from './use-hero-ticker';
 
+// Fourth action is Scan (Lane J): the dashboard's way into the Round 2
+// QR scanner. It links to /send?scan=1, which opens the scanner on
+// arrival — the welcome screen has no Scan tile because without a vault
+// there is nothing to send from. The icon is the ScanIcon SVG (the
+// owner-reference glyph), not a BawaIconName.
 const ACTIONS = [
-  { to: '/send', icon: 'send', label: 'Send' },
-  { to: '/receive', icon: 'receive', label: 'Receive' },
-  { to: '/transactions', icon: 'activity', label: 'Activity' },
+  { to: '/send', icon: <BawaIcon name="send" className="size-6" />, label: 'Send' },
+  { to: '/receive', icon: <BawaIcon name="receive" className="size-6" />, label: 'Receive' },
+  { to: '/send?scan=1', icon: <ScanIcon className="size-6" />, label: 'Scan' },
+  { to: '/transactions', icon: <BawaIcon name="activity" className="size-6" />, label: 'Activity' },
 ] as const;
 
 /**
@@ -256,9 +262,15 @@ export function DashboardScreen() {
     }
   }, [nextHero]);
 
+  // Magic UI Number Ticker pattern, honest variant (Lane J): the hero
+  // counts between settled dollar values; first load, Partial,
+  // Unavailable, Locked and masked totals render at once (see
+  // use-hero-ticker.ts — it never counts from a fabricated $0.00).
+  const animatedHeroText = useAnimatedHeroValue(hero.text);
+
   // The toggle masks a real total only; "Unavailable" stays visible so
   // a missing total is never disguised as a hidden one.
-  const heroText = isLocked ? 'Locked' : hideBalance && hero.text !== 'Unavailable' ? '••••••' : hero.text;
+  const heroText = isLocked ? 'Locked' : hideBalance && hero.text !== 'Unavailable' ? '••••••' : animatedHeroText;
 
   return (
     <div className="space-y-6 lg:grid lg:grid-cols-[7fr_5fr] lg:gap-6 lg:space-y-0 xl:grid-cols-[2fr_1fr]">
@@ -327,28 +339,20 @@ export function DashboardScreen() {
         )}
         <Button type="button" variant="outline" disabled={pricesLoading} onClick={() => refreshPrices()}>{pricesLoading ? 'Refreshing prices…' : 'Refresh prices'}</Button>
       </div>
-      <div className="grid grid-cols-3 gap-2 lg:self-center">
+      <div className="grid grid-cols-4 gap-2 lg:self-center">
         {ACTIONS.map(({ to, icon, label }) => (
           <Link
             key={to}
             to={to}
-            className="flex flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper py-1 hover:bg-sun/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral active:bg-sun"
           >
             <span className="flex size-14 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
-              <BawaIcon name={icon} className="size-6" />
+              {icon}
             </span>
             <span className="text-xs leading-4 font-medium text-ink">{label}</span>
           </Link>
         ))}
       </div>
-
-      <PopularChainsStrip
-        mode="dashboard"
-        hideBalance={hideBalance}
-        entries={pricesState.entries}
-        pricesLoading={pricesLoading}
-        nowMs={Date.now()}
-      />
 
       {/*
         Tokens/Activity tabs. Two errors corrected hands-on: tx.amount ->

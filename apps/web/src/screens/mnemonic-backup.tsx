@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { hasVault, vaultProfiles, verifyVaultPassword, withMnemonic } from '../wallet/vault';
-import { profileFor } from '../wallet/chains';
+import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Button } from '../ui/components/button';
 import {
   Card,
@@ -28,6 +28,9 @@ const PROFILE_LABELS: Record<string, string> = {
   'bawa-evm-bip44-v1': 'Ethereum (bawa-evm-bip44-v1)',
   'bawa-trx-bip44-v1': 'TRON (bawa-trx-bip44-v1)',
   'bawa-ton-v4r2-v1': 'TON (bawa-ton-v4r2-v1)',
+  'bawa-sol-bip44-v1': 'Solana (bawa-sol-bip44-v1)',
+  'bawa-ltc-bip84-v1': 'Litecoin (bawa-ltc-bip84-v1)',
+  'bawa-doge-bip44-v1': 'Dogecoin (bawa-doge-bip44-v1)',
 };
 
 /**
@@ -67,11 +70,16 @@ const REVEAL_QUIZ = [
 
 type RevealStage = 'idle' | 'password' | 'quiz' | 'revealed';
 
-// Only the four chains this wallet supports. SUPPORTED_CHAINS holds
-// thirteen chains and every EVM chain shares the bawa-evm-bip44-v1
-// profile, so mapping it showed duplicate "Ethereum" rows plus
-// Solana, Litecoin and Dogecoin profiles that this wallet never uses.
-const BACKUP_CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
+// One row per DISTINCT derivation profile across all 22 supported
+// chains — the same dedup the create and import flows use when they
+// store the vault's profileIds. The fifteen EVM chains share
+// bawa-evm-bip44-v1, so they collapse to one "Ethereum" row; Solana,
+// Litecoin and Dogecoin have their own profiles and get their own
+// rows. The old four-chain list understated what the phrase
+// recovers: a vault stores seven profiles, not four.
+const BACKUP_PROFILES: readonly string[] = [
+  ...new Set(SUPPORTED_CHAINS.map((chain) => profileFor(chain))),
+];
 
 export function MnemonicBackupScreen() {
   const [profiles, setProfiles] = useState<string[] | null>(null);
@@ -233,12 +241,11 @@ export function MnemonicBackupScreen() {
           {/* Round 2: one compact row per profile instead of four tall
               cards — the profile id and its stored state on one line. */}
           <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
-            {BACKUP_CHAINS.map((chain) => {
-              const profileId = profileFor(chain);
+            {BACKUP_PROFILES.map((profileId) => {
               const stored = profiles.includes(profileId);
               return (
                 <li
-                  key={chain}
+                  key={profileId}
                   className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2"
                 >
                   <span className="text-sm font-semibold text-ink">
