@@ -10,7 +10,8 @@ diagram (not a PNG or SVG), do something about the increased branch count.
 **Method:** hands-on Muse, 0 Sol calls, 0 AgentRouter calls. Branch
 `panel-rebuild/marketing-fix`, created from `panel-rebuild/token-gaps` `71326e1`,
 rebased onto `e290654` after the parallel deep-audit programme merged into
-token-gaps. Merged into token-gaps when done (see merge note at the end).
+token-gaps. Merged into token-gaps as `571f0fb` (verified by fresh ls-remote;
+merged tree is byte-identical to the verified `a8018fd` tree).
 No code merged into `adopt-proper` or `main`.
 
 ## Lane 1 — Fix the first-impression defects (commit `49840e9`)
@@ -129,8 +130,34 @@ GitHub mobile app shows Mermaid as raw code; it renders on github.com web.
 
 ## Lane 6 — Branch cleanup
 
-(Recorded after the merge into token-gaps; see the merge note. Before/after
-branch lists, what was deleted, what was kept and why.)
+Remote before: 13 branches — main `5c6dc76`, gh-pages `ee63a13`,
+adopt-proper `6ac3c99`, deep-audit-devnet `9be792e`, desktop-layout-v2
+`92817cf`, devnet-temp `5b991b5`, marketing-fix `a8018fd`,
+readme-showcase-token `eab8861`, reverify-pro `ccb8195`, token-discovery
+`ff7f30d`, token-gaps `571f0fb`, ui-ux-fixes `a9eb6aa`, ui-ux-round2 `5cbf5fc`.
+
+Ancestry checked first-hand against token-gaps `571f0fb` with
+`merge-base --is-ancestor`. **Deleted from the remote (4, all verified
+ancestors):** ui-ux-round2, reverify-pro, readme-showcase-token,
+deep-audit-devnet. **Kept, not ancestors — they hold post-merge doc-only
+commits:** token-discovery (`ff7f30d`, 5 doc commits after merge-base
+`f76245a`) and ui-ux-fixes (`a9eb6aa`, one doc commit after merge-base
+`68fd75b`; its programme record differs from token-gaps' copy, so the
+content is genuinely unique). **Kept, unique unmerged work:**
+desktop-layout-v2, devnet-temp. **Kept, programme/protected:** marketing-fix
+(the just-merged programme branch, kept like earlier programme branches),
+main, adopt-proper, token-gaps, gh-pages.
+
+Remote after: 9 branches (the 4 deletions above; ls-remote verified).
+
+Local (gray-pinee): 59 → 56 branches. Only 3 deleted
+(`panel-rebuild/desktop-layout`, `panel-rebuild/fix-perf-ui`,
+`panel-rebuild/org-security-docs`) — nearly every other ancestor branch is
+checked out in a worktree and git refuses to delete a checked-out branch.
+`main-adopt-fixes` is not an ancestor and was kept. The remaining
+ancestor-but-checked-out lane branches need a worktree-removal pass before
+they can be deleted; that is handed to the finish-product programme's
+Lane E (repo cleanup + branches), not forced here.
 
 ## Lane 7 — QR templates (commit `ed4459d`)
 
