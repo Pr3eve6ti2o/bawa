@@ -562,6 +562,10 @@ describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', 
       fillStyle: '',
       fillRect: () => {},
       drawImage: () => {},
+      // The card renderer measures and draws text; jsdom's canvas
+      // has neither, so the fake measures 10px a character.
+      fillText: () => {},
+      measureText: (text: string) => ({ width: text.length * 10 }),
     } as unknown as CanvasRenderingContext2D);
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(
       (callback: (blob: Blob | null) => void) => {
@@ -646,7 +650,7 @@ describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', 
       expect(file.name).toBe('bawa-receive-eth.png');
       expect(file.type).toBe('image/png');
       expect(await file.text()).toBe('png-bytes');
-      expect(mounted.div.textContent).toContain('QR code shared.');
+      expect(mounted.div.textContent).toContain('Card shared.');
     } finally {
       await mounted.cleanup();
     }
@@ -679,7 +683,7 @@ describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', 
     }
   });
 
-  it('downloads the QR as a PNG from the Download QR button', async () => {
+  it('downloads the card as a PNG from the Download card button', async () => {
     setWallet();
     stubQrRendering();
     const clickedAnchors: HTMLAnchorElement[] = [];
@@ -692,13 +696,75 @@ describe('receive screen — sharing the QR as an image (UI/UX fixes, item 4)', 
     try {
       // Item 20: Share/Download live on the details step.
       await reachDetails(mounted.div);
-      clickButtonByText(mounted.div, 'Download QR');
+      clickButtonByText(mounted.div, 'Download card');
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       });
       expect(clickedAnchors).toHaveLength(1);
       expect(clickedAnchors[0]!.download).toBe('bawa-receive-eth.png');
-      expect(mounted.div.textContent).toContain('QR code downloaded.');
+      expect(mounted.div.textContent).toContain('Card downloaded.');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
+  function setAmountInput(div: HTMLDivElement, value: string): void {
+    const input = div.querySelector('#receive-amount') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )?.set;
+    setter?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  it('shows the card with amount, address and network for the native coin', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card).not.toBeNull();
+      // No amount typed yet — the card says so honestly.
+      expect(card?.textContent).toContain('Any amount');
+      expect(card?.textContent).toContain(VAULT_ETH);
+      expect(card?.textContent).toContain('Ethereum');
+      expect(card?.textContent).toContain('Native coin');
+      await act(async () => {
+        setAmountInput(mounted.div, '0.5');
+      });
+      expect(card?.textContent).toContain('0.5 ETH');
+      expect(card?.textContent).not.toContain('Any amount');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the token (chain) label on the card for a token', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'Ethereum');
+      const usdcButton = [...mounted.div.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('USD Coin'),
+      );
+      expect(usdcButton).not.toBeUndefined();
+      await act(async () => {
+        usdcButton?.dispatchEvent(new Event('click', { bubbles: true }));
+      });
+      await act(async () => {
+        setAmountInput(mounted.div, '25');
+      });
+      const card = mounted.div.querySelector('[data-testid="qr-card"]');
+      expect(card).not.toBeNull();
+      expect(card?.textContent).toContain('25 USDC');
+      expect(card?.textContent).toContain('usdc (eth)');
+      expect(card?.textContent).toContain('USD Coin · Ethereum');
+      expect(card?.querySelector('img[alt="USDC logo"]')).not.toBeNull();
+      expect(card?.querySelector('img[alt="Ethereum logo"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
     }

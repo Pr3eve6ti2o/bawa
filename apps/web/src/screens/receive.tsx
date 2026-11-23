@@ -5,7 +5,7 @@ import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
-import { buildBawaSendLink, buildPaymentUri, qrSvgToPngFile } from '../wallet/payment-links';
+import { buildBawaSendLink, buildPaymentUri, qrCardToPngFile } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
   isVerifiedToken,
@@ -16,6 +16,8 @@ import {
   type TokenRecord,
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
+import { QrCard, qrCardTokenLabel } from './qr-card';
+import { chainLogoFor, tokenLogoFor } from './token-logo';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
@@ -228,11 +230,12 @@ export function ReceiveScreen() {
   async function sharePayment() {
     if (!address || !shareLink) return;
     setCopyStatus('');
-    // Sharing attaches the QR as a PNG image (UI/UX fixes, item 4):
-    // the file is what the recipient's wallet scans; the payment URI
-    // stays in the text and the Bawa link in the URL. When the
-    // platform cannot share files, the PNG downloads instead — the
-    // link is only copied as a last resort.
+    // Sharing attaches the QR card as a PNG image (UI/UX Round 2,
+    // item 1): the file is the card — QR, amount, address, token +
+    // chain with both logos — the same card the screen shows. The
+    // payment URI stays in the text and the Bawa link in the URL.
+    // When the platform cannot share files, the PNG downloads
+    // instead — the link is only copied as a last resort.
     const file = await qrPngFile();
     if (
       file !== null &&
@@ -246,7 +249,7 @@ export function ReceiveScreen() {
           text: paymentUri ?? address,
           url: shareLink,
         });
-        setCopyStatus('QR code shared.');
+        setCopyStatus('Card shared.');
         return;
       } catch (error: unknown) {
         // A cancelled share sheet is not an error; fall through to download.
@@ -257,7 +260,7 @@ export function ReceiveScreen() {
       try {
         downloadBlob(file, file.name);
         setCopyStatus(
-          'Sharing is not available here — the QR code was downloaded instead.',
+          'Sharing is not available here — the card was downloaded instead.',
         );
         return;
       } catch {
@@ -271,12 +274,27 @@ export function ReceiveScreen() {
     return `bawa-receive-${chain}${effectiveToken ? `-${effectiveToken.symbol.toLowerCase()}` : ''}.png`;
   }
 
+  // The amount as the card shows it — null when no amount is set.
+  const amountText =
+    amount.trim() === '' || amountError
+      ? null
+      : `${amount.trim()} ${assetSymbol}`;
+
   async function qrPngFile(): Promise<File | null> {
-    const svg = qrRef.current?.querySelector('svg');
-    if (!svg) return null;
+    const svg = qrRef.current?.querySelector('#qr-card-qr svg');
+    if (!svg || !address || !chain) return null;
     try {
-      return await qrSvgToPngFile(
+      return await qrCardToPngFile(
         new XMLSerializer().serializeToString(svg),
+        {
+          amountText: amountText ?? 'Any amount',
+          address,
+          tokenLabel: qrCardTokenLabel(effectiveToken, chain),
+          tokenLogoSrc: tokenLogoFor(
+            effectiveToken === null ? config.symbol : effectiveToken.symbol,
+          ),
+          chainLogoSrc: chainLogoFor(chain) ?? tokenLogoFor(chain),
+        },
         qrFileName(),
       );
     } catch {
@@ -298,14 +316,14 @@ export function ReceiveScreen() {
   async function downloadQr() {
     const file = await qrPngFile();
     if (!file) {
-      setCopyStatus('Unable to download the QR code.');
+      setCopyStatus('Unable to download the card.');
       return;
     }
     try {
       downloadBlob(file, file.name);
-      setCopyStatus('QR code downloaded.');
+      setCopyStatus('Card downloaded.');
     } catch {
-      setCopyStatus('Unable to download the QR code.');
+      setCopyStatus('Unable to download the card.');
     }
   }
 
@@ -565,27 +583,25 @@ export function ReceiveScreen() {
       <Card className="rounded-xl border-border bg-card p-6 text-foreground">
         {address ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* Paper surround keeps the QR scannable — Ink modules on Paper. */}
-              <div id="receive-qr" ref={qrRef} className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
-                <QRCodeSVG
-                  value={mainQr}
-                  size={192}
-                  marginSize={4}
-                  level="H"
-                  fgColor="#2B2B2B"
-                  bgColor="#FFFDF7"
-                  title={mainQr}
-                />
-              </div>
-              {paymentUriUnavailable && (
-                <p className="text-sm text-ink">
-                  Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
-                  standard payment-request link, so the QR encodes the address only. The share
-                  link below still carries the amount.)
-                </p>
-              )}
+            {/* The QR card (UI/UX Round 2, item 1): QR, amount,
+                address, token + chain with both logos — the same
+                card the Share and Download buttons send out. */}
+            <div id="receive-qr" ref={qrRef} className="w-full max-w-md">
+              <QrCard
+                qrValue={mainQr}
+                amountText={amountText}
+                address={address}
+                token={effectiveToken}
+                chain={chain}
+              />
             </div>
+            {paymentUriUnavailable && (
+              <p className="text-sm text-ink">
+                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
+                standard payment-request link, so the QR encodes the address only. The share
+                link below still carries the amount.)
+              </p>
+            )}
             <div className="flex items-start justify-center gap-3">
               {smallQrs.map((candidate) => (
                 <button
@@ -615,7 +631,6 @@ export function ReceiveScreen() {
                 </button>
               ))}
             </div>
-            <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
             {vaultAddress !== undefined && !isWatchOnly && (
               <p className="w-full text-center text-sm text-ink">
                 {canRotate
@@ -647,7 +662,7 @@ export function ReceiveScreen() {
                 Copy link
               </Button>
               <Button type="button" variant="outline" onClick={() => void downloadQr()}>
-                Download QR
+                Download card
               </Button>
             </div>
           </div>

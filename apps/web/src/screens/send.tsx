@@ -172,15 +172,16 @@ export function SendScreen() {
   // &token=) or a scanned payment URI (token gaps, item 3). The link
   // opens this screen with chain, recipient, amount and token filled
   // in; when the recipient validates, the flow moves to the amount
-  // step so both are visible prefilled. A link for a chain with no
-  // wallet here is ignored — its chain button stays disabled.
+  // step so both are visible prefilled. Returns false when the
+  // payment's chain has no wallet here — the caller says so, instead
+  // of the scan silently doing nothing (UI/UX Round 2, item 1).
   async function applyPrefill(prefill: {
     chain: ChainId;
     to: string;
     amount?: string;
     tokenContract?: string;
-  }): Promise<void> {
-    if ((vaultAddresses[prefill.chain] ?? []).length === 0) return;
+  }): Promise<boolean> {
+    if ((vaultAddresses[prefill.chain] ?? []).length === 0) return false;
     const tokenRecord =
       prefill.tokenContract === undefined
         ? null
@@ -210,6 +211,7 @@ export function SendScreen() {
     } else {
       setRecipientError(result.reason);
     }
+    return true;
   }
 
   useEffect(() => {
@@ -224,6 +226,12 @@ export function SendScreen() {
       to: link.to,
       amount: link.amount,
       tokenContract: link.token,
+    }).then((applied) => {
+      if (!applied) {
+        setPrefillNote(
+          `This link is for ${chainConfig(link.chain).displayName}, which has no wallet here yet.`,
+        );
+      }
     });
     // The link is applied once, on mount, from the URL that opened
     // this screen. applyPrefill is stable by construction (it only
@@ -246,26 +254,38 @@ export function SendScreen() {
     // A scanned payment URI (BIP-21, EIP-681, Solana Pay, TON) or a
     // Bawa web link prefills the whole payment — chain, recipient,
     // amount and token — instead of being treated as a bare address.
+    // When the QR's chain has no wallet here, say so on this screen
+    // instead of silently staying put (UI/UX Round 2, item 1).
     const payment = parsePaymentUri(value, allTokens);
     if (payment.ok) {
-      await applyPrefill({
+      const applied = await applyPrefill({
         chain: payment.request.chain,
         to: payment.request.address,
         amount: payment.request.amount,
         tokenContract: payment.request.tokenContract,
       });
+      if (!applied) {
+        setPrefillNote(
+          `This QR is for ${chainConfig(payment.request.chain).displayName}, which has no wallet here yet.`,
+        );
+      }
       return;
     }
     if (value.startsWith('http')) {
       try {
         const link = parseBawaSendLink(new URL(value).search);
         if (link !== null) {
-          await applyPrefill({
+          const applied = await applyPrefill({
             chain: link.chain,
             to: link.to,
             amount: link.amount,
             tokenContract: link.token,
           });
+          if (!applied) {
+            setPrefillNote(
+              `This QR is for ${chainConfig(link.chain).displayName}, which has no wallet here yet.`,
+            );
+          }
           return;
         }
       } catch {
@@ -662,6 +682,39 @@ export function SendScreen() {
 
       {step === 'asset' && (
         <>
+      {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
+          the network, token, amount and address by itself, so the
+          scanner lives here too — not only on the recipient step,
+          after the network and token were already picked by hand. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3">
+        <button
+          type="button"
+          aria-label="Scan QR code"
+          aria-expanded={showScanner}
+          title="Scan QR code"
+          onClick={() => setShowScanner((current) => !current)}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+        >
+          <ScanIcon className="h-11 w-11 text-ink" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-ink">Scan a QR code</p>
+          <p className="text-sm text-muted-foreground">
+            Scan a payment QR and the network, token, amount and address fill in themselves.
+          </p>
+        </div>
+      </div>
+      {prefillNote && (
+        <p role="note" className="text-sm text-ink">
+          {prefillNote}
+        </p>
+      )}
+      {showScanner && (
+        <QrScanner
+          onScan={(value) => void handleScan(value)}
+          onCancel={() => setShowScanner(false)}
+        />
+      )}
       <div
         role="group"
         aria-label="Chain"

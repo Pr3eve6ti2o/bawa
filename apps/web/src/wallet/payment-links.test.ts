@@ -22,8 +22,12 @@ import {
   buildPaymentUri,
   parseBawaSendLink,
   parsePaymentUri,
+  qrCardToPngBlob,
+  qrCardToPngFile,
   qrSvgToPngBlob,
   qrSvgToPngFile,
+  wrapCardText,
+  type QrCardPngDetails,
   type QrRenderDeps,
 } from './payment-links';
 
@@ -470,5 +474,163 @@ describe('qrSvgToPngFile — sharing the QR as an image (UI/UX fixes, item 4)', 
     await expect(qrSvgToPngBlob(SVG, 512, deps)).rejects.toThrow(
       'could not be loaded',
     );
+  });
+});
+
+describe('qrCardToPngFile — sharing the QR card (UI/UX Round 2, item 1)', () => {
+  const SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" fill="#FFFDF7"/><rect x="10" y="10" width="20" height="20" fill="#2B2B2B"/></svg>';
+  const ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
+  const DETAILS: QrCardPngDetails = {
+    amountText: '25 USDC',
+    address: ADDRESS,
+    tokenLabel: 'usdc (base)',
+    tokenLogoSrc: 'https://example.invalid/usdc.webp',
+    chainLogoSrc: 'https://example.invalid/base.webp',
+  };
+
+  // Fake render deps with text support: the card measures and draws
+  // text, so the fake context records fillText and measures each
+  // character as 10px wide. Images load in call order — the QR
+  // first, then the two logos — and logos can be made to fail.
+  function cardDeps(options: { failLogos?: boolean } = {}): {
+    deps: QrRenderDeps;
+    canvas: { width: number; height: number };
+    fillRect: ReturnType<typeof vi.fn>;
+    drawImage: ReturnType<typeof vi.fn>;
+    fillText: ReturnType<typeof vi.fn>;
+  } {
+    const fillRect = vi.fn();
+    const drawImage = vi.fn();
+    const fillText = vi.fn();
+    const ctx = {
+      fillStyle: '',
+      font: '',
+      textAlign: '',
+      textBaseline: '',
+      fillRect,
+      drawImage,
+      fillText,
+      measureText: (text: string) => ({ width: text.length * 10 }),
+    };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ctx,
+      toBlob: (callback: (blob: Blob | null) => void) => {
+        callback(new Blob(['\x89PNG fake-bytes'], { type: 'image/png' }));
+      },
+    };
+    let imageCount = 0;
+    const deps: QrRenderDeps = {
+      createCanvas: () => canvas,
+      createImage: () => {
+        const index = imageCount++;
+        const image = {
+          onload: null as (() => void) | null,
+          onerror: null as (() => void) | null,
+          width: 192,
+          height: 192,
+          set src(_value: string) {
+            queueMicrotask(() => {
+              if (options.failLogos === true && index > 0) {
+                image.onerror?.();
+              } else {
+                image.onload?.();
+              }
+            });
+          },
+        };
+        return image;
+      },
+    };
+    return { deps, canvas, fillRect, drawImage, fillText };
+  }
+
+  it('draws the card — QR, amount, address, token label — in order', async () => {
+    const fakes = cardDeps();
+    const file = await qrCardToPngFile(SVG, DETAILS, 'bawa-receive-base-usdc.png', fakes.deps);
+    expect(file).toBeInstanceOf(File);
+    expect(file.name).toBe('bawa-receive-base-usdc.png');
+    expect(file.type).toBe('image/png');
+    // 640 wide; one address line at 10px a character (42 chars fit
+    // the 568px content width): 36 + 360 + 24 + 44 + 16 + 28 + 20 +
+    // 44 + 36 = 608 tall.
+    expect(fakes.canvas.width).toBe(640);
+    expect(fakes.canvas.height).toBe(608);
+    // Paper painted first, over the whole card.
+    expect(fakes.fillRect).toHaveBeenCalledWith(0, 0, 640, 608);
+    // The QR is drawn 360px wide, centred, at the top.
+    const qrDraw = fakes.drawImage.mock.calls[0]!;
+    expect(qrDraw[1]).toBe(140);
+    expect(qrDraw[2]).toBe(36);
+    expect(qrDraw[3]).toBe(360);
+    expect(qrDraw[4]).toBe(360);
+    // Both logos are drawn 44px, flanking the label.
+    const logoDraws = fakes.drawImage.mock.calls.slice(1);
+    expect(logoDraws).toHaveLength(2);
+    expect(logoDraws[0]![3]).toBe(44);
+    expect(logoDraws[1]![3]).toBe(44);
+    // The card's facts, in the on-screen order: amount, address, label.
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual(['25 USDC', ADDRESS, 'usdc (base)']);
+  });
+
+  it('wraps a long address onto two lines and grows the card', async () => {
+    const fakes = cardDeps();
+    // 62 characters at 10px = 620px: 56 on the first line, 6 on the second.
+    const longAddress = `bc1q${'a'.repeat(58)}`;
+    await qrCardToPngBlob(
+      SVG,
+      { amountText: '0.5 BTC', address: longAddress, tokenLabel: 'Bitcoin' },
+      fakes.deps,
+    );
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual(['0.5 BTC', longAddress.slice(0, 56), longAddress.slice(56), 'Bitcoin']);
+    expect(fakes.canvas.height).toBe(608 + 28);
+  });
+
+  it('still shares the card when both logos fail to load', async () => {
+    const fakes = cardDeps({ failLogos: true });
+    const file = await qrCardToPngFile(SVG, DETAILS, 'bawa-receive-base-usdc.png', fakes.deps);
+    expect(file).toBeInstanceOf(File);
+    // Only the QR is drawn; the label is still there, centred alone.
+    expect(fakes.drawImage).toHaveBeenCalledTimes(1);
+    const texts = fakes.fillText.mock.calls.map((call) => call[0]);
+    expect(texts).toEqual(['25 USDC', ADDRESS, 'usdc (base)']);
+  });
+
+  it('rejects a blank SVG and missing payment details', async () => {
+    const fakes = cardDeps();
+    await expect(qrCardToPngBlob('   ', DETAILS, fakes.deps)).rejects.toThrow(
+      'no QR image',
+    );
+    await expect(
+      qrCardToPngBlob(SVG, { ...DETAILS, address: '  ' }, fakes.deps),
+    ).rejects.toThrow('payment details are missing');
+    await expect(
+      qrCardToPngBlob(SVG, { ...DETAILS, tokenLabel: '' }, fakes.deps),
+    ).rejects.toThrow('payment details are missing');
+  });
+});
+
+describe('wrapCardText — the card address wrap', () => {
+  const measure = (text: string): number => text.length * 10;
+
+  it('keeps a short address on one line', () => {
+    expect(wrapCardText('0xabc', 568, measure)).toEqual(['0xabc']);
+  });
+
+  it('breaks a long address where the line fills', () => {
+    expect(wrapCardText('abcdefghij', 30, measure)).toEqual([
+      'abc',
+      'def',
+      'ghi',
+      'j',
+    ]);
+  });
+
+  it('returns no lines for an empty string', () => {
+    expect(wrapCardText('', 568, measure)).toEqual([]);
   });
 });
