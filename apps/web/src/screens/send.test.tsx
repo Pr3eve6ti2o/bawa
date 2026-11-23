@@ -137,6 +137,16 @@ function findButton(div: HTMLDivElement, text: string): HTMLButtonElement {
   return button as HTMLButtonElement;
 }
 
+async function clickLabel(div: HTMLDivElement, label: string): Promise<void> {
+  const button = div.querySelector(
+    `button[aria-label="${label}"]`,
+  ) as HTMLButtonElement | null;
+  expect(button).not.toBeNull();
+  await act(async () => {
+    button?.click();
+  });
+}
+
 async function mountScreen(initialEntries: string[] = ['/send']) {
   const div = document.createElement('div');
   document.body.appendChild(div);
@@ -324,7 +334,7 @@ describe('send screen', () => {
     const mounted = await mountScreen();
     try {
       await clickContaining(mounted.div, 'Ethereum · ETH');
-      await click(mounted.div, 'Scan QR');
+      await clickLabel(mounted.div, 'Scan QR code');
       await waitForText(
         mounted.div,
         'Camera is not available in this browser.',
@@ -332,6 +342,36 @@ describe('send screen', () => {
       expect(mounted.div.textContent).toContain(
         'Camera is not available in this browser.',
       );
+      // The panel stays open so the image upload stays available.
+      expect(
+        mounted.div.querySelector('input[type="file"]'),
+      ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('toggles the scanner from the scan icon button', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      const button = mounted.div.querySelector(
+        'button[aria-label="Scan QR code"]',
+      ) as HTMLButtonElement | null;
+      expect(button).not.toBeNull();
+      expect(button?.getAttribute('aria-expanded')).toBe('false');
+      await clickLabel(mounted.div, 'Scan QR code');
+      await waitForText(
+        mounted.div,
+        'Camera is not available in this browser.',
+      );
+      expect(button?.getAttribute('aria-expanded')).toBe('true');
+      await clickLabel(mounted.div, 'Scan QR code');
+      expect(mounted.div.textContent).not.toContain(
+        'Camera is not available in this browser.',
+      );
+      expect(button?.getAttribute('aria-expanded')).toBe('false');
     } finally {
       await mounted.cleanup();
     }

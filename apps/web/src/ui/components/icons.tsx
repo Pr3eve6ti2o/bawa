@@ -179,3 +179,35 @@ export function BawaIcon({
     </svg>
   );
 }
+
+// Scan glyph from the owner's reference: a solid dark disc with white
+// corner brackets and a centre scan line. It is deliberately not a
+// BawaIconName — BawaIcon is a single-colour stroke set, and this glyph
+// needs a filled disc (currentColor, so callers render it with text-ink)
+// plus white marks. Bracket and line proportions are measured from the
+// reference image: the bracket square spans about a third of the disc,
+// the centre line about five sixths of the bracket square.
+export function ScanIcon({ className }: { className?: string }): ReactElement {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 48 48"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="24" cy="24" r="23" fill="currentColor" />
+      <g
+        stroke="#fff"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20 16 H16 V20" stroke="#fff" />
+        <path d="M28 16 H32 V20" stroke="#fff" />
+        <path d="M20 32 H16 V28" stroke="#fff" />
+        <path d="M28 32 H32 V28" stroke="#fff" />
+        <path d="M17 24 H31" stroke="#fff" strokeWidth={2.5} />
+      </g>
+    </svg>
+  );
+}

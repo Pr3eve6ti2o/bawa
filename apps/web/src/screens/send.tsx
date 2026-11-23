@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
+import { ScanIcon } from '../ui/components/icons';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import {
@@ -98,7 +99,6 @@ export function SendScreen() {
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [scannerError, setScannerError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [preview, setPreview] = useState<SendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -832,31 +832,26 @@ export function SendScreen() {
             <Button type="button" onClick={() => void handleRecipientNext()}>
               Continue
             </Button>
-            <Button
+            {/* Scan icon from the owner's reference: a black circle with
+                white corner brackets. A camera failure no longer closes
+                the panel — QrScanner shows the failure and offers an
+                image upload instead. */}
+            <button
               type="button"
-              variant="outline"
-              onClick={() => {
-                setScannerError(null);
-                setShowScanner((current) => !current);
-              }}
+              aria-label="Scan QR code"
+              aria-expanded={showScanner}
+              title="Scan QR code"
+              onClick={() => setShowScanner((current) => !current)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
             >
-              {showScanner ? 'Hide scanner' : 'Scan QR'}
-            </Button>
+              <ScanIcon className="h-11 w-11 text-ink" />
+            </button>
           </div>
           {showScanner && (
             <QrScanner
               onScan={(value) => void handleScan(value)}
               onCancel={() => setShowScanner(false)}
-              onError={(message) => {
-                setScannerError(message);
-                setShowScanner(false);
-              }}
             />
-          )}
-          {scannerError && (
-            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-              {scannerError}
-            </p>
           )}
         </section>
       )}

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createRoot } from "react-dom/client";
 import { act } from "react-dom/test-utils";
 import type { ReactElement } from "react";
-import { BAWA_ICON_NAMES, BawaIcon, type BawaIconName } from "./icons";
+import { BAWA_ICON_NAMES, BawaIcon, ScanIcon, type BawaIconName } from "./icons";
 
 const EXPECTED_ICON_NAMES: readonly BawaIconName[] = [
   "wallet",
@@ -119,5 +119,30 @@ describe("BawaIcon", () => {
     expect(container.querySelector("svg")?.getAttribute("class")).toBe(
       "wallet-icon",
     );
+  });
+});
+
+describe("ScanIcon", () => {
+  it("renders the reference glyph: dark disc, white corner brackets and centre line", async () => {
+    const container = await mount(
+      <ScanIcon className="h-11 w-11 text-ink" />,
+    );
+    const svg = container.querySelector("svg");
+
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 48 48");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(svg?.getAttribute("class")).toBe("h-11 w-11 text-ink");
+
+    // The disc takes its colour from the caller's text colour (text-ink).
+    const circle = svg?.querySelector("circle");
+    expect(circle?.getAttribute("fill")).toBe("currentColor");
+
+    // Four corner brackets plus the centre scan line, all white.
+    const paths = [...(svg?.querySelectorAll("path") ?? [])];
+    expect(paths).toHaveLength(5);
+    for (const path of paths) {
+      expect(path.getAttribute("stroke")).toBe("#fff");
+    }
   });
 });
