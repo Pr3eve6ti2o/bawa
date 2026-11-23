@@ -247,6 +247,38 @@ export function planFailure(
  * only needs UTXOs, addresses and the rate. The preview uses this so the
  * BTC fee shown is the real planned fee, not the sat/vB rate.
  */
+/**
+ * True when every BTC UTXO in the set is well-formed (64-hex txid,
+ * non-negative safe-integer vout, numeric value). planBtcFee and
+ * signBtcOffline validate the same shape; BtcSigningUtxo is
+ * field-identical to UtxoInput, so one predicate covers both.
+ */
+function isValidBtcUtxoSet(utxos: readonly UtxoInput[]): boolean {
+  return !utxos.some(
+    (u) =>
+      !/^[0-9a-fA-F]{64}$/.test(u.txid) ||
+      !Number.isSafeInteger(u.vout) ||
+      u.vout < 0 ||
+      toSafeInt(u.valueBaseUnits) === null,
+  );
+}
+
+/**
+ * UTXO -> TrustWallet SigningInput utxo entries. The two BTC sites
+ * (planBtcFee, signBtcOffline) differ only in the outer privateKey
+ * field, not in this map.
+ */
+function btcSigningUtxos(utxos: readonly UtxoInput[], script: Uint8Array) {
+  return utxos.map((u) => ({
+    outPoint: {
+      hash: reverseBytes(hexToBytes(u.txid)),
+      index: u.vout,
+    },
+    script,
+    amount: Long.fromNumber(toSafeInt(u.valueBaseUnits) as number),
+  }));
+}
+
 async function planBtcFee(
   fromAddress: string,
   toAddress: string,
@@ -262,13 +294,7 @@ async function planBtcFee(
   if (
     feeRate === null ||
     amountInt === null ||
-    utxos.some(
-      (u) =>
-        !/^[0-9a-fA-F]{64}$/.test(u.txid) ||
-        !Number.isSafeInteger(u.vout) ||
-        u.vout < 0 ||
-        toSafeInt(u.valueBaseUnits) === null,
-    )
+    !isValidBtcUtxoSet(utxos)
   ) {
     return { ok: false, code: 'invalid-input', reason: 'Invalid BTC fee-planning inputs.' };
   }
@@ -302,14 +328,7 @@ async function planBtcFee(
         toAddress: planTo,
         changeAddress: planFrom,
         privateKey: [],
-        utxo: utxos.map((u) => ({
-          outPoint: {
-            hash: reverseBytes(hexToBytes(u.txid)),
-            index: u.vout,
-          },
-          script,
-          amount: Long.fromNumber(toSafeInt(u.valueBaseUnits) as number),
-        })),
+        utxo: btcSigningUtxos(utxos, script),
       });
       encoded = TW.Bitcoin.Proto.SigningInput.encode(input).finish();
     } finally {
@@ -338,6 +357,28 @@ async function planBtcFee(
  * the BTC preview plans the transaction against the live UTXO set
  * (planBtcFee, no private key) and reports the real planned fee.
  */
+/**
+ * Shared fee-preview success result (TON fee-unknown placeholder, BTC
+ * planned, and the generic branch of previewSendAmount all assemble
+ * the same total = amount + fee). decimalToBaseUnits strips leading
+ * zeros, so the TON '0'-fee total equals the amount exactly.
+ */
+function sendPreviewOk(
+  amount: string,
+  feeBaseUnits: string,
+  feeNote: string,
+  feeUnknown = false,
+): Extract<SendPreview, { ok: true }> {
+  return {
+    ok: true,
+    amountBaseUnits: amount,
+    feeBaseUnits,
+    totalBaseUnits: (BigInt(amount) + BigInt(feeBaseUnits)).toString(),
+    feeNote,
+    ...(feeUnknown ? { feeUnknown: true } : {}),
+  };
+}
+
 export async function previewSendAmount(
   chain: ChainId,
   fromAddress: string,
@@ -376,25 +417,14 @@ export async function previewSendAmount(
   if (chain === 'ton') {
     const fee = await adapter.estimateFee();
     if (fee.status === 'ok') {
-      return {
-        ok: true,
-        amountBaseUnits: amount,
-        feeBaseUnits: fee.data.feeBaseUnits,
-        totalBaseUnits: (
-          BigInt(amount) + BigInt(fee.data.feeBaseUnits)
-        ).toString(),
-        feeNote: fee.data.note,
-      };
+      return sendPreviewOk(amount, fee.data.feeBaseUnits, fee.data.note);
     }
-    return {
-      ok: true,
-      amountBaseUnits: amount,
-      feeBaseUnits: '0',
-      totalBaseUnits: amount,
-      feeNote:
-        'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
-      feeUnknown: true,
-    };
+    return sendPreviewOk(
+      amount,
+      '0',
+      'TON fee is charged by the network when the transaction is broadcast; it is not known in advance and comes out of your balance on top of this amount.',
+      true,
+    );
   }
 
   const fee = await adapter.estimateFee();
@@ -419,26 +449,10 @@ export async function previewSendAmount(
       devnet,
     );
     if (!planned.ok) return planned;
-    return {
-      ok: true,
-      amountBaseUnits: amount,
-      feeBaseUnits: planned.feeBaseUnits,
-      totalBaseUnits: (
-        BigInt(amount) + BigInt(planned.feeBaseUnits)
-      ).toString(),
-      feeNote: `Planned fee at ${fee.data.feeBaseUnits} sat/vB from the live UTXO set.`,
-    };
+    return sendPreviewOk(amount, planned.feeBaseUnits, `Planned fee at ${fee.data.feeBaseUnits} sat/vB from the live UTXO set.`);
   }
 
-  return {
-    ok: true,
-    amountBaseUnits: amount,
-    feeBaseUnits: fee.data.feeBaseUnits,
-    totalBaseUnits: (
-      BigInt(amount) + BigInt(fee.data.feeBaseUnits)
-    ).toString(),
-    feeNote: fee.data.note,
-  };
+  return sendPreviewOk(amount, fee.data.feeBaseUnits, fee.data.note);
 }
 
 export type SimulationError = {
@@ -1144,13 +1158,7 @@ export async function signBtcOffline(
     feeRate === null ||
     feeRate <= 0 ||
     utxos.length === 0 ||
-    utxos.some(
-      (u) =>
-        !/^[0-9a-fA-F]{64}$/.test(u.txid) ||
-        !Number.isSafeInteger(u.vout) ||
-        u.vout < 0 ||
-        toSafeInt(u.valueBaseUnits) === null,
-    )
+    !isValidBtcUtxoSet(utxos)
   ) {
     return {
       ok: false,
@@ -1229,14 +1237,7 @@ export async function signBtcOffline(
             toAddress: wasmTo,
             changeAddress: wasmChange,
             privateKey: [keyBytes],
-            utxo: utxos.map((u) => ({
-              outPoint: {
-                hash: reverseBytes(hexToBytes(u.txid)),
-                index: u.vout,
-              },
-              script,
-              amount: Long.fromNumber(toSafeInt(u.valueBaseUnits) as number),
-            })),
+            utxo: btcSigningUtxos(utxos, script),
           });
           const encodedInput =
             TW.Bitcoin.Proto.SigningInput.encode(input).finish();

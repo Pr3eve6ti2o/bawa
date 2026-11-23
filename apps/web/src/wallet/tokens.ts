@@ -482,16 +482,23 @@ export function validateSolMintAddress(address: string): AddressValidation {
 }
 
 /** Base64url → bytes (atob is standard base64 only). Returns null on bad input. */
+/**
+ * atob output -> bytes. Shared by decodeBase64Url here and decodeBase64
+ * in adapters/token-balances.ts.
+ */
+export function base64ToBytes(binary: string): Uint8Array {
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 function decodeBase64Url(value: string): Uint8Array | null {
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
   try {
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+    return base64ToBytes(atob(padded));
   } catch {
     return null;
   }

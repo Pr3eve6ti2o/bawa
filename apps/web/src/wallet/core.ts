@@ -228,10 +228,13 @@ export async function createWallet(passphrase = ''): Promise<string> {
 }
 
 /** Validate and restore a mnemonic without retaining a WASM wallet object. */
-export async function restoreWallet(
-  mnemonic: string,
-  passphrase = '',
-): Promise<string> {
+/**
+ * Load Wallet Core, validate the mnemonic and open the HD wallet. The
+ * caller owns the wallet and must delete() it. Shared by the two sites
+ * that already did these steps with the same null check (restoreWallet,
+ * deriveDevnetBtcAddress).
+ */
+async function openWallet(mnemonic: string, passphrase: string) {
   const core = await loadCore();
   assertValidMnemonic(core, mnemonic);
 
@@ -239,6 +242,14 @@ export async function restoreWallet(
   if (!wallet) {
     throw new Error('Unable to restore wallet.');
   }
+  return { core, wallet };
+}
+
+export async function restoreWallet(
+  mnemonic: string,
+  passphrase = '',
+): Promise<string> {
+  const { wallet } = await openWallet(mnemonic, passphrase);
 
   try {
     return wallet.mnemonic();
@@ -252,6 +263,40 @@ export async function restoreWallet(
  * Wallet Core 4.9.3's TON default is a workchain-zero V4R2 wallet, using the
  * single fully hardened path m/44'/607'/0', with no change/index suffix.
  */
+/**
+ * All 22 registry chains' addresses from one address function. The
+ * deriveAddresses / deriveAddressesAt pair differ only in how a single
+ * address is derived, not in the chain map.
+ */
+function allChainAddresses(
+  addressFor: (chain: ChainId) => string,
+): WalletAddresses {
+  return {
+    btc: addressFor('btc'),
+    eth: addressFor('eth'),
+    trx: addressFor('trx'),
+    ton: addressFor('ton'),
+    sol: addressFor('sol'),
+    bsc: addressFor('bsc'),
+    matic: addressFor('matic'),
+    arb: addressFor('arb'),
+    op: addressFor('op'),
+    base: addressFor('base'),
+    avax: addressFor('avax'),
+    gnosis: addressFor('gnosis'),
+    celo: addressFor('celo'),
+    linea: addressFor('linea'),
+    mantle: addressFor('mantle'),
+    scroll: addressFor('scroll'),
+    opbnb: addressFor('opbnb'),
+    metis: addressFor('metis'),
+    aurora: addressFor('aurora'),
+    fantom: addressFor('fantom'),
+    ltc: addressFor('ltc'),
+    doge: addressFor('doge'),
+  };
+}
+
 export async function deriveAddresses(
   mnemonic: string,
   passphrase = '',
@@ -272,30 +317,7 @@ export async function deriveAddresses(
         wallet.getAddressForCoin(coinForChain(core, chain)),
       );
 
-    return {
-      btc: addressFor('btc'),
-      eth: addressFor('eth'),
-      trx: addressFor('trx'),
-      ton: addressFor('ton'),
-      sol: addressFor('sol'),
-      bsc: addressFor('bsc'),
-      matic: addressFor('matic'),
-      arb: addressFor('arb'),
-      op: addressFor('op'),
-      base: addressFor('base'),
-      avax: addressFor('avax'),
-      gnosis: addressFor('gnosis'),
-      celo: addressFor('celo'),
-      linea: addressFor('linea'),
-      mantle: addressFor('mantle'),
-      scroll: addressFor('scroll'),
-      opbnb: addressFor('opbnb'),
-      metis: addressFor('metis'),
-      aurora: addressFor('aurora'),
-      fantom: addressFor('fantom'),
-      ltc: addressFor('ltc'),
-      doge: addressFor('doge'),
-    };
+    return allChainAddresses(addressFor);
   } finally {
     wallet.delete();
   }
@@ -405,30 +427,7 @@ export async function deriveAddressesAt(
     const addressFor = (chain: ChainId): string =>
       deriveOneAddress(core, wallet, chain, account, index);
 
-    return {
-      btc: addressFor('btc'),
-      eth: addressFor('eth'),
-      trx: addressFor('trx'),
-      ton: addressFor('ton'),
-      sol: addressFor('sol'),
-      bsc: addressFor('bsc'),
-      matic: addressFor('matic'),
-      arb: addressFor('arb'),
-      op: addressFor('op'),
-      base: addressFor('base'),
-      avax: addressFor('avax'),
-      gnosis: addressFor('gnosis'),
-      celo: addressFor('celo'),
-      linea: addressFor('linea'),
-      mantle: addressFor('mantle'),
-      scroll: addressFor('scroll'),
-      opbnb: addressFor('opbnb'),
-      metis: addressFor('metis'),
-      aurora: addressFor('aurora'),
-      fantom: addressFor('fantom'),
-      ltc: addressFor('ltc'),
-      doge: addressFor('doge'),
-    };
+    return allChainAddresses(addressFor);
   } finally {
     wallet.delete();
   }
@@ -479,14 +478,7 @@ export async function deriveDevnetAddressesAt(
   account: number,
   index: number,
 ): Promise<WalletAddresses> {
-  if (!Number.isSafeInteger(account) || account < 0) {
-    throw new RangeError('account must be a non-negative safe integer');
-  }
-  if (!Number.isSafeInteger(index) || index < 0 || index >= 0x80000000) {
-    throw new RangeError(
-      'index must be a non-negative safe integer below 0x80000000',
-    );
-  }
+  assertAccountIndex(account, index);
 
   const base = await deriveAddressesAt(mnemonic, passphrase, account, index);
   const btc = await deriveDevnetBtcAddress(mnemonic, passphrase, account, index);
@@ -499,12 +491,7 @@ async function deriveDevnetBtcAddress(
   account: number,
   index: number,
 ): Promise<string> {
-  const core = await loadCore();
-  assertValidMnemonic(core, mnemonic);
-  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
-  if (!wallet) {
-    throw new Error('Unable to restore wallet.');
-  }
+  const { core, wallet } = await openWallet(mnemonic, passphrase);
 
   try {
     const coin = core.CoinType.bitcoin;
