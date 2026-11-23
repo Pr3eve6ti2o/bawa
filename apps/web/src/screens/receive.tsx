@@ -804,6 +804,13 @@ export function ReceiveScreen() {
                 address={address}
                 token={effectiveToken}
                 chain={chain}
+                onCopyAddress={() => void copyAddress()}
+                networkDisplayName={
+                  devnetEnabled
+                    ? (devnetChainConfigOrUndefined(chain)?.devnetName ??
+                      config.displayName)
+                    : undefined
+                }
               />
             </div>
             {paymentUriUnavailable && (

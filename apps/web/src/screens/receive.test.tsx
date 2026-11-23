@@ -558,16 +558,17 @@ describe('receive screen', () => {
     }
   });
 
-  it('keeps every step compact: searchable picker, 136 px QR card, truncated share link', async () => {
+  it('keeps every step compact: searchable picker, 192 px full QR card, truncated share link', async () => {
     // Lane H: the chain step is a searchable picker (Popular first,
     // the rest behind All networks), not a 22-button grid; the QR
-    // card's code is 136 px, and the long share link shows as one
-    // truncated line — each step fits the viewport without scrolling
-    // to reach the next control. Layout heights are asserted in CDP;
-    // this test locks the structure that makes them fit. (The 136 px
-    // value is D2's; the Round-2 merge kept A2's 192 px QrCard and the
-    // deep audit re-measured the merged tree at scrollH 1446 with the
-    // Copy/Share/Download row below the fold.)
+    // card's code is 192 px, and the long share link shows as one
+    // truncated line. Layout heights are asserted in CDP.
+    //
+    // Lane 5 (2026-11-24): the 136 px value was Lane E's fold fix
+    // (the template row sat 55 px below the fold at 192) — the
+    // owner has since ordered the full card with a large QR, so
+    // 192 is the size again and the template row is reached with
+    // one short scroll at 390 px instead of sitting above the fold.
     setWallet();
     const mounted = await mountScreen();
     try {
@@ -580,7 +581,7 @@ describe('receive screen', () => {
       await reachDetails(mounted.div);
       const qrSvg = mounted.div.querySelector('#receive-qr svg');
       expect(qrSvg).not.toBeNull();
-      expect(qrSvg?.getAttribute('width')).toBe('136');
+      expect(qrSvg?.getAttribute('width')).toBe('192');
       const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
       expect(link).not.toBeNull();
       expect(link?.className).toContain('truncate');
@@ -1214,8 +1215,17 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
       // No amount typed yet — the card says so honestly.
       expect(card?.textContent).toContain('Any amount');
       expect(card?.textContent).toContain(VAULT_ETH);
-      expect(card?.textContent).toContain('Ethereum');
-      expect(card?.textContent).toContain('Native coin');
+      // Lane 5: the full card names the asset and its one network
+      // in the title and subtitle, and closes with Bawa's footer.
+      expect(card?.querySelector('[data-testid="qr-card-title"]')?.textContent).toBe(
+        'Receive ETH',
+      );
+      expect(card?.querySelector('[data-testid="qr-card-subtitle"]')?.textContent).toBe(
+        'Only Ethereum network assets can be received here.',
+      );
+      expect(card?.querySelector('[data-testid="qr-card-footer"]')?.textContent).toBe(
+        'Share the card, keep the keys.',
+      );
       await act(async () => {
         setAmountInput(mounted.div, '0.5');
       });
@@ -1226,7 +1236,7 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
     }
   });
 
-  it('shows the token (chain) label on the card for a token', async () => {
+  it('shows the token title, subtitle and name on the card for a token', async () => {
     setWallet();
     const mounted = await mountScreen();
     try {
@@ -1244,10 +1254,96 @@ describe('receive screen — the QR card (UI/UX Round 2, item 1)', () => {
       const card = mounted.div.querySelector('[data-testid="qr-card"]');
       expect(card).not.toBeNull();
       expect(card?.textContent).toContain('25 USDC');
-      expect(card?.textContent).toContain('usdc (eth)');
+      // Lane 5: the title names the asset, the subtitle its network,
+      // the token line its full name — the old 'usdc (eth)' label
+      // line is gone; the title and subtitle already say it.
+      expect(card?.querySelector('[data-testid="qr-card-title"]')?.textContent).toBe(
+        'Receive USDC',
+      );
+      expect(card?.querySelector('[data-testid="qr-card-subtitle"]')?.textContent).toBe(
+        'Only Ethereum network assets can be received here.',
+      );
       expect(card?.textContent).toContain('USD Coin · Ethereum');
       expect(card?.querySelector('img[alt="USDC logo"]')).not.toBeNull();
       expect(card?.querySelector('img[alt="Ethereum logo"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('copies the full address from the copy button on the card', async () => {
+    // Lane 5: the card carries its own copy button beside the
+    // "Receiving address" label — the same copy as the action row
+    // below the templates, but on the card itself.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    type ClipboardStub = {
+      clipboard?: { writeText: (value: string) => Promise<void> };
+    };
+    const navigatorStub = navigator as unknown as ClipboardStub;
+    const previousClipboard = navigatorStub.clipboard;
+    navigatorStub.clipboard = { writeText };
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await reachDetails(mounted.div);
+      const copy = mounted.div.querySelector(
+        '[aria-label="Copy receiving address"]',
+      ) as HTMLButtonElement | null;
+      expect(copy).not.toBeNull();
+      expect((copy as HTMLButtonElement).disabled).toBe(false);
+      await act(async () => {
+        copy?.click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(writeText).toHaveBeenCalledWith(VAULT_ETH);
+      expect(mounted.div.querySelector('[role="status"]')?.textContent).toBe(
+        'Address copied.',
+      );
+    } finally {
+      await mounted.cleanup();
+      navigatorStub.clipboard = previousClipboard;
+    }
+  });
+
+  it('encodes the selected template exactly in the card QR', async () => {
+    // Lane 5: template switching still drives the card QR — the
+    // payload is the exact payment URI / address / share link for
+    // the template the screen names, never a stale one.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'Ethereum');
+      await clickButton(mounted.div, 'USD Coin');
+      const findSmall = (label: string) =>
+        [...mounted.div.querySelectorAll('button')].find(
+          (button) => button.getAttribute('aria-label') === label,
+        );
+      const mainTitle = () => mounted.div.querySelector('#receive-qr svg title')?.textContent;
+      // No amount yet: the plain address.
+      expect(mounted.div.textContent).toContain('QR type: Address');
+      expect(mainTitle()).toBe(VAULT_ETH);
+      await act(async () => {
+        setAmountInput(mounted.div, '25');
+      });
+      // An amount makes the payment request the main QR.
+      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      expect(mainTitle()).toBe(
+        'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
+      );
+      // Tapping Address swaps the plain address back in.
+      await act(async () => {
+        findSmall('Show address QR')?.click();
+      });
+      expect(mounted.div.textContent).toContain('QR type: Address');
+      expect(mainTitle()).toBe(VAULT_ETH);
+      // Tapping Share link swaps the Bawa link in.
+      await act(async () => {
+        findSmall('Show share link QR')?.click();
+      });
+      expect(mounted.div.textContent).toContain('QR type: Share link');
+      expect(mainTitle()).toContain('chain=eth');
+      expect(mainTitle()).toContain(`to=${VAULT_ETH}`);
+      expect(mainTitle()).toContain('amount=25');
     } finally {
       await mounted.cleanup();
     }
