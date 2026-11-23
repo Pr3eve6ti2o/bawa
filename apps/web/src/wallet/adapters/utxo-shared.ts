@@ -19,7 +19,9 @@ import {
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type FeeEstimate,
   type FetchTransport,
+  type TxInput,
 } from './types';
 import { isRecord } from '../guards';
 import { withRetry } from '../retry';
@@ -256,4 +258,101 @@ export function parseUtxoEntries(
     utxos.push({ txid, vout, valueBaseUnits: String(Math.trunc(value)) });
   }
   return utxos;
+}
+
+/**
+ * Shared address-read prologue for the mempool adapters (btc.ts
+ * getBalance/getHistory/getTxInputs, ltc.ts getHistory/getTxInputs):
+ * validate the address, check the network identity, read one JSON
+ * endpoint. Returns the raw payload and the endpoint that answered,
+ * or the AdapterResult to return. LTC getBalance is deliberately NOT
+ * converted: a mempool failure there falls through to the BlockCypher
+ * fallback instead of returning an error.
+ */
+export type AddressJsonRead =
+  | { ok: true; raw: unknown; endpoint: string }
+  | { ok: false; result: AdapterResult<never> };
+
+export async function readAddressJson(
+  isValid: boolean,
+  invalidReason: string,
+  requireIdentity: () => Promise<AdapterResult<never> | null>,
+  readJsonFrom: MempoolReader,
+  urlFor: (base: string) => string,
+  operation: string,
+  defaultEndpoint: string,
+): Promise<AddressJsonRead> {
+  if (!isValid) {
+    return { ok: false, result: { status: 'error', reason: invalidReason } };
+  }
+  const identity = await requireIdentity();
+  if (identity) return { ok: false, result: identity };
+  let raw: unknown;
+  let endpoint = defaultEndpoint;
+  try {
+    ({ raw, endpoint } = await readJsonFrom(urlFor, operation));
+  } catch (error: unknown) {
+    return { ok: false, result: toAdapterError(error) };
+  }
+  return { ok: true, raw, endpoint };
+}
+
+/** Shared getTxInputs tail: parse a UTXO list and report it. */
+export function utxoInputsResult(
+  raw: unknown,
+  endpoint: string,
+): AdapterResult<TxInput> {
+  const utxos = parseUtxoEntries(raw);
+  if (utxos === null) {
+    return { status: 'error', reason: 'Invalid response: expected a UTXO list' };
+  }
+  return {
+    status: 'ok',
+    data: { kind: 'utxo', utxos },
+    source: endpointHost(endpoint),
+    fetchedAt: Date.now(),
+  };
+}
+
+/** Shared getHistory tail: parse a mempool transaction list and report it. */
+export function mempoolHistoryResult(
+  raw: unknown,
+  options: MempoolHistoryOptions,
+  endpoint: string,
+): AdapterResult<AdapterTx[]> {
+  const txs = parseMempoolHistory(raw, options);
+  if (txs === null) {
+    return { status: 'error', reason: 'Invalid response: expected a transaction list' };
+  }
+  return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
+}
+
+/**
+ * Shared estimateFee success result (btc/ltc/trx): the fee amount,
+ * unit and note differ per chain; the envelope (source + fetchedAt
+ * inside and outside data) is the same.
+ */
+export function feeEstimateResult(
+  chain: ChainId,
+  networkId: string,
+  feeBaseUnits: string,
+  unit: string,
+  note: string,
+  endpoint: string,
+): AdapterResult<FeeEstimate> {
+  const source = endpointHost(endpoint);
+  return {
+    status: 'ok',
+    data: {
+      chain,
+      networkId,
+      feeBaseUnits,
+      unit,
+      note,
+      source,
+      fetchedAt: Date.now(),
+    },
+    source,
+    fetchedAt: Date.now(),
+  };
 }

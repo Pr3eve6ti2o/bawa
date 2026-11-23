@@ -25,10 +25,12 @@ import { isRecord } from '../guards';
 import {
   balanceResult,
   createMempoolReader,
+  feeEstimateResult,
+  mempoolHistoryResult,
   parseBlockcypherBalance,
   parseChainStatsBalance,
-  parseMempoolHistory,
-  parseUtxoEntries,
+  readAddressJson,
+  utxoInputsResult,
   verifyGenesisBlock,
 } from './utxo-shared';
 
@@ -184,32 +186,28 @@ export function createLtcAdapter(
     address: string,
     limit = 25,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isLtcAddress(address)) {
-      return { status: 'error', reason: 'Invalid Litecoin address' };
-    }
-    const identity = await requireMainnet();
-    if (identity) return identity;
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/address/${address}/txs`,
-        'ltc.getHistory',
-      ));
-    } catch (error: unknown) {
-      return toAdapterError(error);
-    }
-    const txs = parseMempoolHistory(raw, {
-      chain: 'ltc',
-      networkId: NETWORK_ID,
-      explorerBaseUrl: 'https://litecoinspace.org',
-      address,
-      limit,
-    });
-    if (txs === null) {
-      return { status: 'error', reason: 'Invalid response: expected a transaction list' };
-    }
-    return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
+    const read = await readAddressJson(
+      isLtcAddress(address),
+      'Invalid Litecoin address',
+      requireMainnet,
+      readJsonFrom,
+      (base) => `${base}/address/${address}/txs`,
+      'ltc.getHistory',
+      BASE_URL,
+    );
+    if (!read.ok) return read.result;
+    const { raw, endpoint } = read;
+    return mempoolHistoryResult(
+      raw,
+      {
+        chain: 'ltc',
+        networkId: NETWORK_ID,
+        explorerBaseUrl: 'https://litecoinspace.org',
+        address,
+        limit,
+      },
+      endpoint,
+    );
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
@@ -229,50 +227,30 @@ export function createLtcAdapter(
     if (typeof fastest !== 'number') {
       return { status: 'error', reason: 'Invalid response: expected a fee rate' };
     }
-    return {
-      status: 'ok',
-      data: {
-        chain: 'ltc',
-        networkId: NETWORK_ID,
-        feeBaseUnits: String(Math.trunc(fastest)),
-        unit: 'sat/vB',
-        note: 'Rate per virtual byte; multiply by tx vsize in Phase 4',
-        source: endpointHost(endpoint),
-        fetchedAt: Date.now(),
-      },
-      source: endpointHost(endpoint),
-      fetchedAt: Date.now(),
-    };
+    return feeEstimateResult(
+      'ltc',
+      NETWORK_ID,
+      String(Math.trunc(fastest)),
+      'sat/vB',
+      'Rate per virtual byte; multiply by tx vsize in Phase 4',
+      endpoint,
+    );
   };
 
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isLtcAddress(address)) {
-      return { status: 'error', reason: 'Invalid Litecoin address' };
-    }
-    const identity = await requireMainnet();
-    if (identity) return identity;
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/address/${address}/utxo`,
-        'ltc.getTxInputs',
-      ));
-    } catch (error: unknown) {
-      return toAdapterError(error);
-    }
-    const utxos = parseUtxoEntries(raw);
-    if (utxos === null) {
-      return { status: 'error', reason: 'Invalid response: expected a UTXO list' };
-    }
-    return {
-      status: 'ok',
-      data: { kind: 'utxo', utxos },
-      source: endpointHost(endpoint),
-      fetchedAt: Date.now(),
-    };
+    const read = await readAddressJson(
+      isLtcAddress(address),
+      'Invalid Litecoin address',
+      requireMainnet,
+      readJsonFrom,
+      (base) => `${base}/address/${address}/utxo`,
+      'ltc.getTxInputs',
+      BASE_URL,
+    );
+    if (!read.ok) return read.result;
+    return utxoInputsResult(read.raw, read.endpoint);
   };
 
   const broadcast = createDisabledBroadcast();

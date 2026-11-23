@@ -17,7 +17,7 @@ import {
   type TxInput,
 } from './types';
 import { withRetry } from '../retry';
-import { createMempoolReader } from './utxo-shared';
+import { createMempoolReader, feeEstimateResult } from './utxo-shared';
 
 const NETWORK_ID = 'tron:0x2b6653dc';
 const BASE_URL = 'https://api.trongrid.io';
@@ -305,20 +305,14 @@ export function createTronAdapter(
         reason: 'getEnergyFee not found in chain parameters',
       };
     }
-    return {
-      status: 'ok',
-      data: {
-        chain: 'trx',
-        networkId,
-        feeBaseUnits: String(Math.trunc(value)),
-        unit: 'SUN per unit of energy',
-        note: 'TRON fees are energy/bandwidth, not a flat tx fee; this is the network energy fee',
-        source: endpointHost(endpoint),
-        fetchedAt: Date.now(),
-      },
-      source: endpointHost(endpoint),
-      fetchedAt: Date.now(),
-    };
+    return feeEstimateResult(
+      'trx',
+      networkId,
+      String(Math.trunc(value)),
+      'SUN per unit of energy',
+      'TRON fees are energy/bandwidth, not a flat tx fee; this is the network energy fee',
+      endpoint,
+    );
   };
 
   const getTxInputs = async (

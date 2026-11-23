@@ -21,9 +21,11 @@ import { withRetry } from '../retry';
 import {
   balanceResult,
   createMempoolReader,
+  feeEstimateResult,
+  mempoolHistoryResult,
   parseChainStatsBalance,
-  parseMempoolHistory,
-  parseUtxoEntries,
+  readAddressJson,
+  utxoInputsResult,
   verifyGenesisBlock,
 } from './utxo-shared';
 
@@ -134,21 +136,17 @@ export function createBtcAdapter(
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
-    if (!isBtcAddress(address, acceptTestnet)) {
-      return { status: 'error', reason: 'Invalid Bitcoin address' };
-    }
-    const identity = await requireNetwork();
-    if (identity) return identity;
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/address/${address}`,
-        'btc.getBalance',
-      ));
-    } catch (error: unknown) {
-      return toAdapterError(error);
-    }
+    const read = await readAddressJson(
+      isBtcAddress(address, acceptTestnet),
+      'Invalid Bitcoin address',
+      requireNetwork,
+      readJsonFrom,
+      (base) => `${base}/address/${address}`,
+      'btc.getBalance',
+      BASE_URL,
+    );
+    if (!read.ok) return read.result;
+    const { raw, endpoint } = read;
     const parsed = parseChainStatsBalance(raw);
     if (!parsed.ok) {
       return { status: 'error', reason: parsed.reason };
@@ -167,32 +165,22 @@ export function createBtcAdapter(
     address: string,
     limit = 25,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isBtcAddress(address, acceptTestnet)) {
-      return { status: 'error', reason: 'Invalid Bitcoin address' };
-    }
-    const identity = await requireNetwork();
-    if (identity) return identity;
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/address/${address}/txs`,
-        'btc.getHistory',
-      ));
-    } catch (error: unknown) {
-      return toAdapterError(error);
-    }
-    const txs = parseMempoolHistory(raw, {
-      chain: 'btc',
-      networkId,
-      explorerBaseUrl,
-      address,
-      limit,
-    });
-    if (txs === null) {
-      return { status: 'error', reason: 'Invalid response: expected a transaction list' };
-    }
-    return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
+    const read = await readAddressJson(
+      isBtcAddress(address, acceptTestnet),
+      'Invalid Bitcoin address',
+      requireNetwork,
+      readJsonFrom,
+      (base) => `${base}/address/${address}/txs`,
+      'btc.getHistory',
+      BASE_URL,
+    );
+    if (!read.ok) return read.result;
+    const { raw, endpoint } = read;
+    return mempoolHistoryResult(
+      raw,
+      { chain: 'btc', networkId, explorerBaseUrl, address, limit },
+      endpoint,
+    );
   };
 
   /**
@@ -230,51 +218,30 @@ export function createBtcAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    const source = endpointHost(endpoint);
-    return {
-      status: 'ok',
-      data: {
-        chain: 'btc',
-        networkId,
-        feeBaseUnits: String(fee),
-        unit: 'sat/vB',
-        note: 'Rate per virtual byte; multiply by tx vsize in Phase 4',
-        source,
-        fetchedAt: Date.now(),
-      },
-      source,
-      fetchedAt: Date.now(),
-    };
+    return feeEstimateResult(
+      'btc',
+      networkId,
+      String(fee),
+      'sat/vB',
+      'Rate per virtual byte; multiply by tx vsize in Phase 4',
+      endpoint,
+    );
   };
 
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isBtcAddress(address, acceptTestnet)) {
-      return { status: 'error', reason: 'Invalid Bitcoin address' };
-    }
-    const identity = await requireNetwork();
-    if (identity) return identity;
-    let raw: unknown;
-    let endpoint = BASE_URL;
-    try {
-      ({ raw, endpoint } = await readJsonFrom(
-        (base) => `${base}/address/${address}/utxo`,
-        'btc.getTxInputs',
-      ));
-    } catch (error: unknown) {
-      return toAdapterError(error);
-    }
-    const utxos = parseUtxoEntries(raw);
-    if (utxos === null) {
-      return { status: 'error', reason: 'Invalid response: expected a UTXO list' };
-    }
-    return {
-      status: 'ok',
-      data: { kind: 'utxo', utxos },
-      source: endpointHost(endpoint),
-      fetchedAt: Date.now(),
-    };
+    const read = await readAddressJson(
+      isBtcAddress(address, acceptTestnet),
+      'Invalid Bitcoin address',
+      requireNetwork,
+      readJsonFrom,
+      (base) => `${base}/address/${address}/utxo`,
+      'btc.getTxInputs',
+      BASE_URL,
+    );
+    if (!read.ok) return read.result;
+    return utxoInputsResult(read.raw, read.endpoint);
   };
 
   // Mainnet: always throws. Devnet: the injected devnet broadcast.
