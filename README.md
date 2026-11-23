@@ -2,8 +2,16 @@
 
 [![CI build status for panel-rebuild/token-gaps](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Ftoken-gaps)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Ftoken-gaps)
 [![MIT licence](https://img.shields.io/github/license/Pr3eve6ti2o/bawa)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Pr3eve6ti2o/bawa?style=social)](https://github.com/Pr3eve6ti2o/bawa/fork)
+[![Last commit](https://img.shields.io/github/last-commit/Pr3eve6ti2o/bawa/panel-rebuild/token-gaps)](https://github.com/Pr3eve6ti2o/bawa/commits/panel-rebuild/token-gaps)
+[![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://pr3eve6ti2o.github.io/bawa)
 
 **One plain request in, a real, buildable wallet project out.**
+
+**[Try the example wallet live](https://pr3eve6ti2o.github.io/bawa)** — no install, no clone. It serves the saved adopt-proper-based build, not this branch; to preview this branch, check it out and run the web starter locally (see [Quickstart](#quickstart)).
+
+**22 chains** enabled in the example wallet · **168 chains** in the guide · **21 default tokens** · **440 checks** passing in a clean clone · **0 funds ever sent** — broadcast stays disabled.
 
 ## Showcase
 
@@ -37,12 +45,22 @@ Then open <http://localhost:4173>. No account, no API key, no funds needed — e
 
 How it fits together — the full box-by-box trace is in [How Bawa works](docs/HOW-IT-WORKS.md).
 
-Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. Give it one plain request — "Create a Web wallet" — and it produces a real project from resources that actually exist: real derivation, real balances and prices from public endpoints, no invented figures, no fake money. The example wallet cannot send funds: broadcast stays disabled.
+Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. Give it one plain request — "Create a Web wallet" — and it produces a real project from resources that actually exist: real derivation, real balances and prices from public endpoints, no invented figures, no fake money. The example wallet cannot send funds: broadcast stays disabled. It is written for two readers: a developer — or an AI agent — building a wallet from scratch, and anyone who wants to understand how a self-custodial wallet actually works. If you want a wallet to hold funds, this is not it — see [If you want a wallet to use](#if-you-want-a-wallet-to-use). Unlike a generated wallet tutorial, every step resolves to something real — a file in this repo, an entry in the registry, or a public endpoint. Nothing in the guide is a placeholder. What it cannot do is stated as plainly as what it can: the [mainnet gap assessment](docs/archive/mainnet-gap-assessment.md) and [Security and honest limits](#security-and-honest-limits) list the gaps instead of hiding them.
 
-- **Self-custodial by construction.** Keys are generated and held locally in the browser; your recovery phrase never leaves your machine.
-- **Real data only.** Balances and prices come from public read-only endpoints. When a provider cannot be reached, a balance shows as unavailable — never as an invented figure.
-- **22 chains out of the box, 168 in the guide.** The example wallet ships with 22 chains enabled. The guide covers the full Trust Wallet Core registry of 168 chains.
-- **Open source, MIT.** The guide, the registries, the starters, and the example wallet.
+**Ask yourself:**
+
+1. Where do your wallet's keys live — on your machine, or on someone else's server?
+2. Where does each balance come from — a real public endpoint, or a number something made up?
+3. Could your wallet send funds without you meaning it to?
+
+Bawa exists so you can answer all three from the code, not from a promise. Keys are generated and held locally in the browser. Balances and prices come from public read-only endpoints. Broadcast stays disabled, so the example wallet cannot send funds at all.
+
+- **Self-custodial by construction.** Keys are generated and held locally in the browser; your recovery phrase never leaves your machine. See [How Bawa works](docs/HOW-IT-WORKS.md).
+- **Real data only.** Balances and prices come from public read-only endpoints. When a provider cannot be reached, a balance shows as unavailable — never as an invented figure. See [Chain support](#chain-support).
+- **22 chains out of the box, 168 in the guide.** The example wallet ships with 22 chains enabled and 21 default tokens. The guide covers the full Trust Wallet Core registry of 168 chains. See [Chain support](#chain-support).
+- **Built on Trust Wallet Core 4.9.3.** The wallet engine is Trust Wallet Core as WebAssembly, loaded by a React 19 + Vite + Tailwind web starter and a Kotlin + Compose + Material 3 Android starter. See [Configuration](#configuration).
+
+> If Bawa helped you, please give it a star. ⭐ It costs nothing, it tells other builders this reference is worth their time, and it is the simplest way to support an open-source project maintained by one person. Thank you.
 
 If you arrived looking for a wallet to hold funds, read [If you want a wallet to use](#if-you-want-a-wallet-to-use) first. Bawa is builder material, not a wallet product.
 
@@ -69,13 +87,15 @@ python3 tools/bawa_cli.py
 
 To run the example web wallet directly, follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md): `cd apps/web && npm ci && npm run build && npm run preview`.
 
+Then open `http://localhost:4173`. You should see the Welcome screen, with Create, Import, and watch-only options.
+
 Check the generator from the repo root:
 
 ```sh
 cd tools/hdwallet-gen && npm ci && npm test
 ```
 
-**Verified expected result:** in a clean clone of this branch, exit `0`, `217` checks pass, `0` fail. The output includes:
+**Verified expected result:** in a clean clone of this branch, exit `0`, `440` checks pass, `0` fail. The output includes:
 
 ```text
 All register-links checks passed
@@ -92,6 +112,16 @@ The web wallet in `apps/web` is a fully functional example wallet built using th
 - Send walks through a stepped flow, but broadcast stays disabled, so nothing is ever sent.
 
 To run it, follow [docs/CREATE-EXAMPLE-WALLET.md](docs/CREATE-EXAMPLE-WALLET.md). To understand how it fits together, read [How Bawa works](docs/HOW-IT-WORKS.md) — two Mermaid diagrams (how it starts, what it can do), each box traced to a real file.
+
+## What Bawa has produced
+
+One prompt in, a real project out — the builder routes the request to a starter, and the starter is a complete project, not a sketch.
+
+- **Web starter** (`apps/web`) — React 19 + Vite + Tailwind; MIT. The example wallet in this repo is built from it.
+- **Android starter** (`apps/android`) — Kotlin + Compose + Material 3; Apache-2.0.
+- **Machine-readable registries** (`registry/`) — capabilities, engines, profiles, and UI, so a builder (human or agent) works from data, not from prose.
+
+If you build something with Bawa, tell us — open an issue and it will be listed here.
 
 ## Chain support
 
@@ -171,6 +201,18 @@ Bawa is builder material: a reference and a starter kit, not a wallet product. I
 ## Contributing
 
 Follow [CONTRIBUTING.md](CONTRIBUTING.md) when you contribute. Report bugs through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues) using the bug report template there.
+
+**First step:** open an issue before starting substantial work, so the approach can be agreed first.
+
+## Contributors
+
+Thanks to everyone who has contributed to Bawa.
+
+<a href="https://github.com/Pr3eve6ti2o/bawa/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Pr3eve6ti2o/bawa" alt="Bawa contributors" />
+</a>
+
+New contributors: open an issue first, so the approach can be agreed before substantial work starts (see [CONTRIBUTING.md](CONTRIBUTING.md)). You will be listed here.
 
 ## Licence
 
