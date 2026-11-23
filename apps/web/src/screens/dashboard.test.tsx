@@ -380,6 +380,43 @@ describe('dashboard screen', () => {
     }
   });
 
+  it('shows balance, fiat value and per-unit price on a non-zero row', async () => {
+    // Item 12: a funded row must show all three — the balance (0.5 BTC),
+    // its current value ($31,341.50) and the current price per unit
+    // ($62,683.00, labelled per BTC). The row is named Bitcoin, not just
+    // BTC: OP Mainnet and Base natives are ETH too, so the symbol alone
+    // cannot tell them apart.
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '50000000' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const btcRow = rows.find((row) => row.textContent?.includes('0.5 BTC'));
+      expect(btcRow).not.toBeUndefined();
+      expect(btcRow?.textContent).toContain('0.5 BTC');
+      expect(btcRow?.textContent).toContain('$31,341.50');
+      expect(btcRow?.textContent).toContain('$62,683.00');
+      expect(btcRow?.textContent).toContain('per BTC');
+      expect(btcRow?.textContent).toContain('Bitcoin');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
   function stubPriceFetch(response: {
     ok: boolean;
     status: number;

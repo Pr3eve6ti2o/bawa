@@ -184,7 +184,7 @@ function AppLayout() {
   const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
 
   return (
-    <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
+    <div className="min-h-dvh bg-paper sm:py-6 lg:py-0">
       {/* Desktop shell is full-bleed at lg: below lg the app is a centred
           430px phone frame, but at lg the frame used to cap at 1440px, so
           on a 1919px viewport the content column sat in the left ~1230px
@@ -192,7 +192,7 @@ function AppLayout() {
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never
           bound there. */}
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-dvh">
         {!isFocusedFlow && (
           <aside
             className={
@@ -209,7 +209,7 @@ function AppLayout() {
                 computes overflow-x to auto, so any child a pixel wider
                 than the sidebar would bring back the horizontal
                 scrollbar. Vertical scrolling is unchanged. */}
-            <div className="sticky top-0 flex h-screen flex-col overflow-x-hidden overflow-y-auto">
+            <div className="sticky top-0 flex h-dvh flex-col overflow-x-hidden overflow-y-auto">
               <SidebarNav
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() =>

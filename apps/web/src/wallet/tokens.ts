@@ -483,3 +483,37 @@ export function writeCustomTokens(tokens: readonly TokenRecord[], store?: TokenS
     // Persistence is best-effort; the in-memory list still works.
   }
 }
+
+/**
+ * Sort keys for balance-aware asset ordering (Send / Receive pickers) —
+ * how the top wallets order a token list: non-zero balances first,
+ * highest fiat value first, then zero balances in registry order. Nothing
+ * is hidden when nothing has a balance. Callers pass precomputed keys:
+ * Send/Receive load no price feed, so fiatMinorUnits is null there and
+ * the order is hasBalance, then registry order.
+ */
+export interface BalanceSortKey {
+  hasBalance: boolean;
+  fiatMinorUnits: number | null;
+}
+
+export function orderAssetsByBalance<T extends BalanceSortKey>(
+  assets: readonly T[],
+): T[] {
+  return [...assets]
+    .map((asset, index) => ({ asset, index }))
+    .sort((a, b) => {
+      if (a.asset.hasBalance !== b.asset.hasBalance) {
+        return a.asset.hasBalance ? -1 : 1;
+      }
+      const aFiat = a.asset.fiatMinorUnits;
+      const bFiat = b.asset.fiatMinorUnits;
+      if (aFiat !== null && bFiat !== null && aFiat !== bFiat) {
+        return bFiat - aFiat;
+      }
+      if (aFiat !== null && bFiat === null) return -1;
+      if (aFiat === null && bFiat !== null) return 1;
+      return a.index - b.index;
+    })
+    .map(({ asset }) => asset);
+}

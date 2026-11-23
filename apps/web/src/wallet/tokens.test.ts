@@ -6,6 +6,7 @@ import {
   addCustomTokenToList,
   isDuplicateToken,
   isVerifiedToken,
+  orderAssetsByBalance,
   readCustomTokens,
   readEnabledChains,
   resolveTokenByTickerOrName,
@@ -461,5 +462,55 @@ describe('custom-tokens persistence', () => {
       [CUSTOM_TOKENS_KEY]: JSON.stringify({ version: 2, tokens: [USDC] }),
     });
     expect(readCustomTokens(store)).toEqual([]);
+  });
+});
+
+describe('orderAssetsByBalance', () => {
+  // Item 20: how top wallets order a token list — non-zero balances
+  // first (highest fiat value first), zero balances below in registry
+  // order, nothing hidden when nothing has a balance.
+  const asset = (
+    key: string,
+    hasBalance: boolean,
+    fiatMinorUnits: number | null,
+  ) => ({ key, hasBalance, fiatMinorUnits });
+
+  it('puts non-zero balances first, highest fiat value first', () => {
+    const ordered = orderAssetsByBalance([
+      asset('zero-a', false, null),
+      asset('small', true, 100),
+      asset('big', true, 5000),
+      asset('zero-b', false, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual([
+      'big',
+      'small',
+      'zero-a',
+      'zero-b',
+    ]);
+  });
+
+  it('keeps registry order when nothing has a balance', () => {
+    const ordered = orderAssetsByBalance([
+      asset('first', false, null),
+      asset('second', false, null),
+      asset('third', false, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual(['first', 'second', 'third']);
+  });
+
+  it('puts a non-zero balance without a price above zero balances', () => {
+    const ordered = orderAssetsByBalance([
+      asset('zero', false, null),
+      asset('priceless', true, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual(['priceless', 'zero']);
+  });
+
+  it('does not mutate the input list', () => {
+    const input = [asset('a', true, 1), asset('b', false, null)];
+    const snapshot = [...input];
+    orderAssetsByBalance(input);
+    expect(input).toEqual(snapshot);
   });
 });

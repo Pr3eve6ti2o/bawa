@@ -1,5 +1,5 @@
 // Send screen (Phase 4, assembled hands-on from Sol p1/p2/p3/p5 + probes).
-// Multi-step flow: chain → recipient (+QR scanner) → amount/fees → review
+// Multi-step flow: asset (chain + token) → recipient (+QR scanner) → amount/fees → review
 // (Sol p3 SendReview) → offline sign → result. Broadcast is DISABLED until
 // separately authorised: the flow signs offline and stops there. Nothing
 // here broadcasts, and the UI never presents send as working — the review
@@ -29,8 +29,10 @@ import {
 import {
   DEFAULT_TOKENS,
   isVerifiedToken,
+  orderAssetsByBalance,
   shortContract,
   tokenKey,
+  tokenKeyOf,
   type TokenRecord,
 } from '../wallet/tokens';
 import {
@@ -60,7 +62,7 @@ import type { ChainId } from '../engine/boundary';
 // pretending to send (token gaps, item 4).
 const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
-type Step = 'recipient' | 'amount' | 'review' | 'result';
+type Step = 'asset' | 'recipient' | 'amount' | 'review' | 'result';
 
 type SignState =
   | { status: 'idle' }
@@ -92,7 +94,7 @@ export function SendScreen() {
       ? selectedChain
       : (chainsWithWallet[0] ?? 'eth'),
   );
-  const [step, setStep] = useState<Step>('recipient');
+  const [step, setStep] = useState<Step>('asset');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -145,7 +147,7 @@ export function SendScreen() {
   function selectChain(next: ChainId): void {
     setChain(next);
     setSelectedToken(null);
-    setStep('recipient');
+    setStep('asset');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
@@ -607,11 +609,13 @@ export function SendScreen() {
       </header>
 
       {(() => {
-        const steps = ['Chain', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
+        const steps = ['Asset', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
         const activeIndex =
-          step === 'recipient'
-            ? 1
-            : step === 'amount'
+          step === 'asset'
+            ? 0
+            : step === 'recipient'
+              ? 1
+              : step === 'amount'
               ? 2
               : step === 'review' || step === 'result'
                 ? {
@@ -656,6 +660,8 @@ export function SendScreen() {
         );
       })()}
 
+      {step === 'asset' && (
+        <>
       <div
         role="group"
         aria-label="Chain"
@@ -693,7 +699,20 @@ export function SendScreen() {
           pretending to send it.
         </p>
         <ul className="space-y-2">
-          {[{ token: null as TokenRecord | null }, ...chainTokens.map((token) => ({ token }))]
+          {orderAssetsByBalance([
+            {
+              token: null as TokenRecord | null,
+              hasBalance: balance.status === 'available',
+              fiatMinorUnits: null,
+            },
+            ...chainTokens.map((token) => ({
+              token,
+              hasBalance:
+                ((tokenBalances ?? {})[tokenKeyOf(token)]?.status ??
+                  'unavailable') === 'available',
+              fiatMinorUnits: null as number | null,
+            })),
+          ])
             .map(({ token }) => {
               const selected =
                 token === null
@@ -755,7 +774,24 @@ export function SendScreen() {
             {`Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only.`}
           </p>
         )}
-      </section>
+        </section>
+        </>
+      )}
+
+      {step !== 'asset' && (
+        <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
+          <span>
+            <span className="font-semibold">
+              {selectedToken === null
+                ? `${config.displayName} · ${config.symbol}`
+                : `${selectedToken.name} · ${selectedToken.symbol}`}
+            </span>
+          </span>
+          <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+            Change
+          </Button>
+        </p>
+      )}
 
       {step === 'recipient' && (
         <section aria-labelledby="send-recipient-heading" className="space-y-4">
@@ -790,6 +826,9 @@ export function SendScreen() {
             )}
           </div>
           <div className="flex flex-wrap gap-3">
+            <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+              Back
+            </Button>
             <Button type="button" onClick={() => void handleRecipientNext()}>
               Continue
             </Button>

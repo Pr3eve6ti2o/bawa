@@ -747,6 +747,25 @@ function idleEntries(): PriceMap {
   };
 }
 
+/**
+ * Item 11/12: a failed refresh must not blank prices that are already on
+ * screen. Keep the last good quote for a chain when the new fetch ends in
+ * error; only chains with no previous quote show the error.
+ */
+function mergePreservingFresh(
+  next: PriceMap,
+  previous: PriceMap,
+): PriceMap {
+  const merged: PriceMap = { ...next };
+  for (const chain of Object.keys(merged) as Array<keyof PriceMap>) {
+    const prev = previous[chain];
+    if (merged[chain].status === 'error' && prev.status === 'fresh') {
+      merged[chain] = prev;
+    }
+  }
+  return merged;
+}
+
 export function usePrices(
   options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
 ): { state: PricesState; refresh: () => void } {
@@ -805,7 +824,10 @@ export function usePrices(
     };
 
     if (typeof globalThis.fetch !== 'function') {
-      setState(networkError);
+      setState((previous) => ({
+        ...networkError,
+        entries: mergePreservingFresh(networkEntries, previous.entries),
+      }));
       return;
     }
 
@@ -865,11 +887,11 @@ export function usePrices(
             continue;
           }
 
-          setState({
+          setState((previous) => ({
             status: 'ready',
-            entries,
+            entries: mergePreservingFresh(entries, previous.entries),
             lastFetchedAtMs: Date.now(),
-          });
+          }));
 
           if (values.some((entry) => entry.status === 'fresh')) {
             try {
@@ -882,7 +904,10 @@ export function usePrices(
         }
       } catch {
         if (mounted.current) {
-          setState(networkError);
+          setState((previous) => ({
+            ...networkError,
+            entries: mergePreservingFresh(networkEntries, previous.entries),
+          }));
         }
       } finally {
         inFlight.current = false;

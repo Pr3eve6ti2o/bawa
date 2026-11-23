@@ -206,7 +206,13 @@ function getNativeRowModel(
       case 'fiat':
         if (entry.status === 'fresh') {
           fiatText = fiat.text;
-          detail = `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+          // Item 12: a funded row shows the current per-unit price as
+          // well as its fiat value — the same "per X" line the
+          // zero-balance rows already show.
+          detail =
+            displayUnit.kind === 'fresh'
+              ? `${displayUnit.text} per ${config.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`
+              : `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
         }
         break;
       case 'zero':
@@ -328,7 +334,11 @@ function getTokenRowModel(
       case 'fiat':
         if (entry.status === 'fresh') {
           fiatText = fiat.text;
-          detail = `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
+          // Item 12: see the native-row note above.
+          detail =
+            displayUnit.kind === 'fresh'
+              ? `${displayUnit.text} per ${token.symbol} · ${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`
+              : `${quoteFreshnessLabel(entry.quote, nowMs)} · CoinGecko`;
         }
         break;
       case 'zero':
@@ -430,7 +440,7 @@ function ListRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => void
       >
         <AssetRow
           avatar={<RowLogo model={model} />}
-          symbol={model.symbol}
+          symbol={model.title}
           amount={model.amount}
           {...(model.valueText === undefined ? {} : { value: model.valueText })}
           detail={model.detail}

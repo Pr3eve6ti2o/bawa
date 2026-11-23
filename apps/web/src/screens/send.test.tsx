@@ -208,7 +208,20 @@ async function waitForText(
   throw new Error(`timed out waiting for text: ${text}`);
 }
 
+async function clickContaining(div: HTMLDivElement, text: string): Promise<void> {
+  const button = [...div.querySelectorAll('button')].find((candidate) =>
+    candidate.textContent?.includes(text),
+  );
+  expect(button).not.toBeUndefined();
+  await act(async () => {
+    button?.click();
+  });
+}
+
 async function reachReview(div: HTMLDivElement): Promise<void> {
+  // Item 20: the flow starts on the asset step — pick the native asset
+  // first, which advances to the recipient step.
+  await clickContaining(div, 'Ethereum · ETH');
   const recipient = div.querySelector(
     '#send-recipient',
   ) as HTMLInputElement;
@@ -288,6 +301,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum · ETH');
       const recipient = mounted.div.querySelector(
         '#send-recipient',
       ) as HTMLInputElement;
@@ -309,6 +323,7 @@ describe('send screen', () => {
     setWallet();
     const mounted = await mountScreen();
     try {
+      await clickContaining(mounted.div, 'Ethereum · ETH');
       await click(mounted.div, 'Scan QR');
       await waitForText(
         mounted.div,
@@ -404,6 +419,53 @@ describe('send screen', () => {
         "Sending USDC isn't available yet",
       );
       expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows only the asset step on mount — no recipient, amount or action below it', async () => {
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      // Item 20: chain + asset pickers are step 1 of 6; the recipient
+      // input, amount input and send action must not be on the page
+      // until an asset is picked.
+      expect(mounted.div.textContent).toContain('Step 1 of 6: Asset');
+      expect(mounted.div.querySelector('#send-recipient')).toBeNull();
+      expect(mounted.div.querySelector('#send-amount')).toBeNull();
+      expect(mounted.div.textContent).toContain('Bitcoin');
+      expect(mounted.div.textContent).toContain('USD Coin');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('lists non-zero assets above zero balances', async () => {
+    // Item 20: DAI holds a balance, USDC does not — DAI must sort
+    // above USDC even though the registry lists USDC first.
+    setWallet({
+      tokenBalances: {
+        'eth:0x6b175474e89094c44da98b954eedeac495271d0f': {
+          status: 'available',
+          value: '1000000000000000000',
+        },
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      const list = mounted.div.querySelector(
+        'section[aria-labelledby="send-asset-heading"] ul',
+      );
+      expect(list).not.toBeNull();
+      const rows = [...(list as HTMLUListElement).querySelectorAll('li')].map(
+        (li) => li.textContent ?? '',
+      );
+      const dai = rows.findIndex((text) => text.includes('Dai Stablecoin'));
+      const usdc = rows.findIndex((text) => text.includes('USD Coin'));
+      expect(dai).toBeGreaterThanOrEqual(0);
+      expect(usdc).toBeGreaterThanOrEqual(0);
+      expect(dai).toBeLessThan(usdc);
     } finally {
       await mounted.cleanup();
     }
