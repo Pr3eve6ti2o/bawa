@@ -160,7 +160,9 @@ export function QrCard({ qrValue, amountText, address, token, chain }: QrCardPro
               so the Copy/Share/Download row clears the bottom nav at
               390x844. The 192 value was A2's QrCard size, kept by the
               Round-2 merge; the deep audit re-measured the merged tree
-              at scrollH 1446 with the actions below the fold. */}
+              at scrollH 1446 with the actions below the fold. Lane E (fix-all)
+              re-measured both sizes live at 390 px: 192 puts the template
+              row 55 px below the fold (bottom 825 vs fold 770), so 136 stays. */}
           <QRCodeSVG
             value={qrValue}
             size={136}

@@ -822,7 +822,7 @@ export function ReceiveScreen() {
                 into the main slot. The unavailable payment segment
                 stays disabled with its reason, never a dead box. */}
             <p className="w-full text-center text-sm font-semibold text-ink">
-              {`QR type: ${effectiveLabel} — tap another to switch`}
+              {`QR type: ${effectiveLabel} — tap to switch`}
             </p>
             <div
               role="group"
@@ -872,28 +872,33 @@ export function ReceiveScreen() {
                 template row: the three QR templates own the
                 above-fold slot (Lane 7, owner correction
                 2026-11-23), so the actions are one short scroll
-                below the templates instead of at the card bottom. */}
+                below the templates instead of at the card bottom. Lane E (fix-all):
+                the five buttons are size sm — at default size they wrapped
+                into 3 rows (136 px); sm fits 2 rows (72 px). Live at 390 px:
+                template row bottom 749 vs fold 770, actions fully revealed
+                after a 57 px scroll (was 141 px); total scroll 489 px to 405 px. */}
 <div className="flex flex-wrap justify-center gap-2">
-              <Button type="button" onClick={() => void copyAddress()}>
+              <Button type="button" size="sm" onClick={() => void copyAddress()}>
                 Copy address
               </Button>
               {canRotate && (
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={() => void newReceiveAddress()}
                   disabled={isRotating || !nextReceiveAddress}
                 >
                   {isRotating ? 'Making address…' : 'New address'}
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={() => void sharePayment()}>
+              <Button type="button" variant="outline" size="sm" onClick={() => void sharePayment()}>
                 Share
               </Button>
-              <Button type="button" variant="outline" onClick={() => void copyLink()}>
+              <Button type="button" variant="outline" size="sm" onClick={() => void copyLink()}>
                 Copy link
               </Button>
-              <Button type="button" variant="outline" onClick={() => void downloadQr()}>
+              <Button type="button" variant="outline" size="sm" onClick={() => void downloadQr()}>
                 Download card
               </Button>
             </div>
