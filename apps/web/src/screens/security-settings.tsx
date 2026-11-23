@@ -8,7 +8,7 @@ import { deleteVault } from "../wallet/vault";
 import { AutoLockSetting } from "./auto-lock-setting";
 
 export function SecuritySettingsScreen() {
-  const { vaultState, refreshVaultAccounts } = useWallet();
+  const { vaultState, refreshVaultAccounts, resetReceiveRotation = () => {} } = useWallet();
   const [deleteArmed, setDeleteArmed] = useState(false);
 
   useEffect(() => {
@@ -81,6 +81,8 @@ export function SecuritySettingsScreen() {
                 }
 
                 await deleteVault();
+                // The deleted vault's HD receive rotation goes with it.
+                resetReceiveRotation();
                 await refreshVaultAccounts();
               }}
             >

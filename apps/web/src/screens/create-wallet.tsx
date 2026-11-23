@@ -13,6 +13,7 @@ import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
+import { CopyButton } from '../ui/components/copy-button';
 import {
   Card,
   CardContent,
@@ -70,7 +71,7 @@ function pickConfirmPositions(wordCount: number, count: number): number[] {
 }
 
 export function CreateWalletScreen() {
-  const { vaultAddresses, refreshVaultAccounts } = useWallet();
+  const { vaultAddresses, refreshVaultAccounts, resetReceiveRotation = () => {} } = useWallet();
   const [step, setStep] = useState<Step>(1);
   const [vaultExists, setVaultExists] = useState(false);
   const [password, setPassword] = useState('');
@@ -172,6 +173,8 @@ export function CreateWalletScreen() {
       await yieldFrame();
       const profileIds = [...new Set(SUPPORTED_CHAINS.map((chain) => profileFor(chain)))];
       await createVault(mnemonic, password, profileIds, passphrase);
+      // A new phrase starts HD receive rotation at index 0.
+      resetReceiveRotation();
       setMnemonic(null);
       setPassword('');
       setConfirmPassword('');
@@ -201,19 +204,30 @@ export function CreateWalletScreen() {
           <CardHeader>
             <CardTitle id="create-wallet-title">A wallet already exists</CardTitle>
             <CardDescription>
-              This browser already has an encrypted vault. Creating a second
-              wallet would replace it.
+              This browser already has an encrypted vault. You can add
+              another account from the same phrase — there is no need to
+              delete anything.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm leading-relaxed">
-              To start over, delete the existing vault from security settings
-              first. Make sure you have its recovery phrase written down —
-              deleting a vault without its phrase loses the wallet.
+              Your vault holds accounts made from one recovery phrase. To
+              create another one, go to Wallets and choose how many
+              accounts to create — each gets its own name, Account 2,
+              Account 3, and so on, with its own addresses. To use a
+              different recovery phrase instead, delete the vault first in
+              security settings. Make sure you have its recovery phrase
+              written down — deleting a vault without its phrase loses
+              the wallet.
             </p>
-            <Button asChild className="h-auto whitespace-normal py-3 text-center">
-              <Link to="/security">Go to security settings</Link>
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                <Link to="/wallets">Go to Wallets</Link>
+              </Button>
+              <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+                <Link to="/security">Go to security settings</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -488,6 +502,13 @@ export function CreateWalletScreen() {
                 </li>
               ))}
             </ol>
+            <div className="space-y-2">
+              <CopyButton value={mnemonic} label="Copy recovery phrase" />
+              <p className="text-sm text-muted-foreground">
+                Copying puts the words on your clipboard. Paper is still
+                the safest place for them.
+              </p>
+            </div>
             <Button
               type="button"
               className="h-auto whitespace-normal py-3 text-center"
@@ -554,6 +575,12 @@ export function CreateWalletScreen() {
                   <code className="block break-all rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
                     {vaultAddresses[chain][0] ?? 'Address unavailable.'}
                   </code>
+                  {vaultAddresses[chain][0] && (
+                    <CopyButton
+                      value={vaultAddresses[chain][0] as string}
+                      label={`Copy ${CHAIN_LABELS[chain]} address`}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

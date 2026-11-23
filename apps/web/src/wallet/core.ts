@@ -266,9 +266,10 @@ export async function deriveAddresses(
 }
 
 /**
- * Derive addresses at a non-default account/index.
+ * Derive one chain's address at a non-default account/index.
  * Paths come from pathFor(chain, account, index) — except TON, which always
- * uses m/44'/607'/0' and ignores account/index (one address per wallet).
+ * uses m/44'/607'/0' and ignores account/index (one address per wallet),
+ * and SOL, whose path is likewise fully hardened (one address per wallet).
  * Pubkey form is normalised at the deriveAddressFromPublicKey call site
  * (Phase 3, Lane H): the secp256k1 key is always extracted compressed,
  * then .uncompressed() for ETH/TRX/EVM chains — the 65-byte
@@ -278,12 +279,64 @@ export async function deriveAddresses(
  * as extracted. TON/SOL Ed25519 keys are used as-is. At account 0 index 0
  * the result equals deriveAddresses() exactly.
  */
-export async function deriveAddressesAt(
-  mnemonic: string,
-  passphrase: string,
+function deriveOneAddress(
+  core: WalletCore,
+  wallet: ReturnType<WalletCore['HDWallet']['createWithMnemonic']>,
+  chain: ChainId,
   account: number,
   index: number,
-): Promise<WalletAddresses> {
+): string {
+  const coin = coinForChain(core, chain);
+  const path =
+    chain === 'ton' ? "m/44'/607'/0'" : pathFor(chain, account, index);
+  const key = wallet.getKey(coin, path);
+
+  try {
+    // Extract compressed (the store/transport form, cf. @scure/bip32:
+    // store compressed, decompress at the point of use), then
+    // normalise the form AT the deriveAddressFromPublicKey call site.
+    // Wallet Core 4.9.3's Tron/Address.cpp and Ethereum/Address.cpp
+    // throw unless the key is the 65-byte secp256k1Extended form, and
+    // the throw crosses the WASM boundary uncaught and aborts the
+    // instance; BTC-family chains throw on the 65-byte form instead.
+    // Normalising here — not via the extraction boolean — fixes every
+    // caller, including future ones. uncompressed() is bound in the
+    // shipped WASM binary (probe 2026-11-20: .data().length === 65).
+    // BTC-family keys are already compressed as extracted, so no
+    // .compressed() call is made for them (it would return *this and
+    // a delete would double-free the shared object).
+    const rawPubkey =
+      chain === 'ton' || chain === 'sol'
+        ? key.getPublicKeyEd25519()
+        : key.getPublicKeySecp256k1(true);
+
+    try {
+      const isSecp256k1 = chain !== 'ton' && chain !== 'sol';
+      const needsExtended =
+        isSecp256k1 &&
+        chain !== 'btc' &&
+        chain !== 'ltc' &&
+        chain !== 'doge';
+      const pubkey = needsExtended ? rawPubkey.uncompressed() : rawPubkey;
+
+      try {
+        return checkedAddress(
+          core,
+          chain,
+          core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey),
+        );
+      } finally {
+        if (pubkey !== rawPubkey) pubkey.delete();
+      }
+    } finally {
+      rawPubkey.delete();
+    }
+  } finally {
+    key.delete();
+  }
+}
+
+function assertAccountIndex(account: number, index: number): void {
   if (!Number.isSafeInteger(account) || account < 0) {
     throw new RangeError('account must be a non-negative safe integer');
   }
@@ -292,62 +345,29 @@ export async function deriveAddressesAt(
       'index must be a non-negative safe integer below 0x80000000',
     );
   }
+}
+
+/**
+ * Derive addresses at a non-default account/index.
+ * Paths come from pathFor(chain, account, index) — except TON, which always
+ * uses m/44'/607'/0' and ignores account/index (one address per wallet).
+ * At account 0 index 0 the result equals deriveAddresses() exactly.
+ */
+export async function deriveAddressesAt(
+  mnemonic: string,
+  passphrase: string,
+  account: number,
+  index: number,
+): Promise<WalletAddresses> {
+  assertAccountIndex(account, index);
 
   const core = await loadCore();
   assertValidMnemonic(core, mnemonic);
   const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
 
   try {
-    const addressFor = (chain: ChainId): string => {
-      const coin = coinForChain(core, chain);
-      const path =
-        chain === 'ton' ? "m/44'/607'/0'" : pathFor(chain, account, index);
-      const key = wallet.getKey(coin, path);
-
-      try {
-        // Extract compressed (the store/transport form, cf. @scure/bip32:
-        // store compressed, decompress at the point of use), then
-        // normalise the form AT the deriveAddressFromPublicKey call site.
-        // Wallet Core 4.9.3's Tron/Address.cpp and Ethereum/Address.cpp
-        // throw unless the key is the 65-byte secp256k1Extended form, and
-        // the throw crosses the WASM boundary uncaught and aborts the
-        // instance; BTC-family chains throw on the 65-byte form instead.
-        // Normalising here — not via the extraction boolean — fixes every
-        // caller, including future ones. uncompressed() is bound in the
-        // shipped WASM binary (probe 2026-11-20: .data().length === 65).
-        // BTC-family keys are already compressed as extracted, so no
-        // .compressed() call is made for them (it would return *this and
-        // a delete would double-free the shared object).
-        const rawPubkey =
-          chain === 'ton' || chain === 'sol'
-            ? key.getPublicKeyEd25519()
-            : key.getPublicKeySecp256k1(true);
-
-        try {
-          const isSecp256k1 = chain !== 'ton' && chain !== 'sol';
-          const needsExtended =
-            isSecp256k1 &&
-            chain !== 'btc' &&
-            chain !== 'ltc' &&
-            chain !== 'doge';
-          const pubkey = needsExtended ? rawPubkey.uncompressed() : rawPubkey;
-
-          try {
-            return checkedAddress(
-              core,
-              chain,
-              core.CoinTypeExt.deriveAddressFromPublicKey(coin, pubkey),
-            );
-          } finally {
-            if (pubkey !== rawPubkey) pubkey.delete();
-          }
-        } finally {
-          rawPubkey.delete();
-        }
-      } finally {
-        key.delete();
-      }
-    };
+    const addressFor = (chain: ChainId): string =>
+      deriveOneAddress(core, wallet, chain, account, index);
 
     return {
       btc: addressFor('btc'),
@@ -364,6 +384,31 @@ export async function deriveAddressesAt(
       ltc: addressFor('ltc'),
       doge: addressFor('doge'),
     };
+  } finally {
+    wallet.delete();
+  }
+}
+
+/**
+ * Lane C, item 8 (HD rotation): derive ONE chain's address at an
+ * account/index, without deriving the other twelve. At account 0 index 0
+ * it equals deriveAddresses()[chain] exactly.
+ */
+export async function deriveAddressAt(
+  mnemonic: string,
+  passphrase: string,
+  chain: ChainId,
+  account: number,
+  index: number,
+): Promise<string> {
+  assertAccountIndex(account, index);
+
+  const core = await loadCore();
+  assertValidMnemonic(core, mnemonic);
+  const wallet = core.HDWallet.createWithMnemonic(mnemonic, passphrase);
+
+  try {
+    return deriveOneAddress(core, wallet, chain, account, index);
   } finally {
     wallet.delete();
   }

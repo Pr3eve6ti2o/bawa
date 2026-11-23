@@ -14,6 +14,8 @@ vi.mock('../state/wallet-context', () => ({
 vi.mock('../wallet/chains', () => ({
   availableFor: vi.fn(),
   chainConfig: vi.fn(),
+  // Lane C, item 8: SOL and TON have one address per wallet by design.
+  canRotateReceiveAddress: (chain: string) => chain !== 'sol' && chain !== 'ton',
   SUPPORTED_CHAINS: [
     'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
   ],
@@ -285,6 +287,109 @@ describe('receive screen', () => {
       expect(link?.textContent).toContain('to=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979');
       expect(link?.textContent).toContain('amount=25');
       expect(link?.textContent).toContain('token=0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the HD receive address and its number, with a New address button', async () => {
+    // Lane C, item 8: the QR card shows the HD receiving address — the
+    // fresh address for the next payment — not the account address.
+    const HD_ETH = '0xHdReceiveAddress000000000000000000000000000001';
+    setWallet({
+      receiveAddresses: { eth: HD_ETH },
+      receiveIndices: { eth: 2 },
+      nextReceiveAddress: vi.fn(async () => {}),
+    });
+    const mounted = await mountScreen();
+    try {
+      // The QR encodes the EIP-681 payment URI for the HD address.
+      const qrTitle = mounted.div.querySelector('svg title')?.textContent;
+      expect(qrTitle).toContain(HD_ETH);
+      expect(qrTitle).not.toContain(VAULT_ETH);
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link?.textContent).toContain(`to=${HD_ETH}`);
+      expect(mounted.div.textContent).toContain(
+        'Receiving address 3 of this account',
+      );
+      const button = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'New address',
+      );
+      expect(button).not.toBeUndefined();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('New address advances the rotation for the selected chain', async () => {
+    const nextReceiveAddress = vi.fn(async () => {});
+    setWallet({
+      receiveAddresses: { eth: '0xHdReceiveAddress000000000000000000000000000001' },
+      receiveIndices: { eth: 0 },
+      nextReceiveAddress,
+    });
+    const mounted = await mountScreen();
+    try {
+      const button = [...mounted.div.querySelectorAll('button')].find(
+        (candidate) => candidate.textContent === 'New address',
+      ) as HTMLButtonElement;
+      await act(async () => {
+        button.click();
+      });
+      expect(nextReceiveAddress).toHaveBeenCalledWith('eth');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows the one-address note for Solana instead of New address', async () => {
+    vi.mocked(availableFor).mockReturnValue(['sol', 'eth']);
+    setWallet({
+      selectedChain: 'sol',
+      addresses: {
+        btc: [],
+        eth: [{ index: 0, address: '0xWatchOnlyEthAddress0000000000000000000' }],
+        trx: [],
+        ton: [],
+        sol: [],
+      },
+      vaultAddresses: { btc: [], eth: [], trx: [], ton: [], sol: ['DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK'] },
+      receiveAddresses: { sol: 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK' },
+      receiveIndices: { sol: 0 },
+      nextReceiveAddress: vi.fn(async () => {}),
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Solana has one address per wallet',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].some(
+          (candidate) => candidate.textContent === 'New address',
+        ),
+      ).toBe(false);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('hides New address for a watch-only address', async () => {
+    setWallet({
+      vaultAddresses: { btc: [], eth: [], trx: [], ton: [] },
+      receiveAddresses: {},
+      receiveIndices: {},
+      nextReceiveAddress: vi.fn(async () => {}),
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain(
+        'Watch-only account — this address can receive',
+      );
+      expect(
+        [...mounted.div.querySelectorAll('button')].some(
+          (candidate) => candidate.textContent === 'New address',
+        ),
+      ).toBe(false);
     } finally {
       await mounted.cleanup();
     }

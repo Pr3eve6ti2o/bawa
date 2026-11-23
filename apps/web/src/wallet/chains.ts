@@ -205,8 +205,17 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * 2026-11-22. History, fee-quote and send stay blocked — the adapters
  * either do not implement them or they have no live cross-check yet —
  * and are never faked.
+ *
+ * Lane C, item 16 (2026-11-23): historyVerified is true only for sol,
+ * ltc and doge, whose adapters now have unit tests plus a live mainnet
+ * cross-check 2026-11-23 (second source) for history. The five non-ETH
+ * EVM chains stay blocked: no keyless public history indexer exists
+ * for them (owner decision: Etherscan API key or another indexer).
  */
-function capabilitiesForBalanceChain(chain: ChainId): Capabilities {
+function capabilitiesForBalanceChain(
+  chain: ChainId,
+  historyVerified = false,
+): Capabilities {
   const base = capabilitiesForExtendedChain(chain);
   return {
     ...base,
@@ -217,6 +226,15 @@ function capabilitiesForBalanceChain(chain: ChainId): Capabilities {
         `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
         `mainnet cross-check 2026-11-22 (second source) for balance.`,
     },
+    history: historyVerified
+      ? {
+          status: 'verified',
+          evidenceLevel: 'mainnet-confirmed',
+          evidence:
+            `Verified by apps/web/src/wallet/adapters/${chain}.test.ts + live ` +
+            `mainnet cross-check 2026-11-23 (second source) for history.`,
+        }
+      : base.history,
   };
 }
 
@@ -356,7 +374,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://solana-rpc.publicnode.com', 'https://public.rpc.solanavibestation.com'],
     evmChainId: null,
-    capabilities: capabilitiesForBalanceChain('sol'),
+    capabilities: capabilitiesForBalanceChain('sol', true),
   },
   bsc: {
     id: 'bsc',
@@ -468,7 +486,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://litecoinspace.org/api'],
     evmChainId: null,
-    capabilities: capabilitiesForBalanceChain('ltc'),
+    capabilities: capabilitiesForBalanceChain('ltc', true),
   },
   doge: {
     id: 'doge',
@@ -484,7 +502,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://sochain.com/api/v3', 'https://api.blockcypher.com/v1/doge/main'],
     evmChainId: null,
-    capabilities: capabilitiesForBalanceChain('doge'),
+    capabilities: capabilitiesForBalanceChain('doge', true),
   },
 };
 
@@ -553,6 +571,18 @@ export function profileFor(chain: ChainId): string {
 
 export function pathFor(chain: ChainId, account: number, index: number): string {
   return chainConfig(chain).pathFor(account, index);
+}
+
+/**
+ * Whether a fresh receive address can be derived for this chain (Lane C,
+ * item 8 — HD rotation). Solana and TON have one address per wallet by
+ * design: their paths are fully hardened (`m/44'/501'/0'` and
+ * `m/44'/607'/0'`) and ignore the account and index, so rotating would
+ * change nothing — and changing the path would change existing users'
+ * addresses. Every other chain rotates: a new index gives a new address.
+ */
+export function canRotateReceiveAddress(chain: ChainId): boolean {
+  return chain !== 'sol' && chain !== 'ton';
 }
 
 export function capabilitiesFor(chain: ChainId): Capabilities {

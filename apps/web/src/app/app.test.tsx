@@ -75,7 +75,7 @@ describe.sequential('App', () => {
 
     await withRenderedApp('/', (div) => {
       expect(div.textContent).toContain('Bawa Web Wallet');
-      expect(div.textContent).toContain('Welcome to Bawa Web Wallet');
+      expect(div.textContent).toContain('Welcome to Bawa');
       expect(div.textContent).toContain(
         'Mainnet only — this wallet never connects to a test network',
       );
@@ -110,7 +110,7 @@ describe.sequential('App', () => {
         );
         expect(div.textContent).toContain('Portfolio balance');
         expect(div.textContent).toContain('Send');
-        expect(div.textContent).not.toContain('Welcome to Bawa Web Wallet');
+        expect(div.textContent).not.toContain('Welcome to Bawa');
       });
     } finally {
       window.localStorage.removeItem('bawa-vault');

@@ -80,12 +80,25 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('shows exactly five Coming soon badges', () => {
-    expect(elementsWithExactText('Coming soon')).toHaveLength(5);
+  it('shows exactly four Coming soon badges', () => {
+    expect(elementsWithExactText('Coming soon')).toHaveLength(4);
   });
 
-  it('shows exactly two Available badges', () => {
-    expect(elementsWithExactText('Available')).toHaveLength(2);
+  it('shows exactly three Available badges', () => {
+    expect(elementsWithExactText('Available')).toHaveLength(3);
+  });
+
+  it('the web wallet is available and opens the dashboard', () => {
+    // Lane C, item 10: the web wallet exists — it is this app — so it
+    // is Available, not Coming soon, and it opens the dashboard.
+    expect(container.textContent).toContain('Three options are ready today');
+    const cards = Array.from(container.querySelectorAll('section > ul > li'));
+    const webWallet = cards[2];
+    expect(webWallet?.textContent).toContain('Available');
+    expect(webWallet?.textContent).not.toContain('Coming soon');
+    const link = webWallet?.querySelector('a[href="/"]');
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute('aria-label')).toBe('Open web wallet');
   });
 
   it('links only the two working cards to /create-wallet', () => {
@@ -111,9 +124,9 @@ describe('CreateScreen', () => {
     // commit hashes, licence notes or implementation references render.
     const links = Array.from(container.querySelectorAll('a'));
 
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
     links.forEach((link) => {
-      expect(link.getAttribute('href')).toBe('/create-wallet');
+      expect(['/create-wallet', '/']).toContain(link.getAttribute('href'));
     });
     expect(container.textContent).not.toContain('github.com');
     expect(container.textContent).not.toContain('References');
@@ -124,7 +137,7 @@ describe('CreateScreen', () => {
       'article[aria-label$=" coming soon"]',
     );
 
-    expect(briefs).toHaveLength(5);
+    expect(briefs).toHaveLength(4);
     briefs.forEach((card) => {
       expect(card.textContent).toContain(
         "Coming soon. This isn't available yet.",

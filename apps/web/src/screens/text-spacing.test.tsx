@@ -247,17 +247,29 @@ beforeEach(() => {
 });
 
 describe('text spacing', () => {
-  it('welcome steps read with real spaces', async () => {
+  it('welcome list reads with real spaces', async () => {
     const mounted = await mountScreen(<WelcomeScreen />);
     try {
-      expect(mounted.div.textContent).toContain('1 Set a vault password');
-      expect(mounted.div.textContent).not.toContain('1Set a vault password');
-      expect(mounted.div.textContent).toContain('2 Write down 24 words');
-      expect(mounted.div.textContent).not.toContain('2Write down 24 words');
-      expect(mounted.div.textContent).toContain('3 Confirm 3 words');
-      expect(mounted.div.textContent).not.toContain('3Confirm 3 words');
-      expect(mounted.div.textContent).toContain('4 See your addresses');
-      expect(mounted.div.textContent).not.toContain('4See your addresses');
+      // Lane C, item 9: the welcome steps are gone — the screen is an
+      // introduction now. The spacing check moves to the new list and
+      // intro line: words must not run together.
+      expect(mounted.div.textContent).toContain(
+        'Bawa is a guide made for humans and AI agents to create crypto wallets, web wallets, Android wallets, HD wallets and smart contracts easily',
+      );
+      expect(mounted.div.textContent).not.toContain('Bawais a guide');
+      expect(mounted.div.textContent).toContain(
+        'Create a crypto wallet — a self-custodial multi-chain wallet, with one address per chain.',
+      );
+      expect(mounted.div.textContent).not.toContain('Createa crypto wallet');
+      expect(mounted.div.textContent).toContain(
+        'Create a web wallet — this one. It runs in your browser, with nothing to install.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Create an HD wallet — a fresh receiving address for every payment.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Create a smart contract — guided, step by step, from a prompt.',
+      );
     } finally {
       await mounted.cleanup();
     }

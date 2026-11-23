@@ -14,7 +14,7 @@ type Tool = {
   description: string;
   icon: BawaIconName;
 } & (
-  | { status: 'working'; href: '/create-wallet' }
+  | { status: 'working'; href: '/create-wallet' | '/'; action: string }
   | { status: 'brief' }
 );
 
@@ -22,8 +22,9 @@ type Tool = {
 // from (repository names, commit hashes, licences, WASM/JNI notes) was
 // removed in the Lane C finalisation pass — a wallet user needs to know
 // what each tool does and whether it works yet, not where it came from.
-// The two working cards open the same creation flow; the copy says so
-// plainly instead of hiding it.
+// The two wallet cards open the same creation flow; the copy says so
+// plainly instead of hiding it. The web wallet is this app, so it opens
+// the dashboard.
 const tools: readonly Tool[] = [
   {
     name: 'Multichain wallet',
@@ -31,6 +32,7 @@ const tools: readonly Tool[] = [
       'Create one wallet for Bitcoin, Ethereum, TRON and TON with one recovery phrase. This opens the same wallet setup as HD wallet.',
     status: 'working',
     href: '/create-wallet',
+    action: 'Open Multichain wallet creation',
     icon: 'wallet',
   },
   {
@@ -39,12 +41,15 @@ const tools: readonly Tool[] = [
       'One recovery phrase covers every account and address. Opens the same creation flow as Multichain wallet.',
     status: 'working',
     href: '/create-wallet',
+    action: 'Open HD wallet creation',
     icon: 'key',
   },
   {
     name: 'Web wallet',
-    description: 'A wallet that will run in your browser.',
-    status: 'brief',
+    description: 'A wallet that runs in your browser — this one. Open it to see your dashboard, balances and history.',
+    status: 'working',
+    href: '/',
+    action: 'Open web wallet',
     icon: 'network',
   },
   {
@@ -118,8 +123,8 @@ function ToolCard({ tool }: { tool: Tool }) {
       <div className="flex h-full min-w-0 flex-col space-y-4 rounded-bawa border-2 border-ink bg-paper p-4">
         <ToolContents tool={tool} />
         <Button asChild className="mt-auto h-auto w-full whitespace-normal py-3 text-center">
-          <Link to={tool.href} aria-label={`Open ${tool.name} creation`}>
-            {`Open ${tool.name} creation`}
+          <Link to={tool.href} aria-label={tool.action}>
+            {tool.action}
           </Link>
         </Button>
       </div>
@@ -146,7 +151,7 @@ export function CreateScreen() {
         Create
       </h1>
       <p className="text-sm text-ink">
-        Choose what to create. Two options are ready today; the rest are coming
+        Choose what to create. Three options are ready today; the rest are coming
         soon.
       </p>
       <p className="text-sm text-ink">

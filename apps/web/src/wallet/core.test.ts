@@ -14,6 +14,7 @@ import {
   createPartialSigner,
   createTransactionIntent,
   createWallet,
+  deriveAddressAt,
   deriveAddresses,
   deriveAddressesAt,
   deriveDevnetAddressesAt,
@@ -164,6 +165,37 @@ describe('wallet/core', () => {
     await expect(deriveAddressesAt(mnemonic, '', 1.5, 0)).rejects.toThrow(
       RangeError,
     );
+  });
+
+  it('deriveAddressAt agrees with deriveAddressesAt for one chain', async () => {
+    // Lane C, item 8: HD rotation derives one chain at a time, so the
+    // single-chain entry point must agree exactly with the all-chain
+    // one at the same account/index.
+    const mnemonic = await createWallet();
+    const all = await deriveAddressesAt(mnemonic, '', 0, 0);
+    expect(await deriveAddressAt(mnemonic, '', 'eth', 0, 0)).toBe(all.eth);
+    expect(await deriveAddressAt(mnemonic, '', 'btc', 0, 0)).toBe(all.btc);
+    const next = await deriveAddressesAt(mnemonic, '', 0, 1);
+    expect(await deriveAddressAt(mnemonic, '', 'eth', 0, 1)).toBe(next.eth);
+    expect(await deriveAddressAt(mnemonic, '', 'eth', 0, 1)).not.toBe(
+      all.eth,
+    );
+    // TON and SOL ignore the index: one address per wallet.
+    expect(await deriveAddressAt(mnemonic, '', 'ton', 0, 5)).toBe(all.ton);
+    expect(await deriveAddressAt(mnemonic, '', 'sol', 0, 5)).toBe(all.sol);
+  });
+
+  it('deriveAddressAt rejects out-of-range account/index', async () => {
+    const mnemonic = await createWallet();
+    await expect(deriveAddressAt(mnemonic, '', 'eth', -1, 0)).rejects.toThrow(
+      RangeError,
+    );
+    await expect(deriveAddressAt(mnemonic, '', 'eth', 0, -1)).rejects.toThrow(
+      RangeError,
+    );
+    await expect(
+      deriveAddressAt(mnemonic, '', 'eth', 0, 0x80000000),
+    ).rejects.toThrow(RangeError);
   });
 
   it('rejects invalid mnemonics', async () => {

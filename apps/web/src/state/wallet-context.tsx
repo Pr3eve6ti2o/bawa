@@ -3,7 +3,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
-import { availableFor, SUPPORTED_CHAINS } from '../wallet/chains';
+import { availableFor, canRotateReceiveAddress, SUPPORTED_CHAINS } from '../wallet/chains';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
 import { messageOf } from '../wallet/adapters/types';
 import {
@@ -192,6 +192,17 @@ interface WalletState {
   // ignores account/index.
   vaultState: VaultState;
   vaultAccount: { account: number; index: number };
+  // Lane C, items 6/7/17: the accounts created from this vault's phrase
+  // (indices; 0 is "Account 1"). One phrase holds many accounts.
+  vaultAccounts: number[];
+  // Lane C, item 6: true when the vault uses a recovery passphrase the
+  // session does not know — account switches cannot re-derive then.
+  vaultPassphraseNeeded: boolean;
+  // Lane C, item 8: per-chain HD receive index (the next unused address
+  // index) and the current HD receive address per chain (vault-derived;
+  // null when the vault is locked or the passphrase is unknown).
+  receiveIndices: ReceiveIndices;
+  receiveAddresses: PerChain<string | null>;
   vaultAddresses: PerChain<string[]>;
   vaultProfileIds: string[] | null;
   balances: PerChain<BalanceState>;
@@ -225,6 +236,16 @@ export interface WalletContextValue extends WalletState {
   devnetEnabled: boolean;
   setDevnetEnabled(enabled: boolean): Promise<void>;
   setVaultAccount(account: number, index: number): Promise<void>;
+  /** Switch to another account from the same phrase, keeping the address index. */
+  selectVaultAccount(account: number): Promise<void>;
+  /** Create `count` new accounts from the vault phrase; returns their indices. */
+  createVaultAccounts(count: number): Promise<number[]>;
+  /** (Re-)derive the HD receive addresses for the current account. */
+  refreshReceiveAddresses(): Promise<void>;
+  /** Advance one chain's receive index and derive its fresh address. */
+  nextReceiveAddress(chain: ChainId): Promise<void>;
+  /** Reset HD receive rotation to index 0 (new or deleted vault). */
+  resetReceiveRotation(): void;
   refreshVaultAccounts(selection?: {
     account: number;
     index: number;
@@ -267,6 +288,28 @@ function computeBootVaultState(): VaultState {
   if (!vault.hasVault()) return 'no-vault';
   if (vault.hasStoredKey() && !readAutoLockEnabled()) return 'unlocked';
   return 'locked';
+}
+
+// Lane C, item 6: the vault uses a recovery passphrase the session does
+// not know — derivation with '' would produce (and persist) the wrong
+// addresses, so account switches must ask for it instead of deriving.
+function computePassphraseNeeded(vaultState: VaultState): boolean {
+  return (
+    vaultState === 'unlocked' &&
+    isPassphraseUsed() &&
+    vault.getSessionPassphrase() === ''
+  );
+}
+
+// Lane C, items 6/7/17: the accounts on record for this vault's phrase.
+// A vault from before accounts existed has none stored: it holds
+// Account 1. No vault means no accounts.
+function syncedVaultAccounts(): number[] {
+  if (!vault.hasVault()) return [];
+  const stored = vault.readVaultAccounts();
+  if (stored.length > 0) return stored;
+  vault.writeVaultAccounts([0]);
+  return [0];
 }
 
 // --- Lane G: central reason → human sentence map (Safe's cgw-errors.ts
@@ -466,6 +509,68 @@ function persistVaultAddresses(
   }
 }
 
+// --- Lane C, item 8: HD receive rotation ----------------------------------
+// Which address index the Receive screen shows per chain. Rotating gives
+// a fresh address (and QR) for the next payment, derived from the next
+// unused index; the account address (index 0) never moves. The indices
+// belong to the current vault's phrase: they reset when a vault is
+// created or deleted (see resetReceiveRotation, called by the screens
+// that create or delete a vault), and on account switch.
+export type ReceiveIndices = Partial<Record<ChainId, number>>;
+
+export const RECEIVE_INDEX_KEY = 'bawa-receive-index:v1';
+
+export function readReceiveIndices(): ReceiveIndices {
+  try {
+    if (typeof window === 'undefined') return {};
+    const raw = window.localStorage.getItem(RECEIVE_INDEX_KEY);
+    if (raw === null) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed) || parsed.version !== 1) return {};
+    const out: ReceiveIndices = {};
+    for (const chain of ALL_CHAIN_IDS) {
+      const value: unknown = parsed[chain];
+      if (
+        typeof value === 'number' &&
+        Number.isSafeInteger(value) &&
+        value >= 0
+      ) {
+        out[chain] = value;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function writeReceiveIndices(indices: ReceiveIndices): void {
+  try {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      RECEIVE_INDEX_KEY,
+      JSON.stringify({ version: 1, ...indices }),
+    );
+  } catch {
+    // Persistence is best-effort; the in-memory indices still work.
+  }
+}
+
+/** Next unused index for a chain: one past the stored index (0 when none is stored yet). */
+export function nextReceiveIndex(chain: ChainId, current: ReceiveIndices): number {
+  const stored = current[chain];
+  return (typeof stored === 'number' ? stored : 0) + 1;
+}
+
+export function resetReceiveIndices(): void {
+  try {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(RECEIVE_INDEX_KEY);
+  } catch {
+    // Best-effort; the in-memory indices are reset by the caller.
+  }
+}
+
 // --- Lane G: last-good balances cache (see BALANCE_CACHE_KEY) ---
 interface CachedBalance {
   address: string;
@@ -534,6 +639,7 @@ function initialWalletState(): WalletState {
           readDevnetEnabled() ? VAULT_ADDRESSES_KEY_DEVNET : VAULT_ADDRESSES_KEY,
         )
       : null;
+  const bootVaultState = computeBootVaultState();
   const stored = readStored();
   const hasPersistedAddress =
     persisted !== null
@@ -570,6 +676,10 @@ function initialWalletState(): WalletState {
     vaultAccount: persisted === null
       ? { account: 0, index: 0 }
       : { account: persisted.account, index: persisted.index },
+    vaultAccounts: syncedVaultAccounts(),
+    vaultPassphraseNeeded: computePassphraseNeeded(bootVaultState),
+    receiveIndices: readReceiveIndices(),
+    receiveAddresses: perChain<string | null>(() => null),
     vaultAddresses: persisted === null
       ? perChain<string[]>(() => [])
       : persisted.addresses,
@@ -957,6 +1067,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const vaultState = computeVaultState();
     const profileIds = vault.hasVault() ? vault.vaultProfiles() : null;
     const selected = selection ?? current.current.vaultAccount;
+    const storedAccounts = syncedVaultAccounts();
+    const passphraseNeeded = computePassphraseNeeded(vaultState);
     // Derivation needs the mnemonic in the vault closure. autoUnlock()
     // restores it from the stored key when it is not there yet (e.g. after
     // a reload); it returns false for a vault that cannot auto-unlock
@@ -990,6 +1102,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         vaultState,
         vaultProfileIds: profileIds,
         vaultAddresses: restored,
+        vaultAccounts: storedAccounts,
+        vaultPassphraseNeeded: passphraseNeeded,
       }));
       return;
     }
@@ -1024,6 +1138,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         vaultState,
         vaultProfileIds: profileIds,
         vaultAddresses: perChain<string[]>(() => []),
+        vaultAccounts: storedAccounts,
+        vaultPassphraseNeeded: passphraseNeeded,
       }));
       throw error;
     }
@@ -1048,6 +1164,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultState,
       vaultProfileIds: profileIds,
       vaultAddresses: addresses,
+      vaultAccounts: storedAccounts,
+      vaultPassphraseNeeded: false,
     }));
     // Persist the PUBLIC addresses only (never keys or the mnemonic), so a
     // reload or direct load can fetch balances/history without an unlock.
@@ -1071,7 +1189,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Switch the derived vault account. Validates like deriveAddressesAt
   // (which re-validates), stores the selection, then re-derives with the
-  // NEW selection passed explicitly — never with captured state.
+  // NEW selection passed explicitly — never with captured state. A new
+  // account starts its HD receive rotation over (index 0 on every chain).
   const setVaultAccount = useCallback(async (account: number, index: number) => {
     if (!Number.isSafeInteger(account) || account < 0) {
       throw new RangeError('account must be a non-negative safe integer');
@@ -1082,9 +1201,137 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       );
     }
     const selection = { account, index };
-    update(previous => ({ ...previous, vaultAccount: selection }));
+    resetReceiveIndices();
+    update(previous => ({
+      ...previous,
+      vaultAccount: selection,
+      receiveIndices: readReceiveIndices(),
+      receiveAddresses: perChain<string | null>(() => null),
+    }));
     await refreshVaultAccounts(selection);
   }, [update, refreshVaultAccounts]);
+
+  // Lane C, item 7: switch to another account from the same phrase,
+  // keeping the current address index.
+  const selectVaultAccount = useCallback(async (account: number) => {
+    await setVaultAccount(account, current.current.vaultAccount.index);
+  }, [setVaultAccount]);
+
+  // Lane C, items 6/7/17: create `count` NEW accounts from the vault
+  // phrase (Account 1 exists → 10 more gives Account 2–11). Only public
+  // index numbers are recorded; derivation happens on selection, so no
+  // unlock is needed to create them. Returns the new indices.
+  const createVaultAccounts = useCallback(async (count: number) => {
+    if (!vault.hasVault()) {
+      throw new Error('No vault exists yet. Create or import a wallet first.');
+    }
+    const merged = vault.nextVaultAccounts(current.current.vaultAccounts, count);
+    const added = merged.filter(
+      (account) => !current.current.vaultAccounts.includes(account),
+    );
+    vault.writeVaultAccounts(merged);
+    update(previous => ({ ...previous, vaultAccounts: merged }));
+    return added;
+  }, [update]);
+
+  // Lane C, item 8: (re-)derive the HD receive addresses for the current
+  // account. Chains sharing one receive index are derived in a single
+  // deriveAddressesAt call; SOL/TON have one address per wallet, so
+  // their receive address is the vault address. A locked vault, or a
+  // passphrase the session does not know, leaves every address unknown.
+  const refreshReceiveAddresses = useCallback(async () => {
+    const request = ++vaultDerivations.current;
+    const selection = current.current.vaultAccount;
+    const indices = current.current.receiveIndices;
+    const passphraseKnown =
+      !isPassphraseUsed() || vault.getSessionPassphrase() !== '';
+    if (
+      computeVaultState() !== 'unlocked' ||
+      !passphraseKnown ||
+      !(await vault.autoUnlock())
+    ) {
+      update(previous => ({
+        ...previous,
+        receiveAddresses: perChain<string | null>(() => null),
+      }));
+      return;
+    }
+    const out: PerChain<string | null> = perChain<string | null>(() => null);
+    out.sol = current.current.vaultAddresses.sol[0] ?? null;
+    out.ton = current.current.vaultAddresses.ton[0] ?? null;
+    const rotatable = ALL_CHAIN_IDS.filter(
+      (chain) => canRotateReceiveAddress(chain),
+    );
+    const byIndex = new Map<number, ChainId[]>();
+    for (const chain of rotatable) {
+      const index = indices[chain] ?? 0;
+      const list = byIndex.get(index) ?? [];
+      list.push(chain);
+      byIndex.set(index, list);
+    }
+    try {
+      const core = await loadVaultCore();
+      const devnet = devnetEnabledRef.current;
+      await vault.withMnemonicAsync(async (mnemonic) => {
+        for (const [index, chains] of byIndex) {
+          const all = devnet
+            ? await core.deriveDevnetAddressesAt(
+                mnemonic,
+                vault.getSessionPassphrase(),
+                selection.account,
+                index,
+              )
+            : await core.deriveAddressesAt(
+                mnemonic,
+                vault.getSessionPassphrase(),
+                selection.account,
+                index,
+              );
+          for (const chain of chains) {
+            out[chain] = all[chain];
+          }
+        }
+      });
+    } catch {
+      if (request !== vaultDerivations.current) return;
+      update(previous => ({
+        ...previous,
+        receiveAddresses: perChain<string | null>(() => null),
+      }));
+      return;
+    }
+    if (request !== vaultDerivations.current) return;
+    update(previous => ({ ...previous, receiveAddresses: out }));
+  }, [update]);
+
+  // Lane C, item 8: advance one chain's receive index and derive its
+  // fresh address. SOL and TON have no next address.
+  const nextReceiveAddress = useCallback(async (chain: ChainId) => {
+    if (!canRotateReceiveAddress(chain)) {
+      throw new Error(
+        `${chain === 'sol' ? 'Solana' : 'TON'} has one address per wallet, so there is no next address.`,
+      );
+    }
+    const indices = {
+      ...current.current.receiveIndices,
+      [chain]: nextReceiveIndex(chain, current.current.receiveIndices),
+    };
+    writeReceiveIndices(indices);
+    update(previous => ({ ...previous, receiveIndices: indices }));
+    await refreshReceiveAddresses();
+  }, [update, refreshReceiveAddresses]);
+
+  // A vault's receive indices belong to its phrase: a new phrase starts
+  // at index 0, and a deleted vault leaves nothing to rotate. Called by
+  // the screens that create or delete a vault.
+  const resetReceiveRotation = useCallback(() => {
+    resetReceiveIndices();
+    update(previous => ({
+      ...previous,
+      receiveIndices: {},
+      receiveAddresses: perChain<string | null>(() => null),
+    }));
+  }, [update]);
 
   const unlockVault = useCallback(async (password: string, passphrase = '') => {
     if (isPassphraseUsed() && !passphrase) {
@@ -1102,6 +1349,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       vaultState: computeVaultState(),
       vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
       vaultAddresses: perChain<string[]>(() => []),
+      vaultPassphraseNeeded: false,
+      receiveAddresses: perChain<string | null>(() => null),
       balances: clearedBalances(),
       history: clearedHistory(),
       tokenBalances: {},
@@ -1258,6 +1507,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         ...previous,
         vaultState: computeVaultState(),
         vaultProfileIds: vault.hasVault() ? vault.vaultProfiles() : null,
+        vaultAccounts: syncedVaultAccounts(),
+        vaultPassphraseNeeded: computePassphraseNeeded(computeVaultState()),
       }));
     });
     return () => {
@@ -1285,11 +1536,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<WalletContextValue>(() => ({
     ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
-    setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory,
+    setVaultAccount, selectVaultAccount, createVaultAccounts,
+    refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation,
+    refreshVaultAccounts, refreshBalances, refreshHistory,
     refreshTokenBalances, setChainEnabled, addCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
     devnetEnabled, setDevnetEnabled,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
+  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

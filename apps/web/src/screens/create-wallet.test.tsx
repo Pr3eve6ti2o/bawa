@@ -24,6 +24,7 @@ vi.mock('../engine/boundary', () => ({
 }));
 
 const mockRefreshVaultAccounts = vi.fn();
+const mockResetReceiveRotation = vi.fn();
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
@@ -143,9 +144,11 @@ beforeEach(() => {
   vi.mocked(hasVault).mockReturnValue(false);
   vi.mocked(loadCore).mockResolvedValue(undefined as unknown as Awaited<ReturnType<typeof loadCore>>);
   mockRefreshVaultAccounts.mockResolvedValue(undefined);
+  mockResetReceiveRotation.mockClear();
   vi.mocked(useWallet).mockReturnValue({
     vaultAddresses: TEST_ADDRESSES,
     refreshVaultAccounts: mockRefreshVaultAccounts,
+    resetReceiveRotation: mockResetReceiveRotation,
   } as unknown as ReturnType<typeof useWallet>);
 });
 
@@ -277,6 +280,8 @@ describe('create wallet screen', () => {
       await settle();
       expect(createVault).toHaveBeenCalledTimes(1);
       expect(mockRefreshVaultAccounts).toHaveBeenCalledTimes(1);
+      // A new phrase starts HD receive rotation at index 0.
+      expect(mockResetReceiveRotation).toHaveBeenCalledTimes(1);
       const stepCards = mounted.div.querySelectorAll('[data-slot="step-card"]');
       expect(stepCards.length).toBe(4);
       expect(stepCards[3]?.getAttribute('data-state')).toBe('pending');
@@ -417,14 +422,86 @@ describe('create wallet screen', () => {
     }
   });
 
-  it('blocks creation when a vault already exists', async () => {
+  it('tells the user to add an account instead of deleting the vault', async () => {
     vi.mocked(hasVault).mockReturnValue(true);
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('A wallet already exists');
       expect(createWallet).not.toHaveBeenCalled();
-      const link = mounted.div.querySelector('a[href="/security"]');
-      expect(link).not.toBeNull();
+      // Item 17: no delete wall any more — another account comes from the
+      // same phrase, on the Wallets screen.
+      expect(mounted.div.textContent).toContain(
+        'add another account from the same phrase',
+      );
+      expect(mounted.div.textContent).not.toContain(
+        'To start over, delete the existing vault',
+      );
+      expect(mounted.div.querySelector('a[href="/wallets"]')).not.toBeNull();
+      expect(mounted.div.querySelector('a[href="/security"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('copies the recovery phrase from step 2', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    const mounted = await mountScreen();
+    try {
+      await generate(mounted.div);
+      const button = mounted.div.querySelector(
+        '[aria-label="Copy recovery phrase"]',
+      ) as HTMLButtonElement;
+      expect(button).not.toBeNull();
+      await act(async () => {
+        button.click();
+      });
+      expect(writeText).toHaveBeenCalledWith(TEST_MNEMONIC);
+      expect(button.textContent).toBe('Copied');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('copies each address from step 4', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+    const mounted = await mountScreen();
+    try {
+      await generate(mounted.div);
+      await act(async () => {
+        findButton(mounted.div, 'I have written them down').click();
+      });
+      const words = TEST_MNEMONIC.split(' ');
+      const inputs = [...mounted.div.querySelectorAll('input[id^="confirm-word-"]')];
+      await act(async () => {
+        inputs.forEach((input) => {
+          const position = Number(
+            (input as HTMLInputElement).id.replace('confirm-word-', ''),
+          );
+          setInputValue(input as HTMLInputElement, words[position] as string);
+        });
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Confirm and create wallet').click();
+      });
+      await settle();
+      expect(mounted.div.textContent).toContain('Your wallet is ready');
+      const button = mounted.div.querySelector(
+        '[aria-label="Copy Ethereum address"]',
+      ) as HTMLButtonElement;
+      expect(button).not.toBeNull();
+      await act(async () => {
+        button.click();
+      });
+      expect(writeText).toHaveBeenCalledWith(TEST_ADDRESSES.eth[0]);
+      expect(button.textContent).toBe('Copied');
     } finally {
       await mounted.cleanup();
     }
