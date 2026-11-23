@@ -772,9 +772,13 @@ E1 expires 2027-02-20; TON Issues 5 and 6 in `DEVNET-ISSUES.md`.
 ## 12. Reverify + Professional Polish programme — 5 lanes, merged into token-gaps (2026-11-23)
 
 Owner order 2026-11-23 ~18:14 IST. Branch
-`panel-rebuild/reverify-pro` from token-gaps `b089c28`; merged into
-`panel-rebuild/token-gaps` (merge commit recorded in a follow-up
-commit on token-gaps). Full record: `docs/REVERIFY-PROGRAMME.md`;
+`panel-rebuild/reverify-pro` from token-gaps `b089c28`; fast-forwarded
+into `panel-rebuild/token-gaps` to `ccb8195` on 2026-11-23. Doc-only
+updates pushed the same day to `main` (`e64679e`),
+`panel-rebuild/adopt-proper` (`d0aa6ba`),
+`panel-rebuild/desktop-layout-v2` (`df6e54d`),
+`panel-rebuild/devnet-temp` (`bd4bdd4`) and
+`panel-rebuild/token-discovery` (`81994e8`). Full record: `docs/REVERIFY-PROGRAMME.md`;
 checklist: `docs/REVERIFY-CHECKLIST.md`. Hands-on Muse, 0 Sol calls.
 
 - **Vitest baseline corrected.** The Round 2 record says 89 files /
