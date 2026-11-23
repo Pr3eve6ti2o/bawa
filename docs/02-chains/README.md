@@ -474,4 +474,6 @@ One primary source per chain family: Bitcoin — BIP-32/39/43/44/49/84/86 and SL
 
 Regtest and signet appear in §3 as network encodings. The local-to-public testing sequence (local stage first, where a chain supports it) belongs in the Web and Android guides and in the repo testing taxonomy (docs/10) — not here.
 
+Live services per chain (Lane C, 2026-11-24): the RPC endpoints, history indexers and price sources the wallet actually calls are not listed in this chapter — they live where a reader of each topic looks: RPCs and the rate limits the app enforces on itself in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from), history indexers in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer), price sources in [ADR-0007](../adr/0007-price-feed-provider.md). One fact to carry from there: six chains have no working keyless history indexer and their history stays blocked — BNB Smart Chain, Gnosis, Linea, opBNB, Metis and Fantom — so a chain guide that promises history on those chains is wrong until the owner approves a keyed indexer.
+
 Cross-reference note: docs/09 describes the BIP-84 testnet prefix `vpub` (not `tpub`) and the `m/84'/1'/0'` origin of EXTERNAL hardware signers following the standard testnet convention — not a Bawa-generated wallet (`m/84'/0'/0'`). Never mix the two origins.

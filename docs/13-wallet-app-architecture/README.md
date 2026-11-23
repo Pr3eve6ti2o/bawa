@@ -370,6 +370,132 @@ For external hardware-signer exports, whose origin follows the signer's own poli
 
 Track confirmations and chain reorganisations (reorgs). Account for the possibility that a transaction which looked confirmed can drop out.
 
+### Live services the app is built from
+
+> Lane C, FIX-ALL programme, 2026-11-24. Every endpoint below is taken from the registry in `apps/web/src/wallet/chains.ts` (`CHAINS[...].rpcEndpoints`, `historyBaseUrl`) and the adapters in `apps/web/src/wallet/adapters/`; nothing is listed that the code does not call. Free and paid limits were re-checked against each provider's own pages on 2026-11-24 and are cited per provider; where a provider publishes no number, the entry says so instead of guessing. Lane A is re-verifying every backup RPC in parallel — if its probes disagree with this table, the probe wins and this table must be corrected.
+>
+> How to read an entry: **Title** — what the service is and how the wallet uses it, in short — then the direct links, then one short line per thing it does for the wallet, then **Free** / **Paid**. Explorers that only supply transaction links (Tronscan, Tonviewer, Solana Explorer, Dogechain, Etherscan Sepolia, Litecoinspace) are named in the per-chain table but get no provider entry: the wallet never reads data from them, it only links out to them.
+
+#### RPC endpoints
+
+**PublicNode (Allnodes)** — free public JSON-RPC for most EVM chains and Solana, no key and no account. The wallet uses it as the primary or backup RPC for ETH, SOL, BSC, Polygon, Arbitrum, Optimism, Base, Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB and Metis. Links: <https://publicnode.com>, e.g. <https://ethereum-rpc.publicnode.com>, <https://solana-rpc.publicnode.com>.
+
+- Free: no key, no account, no published numeric limit, no SLA, no paid tier — it is a public good run by Allnodes, so a busy hour can 429 with no recourse except the backup endpoint.
+- Paid: none exists. There is no paid PublicNode tier to buy; the only upgrade is a different provider.
+
+**1RPC (Automata)** — a privacy relay that strips request metadata before forwarding to an RPC provider. The wallet uses it only as the Ethereum backup (`https://1rpc.io/eth`); it is never the primary for any chain. Links: <https://1rpc.io>, <https://docs.1rpc.io>.
+
+- Free: Public plan 200 requests/day, keyless; Starter plan 1,000 requests/day with a free key. The wallet uses the keyless Public plan, so a heavy day can exhaust it — the primary carries the load.
+- Paid: Personal $9.90/month, 40,000 requests/day, adds WebSocket and a 99.9% SLA; Developer $29.90/month, 100,000 requests/day, adds testnets. Source: 1rpc.io pricing, reviewed 2026-11-18.
+
+**Binance public dataseed** — Binance's public BSC endpoint. The wallet uses it only as the BNB Smart Chain backup (`https://bsc-dataseed.binance.org`).
+
+- Free: public, no key.
+- Paid / limits: no published per-client limit or paid tier found for this endpoint — unverified. Do not quote a number for it.
+
+**Chain-operated public RPCs** — the public endpoints the chains themselves run, each used as the backup (or, for Fantom and Aurora, the primary) for one chain. Links: Celo Forno <https://forno.celo.org>; Gnosis <https://rpc.gnosischain.com>; Linea <https://rpc.linea.build>; Mantle <https://rpc.mantle.xyz>; Metis <https://andromeda.metis.io>; Aurora <https://mainnet.aurora.dev>; Fantom <https://rpc.fantom.network> and <https://rpc2.fantom.network>; Optimism <https://mainnet.optimism.io>; Avalanche <https://api.avax.network/ext/bc/C/rpc>; opBNB <https://opbnb-mainnet-rpc.bnbchain.org>; Scroll <https://rpc.scroll.io>.
+
+- Free: public, no key, no SLA.
+- Paid / limits: no published per-client limit found for any of these endpoints — unverified. No paid tier is attached to the public URLs themselves.
+
+**TronGrid (TRON Foundation)** — the official TRON HTTP/gRPC API. The wallet uses it as the only TRON RPC (`https://api.trongrid.io`): native TRX balances, TRC-20 `balanceOf` reads and TRON history all go through it. Links: <https://www.trongrid.io>, <https://developers.tron.network/reference/rate-limits>.
+
+- Free: keyless access is throttled; a free key gives about 100,000 requests/day (last readable pricing page — the current page renders as a JavaScript shell, so re-check before relying on the figure). The per-second figure is disputed: third-party comparisons report 15 QPS with a key, TronLink's docs report about 5 QPS — unverified on TronGrid's own page. Exceeding the limit blocks the key for 30 seconds with HTTP 403 (third-party reports). The wallet sends no key, so it runs on the throttled keyless tier.
+- Paid: custom plans only, negotiated with the TRON team; no public price.
+
+**TonCenter (TON)** — the TON HTTP JSON-RPC API in front of liteservers. The wallet uses it as the only TON RPC (`https://toncenter.com/api/v2/jsonRPC`): TON balances and history. Links: <https://toncenter.com>, <https://docs.ton.org/api/rate-limit>.
+
+- Free: keyless 1 request/second; a free key (from the @toncenter Telegram bot) gives 10 requests/second, 1 key per network, on shared liteservers. The wallet sends no key, so it runs at the 1 request/second tier — the TON adapter enforces a 1,100 ms gap between requests for exactly this reason (see "Rate limits the app itself enforces" below).
+- Paid: Plus 25 requests/second, Advanced 100 requests/second, Enterprise custom. Prices are quoted in GRAM (2.5 and 25 GRAM/month reported by secondary sources); the official rate-limit page publishes no prices, so the GRAM figures are unverified on the provider's own page.
+
+**TonAPI (Tonkeeper / TON Console)** — the indexed TON REST API. The wallet uses it only as a TON balance fallback (`https://tonapi.io` — `/v2/accounts/{address}` when TonCenter fails) and for TON Jetton rates (`/v2/rates`). Links: <https://tonapi.io>, <https://console.tonapi.io>.
+
+- Free: keyless default 1 request/second (the docs disagree with each other — 1 request per 4 seconds in one place, 1 per second in another — unresolved); a free key (Start plan) gives 1 request/second. TonAPI is also the price fallback for TON; its tiers are listed in full in [ADR-0007](../adr/0007-price-feed-provider.md).
+- Paid: Lite $9.90/month, 10 requests/second; Standard $95/month, 100; Plus $290/month, 300; Heavy $890/month, 1,000. Source: console.tonapi.io pricing.
+
+**Solana Vibe Station** — a public Solana RPC. The wallet uses it only as the Solana backup (`https://public.rpc.solanavibestation.com`).
+
+- Free: public, no key.
+- Paid / limits: no published limit or paid tier found — unverified. A third-party measurement (November 2026) held about 1 request/second, which is why it is the backup, not the primary.
+
+**mempool.space** — the open-source Bitcoin explorer and Esplora-compatible REST API. The wallet uses it as the primary Bitcoin balance and history source (`https://mempool.space/api`). Links: <https://mempool.space>, <https://mempool.space/docs/api/rest>.
+
+- Free: keyless, no published numeric limit — the team states its rate limits "aren't disclosed" and a 429 means the unpublished threshold was crossed. Self-hosting the open-source stack (AGPL-3.0, <https://github.com/mempool/mempool>) removes the limit entirely.
+- Paid: a Mempool Enterprise tier exists with higher contracted limits and SLAs; no public price was verified on the provider's own pages — unverified.
+
+**Blockstream Esplora** — Blockstream's open-source Esplora explorer and REST API. The wallet uses it as the Bitcoin backup (`https://blockstream.info/api`), same Esplora shape as mempool.space. Links: <https://blockstream.info>, <https://github.com/Blockstream/esplora/blob/master/API.md>.
+
+- Free: keyless, no published numeric limit found — unverified.
+- Paid: paid plans start at $40/month for 500,000 credits (secondary source — unverified on Blockstream's own pages).
+
+**Litecoinspace** — the Litecoin equivalent of mempool.space (Esplora-compatible). The wallet uses it as the only Litecoin RPC (`https://litecoinspace.org/api`): LTC balances and history. Link: <https://litecoinspace.org>.
+
+- Free: keyless.
+- Paid / limits: no published limit or paid tier found — unverified.
+
+**SoChain** — a REST API for Bitcoin, Litecoin, Dogecoin and Zcash. The wallet uses it as the primary Dogecoin balance and history source (`https://sochain.com/api/v3`). Links: <https://sochain.com>, <https://sochain.com/docs/limits>, <https://sochain.com/pricing>.
+
+- Free: keyless 2,500 lookups/day per IP; a free key gives 75,000 requests/month. Past the quota, lookups carry on at the free rate (2,500/day) instead of breaking.
+- Paid: Hobby $35/month, 500,000 requests/month; Starter $149/month, 1,500,000; Professional $499/month, 15,000,000; Behemoth $1,999/month, 150,000,000. Source: sochain.com/pricing.
+
+**BlockCypher** — a multi-chain blockchain API. The wallet uses it only as a fallback: Dogecoin balance/history (`https://api.blockcypher.com/v1/doge/main`) and Litecoin balance/history (`https://api.blockcypher.com/v1/ltc/main`). Links: <https://www.blockcypher.com>, <https://www.blockcypher.com/pricing.html>, <https://www.blockcypher.com/dev/>.
+
+- Free: read-only GETs need no token; 3 requests/second and 100 requests/hour (confirmed in the rate-limit docs). The daily figure conflicts on BlockCypher's own pages — the pricing card says 1,000 requests/day, the FAQ says 2,000 — so do not rely on either.
+- Paid: the pricing page lists Prototype at $150/month (5,000 requests/day); the docs say paid plans start at $119/month. Both figures are on BlockCypher's own pages and they disagree — report both, rely on neither.
+
+Per-chain endpoint table (registry order is primary first; the adapter tries them in order and reports which one answered):
+
+| Chain | EVM chain id | Endpoints in order |
+|---|---|---|
+| Bitcoin (btc) | — | `https://mempool.space/api`, `https://blockstream.info/api` |
+| Ethereum (eth) | 1 | `https://ethereum-rpc.publicnode.com`, `https://1rpc.io/eth` |
+| TRON (trx) | — | `https://api.trongrid.io` |
+| TON (ton) | — | `https://toncenter.com/api/v2/jsonRPC` (+ TonAPI balance fallback) |
+| Solana (sol) | — | `https://solana-rpc.publicnode.com`, `https://public.rpc.solanavibestation.com` |
+| BNB Smart Chain (bsc) | 56 | `https://bsc-rpc.publicnode.com`, `https://bsc-dataseed.binance.org` |
+| Polygon (matic) | 137 | `https://polygon-bor-rpc.publicnode.com` |
+| Arbitrum One (arb) | 42161 | `https://arbitrum-rpc.publicnode.com` |
+| OP Mainnet (op) | 10 | `https://optimism-rpc.publicnode.com`, `https://mainnet.optimism.io` |
+| Base (base) | 8453 | `https://base-rpc.publicnode.com` |
+| Avalanche C-Chain (avax) | 43114 | `https://avalanche-rpc.publicnode.com`, `https://api.avax.network/ext/bc/C/rpc` |
+| Litecoin (ltc) | — | `https://litecoinspace.org/api` (+ BlockCypher fallback in the adapter) |
+| Dogecoin (doge) | — | `https://sochain.com/api/v3`, `https://api.blockcypher.com/v1/doge/main` |
+| Gnosis (gnosis) | 100 | `https://gnosis-rpc.publicnode.com`, `https://rpc.gnosischain.com` |
+| Celo (celo) | 42220 | `https://celo-rpc.publicnode.com`, `https://forno.celo.org` |
+| Linea (linea) | 59144 | `https://linea-rpc.publicnode.com`, `https://rpc.linea.build` |
+| Mantle (mantle) | 5000 | `https://mantle-rpc.publicnode.com`, `https://rpc.mantle.xyz` |
+| Scroll (scroll) | 534352 | `https://scroll-rpc.publicnode.com`, `https://rpc.scroll.io` |
+| opBNB (opbnb) | 204 | `https://opbnb-rpc.publicnode.com`, `https://opbnb-mainnet-rpc.bnbchain.org` |
+| Metis (metis) | 1088 | `https://metis-rpc.publicnode.com`, `https://andromeda.metis.io` |
+| Aurora (aurora) | 1313161554 | `https://mainnet.aurora.dev`, `https://1rpc.io/aurora` |
+| Fantom (fantom) | 250 | `https://rpc.fantom.network`, `https://rpc2.fantom.network` |
+
+Two cross-checks against the code: the adapters hardcode the same defaults as the registry (ETH adapter pins `ethereum-rpc.publicnode.com`, the BTC adapter pins mempool.space then Blockstream, the Solana adapter pins PublicNode then Vibe Station) — registry and adapter agree. And `https://ethereum.publicnode.com` appears only in a comment (`apps/web/src/engine/destination.ts:548`, a chain-id probe note) — it is **not** a configured endpoint, so it is not listed above. The owner can add a custom endpoint per chain in the RPC manager; `validateRpcEndpoint` (`chains.ts`) requires https only, no embedded credentials, no query or fragment, at most 3 endpoints per chain (`MAX_RPC_ENDPOINTS_PER_CHAIN`), and registry endpoints can never be removed — only demoted.
+
+#### History indexers — summary
+
+The full per-chain history table and the indexer provider entries live in [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) ("RPC is not an indexer"), where a reader of history looks. The summary: 16 of 22 chains have a verified keyless history indexer — Bitcoin (mempool.space / Blockstream), Ethereum, Polygon, Arbitrum, Optimism, Base, Celo, Scroll, Aurora (Blockscout instances), Avalanche and Mantle (Routescan), TRON (TronGrid), TON (TonCenter), Solana (Solana RPC), Litecoin (Litecoinspace / BlockCypher), Dogecoin (SoChain / BlockCypher). Six chains have **no** working keyless indexer and their history stays blocked, never faked: **BNB Smart Chain, Gnosis, Linea, opBNB, Metis, Fantom** — an Etherscan API key or another indexer is an owner decision, not a code fix.
+
+One flag on the Blockscout and Scrollscan hosts: Blockscout moved all API traffic to its keyed Pro API on 1 July 2026 and retired the per-instance APIs the wallet calls keyless — but Lane B probed those same per-instance hosts live on 2026-11-23 and they returned real transactions with no key. The keyless calls work today and are documented as they are; if they stop answering, history on those chains needs a Pro key (free tier: 100,000 credits/day at 5 requests/second, key required; Builder $49/month). See docs/06 for the full note.
+
+#### Rate limits the app itself enforces
+
+The providers above are all free tiers with unpublished or tight limits, so the app throttles itself — this is why the wallet behaves the way it does under load.
+
+**Refresh limiter — 4 concurrent network calls.** One shared limiter caps balances + history + token balances together at 4 concurrent calls (`REFRESH_CONCURRENCY_LIMIT`, `apps/web/src/state/wallet-context.tsx:510`). Before it, unlocking fired the whole 43-row dashboard at once — about 50 requests in the first second, most of them JSON-RPC against the same free-tier hosts — the free tiers 429'd and the hero read "$0.00 (Partial)". Pure promise queueing, no timers; raise the cap only with a live 429 measurement behind the change.
+
+**Read retries — 3 attempts, then stop.** `fetchWithRetry` (wallet-context) retries a failed read-only fetch 3 times with 1s then 2s delays, honouring the provider's `Retry-After` capped at 30s. `withRetry` (`apps/web/src/wallet/retry.ts`) retries 3 attempts inside a 30-second total budget, base delay 200 ms, max 5 s, full jitter, `Retry-After` honoured for rate-limit errors. Only transient failures retry: 429, 5xx, timeouts and network errors. A failed refresh never blanks data — the last good value stays and the failure is reported.
+
+**EVM endpoint failover — chain id checked on every call.** The generic EVM adapter (`apps/web/src/wallet/adapters/evm.ts`) asks each endpoint for its chain id first; a wrong chain id fails that endpoint and the next one is tried. The viem transport is set to `retryCount: 0` so a dead endpoint fails fast in one attempt instead of burning retries inside the transport.
+
+**TON pacing — 1,100 ms between TonCenter requests.** The TON adapter enforces a minimum 1,100 ms gap between the start of one TonCenter request and the next (`apps/web/src/wallet/adapters/ton.ts`) because the keyless TonCenter tier allows about 1 request/second. Production must not lower it.
+
+**Price freshness — 10-minute quotes, 10-second timeout, no polling timer.** A price quote is fresh for at most 10 minutes (`MAX_QUOTE_AGE_MS`, `apps/web/src/wallet/prices.ts`), each price fetch times out after 10 seconds, and a failed refresh keeps the last good cached quote instead of blanking it. There is no polling timer in the tree: prices load on mount and on manual refresh. "Refresh ~60s" in the prices header is CoinGecko's server-side data refresh, not an app timer.
+
+**Balance cache — 10 minutes.** Balances are cached for 10 minutes (`BALANCE_CACHE_MAX_AGE_MS`, wallet-context) before a refresh re-reads them.
+
+**DexScreener batching — 30 addresses per call, one call per chain.** Token price lookups batch at most 30 token addresses per `tokens/v1` call, one call per chain, so a wallet with many unlisted tokens costs one call per chain, not one per token.
+
 ## UI flows
 
 ### Canonical screen contract

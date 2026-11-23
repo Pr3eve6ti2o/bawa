@@ -154,7 +154,11 @@ What each part means, in the wallet's own terms:
   TRON, TON, Solana, BNB Chain, Polygon, Arbitrum, Optimism, Base,
   Avalanche, Litecoin, Dogecoin, Gnosis, Celo, Linea, Mantle, Scroll,
   opBNB, Metis, Aurora, Fantom), each talking to public RPC endpoints
-  (up to three per chain, with fallbacks).
+  (up to two per chain in the registry, with fallbacks; a custom
+  endpoint can be added per chain, at most three in total). The full
+  per-chain endpoint table, the history indexers and the rate limits the
+  app enforces on itself are in [docs/13](13-wallet-app-architecture/README.md#live-services-the-app-is-built-from)
+  and [docs/06](06-tracking/README.md#3-rpc-is-not-an-indexer).
 - **Balances from public RPCs** — the dashboard refreshes every enabled
   chain's balance from its adapter. A failed fetch shows as unavailable,
   never as zero or as a made-up number.
@@ -162,7 +166,9 @@ What each part means, in the wallet's own terms:
   cache. When a CoinGecko quote is stale or missing, native assets fall
   back to CoinLore and Coinbase (LTC only); unlisted tokens fall back to
   DexScreener (EVM, Solana, TRON) and TonAPI rates (TON Jettons). When
-  no source has a price, the wallet says the price is unavailable.
+  no source has a price, the wallet says the price is unavailable. The
+  full per-provider entries, with free and paid tiers, are in
+  [ADR-0007](adr/0007-price-feed-provider.md).
 - **Receive and Send** — Receive shows the address and QR code for any
   chain. Send builds the transaction offline and signs it
   (`createTransactionIntent`) — but mainnet broadcast stays **disabled**

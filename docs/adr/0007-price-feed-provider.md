@@ -65,6 +65,86 @@ Use CoinGecko as the default (and only) price provider:
   CoinGecko data refreshes about every 60 seconds; it is not tick data.
 - Live-verified from gray-pinee 2026-11-19 19:15 UTC: keyless
   `/simple/price` returned HTTP 200 with BTC/ETH/TRX and `the-open-network`.
+- Re-checked 2026-11-24 (Lane C, FIX-ALL): the pricing page
+  (`coingecko.com/en/api/pricing`, crawled 2026-10-21) lists Demo at
+  10,000 call credits/month and 100 calls/minute — the 100/minute figure
+  above is current; the older 30/minute figure on stale crawls is out of
+  date. Paid tiers on the same page: Basic $35/month (100,000 credits,
+  300/minute), Analyst $129/month (500,000 credits, 500/minute), Lite
+  $499/month (2,000,000 credits, 500/minute).
+
+### Fallback providers (added 2026-11-23, Lane C finish-the-product)
+
+CoinGecko stays the first source. `usePrices()` fetches its batched
+`/simple/price` call first, and only the chains whose quote is NOT fresh
+reach these fallbacks (`apps/web/src/wallet/price-fallbacks.ts`,
+`applyPriceFallbacks`). A chain no source prices stays on its CoinGecko
+entry — expired, error or unavailable — never a guessed price. The row
+label shows the quote's real source. Coverage after fallbacks: 20 of 22
+chains have at least one fallback; Gnosis and Mantle are CoinGecko-only
+(no verified keyless source). Each entry follows the same shape as the
+provider terms above: what it is and how the wallet uses it, in short,
+then Free / Paid.
+
+**CoinLore — FIRST fallback.** A free public crypto price API
+(`https://api.coinlore.net`). The wallet makes one batched
+`/api/ticker/?id=...` call for every mapped chain. It goes first because
+it is one call for many chains and its verified quotes track CoinGecko
+tightest (within 0.7% live on BTC, ETH, BNB, SOL, TRX, DOGE, AVAX, CELO,
+METIS, 2026-11-23). Covers BTC (id 90), ETH and the ETH-native chains
+(80), BNB/opBNB (2710), SOL (48543), TRX (2713), DOGE (2), AVAX (44883),
+CELO (44425), METIS (49563). It does NOT cover TON (stale $1.78 quote
+excluded), MATIC (stale legacy quote excluded), LTC, FTM, XDAI or MNT.
+
+- Free: no key, no registration; no strict rate limit, about 1 request
+  per second recommended for fair use. No paid tier exists.
+- Paid: none. Source: `coinlore.com/cryptocurrency-data-api`.
+
+**DexScreener — SECOND fallback.** DEX pair data (`https://api.dexscreener.com`).
+The wallet prices the wrapped native on-chain (`tokens/v1/<chain>/<wrapped>`)
+and takes the implied price (`priceUsd / priceNative`) — NOT `priceUsd`
+itself, which is the base token's price. It also prices unlisted tokens
+the same way (`apps/web/src/wallet/dex-prices.ts`, `token-prices.ts`),
+one batched call per chain, at most 30 addresses per call. Gnosis and
+Aurora are NOT covered: `dexscreener.com/gnosis` and `/aurora` are 404
+and `tokens/v1` returns `[]` for known tokens there.
+
+- Free: no key; 300 requests/minute on pair, token and search endpoints,
+  60/minute on profile, boost, order and meta endpoints. No paid tier is
+  documented for the API.
+- Paid: none documented. Source: `docs.dexscreener.com/api/reference`.
+
+**TonAPI rates — TON fallback.** TonAPI's rates endpoint
+(`https://tonapi.io/v2/rates?tokens={masters}&currencies=usd`) prices
+TON and TON Jettons, which DexScreener does not cover. It is the TON
+balance fallback too (see docs/13).
+
+- Free: keyless default 1 request/second (the docs disagree — 1 request
+  per 4 seconds in one place, 1 per second in another — unresolved); a
+  free key (Start plan) gives 1 request/second.
+- Paid: Lite $9.90/month, 10 requests/second; Standard $95/month, 100;
+  Plus $290/month, 300; Heavy $890/month, 1,000. Source:
+  `console.tonapi.io` pricing.
+
+**Coinbase Exchange — LTC fallback.** The public ticker
+(`https://api.exchange.coinbase.com/products/LTC-USD/ticker`) prices
+Litecoin, the one chain CoinLore cannot cover that has no DexScreener
+pair. No key, no account; the wallet calls the public market-data
+endpoint only.
+
+- Free: public endpoints 10 requests/second per IP, bursts up to 15;
+  market data is free.
+- Paid: none for public market data. Source:
+  `docs.cdp.coinbase.com/exchange/rest-api/rate-limits`.
+
+**Rejected live (do not re-add without fresh evidence):** Binance
+(`api.binance.com` returns HTTP 451, geo-blocked; `api.binance.us`
+quotes a frozen pre-delisting FTM at $0.4806 against a live ~$0.03);
+CoinPaprika (same frozen FTM $0.4803, and its free tier is personal-use
+only — see above); CoinCodex (its Fantom endpoint returns a
+"not_trading_anymore" record, not a price); Kraken (no
+`Access-Control-Allow-Origin` header, so a browser fetch is CORS-blocked,
+and it has no FTM pair at all).
 
 ### CoinPaprika — REJECTED as default
 

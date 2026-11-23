@@ -334,6 +334,17 @@ curl -sS "https://testnet.toncenter.com/api/v2/getMasterchainInfo"
 
 > **Expected result:** Confirm `ok:true` and read the current masterchain seqno. Use seqno 96561294 only as the dated example checked on 2026-11-08. Run the command and expect a larger seqno.
 
+### Devnet-mode endpoints (temporary)
+
+> Lane C, FIX-ALL programme, 2026-11-24. Devnet mode (`bawa-devnet-enabled`) is a temporary test-only switch that re-points the wallet at test networks with valueless tokens; it is removable without touching mainnet behaviour. The endpoints below are the devnet config in `apps/web/src/wallet/devnet-endpoints.ts` — the same providers as mainnet, on their test networks. No separate free/paid tier is listed here: the testnet endpoints share their provider's terms (see docs/13), and testnet tokens have no value.
+
+| Chain | Devnet endpoint | History / explorer |
+|---|---|---|
+| Bitcoin testnet4 | `https://mempool.space/testnet4/api` | `https://mempool.space/testnet4/tx/` |
+| Ethereum Sepolia | `https://ethereum-sepolia-rpc.publicnode.com` | `https://eth-sepolia.blockscout.com/api`, explorer `https://sepolia.etherscan.io/tx/` |
+| TRON Nile | `https://nile.trongrid.io` (fallback `https://api.nileex.io`) | explorer `https://nile.tronscan.org/#/transaction/` |
+| TON testnet | `https://testnet.toncenter.com/api/v2/jsonRPC` | explorer `https://testnet.tonviewer.com/transaction/` |
+
 ### Sources
 
 - Node.js CLI: https://nodejs.org/api/cli.html

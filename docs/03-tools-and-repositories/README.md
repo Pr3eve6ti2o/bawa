@@ -133,6 +133,8 @@ One owner per job; do not treat any tool as a complete wallet backend. These bou
 
 **Evidence limit:** Bawa documents no Assets metadata schema or API, no RPC/indexer provider with supported operations and guarantees, and no application database model. Check the Assets documentation, choose a network provider and confirm its capabilities and guarantees, and define your application's record model. RPC/indexer services and the application database are application infrastructure, not Bawa code. The table assigns responsibilities; it does not verify service capabilities.
 
+Lane C note, 2026-11-24: the RPC/indexer half of this gap is now closed for the web wallet — the providers the app actually calls, with their supported operations and free/paid tiers, are documented in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from) (RPCs and the rate limits the app enforces on itself) and [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer) (history indexers), and the price sources in [ADR-0007](../adr/0007-price-feed-provider.md). What stays open: the Assets metadata schema/API and the application database model — still undocumented, still to be defined before anyone relies on them.
+
 Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 0044, 0132 are the sources of truth. Agreement between libraries is a check, not a replacement for the standard. Bawa does not document verification coverage beyond the bip_utils list; review the relevant standards and tests before relying on additional coverage.
 
 **Invocation and code audit:** `tools/hdwallet-gen/package.json` lists `@trustwallet/wallet-core` 4.9.3; `requirements.txt` lists `bip_utils` 2.12.3. This section is a decision table, not a runnable recipe. Check each tool's own documentation and the relevant Bawa call site before using it. Three review checks:
@@ -148,6 +150,8 @@ Authority stays with the scheme: BIPs 32, 39, 43, 44, 49, 84 and SLIPs 0010, 004
 ## 10. Canonical pricing note
 
 Prices appear in exactly ONE place in this guide set: the costs reference in `docs/08-security-recovery`, labelled as an indicative snapshot dated 30 October 2026, recheck-required, not current quotations, with the recheck warning kept verbatim. No price figure is copied anywhere else in the guide set. No pricing page is cited anywhere. Before relying on any figure, re-check it against the vendor's current published pricing and re-date the snapshot; never supply a revised price without a source check. Review trigger: any figure older than its stated snapshot date, or any vendor pricing change, triggers a re-check. `docs/06` and `docs/16` point here, not at figures.
+
+Lane C note, 2026-11-24 (owner order, FIX-ALL programme): this rule is scoped, not broken, by the service entries added the same day. The owner ordered every provider the wallet is built from documented with its free tier and what its paid tier gives, verified from the provider's own pages. Those tier figures — with their source pages and the 2026-11-24 check date — live only in the service entries in docs/13, docs/06 and ADR-0007, and nowhere else. This section still governs every other cost figure in the guide set: no other price figure is added anywhere, and a tier figure older than its stated check date (or changed on the vendor's page) triggers the same re-check.
 
 ## 11. Sources
 
@@ -168,3 +172,49 @@ Prices appear in exactly ONE place in this guide set: the costs reference in `do
 - [ethers docs](https://docs.ethers.org/v6/)
 - [Ledger developer ecosystem](https://developers.ledger.com)
 - [TON SDKs](https://docs.ton.org/applications/sdks)
+
+## 12. Repositories and services the wallet and guide actually draw from
+
+> Lane C, FIX-ALL programme, 2026-11-24. This section lists only repos and services the wallet code or the guide verifiably draws from — with the licence and what was taken. Anything merely considered and rejected lives in the ADRs and the module headers, not here. The live-service entries (RPCs, indexers, price feeds, logos, derivation) live in their own homes — docs/13, docs/06, ADR-0007, docs/12, docs/11 — and are summarised here by link, not copied.
+
+### Wallet-provider repositories
+
+**Trust Wallet Core** — `trustwallet/wallet-core`, MIT. Keys, derivation, addresses and signing for all 22 chains; pinned 4.9.3. See [docs/11](../11-trust-wallet-and-independent-verification/README.md#derivation-and-oracle-sources-the-wallet-is-built-from).
+
+**Trust Wallet Assets** — `trustwallet/assets`, MIT. Token metadata and logos; pinned commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`. See [docs/12](../12-chain-registry-and-assets/README.md#logos-actually-vendored-in-the-app).
+
+**Blockstream Esplora** — `Blockstream/esplora`, MIT. The Esplora-compatible REST API the BTC adapter speaks; self-hostable. See [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from).
+
+**mempool/mempool** — the mempool.space stack, AGPL-3.0. The primary BTC balance/history source; self-hosting removes its unpublished rate limit. See [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from).
+
+**Blockscout** — `blockscout/blockscout`. The EVM explorer behind eight of the wallet's history hosts. Licence changed 22 April 2026 from GPL-3.0 to the source-available Blockscout Software Licence v1.0 — paid hosting and bundling into a product need a commercial licence. See [docs/06](../06-tracking/README.md#3-rpc-is-not-an-indexer).
+
+**Cosmos Chain Registry** — `cosmos/chain-registry`, open source. Chain, asset and IBC metadata; a metadata source only, not a signer and not a Bawa chain. See [docs/12](../12-chain-registry-and-assets/README.md#cosmos-chain-registry).
+
+**Solana docs source** — `solana-foundation/solana-com`. The version-controlled docs source for the Solana chain guide in docs/02.
+
+**Uniswap token lists** — the verified-tick pattern, not a dependency: membership in a curated list is the verification, and identity is chain id + contract address (`apps/web/src/wallet/tokens.ts`, `isVerifiedToken`). No token-list package is imported.
+
+### UI sources mined in earlier programmes
+
+Full research, with what was read and what was applied, in `~/workspace/bawa-fix-all/RESEARCH.md` (13 sources, all fetched and read, 2026-11-23). What the wallet took, and the licence that governs each take:
+
+**ui-ux-pro-max-skill** — `nextlevelbuilder/ui-ux-pro-max-skill`, MIT. The Fintech/Crypto reasoning rule and the pre-delivery checklist (SVG icons only, 4.5:1 contrast, 375 px responsive check) adopted as the gate for the UI lanes. Rules reference, not components.
+
+**instalanding.ai — Linework, Oishi, Fortix design systems** — MIT. Linework's token structure (paper / ink / accent / mono annotation) is the template for Bawa's own design tokens; Oishi's cream paper + ink borders + hard offset shadows is the card treatment; Fortix's stat-card ring is the dashboard-hero model. Tokens and patterns taken; no page copied whole.
+
+**Ivy Wallet** — `Ivy-Apps/ivy-wallet`, GPL-3.0, archived. Patterns only, no code: the dashboard hero (one total, then rows), the row anatomy (icon + name + balance + one status line, no Retry button), search-over-list for the 22-chain picker. GPL-3.0 code must not be copied into this MIT-licensed app.
+
+**OJO-Design-Skills** — `touchine-ojo/OJO-Design-Skills`, MIT. The anti-slop guardrails (no grey-box placeholders, real imagery only) and the 8-state interaction model for components. Rules, not pixels.
+
+**Aceternity UI** — `ui.aceternity.com`. Free for personal and commercial projects; may not be resold or redistributed as a competing library. Taken as structure, re-skinned to Bawa's tokens: Stateful Button (Send loading → success), Empty States, card spotlight / 3D card for the QR card, Bento Grid for the dashboard.
+
+**Magic UI** — `magicuidesign/magicui`, MIT (templates paid). Taken sparingly, for numbers, lists and the primary CTA only: Number Ticker, Animated List, Bento Grid, Magic Card, Shimmer Button. Neon/gradient styling dropped.
+
+**COSS UI / Origin UI** — MIT via Origin UI (31 families). Primitive checklist (Combobox, Segmented Control, Drawer/Sheet, Skeleton, Empty, Toast). Licence to be verified on the specific component page before any code is copied.
+
+**UI Vault registry** — `sanketpatel32/ui-vault`. A vetted index of free, vendorable component sources (Number Flow, Animata, Animate UI, ReactBits, Origin UI); a shopping list for the next round, not code in the tree.
+
+**consenlabs/token-ui — VENDORED.** `apps/web/src/ui/`, commit `6380d5d4dfeebf89704c0527e3c552be6ee2d231` (2026-05-14), MIT — see `apps/web/src/ui/NOTICE.md`. 65 components plus `hooks/use-mobile.ts`, `lib/utils.ts` and `styles/globals.css` copied, import paths rewritten to relative paths, no behaviour changed. 12 vendored files nothing imported were removed 2026-11-23 (Lane 4); they are still upstream and can be re-copied.
+
+**Not usable, recorded so nobody re-mines them:** `abdoutech19/shop-app` (five years stale, e-commerce, no wallet patterns); liquid-glass / aurora / neon styling (clashes with the hand-drawn ink style — take structure, never the skin); `pixel-paper-editorial` (a different illustration style).

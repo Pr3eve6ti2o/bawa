@@ -84,6 +84,69 @@ Use an indexer for wallet history, all token transfers, NFT ownership, token met
 
 Apply this rule: **a standard RPC has no universal wallet-history method**. For fuller EVM history, scan blocks and logs, use tracing where supported, or use an indexer.
 
+### History indexers the wallet actually uses
+
+> Lane C, FIX-ALL programme, 2026-11-24. This is the history half of the live-services record; the RPC half (endpoints per chain, provider tiers, and the rate limits the app enforces on itself) lives in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from). Every indexer below is wired in `apps/web/src/wallet/chains.ts` (`historyBaseUrl`) or in the chain's adapter, and was probed live returning real transactions — mostly on 2026-11-23 (Lane B, finish-the-product) — before it was listed. A chain with no entry here has no history in the wallet, and the wallet says so instead of inventing one.
+>
+> How to read an entry: **Title** — what the indexer is and how the wallet uses it, in short — then the direct links, then one short line per thing it does for the wallet, then **Free** / **Paid**.
+
+**Blockscout (per-instance hosts)** — the open-source EVM block explorer, run as one instance per chain, with an Etherscan-compatible `?module=account&action=txlist` API. The wallet reads history from the instance for each chain: ETH (`https://eth.blockscout.com/api`), Polygon (`https://polygon.blockscout.com/api`), Arbitrum (`https://arbitrum.blockscout.com/api`), Base (`https://base.blockscout.com/api`), Celo (`https://celo.blockscout.com/api`), Scroll via Scrollscan (below), Aurora (`https://explorer.aurora.dev/api`), Optimism (`https://explorer.optimism.io/api`). The same hosts also answer the Blockscout v2 hash lookup the tracker uses (see `apps/web/src/wallet/tracker.ts`, `BLOCKSCOUT_V2_CHAINS`). Links: <https://blockscout.com>, <https://docs.blockscout.com>.
+
+- Free: the per-instance hosts answered keyless in live probes on 2026-11-23 — but Blockscout moved all API traffic to its keyed Pro API on 1 July 2026 and retired the per-instance APIs. The keyless calls work today; they sit on a retired path, so treat them as borrowed time. The Pro API free tier is 100,000 credits/day at 5 requests/second, key required (most endpoints cost 20 credits, so about 5,000 calls/day).
+- Paid: Builder $49/month (100 million credits, 15 requests/second); Pro $199/month (500 million credits, 30 requests/second); Enterprise custom. The explorer software itself is source-available under the Blockscout Software Licence v1.0 since 22 April 2026 (it was GPL-3.0 before that); self-hosting is free in licence terms and costs servers, an archive node and engineering time.
+- If the keyless hosts stop answering, history on those eight chains needs a Pro key — an owner decision (keyed service), not a code fix.
+
+**Routescan** — a multichain explorer with an Etherscan-compatible API. The wallet reads history for Avalanche (`https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api`) and Mantle (`https://api.routescan.io/v2/network/mainnet/evm/5000/etherscan/api`) from it. Hash lookup is not supported there (its tx-info shape differs), so history works but hash lookup stays unsupported on those two chains. Links: <https://routescan.io>, <https://routescan.io/pricing>.
+
+- Free: keyless 2 calls/second and 10,000 calls/day; a free key raises that to 5 calls/second and 100,000 calls/day. Free plans need a backlink or a "Powered by Routescan.io APIs" mention, except for private use.
+- Paid: Standard $200/month (10 calls/second, 200,000 calls/day); Advanced $300/month (20/second, 500,000/day); Professional $400/month (30/second, 1,000,000/day); Pro Plus $550/month (30/second, 1,500,000/day).
+
+**Scrollscan (Etherscan family)** — Scroll's Etherscan-family explorer. The wallet reads Scroll history from `https://scrollscan.com/api`. Link: <https://scrollscan.com>.
+
+- Free: the Etherscan-family free tier is 5 calls/second and 100,000 calls/day with a key (source: <https://info.etherscan.com>). The wallet sends no key and the host answered keyless in the live probes — the same borrowed-time note as Blockscout applies.
+- Paid: paid tiers start at $199/month (secondary source — the figure was not re-verified on Etherscan's own pricing page). The wallet uses no Etherscan key anywhere.
+
+**mempool.space / Blockstream Esplora** — Bitcoin history (and balances). The wallet reads BTC history from mempool.space (`https://mempool.space/api`) with Blockstream Esplora (`https://blockstream.info/api`) as the backup, both Esplora-shaped. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from): both are keyless with no published numeric limit.
+
+**TronGrid** — TRON history (and balances, and TRC-20 reads). The wallet reads TRX history from `https://api.trongrid.io`. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from): keyless is throttled, a free key gives about 100,000 requests/day, paid is custom-only with no public price.
+
+**TonCenter** — TON history (and balances). The wallet reads TON history from `https://toncenter.com/api/v2/jsonRPC`. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from): keyless 1 request/second, free key 10/second, Plus 25/second, Advanced 100/second.
+
+**Solana RPC** — Solana history is read from the Solana RPC itself (`getSignaturesForAddress`), primary PublicNode, backup Vibe Station. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from).
+
+**Litecoinspace / BlockCypher** — Litecoin history. The wallet reads LTC history from `https://litecoinspace.org/api` with BlockCypher (`https://api.blockcypher.com/v1/ltc/main`) as the fallback. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from).
+
+**SoChain / BlockCypher** — Dogecoin history. The wallet reads DOGE history from `https://sochain.com/api/v3` with BlockCypher (`https://api.blockcypher.com/v1/doge/main`) as the fallback. Free and paid tiers are listed in full in [docs/13](../13-wallet-app-architecture/README.md#live-services-the-app-is-built-from): SoChain keyless 2,500 lookups/day per IP, free key 75,000/month, paid from $35/month; BlockCypher 3 requests/second and 100/hour free.
+
+Per-chain history status (probed live 2026-11-23 unless noted):
+
+| Chain | History source | Status |
+|---|---|---|
+| Bitcoin | mempool.space / Blockstream | Verified |
+| Ethereum | eth.blockscout.com | Verified |
+| TRON | TronGrid | Verified |
+| TON | TonCenter | Verified |
+| Solana | Solana RPC | Verified |
+| BNB Smart Chain | — | **Blocked — no keyless indexer answers** |
+| Polygon | polygon.blockscout.com | Verified (headless-Chromium fetch; plain curl gets 403 Cloudflare) |
+| Arbitrum One | arbitrum.blockscout.com | Verified (headless-Chromium fetch; plain curl gets 403 Cloudflare) |
+| OP Mainnet | explorer.optimism.io | Verified |
+| Base | base.blockscout.com | Verified (headless-Chromium fetch; plain curl gets 403 Cloudflare) |
+| Avalanche C-Chain | Routescan | Verified (hash lookup unsupported — shape differs) |
+| Litecoin | Litecoinspace / BlockCypher | Verified |
+| Dogecoin | SoChain / BlockCypher | Verified |
+| Gnosis | — | **Blocked — gnosisscan.io 403s; no keyless indexer answers** |
+| Celo | celo.blockscout.com | Verified |
+| Linea | — | **Blocked — no keyless indexer answers** |
+| Mantle | Routescan | Verified (hash lookup unsupported — shape differs) |
+| Scroll | scrollscan.com | Verified |
+| opBNB | — | **Blocked — no keyless indexer answers** |
+| Metis | — | **Blocked — no keyless indexer answers** |
+| Aurora | explorer.aurora.dev | Verified |
+| Fantom | — | **Blocked — no keyless indexer answers** |
+
+The six blocked chains — BNB Smart Chain, Gnosis, Linea, opBNB, Metis, Fantom — were each probed and no keyless public history indexer answers for them (the Etherscan-family hosts 404 or 403). Their history stays blocked, never faked. Unblocking them needs an Etherscan API key or another indexer — an owner decision, because it is a keyed service. Note the stale comment in `apps/web/src/wallet/adapters/index.ts` (`EVM_HISTORY_SOURCES`) still says "the other twelve non-ETH EVM chains stay unwired": it predates the Lane B verification above and is out of date.
+
 ## 4. UTXO tracking vs account tracking
 
 - **BTC:** Track which outputs belong to the wallet, which are unspent or spent, and which transaction created or spent each output. Keep the state UTXO-oriented. Treat xpubs as **sensitive public material**: they can reveal derived addresses and link their activity.

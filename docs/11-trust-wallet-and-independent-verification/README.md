@@ -56,6 +56,40 @@ References:
 - [Wallet Core](https://github.com/trustwallet/wallet-core)
 - [HDWallet API](https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/)
 
+### Derivation and oracle sources the wallet is built from
+
+> Lane C, FIX-ALL programme, 2026-11-24. Every entry below is a source the wallet or its tooling actually imports or runs. Free / paid is stated per entry; all of them are free open-source libraries except where noted, and none of them is a keyed or paid service.
+
+**Trust Wallet Core 4.9.3 — the derivation and signing engine.** What it is: Trust Wallet's cross-platform wallet-crypto library, used here as WebAssembly in the browser (`loadCore`, `apps/web/src/wallet/core.ts`) and as Node WASM in the CLI tools. How the wallet uses it: the mnemonic (`HDWallet.createWithMnemonic` / `createWithEntropy`, `Mnemonic.isValid`), all 22 chains' addresses (`getAddressForCoin`, `CoinTypeExt.deriveAddressFromPublicKey`, `CoinTypeExt.validate`), xpub derivation (`HDWallet.getPublicKeyFromExtended`) and offline signing (`AnySigner.sign`). The app never implements cryptography itself. Pin: tag `4.9.3`, commit `7a21615fad32edd8dc0b040d845de3973cde2c5a`, published 2026-11-11 (recorded in docs/12). Direct links: <https://github.com/trustwallet/wallet-core>, <https://trustwallet.github.io/docc/documentation/walletcore/hdwallet/>.
+
+- Free: MIT licence, no fee, no paid tier, no key. Re-pin and re-verify whenever the pin moves.
+
+**bip_utils 2.12.3 — the independent verifier.** What it is: a Python library for BIP-32/39/44/49/84/86, SLIP-0010 and chain-specific schemes. How Bawa uses it: as the independent reference in the differential test harness only — it checks Wallet Core's derivation against published vectors and never runs as a second production engine. Pinned in `requirements.txt` (with `cryptography==50.0.2`, `mnemonic==0.21`, `pynacl==1.6.2`, `requests==2.34.2`). Direct link: <https://github.com/ebellocchia/bip_utils>.
+
+- Free: MIT licence, no fee, no paid tier.
+
+**@scure/bip39 2.4.0 — BIP-39 validation and test vectors only.** What it is: a small focused BIP-39 implementation. How the wallet uses it: validation, test vectors and docs examples only (`apps/web/src/wallet/bip39-validation.ts`); Trust Wallet Core 4.9.3 WASM remains the production mnemonic engine and is not replaced. Direct link: <https://github.com/paulmillr/scure-bip39>.
+
+- Free: MIT licence, no fee, no paid tier.
+
+**bip39 3.1.2 — devDependency test oracle only.** What it is: the bitcoinjs BIP-39 implementation. How Bawa uses it: a test oracle (`apps/web/src/wallet/bip39-oracle.test.ts`), never imported by runtime code. Direct link: <https://github.com/bitcoinjs/bip39>.
+
+- Free: ISC licence, no fee, no paid tier.
+
+**mnemonic-words 2.0.0 — wordlist data only.** What it is: the BIP-39 English wordlist as JSON data. How Bawa uses it: as data only (`apps/web/src/wallet/bip39-wordlist.test.ts`), never as code.
+
+- Free: MIT licence, no fee, no paid tier.
+
+**viem 2.58.0 — the EVM RPC client.** What it is: the TypeScript Ethereum library. How the wallet uses it: every EVM balance read and chain-id check goes through `createPublicClient` with an `http` transport (`apps/web/src/wallet/adapters/evm.ts`, `eth.ts`), plus address utilities (`getAddress`, `isAddress`) and ERC-20 `balanceOf` reads for token balances. Direct link: <https://github.com/wevm/viem>.
+
+- Free: MIT licence, no fee, no paid tier.
+
+**tools/hdwallet-gen — the CLI derivation tools.** What they are: the repo's own Node tools on Trust Wallet Core 4.9.3 WASM (`generate.js`, `derive.js`, `derive-daemon.js`, `derive-ton.js`, `extended-key.js`, `compare.js`; `tools/hdwallet-gen/package.json`). How they are used: offline wallet generation and watch-only address derivation outside the browser; import only their extended public keys, never secret output. The daemon keeps one outstanding request per worker because replies carry no request identifier.
+
+- Free: MIT licence (repo licence), no fee, no paid tier.
+
+**Derivation test vectors — adopted vectors, not adopted code.** The cross-checks against the published go-ethereum-hdwallet and hd-wallet-derive vectors live in `tests/mainnet-derivation-vectors.test.mjs`; only the vectors were adopted, not the tools' code (hd-wallet-derive is GPL-3.0, so its code must not be copied into this MIT-licensed repo).
+
 ## Why Bawa uses an independent verifier
 
 `bip_utils` independently implements BIP-32, BIP-39, BIP-44, BIP-49, BIP-84, BIP-86, SLIP-0010, CIP-1852 and many chain-specific key/address systems.

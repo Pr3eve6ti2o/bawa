@@ -8,6 +8,28 @@
 > covers that feed **by reference only**, for the merge that brings it
 > in (see Prerequisite 0 of the repo-study apply plan). Do not create a
 > price feed in this tree on the strength of this runbook.
+>
+> Lane C note, 2026-11-24: the merge described above has since happened
+> — `apps/web/src/wallet/prices.ts` is in this tree, with last-good
+> retention, CoinLore / DexScreener / TonAPI / Coinbase fallbacks and
+> per-source row labels. The "by reference" framing and the two
+> corrections below describe the multichain-create tree as it was on
+> 2026-11-20, not this tree. For the feed as it runs now, read
+> [ADR-0007](../adr/0007-price-feed-provider.md) (provider terms and
+> fallback providers, with free/paid tiers) and the module headers in
+> `prices.ts`, `price-fallbacks.ts`, `dex-prices.ts` and
+> `token-prices.ts`.
+
+## Price sources the wallet is built from
+
+CoinGecko first (batched `/simple/price`, one call per refresh), then
+CoinLore, DexScreener, TonAPI (TON) and Coinbase (LTC only) as
+fallbacks for the chains whose CoinGecko quote is not fresh. The full
+per-provider entries — what each source is, how the wallet uses it,
+which chains it covers, and its free and paid tiers with source pages —
+live in [ADR-0007](../adr/0007-price-feed-provider.md) ("Provider terms"
+and "Fallback providers"). Do not copy the tier figures here; the ADR is
+the one home for them.
 
 ## How the multichain-create feed works (reference)
 

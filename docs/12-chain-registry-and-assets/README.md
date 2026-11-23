@@ -312,6 +312,19 @@ Bawa's tools derive addresses for native assets only. BTC, ETH and TRX are watch
 
 Token tracking in `docs/06` and `docs/07` (ERC-20, TRC-20 and [SPL](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/tokens/index.mdx), indexers, `Transfer` events and token metadata) is downstream consumption of chain data, not Bawa functionality.
 
+### Logos actually vendored in the app
+
+> Lane C, FIX-ALL programme, 2026-11-24. The logos the wallet shows are copies of Trust Wallet Assets files, vendored into the repo — the app never fetches a logo from the network at runtime.
+
+**Trust Wallet Assets — logo source.** What it is: the Trust Wallet token/asset metadata registry (`trustwallet/assets`); how the wallet uses it: the chain and token logos in `apps/web/src/assets/chains/` and `apps/web/src/assets/tokens/`, rendered by `ChainLogo` / `TokenLogo` in `apps/web/src/screens/token-logo.tsx`. Direct links: <https://github.com/trustwallet/assets>, <https://github.com/trustwallet/assets/blob/master/knowledge/architecture/repo-overview.md>.
+
+- Pinned at commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e` (verified to exist on GitHub 2026-11-24). Re-pin and re-verify whenever the pin moves; a logo copied from a different commit is a different file until checked.
+- Licence: MIT, Copyright (c) 2019-2023 Trust Wallet. No fee, no paid tier — it is a public registry.
+- Chain logos live at `blockchains/<chain>/info/logo.png` upstream. The 22 vendored chain logos, with the directory corrections the registry itself requires: `bitcoin`, `ethereum`, `tron`, `ton`, `solana`, `smartchain` (BNB Smart Chain — NOT `binance`, which is the BNB Beacon Chain mark), `polygon`, `arbitrum`, `optimism`, `base`, `avalanchec`, `litecoin`, `doge`, `xdai` (Gnosis — `gnosis` does not exist upstream), `celo`, `linea`, `mantle`, `scroll`, `opbnb`, `metis`, `aurora`, `fantom`. Each logo's upstream `info.json` name was verified at fetch time.
+- Token logos live at `blockchains/ethereum/assets/<contract>/logo.png` upstream. The 8 vendored token logos: USDC `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, USDT `0xdAC17F958D2ee523a2206206994597C13D831ec7`, DAI `0x6B175474E89094C44Da98b954EedeAC495271d0F`, LINK `0x514910771AF9Ca656af840dff83E8264EcF986CA`, UNI `0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`, WBTC `0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599`, WETH `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`, and USDT0 on Arbitrum `blockchains/arbitrum/assets/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png` (upstream name Tether USD, symbol USDT — the USDT0 contract on Arbitrum).
+- Served as WebP: the same Trust Wallet images, resized to 96 px and re-encoded at quality 85 — 39,670 bytes total vs 303,787 bytes for the PNGs (-87%). The original PNGs stay in `src/assets/chains` and `src/assets/tokens` as the canonical sources.
+- Trust Wallet resolves logos by contract address, not by symbol; the wallet's symbol map (plus aliases for the on-chain spellings the registry reports — `USD₮` → USDT, `USD₮0` → USDT0) is this wallet's simplification of that. A token with no registered logo renders a readable ticker badge, never a broken image. Full detail, including the per-logo fetch notes, is in `apps/web/README.md` ("Chain logos" and "Token logos").
+
 ## Token identity
 
 Never identify a token by symbol alone. Use this normalised identity:

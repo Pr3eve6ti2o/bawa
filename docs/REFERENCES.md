@@ -41,3 +41,50 @@ The primary registry references are pinned to Wallet Core 4.9.3, matching tools/
 - @hdwallet/core — https://www.npmjs.com/package/@hdwallet/core
 
 The last item is reference/research material only; its current npm page states that it is not ready for production use.
+
+## Live services the app calls
+
+Lane C, FIX-ALL programme, 2026-11-24. The full entries — what each service does for the wallet, which chains it covers, and its free and paid tiers with source pages — live in docs/13 (RPCs), docs/06 (history indexers) and ADR-0007 (price sources). This section is the link index only.
+
+### RPC providers
+
+- PublicNode — https://publicnode.com
+- 1RPC — https://1rpc.io — pricing: https://1rpc.io (plans on the homepage)
+- TronGrid — https://www.trongrid.io — rate limits: https://developers.tron.network/reference/rate-limits
+- TonCenter — https://toncenter.com — rate limits: https://docs.ton.org/api/rate-limit
+- TonAPI — https://tonapi.io — pricing: https://console.tonapi.io
+- mempool.space API — https://mempool.space/docs/api/rest
+- Blockstream Esplora API — https://github.com/Blockstream/esplora/blob/master/API.md
+- Litecoinspace — https://litecoinspace.org
+- SoChain — https://sochain.com — limits: https://sochain.com/docs/limits — pricing: https://sochain.com/pricing
+- BlockCypher — https://www.blockcypher.com — pricing: https://www.blockcypher.com/pricing.html — rate limits: https://www.blockcypher.com/dev/
+- Binance public dataseed — https://bsc-dataseed.binance.org
+
+### History indexers
+
+- Blockscout — https://blockscout.com — Pro API docs: https://docs.blockscout.com/devs/pro-api.md
+- Routescan — https://routescan.io — pricing: https://routescan.io/pricing
+- Scrollscan — https://scrollscan.com
+- Etherscan API rate limits — https://info.etherscan.com/api-return-errors/
+
+### Price sources
+
+- CoinGecko API — https://api.coingecko.com/api/v3 — pricing: https://www.coingecko.com/en/api/pricing — terms: https://www.coingecko.com/en/api_terms
+- CoinLore API — https://www.coinlore.com/cryptocurrency-data-api
+- DexScreener API — https://docs.dexscreener.com/api/reference
+- TonAPI rates — https://tonapi.io
+- Coinbase Exchange API rate limits — https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits
+
+## Repositories the wallet draws from
+
+- Trust Wallet Core — https://github.com/trustwallet/wallet-core
+- Trust Wallet Assets — https://github.com/trustwallet/assets
+- viem — https://github.com/wevm/viem
+- @scure/bip39 — https://github.com/paulmillr/scure-bip39
+- Blockstream Esplora — https://github.com/Blockstream/esplora
+- mempool — https://github.com/mempool/mempool
+- Blockscout — https://github.com/blockscout/blockscout
+- Cosmos Chain Registry — https://github.com/cosmos/chain-registry
+- consenlabs/token-ui (vendored) — https://github.com/ConsenLabs/token-ui
+- ui-ux-pro-max-skill — https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+- Ivy Wallet (patterns only, GPL-3.0) — https://github.com/Ivy-Apps/ivy-wallet
