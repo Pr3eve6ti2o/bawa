@@ -419,12 +419,7 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
       });
     }
 
-    if (quotes.length === 0) return;
-
-    const cacheStore = store ?? globalThis.localStorage;
-    if (!cacheStore) return;
-
-    cacheStore.setItem(PRICE_CACHE_KEY, JSON.stringify({ version: 1, quotes }));
+    writePriceCache(store, PRICE_CACHE_KEY, 1, quotes);
   } catch {
     // Cache persistence is best-effort, including access to localStorage.
   }
@@ -563,6 +558,42 @@ export function parsePriceResponse(
   };
 }
 
+/**
+ * Shared CoinGecko /simple/price fetch: build the URL from the ids,
+ * fetch with the demo-key header, map a transport failure to the
+ * all-error result, parse the payload on success. fetchPrices and
+ * fetchCoingeckoTokenPrices differ only in the ids, the all-error map
+ * and the parse step.
+ */
+export async function fetchCoingeckoSimplePrices<T>(
+  fetchFn: typeof fetch,
+  ids: string,
+  allError: (entry: Extract<PriceEntry, { status: 'error' }>) => T,
+  parse: (payload: unknown) => T,
+): Promise<T> {
+  const url =
+    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
+    '&vs_currencies=usd&include_last_updated_at=true';
+  const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
+  if (result.status === 'error') {
+    return allError(result.error);
+  }
+  return parse(result.payload);
+}
+
+/** Shared last-good-cache write tail (native v1, token v2). */
+export function writePriceCache(
+  store: PriceCacheStore | undefined,
+  key: string,
+  version: number,
+  quotes: unknown[],
+): void {
+  if (quotes.length === 0) return;
+  const cacheStore = store ?? globalThis.localStorage;
+  if (!cacheStore) return;
+  cacheStore.setItem(key, JSON.stringify({ version, quotes }));
+}
+
 export async function fetchPrices(
   fetchFn: typeof fetch,
   nowMs?: number,
@@ -574,15 +605,12 @@ export async function fetchPrices(
     Object.fromEntries(chains.map((chain) => [chain, { ...entry }])) as PriceMap;
 
   const resolvedNowMs = nowMs ?? Date.now();
-  const ids = [...new Set(Object.values(PRICE_IDS))].join(',');
-  const url =
-    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
-    '&vs_currencies=usd&include_last_updated_at=true';
-  const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
-  if (result.status === 'error') {
-    return allError(result.error);
-  }
-  return parsePriceResponse(result.payload, resolvedNowMs);
+  return fetchCoingeckoSimplePrices(
+    fetchFn,
+    [...new Set(Object.values(PRICE_IDS))].join(','),
+    allError,
+    (payload) => parsePriceResponse(payload, resolvedNowMs),
+  );
 }
 
 export function usdPriceToMinorUnitsPerWhole(usdPrice: string): string {

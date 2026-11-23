@@ -19,9 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { isPlainObject, ownValue } from './guards';
 import {
   PRICE_ATTRIBUTION_TEXT,
-  PRICE_PROVIDER_BASE_URL,
-  coingeckoHeaders,
-  fetchJsonWithTimeout,
+  fetchCoingeckoSimplePrices,
   fiatValueForPricedBalance,
   isCacheableQuote,
   isFreshQuote,
@@ -30,6 +28,7 @@ import {
   parseCoingeckoPriceEntry,
   priceRetryDelayMs,
   resolvePriceWait,
+  writePriceCache,
   type FiatValueResult,
   type PriceEntry,
   type PriceQuote,
@@ -154,15 +153,12 @@ async function fetchCoingeckoTokenPrices(
   const allError = (entry: Extract<PriceEntry, { status: 'error' }>): TokenPriceMap =>
     Object.fromEntries(requests.map((request) => [request.key, { ...entry }]));
 
-  const ids = [...new Set(requests.map((request) => request.coingeckoId))].join(',');
-  const url =
-    `${PRICE_PROVIDER_BASE_URL}/simple/price?ids=${ids}` +
-    '&vs_currencies=usd&include_last_updated_at=true';
-  const result = await fetchJsonWithTimeout(fetchFn, url, coingeckoHeaders());
-  if (result.status === 'error') {
-    return allError(result.error);
-  }
-  return parseTokenPriceResponse(result.payload, requests, nowMs, tokens);
+  return fetchCoingeckoSimplePrices(
+    fetchFn,
+    [...new Set(requests.map((request) => request.coingeckoId))].join(','),
+    allError,
+    (payload) => parseTokenPriceResponse(payload, requests, nowMs, tokens),
+  );
 }
 
 /**
@@ -265,10 +261,7 @@ export function saveCachedTokenPrices(
         fetchedAtMs: quote.fetchedAtMs,
       });
     }
-    if (quotes.length === 0) return;
-    const cacheStore = store ?? globalThis.localStorage;
-    if (!cacheStore) return;
-    cacheStore.setItem(TOKEN_PRICE_CACHE_KEY, JSON.stringify({ version: 2, quotes }));
+    writePriceCache(store, TOKEN_PRICE_CACHE_KEY, 2, quotes);
   } catch {
     // Cache persistence is best-effort, including access to localStorage.
   }
