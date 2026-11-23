@@ -175,6 +175,6 @@ Recent programmes, each with its full record, gates and branch state in `docs/`:
 - **UI/UX Fixes programme (2026-11-23)** — 21 items, merged into `panel-rebuild/token-gaps` (merge commit `4eb0242`). Record: [docs/UI-UX-FIXES-PROGRAMME.md](docs/UI-UX-FIXES-PROGRAMME.md).
 - **UI/UX Round 2 programme (2026-11-23)** — 10 items, merged into `panel-rebuild/token-gaps` (merge commit `6147b74`). Record: [docs/UI-UX-ROUND2-PROGRAMME.md](docs/UI-UX-ROUND2-PROGRAMME.md).
 - **Reverify + Professional Polish programme (2026-11-23)** — five lanes, merged into `panel-rebuild/token-gaps` (fast-forward to `ccb8195`). Record: [docs/REVERIFY-PROGRAMME.md](docs/REVERIFY-PROGRAMME.md).
-- **Marketing Fix + Found-Bugs programme (2026-11-23)** — first-impression defects, found bugs, value proposition, README rewrite, architecture diagrams, branch cleanup, QR templates, browser-first re-verification; running on `panel-rebuild/token-gaps`.
+- **Marketing Fix + Found-Bugs programme (2026-11-23)** — first-impression defects, found bugs, value proposition, README rewrite, architecture diagrams, branch cleanup, QR templates, browser-first re-verification; merged into `panel-rebuild/token-gaps` (merge commit `571f0fb`). Record: [docs/MARKETING-FIX-PROGRAMME.md](docs/MARKETING-FIX-PROGRAMME.md).
 
 No code from these programmes was merged into `adopt-proper` or `main`. The durable preview (GitHub Pages) still serves the saved adopt-proper-based build; to preview this branch, check out `panel-rebuild/token-gaps` and run the web starter locally.
