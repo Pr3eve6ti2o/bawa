@@ -1,21 +1,43 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createTestWallet, gotoInApp, setupMaskedScreenshots } from './helpers';
 
 setupMaskedScreenshots();
 
-// Wrapped ETH — a real ERC-20 on Ethereum mainnet, NOT one of the
-// wallet's 7 default tokens (USDC is a default, so adding it reports
-// "Already added"). The fresh wallet holds 0 WETH; the balance the
-// app shows comes from a live eth_call, never a fixture.
-const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+async function openAddToken(page: Page): Promise<void> {
+  // The Assets page re-renders while its 43 rows settle, which can
+  // detach the button between resolve and click; retry the open with
+  // a freshly resolved locator until the dialog is visible (same
+  // helper as the item13 / itemD specs — the single click this file
+  // used before flaked on the re-render).
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await page
+        .getByRole('button', { name: 'Add token' })
+        .first()
+        .click({ timeout: 10_000 });
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5_000 });
+      return;
+    } catch {
+      // The button detached or the dialog did not appear yet; retry.
+    }
+  }
+  throw new Error('Add Token dialog did not open after 5 attempts');
+}
 
-test('E2E-06 add token by contract adds WETH with a real balance', async ({ page }) => {
+// Shiba Inu — a real ERC-20 on Ethereum mainnet, NOT one of the
+// wallet's default tokens (WETH was the original token here, but item 18
+// made it a default, so adding it reports "Already added"; SHIB is the
+// listed non-default replacement, CoinGecko id 'shiba-inu'). The fresh
+// wallet holds 0 SHIB; the balance the app shows comes from a live
+// eth_call, never a fixture.
+const SHIB = '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE';
+
+test('E2E-06 add token by contract adds SHIB with a real balance', async ({ page }) => {
   await createTestWallet(page);
   await gotoInApp(page, 'Assets');
 
-  await page.getByRole('button', { name: 'Add token' }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByLabel('Ethereum contract address').fill(WETH);
+  await openAddToken(page);
+  await page.getByLabel('Ethereum contract address').fill(SHIB);
   await page.getByRole('button', { name: 'Add', exact: true }).click();
 
   // Live verification: eth_getCode + name/symbol/decimals + balanceOf
@@ -25,7 +47,7 @@ test('E2E-06 add token by contract adds WETH with a real balance', async ({ page
 
   // Close the dialog and see the new row with its real zero balance.
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('link', { name: /WETH/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /SHIB/ }).first()).toBeVisible();
   await expect(
     page.getByText('Zero balance', { exact: true }).last(),
   ).toBeVisible();
@@ -35,8 +57,7 @@ test('E2E-06 a bad contract is rejected with an inline error', async ({ page }) 
   await createTestWallet(page);
   await gotoInApp(page, 'Assets');
 
-  await page.getByRole('button', { name: 'Add token' }).first().click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await openAddToken(page);
   await page.getByLabel('Ethereum contract address').fill('0x1234');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
 
@@ -57,7 +78,7 @@ test('E2E-06 add chain re-enables a disabled chain', async ({ page }) => {
   await expect(solanaRow.getByText('DISABLED')).toBeVisible();
 
   await gotoInApp(page, 'Assets');
-  await page.getByRole('button', { name: 'Add token' }).first().click();
+  await openAddToken(page);
   await page.getByRole('button', { name: 'Add chain' }).click();
   const dialogSolanaRow = page
     .getByRole('dialog')

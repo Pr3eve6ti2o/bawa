@@ -88,6 +88,8 @@ export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
 export const PRICE_FETCH_TIMEOUT_MS = 10_000;
 export const PRICE_ATTRIBUTION_TEXT = 'Powered by CoinGecko';
 
+export type PriceSource = 'CoinGecko' | 'DexScreener' | 'TonAPI';
+
 export type PriceQuote = {
   chain: ChainId;
   assetId: string;
@@ -95,7 +97,7 @@ export type PriceQuote = {
   usdPrice: string;
   providerUpdatedAtMs: number;
   fetchedAtMs: number;
-  source: 'CoinGecko';
+  source: PriceSource;
 };
 
 export type PriceEntry =

@@ -70,7 +70,7 @@ export function AssetDetailScreen() {
   }, [tokenParam, config, customTokens, chain]);
   const isToken = tokenRecord !== undefined;
 
-  // Per-unit price from the same live CoinGecko feed as the dashboard
+  // Per-unit price from the same live price feed as the dashboard
   // strip and the asset list (usePrices pattern: auto-fetch on mount,
   // refresh about every 60 seconds). No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
@@ -92,7 +92,7 @@ export function AssetDetailScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Token price (token route only): the same CoinGecko feed, one call
+  // Token price (token route only): the same price feed, one call
   // for the single token. Gated on the token existing — native routes
   // never fetch here.
   const tokenList = useMemo(
@@ -175,6 +175,15 @@ export function AssetDetailScreen() {
   const unitPrice = tokenRecord !== undefined
     ? unitPriceForChain(tokenPricesState.entries[tokenKeyOf(tokenRecord)], Date.now())
     : unitPriceForChain(pricesState.entries[chainId], Date.now());
+  // The row label names the quote's real source (CoinGecko for listed
+  // tokens, DexScreener / TonAPI for unlisted ones — see token-prices);
+  // it only renders when the quote is fresh, so the entry is fresh here.
+  const priceEntryForSource =
+    tokenRecord !== undefined
+      ? tokenPricesState.entries[tokenKeyOf(tokenRecord)]
+      : pricesState.entries[chainId];
+  const priceSource =
+    priceEntryForSource?.status === 'fresh' ? priceEntryForSource.quote.source : 'CoinGecko';
   const detailsBalance =
     balance.status === 'loading'
       ? 'Loading…'
@@ -332,7 +341,7 @@ export function AssetDetailScreen() {
       {/*
         Details block, in MetaMask's market position (after the actions,
         before activity). The per-unit price comes from the same live
-        CoinGecko feed as the dashboard strip and the asset list; the
+        price feed as the dashboard strip and the asset list; the
         other rows are the on-chain details the screen already had
         (balance, network).
       */}
@@ -357,7 +366,7 @@ export function AssetDetailScreen() {
                     <>
                       <span>{unitPrice.text}</span>
                       <span className="block text-xs font-normal text-muted-foreground">
-                        {`per ${displaySymbol} · CoinGecko`}
+                        {`per ${displaySymbol} · ${priceSource}`}
                       </span>
                     </>
                   ) : unitPrice.kind === 'expired' ? (

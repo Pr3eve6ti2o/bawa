@@ -262,6 +262,75 @@ describe('AddTokenDialog — add token mode', () => {
     }
   });
 
+  it('resolves a Jetton CoinGecko id via the-open-network', async () => {
+    const NOT_MASTER = 'EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT';
+    vi.mocked(resolveTokenCoingeckoId).mockResolvedValue('notcoin');
+    vi.mocked(verifyJettonToken).mockResolvedValue({
+      ok: true,
+      metadata: { name: 'Notcoin', symbol: 'NOT', decimals: 9 },
+      balanceBaseUnits: '0',
+    });
+    setWallet({
+      vaultAddresses: {
+        eth: [ETH_ADDRESS],
+        trx: [TRON_ADDRESS],
+        btc: [],
+        ton: [TON_ADDRESS],
+        sol: [],
+        bsc: [],
+        matic: [],
+        arb: [],
+        op: [],
+        base: [],
+        avax: [],
+        ltc: [],
+        doge: [],
+      },
+      addresses: {
+        eth: [{ address: ETH_ADDRESS }],
+        trx: [{ address: TRON_ADDRESS }],
+        btc: [],
+        ton: [{ address: TON_ADDRESS }],
+        sol: [],
+        bsc: [],
+        matic: [],
+        arb: [],
+        op: [],
+        base: [],
+        avax: [],
+        ltc: [],
+        doge: [],
+      },
+    });
+    const mounted = await mountDialog();
+    try {
+      const select = document.querySelector<HTMLSelectElement>('#add-token-chain');
+      expect(select).not.toBeNull();
+      setSelectValue(select!, 'ton');
+      const input = document.querySelector<HTMLInputElement>('#add-token-contract');
+      setInputValue(input!, NOT_MASTER);
+      await submitForm(document);
+      expect(verifyJettonToken).toHaveBeenCalledTimes(1);
+      expect(resolveTokenCoingeckoId).toHaveBeenCalledWith({
+        platform: 'the-open-network',
+        contract: NOT_MASTER,
+      });
+      expect(mockAddCustomToken).toHaveBeenCalledTimes(1);
+      const record = mockAddCustomToken.mock.calls[0]![0] as TokenRecord;
+      expect(record).toMatchObject({
+        chain: 'ton',
+        contract: NOT_MASTER,
+        name: 'Notcoin',
+        symbol: 'NOT',
+        decimals: 9,
+        coingeckoId: 'notcoin',
+      });
+      expect(document.body.textContent).toContain('Token added');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('still adds the token when the CoinGecko lookup 404s, with no price id', async () => {
     vi.mocked(resolveTokenCoingeckoId).mockResolvedValue(null);
     const mounted = await mountDialog();

@@ -1,13 +1,19 @@
 /**
- * CoinGecko prices for tokens (token discovery).
+ * Token prices (token discovery).
  *
  * prices.ts is chain-keyed (PriceMap); token prices need a parallel
  * token-keyed map keyed by tokenKey (`${chain}:${contract}`). Same
- * provider, same keyless ~5 calls/min budget, same 10-minute freshness,
- * same 429/backoff shape — one batched /simple/price call per refresh
- * for the default 7 tokens (six unique ids; the two USDT deployments
- * share 'tether'). User-added tokens resolve their CoinGecko id once at
- * add time (token-balances resolveTokenCoingeckoId) and join the batch.
+ * keyless budget shape, same 10-minute freshness, same 429/backoff
+ * shape — one batched /simple/price call per refresh for the default
+ * 21 tokens. User-added tokens resolve their CoinGecko id once at add
+ * time (token-balances resolveTokenCoingeckoId) and join the batch.
+ *
+ * Tokens CoinGecko does NOT list are priced by the fallback in
+ * dex-prices.ts instead (README showcase + Add Token, item D):
+ * DexScreener for EVM/Solana/TRON tokens, TonAPI rates for TON
+ * Jettons. A token no source prices stays "Price unavailable" — the
+ * feed never invents a price. The row label shows the quote's real
+ * source (see asset-rows / asset-detail), never a hardcoded provider.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -18,7 +24,13 @@ import {
   usdPriceToMinorUnitsPerWhole,
   type PriceEntry,
   type PriceQuote,
+  type PriceSource,
 } from './prices';
+import {
+  DEXSCREENER_CHAIN_FOR_CHAIN,
+  fetchDexScreenerPrices,
+  fetchTonJettonPrices,
+} from './dex-prices';
 import { fiatMinorUnits, formatFiatUSD } from './money';
 import type { BalanceState } from './balance-state';
 import { DEFAULT_TOKENS, tokenKey, type TokenRecord } from './tokens';
@@ -36,7 +48,7 @@ export const TOKEN_PRICE_IDS: Record<string, string> = Object.fromEntries(
   ]),
 );
 
-export const TOKEN_PRICE_CACHE_KEY = 'bawa:token-prices-cache:v1';
+export const TOKEN_PRICE_CACHE_KEY = 'bawa:token-prices-cache:v2';
 
 export function tokenPriceEntries(keys: readonly string[]): TokenPriceMap {
   const entries: TokenPriceMap = {};
@@ -46,20 +58,41 @@ export function tokenPriceEntries(keys: readonly string[]): TokenPriceMap {
   return entries;
 }
 
-export interface TokenPriceRequest {
-  key: string;
-  coingeckoId: string;
-}
+/**
+ * One price request per token. CoinGecko first (a token with an id is
+ * priced there and never reaches the fallback); without an id, the
+ * DexScreener chain map decides (EVM/Solana/TRON), then TonAPI for
+ * TON Jettons. A token on a chain no fallback covers (Gnosis, Aurora
+ * — DexScreener does not index them) gets no request and stays
+ * "Price unavailable" (see tokenPriceEntries / fiatValueForTokenBalance).
+ */
+export type TokenPriceRequest =
+  | { kind: 'coingecko'; key: string; coingeckoId: string }
+  | { kind: 'dexscreener'; key: string; chain: TokenRecord['chain']; contract: string }
+  | { kind: 'tonapi'; key: string; contract: string };
 
 export function tokenPriceRequests(tokens: readonly TokenRecord[]): TokenPriceRequest[] {
   const requests: TokenPriceRequest[] = [];
   for (const token of tokens) {
+    const key = tokenKey(token.chain, token.contract);
     const coingeckoId =
-      token.coingeckoId ?? TOKEN_PRICE_IDS[tokenKey(token.chain, token.contract)];
-    if (typeof coingeckoId !== 'string' || coingeckoId === '') continue;
-    requests.push({ key: tokenKey(token.chain, token.contract), coingeckoId });
+      token.coingeckoId ?? TOKEN_PRICE_IDS[key];
+    if (typeof coingeckoId === 'string' && coingeckoId !== '') {
+      requests.push({ kind: 'coingecko', key, coingeckoId });
+    } else if (DEXSCREENER_CHAIN_FOR_CHAIN[token.chain] !== undefined) {
+      requests.push({ kind: 'dexscreener', key, chain: token.chain, contract: token.contract });
+    } else if (token.chain === 'ton') {
+      requests.push({ kind: 'tonapi', key, contract: token.contract });
+    }
   }
   return requests;
+}
+
+/** The provider id a request is priced by (CoinGecko id, or the contract for the fallback). */
+export function tokenPriceRequestKey(request: TokenPriceRequest): string {
+  return request.kind === 'coingecko'
+    ? `${request.key}=coingecko:${request.coingeckoId}`
+    : `${request.key}=${request.kind}:${request.contract}`;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -82,7 +115,7 @@ function ownValue(object: Record<string, unknown>, key: string): unknown {
 
 function parseToken(
   root: Record<string, unknown> | null,
-  request: TokenPriceRequest,
+  request: Extract<TokenPriceRequest, { kind: 'coingecko' }>,
   token: TokenRecord | undefined,
   nowMs: number,
 ): PriceEntry {
@@ -124,6 +157,9 @@ export function parseTokenPriceResponse(
   const root = isPlainObject(payload) ? payload : null;
   const entries: TokenPriceMap = {};
   for (const request of requests) {
+    // Only CoinGecko requests are priced from this payload; fallback
+    // requests are priced by fetchDexScreenerPrices / fetchTonJettonPrices.
+    if (request.kind !== 'coingecko') continue;
     const token = tokens?.find(
       (candidate) => tokenKey(candidate.chain, candidate.contract) === request.key,
     );
@@ -132,13 +168,18 @@ export function parseTokenPriceResponse(
   return entries;
 }
 
-export async function fetchTokenPrices(
+/**
+ * One batched CoinGecko /simple/price call for the CoinGecko requests.
+ * Unchanged behaviour: a single call carrying every distinct id, 429 /
+ * provider / network errors reported per token. Only called when at
+ * least one request is a CoinGecko request.
+ */
+async function fetchCoingeckoTokenPrices(
   fetchFn: typeof fetch,
-  requests: TokenPriceRequest[],
-  nowMs?: number,
+  requests: Extract<TokenPriceRequest, { kind: 'coingecko' }>[],
+  nowMs: number,
   tokens?: readonly TokenRecord[],
 ): Promise<TokenPriceMap> {
-  const resolvedNowMs = nowMs ?? Date.now();
   const allError = (entry: Extract<PriceEntry, { status: 'error' }>): TokenPriceMap =>
     Object.fromEntries(requests.map((request) => [request.key, { ...entry }]));
   const isAbortError = (error: unknown): boolean =>
@@ -146,8 +187,6 @@ export async function fetchTokenPrices(
     error !== null &&
     'name' in error &&
     error.name === 'AbortError';
-
-  if (requests.length === 0) return {};
 
   const headers: Record<string, string> = { Accept: 'application/json' };
   const demoKey: unknown = (import.meta.env as Record<string, unknown>)
@@ -190,7 +229,7 @@ export async function fetchTokenPrices(
     }
 
     try {
-      return parseTokenPriceResponse(await response.json(), requests, resolvedNowMs, tokens);
+      return parseTokenPriceResponse(await response.json(), requests, nowMs, tokens);
     } catch (error: unknown) {
       return allError({
         status: 'error',
@@ -205,6 +244,49 @@ export async function fetchTokenPrices(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Prices every requested token: CoinGecko for listed tokens, DexScreener
+ * for unlisted EVM/Solana/TRON tokens, TonAPI rates for unlisted TON
+ * Jettons — the three fetches run in parallel and merge by tokenKey.
+ * A source that fails reports errors only for its own tokens; the other
+ * sources' quotes are unaffected.
+ */
+export async function fetchTokenPrices(
+  fetchFn: typeof fetch,
+  requests: TokenPriceRequest[],
+  nowMs?: number,
+  tokens?: readonly TokenRecord[],
+): Promise<TokenPriceMap> {
+  const resolvedNowMs = nowMs ?? Date.now();
+  if (requests.length === 0) return {};
+
+  const coingecko = requests.filter(
+    (request): request is Extract<TokenPriceRequest, { kind: 'coingecko' }> =>
+      request.kind === 'coingecko',
+  );
+  const dex = requests.filter(
+    (request): request is Extract<TokenPriceRequest, { kind: 'dexscreener' }> =>
+      request.kind === 'dexscreener',
+  );
+  const ton = requests.filter(
+    (request): request is Extract<TokenPriceRequest, { kind: 'tonapi' }> =>
+      request.kind === 'tonapi',
+  );
+
+  const [coingeckoEntries, dexEntries, tonEntries] = await Promise.all([
+    coingecko.length > 0
+      ? fetchCoingeckoTokenPrices(fetchFn, coingecko, resolvedNowMs, tokens)
+      : Promise.resolve({} as TokenPriceMap),
+    dex.length > 0
+      ? fetchDexScreenerPrices(fetchFn, dex, resolvedNowMs)
+      : Promise.resolve({} as TokenPriceMap),
+    ton.length > 0
+      ? fetchTonJettonPrices(fetchFn, ton, resolvedNowMs)
+      : Promise.resolve({} as TokenPriceMap),
+  ]);
+  return { ...coingeckoEntries, ...dexEntries, ...tonEntries };
 }
 
 /** Fiat value of a token balance, mirroring fiatValueForBalance in prices.ts. */
@@ -275,7 +357,8 @@ export function saveCachedTokenPrices(
       tokenKey: string;
       chain: string;
       contract: string;
-      coingeckoId: string;
+      providerAssetId: string;
+      source: PriceSource;
       usdPrice: string;
       providerUpdatedAtMs: number;
       fetchedAtMs: number;
@@ -302,7 +385,8 @@ export function saveCachedTokenPrices(
         tokenKey: key,
         chain: String(quote.chain),
         contract: token?.contract ?? quote.assetId,
-        coingeckoId: quote.providerAssetId,
+        providerAssetId: quote.providerAssetId,
+        source: quote.source,
         usdPrice: quote.usdPrice,
         providerUpdatedAtMs: quote.providerUpdatedAtMs,
         fetchedAtMs: quote.fetchedAtMs,
@@ -311,7 +395,7 @@ export function saveCachedTokenPrices(
     if (quotes.length === 0) return;
     const cacheStore = store ?? globalThis.localStorage;
     if (!cacheStore) return;
-    cacheStore.setItem(TOKEN_PRICE_CACHE_KEY, JSON.stringify({ version: 1, quotes }));
+    cacheStore.setItem(TOKEN_PRICE_CACHE_KEY, JSON.stringify({ version: 2, quotes }));
   } catch {
     // Cache persistence is best-effort, including access to localStorage.
   }
@@ -329,7 +413,7 @@ export function loadCachedTokenPrices(
     if (serialized === null) return null;
     const parsed: unknown = JSON.parse(serialized);
     if (!isPlainObject(parsed)) return null;
-    if (parsed.version !== 1 || !Array.isArray(parsed.quotes)) return null;
+    if (parsed.version !== 2 || !Array.isArray(parsed.quotes)) return null;
     const entries = tokenPriceEntries(keys);
     let hasUsableRecord = false;
     for (const value of parsed.quotes as unknown[]) {
@@ -338,7 +422,8 @@ export function loadCachedTokenPrices(
         tokenKey: key,
         chain,
         contract,
-        coingeckoId,
+        providerAssetId,
+        source,
         usdPrice,
         providerUpdatedAtMs,
         fetchedAtMs,
@@ -348,7 +433,8 @@ export function loadCachedTokenPrices(
         !keys.includes(key) ||
         typeof chain !== 'string' ||
         typeof contract !== 'string' ||
-        typeof coingeckoId !== 'string' ||
+        typeof providerAssetId !== 'string' ||
+        (source !== 'CoinGecko' && source !== 'DexScreener' && source !== 'TonAPI') ||
         typeof usdPrice !== 'string' ||
         usdPrice.trim() !== usdPrice ||
         !/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(usdPrice) ||
@@ -364,11 +450,11 @@ export function loadCachedTokenPrices(
       const quote: PriceQuote = {
         chain: chain as PriceQuote['chain'],
         assetId: contract,
-        providerAssetId: coingeckoId,
+        providerAssetId,
         usdPrice,
         providerUpdatedAtMs,
         fetchedAtMs,
-        source: 'CoinGecko',
+        source: source as PriceSource,
       };
       entries[key] = isFreshQuote(quote, nowMs)
         ? { status: 'fresh', quote }
@@ -422,7 +508,7 @@ export function useTokenPrices(
   // load cached mainnet prices for testnet balances, and never fetch.
   const devnet = options?.devnet === true;
   const requests = tokenPriceRequests(tokens);
-  const requestKey = requests.map((r) => `${r.key}=${r.coingeckoId}`).sort().join('|');
+  const requestKey = requests.map((r) => tokenPriceRequestKey(r)).sort().join('|');
   const requestsRef = useRef(requests);
   requestsRef.current = requests;
   const tokensRef = useRef(tokens);
