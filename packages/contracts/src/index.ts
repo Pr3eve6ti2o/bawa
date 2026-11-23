@@ -1,7 +1,7 @@
-// Chains in the registry: xpub derivation for btc/eth/trx, the six EVM
-// chains, ltc and doge; public-address import only for TON and SOL
+// Chains in the registry: xpub derivation for btc/eth/trx, the fifteen
+// EVM chains, ltc and doge; public-address import only for TON and SOL
 // (no xpub: fully hardened Ed25519, one address per wallet).
-export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge';
+export type ChainId = 'btc' | 'eth' | 'trx' | 'ton' | 'sol' | 'bsc' | 'matic' | 'arb' | 'op' | 'base' | 'avax' | 'ltc' | 'doge' | 'gnosis' | 'celo' | 'linea' | 'mantle' | 'scroll' | 'opbnb' | 'metis' | 'aurora' | 'fantom';
 
 // Alias for chains supported by the watch-only starter.
 export type SupportedChain = ChainId;

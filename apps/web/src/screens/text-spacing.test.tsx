@@ -70,6 +70,15 @@ const CHAINS = {
   op: { displayName: 'OP Mainnet', symbol: 'ETH' },
   base: { displayName: 'Base', symbol: 'ETH' },
   avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  gnosis: { displayName: 'Gnosis', symbol: 'XDAI' },
+  celo: { displayName: 'Celo', symbol: 'CELO' },
+  linea: { displayName: 'Linea', symbol: 'ETH' },
+  mantle: { displayName: 'Mantle', symbol: 'MNT' },
+  scroll: { displayName: 'Scroll', symbol: 'ETH' },
+  opbnb: { displayName: 'opBNB', symbol: 'BNB' },
+  metis: { displayName: 'Metis', symbol: 'METIS' },
+  aurora: { displayName: 'Aurora', symbol: 'ETH' },
+  fantom: { displayName: 'Fantom', symbol: 'FTM' },
   ltc: { displayName: 'Litecoin', symbol: 'LTC' },
   doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
@@ -88,6 +97,15 @@ const EMPTY_ADDRESSES: Record<ChainKey, string[]> = {
   op: [],
   base: [],
   avax: [],
+  gnosis: [],
+  celo: [],
+  linea: [],
+  mantle: [],
+  scroll: [],
+  opbnb: [],
+  metis: [],
+  aurora: [],
+  fantom: [],
   ltc: [],
   doge: [],
 };
@@ -105,6 +123,15 @@ const EMPTY_PRICES: PriceMap = {
   op: UNAVAILABLE_PRICE,
   base: UNAVAILABLE_PRICE,
   avax: UNAVAILABLE_PRICE,
+  gnosis: UNAVAILABLE_PRICE,
+  celo: UNAVAILABLE_PRICE,
+  linea: UNAVAILABLE_PRICE,
+  mantle: UNAVAILABLE_PRICE,
+  scroll: UNAVAILABLE_PRICE,
+  opbnb: UNAVAILABLE_PRICE,
+  metis: UNAVAILABLE_PRICE,
+  aurora: UNAVAILABLE_PRICE,
+  fantom: UNAVAILABLE_PRICE,
   ltc: UNAVAILABLE_PRICE,
   doge: UNAVAILABLE_PRICE,
 };
@@ -220,6 +247,15 @@ const perChainLoaded = (): Record<ChainKey, HistoryState> => ({
   op: loadedHistory,
   base: loadedHistory,
   avax: loadedHistory,
+  gnosis: loadedHistory,
+  celo: loadedHistory,
+  linea: loadedHistory,
+  mantle: loadedHistory,
+  scroll: loadedHistory,
+  opbnb: loadedHistory,
+  metis: loadedHistory,
+  aurora: loadedHistory,
+  fantom: loadedHistory,
   ltc: loadedHistory,
   doge: loadedHistory,
 });
@@ -247,17 +283,29 @@ beforeEach(() => {
 });
 
 describe('text spacing', () => {
-  it('welcome steps read with real spaces', async () => {
+  it('welcome list reads with real spaces', async () => {
     const mounted = await mountScreen(<WelcomeScreen />);
     try {
-      expect(mounted.div.textContent).toContain('1 Set a vault password');
-      expect(mounted.div.textContent).not.toContain('1Set a vault password');
-      expect(mounted.div.textContent).toContain('2 Write down 24 words');
-      expect(mounted.div.textContent).not.toContain('2Write down 24 words');
-      expect(mounted.div.textContent).toContain('3 Confirm 3 words');
-      expect(mounted.div.textContent).not.toContain('3Confirm 3 words');
-      expect(mounted.div.textContent).toContain('4 See your addresses');
-      expect(mounted.div.textContent).not.toContain('4See your addresses');
+      // Lane C, item 9: the welcome steps are gone — the screen is an
+      // introduction now. The spacing check moves to the new list and
+      // intro line: words must not run together.
+      expect(mounted.div.textContent).toContain(
+        'Bawa is a guide made for humans and AI agents to create crypto wallets, web wallets, Android wallets, HD wallets and smart contracts easily',
+      );
+      expect(mounted.div.textContent).not.toContain('Bawais a guide');
+      expect(mounted.div.textContent).toContain(
+        'Create a crypto wallet — a self-custodial multi-chain wallet, with one address per chain.',
+      );
+      expect(mounted.div.textContent).not.toContain('Createa crypto wallet');
+      expect(mounted.div.textContent).toContain(
+        'Create a web wallet — this one. It runs in your browser, with nothing to install.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Create an HD wallet — a fresh receiving address for every payment.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Create a smart contract — guided, step by step, from a prompt.',
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -369,6 +417,15 @@ describe('text spacing', () => {
         op: { status: 'unavailable', reason: 'no-adapter' },
         base: { status: 'unavailable', reason: 'no-adapter' },
         avax: { status: 'unavailable', reason: 'no-adapter' },
+        gnosis: { status: 'unavailable', reason: 'no-adapter' },
+        celo: { status: 'unavailable', reason: 'no-adapter' },
+        linea: { status: 'unavailable', reason: 'no-adapter' },
+        mantle: { status: 'unavailable', reason: 'no-adapter' },
+        scroll: { status: 'unavailable', reason: 'no-adapter' },
+        opbnb: { status: 'unavailable', reason: 'no-adapter' },
+        metis: { status: 'unavailable', reason: 'no-adapter' },
+        aurora: { status: 'unavailable', reason: 'no-adapter' },
+        fantom: { status: 'unavailable', reason: 'no-adapter' },
         ltc: { status: 'unavailable', reason: 'no-adapter' },
         doge: { status: 'unavailable', reason: 'no-adapter' },
       },

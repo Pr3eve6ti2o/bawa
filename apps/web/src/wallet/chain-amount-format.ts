@@ -14,6 +14,15 @@ export const CHAIN_DECIMALS: Record<ChainId, number> = {
   avax: 18,
   ltc: 8,
   doge: 8,
+  gnosis: 18,
+  celo: 18,
+  linea: 18,
+  mantle: 18,
+  scroll: 18,
+  opbnb: 18,
+  metis: 18,
+  aurora: 18,
+  fantom: 18,
 };
 
 /**

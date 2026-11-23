@@ -8,10 +8,15 @@ const ADDRESS = '11111111111111111111111111111111';
 function solTransport(handlers: {
   getBalance?: unknown;
   getHealth?: unknown;
+  getSignaturesForAddress?: unknown;
+  getTransaction?: Record<string, unknown>;
 }): FetchTransport {
   return {
     request: vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      const body = JSON.parse(String(init?.body ?? '{}')) as {
+        method?: string;
+        params?: unknown[];
+      };
       if (body.method === 'getBalance') {
         if (handlers.getBalance instanceof Error) throw handlers.getBalance;
         return handlers.getBalance;
@@ -19,6 +24,21 @@ function solTransport(handlers: {
       if (body.method === 'getHealth') {
         if (handlers.getHealth instanceof Error) throw handlers.getHealth;
         return handlers.getHealth;
+      }
+      if (body.method === 'getSignaturesForAddress') {
+        if (handlers.getSignaturesForAddress instanceof Error) {
+          throw handlers.getSignaturesForAddress;
+        }
+        return handlers.getSignaturesForAddress;
+      }
+      if (body.method === 'getTransaction') {
+        const signature = String(body.params?.[0] ?? '');
+        const response = handlers.getTransaction?.[signature];
+        if (response instanceof Error) throw response;
+        if (response === undefined) {
+          throw new Error(`unexpected getTransaction ${signature}`);
+        }
+        return response;
       }
       throw new Error(`unexpected method ${body.method ?? ''}`);
     }),
@@ -176,9 +196,8 @@ describe('solana adapter — balance', () => {
 });
 
 describe('solana adapter — unbuilt operations', () => {
-  it('reports history, fee-quote and tx inputs unavailable, never faked', async () => {
+  it('reports fee-quote and tx inputs unavailable, never faked', async () => {
     const adapter = createSolanaAdapter({ transport: solTransport({}) });
-    expect((await adapter.getHistory(ADDRESS)).status).toBe('unavailable');
     expect((await adapter.estimateFee()).status).toBe('unavailable');
     expect((await adapter.getTxInputs(ADDRESS)).status).toBe('unavailable');
   });
@@ -186,5 +205,210 @@ describe('solana adapter — unbuilt operations', () => {
   it('always throws the broadcast-disabled message', async () => {
     const adapter = createSolanaAdapter({ transport: solTransport({}) });
     await expect(adapter.broadcast({})).rejects.toThrow(BROADCAST_DISABLED_MESSAGE);
+  });
+});
+
+describe('solana adapter — custom RPC list (UI/UX fixes, item 19)', () => {
+  it('walks a resolver-supplied list until an endpoint answers', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (url === 'https://first.invalid' || url === 'https://second.invalid') {
+        throw new Error(`Network error: ${url} unreachable`);
+      }
+      if (url === 'https://third.invalid') {
+        if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+        if (body.method === 'getBalance') {
+          return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 99 } };
+        }
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    const adapter = createSolanaAdapter({
+      transport: { request },
+      rpcUrls: [
+        'https://first.invalid',
+        'https://second.invalid',
+        'https://third.invalid',
+      ],
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('99');
+      expect(result.data.source).toBe('third.invalid');
+    }
+  });
+
+  it('re-reads a resolver-supplied list on every call', async () => {
+    const request = vi.fn(async (url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string };
+      if (body.method === 'getHealth') return { jsonrpc: '2.0', id: 2, result: 'ok' };
+      if (body.method === 'getBalance') {
+        return { jsonrpc: '2.0', id: 1, result: { context: { slot: 1 }, value: 5 } };
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+    let urls = ['https://first.invalid'];
+    const adapter = createSolanaAdapter({
+      transport: { request },
+      rpcUrls: () => urls,
+    });
+    await adapter.getBalance(ADDRESS);
+    urls = ['https://second.invalid'];
+    await adapter.getBalance(ADDRESS);
+    const calls = request.mock.calls;
+    expect(calls.some((call) => call[0] === 'https://first.invalid')).toBe(true);
+    expect(calls.some((call) => call[0] === 'https://second.invalid')).toBe(true);
+  });
+});
+
+describe('solana adapter — history', () => {
+  // Lane C, item 16: history via JSON-RPC getSignaturesForAddress +
+  // getTransaction (jsonParsed). Direction and amount come from the
+  // address's pre/post balance delta in the transaction's meta.
+  const HEALTH = { jsonrpc: '2.0', id: 2, result: 'ok' };
+  const SIG_IN = 'sig-in-1111111111111111111111111111111111111111111111111111111111';
+  const SIG_OUT = 'sig-out-2222222222222222222222222222222222222222222222222222222222';
+  const SIG_FAIL = 'sig-fail-3333333333333333333333333333333333333333333333333333333333';
+
+  function txFixture(pre: number, post: number, err: unknown = null) {
+    return {
+      jsonrpc: '2.0',
+      id: 1,
+      result: {
+        blockTime: 1795392000,
+        meta: { err, fee: 5000, preBalances: [5000000, pre], postBalances: [4995000, post] },
+        transaction: {
+          message: {
+            accountKeys: [{ pubkey: 'Other111111111111111111111111111111111111' }, { pubkey: ADDRESS }],
+          },
+        },
+      },
+    };
+  }
+
+  it('reads direction and amount from the balance delta, newest first', async () => {
+    const transport = solTransport({
+      getHealth: HEALTH,
+      getSignaturesForAddress: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: [
+          { signature: SIG_IN, slot: 100, blockTime: 1795392000, confirmationStatus: 'finalized', err: null },
+          { signature: SIG_OUT, slot: 99, blockTime: 1795391000, confirmationStatus: 'finalized', err: null },
+        ],
+      },
+      getTransaction: {
+        [SIG_IN]: txFixture(1000000, 1500000),
+        [SIG_OUT]: txFixture(1500000, 1000000),
+      },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0]).toMatchObject({
+        hash: SIG_IN,
+        chain: 'sol',
+        direction: 'in',
+        amountBaseUnits: '500000',
+        timestamp: 1795392000 * 1000,
+        status: 'confirmed',
+        explorerUrl: `https://explorer.solana.com/tx/${SIG_IN}`,
+      });
+      expect(result.data[1]).toMatchObject({
+        hash: SIG_OUT,
+        direction: 'out',
+        amountBaseUnits: '500000',
+      });
+    }
+  });
+
+  it('marks a failed transaction failed', async () => {
+    const transport = solTransport({
+      getHealth: HEALTH,
+      getSignaturesForAddress: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: [
+          { signature: SIG_IN, slot: 100, blockTime: 1795392000, confirmationStatus: 'finalized', err: null },
+        ],
+      },
+      getTransaction: {
+        [SIG_IN]: txFixture(1000000, 1000000, { InstructionError: [0, 'Custom'] }),
+      },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        direction: 'self',
+        amountBaseUnits: '0',
+        status: 'failed',
+      });
+    }
+  });
+
+  it('returns an empty list for an address with no signatures', async () => {
+    const transport = solTransport({
+      getHealth: HEALTH,
+      getSignaturesForAddress: { jsonrpc: '2.0', id: 1, result: [] },
+      getTransaction: {},
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result).toMatchObject({ status: 'ok', data: [] });
+  });
+
+  it('skips a signature whose transaction cannot be read', async () => {
+    const transport = solTransport({
+      getHealth: HEALTH,
+      getSignaturesForAddress: {
+        jsonrpc: '2.0',
+        id: 1,
+        result: [
+          { signature: SIG_IN, slot: 100, blockTime: 1795392000, confirmationStatus: 'finalized', err: null },
+          { signature: SIG_FAIL, slot: 99, blockTime: 1795391000, confirmationStatus: 'finalized', err: null },
+        ],
+      },
+      getTransaction: {
+        [SIG_IN]: txFixture(1000000, 1500000),
+        [SIG_FAIL]: new Error('Network error: transaction pruned'),
+      },
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.hash).toBe(SIG_IN);
+    }
+  });
+
+  it('rejects an invalid address', async () => {
+    const adapter = createSolanaAdapter({ transport: solTransport({}) });
+    const result = await adapter.getHistory('not-an-address!!');
+    expect(result.status).toBe('error');
+  });
+
+  it('errors when the signatures call returns an RPC error object', async () => {
+    const transport = solTransport({
+      getHealth: HEALTH,
+      getSignaturesForAddress: {
+        jsonrpc: '2.0',
+        id: 1,
+        error: { code: -32602, message: 'Invalid param' },
+      },
+      getTransaction: {},
+    });
+    const adapter = createSolanaAdapter({ transport });
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toContain('Invalid param');
+    }
   });
 });

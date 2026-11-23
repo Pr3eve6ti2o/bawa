@@ -102,6 +102,8 @@ void function boundaryTypeContracts(
   // Merge 1 (Lane B): repo-study pinned the 4-chain ChainId; the merged
   // tree is 13 chains (adopt-proper's registry extension), so the pin
   // and the two 'sol' rejections below are updated to the merged truth.
+  // UI/UX fixes item 14 (2026-11-23): nine more EVM chains join the
+  // registry, so the pin is 22 chains.
   expectTypeOf<ChainId>().toEqualTypeOf<
     | 'btc'
     | 'eth'
@@ -116,6 +118,15 @@ void function boundaryTypeContracts(
     | 'avax'
     | 'ltc'
     | 'doge'
+    | 'gnosis'
+    | 'celo'
+    | 'linea'
+    | 'mantle'
+    | 'scroll'
+    | 'opbnb'
+    | 'metis'
+    | 'aurora'
+    | 'fantom'
   >();
   expectTypeOf<ChainId>().toEqualTypeOf<import('@bawa/contracts').ChainId>();
 
@@ -158,7 +169,10 @@ void function boundaryTypeContracts(
     ExtendedKeyValidator
   >();
   expectTypeOf<typeof validateTonAddress>().toEqualTypeOf<
-    (address: string) => TonAddressValidation
+    (
+      address: string,
+      options?: { devnet?: boolean },
+    ) => TonAddressValidation
   >();
   expectTypeOf<typeof validateWatchOnlyImport>().toEqualTypeOf<
     (chain: ChainId, value: string) => Promise<ExpectedWatchOnlyImportValidation>

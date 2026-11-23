@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeAutoLockEnabled } from './auto-lock';
 import {
+  accountName,
   autoUnlock,
   changePassword,
+  clearVaultAccounts,
   createVault,
   deleteStoredKey,
   deleteVault,
@@ -16,11 +18,14 @@ import {
   isTestVault,
   lock,
   migrateEnvelope,
+  nextVaultAccounts,
   PBKDF2_ITERATIONS,
+  readVaultAccounts,
   restoreVaultFromBackup,
   storeCurrentKey,
   TEST_PROVENANCE,
   unlock,
+  VAULT_ACCOUNTS_KEY,
   VAULT_BACKUP_STORAGE_KEY,
   VAULT_CORRUPTED,
   VAULT_KEY_STORAGE_KEY,
@@ -31,6 +36,7 @@ import {
   verifyVaultPassword,
   withMnemonic,
   withMnemonicAsync,
+  writeVaultAccounts,
   writeVaultBackup,
 } from './vault';
 import { BTC_PROFILE_ID, EVM_PROFILE_ID } from '../state/test-helpers';
@@ -816,5 +822,67 @@ describe('auto-lock stored-key invariant', () => {
 
     await fresh.unlock(TEST_PASSWORD);
     expect(fresh.withMnemonic((mnemonic) => mnemonic)).toBe(TEST_MNEMONIC);
+  });
+});
+
+describe('vault accounts', () => {
+  // Lane C, items 6/7/17: one recovery phrase holds many named accounts.
+  // Account index 0 is "Account 1", index 1 is "Account 2", and so on.
+  // Only public index numbers are persisted — never a phrase or key.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('reads an empty list when nothing is stored', () => {
+    expect(readVaultAccounts()).toEqual([]);
+  });
+
+  it('writes and reads the stored list, sorted and de-duplicated', () => {
+    writeVaultAccounts([2, 0, 1, 1]);
+    expect(readVaultAccounts()).toEqual([0, 1, 2]);
+  });
+
+  it('treats corrupt storage as empty instead of throwing', () => {
+    localStorage.setItem(VAULT_ACCOUNTS_KEY, 'not-json{');
+    expect(readVaultAccounts()).toEqual([]);
+    localStorage.setItem(
+      VAULT_ACCOUNTS_KEY,
+      JSON.stringify({ version: 1, accounts: ['a', -1, 1.5] }),
+    );
+    expect(readVaultAccounts()).toEqual([]);
+  });
+
+  it('names accounts from 1: index 0 is Account 1', () => {
+    expect(accountName(0)).toBe('Account 1');
+    expect(accountName(1)).toBe('Account 2');
+    expect(accountName(49)).toBe('Account 50');
+    expect(() => accountName(-1)).toThrow(/non-negative/);
+  });
+
+  it('adds new accounts after the highest existing one', () => {
+    expect(nextVaultAccounts([0], 3)).toEqual([0, 1, 2, 3]);
+    expect(nextVaultAccounts([0, 1, 2], 2)).toEqual([0, 1, 2, 3, 4]);
+    expect(nextVaultAccounts([], 1)).toEqual([0]);
+  });
+
+  it('rejects counts outside 1–50', () => {
+    expect(() => nextVaultAccounts([0], 0)).toThrow(/between 1 and 50/);
+    expect(() => nextVaultAccounts([0], 51)).toThrow(/between 1 and 50/);
+  });
+
+  it('caps the total number of accounts', () => {
+    const many = Array.from({ length: 199 }, (_, i) => i);
+    expect(() => nextVaultAccounts(many, 2)).toThrow(/too many accounts/);
+  });
+
+  it('clears the stored list', () => {
+    writeVaultAccounts([0, 1]);
+    clearVaultAccounts();
+    expect(readVaultAccounts()).toEqual([]);
+    expect(localStorage.getItem(VAULT_ACCOUNTS_KEY)).toBeNull();
   });
 });

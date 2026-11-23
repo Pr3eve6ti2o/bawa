@@ -2,13 +2,17 @@ import {
   BROADCAST_DISABLED_MESSAGE,
   DEFAULT_TON_WALLET_VERSION,
   assertTonWalletVersion,
+  endpointHost,
   httpFetchTransport,
   messageOf,
+  resolveEndpoints,
   toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
+  type EndpointList,
   type FeeEstimate,
   type FetchTransport,
   type TonWalletVersion,
@@ -19,11 +23,34 @@ import { withRetry } from '../retry';
 
 const NETWORK_ID = 'ton:-239';
 const BASE_URL = 'https://toncenter.com/api/v2/jsonRPC';
-const SOURCE = 'toncenter';
+// TonAPI is a different API shape (REST, not TonCenter JSON-RPC):
+// balance-only fallback, verified live 2026-11-23 —
+// /v2/accounts/{address} returns { balance: "<nanotons>" } keyless,
+// and /v2/blockchain/masterchain-head returns { seqno } for identity.
+// Mainnet only: the devnet adapter never falls back to mainnet TonAPI.
+const TONAPI_BASE_URL = 'https://tonapi.io';
+const TONAPI_SOURCE = 'tonapi';
 const DECIMALS = 9;
 
 export interface TonAdapterOverrides {
   baseUrl?: string;
+  /**
+   * Ordered TonCenter-compatible base URLs, or a resolver re-read on
+   * every call (the RPC manager). Defaults to [baseUrl].
+   */
+  baseUrls?: EndpointList;
+  /** TonAPI base URL (balance fallback). */
+  tonApiBaseUrl?: string;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * explorer base, whether testnet address forms are accepted, and
+   * the devnet broadcast. Unset, the adapter is the mainnet adapter
+   * exactly as before.
+   */
+  networkId?: string;
+  explorerBaseUrl?: string;
+  acceptTestnetAddresses?: boolean;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
   retryDelaysMs?: number[];
   /**
    * Minimum gap (ms) between the start of one TonCenter request and the
@@ -52,8 +79,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isTonAddress(address: string): boolean {
-  return address.length === 48 && (address.startsWith('EQ') || address.startsWith('UQ'));
+function isTonAddress(address: string, acceptTestnet = false): boolean {
+  if (address.length !== 48) return false;
+  // Devnet mode accepts testnet-flagged forms ONLY (kQ bounceable, 0Q
+  // non-bounceable); mainnet mode accepts EQ/UQ only. A mainnet address
+  // on the devnet adapter is an isolation error, not a lookup.
+  if (acceptTestnet) {
+    return address.startsWith('kQ') || address.startsWith('0Q');
+  }
+  return address.startsWith('EQ') || address.startsWith('UQ');
 }
 
 /**
@@ -102,8 +136,20 @@ function parseTonTxList(value: unknown): unknown[] {
  * valid seqno (a fresh wallet has seqno 0): it must parse to 0, never be
  * treated as missing — the ton 16.3.0 seqno-0 `validUntil` regression test
  * pins this.
+ *
+ * The run's `exit_code` must be 0: TonCenter answers ok:true even when
+ * the get-method failed, and the stack on a failed run is garbage. Live
+ * devnet finding (Lane D, 2026-11-22): on an uninitialized wallet the
+ * run returns exit_code -13 with stack 0x14c97; reading that stack as a
+ * seqno signed a message with seqno 85143 and the network rejected it.
+ * A missing exit_code is tolerated (older fixtures / responses), but a
+ * present non-zero one is always a failure.
  */
 function parseTonSeqno(value: unknown): number {
+  const exitCode = isRecord(value) ? value['exit_code'] : undefined;
+  if (typeof exitCode === 'number' && exitCode !== 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
   const stack = isRecord(value) ? value['stack'] : undefined;
   const first = Array.isArray(stack) ? stack[0] : undefined;
   const hex =
@@ -116,6 +162,15 @@ function parseTonSeqno(value: unknown): number {
     throw invalidTonResponse('ton.getTxInputs');
   }
   return seqno;
+}
+
+/** Parses a `getAddressInformation` account state (`uninitialized` | `active` | `frozen`). */
+function parseTonAccountState(value: unknown): string {
+  const state = isRecord(value) ? value['state'] : undefined;
+  if (typeof state !== 'string' || state.length === 0) {
+    throw invalidTonResponse('ton.getTxInputs');
+  }
+  return state;
 }
 
 /** Base64 (TonCenter tx hashes) to lowercase hex, without Buffer. */
@@ -133,6 +188,11 @@ export function createTonAdapter(
 ): ChainAdapter {
   const baseUrl = overrides.baseUrl ?? BASE_URL;
   const transport = overrides.transport ?? httpFetchTransport;
+  // Devnet overrides default to the mainnet values, so a mainnet
+  // adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? NETWORK_ID;
+  const explorerBaseUrl = overrides.explorerBaseUrl ?? 'https://tonviewer.com';
+  const acceptTestnet = overrides.acceptTestnetAddresses ?? false;
   // Fail loudly on an unsupported version (item 4): the adapter and the
   // signer must never silently disagree about the wallet contract.
   const version = assertTonWalletVersion(
@@ -158,7 +218,8 @@ export function createTonAdapter(
     lastAttemptStartedAtMs = Date.now();
   };
   // Chain-identity check result, cached per instance: TON's identity rests
-  // on the pinned mainnet host (testnet lives on testnet.toncenter.com).
+  // on the pinned host (mainnet lives on toncenter.com, testnet on
+  // testnet.toncenter.com).
   // The host is fixed at construction, so one check per instance is enough.
   let identityChecked = false;
   let identityCheckInFlight: Promise<AdapterResult<never> | null> | null = null;
@@ -173,24 +234,42 @@ export function createTonAdapter(
   //   own backoff and exhaust with a bare 'HTTP 429' reason, losing the
   //   rate-limit message the tests pin. Broadcast is never retried —
   //   it stays disabled.
-  type RpcAttempt = { kind: 'ok'; raw: unknown } | { kind: 'rate-limited' };
+  type RpcAttempt =
+    | { kind: 'ok'; raw: unknown; endpoint: string }
+    | { kind: 'rate-limited' };
+  // RPC failover (UI/UX fixes, item 19): one attempt sweeps the
+  // TonCenter-compatible endpoints in order. A 429 on one endpoint
+  // tries the next before the outer loop owns the rate limit; a
+  // transport error tries the next endpoint and only throws when every
+  // endpoint failed (the last non-429 error, so a network failure is
+  // never reported as a rate limit).
+  const resolveBaseUrls = (): string[] =>
+    resolveEndpoints(overrides.baseUrls, [baseUrl]);
   const attemptFetch = async (
     method: string,
     params: Record<string, unknown>,
   ): Promise<RpcAttempt> => {
-    try {
-      const raw = await transport.request(baseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }),
-      });
-      return { kind: 'ok', raw };
-    } catch (error: unknown) {
-      if (messageOf(error) === 'HTTP 429') {
-        return { kind: 'rate-limited' };
+    let sawRateLimit = false;
+    let lastNon429Error: unknown = null;
+    for (const url of resolveBaseUrls()) {
+      try {
+        const raw = await transport.request(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: 1, jsonrpc: '2.0', method, params }),
+        });
+        return { kind: 'ok', raw, endpoint: url };
+      } catch (error: unknown) {
+        if (messageOf(error) === 'HTTP 429') {
+          sawRateLimit = true;
+          continue;
+        }
+        lastNon429Error = error;
       }
-      throw error;
     }
+    if (lastNon429Error !== null) throw lastNon429Error;
+    if (sawRateLimit) return { kind: 'rate-limited' };
+    throw new Error('No TON endpoints configured.');
   };
 
   const rpcUnpaced = async (
@@ -202,6 +281,7 @@ export function createTonAdapter(
     for (let attempt = 0; ; attempt += 1) {
       let raw: unknown = undefined;
       let rateLimited = false;
+      let endpoint = BASE_URL;
 
       // The gap is enforced per attempt, so a 429 retry also waits its
       // turn instead of firing into the same 1 s window. The retry
@@ -221,6 +301,7 @@ export function createTonAdapter(
         rateLimited = true;
       } else {
         raw = fetched.raw;
+        endpoint = fetched.endpoint;
       }
 
       if (rateLimited || (isRecord(raw) && raw['ok'] === false && raw['code'] === 429)) {
@@ -250,7 +331,12 @@ export function createTonAdapter(
                 : `TonCenter request failed (${method})`,
         };
       }
-      return { status: 'ok', data: raw['result'], source: SOURCE, fetchedAt: Date.now() };
+      return {
+        status: 'ok',
+        data: raw['result'],
+        source: endpointHost(endpoint),
+        fetchedAt: Date.now(),
+      };
     }
   };
 
@@ -270,7 +356,7 @@ export function createTonAdapter(
     return run;
   };
 
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
+  const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;
 
     // Merge 1 (Lane B): adopt-proper's in-flight dedup kept (concurrent
@@ -299,46 +385,113 @@ export function createTonAdapter(
     return await identityCheckInFlight;
   };
 
-  const getBalance = async (
+  // TonAPI balance fallback (UI/UX fixes, item 19): when TonCenter is
+  // down, the balance comes from TonAPI's REST account read instead.
+  // Mainnet only — the devnet adapter (acceptTestnet) never reads
+  // mainnet TonAPI. The TonAPI calls bypass the TonCenter serial gate
+  // (different host, different rate limit).
+  const tonApiBaseUrl = overrides.tonApiBaseUrl ?? TONAPI_BASE_URL;
+  const tonApiEnabled = !acceptTestnet;
+  const getTonApiBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
-    if (!isTonAddress(address)) {
-      return { status: 'error', reason: 'Invalid TON address' };
-    }
-    const identity = await requireMainnet();
-    if (identity) return identity;
-    const result = await rpc('getAddressBalance', { address });
-    if (result.status !== 'ok') return result;
-    let balance: string;
+    let raw: unknown;
     try {
-      balance = parseTonBalance(result.data);
+      raw = await withRetry(
+        () => transport.request(`${tonApiBaseUrl}/v2/accounts/${address}`),
+        { operation: 'ton.getBalance.tonapi' },
+      );
     } catch (error: unknown) {
       return toAdapterError(error);
+    }
+    const balance = isRecord(raw) ? raw['balance'] : undefined;
+    if (typeof balance !== 'string' || !/^\d+$/.test(balance)) {
+      return {
+        status: 'error',
+        reason: 'Invalid response: expected a TonAPI balance',
+      };
     }
     return {
       status: 'ok',
       data: {
         chain: 'ton',
         address,
-        networkId: NETWORK_ID,
+        networkId,
         valueBaseUnits: balance,
         decimals: DECIMALS,
-        source: SOURCE,
+        source: TONAPI_SOURCE,
         fetchedAt: Date.now(),
       },
-      source: SOURCE,
+      source: TONAPI_SOURCE,
       fetchedAt: Date.now(),
     };
+  };
+
+  const getBalance = async (
+    address: string,
+  ): Promise<AdapterResult<AdapterBalance>> => {
+    if (!isTonAddress(address, acceptTestnet)) {
+      return { status: 'error', reason: 'Invalid TON address' };
+    }
+    const identity = await requireNetwork();
+    if (identity) {
+      if (!tonApiEnabled) return identity;
+      // TonCenter identity failed: TonAPI's masterchain head proves
+      // its API is live before the balance is read from it.
+      try {
+        const head = await withRetry(
+          () =>
+            transport.request(
+              `${tonApiBaseUrl}/v2/blockchain/masterchain-head`,
+            ),
+          { operation: 'ton.identity.tonapi' },
+        );
+        const seqno = isRecord(head) ? head['seqno'] : undefined;
+        if (typeof seqno !== 'number') return identity;
+      } catch {
+        return identity;
+      }
+      return await getTonApiBalance(address);
+    }
+    const result = await rpc('getAddressBalance', { address });
+    if (result.status === 'ok') {
+      let balance: string;
+      try {
+        balance = parseTonBalance(result.data);
+      } catch (error: unknown) {
+        return toAdapterError(error);
+      }
+      return {
+        status: 'ok',
+        data: {
+          chain: 'ton',
+          address,
+          networkId,
+          valueBaseUnits: balance,
+          decimals: DECIMALS,
+          source: result.source,
+          fetchedAt: Date.now(),
+        },
+        source: result.source,
+        fetchedAt: Date.now(),
+      };
+    }
+    if (!tonApiEnabled) return result;
+    // TonCenter balance failed after a good identity: fall back to
+    // TonAPI. When TonAPI fails too, the TonCenter error is reported —
+    // the primary failure is the one the owner needs to see.
+    const fallback = await getTonApiBalance(address);
+    return fallback.status === 'ok' ? fallback : result;
   };
 
   const getHistory = async (
     address: string,
     limit = 10,
   ): Promise<AdapterResult<AdapterTx[]>> => {
-    if (!isTonAddress(address)) {
+    if (!isTonAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid TON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const result = await rpc('getTransactions', { address, limit });
     if (result.status !== 'ok') return result;
@@ -391,16 +544,16 @@ export function createTonAdapter(
       txs.push({
         hash,
         chain: 'ton',
-        networkId: NETWORK_ID,
+        networkId,
         direction,
         amountBaseUnits: amount,
         counterparty,
         timestamp: Number.isFinite(utime) ? utime * 1000 : null,
         status: 'confirmed',
-        explorerUrl: `https://tonviewer.com/transaction/${hash}`,
+        explorerUrl: `${explorerBaseUrl}/transaction/${hash}`,
       });
     }
-    return { status: 'ok', data: txs, source: SOURCE, fetchedAt: Date.now() };
+    return { status: 'ok', data: txs, source: result.source, fetchedAt: Date.now() };
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
@@ -415,10 +568,10 @@ export function createTonAdapter(
   const getTxInputs = async (
     address: string,
   ): Promise<AdapterResult<TxInput>> => {
-    if (!isTonAddress(address)) {
+    if (!isTonAddress(address, acceptTestnet)) {
       return { status: 'error', reason: 'Invalid TON address' };
     }
-    const identity = await requireMainnet();
+    const identity = await requireNetwork();
     if (identity) return identity;
     const result = await rpc('runGetMethod', {
       address,
@@ -430,25 +583,41 @@ export function createTonAdapter(
     try {
       seqno = parseTonSeqno(result.data);
     } catch (error: unknown) {
-      return toAdapterError(error);
+      // A failed seqno run means the account has no code to run it — an
+      // uninitialized wallet. Its seqno is 0 by definition, but only
+      // the account state may say so: a failed run on an active or
+      // unreadable account stays an error, never a guessed 0.
+      const stateResult = await rpc('getAddressInformation', { address });
+      if (stateResult.status !== 'ok') return toAdapterError(error);
+      try {
+        if (parseTonAccountState(stateResult.data) !== 'uninitialized') {
+          return toAdapterError(error);
+        }
+      } catch {
+        return toAdapterError(error);
+      }
+      seqno = 0;
     }
     return {
       status: 'ok',
       // The version travels with the seqno so the Phase 4 send flow signs
       // against the same contract the adapter read (item 4).
       data: { kind: 'seqno', seqno, walletVersion: version },
-      source: SOURCE,
+      source: result.source,
       fetchedAt: Date.now(),
     };
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: 'ton',
-    networkId: NETWORK_ID,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,

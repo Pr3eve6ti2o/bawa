@@ -75,7 +75,7 @@ describe.sequential('App', () => {
 
     await withRenderedApp('/', (div) => {
       expect(div.textContent).toContain('Bawa Web Wallet');
-      expect(div.textContent).toContain('Welcome to Bawa Web Wallet');
+      expect(div.textContent).toContain('Welcome to Bawa');
       expect(div.textContent).toContain(
         'Mainnet only — this wallet never connects to a test network',
       );
@@ -110,7 +110,7 @@ describe.sequential('App', () => {
         );
         expect(div.textContent).toContain('Portfolio balance');
         expect(div.textContent).toContain('Send');
-        expect(div.textContent).not.toContain('Welcome to Bawa Web Wallet');
+        expect(div.textContent).not.toContain('Welcome to Bawa');
       });
     } finally {
       window.localStorage.removeItem('bawa-vault');
@@ -190,6 +190,42 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Multi-signature wallet');
       expect(div.textContent).toContain('Connect an existing wallet');
       expect(div.textContent).toContain('Coming soon');
+    });
+  });
+
+  it('shows the Devnet pill and devnet welcome copy when devnet is on', async () => {
+    window.localStorage.removeItem('bawa-vault');
+    window.localStorage.setItem('bawa-devnet-enabled', '1');
+    try {
+      await withRenderedApp('/', (div) => {
+        expect(div.textContent).toContain('Devnet — test mode');
+        expect(div.textContent).toContain(
+          'Devnet — test mode. This wallet connects to a test network',
+        );
+        expect(div.textContent).not.toContain(
+          'Mainnet only — this wallet never connects to a test network',
+        );
+      });
+    } finally {
+      window.localStorage.removeItem('bawa-devnet-enabled');
+    }
+  });
+
+  it('sizes the shell with dynamic viewport units so mobile sections do not jump', async () => {
+    // Item 1: min-h-screen/h-screen are 100vh — the LARGE viewport, so on
+    // a phone the shell and sidebar jump by the URL-bar height every time
+    // it shows or hides mid-scroll. dvh tracks the visible viewport.
+    await withRenderedApp('/', (div) => {
+      const frame = Array.from(div.querySelectorAll('div')).find((el) =>
+        el.className.includes('lg:flex-row'),
+      );
+      expect(frame?.className).toContain('min-h-dvh');
+      expect(frame?.className).not.toContain('min-h-screen');
+      const stickyWrapper = div.querySelector('aside')
+        ?.children[0] as Element | undefined;
+      expect(stickyWrapper?.className).toContain('h-dvh');
+      expect(stickyWrapper?.className).not.toContain('h-screen');
+      expect(div.querySelector('.min-h-screen, .h-screen')).toBeNull();
     });
   });
 });

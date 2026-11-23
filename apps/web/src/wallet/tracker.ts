@@ -8,7 +8,7 @@
  * account address plus lt plus hash, so TON lookup needs the address.
  */
 import type { ChainId } from '../engine/boundary';
-import { getAdapter } from './adapters/index';
+import { getAdapterForMode } from './adapters/index';
 import { base64ToHex } from './adapters/ton';
 import { fetchJson } from './adapters/types';
 import type { AdapterResult, AdapterTx, TxStatus } from './adapters/types';
@@ -55,7 +55,7 @@ function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
-export function parseBtcTx(raw: unknown, tipHeight: number | null): TrackedTx | null {
+export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = false): TrackedTx | null {
   if (
     !isRecord(raw) || !isRecord(raw.status) ||
     !Array.isArray(raw.vin) || !Array.isArray(raw.vout) ||
@@ -96,7 +96,9 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null): TrackedTx | 
   return {
     hash,
     chain: 'btc',
-    networkId: 'bip122:000000000019d6689c085ae165831e93',
+    networkId: devnet
+      ? 'bip122:00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043'
+      : 'bip122:000000000019d6689c085ae165831e93',
     status: status.confirmed ? 'confirmed' : 'pending',
     statusLabel: status.confirmed ? 'confirmed' : 'pending',
     confirmations: blockHeight === null || tipHeight === null
@@ -108,13 +110,15 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null): TrackedTx | 
     amountBaseUnits: amount.toString(),
     feeBaseUnits: raw.fee.toString(),
     timestamp,
-    explorerUrl: `https://mempool.space/tx/${hash}`,
+    explorerUrl: devnet
+      ? `https://mempool.space/testnet4/tx/${hash}`
+      : `https://mempool.space/tx/${hash}`,
     source: 'mempool.space',
     fetchedAt: Date.now(),
   };
 }
 
-export function parseEthTx(raw: unknown): TrackedTx | null {
+export function parseEthTx(raw: unknown, devnet = false): TrackedTx | null {
   if (!isRecord(raw)) return null;
 
   const hash = stringOrNull(raw.hash);
@@ -137,7 +141,7 @@ export function parseEthTx(raw: unknown): TrackedTx | null {
   return {
     hash,
     chain: 'eth',
-    networkId: 'eip155:1',
+    networkId: devnet ? 'eip155:11155111' : 'eip155:1',
     status,
     statusLabel: raw.status,
     confirmations: isNonNegativeInteger(raw.confirmations)
@@ -149,13 +153,15 @@ export function parseEthTx(raw: unknown): TrackedTx | null {
     amountBaseUnits: value,
     feeBaseUnits: isRecord(raw.fee) ? stringOrNull(raw.fee.value) : null,
     timestamp: Number.isFinite(parsedTime) ? parsedTime : null,
-    explorerUrl: `https://eth.blockscout.com/tx/${hash}`,
+    explorerUrl: devnet
+      ? `https://sepolia.etherscan.io/tx/${hash}`
+      : `https://eth.blockscout.com/tx/${hash}`,
     source: 'blockscout',
     fetchedAt: Date.now(),
   };
 }
 
-export function parseTrxTx(raw: unknown): TrackedTx | null {
+export function parseTrxTx(raw: unknown, devnet = false): TrackedTx | null {
   try {
     if (
       !isRecord(raw) || typeof raw.txID !== 'string' || !raw.txID ||
@@ -185,7 +191,7 @@ export function parseTrxTx(raw: unknown): TrackedTx | null {
     const contractRet = raw.ret[0].contractRet;
     return {
       chain: 'trx',
-      networkId: 'tron:0x2b6653dc',
+      networkId: devnet ? 'tron:nile' : 'tron:0x2b6653dc',
       hash: raw.txID,
       from: typeof value.owner_address === 'string' ? value.owner_address : null,
       to: typeof value.to_address === 'string' ? value.to_address : null,
@@ -198,7 +204,9 @@ export function parseTrxTx(raw: unknown): TrackedTx | null {
       blockHeight: null,
       confirmations: null,
       source: 'trongrid',
-      explorerUrl: `https://tronscan.org/#/transaction/${raw.txID}`,
+      explorerUrl: devnet
+        ? `https://nile.tronscan.org/#/transaction/${raw.txID}`
+        : `https://tronscan.org/#/transaction/${raw.txID}`,
       fetchedAt: Date.now(),
     };
   } catch {
@@ -216,7 +224,7 @@ function trackerTonHex(hash: unknown): string | null {
   }
 }
 
-export function parseTonTxEntry(raw: unknown): TrackedTx | null {
+export function parseTonTxEntry(raw: unknown, devnet = false): TrackedTx | null {
   try {
     if (!isRecord(raw) || !isRecord(raw.transaction_id)) return null;
     const hash = trackerTonHex(raw.transaction_id.hash);
@@ -238,7 +246,7 @@ export function parseTonTxEntry(raw: unknown): TrackedTx | null {
     const source = isRecord(raw.in_msg) ? raw.in_msg.source : null;
     return {
       chain: 'ton',
-      networkId: 'ton:-239',
+      networkId: devnet ? 'ton:-3' : 'ton:-239',
       hash,
       from: typeof source === 'string' ? source : null,
       to: outgoing && typeof message.destination === 'string' ? message.destination : null,
@@ -251,7 +259,9 @@ export function parseTonTxEntry(raw: unknown): TrackedTx | null {
       blockHeight: null,
       confirmations: null,
       source: 'toncenter',
-      explorerUrl: `https://tonviewer.com/transaction/${hash}`,
+      explorerUrl: devnet
+        ? `https://testnet.tonviewer.com/transaction/${hash}`
+        : `https://tonviewer.com/transaction/${hash}`,
       fetchedAt: Date.now(),
     };
   } catch {
@@ -259,7 +269,7 @@ export function parseTonTxEntry(raw: unknown): TrackedTx | null {
   }
 }
 
-async function lookupTon(hash: string, address: string | undefined): Promise<TrackerLookupResult> {
+async function lookupTon(hash: string, address: string | undefined, devnet = false): Promise<TrackerLookupResult> {
   if (!address) {
     return {
       status: 'unsupported',
@@ -271,7 +281,7 @@ async function lookupTon(hash: string, address: string | undefined): Promise<Tra
     const target = /^[0-9a-f]{64}$/i.test(hash) ? hash.toLowerCase() : trackerTonHex(hash);
     if (!target) return { status: 'error', reason: 'Invalid TON transaction hash format.' };
 
-    const raw: unknown = await fetchJson('https://toncenter.com/api/v2/jsonRPC', {
+    const raw: unknown = await fetchJson(devnet ? 'https://testnet.toncenter.com/api/v2/jsonRPC' : 'https://toncenter.com/api/v2/jsonRPC', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -291,7 +301,7 @@ async function lookupTon(hash: string, address: string | undefined): Promise<Tra
         !isRecord(entry) || !isRecord(entry.transaction_id) ||
         trackerTonHex(entry.transaction_id.hash) !== target
       ) continue;
-      const data = parseTonTxEntry(entry);
+      const data = parseTonTxEntry(entry, devnet);
       return data ? { status: 'ok', data } : { status: 'not-found' };
     }
 
@@ -322,8 +332,9 @@ export function registerLookupHandler(chain: string, handler: LookupHandler): vo
 export async function lookupTransaction(
   chain: ChainId,
   hash: string,
-  opts?: { address?: string },
+  opts?: { address?: string; devnet?: boolean },
 ): Promise<TrackerLookupResult> {
+  const devnet = opts?.devnet === true;
   const registered = trackerLookupHandlers.get(chain);
   if (registered) {
     return registered(hash, opts ?? {});
@@ -352,7 +363,7 @@ export async function lookupTransaction(
       return { status: 'error', reason: 'Invalid TRON transaction hash format.' };
     }
     try {
-      const raw: unknown = await fetchJson('https://api.trongrid.io/wallet/gettransactionbyid', {
+      const raw: unknown = await fetchJson(devnet ? 'https://nile.trongrid.io/wallet/gettransactionbyid' : 'https://api.trongrid.io/wallet/gettransactionbyid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: hash }),
@@ -360,7 +371,7 @@ export async function lookupTransaction(
       if (isRecord(raw) && Object.keys(raw).length === 0) {
         return { status: 'not-found' };
       }
-      const data = parseTrxTx(raw);
+      const data = parseTrxTx(raw, devnet);
       return data
         ? { status: 'ok', data }
         : { status: 'error', reason: 'Invalid response: expected a transaction' };
@@ -372,31 +383,34 @@ export async function lookupTransaction(
     if (!/^[0-9a-f]{64}$/i.test(hash) && !/^[A-Za-z0-9+/]{43}=$/.test(hash)) {
       return { status: 'error', reason: 'Invalid TON transaction hash format.' };
     }
-    return lookupTon(hash, opts?.address);
+    return lookupTon(hash, opts?.address, devnet);
   }
 
   try {
     let data: TrackedTx | null;
     if (chain === 'btc') {
-      const raw: unknown = await fetchJson(`https://mempool.space/api/tx/${hash}`);
+      const base = devnet ? 'https://mempool.space/testnet4/api' : 'https://mempool.space/api';
+      const raw: unknown = await fetchJson(`${base}/tx/${hash}`);
       let tipHeight: number | null = null;
       try {
         const tip: unknown = await fetchJson(
-          'https://mempool.space/api/blocks/tip/height',
+          `${base}/blocks/tip/height`,
         );
         if (isNonNegativeInteger(tip)) tipHeight = tip;
       } catch {
         // A tip-fetch failure leaves confirmations unknown, not the lookup failed.
       }
-      data = parseBtcTx(raw, tipHeight);
+      data = parseBtcTx(raw, tipHeight, devnet);
     } else {
       const raw: unknown = await fetchJson(
-        `https://eth.blockscout.com/api/v2/transactions/${hash}`,
+        devnet
+          ? `https://eth-sepolia.blockscout.com/api/v2/transactions/${hash}`
+          : `https://eth.blockscout.com/api/v2/transactions/${hash}`,
       );
       if (isRecord(raw) && raw.message === 'Not found') {
         return { status: 'not-found' };
       }
-      data = parseEthTx(raw);
+      data = parseEthTx(raw, devnet);
     }
 
     return data === null
@@ -418,10 +432,11 @@ export async function getRecentActivity(
   chain: ChainId,
   address: string,
   limit?: number,
+  opts?: { devnet?: boolean },
 ): Promise<TrackerActivityResult> {
   const requested = limit ?? 10;
   const clamped = Math.max(1, Math.min(20, Math.trunc(Number.isNaN(requested) ? 10 : requested)));
-  const adapter = getAdapter(chain);
+  const adapter = getAdapterForMode(chain, opts?.devnet === true);
   if (!adapter) {
     return { status: 'unavailable', reason: 'No history adapter is available for this chain.' };
   }

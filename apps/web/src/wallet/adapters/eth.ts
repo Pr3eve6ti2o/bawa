@@ -7,22 +7,41 @@
  */
 import type { PublicClient } from 'viem';
 import { createEvmAdapter } from './evm';
-import type { ChainAdapter, FetchTransport } from './types';
+import type {
+  BroadcastResult,
+  ChainAdapter,
+  EndpointList,
+  FetchTransport,
+} from './types';
 
 export interface EthAdapterOverrides {
   client?: PublicClient;
   historyBaseUrl?: string;
   rpcUrl?: string;
+  /** Ordered RPC list, or a resolver re-read on every call (item 19). */
+  rpcUrls?: EndpointList;
   /**
    * Injectable transport for the Blockscout history read (item 2).
    * Defaults to the single-attempt HTTP transport.
    */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode): the network id, the
+   * chain id the identity check pins, the explorer base, and the
+   * devnet broadcast. Unset, the adapter is the mainnet adapter
+   * exactly as before.
+   */
+  networkId?: string;
+  expectedChainId?: number;
+  explorerBaseUrl?: string;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdapter {
-  // EthAdapterOverrides is structurally identical to
-  // EvmAdapterOverrides, so the overrides pass through unchanged.
+  // The devnet overrides rename the factory's fields (expectedChainId
+  // vs evmChainId, explorerBaseUrl vs historyExplorerBase); map them
+  // here so the factory's mainnet defaults apply untouched when they
+  // are unset.
   return createEvmAdapter(
     {
       chain: 'eth',
@@ -35,6 +54,16 @@ export function createEthAdapter(overrides: EthAdapterOverrides = {}): ChainAdap
       historyBaseUrl: 'https://eth.blockscout.com/api',
       historyExplorerBase: 'https://eth.blockscout.com',
     },
-    overrides,
+    {
+      client: overrides.client,
+      rpcUrl: overrides.rpcUrl,
+      rpcUrls: overrides.rpcUrls,
+      historyBaseUrl: overrides.historyBaseUrl,
+      transport: overrides.transport,
+      networkId: overrides.networkId,
+      evmChainId: overrides.expectedChainId,
+      historyExplorerBase: overrides.explorerBaseUrl,
+      broadcast: overrides.broadcast,
+    },
   );
 }

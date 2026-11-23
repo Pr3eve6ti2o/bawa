@@ -394,10 +394,33 @@ export type TokenPricesState = {
  * so user-added tokens join the batch; the hook refetches when the set
  * of requested ids changes.
  */
+/**
+ * Item 11/12: same blanking bug as the native feed — a failed refresh
+ * must not wipe token prices that are already on screen. Keep the last
+ * good quote for a token when the new fetch ends in error.
+ */
+function mergePreservingFreshTokenQuotes(
+  next: TokenPricesState['entries'],
+  previous: TokenPricesState['entries'],
+): TokenPricesState['entries'] {
+  const merged = { ...next };
+  for (const key of Object.keys(merged)) {
+    const current = merged[key];
+    const prev = previous[key];
+    if (current?.status === 'error' && prev?.status === 'fresh') {
+      merged[key] = prev;
+    }
+  }
+  return merged;
+}
+
 export function useTokenPrices(
   tokens: readonly TokenRecord[],
-  options?: { sleep?: (ms: number) => Promise<void> },
+  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
 ): { state: TokenPricesState; refresh: () => void } {
+  // TEMPORARY devnet mode: devnet tokens have no market price. Never
+  // load cached mainnet prices for testnet balances, and never fetch.
+  const devnet = options?.devnet === true;
   const requests = tokenPriceRequests(tokens);
   const requestKey = requests.map((r) => `${r.key}=${r.coingeckoId}`).sort().join('|');
   const requestsRef = useRef(requests);
@@ -407,10 +430,14 @@ export function useTokenPrices(
   const [state, setState] = useState<TokenPricesState>(() => {
     const keys = requests.map((r) => r.key);
     let entries: TokenPriceMap;
-    try {
-      entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
-    } catch {
+    if (devnet) {
       entries = tokenPriceEntries(keys);
+    } else {
+      try {
+        entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
+      } catch {
+        entries = tokenPriceEntries(keys);
+      }
     }
     return { status: 'idle', entries, lastFetchedAtMs: null };
   });
@@ -426,7 +453,21 @@ export function useTokenPrices(
     };
   }, []);
 
+  // Reset to no-prices when devnet mode turns on; the caller re-fetches
+  // when it turns back off.
+  useEffect(() => {
+    if (devnet) {
+      setState({
+        status: 'idle',
+        entries: tokenPriceEntries(requestsRef.current.map((r) => r.key)),
+        lastFetchedAtMs: null,
+      });
+    }
+  }, [devnet]);
+
   const refresh = useCallback(() => {
+    // Devnet tokens have no market price: refresh is a no-op.
+    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
     const currentRequests = requestsRef.current;
     const keys = currentRequests.map((r) => r.key);
@@ -440,7 +481,13 @@ export function useTokenPrices(
       lastFetchedAtMs: null,
     };
     if (typeof globalThis.fetch !== 'function') {
-      setState(networkError);
+      setState((previous) => ({
+        ...networkError,
+        entries: mergePreservingFreshTokenQuotes(
+          networkEntries,
+          previous.entries,
+        ),
+      }));
       return;
     }
     const wait =
@@ -491,7 +538,11 @@ export function useTokenPrices(
             await wait(delayMs);
             continue;
           }
-          setState({ status: 'ready', entries, lastFetchedAtMs: Date.now() });
+          setState((previous) => ({
+            status: 'ready',
+            entries: mergePreservingFreshTokenQuotes(entries, previous.entries),
+            lastFetchedAtMs: Date.now(),
+          }));
           if (values.some((entry) => entry.status === 'fresh')) {
             try {
               saveCachedTokenPrices(entries, Date.now(), tokensRef.current);
@@ -503,13 +554,19 @@ export function useTokenPrices(
         }
       } catch {
         if (mounted.current) {
-          setState(networkError);
+          setState((previous) => ({
+            ...networkError,
+            entries: mergePreservingFreshTokenQuotes(
+              networkEntries,
+              previous.entries,
+            ),
+          }));
         }
       } finally {
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep, requestKey]);
+  }, [state.status, sleep, requestKey, devnet]);
 
   return { state, refresh };
 }

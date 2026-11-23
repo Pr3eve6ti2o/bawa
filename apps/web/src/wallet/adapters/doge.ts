@@ -14,8 +14,10 @@
  * is why SoChain is primary). Chain identity rests on SoChain's
  * network_info reporting a live block count, falling back to
  * BlockCypher's chain endpoint reporting name 'DOGE' (cached per
- * instance). History, fee-quote and tx inputs are not built — they
- * report unavailable, never faked. Broadcast stays disabled.
+ * instance). History is built the same way: SoChain v3 /transactions
+ * (in + out, merged newest-first) with BlockCypher /full as fallback.
+ * Fee-quote and tx inputs are not built — they report unavailable,
+ * never faked. Broadcast stays disabled.
  */
 import {
   BROADCAST_DISABLED_MESSAGE,
@@ -63,6 +65,134 @@ export function sochainConfirmedToKoinu(confirmed: string): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse one SoChain v3 /transactions page. Entries carry hash,
+ * balance_change (signed decimal DOGE — the direction's ground truth),
+ * time (unix seconds) and block. Returns null for a bad shape, so the
+ * caller can fall back to BlockCypher.
+ */
+function sochainTxs(raw: unknown): AdapterTx[] | null {
+  if (!isRecord(raw) || raw['status'] !== 'success') return null;
+  const data = raw['data'];
+  if (!isRecord(data) || !Array.isArray(data['transactions'])) return null;
+  const txs: AdapterTx[] = [];
+  for (const entry of data['transactions'] as unknown[]) {
+    if (!isRecord(entry)) continue;
+    const hash = typeof entry['hash'] === 'string' ? entry['hash'] : '';
+    const change =
+      typeof entry['balance_change'] === 'string'
+        ? entry['balance_change']
+        : '';
+    const time = typeof entry['time'] === 'number' ? entry['time'] : NaN;
+    if (hash === '' || !/^-?\d+(\.\d{1,8})?$/.test(change) || !Number.isFinite(time)) {
+      continue;
+    }
+    const magnitude = change.startsWith('-') ? change.slice(1) : change;
+    const koinu = sochainConfirmedToKoinu(magnitude);
+    if (koinu === null) continue;
+    txs.push({
+      hash,
+      chain: 'doge',
+      networkId: NETWORK_ID,
+      direction: change.startsWith('-')
+        ? 'out'
+        : koinu === '0'
+          ? 'self'
+          : 'in',
+      amountBaseUnits: koinu,
+      counterparty: null,
+      timestamp: time * 1000,
+      status: 'confirmed',
+      explorerUrl: `https://dogechain.info/tx/${hash}`,
+    });
+  }
+  return txs;
+}
+
+/**
+ * Parse a BlockCypher /full response. Direction follows the LTC
+ * adapter's rule: 'self' only when every output returns to this
+ * address (a send with change is an 'out', not a self-transfer).
+ * Returns null for a bad shape.
+ */
+function blockcypherTxs(raw: unknown, address: string): AdapterTx[] | null {
+  if (!isRecord(raw) || !Array.isArray(raw['txs'])) return null;
+  const txs: AdapterTx[] = [];
+  for (const entry of raw['txs'] as unknown[]) {
+    if (!isRecord(entry)) continue;
+    const hash = typeof entry['hash'] === 'string' ? entry['hash'] : '';
+    if (hash === '') continue;
+    const inputs = Array.isArray(entry['inputs']) ? entry['inputs'] : [];
+    const outputs = Array.isArray(entry['outputs']) ? entry['outputs'] : [];
+    let inSum = 0n;
+    let outToSelf = 0n;
+    let outToOthers = 0n;
+    let counterparty: string | null = null;
+    for (const input of inputs) {
+      if (!isRecord(input)) continue;
+      const addrs = Array.isArray(input['addresses'])
+        ? (input['addresses'] as unknown[])
+        : [];
+      const value =
+        typeof input['output_value'] === 'number'
+          ? BigInt(Math.trunc(input['output_value']))
+          : 0n;
+      if (addrs.includes(address)) {
+        inSum += value;
+      } else if (!counterparty && typeof addrs[0] === 'string') {
+        counterparty = addrs[0];
+      }
+    }
+    for (const output of outputs) {
+      if (!isRecord(output)) continue;
+      const addrs = Array.isArray(output['addresses'])
+        ? (output['addresses'] as unknown[])
+        : [];
+      const value =
+        typeof output['value'] === 'number'
+          ? BigInt(Math.trunc(output['value']))
+          : 0n;
+      if (addrs.includes(address)) {
+        outToSelf += value;
+      } else {
+        outToOthers += value;
+        if (!counterparty && typeof addrs[0] === 'string') {
+          counterparty = addrs[0];
+        }
+      }
+    }
+    const inVin = inSum > 0n;
+    const inVout = outToSelf > 0n;
+    const direction =
+      inVin && inVout && outToOthers === 0n
+        ? 'self'
+        : inVout && !inVin
+          ? 'in'
+          : 'out';
+    const confirmed =
+      typeof entry['confirmed'] === 'string' ? entry['confirmed'] : null;
+    const timestamp = confirmed !== null ? Date.parse(confirmed) : NaN;
+    txs.push({
+      hash,
+      chain: 'doge',
+      networkId: NETWORK_ID,
+      direction,
+      amountBaseUnits:
+        direction === 'in'
+          ? outToSelf.toString()
+          : direction === 'out'
+            ? outToOthers.toString()
+            : outToSelf.toString(),
+      counterparty,
+      timestamp: Number.isFinite(timestamp) ? timestamp : null,
+      status: confirmed !== null ? 'confirmed' : 'pending',
+      explorerUrl: `https://dogechain.info/tx/${hash}`,
+    });
+  }
+  txs.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+  return txs;
 }
 
 const BASE58_ALPHABET =
@@ -193,9 +323,66 @@ export function createDogeAdapter(
   });
 
   const getHistory = async (
-    _address: string,
-  ): Promise<AdapterResult<AdapterTx[]>> =>
-    unavailable('History is not connected for Dogecoin yet.');
+    address: string,
+    limit = 25,
+  ): Promise<AdapterResult<AdapterTx[]>> => {
+    if (!isDogeAddress(address)) {
+      return { status: 'error', reason: 'Invalid Dogecoin address' };
+    }
+    const identity = await requireMainnet();
+    if (identity) return identity;
+    // Primary: SoChain v3 transactions, in + out, merged newest-first.
+    // A bad shape falls back to BlockCypher, like the balance does.
+    try {
+      const [rawIn, rawOut] = await Promise.all([
+        readJson(
+          `${sochainBaseUrl}/transactions/DOGE/${address}?direction=in`,
+          'doge.getHistory',
+        ),
+        readJson(
+          `${sochainBaseUrl}/transactions/DOGE/${address}?direction=out`,
+          'doge.getHistory',
+        ),
+      ]);
+      const fromIn = sochainTxs(rawIn);
+      const fromOut = sochainTxs(rawOut);
+      if (fromIn !== null && fromOut !== null) {
+        const txs = [...fromIn, ...fromOut];
+        txs.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+        return {
+          status: 'ok',
+          data: txs.slice(0, limit),
+          source: SOCHAIN_SOURCE,
+          fetchedAt: Date.now(),
+        };
+      }
+    } catch {
+      // Fall through to BlockCypher below.
+    }
+    // Fallback: BlockCypher /full (inputs/outputs per transaction).
+    let raw: unknown;
+    try {
+      raw = await readJson(
+        `${baseUrl}/addrs/${address}/full?limit=${limit}`,
+        'doge.getHistory',
+      );
+    } catch (error: unknown) {
+      return toAdapterError(error);
+    }
+    const parsed = blockcypherTxs(raw, address);
+    if (parsed === null) {
+      return {
+        status: 'error',
+        reason: 'Invalid response: expected a transaction list',
+      };
+    }
+    return {
+      status: 'ok',
+      data: parsed.slice(0, limit),
+      source: BLOCKCYPHER_SOURCE,
+      fetchedAt: Date.now(),
+    };
+  };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> =>
     unavailable('Fee-quote is not connected for Dogecoin yet.');

@@ -4,7 +4,7 @@
 // /search for candidate coins, then /coins/{id} for each hit's
 // contract addresses per platform (detail_platforms, which carries
 // decimal_place). Only platforms this wallet supports are kept
-// (EVM chains + TRON — the chains tokenStandardFor offers); a
+// (EVM chains + TRON + Solana — the chains tokenStandardFor offers); a
 // platform without known decimals is skipped rather than invented.
 // A query that resolves to nothing returns not-found honestly.
 //
@@ -37,6 +37,17 @@ const CHAIN_FOR_PLATFORM: Partial<Record<string, ChainId>> = {
   'optimistic-ethereum': 'op',
   base: 'base',
   avalanche: 'avax',
+  // UI/UX fixes, item 13: SPL on Solana + ERC-20 on the 9 new EVM chains.
+  solana: 'sol',
+  xdai: 'gnosis',
+  celo: 'celo',
+  linea: 'linea',
+  mantle: 'mantle',
+  scroll: 'scroll',
+  opbnb: 'opbnb',
+  metis: 'metis',
+  aurora: 'aurora',
+  fantom: 'fantom',
 };
 
 /** At most this many search hits get a detail fetch (bounds the calls). */

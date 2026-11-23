@@ -6,7 +6,11 @@
  * arb=ethereum (Arbitrum native asset is ETH — NOT 'arbitrum', the ARB
  * governance token); op=ethereum (OP native asset is ETH — NOT
  * 'optimism', the OP governance token); base=ethereum (Base native
- * asset is ETH); avax=avalanche-2; ltc=litecoin; doge=dogecoin.
+ * base, avalanche; ltc=litecoin; doge=dogecoin.
+ * gnosis=xdai; celo=celo; linea=ethereum (Linea native asset is ETH);
+ * mantle=mantle; scroll=ethereum (Scroll native asset is ETH);
+ * opbnb=binancecoin (opBNB native asset is BNB); metis=metis-token;
+ * aurora=ethereum (Aurora native asset is ETH); fantom=fantom.
  * matic-network is the STALE MATIC listing (last updated 2026-02-03,
  * verified live 2026-11-22): its quote would parse as expired forever.
  * polygon-ecosystem-token is the live POL listing.
@@ -44,6 +48,15 @@ export const PRICE_IDS: Record<ChainId, string> = {
   avax: 'avalanche-2',
   ltc: 'litecoin',
   doge: 'dogecoin',
+  gnosis: 'xdai',
+  celo: 'celo',
+  linea: 'ethereum',
+  mantle: 'mantle',
+  scroll: 'ethereum',
+  opbnb: 'binancecoin',
+  metis: 'metis-token',
+  aurora: 'ethereum',
+  fantom: 'fantom',
 };
 
 export const PRICE_ASSET_IDS: Record<ChainId, string> = {
@@ -60,6 +73,15 @@ export const PRICE_ASSET_IDS: Record<ChainId, string> = {
   avax: 'eip155:43114/slip44:60',
   ltc: 'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2/slip44:2',
   doge: 'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691/slip44:3',
+  gnosis: 'eip155:100/slip44:60',
+  celo: 'eip155:42220/slip44:527',
+  linea: 'eip155:59144/slip44:60',
+  mantle: 'eip155:5000/slip44:60',
+  scroll: 'eip155:534352/slip44:60',
+  opbnb: 'eip155:204/slip44:60',
+  metis: 'eip155:1088/slip44:60',
+  aurora: 'eip155:1313161554/slip44:60',
+  fantom: 'eip155:250/slip44:250',
 };
 
 export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
@@ -348,6 +370,15 @@ export function parsePriceResponse(
     op: parseChain('op'),
     base: parseChain('base'),
     avax: parseChain('avax'),
+    gnosis: parseChain('gnosis'),
+    celo: parseChain('celo'),
+    linea: parseChain('linea'),
+    mantle: parseChain('mantle'),
+    scroll: parseChain('scroll'),
+    opbnb: parseChain('opbnb'),
+    metis: parseChain('metis'),
+    aurora: parseChain('aurora'),
+    fantom: parseChain('fantom'),
     ltc: parseChain('ltc'),
     doge: parseChain('doge'),
   };
@@ -357,7 +388,7 @@ export async function fetchPrices(
   fetchFn: typeof fetch,
   nowMs?: number,
 ): Promise<PriceMap> {
-  const chains = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'] as const;
+  const chains = ['btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const;
   const allError = (
     entry: Extract<PriceEntry, { status: 'error' }>,
   ): PriceMap =>
@@ -601,7 +632,7 @@ export function portfolioTotal(
   balances: Record<ChainId, BalanceState>,
   entries: PriceMap,
   nowMs: number,
-  // Chains to total. Defaults to all 13 registry chains; the dashboard
+  // Chains to total. Defaults to all 22 registry chains; the dashboard
   // passes availableFor('balance') so the hero totals exactly the chains
   // its loading/failed detection counts (in the screen tests that mock
   // is the original 4, which keeps the hero's 4-chain expectations).
@@ -610,7 +641,7 @@ export function portfolioTotal(
   // folds in via tokenContribution. Token fiat values also show on
   // their own rows.
   chains: readonly ChainId[] = [
-    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge',
+    'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom',
   ],
   tokenContribution?: PortfolioTokenContribution,
 ): {
@@ -742,15 +773,49 @@ function idleEntries(): PriceMap {
     op: { status: 'unavailable', reason: 'missing' },
     base: { status: 'unavailable', reason: 'missing' },
     avax: { status: 'unavailable', reason: 'missing' },
+    gnosis: { status: 'unavailable', reason: 'missing' },
+    celo: { status: 'unavailable', reason: 'missing' },
+    linea: { status: 'unavailable', reason: 'missing' },
+    mantle: { status: 'unavailable', reason: 'missing' },
+    scroll: { status: 'unavailable', reason: 'missing' },
+    opbnb: { status: 'unavailable', reason: 'missing' },
+    metis: { status: 'unavailable', reason: 'missing' },
+    aurora: { status: 'unavailable', reason: 'missing' },
+    fantom: { status: 'unavailable', reason: 'missing' },
     ltc: { status: 'unavailable', reason: 'missing' },
     doge: { status: 'unavailable', reason: 'missing' },
   };
 }
 
+/**
+ * Item 11/12: a failed refresh must not blank prices that are already on
+ * screen. Keep the last good quote for a chain when the new fetch ends in
+ * error; only chains with no previous quote show the error.
+ */
+function mergePreservingFresh(
+  next: PriceMap,
+  previous: PriceMap,
+): PriceMap {
+  const merged: PriceMap = { ...next };
+  for (const chain of Object.keys(merged) as Array<keyof PriceMap>) {
+    const prev = previous[chain];
+    if (merged[chain].status === 'error' && prev.status === 'fresh') {
+      merged[chain] = prev;
+    }
+  }
+  return merged;
+}
+
 export function usePrices(
-  options?: { sleep?: (ms: number) => Promise<void> },
+  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
 ): { state: PricesState; refresh: () => void } {
+  // TEMPORARY devnet mode: devnet tokens have no market price. Never
+  // load cached mainnet prices for testnet balances, and never fetch.
+  const devnet = options?.devnet === true;
   const [state, setState] = useState<PricesState>(() => {
+    if (devnet) {
+      return { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null };
+    }
     let entries: PriceMap;
     try {
       entries = loadCachedPrices(Date.now()) ?? idleEntries();
@@ -775,7 +840,17 @@ export function usePrices(
     };
   }, []);
 
+  // Reset to no-prices when devnet mode turns on; the caller re-fetches
+  // when it turns back off.
+  useEffect(() => {
+    if (devnet) {
+      setState({ status: 'idle', entries: idleEntries(), lastFetchedAtMs: null });
+    }
+  }, [devnet]);
+
   const refresh = useCallback(() => {
+    // Devnet tokens have no market price: refresh is a no-op.
+    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
 
     const networkEntries: PriceMap = { ...idleEntries() };
@@ -789,7 +864,10 @@ export function usePrices(
     };
 
     if (typeof globalThis.fetch !== 'function') {
-      setState(networkError);
+      setState((previous) => ({
+        ...networkError,
+        entries: mergePreservingFresh(networkEntries, previous.entries),
+      }));
       return;
     }
 
@@ -849,11 +927,11 @@ export function usePrices(
             continue;
           }
 
-          setState({
+          setState((previous) => ({
             status: 'ready',
-            entries,
+            entries: mergePreservingFresh(entries, previous.entries),
             lastFetchedAtMs: Date.now(),
-          });
+          }));
 
           if (values.some((entry) => entry.status === 'fresh')) {
             try {
@@ -866,13 +944,16 @@ export function usePrices(
         }
       } catch {
         if (mounted.current) {
-          setState(networkError);
+          setState((previous) => ({
+            ...networkError,
+            entries: mergePreservingFresh(networkEntries, previous.entries),
+          }));
         }
       } finally {
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep]);
+  }, [state.status, sleep, devnet]);
 
   return { state, refresh };
 }

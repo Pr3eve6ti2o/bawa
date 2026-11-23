@@ -151,3 +151,118 @@ describe('evm adapter — broadcast', () => {
     await expect(adapter.broadcast({})).rejects.toThrow(BROADCAST_DISABLED_MESSAGE);
   });
 });
+
+describe('evm adapter — RPC failover (UI/UX fixes, item 19)', () => {
+  /** JSON-RPC fetch stub: the primary host throws, the backup answers. */
+  function mockRpcFailover(primaryHost: string, _backupHost: string): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.startsWith(primaryHost)) {
+          throw new Error('Network error: primary RPC unreachable');
+        }
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          id?: unknown;
+          method?: string;
+        };
+        const result =
+          body.method === 'eth_chainId'
+            ? '0x38'
+            : body.method === 'eth_getBalance'
+              ? '0x1bc16d674ec80000'
+              : body.method === 'eth_gasPrice'
+                ? '0x77359400'
+                : body.method === 'eth_getTransactionCount'
+                  ? '0x4'
+                  : '0x0';
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'Content-Type': 'application/json' }),
+          json: async () => ({ jsonrpc: '2.0', id: body.id ?? 1, result }),
+          // viem reads the body as text first (error paths), then parses.
+          text: async () =>
+            JSON.stringify({ jsonrpc: '2.0', id: body.id ?? 1, result }),
+        };
+      }),
+    );
+  }
+
+  it('loads a balance through the backup RPC when the primary is down', async () => {
+    mockRpcFailover('https://bsc-primary.invalid', 'https://bsc-backup.invalid');
+    const adapter = createEvmAdapter(BSC, {
+      rpcUrls: ['https://bsc-primary.invalid', 'https://bsc-backup.invalid'],
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('2000000000000000000');
+      // The answering endpoint is named, never the dead primary.
+      expect(result.data.source).toBe('bsc-backup.invalid');
+    }
+  });
+
+  it('errors when every RPC is down, naming the last failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('Network error: all RPCs unreachable');
+      }),
+    );
+    const adapter = createEvmAdapter(BSC, {
+      rpcUrls: ['https://bsc-primary.invalid', 'https://bsc-backup.invalid'],
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+  });
+
+  it('re-reads a resolver-supplied RPC list on every call', async () => {
+    mockRpcFailover('https://bsc-primary.invalid', 'https://bsc-backup.invalid');
+    let urls = ['https://bsc-primary.invalid', 'https://bsc-backup.invalid'];
+    const adapter = createEvmAdapter(BSC, { rpcUrls: () => urls });
+    const first = await adapter.getBalance(ADDRESS);
+    expect(first.status).toBe('ok');
+    // The primary recovers and is put first again: the next call must
+    // use it (source flips back to the primary host).
+    urls = ['https://bsc-backup.invalid', 'https://bsc-primary.invalid'];
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockImplementation(async (input: string | URL | Request, init?: RequestInit) => {
+      void input;
+      const body = JSON.parse(String(init?.body ?? '{}')) as {
+        id?: unknown;
+        method?: string;
+      };
+      const result =
+        body.method === 'eth_chainId'
+          ? '0x38'
+          : body.method === 'eth_getBalance'
+            ? '0x1bc16d674ec80000'
+            : '0x0';
+      // Partial Response shape, like mockRpcFailover above: viem
+      // only reads ok/status/headers/json/text from it.
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'Content-Type': 'application/json' }),
+        json: async () => ({ jsonrpc: '2.0', id: body.id ?? 1, result }),
+        text: async () =>
+          JSON.stringify({ jsonrpc: '2.0', id: body.id ?? 1, result }),
+      } as unknown as Response;
+    });
+    const second = await adapter.getBalance(ADDRESS);
+    expect(second.status).toBe('ok');
+    if (second.status === 'ok') {
+      expect(second.data.source).toBe('bsc-backup.invalid');
+    }
+  });
+
+  it('an injected client still wins over the RPC list', async () => {
+    const adapter = createEvmAdapter(BSC, {
+      client: mockClient(),
+      rpcUrls: ['https://bsc-primary.invalid'],
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') expect(result.data.source).toBe('publicnode');
+  });
+});

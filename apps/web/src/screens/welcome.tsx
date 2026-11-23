@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import { StepCard } from "../ui/components/step-card";
 import { Button } from "../ui/components/button";
 import { BawaIcon } from "../ui/components/icons";
 import {
@@ -10,8 +9,10 @@ import {
   CardTitle,
 } from "../ui/components/card";
 import { PopularChainsStrip } from "./chain-strip";
+import { useWallet } from "../state/wallet-context";
 
 export function WelcomeScreen() {
+  const { devnetEnabled } = useWallet();
   return (
     <section aria-labelledby="welcome-title" className="mx-auto w-full max-w-[480px] space-y-6 lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:items-start lg:space-y-0">
       <div className="rounded-bawa border-2 border-ink bg-paper p-7 text-ink sm:p-8 lg:col-span-3 lg:col-start-1 lg:row-start-1">
@@ -23,54 +24,56 @@ export function WelcomeScreen() {
           id="welcome-title"
           className="mt-3 text-title-lg font-bold tracking-tight text-ink"
         >
-          Welcome to <span className="bawa-marker">Bawa</span> Web Wallet
+          Welcome to <span className="bawa-marker">Bawa</span>
         </h1>
         <p className="mt-2 max-w-xl text-body-md text-ink">
-          A self-custodial multi-chain wallet. Create a wallet in the browser
-          — your recovery phrase is encrypted on this device with your vault
-          password — or import a watch-only wallet to track addresses without
-          holding secrets.
+          Bawa is a guide made for humans and AI agents to create crypto
+          wallets, web wallets, Android wallets, HD wallets and smart
+          contracts easily — with just a few prompts, explained in the
+          guide.
+        </p>
+        <p className="mt-2 max-w-xl text-body-md text-ink">
+          This web wallet is the wallet the guide builds: a self-custodial
+          multi-chain wallet that runs in your browser. Your recovery
+          phrase is encrypted on this device with your vault password —
+          only you hold it.
         </p>
 
         <div className="mt-6 flex h-11 items-center justify-between rounded-bawa-sm border-2 border-ink bg-paper px-4">
           <p className="text-xs font-semibold text-ink">Network</p>
           <span className="flex h-6 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-            MAINNET
+            {devnetEnabled ? "DEVNET" : "MAINNET"}
           </span>
         </div>
 
-        <ol className="mt-4 space-y-3 text-body-md">
+        <h2 className="mt-6 text-body-md font-semibold text-ink">
+          What you can do with Bawa
+        </h2>
+        <ul className="mt-2 list-disc space-y-2 pl-5 text-body-md text-ink">
           <li>
-            <StepCard icon={<span>1</span>} label="Set a vault password" state="pending" />
+            <strong>Create a crypto wallet</strong> — a self-custodial
+            multi-chain wallet, with one address per chain.
           </li>
           <li>
-            <StepCard icon={<span>2</span>} label="Write down 24 words" state="pending" />
+            <strong>Create a web wallet</strong> — this one. It runs in
+            your browser, with nothing to install.
           </li>
           <li>
-            <StepCard icon={<span>3</span>} label="Confirm 3 words" state="pending" />
+            <strong>Create an Android wallet</strong> — the same wallet on
+            your phone.
           </li>
           <li>
-            <StepCard icon={<span>4</span>} label="See your addresses" state="pending" />
+            <strong>Create an HD wallet</strong> — a fresh receiving
+            address for every payment.
           </li>
-        </ol>
+          <li>
+            <strong>Create a smart contract</strong> — guided, step by
+            step, from a prompt.
+          </li>
+        </ul>
       </div>
 
       <div className="grid gap-4 lg:col-span-2 lg:col-start-4 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-6">
-        <Card className="flex flex-col rounded-xl bg-card text-foreground">
-          <CardHeader className="px-6 pt-6">
-            <CardTitle>Create a wallet</CardTitle>
-            <CardDescription>
-              Generate a recovery phrase in the browser and encrypt it on this
-              device with a vault password. Only you hold the phrase.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="mt-auto px-6 pb-6">
-            <Button asChild className="h-10 w-full">
-              <Link to="/create-wallet">Create a wallet</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
         <Card className="flex flex-col rounded-xl bg-card text-foreground">
           <CardHeader className="px-6 pt-6">
             <CardTitle>Import a wallet</CardTitle>
@@ -90,7 +93,11 @@ export function WelcomeScreen() {
       </div>
 
       <aside className="space-y-2 rounded-bawa border-2 border-ink bg-paper p-4 text-sm text-ink lg:col-span-3 lg:col-start-1 lg:row-start-2">
-        <p>Mainnet only — this wallet never connects to a test network.</p>
+        <p>
+          {devnetEnabled
+            ? "Devnet — test mode. This wallet connects to a test network with valueless test tokens."
+            : "Mainnet only — this wallet never connects to a test network."}
+        </p>
         <p>
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.
         </p>

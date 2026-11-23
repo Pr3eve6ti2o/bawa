@@ -6,20 +6,25 @@ import {
   addCustomTokenToList,
   isDuplicateToken,
   isVerifiedToken,
+  orderAssetsByBalance,
   readCustomTokens,
   readEnabledChains,
   resolveTokenByTickerOrName,
   shortContract,
   tokenKey,
+  tokenKeyOf,
   tokenStandardFor,
   validateEvmContractAddress,
+  validateSolMintAddress,
   validateTokenMetadata,
+  validateTonJettonAddress,
   validateTronContractAddress,
   writeCustomTokens,
   writeEnabledChains,
   type TokenRecord,
   type TokenStore,
 } from './tokens';
+
 import { SUPPORTED_CHAINS } from './chains';
 
 function memoryStore(initial: Record<string, string> = {}): TokenStore {
@@ -42,61 +47,320 @@ const USDC: TokenRecord = {
   addedAtMs: 0,
 };
 
-describe('DEFAULT_TOKENS', () => {
-  it('lists exactly the 8 default tokens with verified contracts', () => {
-    expect(DEFAULT_TOKENS).toHaveLength(8);
-    const byKey = new Map(DEFAULT_TOKENS.map((t) => [tokenKey(t.chain, t.contract), t]));
-    expect(byKey.get('eth:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')).toMatchObject({
-      symbol: 'USDC',
-      decimals: 6,
-      coingeckoId: 'usd-coin',
-    });
-    expect(byKey.get('eth:0xdac17f958d2ee523a2206206994597c13d831ec7')).toMatchObject({
-      symbol: 'USDT',
-      decimals: 6,
-      coingeckoId: 'tether',
-    });
-    expect(byKey.get('eth:0x6b175474e89094c44da98b954eedeac495271d0f')).toMatchObject({
-      symbol: 'DAI',
-      decimals: 18,
-      coingeckoId: 'dai',
-    });
-    expect(byKey.get('eth:0x514910771af9ca656af840dff83e8264ecf986ca')).toMatchObject({
-      symbol: 'LINK',
-      decimals: 18,
-      coingeckoId: 'chainlink',
-    });
-    expect(byKey.get('eth:0x1f9840a85d5af5bf1d1762f925bdaddc4201f984')).toMatchObject({
-      symbol: 'UNI',
-      decimals: 18,
-      coingeckoId: 'uniswap',
-    });
-    expect(byKey.get('eth:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599')).toMatchObject({
-      symbol: 'WBTC',
-      decimals: 8,
-      coingeckoId: 'wrapped-bitcoin',
-    });
-    expect(byKey.get('trx:tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t')).toMatchObject({
-      symbol: 'USDT',
-      decimals: 6,
-      coingeckoId: 'tether',
-    });
-    // Token #21 (token gaps): Base USDC, verified live against the
-    // CoinGecko Base contract endpoint 2026-11-22 (id usd-coin,
-    // decimals 6, contract 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913).
-    expect(byKey.get('base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913')).toMatchObject({
-      symbol: 'USDC',
+
+describe('DEFAULT_TOKENS — UI/UX fixes, item 18', () => {
+  // The 8 original defaults + 13 verified primaries (item 18):
+  // SPL USDC + Jetton USDT (item 13, live-verified in CDP), WETH on
+  // Ethereum, USDC/USDT(0) on Polygon/Arbitrum/Optimism/Base/Avalanche
+  // and USDT on BNB Smart Chain. Every contract, name, symbol and
+  // decimals below was verified live on-chain (eth_call / Solana RPC /
+  // TonAPI) and against the CoinGecko contract endpoint, 2026-11-23.
+  const EXPECTED_NEW = [
+    {
+      chain: 'sol',
+      contract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       name: 'USD Coin',
+      symbol: 'USDC',
       decimals: 6,
       coingeckoId: 'usd-coin',
+    },
+    {
+      chain: 'ton',
+      contract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      name: 'Tether USD',
+      symbol: 'USD₮',
+      decimals: 6,
+      coingeckoId: 'tether',
+    },
+    {
+      chain: 'eth',
+      contract: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      name: 'Wrapped Ether',
+      symbol: 'WETH',
+      decimals: 18,
+      coingeckoId: 'weth',
+    },
+    {
+      chain: 'matic',
+      contract: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+      name: 'USD Coin',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+    },
+    {
+      chain: 'matic',
+      contract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      name: 'USDT0',
+      symbol: 'USDT0',
+      decimals: 6,
+      coingeckoId: 'usdt0',
+    },
+    {
+      chain: 'arb',
+      contract: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+      name: 'USD Coin',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+    },
+    {
+      chain: 'arb',
+      contract: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+      name: 'USD₮0',
+      symbol: 'USD₮0',
+      decimals: 6,
+      coingeckoId: 'usdt0',
+    },
+    {
+      chain: 'op',
+      contract: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+      name: 'USD Coin',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+    },
+    {
+      chain: 'op',
+      contract: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+      name: 'Tether USD',
+      symbol: 'USDT',
+      decimals: 6,
+      coingeckoId: 'bridged-usdt',
+    },
+    {
+      chain: 'base',
+      contract: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+      name: 'Tether USD',
+      symbol: 'USDT',
+      decimals: 6,
+      coingeckoId: 'l2-standard-bridged-usdt-base',
+    },
+    {
+      chain: 'avax',
+      contract: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+      name: 'USD Coin',
+      symbol: 'USDC',
+      decimals: 6,
+      coingeckoId: 'usd-coin',
+    },
+    {
+      chain: 'avax',
+      contract: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+      name: 'TetherToken',
+      symbol: 'USDt',
+      decimals: 6,
+      coingeckoId: 'tether',
+    },
+    {
+      chain: 'bsc',
+      contract: '0x55d398326f99059fF775485246999027B3197955',
+      name: 'Tether USD',
+      symbol: 'USDT',
+      decimals: 18,
+      coingeckoId: 'binance-bridged-usdt-bnb-smart-chain',
+    },
+  ] as const;
+
+  it('holds 21 verified defaults (8 original + 13 item-18 primaries)', () => {
+    expect(DEFAULT_TOKENS).toHaveLength(21);
+    for (const expected of EXPECTED_NEW) {
+      const found = DEFAULT_TOKENS.find(
+        (token) => tokenKeyOf(token) === `${expected.chain}:${expected.contract.toLowerCase()}`,
+      );
+      expect(found).toMatchObject({
+        chain: expected.chain,
+        contract: expected.contract,
+        name: expected.name,
+        symbol: expected.symbol,
+        decimals: expected.decimals,
+        coingeckoId: expected.coingeckoId,
+      });
+    }
+  });
+
+  it('has no duplicate defaults and every contract is valid for its chain', () => {
+    const keys = DEFAULT_TOKENS.map((token) => tokenKeyOf(token));
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const token of DEFAULT_TOKENS) {
+      expect(token.coingeckoId).not.toBeNull();
+      if (token.chain === 'sol') {
+        expect(validateSolMintAddress(token.contract).ok).toBe(true);
+      } else if (token.chain === 'ton') {
+        expect(validateTonJettonAddress(token.contract).ok).toBe(true);
+      } else if (token.chain === 'trx') {
+        expect(validateTronContractAddress(token.contract).ok).toBe(true);
+      } else {
+        expect(validateEvmContractAddress(token.contract).ok).toBe(true);
+      }
+      expect(isDuplicateToken(DEFAULT_TOKENS, token.chain, token.contract)).toBe(true);
+    }
+  });
+});
+
+describe('tokenStandardFor — UI/UX fixes, item 13', () => {
+  it('offers SPL on Solana and Jetton on TON', () => {
+    expect(tokenStandardFor('sol')).toEqual({ standard: 'spl' });
+    expect(tokenStandardFor('ton')).toEqual({ standard: 'jetton' });
+  });
+
+  it('still offers ERC-20 on every EVM chain and TRC-20 on TRON', () => {
+    for (const chain of [
+      'eth',
+      'bsc',
+      'matic',
+      'arb',
+      'op',
+      'base',
+      'avax',
+      'gnosis',
+      'celo',
+      'linea',
+      'mantle',
+      'scroll',
+      'opbnb',
+      'metis',
+      'aurora',
+      'fantom',
+    ] as const) {
+      expect(tokenStandardFor(chain)).toEqual({ standard: 'erc20' });
+    }
+    expect(tokenStandardFor('trx')).toEqual({ standard: 'trc20' });
+  });
+
+  it('keeps native-coin-only chains unselectable', () => {
+    for (const chain of ['btc', 'ltc', 'doge'] as const) {
+      expect(tokenStandardFor(chain)).toEqual({
+        standard: null,
+        reason: 'Native coin only',
+      });
+    }
+  });
+});
+
+describe('validateSolMintAddress — UI/UX fixes, item 13', () => {
+  it('accepts the USDC mint', () => {
+    expect(
+      validateSolMintAddress(
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      ),
+    ).toEqual({
+      ok: true,
+      normalized: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     });
   });
 
-  it('has unique token keys', () => {
-    const keys = DEFAULT_TOKENS.map((t) => tokenKey(t.chain, t.contract));
-    expect(new Set(keys).size).toBe(keys.length);
+  it('rejects bad base58, short and over-long mints without touching the network', () => {
+    // A 43-char base58 string can still decode to 32 bytes (the USDC
+    // mint minus its last char does), so the short/over-long cases use
+    // vectors whose decoded byte length is provably wrong: all-'1'
+    // collapses to one zero byte, all-'z' overflows to 33 bytes.
+    for (const bad of [
+      '',
+      '1'.repeat(43),
+      'z'.repeat(45),
+      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1O', // 'O' is not base58
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // an EVM address, not a mint
+    ]) {
+      const result = validateSolMintAddress(bad);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toContain('Solana mint');
+    }
   });
 });
+
+describe('validateTonJettonAddress — UI/UX fixes, item 13', () => {
+  it('accepts the USDT jetton master and the raw form', () => {
+    expect(
+      validateTonJettonAddress(
+        'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      ).ok,
+    ).toBe(true);
+    expect(
+      validateTonJettonAddress(`0:${'ab'.repeat(32)}`).ok,
+    ).toBe(true);
+  });
+
+  it('rejects short, garbage and wrong-prefix addresses', () => {
+    for (const bad of [
+      '',
+      'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sD', // 47 chars
+      'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs!', // '!' is not base64
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // an EVM address
+      '1:ab', // bad workchain/hash shape
+    ]) {
+      const result = validateTonJettonAddress(bad);
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error).toContain('Jetton');
+    }
+  });
+});
+
+describe('validateTokenMetadata — UI/UX fixes, item 13', () => {
+  it('accepts a real non-ASCII symbol (TON USDT is USD₮ on TonAPI)', () => {
+    expect(validateTokenMetadata('Tether USD', 'USD₮', 6)).toBeNull();
+  });
+
+  it('still rejects an empty, whitespace or control-character symbol', () => {
+    expect(validateTokenMetadata('Tether USD', '', 6)).not.toBeNull();
+    expect(validateTokenMetadata('Tether USD', 'US DT', 6)).not.toBeNull();
+    expect(validateTokenMetadata('Tether USD', 'US\u0001DT', 6)).not.toBeNull();
+  });
+});
+
+describe('orderAssetsByBalance', () => {
+  // Item 20: how top wallets order a token list — non-zero balances
+  // first (highest fiat value first), zero balances below in registry
+  // order, nothing hidden when nothing has a balance.
+  const asset = (
+    key: string,
+    hasBalance: boolean,
+    fiatMinorUnits: number | null,
+  ) => ({ key, hasBalance, fiatMinorUnits });
+
+  it('puts non-zero balances first, highest fiat value first', () => {
+    const ordered = orderAssetsByBalance([
+      asset('zero-a', false, null),
+      asset('small', true, 100),
+      asset('big', true, 5000),
+      asset('zero-b', false, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual([
+      'big',
+      'small',
+      'zero-a',
+      'zero-b',
+    ]);
+  });
+
+  it('keeps registry order when nothing has a balance', () => {
+    const ordered = orderAssetsByBalance([
+      asset('first', false, null),
+      asset('second', false, null),
+      asset('third', false, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual(['first', 'second', 'third']);
+  });
+
+  it('puts a non-zero balance without a price above zero balances', () => {
+    const ordered = orderAssetsByBalance([
+      asset('zero', false, null),
+      asset('priceless', true, null),
+    ]);
+    expect(ordered.map((a) => a.key)).toEqual(['priceless', 'zero']);
+  });
+
+  it('does not mutate the input list', () => {
+    const input = [asset('a', true, 1), asset('b', false, null)];
+    const snapshot = [...input];
+    orderAssetsByBalance(input);
+    expect(input).toEqual(snapshot);
+  });
+});
+// Restored from Lane A (uiux-a-layout): unit coverage the B-side
+// rewrite of this file dropped. Lane A tokenStandardFor and
+// DEFAULT_TOKENS describes are NOT restored — B supersedes them
+// (SPL/Jetton support, item 13; 21 default tokens, item 18).
 
 describe('isVerifiedToken', () => {
   // Verified-tick rule (token gaps, item 2): a token is official when it
@@ -343,44 +607,6 @@ describe('validateTokenMetadata', () => {
     expect(validateTokenMetadata('Token', 'TKN', -1)).toContain('decimals');
     expect(validateTokenMetadata('Token', 'TKN', 37)).toContain('decimals');
     expect(validateTokenMetadata('Token', 'TKN', 1.5)).toContain('decimals');
-  });
-});
-
-describe('tokenStandardFor', () => {
-  it('offers ERC-20 on the seven EVM chains', () => {
-    for (const chain of ['eth', 'bsc', 'matic', 'arb', 'op', 'base', 'avax'] as const) {
-      expect(tokenStandardFor(chain)).toEqual({ standard: 'erc20' });
-    }
-  });
-
-  it('offers TRC-20 on TRON', () => {
-    expect(tokenStandardFor('trx')).toEqual({ standard: 'trc20' });
-  });
-
-  it('marks BTC, LTC and DOGE as native-coin only', () => {
-    for (const chain of ['btc', 'ltc', 'doge'] as const) {
-      const result = tokenStandardFor(chain);
-      expect(result).toEqual({
-        standard: null,
-        reason: 'Native coin only',
-      });
-    }
-  });
-
-  it('marks TON Jettons as not supported yet', () => {
-    const result = tokenStandardFor('ton');
-    expect(result.standard).toBeNull();
-    if (result.standard === null) {
-      expect(result.reason).toContain('Jetton');
-    }
-  });
-
-  it('marks Solana SPL tokens as not supported yet', () => {
-    const result = tokenStandardFor('sol');
-    expect(result.standard).toBeNull();
-    if (result.standard === null) {
-      expect(result.reason).toContain('SPL');
-    }
   });
 });
 

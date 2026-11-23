@@ -10,6 +10,9 @@ export const SEND_APPROVAL_STAGES = [
   'signing',
   'signed',
   'broadcast-disabled',
+  // TEMPORARY devnet mode: the signed transaction is broadcasting to
+  // the test network (broadcastSignedDevnet). Mainnet has no such stage.
+  'broadcast-devnet',
 ] as const;
 
 export type SendApprovalStage = (typeof SEND_APPROVAL_STAGES)[number];

@@ -1,17 +1,25 @@
 // Send screen (Phase 4, assembled hands-on from Sol p1/p2/p3/p5 + probes).
-// Multi-step flow: chain → recipient (+QR scanner) → amount/fees → review
+// Multi-step flow: asset (chain + token) → recipient (+QR scanner) → amount/fees → review
 // (Sol p3 SendReview) → offline sign → result. Broadcast is DISABLED until
 // separately authorised: the flow signs offline and stops there. Nothing
 // here broadcasts, and the UI never presents send as working — the review
 // and result both state the broadcast block plainly, and the only action
 // after review is "Sign offline".
+// TEMPORARY devnet mode (owner order 2026-11-22) is the one exception:
+// when devnet is on, the signed transaction broadcasts to the test
+// network via broadcastSignedDevnet. Mainnet still never broadcasts.
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
-import { ensureAdapters, useWallet } from '../state/wallet-context';
+import {
+  ensureAdapters,
+  ensureDevnetAdapters,
+  useWallet,
+} from '../state/wallet-context';
 import { chainConfig, SUPPORTED_CHAINS } from '../wallet/chains';
+import { DEVNET_CHAIN_CONFIGS, devnetChainConfig } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { formatFeePreview } from '../wallet/money';
 import {
@@ -21,8 +29,10 @@ import {
 import {
   DEFAULT_TOKENS,
   isVerifiedToken,
+  orderAssetsByBalance,
   shortContract,
   tokenKey,
+  tokenKeyOf,
   type TokenRecord,
 } from '../wallet/tokens';
 import {
@@ -33,10 +43,12 @@ import {
   signBtcOffline,
   signTrxOffline,
   signTonOffline,
+  broadcastSignedDevnet,
   type SendPreview,
 } from '../wallet/send';
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
-import { getAdapter } from '../wallet/adapters';
+import { getAdapterForMode } from '../wallet/adapters';
+import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
 import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
@@ -50,7 +62,7 @@ import type { ChainId } from '../engine/boundary';
 // pretending to send (token gaps, item 4).
 const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
-type Step = 'recipient' | 'amount' | 'review' | 'result';
+type Step = 'asset' | 'recipient' | 'amount' | 'review' | 'result';
 
 type SignState =
   | { status: 'idle' }
@@ -63,8 +75,16 @@ type SignState =
     }
   | { status: 'error'; reason: string };
 
+// TEMPORARY devnet mode: the outcome of the test-network broadcast after
+// signing. Mainnet never reaches these states.
+type DevnetBroadcastState =
+  | { status: 'idle' }
+  | { status: 'broadcasting' }
+  | { status: 'submitted'; txHash: string; explorerUrl: string }
+  | { status: 'error'; reason: string };
+
 export function SendScreen() {
-  const { vaultState, vaultAddresses, balances, selectedChain, customTokens, tokenBalances } = useWallet();
+  const { vaultState, vaultAddresses, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
   const chainsWithWallet: ChainId[] = SUPPORTED_CHAINS.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
@@ -74,7 +94,7 @@ export function SendScreen() {
       ? selectedChain
       : (chainsWithWallet[0] ?? 'eth'),
   );
-  const [step, setStep] = useState<Step>('recipient');
+  const [step, setStep] = useState<Step>('asset');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -84,6 +104,7 @@ export function SendScreen() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [signState, setSignState] = useState<SignState>({ status: 'idle' });
   const [approvalStage, setApprovalStage] = useState<SendApprovalStage>('review');
+  const [devnetBroadcast, setDevnetBroadcast] = useState<DevnetBroadcastState>({ status: 'idle' });
   const [copied, setCopied] = useState(false);
   // Full asset list (token gaps, item 4): the selected chain's native
   // coin plus its tokens. Token sends are not built (see SIGNING_CHAINS
@@ -126,13 +147,14 @@ export function SendScreen() {
   function selectChain(next: ChainId): void {
     setChain(next);
     setSelectedToken(null);
-    setStep('recipient');
+    setStep('asset');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
     setPreview(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
+    setDevnetBroadcast({ status: 'idle' });
   }
 
   function selectToken(token: TokenRecord | null): void {
@@ -210,7 +232,7 @@ export function SendScreen() {
   }, []);
 
   async function handleRecipientNext(): Promise<void> {
-    const result = await validateRecipient(chain, recipient);
+    const result = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
     if (!result.ok) {
       setRecipientError(result.reason);
       return;
@@ -251,7 +273,7 @@ export function SendScreen() {
       }
     }
     setRecipient(value);
-    const result = await validateRecipient(chain, value);
+    const result = await validateRecipient(chain, value, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
     if (result.ok) setStep('amount');
   }
@@ -279,12 +301,12 @@ export function SendScreen() {
     setPreviewBusy(true);
     try {
       try {
-        await ensureAdapters();
+        await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
       } catch {
         setPreview({ ok: false, code: 'adapter-unavailable', reason: 'Balance adapters could not be loaded. Check your connection and retry.' });
         return;
       }
-      const result = await previewSendAmount(chain, from, recipient, amount);
+      const result = await previewSendAmount(chain, from, recipient, amount, { devnet: devnetEnabled });
       setPreview(result);
       if (result.ok) setStep('review');
     } finally {
@@ -306,14 +328,14 @@ export function SendScreen() {
     if (approvalStage === 'simulating' || approvalStage === 'signing') return;
     if (!preview || !preview.ok) return;
     try {
-      await ensureAdapters();
+      await (devnetEnabled ? ensureDevnetAdapters() : ensureAdapters());
     } catch {
       setSignState({ status: 'error', reason: "We couldn't load this network's balance. Please retry." });
       return;
     }
     const previewOk = preview;
     setApprovalStage('simulating');
-    const simulation = await simulateSend(chain, from, recipient, amount);
+    const simulation = await simulateSend(chain, from, recipient, amount, { devnet: devnetEnabled });
     if (!simulation.ok) {
       setSignState({ status: 'error', reason: simulation.reason });
       setApprovalStage('review');
@@ -324,7 +346,7 @@ export function SendScreen() {
     setSignState({ status: 'signing' });
     try {
       const signed = await withMnemonicAsync(async (mnemonic) => {
-        const adapter = getAdapter(chain);
+        const adapter = getAdapterForMode(chain, devnetEnabled);
         if (!adapter) throw new Error("Sending isn't available for this network.");
         if (chain === 'eth') {
           const inputs = await adapter.getTxInputs(from);
@@ -346,6 +368,7 @@ export function SendScreen() {
             previewOk.amountBaseUnits,
             String(inputs.data.nonce),
             gasPrice,
+            { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
           return {
@@ -371,6 +394,7 @@ export function SendScreen() {
             inputs.data.utxos,
             fee.data.feeBaseUnits,
             from,
+            { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
           return {
@@ -381,7 +405,11 @@ export function SendScreen() {
           };
         }
         if (chain === 'trx') {
-          const header = await getLatestBlockHeader();
+          const header = await getLatestBlockHeader(
+            devnetEnabled
+              ? { baseUrl: DEVNET_CHAIN_CONFIGS.trx.apiBaseUrl }
+              : undefined,
+          );
           if (header.status !== 'ok') throw new Error(header.reason);
           const result = await signTrxOffline(
             mnemonic,
@@ -389,6 +417,7 @@ export function SendScreen() {
             recipient,
             previewOk.amountBaseUnits,
             header.data,
+            { devnet: devnetEnabled },
           );
           if (!result.ok) return result;
           return {
@@ -409,6 +438,7 @@ export function SendScreen() {
           recipient,
           previewOk.amountBaseUnits,
           inputs.data.seqno,
+          { devnet: devnetEnabled },
         );
         if (!result.ok) return result;
         return {
@@ -430,7 +460,33 @@ export function SendScreen() {
       });
       setApprovalStage('signed');
       setStep('result');
-      setApprovalStage('broadcast-disabled');
+      if (devnetEnabled) {
+        // TEMPORARY devnet mode: broadcast the signed transaction to the
+        // test network. broadcastSignedDevnet asserts devnet mode, a
+        // devnet networkId and a non-test provenance before any write.
+        setApprovalStage('broadcast-devnet');
+        setDevnetBroadcast({ status: 'broadcasting' });
+        try {
+          const broadcast = await broadcastSignedDevnet(chain, signed.payload, {
+            devnet: true,
+            messageHash: signed.txHash,
+          });
+          recordPendingBroadcastDevnet({ txHash: broadcast.txHash, chain });
+          setDevnetBroadcast({
+            status: 'submitted',
+            txHash: broadcast.txHash,
+            explorerUrl: broadcast.explorerUrl,
+          });
+        } catch (error) {
+          setDevnetBroadcast({
+            status: 'error',
+            reason:
+              error instanceof Error ? error.message : 'Broadcast failed.',
+          });
+        }
+      } else {
+        setApprovalStage('broadcast-disabled');
+      }
     } catch (error: unknown) {
       setSignState({
         status: 'error',
@@ -468,7 +524,7 @@ export function SendScreen() {
       return;
     }
     void (async () => {
-      const adapter = getAdapter(chain);
+      const adapter = getAdapterForMode(chain, devnetEnabled);
       if (!adapter) {
         if (!cancelled) setFeeEstimate({ ok: false, reason: "A fee estimate isn't available for this network." });
         return;
@@ -484,7 +540,7 @@ export function SendScreen() {
     return () => {
       cancelled = true;
     };
-  }, [step, chain, selectedToken]);
+  }, [step, chain, selectedToken, devnetEnabled]);
 
   // Max preserves the fee reserve. Only ETH has a flat native fee estimate
   // (gasPrice x 21000): BTC quotes a sat/vB rate, TRX quotes SUN per unit
@@ -546,17 +602,20 @@ export function SendScreen() {
           role="note"
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
         >
-          Sending funds is switched off until it is separately approved. This flow signs
-          offline only — nothing here sends cryptocurrency anywhere.
+          {devnetEnabled
+            ? `Devnet test mode — this send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
+            : 'Sending funds is switched off until it is separately approved. This flow signs offline only — nothing here sends cryptocurrency anywhere.'}
         </p>
       </header>
 
       {(() => {
-        const steps = ['Chain', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
+        const steps = ['Asset', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
         const activeIndex =
-          step === 'recipient'
-            ? 1
-            : step === 'amount'
+          step === 'asset'
+            ? 0
+            : step === 'recipient'
+              ? 1
+              : step === 'amount'
               ? 2
               : step === 'review' || step === 'result'
                 ? {
@@ -565,6 +624,7 @@ export function SendScreen() {
                     signing: 4,
                     signed: 5,
                     'broadcast-disabled': 5,
+                    'broadcast-devnet': 5,
                   }[approvalStage]
                 : 5;
         return (
@@ -600,6 +660,8 @@ export function SendScreen() {
         );
       })()}
 
+      {step === 'asset' && (
+        <>
       <div
         role="group"
         aria-label="Chain"
@@ -637,7 +699,20 @@ export function SendScreen() {
           pretending to send it.
         </p>
         <ul className="space-y-2">
-          {[{ token: null as TokenRecord | null }, ...chainTokens.map((token) => ({ token }))]
+          {orderAssetsByBalance([
+            {
+              token: null as TokenRecord | null,
+              hasBalance: balance.status === 'available',
+              fiatMinorUnits: null,
+            },
+            ...chainTokens.map((token) => ({
+              token,
+              hasBalance:
+                ((tokenBalances ?? {})[tokenKeyOf(token)]?.status ??
+                  'unavailable') === 'available',
+              fiatMinorUnits: null as number | null,
+            })),
+          ])
             .map(({ token }) => {
               const selected =
                 token === null
@@ -699,7 +774,24 @@ export function SendScreen() {
             {`Sending on ${config.displayName} isn't available yet. This wallet signs native BTC, ETH, TRX and TON transfers offline only.`}
           </p>
         )}
-      </section>
+        </section>
+        </>
+      )}
+
+      {step !== 'asset' && (
+        <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
+          <span>
+            <span className="font-semibold">
+              {selectedToken === null
+                ? `${config.displayName} · ${config.symbol}`
+                : `${selectedToken.name} · ${selectedToken.symbol}`}
+            </span>
+          </span>
+          <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+            Change
+          </Button>
+        </p>
+      )}
 
       {step === 'recipient' && (
         <section aria-labelledby="send-recipient-heading" className="space-y-4">
@@ -734,6 +826,9 @@ export function SendScreen() {
             )}
           </div>
           <div className="flex flex-wrap gap-3">
+            <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+              Back
+            </Button>
             <Button type="button" onClick={() => void handleRecipientNext()}>
               Continue
             </Button>
@@ -864,19 +959,34 @@ export function SendScreen() {
               CHAIN_DECIMALS[chain],
               config.symbol,
             )}
-            fee={formatNativeWithSymbol(
-              preview.feeBaseUnits,
-              CHAIN_DECIMALS[chain],
-              config.symbol,
-            )}
-            total={formatNativeWithSymbol(
-              preview.totalBaseUnits,
-              CHAIN_DECIMALS[chain],
-              config.symbol,
-            )}
+            fee={
+              preview.feeUnknown
+                ? 'Unknown — charged by the network at broadcast'
+                : formatNativeWithSymbol(
+                    preview.feeBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )
+            }
+            total={
+              preview.feeUnknown
+                ? `${formatNativeWithSymbol(
+                    preview.amountBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )} + network fee`
+                : formatNativeWithSymbol(
+                    preview.totalBaseUnits,
+                    CHAIN_DECIMALS[chain],
+                    config.symbol,
+                  )
+            }
             feeNote={preview.feeNote}
             disabledReason={BROADCAST_DISABLED_MESSAGE}
             stage={approvalStage}
+            devnetNetworkName={
+              devnetEnabled ? devnetChainConfig(chain).devnetName : undefined
+            }
             onBack={() => setStep('amount')}
             onSign={() => void handleSign()}
           />
@@ -906,13 +1016,44 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            Send signed — not sent
+            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed — not sent'}
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            The transaction was signed offline with your vault key. It was
-            not sent anywhere: sending funds is switched off until it is separately
-            approved.
+            {devnetEnabled
+              ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
+              : 'The transaction was signed offline with your vault key. It was not sent anywhere: sending funds is switched off until it is separately approved.'}
           </p>
+          {devnetEnabled && devnetBroadcast.status === 'broadcasting' && (
+            <p aria-live="polite" className="text-sm text-muted-foreground">
+              Broadcasting to the test network…
+            </p>
+          )}
+          {devnetEnabled && devnetBroadcast.status === 'submitted' && (
+            <div className="space-y-2 text-sm">
+              <p className="text-ink">
+                Broadcast submitted — track it on the testnet explorer.
+              </p>
+              <a
+                href={devnetBroadcast.explorerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block break-all font-medium text-primary underline underline-offset-4"
+              >
+                {devnetBroadcast.explorerUrl}
+              </a>
+            </div>
+          )}
+          {devnetEnabled && devnetBroadcast.status === 'error' && (
+            <div role="alert" className="space-y-2 text-sm">
+              <p className="text-ink bawa-squiggle-underline">
+                {devnetBroadcast.reason}
+              </p>
+              <p className="text-muted-foreground">
+                The transaction is signed but was not broadcast. Check the
+                test network first before retrying — never resend blindly.
+              </p>
+            </div>
+          )}
           <dl className="space-y-1 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Transaction</dt>

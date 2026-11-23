@@ -1,13 +1,14 @@
 /**
- * Token identity and the default 20-token list (token discovery).
+ * Token identity and the default token list (token discovery).
  *
  * A token is identified by network + contract, never by symbol alone
- * (docs/12). The 7 default tokens below are the token half of the
- * 20-token default list (13 natives + 7 tokens); the natives come from
- * the chain registry (CHAINS). Contracts were verified twice: in-repo
- * (apps/web/README.md "Token logos") and live against CoinGecko
- * (2026-11-22). Balances are never stored here — only the identity and
- * the CoinGecko id used to price the row.
+ * (docs/12). The 21 default tokens below are the token half of the
+ * default list (22 natives + 21 tokens = 43 rows); the natives come
+ * from the chain registry (CHAINS). Contracts were verified twice:
+ * in-repo (apps/web/README.md "Token logos") and live against
+ * CoinGecko (2026-11-22 for the first 8, 2026-11-23 for the 13
+ * item-18 primaries). Balances are never stored here — only the
+ * identity and the CoinGecko id used to price the row.
  */
 import { getAddress, hexToBytes, isAddress, sha256 } from 'viem';
 import type { ChainId } from '../engine/boundary';
@@ -103,6 +104,134 @@ export const DEFAULT_TOKENS: TokenRecord[] = [
     coingeckoId: 'usd-coin',
     addedAtMs: 0,
   },
+  // Thirteen more primaries (UI/UX fixes, item 18): primary tokens on
+  // more chains. Every contract, name, symbol and decimals below was
+  // verified live 2026-11-23 — on-chain via eth_call on the chain's
+  // pinned RPC (Solana RPC + TonAPI for SPL/Jetton) and against the
+  // CoinGecko contract endpoint for the exact platform + contract.
+  // The CoinGecko id is the contract-specific one: bridged variants
+  // have their own ids (e.g. Optimism USDT is 'bridged-usdt', BSC
+  // USDT is 'binance-bridged-usdt-bnb-smart-chain'), not 'tether'.
+  // On-chain quirks are recorded honestly: Arbitrum USDT0 reports
+  // symbol 'USD₮0'; Avalanche USDT reports name 'TetherToken' and
+  // symbol 'USDt'; BSC USDT has 18 decimals.
+  {
+    chain: 'sol',
+    contract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'ton',
+    contract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+    name: 'Tether USD',
+    symbol: 'USD₮',
+    decimals: 6,
+    coingeckoId: 'tether',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'eth',
+    contract: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    name: 'Wrapped Ether',
+    symbol: 'WETH',
+    decimals: 18,
+    coingeckoId: 'weth',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'matic',
+    contract: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'matic',
+    contract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+    name: 'USDT0',
+    symbol: 'USDT0',
+    decimals: 6,
+    coingeckoId: 'usdt0',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'arb',
+    contract: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'arb',
+    contract: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    name: 'USD₮0',
+    symbol: 'USD₮0',
+    decimals: 6,
+    coingeckoId: 'usdt0',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'op',
+    contract: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'op',
+    contract: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+    name: 'Tether USD',
+    symbol: 'USDT',
+    decimals: 6,
+    coingeckoId: 'bridged-usdt',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'base',
+    contract: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+    name: 'Tether USD',
+    symbol: 'USDT',
+    decimals: 6,
+    coingeckoId: 'l2-standard-bridged-usdt-base',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'avax',
+    contract: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+    name: 'USD Coin',
+    symbol: 'USDC',
+    decimals: 6,
+    coingeckoId: 'usd-coin',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'avax',
+    contract: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+    name: 'TetherToken',
+    symbol: 'USDt',
+    decimals: 6,
+    coingeckoId: 'tether',
+    addedAtMs: 0,
+  },
+  {
+    chain: 'bsc',
+    contract: '0x55d398326f99059fF775485246999027B3197955',
+    name: 'Tether USD',
+    symbol: 'USDT',
+    decimals: 18,
+    coingeckoId: 'binance-bridged-usdt-bnb-smart-chain',
+    addedAtMs: 0,
+  },
 ];
 
 /** Identity key: `${chain}:${contract}` — contract lowercased, TRON included. */
@@ -119,7 +248,7 @@ export function tokenKeyOf(record: TokenRecord): string {
   return tokenKey(record.chain, record.contract);
 }
 
-/** True when the record is one of the 8 verified default tokens. */
+/** True when the record is one of the 21 verified default tokens. */
 export function isDefaultToken(record: TokenRecord): boolean {
   const key = tokenKeyOf(record);
   return DEFAULT_TOKENS.some((candidate) => tokenKeyOf(candidate) === key);
@@ -200,27 +329,35 @@ export const EVM_TOKEN_CHAINS: readonly ChainId[] = [
   'op',
   'base',
   'avax',
+  'gnosis',
+  'celo',
+  'linea',
+  'mantle',
+  'scroll',
+  'opbnb',
+  'metis',
+  'aurora',
+  'fantom',
 ];
 
 export type TokenStandard =
   | { standard: 'erc20' }
   | { standard: 'trc20' }
+  | { standard: 'spl' }
+  | { standard: 'jetton' }
   | { standard: null; reason: string };
 
 /**
- * What kind of token a chain can hold in v1. TON Jettons and Solana SPL
- * tokens are not offered: there is no Jetton/SPL adapter and no metadata
- * path for them yet. BTC/LTC/DOGE have no token standard at all.
+ * What kind of token a chain can hold. Solana SPL tokens verify through
+ * the Solana RPC (mint account + Metaplex metadata + token accounts) and
+ * TON Jettons through TonAPI (UI/UX fixes, item 13). BTC/LTC/DOGE have
+ * no token standard at all.
  */
 export function tokenStandardFor(chain: ChainId): TokenStandard {
   if (EVM_TOKEN_CHAINS.includes(chain)) return { standard: 'erc20' };
   if (chain === 'trx') return { standard: 'trc20' };
-  if (chain === 'ton') {
-    return { standard: null, reason: 'Jettons are not supported yet' };
-  }
-  if (chain === 'sol') {
-    return { standard: null, reason: 'SPL tokens are not supported yet' };
-  }
+  if (chain === 'ton') return { standard: 'jetton' };
+  if (chain === 'sol') return { standard: 'spl' };
   return { standard: null, reason: 'Native coin only' };
 }
 
@@ -328,6 +465,70 @@ export function validateTronContractAddress(address: string): AddressValidation 
 }
 
 /**
+ * Solana mint address: base58, decoding to exactly 32 bytes. No
+ * checksum exists for a mint (base58 only), so a well-formed address
+ * that is not a mint is caught by the on-chain check, not here.
+ */
+export function validateSolMintAddress(address: string): AddressValidation {
+  const decoded = decodeBase58(address);
+  if (decoded === null || decoded.length !== 32) {
+    return {
+      ok: false,
+      error: 'Enter a valid Solana mint address',
+    };
+  }
+  return { ok: true, normalized: address };
+}
+
+/** Base64url → bytes (atob is standard base64 only). Returns null on bad input. */
+function decodeBase64Url(value: string): Uint8Array | null {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  try {
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * TON Jetton master address: the raw form (`0:` + 64 hex chars) or the
+ * user-friendly form (48 base64url chars decoding to 36 bytes: flags
+ * 0x11 bounceable / 0x51 non-bounceable, workchain 0x00 / 0xff, 32-byte
+ * hash, 2-byte CRC). The CRC is not re-checked here — the on-chain
+ * TonAPI lookup is the real check, and a CRC typo fails there.
+ */
+export function validateTonJettonAddress(address: string): AddressValidation {
+  if (/^0:[0-9a-fA-F]{64}$/.test(address)) {
+    return { ok: true, normalized: address };
+  }
+  if (address.length !== 48) {
+    return {
+      ok: false,
+      error: 'Enter a valid TON Jetton master address',
+    };
+  }
+  const decoded = decodeBase64Url(address);
+  if (
+    decoded === null ||
+    decoded.length !== 36 ||
+    (decoded[0] !== 0x11 && decoded[0] !== 0x51) ||
+    (decoded[1] !== 0x00 && decoded[1] !== 0xff)
+  ) {
+    return {
+      ok: false,
+      error: 'Enter a valid TON Jetton master address',
+    };
+  }
+  return { ok: true, normalized: address };
+}
+
+/**
  * On-chain metadata rules (Lane 1 §7.3): name non-empty, symbol 1–11
  * printable chars, decimals an integer 0–36. Returns the specific
  * problem, or null when the metadata is valid.
@@ -344,7 +545,11 @@ export function validateTokenMetadata(
     typeof symbol !== 'string' ||
     symbol.length < 1 ||
     symbol.length > 11 ||
-    !/^[\x20-\x7E]+$/.test(symbol) ||
+    // Printable only: no control characters and no whitespace. Real
+    // symbols are not ASCII-only — TON USDT is 'USD₮' on TonAPI — so
+    // non-ASCII printable characters are accepted.
+    // eslint-disable-next-line no-control-regex
+    /[\u0000-\u001F\u007F]/.test(symbol) ||
     /\s/.test(symbol)
   ) {
     return 'Could not read this token — its symbol is invalid';
@@ -378,8 +583,8 @@ export function addCustomTokenToList(
 // --- Persistence (localStorage, versioned keys, public data only) ---
 // Follows the existing precedent (bawa-watch-only-xpubs,
 // bawa-vault-addresses:v1): versioned JSON, best-effort writes, never
-// secrets. The 7 default tokens are NOT stored here — they live in code
-// so a fresh wallet always loads the 20; this key holds user-added
+// secrets. The 21 default tokens are NOT stored here — they live in code
+// so a fresh wallet always loads the 43; this key holds user-added
 // tokens only.
 
 export const ENABLED_CHAINS_KEY = 'bawa:enabled-chains:v1';
@@ -403,7 +608,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Default (nothing stored): all 13 chains enabled — the default 20-token list is the enabled set. */
+/** Default (nothing stored): all 22 chains enabled — the default 20-token list is the enabled set. */
 export function readEnabledChains(store?: TokenStore): ChainId[] {
   const storage = store ?? defaultStore();
   try {
@@ -482,4 +687,38 @@ export function writeCustomTokens(tokens: readonly TokenRecord[], store?: TokenS
   } catch {
     // Persistence is best-effort; the in-memory list still works.
   }
+}
+
+/**
+ * Sort keys for balance-aware asset ordering (Send / Receive pickers) —
+ * how the top wallets order a token list: non-zero balances first,
+ * highest fiat value first, then zero balances in registry order. Nothing
+ * is hidden when nothing has a balance. Callers pass precomputed keys:
+ * Send/Receive load no price feed, so fiatMinorUnits is null there and
+ * the order is hasBalance, then registry order.
+ */
+export interface BalanceSortKey {
+  hasBalance: boolean;
+  fiatMinorUnits: number | null;
+}
+
+export function orderAssetsByBalance<T extends BalanceSortKey>(
+  assets: readonly T[],
+): T[] {
+  return [...assets]
+    .map((asset, index) => ({ asset, index }))
+    .sort((a, b) => {
+      if (a.asset.hasBalance !== b.asset.hasBalance) {
+        return a.asset.hasBalance ? -1 : 1;
+      }
+      const aFiat = a.asset.fiatMinorUnits;
+      const bFiat = b.asset.fiatMinorUnits;
+      if (aFiat !== null && bFiat !== null && aFiat !== bFiat) {
+        return bFiat - aFiat;
+      }
+      if (aFiat !== null && bFiat === null) return -1;
+      if (aFiat === null && bFiat !== null) return 1;
+      return a.index - b.index;
+    })
+    .map(({ asset }) => asset);
 }

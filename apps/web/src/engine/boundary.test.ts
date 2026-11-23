@@ -515,3 +515,32 @@ describe('SOL watch-only address validation', () => {
     await expect(deriveAddress('sol', address, 1)).rejects.toThrow();
   });
 });
+
+describe('validateTonAddress devnet (temporary devnet mode)', () => {
+  it('accepts testnet-flagged addresses in devnet mode', () => {
+    expect(
+      validateTonAddress('kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo', {
+        devnet: true,
+      }),
+    ).toMatchObject({ ok: true, form: 'bounceable', workchain: 0 });
+    expect(
+      validateTonAddress('0QAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-akS', {
+        devnet: true,
+      }),
+    ).toMatchObject({ ok: true, form: 'non-bounceable', workchain: 0 });
+  });
+
+  it('rejects mainnet addresses in devnet mode', () => {
+    expect(
+      validateTonAddress('UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn', {
+        devnet: true,
+      }),
+    ).toMatchObject({ ok: false, reason: 'wrong-network' });
+  });
+
+  it('still rejects testnet addresses without the devnet flag', () => {
+    expect(
+      validateTonAddress('kQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD5qo'),
+    ).toMatchObject({ ok: false, reason: 'wrong-network' });
+  });
+});

@@ -8,6 +8,7 @@ import {
   fetchJson,
   httpFetchTransport,
   TON_WALLET_VERSIONS,
+  tryEndpoints,
   type AdapterResult,
   type AdapterBalance,
   type ChainAdapter,
@@ -222,5 +223,46 @@ describe('adapter registry', () => {
     expect(getAdapter('eth')?.networkId).toBe('eip155:1');
     expect(registeredChains()).toContain('eth');
     expect(getAdapter('btc')).toBeUndefined();
+  });
+});
+
+describe('tryEndpoints — RPC failover (UI/UX fixes, item 19)', () => {
+  it('returns the first endpoint that succeeds', async () => {
+    const attempt = vi.fn(async (endpoint: string) => {
+      if (endpoint === 'https://a.invalid') throw new Error('a down');
+      return `ok:${endpoint}`;
+    });
+    const result = await tryEndpoints(
+      ['https://a.invalid', 'https://b.invalid'],
+      attempt,
+    );
+    expect(result).toEqual({ result: 'ok:https://b.invalid', endpoint: 'https://b.invalid' });
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns the first endpoint without trying the rest', async () => {
+    const attempt = vi.fn(async (endpoint: string) => `ok:${endpoint}`);
+    const result = await tryEndpoints(
+      ['https://a.invalid', 'https://b.invalid'],
+      attempt,
+    );
+    expect(result.endpoint).toBe('https://a.invalid');
+    expect(attempt).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws the last error when every endpoint fails', async () => {
+    const attempt = vi.fn(async (endpoint: string) => {
+      throw new Error(`down: ${endpoint}`);
+    });
+    await expect(
+      tryEndpoints(['https://a.invalid', 'https://b.invalid'], attempt),
+    ).rejects.toThrow('down: https://b.invalid');
+    expect(attempt).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws on an empty endpoint list', async () => {
+    await expect(tryEndpoints([], async () => 'x')).rejects.toThrow(
+      /no .*endpoint/i,
+    );
   });
 });

@@ -34,6 +34,15 @@ const CHAINS = {
   op: { displayName: 'OP Mainnet', symbol: 'ETH' },
   base: { displayName: 'Base', symbol: 'ETH' },
   avax: { displayName: 'Avalanche C-Chain', symbol: 'AVAX' },
+  gnosis: { displayName: 'Gnosis', symbol: 'XDAI' },
+  celo: { displayName: 'Celo', symbol: 'CELO' },
+  linea: { displayName: 'Linea', symbol: 'ETH' },
+  mantle: { displayName: 'Mantle', symbol: 'MNT' },
+  scroll: { displayName: 'Scroll', symbol: 'ETH' },
+  opbnb: { displayName: 'opBNB', symbol: 'BNB' },
+  metis: { displayName: 'Metis', symbol: 'METIS' },
+  aurora: { displayName: 'Aurora', symbol: 'ETH' },
+  fantom: { displayName: 'Fantom', symbol: 'FTM' },
   ltc: { displayName: 'Litecoin', symbol: 'LTC' },
   doge: { displayName: 'Dogecoin', symbol: 'DOGE' },
 } as const;
@@ -55,6 +64,15 @@ function balancesFor(
     op: { status: 'unavailable', reason: 'no-adapter' },
     base: { status: 'unavailable', reason: 'no-adapter' },
     avax: { status: 'unavailable', reason: 'no-adapter' },
+    gnosis: { status: 'unavailable', reason: 'no-adapter' },
+    celo: { status: 'unavailable', reason: 'no-adapter' },
+    linea: { status: 'unavailable', reason: 'no-adapter' },
+    mantle: { status: 'unavailable', reason: 'no-adapter' },
+    scroll: { status: 'unavailable', reason: 'no-adapter' },
+    opbnb: { status: 'unavailable', reason: 'no-adapter' },
+    metis: { status: 'unavailable', reason: 'no-adapter' },
+    aurora: { status: 'unavailable', reason: 'no-adapter' },
+    fantom: { status: 'unavailable', reason: 'no-adapter' },
     ltc: { status: 'unavailable', reason: 'no-adapter' },
     doge: { status: 'unavailable', reason: 'no-adapter' },
   };
@@ -374,6 +392,43 @@ describe('dashboard screen', () => {
       expect(mounted.div.textContent).toContain('Price error');
       expect(mounted.div.textContent).toContain('$0.00');
       expect(mounted.div.textContent).not.toContain('$62,683.00');
+    } finally {
+      vi.unstubAllGlobals();
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows balance, fiat value and per-unit price on a non-zero row', async () => {
+    // Item 12: a funded row must show all three — the balance (0.5 BTC),
+    // its current value ($31,341.50) and the current price per unit
+    // ($62,683.00, labelled per BTC). The row is named Bitcoin, not just
+    // BTC: OP Mainnet and Base natives are ETH too, so the symbol alone
+    // cannot tell them apart.
+    window.localStorage.clear();
+    setWallet(
+      balancesFor({
+        btc: { status: 'available', value: '50000000' },
+        eth: { status: 'zero', value: '0' },
+        trx: { status: 'zero', value: '0' },
+        ton: { status: 'zero', value: '0' },
+      }),
+    );
+    stubPriceFetch({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickRefreshPrices(mounted);
+      const rows = [...mounted.div.querySelectorAll('[data-slot="asset-row"]')];
+      const btcRow = rows.find((row) => row.textContent?.includes('0.5 BTC'));
+      expect(btcRow).not.toBeUndefined();
+      expect(btcRow?.textContent).toContain('0.5 BTC');
+      expect(btcRow?.textContent).toContain('$31,341.50');
+      expect(btcRow?.textContent).toContain('$62,683.00');
+      expect(btcRow?.textContent).toContain('per BTC');
+      expect(btcRow?.textContent).toContain('Bitcoin');
     } finally {
       vi.unstubAllGlobals();
       await mounted.cleanup();
@@ -1026,4 +1081,30 @@ describe('dashboard screen', () => {
       await mounted.cleanup();
     }
   });
+
+  it('never fetches mainnet prices and shows no Testnet label in devnet mode', async () => {
+    setWallet(
+      balancesFor({
+        btc: { status: 'zero', value: '0' },
+        eth: { status: 'available', value: '1500000000000000000' },
+      }),
+      { devnetEnabled: true },
+    );
+    const mounted = await mountScreen();
+    try {
+      const text = mounted.div.textContent ?? '';
+      // Real balances from the context, formatted from base units.
+      expect(text).toContain('1.5 ETH');
+      expect(text).toContain('Zero balance');
+      // Devnet tokens have no market price: the price feed is never hit.
+      expect(fetchMock).not.toHaveBeenCalled();
+      // The dashboard itself never invents a testnet label; the only
+      // devnet marker is the app header pill.
+      expect(text).not.toContain('Testnet');
+      expect(text).not.toContain('TESTNET');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });
+

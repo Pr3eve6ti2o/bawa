@@ -16,12 +16,15 @@
 // -> switch to the requested chain -> open the Send screen) and the
 // erc681.org adoption audit (native + ERC-20 transfer only; any other
 // function name is rejected) — see WORK-LOG.md.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildBawaSendLink,
   buildPaymentUri,
   parseBawaSendLink,
   parsePaymentUri,
+  qrSvgToPngBlob,
+  qrSvgToPngFile,
+  type QrRenderDeps,
 } from './payment-links';
 
 describe('buildPaymentUri — BIP-21 (BTC, LTC, DOGE)', () => {
@@ -334,5 +337,138 @@ describe('Bawa web send link', () => {
   it('returns null for a link without a recipient', () => {
     expect(parseBawaSendLink('?chain=eth&amount=1')).toBeNull();
     expect(parseBawaSendLink('')).toBeNull();
+  });
+});
+
+describe('qrSvgToPngFile — sharing the QR as an image (UI/UX fixes, item 4)', () => {
+  const SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" fill="#FFFDF7"/><rect x="10" y="10" width="20" height="20" fill="#2B2B2B"/></svg>';
+
+  // Fake render deps: jsdom has no canvas and its Image never loads, so
+  // the tests inject fakes shaped like the browser objects the helper
+  // uses. The production call site uses the real browser globals.
+  function fakeDeps(overrides: Partial<QrRenderDeps> = {}): {
+    deps: QrRenderDeps;
+    drawImage: ReturnType<typeof vi.fn>;
+    fillRect: ReturnType<typeof vi.fn>;
+    toBlob: ReturnType<typeof vi.fn>;
+    lastSrc: string;
+  } {
+    const drawImage = vi.fn();
+    const fillRect = vi.fn();
+    const toBlob = vi.fn((callback: (blob: Blob | null) => void) => {
+      callback(new Blob(['\x89PNG fake-bytes'], { type: 'image/png' }));
+    });
+    let lastSrc = '';
+    const image = {
+      onload: null as (() => void) | null,
+      onerror: null as (() => void) | null,
+      width: 192,
+      height: 192,
+      set src(value: string) {
+        lastSrc = value;
+        // Loading an image URL is async in a browser; fire onload on
+        // the next microtask so the helper's promise machinery is
+        // exercised.
+        queueMicrotask(() => {
+          image.onload?.();
+        });
+      },
+    };
+    const deps: QrRenderDeps = {
+      createCanvas: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({
+          fillStyle: '',
+          fillRect,
+          drawImage,
+        }),
+        toBlob: (callback: (blob: Blob | null) => void) => {
+          toBlob(callback);
+        },
+      }),
+      createImage: () => image,
+      ...overrides,
+    };
+    return { deps, drawImage, fillRect, toBlob, get lastSrc() { return lastSrc; } };
+  }
+
+  it('renders the SVG to a PNG file with the requested name', async () => {
+    const { deps, drawImage } = fakeDeps();
+    const file = await qrSvgToPngFile(SVG, 'bawa-receive-eth.png', 512, deps);
+    expect(file).toBeInstanceOf(File);
+    expect(file.name).toBe('bawa-receive-eth.png');
+    expect(file.type).toBe('image/png');
+    expect(file.size).toBeGreaterThan(0);
+    expect(drawImage).toHaveBeenCalledTimes(1);
+    // The QR is drawn scaled to the requested pixel size.
+    const args = drawImage.mock.calls[0]!;
+    expect(args[1]).toBe(0);
+    expect(args[2]).toBe(0);
+    expect(args[3]).toBe(512);
+    expect(args[4]).toBe(512);
+  });
+
+  it('paints the paper background first so the QR stays scannable', async () => {
+    const { deps, fillRect } = fakeDeps();
+    await qrSvgToPngBlob(SVG, 256, deps);
+    expect(fillRect).toHaveBeenCalledTimes(1);
+    expect(fillRect).toHaveBeenCalledWith(0, 0, 256, 256);
+  });
+
+  it('rejects a blank SVG instead of sharing an empty image', async () => {
+    const { deps } = fakeDeps();
+    await expect(qrSvgToPngBlob('   ', 512, deps)).rejects.toThrow(
+      'no QR image',
+    );
+    await expect(qrSvgToPngBlob('<div>not svg</div>', 512, deps)).rejects.toThrow(
+      'no QR image',
+    );
+  });
+
+  it('rejects when the canvas has no 2d context', async () => {
+    const { deps } = fakeDeps({
+      createCanvas: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => null,
+        toBlob: () => {},
+      }),
+    });
+    await expect(qrSvgToPngBlob(SVG, 512, deps)).rejects.toThrow(
+      'could not be rendered',
+    );
+  });
+
+  it('loads the SVG from a data URL, not a blob URL', async () => {
+    // CDP 2026-11-23: a blob-URL SVG hangs in headless Chromium (neither
+    // onload nor onerror), so the helper must load from a data URL.
+    const fakes = fakeDeps();
+    await qrSvgToPngBlob(SVG, 512, fakes.deps);
+    expect(fakes.lastSrc.startsWith('data:image/svg+xml')).toBe(true);
+    expect(decodeURIComponent(fakes.lastSrc)).toContain('<svg');
+  });
+
+  it('rejects when the SVG image fails to load', async () => {
+    const { deps } = fakeDeps({
+      createImage: () => {
+        const image = {
+          onload: null as (() => void) | null,
+          onerror: null as (() => void) | null,
+          width: 0,
+          height: 0,
+          set src(_value: string) {
+            queueMicrotask(() => {
+              image.onerror?.();
+            });
+          },
+        };
+        return image;
+      },
+    });
+    await expect(qrSvgToPngBlob(SVG, 512, deps)).rejects.toThrow(
+      'could not be loaded',
+    );
   });
 });

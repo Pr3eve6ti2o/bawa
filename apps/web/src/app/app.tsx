@@ -113,6 +113,69 @@ function HomeScreen() {
   return vaultState === 'no-vault' ? <WelcomeScreen /> : <DashboardScreen />;
 }
 
+// The header network pill (UI/UX fixes, item 2): the Mainnet/Devnet
+// indicator in the app header is a button, not a label. Tapping it
+// switches the wallet between mainnet and devnet — the same mode flag
+// the Networks screen's DevnetSetting switch flips — and back again.
+// Same pill look, same place, no restyle: the button keeps the exact
+// classes the old span had. Used in both headers (desktop + mobile).
+//
+// Disabled with no vault (the DevnetSetting rule: there is nothing to
+// re-derive). A failed toggle is announced to assistive technology and
+// kept on the button's title; the visible error copy lives on the
+// Networks screen's DevnetSetting, which shows the same failure.
+export function NetworkModePill() {
+  const { vaultState, devnetEnabled, setDevnetEnabled } = useWallet();
+  const [isToggling, setIsToggling] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const hasVault = vaultState !== 'no-vault';
+  const disabled = !hasVault || isToggling;
+
+  async function handleToggle() {
+    if (disabled) return;
+    setActionError(null);
+    setIsToggling(true);
+    try {
+      await setDevnetEnabled(!devnetEnabled);
+    } catch (error: unknown) {
+      setActionError(
+        error instanceof Error ? error.message : String(error),
+      );
+    } finally {
+      setIsToggling(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-pressed={devnetEnabled}
+        aria-label={devnetEnabled ? 'Switch to mainnet' : 'Switch to devnet'}
+        title={
+          actionError ??
+          (devnetEnabled
+            ? 'Devnet test mode — tap to switch back to mainnet'
+            : 'Mainnet — tap to switch to devnet test mode')
+        }
+        disabled={disabled}
+        onClick={() => {
+          void handleToggle();
+        }}
+        className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink disabled:opacity-60"
+      >
+        {devnetEnabled ? 'Devnet — test mode' : 'Mainnet'}
+      </button>
+      {actionError !== null && (
+        <span role="alert" className="sr-only">
+          {actionError}
+        </span>
+      )}
+    </>
+  );
+}
+
 function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -184,7 +247,7 @@ function AppLayout() {
   const isWideAtLg = ['/create-wallet', '/security', '/lock'].includes(pathname);
 
   return (
-    <div className="min-h-screen bg-paper sm:py-6 lg:py-0">
+    <div className="min-h-dvh bg-paper sm:py-6 lg:py-0">
       {/* Desktop shell is full-bleed at lg: below lg the app is a centred
           430px phone frame, but at lg the frame used to cap at 1440px, so
           on a 1919px viewport the content column sat in the left ~1230px
@@ -192,7 +255,7 @@ function AppLayout() {
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never
           bound there. */}
-      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-screen">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-paper text-ink sm:min-h-[720px] sm:rounded-bawa sm:border-2 sm:border-ink lg:max-w-none lg:flex-row lg:rounded-none lg:border-0 lg:min-h-dvh">
         {!isFocusedFlow && (
           <aside
             className={
@@ -209,7 +272,7 @@ function AppLayout() {
                 computes overflow-x to auto, so any child a pixel wider
                 than the sidebar would bring back the horizontal
                 scrollbar. Vertical scrolling is unchanged. */}
-            <div className="sticky top-0 flex h-screen flex-col overflow-x-hidden overflow-y-auto">
+            <div className="sticky top-0 flex h-dvh flex-col overflow-x-hidden overflow-y-auto">
               <SidebarNav
                 collapsed={sidebarCollapsed}
                 onToggleCollapse={() =>
@@ -231,9 +294,7 @@ function AppLayout() {
             >
               {vaultState === 'no-vault' ? 'No wallet' : 'Account 01'} &#8250;
             </Link>
-            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              Mainnet
-            </span>
+            <NetworkModePill />
           </header>
 
           <header className="flex items-center justify-between gap-3 px-5 pb-4 pt-5 lg:hidden">
@@ -255,9 +316,7 @@ function AppLayout() {
                 </Link>
               </div>
             </div>
-            <span className="flex h-6 shrink-0 items-center rounded-bawa-sm border-2 border-ink bg-sun px-3 text-[10px] font-bold text-ink">
-              Mainnet
-            </span>
+            <NetworkModePill />
           </header>
 
           {/* Mobile bottom padding must clear the sticky bottom nav

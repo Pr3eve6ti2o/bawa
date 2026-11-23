@@ -263,7 +263,10 @@ describe('ton adapter — fee, seqno, broadcast', () => {
   });
 
   it('returns the wallet seqno from runGetMethod', async () => {
-    mockRpcSequence([MASTERCHAIN, { stack: [['num', '0x1a']] }]);
+    mockRpcSequence([
+      MASTERCHAIN,
+      { exit_code: 0, stack: [['num', '0x1a']] },
+    ]);
     const adapter = createTonAdapter();
     const result = await adapter.getTxInputs(ADDRESS);
     expect(result.status).toBe('ok');
@@ -275,12 +278,65 @@ describe('ton adapter — fee, seqno, broadcast', () => {
   it('seqno 0 is a valid seqno, never a missing value (item 3 regression)', async () => {
     // A fresh wallet has seqno 0. The ton 16.3.0 validUntil regression was
     // exactly this: seqno 0 treated as absent/bogus. It must parse to 0.
-    mockRpcSequence([MASTERCHAIN, { stack: [['num', '0x0']] }]);
+    mockRpcSequence([
+      MASTERCHAIN,
+      { exit_code: 0, stack: [['num', '0x0']] },
+    ]);
     const adapter = createTonAdapter();
     const result = await adapter.getTxInputs(ADDRESS);
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
       expect(result.data).toEqual({ kind: 'seqno', seqno: 0, walletVersion: 'v4r2' });
+    }
+  });
+
+  it('returns seqno 0 for an uninitialized wallet whose seqno run fails', async () => {
+    // Live devnet finding (Lane D, 2026-11-22): TonCenter answers
+    // runGetMethod seqno on an uninitialized wallet with ok:true but
+    // exit_code -13 and a garbage stack (0x14c97). The stack value is
+    // meaningless on a failed run and must never be read as a seqno —
+    // the wallet was signed with seqno 85143 and the network rejected
+    // the message. An uninitialized account has seqno 0 by definition.
+    mockRpcSequence([
+      MASTERCHAIN,
+      { exit_code: -13, stack: [['num', '0x14c97']] },
+      { state: 'uninitialized' },
+    ]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data).toEqual({ kind: 'seqno', seqno: 0, walletVersion: 'v4r2' });
+    }
+  });
+
+  it('rejects a failed seqno run when the account is active', async () => {
+    // A failed run on an active account is a real error, not a fresh
+    // wallet: the original invalid-response error is surfaced.
+    mockRpcSequence([
+      MASTERCHAIN,
+      { exit_code: -13, stack: [['num', '0x14c97']] },
+      { state: 'active' },
+    ]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/Invalid response/);
+    }
+  });
+
+  it('rejects a failed seqno run when the account state cannot be read', async () => {
+    mockRpcSequence([
+      MASTERCHAIN,
+      { exit_code: -13, stack: [['num', '0x14c97']] },
+      {},
+    ]);
+    const adapter = createTonAdapter();
+    const result = await adapter.getTxInputs(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') {
+      expect(result.reason).toMatch(/Invalid response/);
     }
   });
 
@@ -368,11 +424,63 @@ describe('ton adapter — retry (item 2)', () => {
   });
 
   it('does not retry a terminal 404', async () => {
-    const fetchMock = mockFetchRawSequence([okRpc(MASTERCHAIN), http404()]);
+    const fetchMock = mockFetchRawSequence([
+      okRpc(MASTERCHAIN),
+      http404(),
+      http404(),
+    ]);
     const adapter = createTonAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
-    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // 1 identity + 1 TonCenter balance attempt + 1 TonAPI fallback
+    // attempt: a 404 is terminal, never retried — the TonAPI call is a
+    // different endpoint, not a retry of the same one.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('ton adapter — TonAPI balance fallback (UI/UX fixes, item 19)', () => {
+  const TONAPI = 'https://tonapi.invalid';
+
+  /** TonCenter is down; TonAPI answers the account + head reads. */
+  function mockTonApiFallback(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url.startsWith('https://toncenter.com')) {
+          throw new Error('Network error: toncenter down');
+        }
+        if (url.startsWith(`${TONAPI}/v2/accounts/`)) {
+          return { ok: true, status: 200, json: async () => ({ balance: '987654321' }) };
+        }
+        if (url.startsWith(`${TONAPI}/v2/blockchain/masterchain-head`)) {
+          return { ok: true, status: 200, json: async () => ({ seqno: 107174694 }) };
+        }
+        throw new Error(`unexpected url ${url}`);
+      }),
+    );
+  }
+
+  it('loads a balance through TonAPI when TonCenter is down', async () => {
+    mockTonApiFallback();
+    const adapter = createTonAdapter({ tonApiBaseUrl: TONAPI });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('987654321');
+      expect(result.data.source).toBe('tonapi');
+    }
+  });
+
+  it('errors when TonCenter and TonAPI are both down', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('Network error: all endpoints down');
+      }),
+    );
+    const adapter = createTonAdapter({ tonApiBaseUrl: TONAPI });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
   });
 });

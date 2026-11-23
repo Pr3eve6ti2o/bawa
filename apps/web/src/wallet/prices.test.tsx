@@ -37,6 +37,13 @@ function freshPayload(ageMs = 30_000): Record<string, { usd: number; last_update
     'avalanche-2': { usd: 25, last_updated_at: secondsBefore(ageMs) },
     litecoin: { usd: 80, last_updated_at: secondsBefore(ageMs) },
     dogecoin: { usd: 0.15, last_updated_at: secondsBefore(ageMs) },
+    // UI/UX fixes item 14 (2026-11-23): live-verified CoinGecko ids
+    // and prices for the nine new chains (probed 2026-11-23).
+    xdai: { usd: 0.999932, last_updated_at: secondsBefore(ageMs) },
+    celo: { usd: 0.054041, last_updated_at: secondsBefore(ageMs) },
+    mantle: { usd: 0.387288, last_updated_at: secondsBefore(ageMs) },
+    'metis-token': { usd: 2.18, last_updated_at: secondsBefore(ageMs) },
+    fantom: { usd: 0.02543893, last_updated_at: secondsBefore(ageMs) },
   };
 }
 
@@ -467,7 +474,7 @@ describe('fetchPrices', () => {
     vi.unstubAllGlobals();
   });
 
-  it('fetches all thirteen fresh prices in one batch without a demo key', async () => {
+  it('fetches all twenty-two fresh prices in one batch without a demo key', async () => {
     vi.stubEnv('VITE_COINGECKO_DEMO_KEY', '');
     try {
       const calls: Array<{ url: string; init: unknown }> = [];
@@ -485,14 +492,14 @@ describe('fetchPrices', () => {
       expect(calls).toHaveLength(1);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(calls[0]!.url).toBe(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin&vs_currencies=usd&include_last_updated_at=true',
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tron,the-open-network,solana,binancecoin,polygon-ecosystem-token,avalanche-2,litecoin,dogecoin,xdai,celo,mantle,metis-token,fantom&vs_currencies=usd&include_last_updated_at=true',
       );
       const headers = (
         calls[0]!.init as { headers: Record<string, string> }
       ).headers;
       expect(headers['Accept']).toBe('application/json');
       expect(headers).not.toHaveProperty('x-cg-demo-api-key');
-      expect(Object.values(prices)).toHaveLength(13);
+      expect(Object.values(prices)).toHaveLength(22);
       for (const price of Object.values(prices)) {
         expect(price).toMatchObject({ status: 'fresh' });
       }
@@ -528,7 +535,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -547,7 +554,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -566,7 +573,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -582,7 +589,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -598,7 +605,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -619,7 +626,7 @@ describe('fetchPrices', () => {
     const prices = await fetchPrices(fetchFn as unknown as typeof fetch, NOW_MS);
 
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(Object.values(prices)).toHaveLength(13);
+    expect(Object.values(prices)).toHaveLength(22);
     for (const price of Object.values(prices)) {
       expect(price).toMatchObject({
         status: 'error',
@@ -752,7 +759,7 @@ describe('portfolioTotal', () => {
   const fresh = parsePriceResponse(freshPayload(), NOW_MS);
   const expired = parsePriceResponse(freshPayload(11 * 60 * 1000), NOW_MS);
   const zero = { status: 'zero' } as const;
-  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero, sol: zero, bsc: zero, matic: zero, arb: zero, op: zero, base: zero, avax: zero, ltc: zero, doge: zero };
+  const zeros = { btc: zero, eth: zero, trx: zero, ton: zero, sol: zero, bsc: zero, matic: zero, arb: zero, op: zero, base: zero, avax: zero, gnosis: zero, celo: zero, linea: zero, mantle: zero, scroll: zero, opbnb: zero, metis: zero, aurora: zero, fantom: zero, ltc: zero, doge: zero };
   const btc = { status: 'available', value: '100000000' } as const;
   const eth = { status: 'available', value: '1500000000000000000' } as const;
 
@@ -996,7 +1003,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(13);
+      expect(entries).toHaveLength(22);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'fresh' });
       expect(Number.isFinite(latest!.state.lastFetchedAtMs)).toBe(true);
     } finally {
@@ -1005,6 +1012,8 @@ describe('usePrices', () => {
   });
 
   it('reports network errors when fetch throws', async () => {
+    // No previous quotes: the refresh must settle with network errors.
+    localStorage.removeItem(PRICE_CACHE_KEY);
     const stub = vi.fn(async () => { throw new Error('down'); });
     vi.stubGlobal('fetch', stub);
     const { cleanup } = await mount();
@@ -1017,7 +1026,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(13);
+      expect(entries).toHaveLength(22);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
       expect(stub).toHaveBeenCalledTimes(3);
     } finally {
@@ -1041,6 +1050,8 @@ describe('usePrices', () => {
   });
 
   it('reports network errors when fetch is unavailable', async () => {
+    // No previous quotes: the refresh must settle with network errors.
+    localStorage.removeItem(PRICE_CACHE_KEY);
     vi.stubGlobal('fetch', undefined);
     delete (globalThis as Record<string, unknown>).fetch;
     const { cleanup } = await mount();
@@ -1048,7 +1059,7 @@ describe('usePrices', () => {
       await act(async () => { latest?.refresh(); });
       expect(latest!.state.status).toBe('ready');
       const entries = Object.values(latest!.state.entries);
-      expect(entries).toHaveLength(13);
+      expect(entries).toHaveLength(22);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
     } finally {
       await cleanup();
@@ -1184,7 +1195,7 @@ describe('usePrices', () => {
       });
 
       expect(latest!.state.status).toBe('ready');
-      expect(Object.values(latest!.state.entries)).toHaveLength(13);
+      expect(Object.values(latest!.state.entries)).toHaveLength(22);
       for (const entry of Object.values(latest!.state.entries)) {
         expect(entry).toMatchObject({
           status: 'error',
@@ -1206,6 +1217,55 @@ describe('usePrices', () => {
     }
   });
 
+  it('keeps the last good quotes when a refresh ends rate-limited', async () => {
+    // Item 11/12: a 429 after a good load used to blank every price on
+    // screen ("Price error" on all rows). The settled quotes stay until
+    // a newer fetch replaces them.
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshPayload();
+      const expected = parsePriceResponse(payload, NOW_MS);
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          headers: { get: () => null },
+        })
+        .mockResolvedValue({
+          ok: false,
+          status: 429,
+          headers: { get: () => '30' },
+        });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+      expect(fetchStub).toHaveBeenCalledTimes(4);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
   it('accepts a mixed fresh/unavailable result without retrying', async () => {
     localStorage.removeItem(PRICE_CACHE_KEY);
     let cleanup: (() => void | Promise<void>) | undefined;
@@ -1217,7 +1277,7 @@ describe('usePrices', () => {
       const mixed = parsePriceResponse(payload, NOW_MS);
       expect(
         Object.values(mixed).filter((entry) => entry.status === 'fresh'),
-      ).toHaveLength(12);
+      ).toHaveLength(21);
       expect(
         Object.values(mixed).filter(
           (entry) => entry.status === 'unavailable',
@@ -1281,6 +1341,87 @@ describe('usePrices', () => {
       } finally {
         localStorage.removeItem(PRICE_CACHE_KEY);
       }
+    }
+  });
+});
+
+describe('usePrices devnet (temporary devnet mode)', () => {
+  let devnetLatest: ReturnType<typeof usePrices> | null = null;
+
+  function ProbeDevnet(): null {
+    devnetLatest = usePrices({ devnet: true });
+    return null;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    devnetLatest = null;
+    localStorage.clear();
+    vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  async function mountDevnet() {
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+    const root = createRoot(div);
+    await act(async () => {
+      root.render(<ProbeDevnet />);
+    });
+    return {
+      div,
+      root,
+      cleanup: async () => {
+        await act(async () => {
+          root.unmount();
+        });
+        div.remove();
+      },
+    };
+  }
+
+  it('never loads cached mainnet prices and never fetches in devnet mode', async () => {
+    // Seed a fresh mainnet cache: the normal probe would show it.
+    saveCachedPrices(parsePriceResponse(freshPayload(), NOW_MS), NOW_MS);
+    expect(loadCachedPrices(NOW_MS)).not.toBeNull();
+    const stub = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => freshPayload(),
+      headers: { get: () => null },
+    }));
+    vi.stubGlobal('fetch', stub);
+    const { cleanup } = await mountDevnet();
+    try {
+      expect(devnetLatest!.state).toMatchObject({
+        status: 'idle',
+        lastFetchedAtMs: null,
+      });
+      for (const entry of Object.values(devnetLatest!.state.entries)) {
+        expect(entry).toMatchObject({
+          status: 'unavailable',
+          reason: 'missing',
+        });
+      }
+      await act(async () => {
+        devnetLatest?.refresh();
+        await Promise.resolve();
+      });
+      expect(stub).not.toHaveBeenCalled();
+      expect(devnetLatest!.state.status).toBe('idle');
+      for (const entry of Object.values(devnetLatest!.state.entries)) {
+        expect(entry).toMatchObject({
+          status: 'unavailable',
+          reason: 'missing',
+        });
+      }
+    } finally {
+      await cleanup();
     }
   });
 });

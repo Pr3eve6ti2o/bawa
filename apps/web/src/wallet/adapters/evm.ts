@@ -21,12 +21,16 @@ import type { ChainId } from '../../engine/boundary';
 import {
   assertNetworkId,
   BROADCAST_DISABLED_MESSAGE,
+  endpointHost,
   httpFetchTransport,
+  resolveEndpoints,
   toAdapterError,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
+  type BroadcastResult,
   type ChainAdapter,
+  type EndpointList,
   type FeeEstimate,
   type FetchTransport,
   type TxInput,
@@ -51,9 +55,25 @@ export interface EvmAdapterConfig {
 export interface EvmAdapterOverrides {
   client?: PublicClient;
   rpcUrl?: string;
+  /**
+   * Ordered RPC list, or a resolver re-read on every call (the RPC
+   * manager in Networks writes the owner's list to localStorage; the
+   * adapter picks it up without being rebuilt). Defaults to [rpcUrl].
+   */
+  rpcUrls?: EndpointList;
   historyBaseUrl?: string;
   /** Injectable transport for the Blockscout history read. */
   transport?: FetchTransport;
+  /**
+   * Devnet overrides (temporary devnet mode, via eth.ts): the network
+   * id, the chain id the identity check pins, the explorer base for
+   * history links, and the devnet broadcast. Unset, the adapter is
+   * the configured mainnet adapter exactly as before.
+   */
+  networkId?: string;
+  evmChainId?: number;
+  historyExplorerBase?: string;
+  broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,45 +85,92 @@ export function createEvmAdapter(
   overrides: EvmAdapterOverrides = {},
 ): ChainAdapter {
   const rpcUrl = overrides.rpcUrl ?? config.rpcUrl;
-  const client: PublicClient =
-    overrides.client ??
-    createPublicClient({
-      chain: defineChain({
-        id: config.evmChainId,
-        name: config.chainName,
-        nativeCurrency: { name: config.chainName, symbol: config.nativeSymbol, decimals: 18 },
-        rpcUrls: { default: { http: [rpcUrl] } },
-      }),
-      transport: http(rpcUrl),
-    });
+  // Devnet overrides fall back to the configured mainnet values, so a
+  // mainnet adapter constructed without them is byte-for-byte the old one.
+  const networkId = overrides.networkId ?? config.networkId;
+  const evmChainId = overrides.evmChainId ?? config.evmChainId;
+  // RPC failover (UI/UX fixes, item 19): one viem client per endpoint,
+  // built lazily and rebuilt only when the resolved list changes, so a
+  // manager change applies on the next call. An injected client (tests,
+  // devnet Sepolia) is the only client and keeps the configured source
+  // label; a URL-built client reports its own hostname as the source, so
+  // a balance that came through the backup never claims the primary.
+  interface EndpointClient {
+    client: PublicClient;
+    source: string;
+  }
+  let cachedClients: EndpointClient[] | null = null;
+  let cachedUrlsKey = '';
+  const getClients = (): EndpointClient[] => {
+    if (overrides.client !== undefined) {
+      return [{ client: overrides.client, source: config.source }];
+    }
+    const urls = resolveEndpoints(overrides.rpcUrls, [rpcUrl]);
+    const key = urls.join('\n');
+    if (cachedClients === null || cachedUrlsKey !== key) {
+      cachedClients = urls.map((url) => ({
+        client: createPublicClient({
+          chain: defineChain({
+            id: evmChainId,
+            name: config.chainName,
+            nativeCurrency: {
+              name: config.chainName,
+              symbol: config.nativeSymbol,
+              decimals: 18,
+            },
+            rpcUrls: { default: { http: [url] } },
+          }),
+          transport: http(url, {
+            // No per-transport retries: the adapter's own endpoint loop
+            // is the failover. A dead endpoint must fail fast (one
+            // attempt) instead of burning 4 attempts × retryDelay here.
+            retryCount: 0,
+          }),
+        }),
+        source: endpointHost(url),
+      }));
+      cachedUrlsKey = key;
+    }
+    return cachedClients;
+  };
   const historyBaseUrl = overrides.historyBaseUrl ?? config.historyBaseUrl;
-  const historyExplorerBase = config.historyExplorerBase;
+  const historyExplorerBase =
+    overrides.historyExplorerBase ?? config.historyExplorerBase;
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
 
   /**
-   * Chain identity, checked on every call: the RPC must report the
-   * configured chain id. Returns an error result on mismatch, null when
-   * the network is the expected mainnet chain. No silent fallback.
+   * Runs one read on the first endpoint that is both reachable and
+   * serving the expected chain, and returns the answering endpoint's
+   * source with the value. A wrong chain id is a failure for that
+   * endpoint (the next one is tried); when every endpoint fails, the
+   * last error surfaces — a wrong-chain error when that is what every
+   * endpoint reported, a transport error when the network is down.
+   * Chain identity is checked on every call, per endpoint.
    */
-  const requireMainnet = async (): Promise<AdapterResult<never> | null> => {
-    let chainId: number;
-    try {
-      chainId = await client.getChainId();
-    } catch (error: unknown) {
-      return toAdapterError(error);
+  const runOnHealthyClient = async <T>(
+    operation: (client: PublicClient) => Promise<T>,
+  ): Promise<{ value: T; source: string }> => {
+    let lastError: unknown = new Error('No RPC endpoints configured.');
+    for (const { client, source } of getClients()) {
+      try {
+        const chainId = await client.getChainId();
+        if (chainId !== evmChainId) {
+          lastError = new Error(
+            `Network identity mismatch: expected chain ${evmChainId} ` +
+              `(${networkId}), got ${chainId}.`,
+          );
+          continue;
+        }
+        assertNetworkId(`eip155:${chainId}`, networkId, source);
+        const value = await operation(client);
+        return { value, source };
+      } catch (error: unknown) {
+        lastError = error;
+      }
     }
-    if (chainId !== config.evmChainId) {
-      return {
-        status: 'error',
-        reason:
-          `Network identity mismatch: expected chain ${config.evmChainId} ` +
-          `(${config.networkId}), got ${chainId}.`,
-      };
-    }
-    assertNetworkId(`eip155:${chainId}`, config.networkId, config.source);
-    return null;
+    throw lastError;
   };
 
   const getBalance = async (
@@ -112,22 +179,22 @@ export function createEvmAdapter(
     if (!isAddress(address)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
-    const identity = await requireMainnet();
-    if (identity) return identity;
     try {
-      const balance = await client.getBalance({ address: getAddress(address) });
+      const { value: balance, source } = await runOnHealthyClient((client) =>
+        client.getBalance({ address: getAddress(address) }),
+      );
       return {
         status: 'ok',
         data: {
           chain: config.chain,
           address: getAddress(address),
-          networkId: config.networkId,
+          networkId,
           valueBaseUnits: balance.toString(),
           decimals: 18,
-          source: config.source,
+          source,
           fetchedAt: Date.now(),
         },
-        source: config.source,
+        source,
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
@@ -148,8 +215,11 @@ export function createEvmAdapter(
         reason: `History is not connected for ${config.chainName} yet.`,
       };
     }
-    const identity = await requireMainnet();
-    if (identity) return identity;
+    try {
+      await runOnHealthyClient((client) => client.getChainId());
+    } catch (error: unknown) {
+      return toAdapterError(error);
+    }
     const url =
       `${historyBaseUrl}?module=account&action=txlist` +
       `&address=${address}&page=1&offset=${limit}&sort=desc`;
@@ -192,7 +262,7 @@ export function createEvmAdapter(
       txs.push({
         hash,
         chain: config.chain,
-        networkId: config.networkId,
+        networkId,
         direction: fromSelf && toSelf ? 'self' : fromSelf ? 'out' : 'in',
         amountBaseUnits: value,
         counterparty:
@@ -209,22 +279,22 @@ export function createEvmAdapter(
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> => {
-    const identity = await requireMainnet();
-    if (identity) return identity;
     try {
-      const gasPrice = await client.getGasPrice();
+      const { value: gasPrice, source } = await runOnHealthyClient((client) =>
+        client.getGasPrice(),
+      );
       return {
         status: 'ok',
         data: {
           chain: config.chain,
-          networkId: config.networkId,
+          networkId,
           feeBaseUnits: (gasPrice * 21000n).toString(),
           unit: 'wei',
           note: 'Native-transfer estimate at current gas price, 21000 gas; not a final fee',
-          source: config.source,
+          source,
           fetchedAt: Date.now(),
         },
-        source: config.source,
+        source,
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
@@ -238,14 +308,14 @@ export function createEvmAdapter(
     if (!isAddress(address)) {
       return { status: 'error', reason: 'Invalid Ethereum address' };
     }
-    const identity = await requireMainnet();
-    if (identity) return identity;
     try {
-      const nonce = await client.getTransactionCount({ address: getAddress(address) });
+      const { value: nonce, source } = await runOnHealthyClient((client) =>
+        client.getTransactionCount({ address: getAddress(address) }),
+      );
       return {
         status: 'ok',
         data: { kind: 'nonce', nonce },
-        source: config.source,
+        source,
         fetchedAt: Date.now(),
       };
     } catch (error: unknown) {
@@ -253,13 +323,16 @@ export function createEvmAdapter(
     }
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  // Mainnet: always throws. Devnet: the injected devnet broadcast.
+  const broadcast: ChainAdapter['broadcast'] =
+    overrides.broadcast ??
+    (async (_signedTx: unknown): Promise<never> => {
+      throw new Error(BROADCAST_DISABLED_MESSAGE);
+    });
 
   return {
     chain: config.chain,
-    networkId: config.networkId,
+    networkId,
     getBalance,
     getHistory,
     estimateFee,
