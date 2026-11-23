@@ -193,14 +193,17 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the Create screen with all six tools', async () => {
+  it('renders the Create screen with one create button', async () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');
-      // Marketing-fix Lane 3: one wallet card, not two for the same setup.
+      // Finish-product Lane I: one wallet, one button. The Web wallet
+      // card is gone — the web wallet is this app — and the four
+      // not-yet-available tools are a plain list, not peer cards.
       expect(div.textContent).toContain('Create a wallet');
+      expect(div.textContent).toContain('One wallet, one identity');
       expect(div.textContent).not.toContain('Multichain wallet');
       expect(div.textContent).not.toContain('HD wallet');
-      expect(div.textContent).toContain('Web wallet');
+      expect(div.textContent).not.toContain('Web wallet');
       expect(div.textContent).toContain('Android wallet');
       expect(div.textContent).toContain('Smart contract creator');
       expect(div.textContent).toContain('Multi-signature wallet');

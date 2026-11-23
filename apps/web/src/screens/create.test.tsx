@@ -59,65 +59,68 @@ describe('CreateScreen', () => {
     expect(heading?.textContent).toBe('Create');
   });
 
-  it('lists all six tool names in order', () => {
+  it('has exactly one button, and it creates the wallet', () => {
+    // Finish-product Lane I: one wallet, one button. The old screen
+    // offered two cards for the same wallet (Multichain / HD, then
+    // Create a wallet / Web wallet); there is one action now.
+    const links = Array.from(container.querySelectorAll('a'));
+
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe('/create-wallet');
+    expect(links[0]?.getAttribute('aria-label')).toBe('Create your wallet');
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('says on the button card what creating gets you', () => {
+    // The message on the single button card: one recovery phrase, one
+    // wallet, 22 chains.
+    expect(container.textContent).toContain('Create a wallet');
+    expect(container.textContent).toContain('One recovery phrase');
+    expect(container.textContent).toContain('22 chains');
+    expect(container.textContent).toContain('24-word recovery phrase');
+  });
+
+  it('presents one wallet identity, honestly', () => {
+    // One phrase, one account; the shared EVM address shown once; and
+    // the honest limit — no single address works on every chain.
+    expect(elementsWithExactText('One wallet, one identity')).toHaveLength(1);
+    expect(container.textContent).toContain('One recovery phrase');
+    expect(container.textContent).toContain('One account');
+    expect(container.textContent).toContain('One shared address');
+    expect(container.textContent).toContain(
+      'Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, Base, Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora and Fantom all use the same address',
+    );
+    expect(container.textContent).toContain(
+      'There is no single address that works on every chain.',
+    );
+  });
+
+  it('has no second wallet card and no web-wallet card', () => {
+    // The Web wallet is this app — it is not something to create, and
+    // the dashboard is reached from the navigation, not this screen.
+    expect(container.textContent).not.toContain('Web wallet');
+    expect(container.textContent).not.toContain('Open web wallet');
+    expect(container.textContent).not.toContain('Multichain wallet');
+    expect(container.textContent).not.toContain('HD wallet');
+    expect(container.textContent).not.toContain('Same setup as');
+    expect(container.querySelector('a[href="/"]')).toBeNull();
+    expect(elementsWithExactText('Available')).toHaveLength(0);
+  });
+
+  it('lists the four not-yet-available tools as plain text, with no actions', () => {
     const names = [
-      'Create a wallet',
-      'Web wallet',
       'Android wallet',
       'Smart contract creator',
       'Multi-signature wallet',
       'Connect an existing wallet',
     ];
-    const cards = Array.from(
-      container.querySelectorAll('section > ul > li'),
-    );
-
-    expect(cards).toHaveLength(6);
-    names.forEach((name, index) => {
+    names.forEach((name) => {
       expect(elementsWithExactText(name)).toHaveLength(1);
-      expect(cards[index]?.textContent).toContain(name);
     });
-  });
-
-  it('shows exactly four Coming soon badges', () => {
-    expect(elementsWithExactText('Coming soon')).toHaveLength(4);
-  });
-
-  it('shows exactly two Available badges', () => {
-    expect(elementsWithExactText('Available')).toHaveLength(2);
-  });
-
-  it('the web wallet is available and opens the dashboard', () => {
-    // Lane C, item 10: the web wallet exists — it is this app — so it
-    // is Available, not Coming soon, and it opens the dashboard.
-    expect(container.textContent).toContain('Two options are ready today');
-    const cards = Array.from(container.querySelectorAll('section > ul > li'));
-    const webWallet = cards[1];
-    expect(webWallet?.textContent).toContain('Available');
-    expect(webWallet?.textContent).not.toContain('Coming soon');
-    const link = webWallet?.querySelector('a[href="/"]');
-    expect(link).not.toBeNull();
-    expect(link?.getAttribute('aria-label')).toBe('Open web wallet');
-  });
-
-  it('links only the one wallet card to /create-wallet', () => {
-    // Marketing-fix Lane 3: the multichain wallet and the HD wallet
-    // were the same wallet and the same setup, presented as two cards.
-    // There is one card now.
-    const links = Array.from(
-      container.querySelectorAll('a[href="/create-wallet"]'),
-    );
-
-    expect(links).toHaveLength(1);
-    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
-      'Create your wallet',
-    ]);
-
-    container.querySelectorAll('article').forEach((card) => {
-      expect(
-        card.querySelectorAll('a[href="/create-wallet"]'),
-      ).toHaveLength(0);
-    });
+    expect(elementsWithExactText('Coming soon')).toHaveLength(1);
+    const comingSoon = container.querySelector('#coming-soon');
+    expect(comingSoon).not.toBeNull();
+    expect(comingSoon?.querySelectorAll('a, button')).toHaveLength(0);
   });
 
   it('shows no developer references', () => {
@@ -125,39 +128,15 @@ describe('CreateScreen', () => {
     // commit hashes, licence notes or implementation references render.
     const links = Array.from(container.querySelectorAll('a'));
 
-    expect(links).toHaveLength(2);
-    links.forEach((link) => {
-      expect(['/create-wallet', '/']).toContain(link.getAttribute('href'));
-    });
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute('href')).toBe('/create-wallet');
     expect(container.textContent).not.toContain('github.com');
     expect(container.textContent).not.toContain('References');
   });
 
-  it('states that every coming-soon card is not available yet', () => {
-    const briefs = container.querySelectorAll(
-      'article[aria-label$=" coming soon"]',
-    );
-
-    expect(briefs).toHaveLength(4);
-    briefs.forEach((card) => {
-      // The Coming soon badge is the whole notice now; a brief card
-      // offers no action to open it.
-      expect(card.textContent).toContain('Coming soon');
-      expect(card.querySelector('a, button')).toBeNull();
-    });
-  });
-
-  it('offers one wallet card, not two for the same setup', () => {
-    // Marketing-fix Lane 3: the old Multichain and HD cards opened the
-    // same creation flow. One card now, named for what it is, stating
-    // the 22-chain scope the old cards understated as four chains.
-    expect(container.textContent).toContain('Create a wallet');
-    expect(container.textContent).toContain('22 chains');
-    expect(container.textContent).not.toContain('Multichain wallet');
-    expect(container.textContent).not.toContain('HD wallet');
-    expect(container.textContent).not.toContain('Same setup as');
-    expect(container.textContent).not.toContain(
-      'Creating a wallet here does not replace your dashboard.',
+  it('states that creation starts with a risk check', () => {
+    expect(container.textContent).toContain(
+      'Creating a wallet starts with a short risk check.',
     );
   });
 });
