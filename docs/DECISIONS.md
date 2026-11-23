@@ -651,3 +651,37 @@ Decisions:
 - **Token discovery Lane 3 verification - bundle baseline correction + manifest port (2026-11-22).** Lane 3 rebuilt adopt-proper 67c48e2 from clean (npm run build) and measured total JS 3,978,773 bytes, largest chunk (boundary) 2,901,695 bytes - byte-identical to Lane 2's independent build. The CONSTRAINTS.md baseline 3,846,651 was measured 2026-11-20 on the repo-study tree (0fd3a2e), not on the adopt-proper base, so it was stale. Factual correction only: the +5% ratchet rule is unchanged, the total cap moves 4,040,000 to 4,177,711, and the branch build (4,050,102) is inside it. The largest-chunk budget 3,050,000 is unchanged (2,901,695 x 1.05 = 3,046,780, still under it). PERF.md records the re-measurement with its history kept. Separately, e2e/manifest.json said the preview serves on 4173 while the Playwright config deliberately serves on 4193 (4173 is Vite's default and is held by another lane on this shared VM); the manifest now says 4193.
 - **Token gaps, items 1–10 + Base USDC #21 (2026-11-22, branch panel-rebuild/token-gaps, Lane 2 IMPLEMENT, hands-on Muse, 0 Sol calls).** SOL balances: `solana-rpc.publicnode.com` primary, `public.rpc.solanavibestation.com` fallback (both verified in-page 200 by Lane 1: 2368210 lamports for 4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM); `api.mainnet-beta.solana.com` retired (in-page 403 re-confirmed). DOGE balances: SoChain `https://sochain.com/api/v3/balance/DOGE/{address}` primary (confirmed 10007.79125175 DOGE for the fixture address DU5VEHzdNfQWUnonpHkXVchYqi1mqC3S8K), BlockCypher fallback. CSP pinned to 17 origins (added publicnode, Vibe Station, sochain.com; dropped mainnet-beta). Verified tick rule: verified = in-repo DEFAULT_TOKENS OR the record's coingeckoId resolved from CoinGecko's contract endpoint for that exact chain+contract at add time; raw-contract user-added tokens get no tick. Short contract = first 6 + `…` + last 4. Payment URIs: BIP-21, EIP-681 with @chainId (+ transfer for ERC-20), Solana Pay, TON `ton://transfer`; TRON has no generic payment-URI standard, so no `tron:` URI is invented — TRX/TRC-20 QRs stay address-only with amount as text and the shareable Bawa `/send` web link carries amount+address. Base USDC #21: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, 6 decimals, CoinGecko usd-coin (verified from CoinGecko + Lane 1). Portfolio hero: partial $0.00 when everything loaded is zero and a chain failed; 'unavailable' only when nothing loaded at all. E2E-03 updated to 21 rows (13 natives + 8 default tokens); the >= 18 zero floor is unchanged pending CDP evidence. No merge, no push.
 - **Token gaps, item 8 bug hunt round 2 — watch-only hydration + 15-word import gate (2026-11-22, same branch).** (1) Watch-only hydration covered only 4 of 13 chains: `state/wallet-context.tsx` defined a local `CHAINS = ['btc','eth','trx','ton']` that the boot hydration effect iterated, so a stored watch-only wallet for SOL (or any other non-original chain) was persisted but dropped on every reload — Wallets showed "No wallets imported" and the Assets row stayed "Balance unavailable" until re-added. The `addXpub` balance-refresh fix was correct but wiped by the remount (`page.goto` reloads; in-app SPA navigation kept the in-memory state, so a real user hit this only on reload/fresh visit). Fix: hydration + cleanup iterate `ALL_CHAIN_IDS` (13); RED-first test seeds localStorage before mount and asserts xpubs.sol restored + balance 2368210. (2) Import rejected valid 15-word mnemonics: the submit gate accepted only 12 or 24 words, but the repo's own published test vector is 15 words (docs/mainnet/MAINNET-VECTORS.md) and BIP-39 allows 12/15/18/21/24. Fix: gate accepts all five counts; helper/placeholder/error copy updated; RED-first test restores the 15-word vector to the preview step. No merge, no push.
+
+## 10. UI/UX Fixes programme — 21 items, merged into token-gaps (2026-11-23)
+
+**Decision: the 21-item UI/UX Fixes programme (owner order 2026-11-23
+~04:40 IST) is complete and merged into `panel-rebuild/token-gaps`.**
+Branch `panel-rebuild/ui-ux-fixes` (`68fd75b`, branched from token-gaps
+`488f644`, devnet mode brought in from `panel-rebuild/devnet-temp`
+`8994584`) was merged into token-gaps by Lane E (hands-on Muse, 0 Sol
+calls) as merge commit `4eb0242`. Merge destination per the owner's
+decision 2026-11-23 ~05:11 IST: further work continues on top of
+token-gaps. No code merged into `panel-rebuild/adopt-proper` or `main`.
+
+Gates on the merged tree, first-hand (Node 22.23.4, `apps/web`): `npx
+tsc --noEmit` 0; `npm run build` 0; full vitest 86 files, 1644 passed /
+5 skipped; `npm run lint` 0; `npm audit` 0 vulnerabilities; root `npm
+test` 0 (after `npm ci` in `tools/hdwallet-gen` — the first attempt in
+the fresh worktree failed only on absent `node_modules`, not on code).
+CDP re-verification at 1919/1440/820/390 was done by the coordinator on
+`ui-ux-fixes` before the merge and passed; Lane E did not re-run CDP.
+
+Item 21 (document everything): `docs/UI-UX-FIXES-PROGRAMME.md` is the
+programme record (all 21 items, gates, branch state, preview/Pages
+pointers, still-open list). Doc-only updates were pushed to `main` and
+the active remote branches (`adopt-proper`, `desktop-layout-v2`,
+`devnet-temp`, `token-discovery`, `token-gaps`, `ui-ux-fixes`) on
+2026-11-23 per the owner's order. Dead local-only lane branches were
+left alone (superseded intermediates, not on the remote).
+
+Still open after the programme: E2E-03/06 need a stable-network run;
+non-zero DOGE watch-row render unproven; 1919 settled widths not
+captured; TON Issue 5 (first-send state init) and Issue 6 (`/track`
+message hash) in `DEVNET-ISSUES.md`; devnet exception E1 expires
+2027-02-20; the mobile Receive 40 px question awaits the owner's pick;
+the item-14 cannot-add chain list is not recorded in the repo.
