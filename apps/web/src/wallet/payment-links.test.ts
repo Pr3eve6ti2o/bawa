@@ -6,9 +6,13 @@
 //   ethereum:<target>@<chainId>?value=<wei> (native) or
 //   ethereum:<tokenContract>@<chainId>/transfer?address=<to>&uint256=<base>
 // - SOL: Solana Pay (solana-foundation/pay SPEC.md) —
-//   solana:<recipient>?amount=<decimal SOL>
+//   solana:<recipient>?amount=<decimal SOL>, or
+//   solana:<recipient>?amount=<decimal>&spl-token=<mint> for SPL tokens
+//   (recipient stays the native SOL account; amount in decimal units).
 // - TON: ton://transfer/<address>?amount=<nanotons>
-//   (ton-blockchain.github.io deep-links; 1 TON = 10^9 nanotons)
+//   (ton-blockchain.github.io deep-links; 1 TON = 10^9 nanotons), or
+//   ton://transfer/<address>?jetton=<master>&amount=<base units> for
+//   Jettons (docs.ton.org deep links; amount in the Jetton's own units).
 // - TRON: NO bare payment-request URI standard exists (TronLink's
 //   transfer deep link is a vendor dApp-callback link, not a payment
 //   request), so buildPaymentUri refuses TRON rather than inventing
@@ -18,6 +22,8 @@
 // erc681.org adoption audit (native + ERC-20 transfer only; any other
 // function name is rejected) — see WORK-LOG.md.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { CHAINS, SUPPORTED_CHAINS, type ChainId } from './chains';
+import { DEFAULT_TOKENS } from './tokens';
 import {
   appBasePath,
   buildBawaSendLink,
@@ -155,6 +161,156 @@ describe('buildPaymentUri — Solana Pay and TON', () => {
       ok: true,
       uri: 'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?amount=2500000000',
     });
+  });
+
+  // Lane 3 (token Receive): an SPL token payment carries the mint —
+  // without spl-token the URL would request native SOL for the token
+  // amount. The recipient stays the native SOL account (the wallet
+  // derives the associated token account); the amount is decimal.
+  it('builds a Solana Pay URI with spl-token for an SPL token payment', () => {
+    expect(
+      buildPaymentUri({
+        chain: 'sol',
+        address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        amount: '25',
+        tokenContract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenDecimals: 6,
+      }),
+    ).toEqual({
+      ok: true,
+      uri: 'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?amount=25&spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    });
+  });
+
+  it('builds a Solana Pay SPL URI without an amount (any amount)', () => {
+    expect(
+      buildPaymentUri({
+        chain: 'sol',
+        address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        tokenContract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenDecimals: 6,
+      }),
+    ).toEqual({
+      ok: true,
+      uri: 'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    });
+  });
+
+  it('refuses an SPL amount finer than the token decimals', () => {
+    const result = buildPaymentUri({
+      chain: 'sol',
+      address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+      amount: '1.0000001',
+      tokenContract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      tokenDecimals: 6,
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('refuses an SPL token payment without decimals', () => {
+    const result = buildPaymentUri({
+      chain: 'sol',
+      address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+      amount: '25',
+      tokenContract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  // Lane 3 (token Receive): a Jetton payment carries the master —
+  // without jetton the URL would request native TON for the Jetton
+  // amount. The amount is in the Jetton's own smallest units
+  // (USDt on TON: 6 decimals, so 25 USDT = 25,000,000 units).
+  it('builds a ton://transfer URI with jetton for a Jetton payment', () => {
+    expect(
+      buildPaymentUri({
+        chain: 'ton',
+        address: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        amount: '25',
+        tokenContract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+        tokenDecimals: 6,
+      }),
+    ).toEqual({
+      ok: true,
+      uri: 'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs&amount=25000000',
+    });
+  });
+
+  it('builds a ton://transfer Jetton URI without an amount (any amount)', () => {
+    expect(
+      buildPaymentUri({
+        chain: 'ton',
+        address: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        tokenContract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+        tokenDecimals: 6,
+      }),
+    ).toEqual({
+      ok: true,
+      uri: 'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+    });
+  });
+
+  it('refuses a Jetton payment without decimals', () => {
+    const result = buildPaymentUri({
+      chain: 'ton',
+      address: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      amount: '25',
+      tokenContract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('builds an ERC-20 transfer URI on every EVM chain id', () => {
+    const evmChains = SUPPORTED_CHAINS.filter(
+      (chain) => CHAINS[chain].evmChainId !== null,
+    );
+    expect(evmChains.length).toBe(16);
+    for (const chain of evmChains) {
+      const chainId = CHAINS[chain].evmChainId as number;
+      const result = buildPaymentUri({
+        chain: chain as ChainId,
+        address: '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979',
+        amount: '1',
+        tokenContract: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        tokenDecimals: 6,
+      });
+      expect(result).toEqual({
+        ok: true,
+        uri: `ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@${chainId}/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=1000000`,
+      });
+    }
+  });
+
+  it('round-trips every default token through build + parse', () => {
+    for (const token of DEFAULT_TOKENS) {
+      if (token.chain === 'trx') continue; // TRON has no payment URI.
+      const address =
+        token.chain === 'sol'
+          ? '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM'
+          : token.chain === 'ton'
+            ? 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+            : '0x27Ef5cDBe01777D62438AfFeb695e33fC2335979';
+      const built = buildPaymentUri({
+        chain: token.chain,
+        address,
+        amount: '25',
+        tokenContract: token.contract,
+        tokenDecimals: token.decimals,
+      });
+      expect(built.ok).toBe(true);
+      if (!built.ok) throw new Error(`build failed for ${token.symbol} on ${token.chain}`);
+      const parsed = parsePaymentUri(built.uri);
+      expect(parsed).toEqual({
+        ok: true,
+        request: {
+          chain: token.chain,
+          address,
+          amount: '25',
+          tokenContract: token.contract,
+          tokenDecimals: token.decimals,
+        },
+      });
+    }
   });
 });
 
@@ -300,10 +456,82 @@ describe('parsePaymentUri — round-trips and rejection', () => {
     ).toBe(false);
   });
 
-  it('rejects a Solana Pay URI for an SPL token (not supported)', () => {
+  // Lane 3 (token Receive): SPL token URIs parse — the mint is
+  // resolved against the known tokens so the amount is read in the
+  // token's decimals, not as SOL.
+  it('parses a Solana Pay URI for an SPL token', () => {
+    const parsed = parsePaymentUri(
+      'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?amount=25&spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    );
+    expect(parsed).toEqual({
+      ok: true,
+      request: {
+        chain: 'sol',
+        address: '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM',
+        amount: '25',
+        tokenContract: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenDecimals: 6,
+      },
+    });
+  });
+
+  it('parses a Solana Pay SPL URI without an amount', () => {
+    const parsed = parsePaymentUri(
+      'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    );
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.request.tokenContract).toBe(
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      );
+      expect(parsed.request.amount).toBeUndefined();
+    }
+  });
+
+  it('rejects a Solana Pay URI with an unknown SPL mint', () => {
     expect(
       parsePaymentUri(
-        'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?amount=1&spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        'solana:4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM?amount=1&spl-token=11111111111111111111111111111111',
+      ).ok,
+    ).toBe(false);
+  });
+
+  // Lane 3 (token Receive): Jetton URIs parse — the master is
+  // resolved against the known tokens so the amount is read in the
+  // Jetton's decimals, not as nanotons.
+  it('parses a ton://transfer URI for a Jetton', () => {
+    const parsed = parsePaymentUri(
+      'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs&amount=25000000',
+    );
+    expect(parsed).toEqual({
+      ok: true,
+      request: {
+        chain: 'ton',
+        address: 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+        amount: '25',
+        tokenContract: 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+        tokenDecimals: 6,
+      },
+    });
+  });
+
+  it('parses a ton://transfer Jetton URI without an amount', () => {
+    const parsed = parsePaymentUri(
+      'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+    );
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.request.tokenContract).toBe(
+        'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      );
+      expect(parsed.request.amount).toBeUndefined();
+    }
+  });
+
+  it('rejects a ton://transfer URI with an unknown Jetton master', () => {
+    expect(
+      parsePaymentUri(
+        'ton://transfer/EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA?jetton=EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&amount=1000',
       ).ok,
     ).toBe(false);
   });

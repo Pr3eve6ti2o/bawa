@@ -11,9 +11,22 @@
 //   to 1 when omitted, which would misroute a Base payment to Ethereum).
 // - SOL: Solana Pay (solana-foundation/pay SPEC.md) —
 //   solana:<recipient>?amount=<decimal SOL> (user units, never lamports)
+//   for native SOL, or solana:<recipient>?amount=<decimal>&spl-token=<mint>
+//   for an SPL token: the recipient stays the native SOL account (the
+//   wallet derives the associated token account from recipient + mint),
+//   and the amount is in decimal token units. Without spl-token the URL
+//   is a native SOL transfer — a token amount without it would be paid
+//   in SOL, so the token path must always carry the mint.
 // - TON: ton://transfer/<address>?amount=<nanotons>
 //   (https://ton-blockchain.github.io/docs/develop/dapps/telegram-apps/app-deeplinks;
-//   1 TON = 10^9 nanotons)
+//   1 TON = 10^9 nanotons) for native TON, or
+//   ton://transfer/<address>?jetton=<jetton master>&amount=<base units>
+//   for a Jetton (docs.ton.org deep links: the jetton parameter names
+//   the Jetton master contract and the amount is then in the Jetton's
+//   own smallest units, e.g. 1 USDT = 1,000,000 units at 6 decimals).
+//   Without jetton the URL is a native TON transfer — a Jetton amount
+//   without it would be paid in TON, so the token path must always
+//   carry the master address.
 // - TRON: there is NO bare payment-request URI standard. TronLink's
 //   transfer deep link (tronlinkoutside://pull.activity?param={...}) is
 //   a vendor dApp-callback link, not a payment request, so buildPaymentUri
@@ -44,7 +57,8 @@ export interface PaymentRequest {
   address: string;
   /** Decimal amount in user units (e.g. '0.5' BTC, '25' USDC). */
   amount?: string;
-  /** ERC-20 contract when this pays a token rather than the native coin. */
+  /** ERC-20 contract / SPL mint / Jetton master when this pays a token
+   * rather than the native coin. */
   tokenContract?: string;
   /** Decimals of tokenContract; required for a token payment. */
   tokenDecimals?: number;
@@ -135,7 +149,23 @@ export function buildPaymentUri(request: PaymentRequest): PaymentUriResult {
   }
 
   // Solana Pay: amount in SOL (user units), scientific notation refused.
+  // An SPL token adds spl-token=<mint> (Solana Pay SPEC.md transfer
+  // request): the recipient stays the native SOL account and the amount
+  // is in decimal token units. The mint is mandatory for a token
+  // payment — without it the URL would request native SOL.
   if (chain === 'sol') {
+    if (tokenContract !== undefined) {
+      if (tokenDecimals === undefined) {
+        return { ok: false, reason: 'Token decimals are required for a token payment.' };
+      }
+      if (amount !== undefined && !validAmount(amount, tokenDecimals)) {
+        return { ok: false, reason: `Invalid amount for sol: ${amount}` };
+      }
+      const params = new URLSearchParams();
+      if (amount !== undefined) params.set('amount', amount);
+      params.set('spl-token', tokenContract);
+      return { ok: true, uri: `solana:${address}?${params.toString()}` };
+    }
     if (amount !== undefined && !validAmount(amount, 9)) {
       return { ok: false, reason: `Invalid amount for sol: ${amount}` };
     }
@@ -143,8 +173,27 @@ export function buildPaymentUri(request: PaymentRequest): PaymentUriResult {
     return { ok: true, uri: `solana:${address}${query}` };
   }
 
-  // TON: amount in nanotons (1 TON = 10^9 nanotons).
+  // TON: amount in nanotons (1 TON = 10^9 nanotons). A Jetton adds
+  // jetton=<master> (docs.ton.org deep links) and the amount is then
+  // in the Jetton's own smallest units (tokenDecimals), not nanotons.
+  // The master is mandatory for a token payment — without it the URL
+  // would request native TON.
   if (chain === 'ton') {
+    if (tokenContract !== undefined) {
+      if (tokenDecimals === undefined) {
+        return { ok: false, reason: 'Token decimals are required for a token payment.' };
+      }
+      const params = new URLSearchParams();
+      params.set('jetton', tokenContract);
+      if (amount !== undefined) {
+        const baseUnits = decimalToBaseUnits(amount, tokenDecimals);
+        if (baseUnits === null) {
+          return { ok: false, reason: `Invalid amount for ton: ${amount}` };
+        }
+        params.set('amount', baseUnits);
+      }
+      return { ok: true, uri: `ton://transfer/${address}?${params.toString()}` };
+    }
     if (amount !== undefined) {
       const nanotons = decimalToBaseUnits(amount, 9);
       if (nanotons === null) {
@@ -171,12 +220,48 @@ export function parsePaymentUri(
   const trimmed = uri.trim();
 
   // TON deep link: ton://transfer/<address>?amount=<nanotons>
+  // — or, for a Jetton, ?jetton=<master>&amount=<jetton base units>.
   if (trimmed.toLowerCase().startsWith('ton://transfer/')) {
     const rest = trimmed.slice('ton://transfer/'.length);
     const [address, queryString] = rest.split('?');
     if (!address) return fail('Missing TON address.');
     const params = new URLSearchParams(queryString ?? '');
-    const nanotons = params.get('amount');
+    const amountRaw = params.get('amount');
+    const jetton = params.get('jetton');
+    if (jetton !== null) {
+      const token = tokens.find(
+        (candidate) =>
+          candidate.chain === 'ton' &&
+          candidate.contract.toLowerCase() === jetton.toLowerCase(),
+      );
+      if (token === undefined) {
+        return fail('Unknown Jetton master in the payment link.');
+      }
+      if (amountRaw === null) {
+        return {
+          ok: true,
+          request: {
+            chain: 'ton',
+            address,
+            tokenContract: token.contract,
+            tokenDecimals: token.decimals,
+          },
+        };
+      }
+      const amount = baseUnitsToDecimal(amountRaw, token.decimals);
+      if (amount === null) return fail('Invalid Jetton amount.');
+      return {
+        ok: true,
+        request: {
+          chain: 'ton',
+          address,
+          amount,
+          tokenContract: token.contract,
+          tokenDecimals: token.decimals,
+        },
+      };
+    }
+    const nanotons = amountRaw;
     if (nanotons === null) return { ok: true, request: { chain: 'ton', address } };
     const amount = baseUnitsToDecimal(nanotons, 9);
     if (amount === null) return fail('Invalid TON amount.');
@@ -202,12 +287,36 @@ export function parsePaymentUri(
   }
 
   // Solana Pay: solana:<recipient>[?amount=&label=&message=&memo=]
+  // — or, for an SPL token, ?amount=&spl-token=<mint>. The amount is
+  // in decimal token units and the recipient is the native SOL account.
   if (scheme === 'solana') {
     const [address, queryString] = rest.split('?');
     if (!address) return fail('Missing Solana address.');
     const params = new URLSearchParams(queryString ?? '');
-    if (params.get('spl-token') !== null) {
-      return fail('SPL token payments are not supported.');
+    const splToken = params.get('spl-token');
+    if (splToken !== null) {
+      const token = tokens.find(
+        (candidate) =>
+          candidate.chain === 'sol' &&
+          candidate.contract.toLowerCase() === splToken.toLowerCase(),
+      );
+      if (token === undefined) {
+        return fail('Unknown SPL token mint in the payment link.');
+      }
+      const amount = params.get('amount') ?? undefined;
+      if (amount !== undefined && !validAmount(amount, token.decimals)) {
+        return fail('Invalid SPL token amount.');
+      }
+      return {
+        ok: true,
+        request: {
+          chain: 'sol',
+          address,
+          amount,
+          tokenContract: token.contract,
+          tokenDecimals: token.decimals,
+        },
+      };
     }
     const amount = params.get('amount') ?? undefined;
     if (amount !== undefined && !validAmount(amount, 9)) {

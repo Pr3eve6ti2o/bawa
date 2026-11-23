@@ -384,6 +384,157 @@ describe('receive screen', () => {
     }
   });
 
+  // Lane 3 (token Receive): an SPL token encodes a Solana Pay URI
+  // with the mint — the amount is USDC, never SOL.
+  it('selecting an SPL token encodes a Solana Pay URI with spl-token', async () => {
+    const solAddress = '4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM';
+    vi.mocked(availableFor).mockReturnValue([...ALL_CHAINS]);
+    setWallet({
+      selectedChain: 'sol',
+      addresses: {
+        btc: [],
+        eth: [{ index: 0, address: '0xWatchOnlyEthAddress0000000000000000000' }],
+        trx: [],
+        ton: [],
+        sol: [{ index: 0, address: solAddress }],
+      },
+      vaultAddresses: {
+        btc: [],
+        eth: [VAULT_ETH],
+        trx: [],
+        ton: [],
+        sol: [solAddress],
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'All networks (18)');
+      await clickButton(mounted.div, 'Solana');
+      await clickButton(mounted.div, 'USD Coin');
+      const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
+      expect(amountInput.placeholder).toContain('USDC');
+      // No amount yet: the payment request still names the token.
+      expect(mounted.div.querySelector('svg title')?.textContent).toBe(
+        `solana:${solAddress}?spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`,
+      );
+      await fillInput(amountInput, '25');
+      // The QR encodes the Solana Pay SPL transfer URI (readable via
+      // its title) — the amount is 25 USDC, not 25 SOL.
+      const title = mounted.div.querySelector('svg title');
+      expect(title?.textContent).toBe(
+        `solana:${solAddress}?amount=25&spl-token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`,
+      );
+      // The share link carries chain, address, amount and token.
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link?.textContent).toContain('chain=sol');
+      expect(link?.textContent).toContain(`to=${solAddress}`);
+      expect(link?.textContent).toContain('amount=25');
+      expect(link?.textContent).toContain(
+        'token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lane 3 (token Receive): a Jetton encodes a ton://transfer URI
+  // with the master — the amount is USDT, never TON.
+  it('selecting a Jetton encodes a ton://transfer URI with jetton', async () => {
+    const tonAddress = 'UQDYzZmfsrGzhObKJUw4gzdeIxEai3jAFbiGKGwxvxHinf4K';
+    setWallet({
+      selectedChain: 'ton',
+      addresses: {
+        btc: [],
+        eth: [{ index: 0, address: '0xWatchOnlyEthAddress0000000000000000000' }],
+        trx: [],
+        ton: [{ index: 0, address: tonAddress }],
+        sol: [],
+      },
+      vaultAddresses: {
+        btc: [],
+        eth: [VAULT_ETH],
+        trx: [],
+        ton: [tonAddress],
+        sol: [],
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'TON');
+      await clickButton(mounted.div, 'Tether USD');
+      const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
+      expect(amountInput.placeholder).toContain('USD₮');
+      // No amount yet: the payment request still names the Jetton.
+      expect(mounted.div.querySelector('svg title')?.textContent).toBe(
+        `ton://transfer/${tonAddress}?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs`,
+      );
+      await fillInput(amountInput, '25');
+      // The QR encodes the Jetton transfer URI — 25 USDT in the
+      // Jetton's smallest units (6 decimals), not 25 TON.
+      const title = mounted.div.querySelector('svg title');
+      expect(title?.textContent).toBe(
+        `ton://transfer/${tonAddress}?jetton=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs&amount=25000000`,
+      );
+      // The share link carries chain, address, amount and token.
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link?.textContent).toContain('chain=ton');
+      expect(link?.textContent).toContain(`to=${tonAddress}`);
+      expect(link?.textContent).toContain('amount=25');
+      expect(link?.textContent).toContain(
+        'token=EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // Lane 3 (token Receive): TRON has no payment-request URI standard,
+  // so a TRC-20 token's QR stays the plain TRON address (the same
+  // address receives TRC-20 tokens) and the share link carries the
+  // amount + token.
+  it('selecting a TRC-20 token keeps the plain-address QR and links the token', async () => {
+    const trxAddress = 'THK4PqR8JzXv7QmNn2bVcXfGdHsJkLpW3a';
+    setWallet({
+      selectedChain: 'trx',
+      addresses: {
+        btc: [],
+        eth: [{ index: 0, address: '0xWatchOnlyEthAddress0000000000000000000' }],
+        trx: [{ index: 0, address: trxAddress }],
+        ton: [],
+        sol: [],
+      },
+      vaultAddresses: {
+        btc: [],
+        eth: [VAULT_ETH],
+        trx: [trxAddress],
+        ton: [],
+        sol: [],
+      },
+    });
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'TRON');
+      await clickButton(mounted.div, 'Tether USD');
+      const amountInput = mounted.div.querySelector('#receive-amount') as HTMLInputElement;
+      expect(amountInput.placeholder).toContain('USDT');
+      await fillInput(amountInput, '10');
+      // The main QR is the plain TRON address — TRON has no payment
+      // URI — and the screen says so honestly.
+      expect(mounted.div.querySelector('svg title')?.textContent).toBe(trxAddress);
+      expect(mounted.div.textContent).toContain(
+        'Requested amount: 10 USDT (shown as text',
+      );
+      // The share link still carries chain, address, amount and token.
+      const link = mounted.div.querySelector('[data-testid="receive-share-link"]');
+      expect(link?.textContent).toContain('chain=trx');
+      expect(link?.textContent).toContain(`to=${trxAddress}`);
+      expect(link?.textContent).toContain('amount=10');
+      expect(link?.textContent).toContain('token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('steps chain, then token, then amount with QR and address', async () => {
     setWallet();
     const mounted = await mountScreen();
