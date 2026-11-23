@@ -1843,8 +1843,8 @@ from wiring.
 The FIX-ALL programme (Lanes A–I) was merged into `panel-rebuild/fix-all`
 by cherry-pick, then merged into `panel-rebuild/token-gaps`. Coordinator:
 hands-on Muse, 0 Sol calls. Base token-gaps `8191b2c`; fix-all code tip `62abe11`; merged into
-token-gaps at `<MERGE-SHA — recorded after the merge; see the
-FIX-ALL programme record>`.
+token-gaps at `343cd3a` (fast-forward from `6db1d1e`; the fix-all
+branch was deleted after the merge).
 
 ### What was merged
 
@@ -1939,9 +1939,23 @@ re-verification at 390/820/980/1440/1919 with screenshots viewed
 
 ### Branch deletions (Lane I list, executed by Lane J)
 
-`<Recorded after the merge in the FIX-ALL programme record and the
-final Lane J report: branch, unique-commit evidence, deletion
-verification. A document cannot name its own merge commit.>`
+Deleted after the merge, each verified first-hand with 0 unique
+code and confirmed by fresh ls-remote: `devnet-temp` (`915054b`),
+`token-discovery` (`176613f`), `ui-ux-fixes` (`333880f`),
+`adopt-proper` (`21ce11d`) — their unique commits were all
+programme-record docs, superseded by token-gaps' corrected
+versions (their `CREATE-EXAMPLE-WALLET.md` copies carried a stale
+blob: no `-L`, wrong wasm path, absolute GitHub link, vs
+token-gaps' corrected `b8319c2`); `readme-marketing` (`8aefab7`,
+0 unique commits, ancestor of token-gaps — its work had already
+landed as `6d4bfbf`/`6db1d1e` on token-gaps and `bcc8555`/`8126b8e`
+on main); `fix-all` itself (`343cd3a`, tip == token-gaps tip after
+the merge). KEPT: `desktop-layout-v2` (`15af54c`) — 40 unique code
+files (+1,755/−197 since merge-base `67c48e2`): the two-column
+desktop layout (`ed0abba`/`0e194f4`) deliberately not ported by
+Lane H (v2 regressions; only the 980 px shell was ported).
+Final remote count: 4 branches — main, token-gaps, gh-pages,
+desktop-layout-v2.
 
 ### Merge-lane fixes found by re-verification (after the gates above)
 
