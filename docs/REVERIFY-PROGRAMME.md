@@ -4,9 +4,10 @@ Owner order 2026-11-23 ~18:14 IST: five lanes, reported per lane.
 Coordinator `3e052fbd`, merge lane hands-on Muse, 0 Sol calls,
 0 AgentRouter calls, 0 runner invocations. Branch
 `panel-rebuild/reverify-pro`, branched from token-gaps `b089c28`
-(the Round 2 tip). Merged into `panel-rebuild/token-gaps` (merge
-commit recorded in a follow-up commit on token-gaps, following the
-Round 2 pattern). No code merged into `panel-rebuild/adopt-proper`
+(the Round 2 tip). Fast-forwarded into `panel-rebuild/token-gaps`
+to `ccb8195` on 2026-11-23 (no merge commit: the token-gaps tip was
+the reverify-pro base, so the merge is a fast-forward). No code
+merged into `panel-rebuild/adopt-proper`
 or `main` — those stay untouched for code. Doc-only updates from
 this programme were pushed to `main` and every active remote branch
 the same day, per the owner's order.
@@ -330,19 +331,19 @@ owner's phone), the E2E suite (environment-blocked items, see
 
 | Branch | SHA | State |
 |---|---|---|
-| `main` | (doc-only update) | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/adopt-proper` | (doc-only update) | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/desktop-layout-v2` | (doc-only update) | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/devnet-temp` | (doc-only update) | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/token-discovery` | (doc-only update) | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/token-gaps` | (merge commit) | Merge of `reverify-pro` into token-gaps. Further work continues on top of token-gaps. |
-| `panel-rebuild/reverify-pro` | (programme branch) | Programme branch. Code complete; doc updates pushed here first. |
+| `main` | `e64679e` | Untouched for code. Doc-only update from this programme. |
+| `panel-rebuild/adopt-proper` | `d0aa6ba` | Untouched for code. Doc-only update from this programme. |
+| `panel-rebuild/desktop-layout-v2` | `df6e54d` | Untouched for code. Doc-only update from this programme. |
+| `panel-rebuild/devnet-temp` | `bd4bdd4` | Untouched for code. Doc-only update from this programme. |
+| `panel-rebuild/token-discovery` | `81994e8` | Untouched for code. Doc-only update from this programme. |
+| `panel-rebuild/token-gaps` | `ccb8195` | Fast-forward of `reverify-pro` into token-gaps. Further work continues on top of token-gaps. |
+| `panel-rebuild/reverify-pro` | `ccb8195` | Programme branch. Code complete; doc updates pushed here first. |
 | `panel-rebuild/deep-audit-devnet` | — | Parallel programme. Not touched by this lane. |
 | `gh-pages` | `ee63a13` | Pages site source. Not touched by this programme. |
 
-SHAs for the doc-only updates and the token-gaps merge commit are
-recorded in the follow-up commit on token-gaps (same pattern as
-Round 2 item 10, commit `b089c28`).
+This follow-up commit records the fast-forward (`ccb8195`) and the
+doc-only update SHAs in the table above (same pattern as Round 2
+item 10, commit `b089c28`).
 
 ## Preview / Pages pointers
 
