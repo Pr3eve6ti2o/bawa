@@ -116,23 +116,28 @@ The registry covers 22 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/token-gaps` tree at `d47d282`
-(Lane E, Finish the Product programme, 2026-11-23). Counts are tracked
+Verified against the `panel-rebuild/token-gaps` tree at `8191b2c`
+(Lane I, FIX-ALL programme, 2026-11-24). Counts are tracked
 files (`git ls-files`).
 
 ```text
 bawa/
   README.md, WALLET_BUILDER.md, ARCHITECTURE.md, CONSTRAINTS.md,
-  AGENTS.md, NAMING-MAP.md, SECURITY.md, CHANGELOG.md, CONTRIBUTING.md
+  AGENTS.md, NAMING-MAP.md, SECURITY.md, CHANGELOG.md, CONTRIBUTING.md,
+  DEVNET-ISSUES.md, PERF.md, SECURITY-FINDINGS.md,
+  NOV18-TRUTH-REPRODUCIBILITY-EVIDENCE.md,
+  NOV18-WALLET-GENERATION-SDK-PICK.md, NOV18-WALLET-PANEL-RESEARCH.md
     Root docs: the front door, the builder entry point, the code map and
     invariants, the test/quality floor, repo instructions, naming
-    decisions, security posture, history, contribution guide.
+    decisions, security posture, history, contribution guide; plus the
+    devnet issues log, performance and security-findings records, and
+    the dated 2026-11-18 research reports.
   apps/
-    web/            (273 files) The wallet web app: React 19 + TypeScript
+    web/            (304 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (57 files, one
+                    (routing, shell), `src/screens` (56 files, one
                     screen per route), `src/state` (wallet context and
-                    refresh), `src/wallet` (80 files: chains, vault,
+                    refresh), `src/wallet` (86 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
                     (address codecs, boundary, destination validation,
                     confirmation policy), `src/ui` (components, styles),
@@ -143,7 +148,7 @@ bawa/
     android/        (30 files) The Android starter (Kotlin): app, core
                     (derivation/confirmation policy, key validation),
                     ui screens and ViewModel.
-  docs/             (216 files) The guide and programme records, in
+  docs/             (219 files) The guide and programme records, in
                     Diátaxis order (see the sections above): numbered
                     docs 01-16, platform guides, reference, evidence,
                     archive. The single entry point is this index.

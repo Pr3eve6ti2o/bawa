@@ -25,6 +25,7 @@
 | `PR1-EVIDENCE.md` | `NOV18-TRUTH-REPRODUCIBILITY-EVIDENCE.md` | "PR1" is lane jargon; the file is the 2026-11-18 truth-and-reproducibility evidence report. Date prefix marks it as a dated lane report at the root. | None live — the only mentions are historical (see §3). |
 | `RESEARCH-REPORT.md` | `NOV18-WALLET-PANEL-RESEARCH.md` | "RESEARCH-REPORT" says nothing about its subject (the wallet-panel rebuild research, 2026-11-18). | None live — the only mentions are historical (see §3). |
 | `SDK-PICK.md` | `NOV18-WALLET-GENERATION-SDK-PICK.md` | "SDK-PICK" says nothing about its subject (the wallet-generation engine SDK pick, 2026-11-18). | None live — the only mentions are historical (see §3). |
+| `apps/web/e2e/itemD-add-token-prices.spec.ts` | `apps/web/e2e/item-d-add-token-prices.spec.ts` | Last camelCase filename in `apps/web/e2e`: siblings are `item13`/`item14`/`item18`/`item19`/`item2`/`item4` (lowercase + number). FIX-ALL Lane I, 2026-11-24. | Screenshot output paths inside the spec (`test-results/itemD/` → `test-results/item-d/`, file names likewise) and the comment in `apps/web/e2e/add-token.spec.ts`. Test titles keep "Item D" (the programme item label, not the filename). Playwright `testDir` is `./e2e` with no file list; the e2e manifest does not name this spec. |
 
 ## 2. Proposed but NOT applied on this branch (and why)
 

@@ -1358,3 +1358,120 @@ Worktree `bawa-fixall-g`, branch `panel-rebuild/fix-all-g`, base `8191b2c`
   fix-all branch only; the five branches' `DECISIONS.md` copies still carry
   the §18 placeholder, out of scope for this lane's doc-only push (only the
   programme-record file was re-pushed there).
+
+## §20 — FIX-ALL programme, Lane I (branches under 4 + renames + pushes) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls, 0 runner invocations.
+Worktree `bawa-fixall-i`, branch `panel-rebuild/fix-all-i`, base `8191b2c`
+(`token-gaps` tip). No merge into `token-gaps` or `main` by this lane.
+Skills read first-hand on the VM: `repo-hygiene-scan` (naming/structure
+scan method + verify-before-deleting rule), `order-traceability-checklist`
+(order set locked first, evidence per verdict — used for the branch audit),
+`git-workflow-and-versioning` (atomic commits, one concern per commit).
+
+- **Unpushed sweep: nothing pushed.** Every local branch tip is already
+  reachable from a pushed remote ref, or its content is: 57 of the 66
+  local branches were ancestors of `token-gaps` `8191b2c` at audit time
+  (55 after this lane's 4 commits on `fix-all-i`; the 11th non-ancestor
+  is the parallel Lane G branch `panel-rebuild/fix-all-g` at `0dd82de`,
+  created during this lane);
+  `main-adopt-fixes` (`df3dd25`) is contained in `main`; `gh-pages` /
+  `main` / remote tips are in sync. 34 worktree HEADs (33 detached
+  deep-audit, finish-product, marketing-fix, reverify, round-2 lane tips
+  + this lane's own tip) are not contained in any remote ref as SHAs —
+  spot-checked by line-subsumption against the
+  `8191b2c` tree (deep-audit A 0/11 lines missing, finish A 1/421,
+  marketing-fix 1 11/236, round-2 item 1 58/571, finish E 0/146 with
+  `secret-handoff.ts` present): their content entered `token-gaps` via the
+  recorded cherry-pick merges under new SHAs, or (reverify Lane 1,
+  199/342) was superseded by the corrected Lane 8 rewrite that explicitly
+  replaces it. Deliberately left unpushed: `panel-rebuild/pages-base`
+  (`cd39306`, local-only, worktree-pinned) — its `/bawa/` base + router
+  basename work is already in the `8191b2c` tree, and pushing it would add
+  a 10th remote branch against the under-4 goal. My own lane commits stay
+  local by brief (lane branches are not pushed). All 4 local tags exist on
+  the remote.
+- **Remote branches 9 → 8.** Fresh `ls-remote` at lane start (2026-11-24):
+  `gh-pages ee63a13`, `main 6af3daf`, `adopt-proper 47fe6c6`,
+  `desktop-layout-v2 3c1a6df`, `devnet-temp db221c4`,
+  `finish-product 8191b2c`, `token-discovery 84142e2`,
+  `token-gaps 8191b2c`, `ui-ux-fixes d4ea91d`. `finish-product` DELETED via
+  PAT protocol — verified `merge-base --is-ancestor` of `token-gaps` with
+  0 unique commits (`8191b2c` = `token-gaps` tip); fresh `ls-remote`
+  confirms the ref is gone. During this lane the Lane G doc-push moved
+  five tips one doc-only commit each (`main 250272a`,
+  `desktop-layout-v2 5fff7ce`, `devnet-temp 76fdd25`,
+  `token-discovery 150b2f6`, `ui-ux-fixes 8ac66fa`; `main` later `58e7c36`
+  for the README fix) — the audit below is against the pre-move tips,
+  re-verified as docs-only on top of them.
+- **Branch audit (unique vs `token-gaps` `8191b2c`, `git cherry` +
+  line-subsumption, not SHA equality).** `adopt-proper` (10 unique, all
+  docs): substance superseded — `token-gaps` carries later corrected
+  versions of the same files (reverify checklist explicitly REPLACES the
+  first checklist; gap rows present with updated statuses; `index.md` /
+  `inventory.md` strictly newer, zero adopt-only lines). `devnet-temp`
+  (8 unique, all docs; devnet code already in the tree,
+  `devnet-setting.tsx` etc.): same supersession verdict. `token-discovery`
+  (11 unique, all docs) and `ui-ux-fixes` (2 unique, both docs): same.
+  Cherry-picking any of those doc commits would REGRESS the docs — not
+  done, with evidence in the lane report. `desktop-layout-v2` (14 unique):
+  3 code commits (`ed0abba`, `0e194f4`, `bf00f54`) with no equivalent in
+  `token-gaps`; the `lg+` two-column commits conflict across 8 files and
+  their layouts were superseded by finish-product desktop work, so only
+  the 980 px breakpoint was ported (see below). `main` (628 unique) and
+  `gh-pages` (orphan build commit) are keepers, never merged.
+- **Deletion list for the merge lane (execute only after the
+  fix-all → `token-gaps` merge).** `desktop-layout-v2` (unique code now
+  ported as `3fce3f7`; remaining unique commits are superseded docs),
+  `devnet-temp`, `token-discovery`, `ui-ux-fixes` (unique commits docs-only
+  and superseded — see audit), `adopt-proper` (same). Evidence per branch
+  is in the lane report (`LANE-I-REPORT.md` in the programme record
+  directory). Local branches: 57 at audit time (55 now — `fix-all-i` and `fix-all-g` hold new work) are ancestors of `token-gaps` and safe to
+  delete once their worktrees are removed — but most are checked out in a
+  worktree, so this lane deleted none (no force-delete of worktree
+  branches); the merge lane / coordinator owns worktree removal. Never
+  deleted: `main`, `token-gaps`, `gh-pages`, `panel-rebuild/fix-all-i`.
+- **980 px breakpoint ported (`3fce3f7`).** Hand-port of `bf00f54` onto
+  `8191b2c` (verbatim cherry-pick of `ed0abba`/`0e194f4`/`bf00f54` aborted
+  on 8-file conflicts): Tailwind `desktop:` variant at 980 px
+  (`--breakpoint-desktop: 61.25rem` in `globals.css`) and the shell-only
+  `lg:` → `desktop:` switch in `app.tsx` (frame, sidebar, headers, bottom
+  nav, more menu, outlet cap), `sidebar-nav.tsx` + `security-settings.tsx`
+  comments, tests in `app.test.tsx` / `app-nav.test.tsx` /
+  `globals.test.ts`. In-page `lg:` grids untouched. The Retry-gate half of
+  `bf00f54` was NOT ported — finish-product Lane J already gates Retry on
+  this tree. Verified `token-gaps` had no `980` in `apps/web/src` before.
+- **Lane G docs incorporated (`77ad733`, cherry-pick of `0dd82de`).**
+  Final SHAs in `docs/FINISH-PRODUCT-PROGRAMME.md` (the `bdb8fa8` →
+  `8191b2c` fix the owner ordered) + DECISIONS §19 (skills archive note).
+  The branch variants (`5fff7ce` etc.) carry the record half only; the
+  fuller `0dd82de` was picked.
+- **Rename (`6a8cdf5`, separate commit).**
+  `apps/web/e2e/itemD-add-token-prices.spec.ts` →
+  `apps/web/e2e/item-d-add-token-prices.spec.ts` — the last camelCase
+  filename in `e2e/` (siblings `item13`/`item14`/… are lowercase +
+  number). Screenshot paths inside the spec and the `add-token.spec.ts`
+  comment updated; test titles keep "Item D" (programme item label).
+  Nothing else renamed: the audit found no other misnamed file —
+  `docs/` SCREAMING-CASE is the recorded convention, Android PascalCase
+  is Kotlin convention, `__typetests__` is the type-test convention,
+  `LICENSE-token-ui` / `boundary.ts` / `test/` vs `tests/` / `docs/index.md`
+  vs `docs/README.md` are all KEEP decisions already recorded in
+  `NAMING-MAP.md` §2 (re-checked, not re-litigated). `secretHandoff.ts`
+  was already renamed by finish-product Lane E. No file deleted.
+- **Captcha rename follow-up: not applicable to this tree.** The
+  2026-11-24 main rename (`captcha/run-tronscan-check` →
+  `run-captcha-check`, main `58e7c36`) and its stale
+  `docs/diagrams/captcha.*` references live on `main` only — this tree
+  contains zero `captcha` paths. Touching `main` is outside this lane's
+  brief; flagged for the coordinator.
+- **Docs brought to the new state (this commit).** `docs/index.md` project
+  structure re-verified by `git ls-files` against `8191b2c`:
+  `apps/web` 273 → 304 files, `src/screens` 57 → 56, `src/wallet` 80 → 86,
+  `docs/` 216 → 219; root-docs list extended (added `DEVNET-ISSUES.md`,
+  `PERF.md`, `SECURITY-FINDINGS.md`, the three `NOV18-*.md` reports);
+  stamp `d47d282` → `8191b2c`. `README.md` Project history gains the
+  FIX-ALL line. `NAMING-MAP.md` §1 gains the `item-d` row.
+- **Gates on this lane tree (Node 22, after `npm ci`):** `tsc --noEmit` 0,
+  `npm run build` 0 (palette audit passed), `vitest` 97 files, 1873 passed
+  / 5 skipped / 0 failed, `eslint` 0, `npm audit` 0 vulnerabilities.
