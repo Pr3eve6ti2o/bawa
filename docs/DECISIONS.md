@@ -579,8 +579,8 @@ Owner order 2026-11-23 ~19:14 IST, from two phone screenshots (mobile `$0.00
 bad, the Retry button should not be there, the mobile balance should not say
 Partial. Hands-on Muse, 0 Sol calls. Branch `panel-rebuild/marketing-fix` from
 `71326e1`, rebased onto `e290654` after the deep-audit programme merged into
-token-gaps first; merged into token-gaps (merge SHA recorded in
-`docs/MARKETING-FIX-PROGRAMME.md`).
+token-gaps first; merged into token-gaps as `571f0fb` (merged tree
+byte-identical to the verified `a8018fd` tree).
 
 - **Lane 1 (first-impression defects).** Reproduced both screenshots on
   baseline first (burst ~230 requests, 36 failed). Partial: shared refresh
@@ -605,8 +605,15 @@ token-gaps first; merged into token-gaps (merge SHA recorded in
 - **Lane 5 (Mermaid diagram).** `docs/HOW-IT-WORKS.md`: two 8-node Mermaid
   flowcharts (how it starts / what it does), render-validated, all 49 cited
   paths exist. Trade-off stated: GitHub mobile app shows Mermaid as raw code.
-- **Lane 6 (branch cleanup).** Recorded in `docs/MARKETING-FIX-PROGRAMME.md`
-  after the merge.
+- **Lane 6 (branch cleanup).** Remote 13 -> 9 branches: deleted ui-ux-round2,
+  reverify-pro, readme-showcase-token, deep-audit-devnet (all verified
+  ancestors of token-gaps `571f0fb`). Kept: token-discovery and ui-ux-fixes
+  (not ancestors - post-merge doc-only commits with unique content),
+  desktop-layout-v2 and devnet-temp (unique unmerged work), marketing-fix
+  (programme branch), main, adopt-proper, token-gaps, gh-pages. Local 59 -> 56
+  branches; the rest are pinned by checked-out worktrees and need a
+  worktree-removal pass (finish-product Lane E). Full lists in
+  `docs/MARKETING-FIX-PROGRAMME.md`.
 - **Lane 7 (QR templates, owner correction).** The owner was right: templates
   were not visible as asked (Receive opened on the network picker; alternates
   40 px, below the fold, unlabelled; Payment request a disabled grey box;
