@@ -186,3 +186,21 @@ Verified at commit `667527e` on 2026-11-20:
 See the [full verification records](docs/10-operations-and-testing/README.md).
 
 [`docs/README-FULL.md`](docs/README-FULL.md) is the frozen 2026-11-08 archive, with 1,285 lines and 81,316 bytes, whose header names the `e3b65fb8` snapshot. It is not a verbatim copy of that commit’s root README, which has 1,019 lines and 55,192 bytes, and it is not the file of the same name at tag `archive/hd-wallet-professional`.
+
+## UI/UX Fixes programme (2026-11-23)
+
+The 21-item UI/UX Fixes programme (sticky-scroll fixes, devnet toggle,
+mobile checks, QR image sharing, one-section 24/25-word import,
+same-phrase accounts, bulk account creation, multichain + HD, rebuilt
+Welcome, "SOON" cleanup, bug hunt, asset values, Add Token for every
+chain, 9 new chains, copy button, watch wallet for all chains,
+multi-account without deleting, HD primary tokens, RPC failover,
+stepped Send/Receive flow, and this documentation) is complete and
+merged into `panel-rebuild/token-gaps` (merge commit `4eb0242`).
+Full record, gates and branch state:
+[docs/UI-UX-FIXES-PROGRAMME.md](docs/UI-UX-FIXES-PROGRAMME.md).
+
+No code from the programme was merged into `adopt-proper` or `main`.
+The durable preview (GitHub Pages) still serves the saved
+adopt-proper-based build; to preview the programme, check out
+`panel-rebuild/token-gaps` and run the web starter locally.
