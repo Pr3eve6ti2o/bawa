@@ -115,7 +115,7 @@ proceed until the install succeeds.
 - [README](../README.md) — what Bawa is, and the note on the 22 chains
   this wallet enables versus the 168 chains the guide covers.
 - [Guide index](index.md) — the full guide.
-- [Web starter README](../apps/web/README.md) — what works, what is mock,
+- [Web starter README](https://github.com/Pr3eve6ti2o/bawa/blob/panel-rebuild/token-gaps/apps/web/README.md) — what works, what is mock,
   and the security notes.
 - [Wallet lifecycle](wallet-lifecycle.md) — cold-test the wallet safely,
   then delete the vault.
