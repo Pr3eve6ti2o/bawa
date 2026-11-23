@@ -126,15 +126,18 @@ test('E2E-19 Ethereum falls back to the backup RPC, and the RPC manager adds/rem
     .locator('select', { has: page.locator('option[value="eth"]') })
     .first()
     .selectOption('eth');
-  // Add a genuinely custom endpoint (blast is already ETH's registry
-  // backup, so adding it would be dedupe-rejected): ankr is a valid
-  // https URL that is not in the registry. The manager only stores and
-  // lists it here — no network call is made to it.
+  // Add a genuinely custom endpoint: Flashbots is on the wallet's
+  // allowed-connection list and is not in the ETH registry, so the
+  // manager stores and lists it. (The old choice here, ankr, is no
+  // longer addable: Lane F's manager rejects origins outside the
+  // allowlist with "the browser would block it" — correctly, since
+  // the CSP would refuse those fetches. The manager only stores and
+  // lists the custom endpoint here — no network call is made to it.)
   await page
     .getByLabel('Custom RPC URL')
-    .fill('https://rpc.ankr.com/eth');
+    .fill('https://rpc.flashbots.net');
   await page.getByRole('button', { name: 'Add RPC' }).click();
-  const customRow = page.locator('text=rpc.ankr.com').first();
+  const customRow = page.locator('text=rpc.flashbots.net').first();
   await expect(customRow).toBeVisible({ timeout: 15_000 });
   await expect(
     page.getByText('Custom', { exact: true }).first(),
@@ -143,9 +146,9 @@ test('E2E-19 Ethereum falls back to the backup RPC, and the RPC manager adds/rem
     .getByRole('button', { name: 'Remove', exact: true })
     .last()
     .click();
-  // The status message still names the host ("Removed rpc.ankr.com
+  // The status message still names the host ("Removed rpc.flashbots.net
   // from Ethereum."), so the removal is asserted on the Custom badge
   // disappearing, not on the host text vanishing.
-  await expect(page.getByText('Removed rpc.ankr.com from Ethereum.')).toBeVisible();
+  await expect(page.getByText('Removed rpc.flashbots.net from Ethereum.')).toBeVisible();
   await expect(page.getByText('Custom', { exact: true })).toHaveCount(0);
 });
