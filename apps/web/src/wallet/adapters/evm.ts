@@ -252,11 +252,39 @@ export function createEvmAdapter(
     const url =
       `${historyBaseUrl}${separator}module=account&action=txlist` +
       `&address=${address}&page=1&offset=${limit}&sort=desc`;
+    // Merge lane (2026-11-24): Etherscan V2's keyless tier allows 1
+    // request per 5 s per IP, and answers NOTOK "Missing/Invalid API
+    // Key" inside the window — the same message as a missing key, so
+    // it looks like keyless access ended when it did not (proven live:
+    // a quiet call without any apikey parameter returns status 1 with
+    // real transactions). The app fires the history refresh twice in
+    // quick succession (boot + page), so the second Linea call lands
+    // inside the window, and the store's request counter discards the
+    // first (good) result — the page ends on "No transactions yet".
+    // One retry after 6 s clears the window; a second NOTOK is
+    // returned as the error, as before. No key is used or needed.
     let raw: unknown;
-    try {
-      raw = await readJson(url, `${config.chain}.getHistory`);
-    } catch (error: unknown) {
-      return toAdapterError(error);
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        raw = await readJson(url, `${config.chain}.getHistory`);
+      } catch (error: unknown) {
+        return toAdapterError(error);
+      }
+      // The quota signal is in `result`, not `message`: Etherscan
+      // answers { status: '0', message: 'NOTOK', result:
+      // 'Missing/Invalid API Key' } inside the 5 s window. (isRecord
+      // narrows `raw` first — it is still `unknown` here.)
+      const quotaHit =
+        historySource === 'etherscan-v2' &&
+        attempt === 1 &&
+        isRecord(raw) &&
+        raw['status'] !== '1' &&
+        ((typeof raw['message'] === 'string' &&
+          raw['message'].includes('Missing/Invalid API Key')) ||
+          (typeof raw['result'] === 'string' &&
+            raw['result'].includes('Missing/Invalid API Key')));
+      if (!quotaHit) break;
+      await new Promise((resolve) => setTimeout(resolve, 6000));
     }
     if (!isRecord(raw)) {
       return { status: 'error', reason: 'Invalid response: expected an object' };

@@ -204,6 +204,91 @@ describe('evm adapter — history', () => {
     expect(url).toBe(
       'https://api.etherscan.io/v2/api?chainid=59144&module=account&action=txlist&address=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&page=1&offset=20&sort=desc',
     );
+
+  });
+
+  it('retries an Etherscan V2 keyless-quota NOTOK once after the 5 s window', async () => {
+    // Merge lane (2026-11-24): the keyless tier is 1 request per 5 s
+    // per IP and answers NOTOK "Missing/Invalid API Key" inside the
+    // window. The app fires the refresh twice in quick succession, so
+    // the second call is quota-hit; the adapter retries it once after
+    // 6 s instead of returning the error. A second NOTOK is returned
+    // as the error (covered by the status-'0' path, not retried).
+    vi.useFakeTimers();
+    try {
+      const okBody = {
+        status: '1',
+        message: 'OK-Missing/Invalid API Key, rate limit of 1/5sec applied',
+        result: [
+          {
+            hash: '0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c',
+            from: '0x8915e470d0dd8a7830d96d6710cd2f4262dd7c40',
+            to: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+            value: '20000000000000',
+            timeStamp: '1782299939',
+            txreceipt_status: '1',
+            isError: '0',
+          },
+        ],
+      };
+      // The mock returns Promise<unknown>: the two stubbed bodies carry
+      // `result` as a string (NOTOK) and as an array (ok), which do not
+      // unify into one mock type.
+      const fetchMock = vi
+        .fn(async (): Promise<unknown> => ({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: '0',
+            message: 'NOTOK',
+            result: 'Missing/Invalid API Key',
+          }),
+        }))
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: '0',
+            message: 'NOTOK',
+            result: 'Missing/Invalid API Key',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => okBody,
+        });
+      vi.stubGlobal('fetch', fetchMock);
+      const adapter = createEvmAdapter(
+        {
+          chain: 'linea',
+          networkId: 'eip155:59144',
+          rpcUrl: 'https://linea-rpc.publicnode.com',
+          evmChainId: 59144,
+          chainName: 'Linea',
+          nativeSymbol: 'ETH',
+          source: 'publicnode',
+          historyBaseUrl: 'https://api.etherscan.io/v2/api?chainid=59144',
+          historyExplorerBase: 'https://lineascan.build',
+        },
+        { client: mockClient({ getChainId: vi.fn(async () => 59144) }) },
+      );
+      const pending = adapter.getHistory(
+        '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      );
+      await vi.advanceTimersByTimeAsync(6000);
+      const result = await pending;
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result.status).toBe('ok');
+      if (result.status === 'ok') {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]?.hash).toBe(
+          '0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c',
+        );
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
