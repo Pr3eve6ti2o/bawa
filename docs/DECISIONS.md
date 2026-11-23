@@ -1326,3 +1326,659 @@ commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as [SHA TBD].
   Receive tagline (owner must say which line goes); README showcase link
   (item A waits on the owner's link); `ci.yml` defines the `web` job
   twice (second shadows the first — owner/merge-lane decision).
+## §19 — FIX-ALL programme, Lane G (skills archive + final-SHA record fix) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls, 0 runner invocations.
+Worktree `bawa-fixall-g`, branch `panel-rebuild/fix-all-g`, base `8191b2c`
+(`token-gaps` tip). No merge; no code touched on any branch.
+
+- **Skills are for Orion's use, not for the repo (owner order 2026-11-24).**
+  No plan to add skills into the repo. The three new skills
+  (`order-traceability-checklist`, `cdp-visual-verification`,
+  `repo-hygiene-scan`) stay live in `/home/boxd/workspace/custom-skills/`
+  on gray-pinee and `~/workspace/custom-skills/` in the sandbox, and are
+  archived at `/home/boxd/workspace/bawa-fix-all/skills-archive/` (copies +
+  README) for future use when skills are added to the repo. Verified: no
+  skills directory exists anywhere in the repo tree (the only `*skill*`
+  path is Playwright's own tooling inside `apps/web/node_modules`).
+- **Second honest gap fixed (Lane G).** The finish-product record as pushed
+  to the five branches carried the final SHAs as unfilled placeholders
+  because the coordinator reasoned re-pushing would recurse. That reasoning was wrong — a document
+  cannot contain its own commit hash, and that is normal: the record lists
+  the SHAs of the other pushes, and its own commit gets a new hash, which is
+  fine. `docs/FINISH-PRODUCT-PROGRAMME.md` now lists the final SHAs
+  (`finish-product` `8191b2c`, `token-gaps` `8191b2c`, `main` `6af3daf`,
+  `desktop-layout-v2` `3c1a6df`, `devnet-temp` `db221c4`,
+  `token-discovery` `84142e2`, `ui-ux-fixes` `d4ea91d`;
+  `adopt-proper` `47fe6c6` and `gh-pages` `ee63a13` untouched) and was
+  re-pushed doc-only to the five branches (fresh `ls-remote` verified, no
+  unfilled placeholder remains in the file on any of the five branches).
+  This section's §18 placeholder is likewise fixed to `8191b2c` on the
+  fix-all branch only; the five branches' `DECISIONS.md` copies still carry
+  the §18 placeholder, out of scope for this lane's doc-only push (only the
+  programme-record file was re-pushed there).
+
+## §20 — FIX-ALL programme, Lane I (branches under 4 + renames + pushes) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls, 0 runner invocations.
+Worktree `bawa-fixall-i`, branch `panel-rebuild/fix-all-i`, base `8191b2c`
+(`token-gaps` tip). No merge into `token-gaps` or `main` by this lane.
+Skills read first-hand on the VM: `repo-hygiene-scan` (naming/structure
+scan method + verify-before-deleting rule), `order-traceability-checklist`
+(order set locked first, evidence per verdict — used for the branch audit),
+`git-workflow-and-versioning` (atomic commits, one concern per commit).
+
+- **Unpushed sweep: nothing pushed.** Every local branch tip is already
+  reachable from a pushed remote ref, or its content is: 57 of the 66
+  local branches were ancestors of `token-gaps` `8191b2c` at audit time
+  (55 after this lane's 4 commits on `fix-all-i`; the 11th non-ancestor
+  is the parallel Lane G branch `panel-rebuild/fix-all-g` at `0dd82de`,
+  created during this lane);
+  `main-adopt-fixes` (`df3dd25`) is contained in `main`; `gh-pages` /
+  `main` / remote tips are in sync. 34 worktree HEADs (33 detached
+  deep-audit, finish-product, marketing-fix, reverify, round-2 lane tips
+  + this lane's own tip) are not contained in any remote ref as SHAs —
+  spot-checked by line-subsumption against the
+  `8191b2c` tree (deep-audit A 0/11 lines missing, finish A 1/421,
+  marketing-fix 1 11/236, round-2 item 1 58/571, finish E 0/146 with
+  `secret-handoff.ts` present): their content entered `token-gaps` via the
+  recorded cherry-pick merges under new SHAs, or (reverify Lane 1,
+  199/342) was superseded by the corrected Lane 8 rewrite that explicitly
+  replaces it. Deliberately left unpushed: `panel-rebuild/pages-base`
+  (`cd39306`, local-only, worktree-pinned) — its `/bawa/` base + router
+  basename work is already in the `8191b2c` tree, and pushing it would add
+  a 10th remote branch against the under-4 goal. My own lane commits stay
+  local by brief (lane branches are not pushed). All 4 local tags exist on
+  the remote.
+- **Remote branches 9 → 8.** Fresh `ls-remote` at lane start (2026-11-24):
+  `gh-pages ee63a13`, `main 6af3daf`, `adopt-proper 47fe6c6`,
+  `desktop-layout-v2 3c1a6df`, `devnet-temp db221c4`,
+  `finish-product 8191b2c`, `token-discovery 84142e2`,
+  `token-gaps 8191b2c`, `ui-ux-fixes d4ea91d`. `finish-product` DELETED via
+  PAT protocol — verified `merge-base --is-ancestor` of `token-gaps` with
+  0 unique commits (`8191b2c` = `token-gaps` tip); fresh `ls-remote`
+  confirms the ref is gone. During this lane the Lane G doc-push moved
+  five tips one doc-only commit each (`main 250272a`,
+  `desktop-layout-v2 5fff7ce`, `devnet-temp 76fdd25`,
+  `token-discovery 150b2f6`, `ui-ux-fixes 8ac66fa`; `main` later `58e7c36`
+  for the README fix) — the audit below is against the pre-move tips,
+  re-verified as docs-only on top of them.
+- **Branch audit (unique vs `token-gaps` `8191b2c`, `git cherry` +
+  line-subsumption, not SHA equality).** `adopt-proper` (10 unique, all
+  docs): substance superseded — `token-gaps` carries later corrected
+  versions of the same files (reverify checklist explicitly REPLACES the
+  first checklist; gap rows present with updated statuses; `index.md` /
+  `inventory.md` strictly newer, zero adopt-only lines). `devnet-temp`
+  (8 unique, all docs; devnet code already in the tree,
+  `devnet-setting.tsx` etc.): same supersession verdict. `token-discovery`
+  (11 unique, all docs) and `ui-ux-fixes` (2 unique, both docs): same.
+  Cherry-picking any of those doc commits would REGRESS the docs — not
+  done, with evidence in the lane report. `desktop-layout-v2` (14 unique):
+  3 code commits (`ed0abba`, `0e194f4`, `bf00f54`) with no equivalent in
+  `token-gaps`; the `lg+` two-column commits conflict across 8 files and
+  their layouts were superseded by finish-product desktop work, so only
+  the 980 px breakpoint was ported (see below). `main` (628 unique) and
+  `gh-pages` (orphan build commit) are keepers, never merged.
+- **Deletion list for the merge lane (execute only after the
+  fix-all → `token-gaps` merge).** `desktop-layout-v2` (unique code now
+  ported as `3fce3f7`; remaining unique commits are superseded docs),
+  `devnet-temp`, `token-discovery`, `ui-ux-fixes` (unique commits docs-only
+  and superseded — see audit), `adopt-proper` (same). Evidence per branch
+  is in the lane report (`LANE-I-REPORT.md` in the programme record
+  directory). Local branches: 57 at audit time (55 now — `fix-all-i` and `fix-all-g` hold new work) are ancestors of `token-gaps` and safe to
+  delete once their worktrees are removed — but most are checked out in a
+  worktree, so this lane deleted none (no force-delete of worktree
+  branches); the merge lane / coordinator owns worktree removal. Never
+  deleted: `main`, `token-gaps`, `gh-pages`, `panel-rebuild/fix-all-i`.
+- **980 px breakpoint ported (`3fce3f7`).** Hand-port of `bf00f54` onto
+  `8191b2c` (verbatim cherry-pick of `ed0abba`/`0e194f4`/`bf00f54` aborted
+  on 8-file conflicts): Tailwind `desktop:` variant at 980 px
+  (`--breakpoint-desktop: 61.25rem` in `globals.css`) and the shell-only
+  `lg:` → `desktop:` switch in `app.tsx` (frame, sidebar, headers, bottom
+  nav, more menu, outlet cap), `sidebar-nav.tsx` + `security-settings.tsx`
+  comments, tests in `app.test.tsx` / `app-nav.test.tsx` /
+  `globals.test.ts`. In-page `lg:` grids untouched. The Retry-gate half of
+  `bf00f54` was NOT ported — finish-product Lane J already gates Retry on
+  this tree. Verified `token-gaps` had no `980` in `apps/web/src` before.
+- **Lane G docs incorporated (`77ad733`, cherry-pick of `0dd82de`).**
+  Final SHAs in `docs/FINISH-PRODUCT-PROGRAMME.md` (the `bdb8fa8` →
+  `8191b2c` fix the owner ordered) + DECISIONS §19 (skills archive note).
+  The branch variants (`5fff7ce` etc.) carry the record half only; the
+  fuller `0dd82de` was picked.
+- **Rename (`6a8cdf5`, separate commit).**
+  `apps/web/e2e/itemD-add-token-prices.spec.ts` →
+  `apps/web/e2e/item-d-add-token-prices.spec.ts` — the last camelCase
+  filename in `e2e/` (siblings `item13`/`item14`/… are lowercase +
+  number). Screenshot paths inside the spec and the `add-token.spec.ts`
+  comment updated; test titles keep "Item D" (programme item label).
+  Nothing else renamed: the audit found no other misnamed file —
+  `docs/` SCREAMING-CASE is the recorded convention, Android PascalCase
+  is Kotlin convention, `__typetests__` is the type-test convention,
+  `LICENSE-token-ui` / `boundary.ts` / `test/` vs `tests/` / `docs/index.md`
+  vs `docs/README.md` are all KEEP decisions already recorded in
+  `NAMING-MAP.md` §2 (re-checked, not re-litigated). `secretHandoff.ts`
+  was already renamed by finish-product Lane E. No file deleted.
+- **Captcha rename follow-up: not applicable to this tree.** The
+  2026-11-24 main rename (`captcha/run-tronscan-check` →
+  `run-captcha-check`, main `58e7c36`) and its stale
+  `docs/diagrams/captcha.*` references live on `main` only — this tree
+  contains zero `captcha` paths. Touching `main` is outside this lane's
+  brief; flagged for the coordinator.
+- **Docs brought to the new state (this commit).** `docs/index.md` project
+  structure re-verified by `git ls-files` against `8191b2c`:
+  `apps/web` 273 → 304 files, `src/screens` 57 → 56, `src/wallet` 80 → 86,
+  `docs/` 216 → 219; root-docs list extended (added `DEVNET-ISSUES.md`,
+  `PERF.md`, `SECURITY-FINDINGS.md`, the three `NOV18-*.md` reports);
+  stamp `d47d282` → `8191b2c`. `README.md` Project history gains the
+  FIX-ALL line. `NAMING-MAP.md` §1 gains the `item-d` row.
+- **Gates on this lane tree (Node 22, after `npm ci`):** `tsc --noEmit` 0,
+  `npm run build` 0 (palette audit passed), `vitest` 97 files, 1873 passed
+  / 5 skipped / 0 failed, `eslint` 0, `npm audit` 0 vulnerabilities.
+
+## §21 — FIX-ALL programme, Lane A (watch-only, history, RPCs) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls. Worktree
+`bawa-fixall-a`, branch `panel-rebuild/fix-all-a`, base `8191b2c`
+(token-gaps tip). Lane report:
+`/home/boxd/workspace/bawa-fix-all/LANE-A-REPORT.md`.
+
+- **TRX watch-only fixed (TronScan fallback + PublicNode backup).**
+  Trongrid 429s under load (`/v1/accounts/` and `/wallet/getaccount`
+  both 429 in the probe runs). The adapter now falls back to TronScan
+  (`https://apilist.tronscanapi.com`, balance + history, TransferContract
+  only, direction from owner/to) and the registry gains PublicNode's
+  TRON full node (`https://tron-rpc.publicnode.com`) as second RPC —
+  it answers `/wallet/*` (identity, fee) but 404s `/v1/*`, which is
+  why TronScan owns balance/history. Mainnet-only gate: the fallback
+  never runs on devnet (Nile). CDP: `/wallets` shows
+  `20,032,755.932541 TRX` for `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5`,
+  matching Trongrid = TronScan = PublicNode in one probe run.
+- **TON: the 0 was genuine.** TonCenter and TonAPI agree the tested
+  address holds 0 (active v4r2 wallet). No adapter change: the TonAPI
+  fallback already existed. Funded address
+  `UQAXDV0lgZTFoAkp_pwBwJbY1Gg8yppMrp2rU7JF6dBG3B5B`
+  (41.293091416 TON, v5r1) renders in CDP, and the zero address
+  renders `Balance: 0 TON` in a separate run. Known limit: the
+  watch-only store holds one entry per chain, so two TON addresses
+  cannot be watched in one browser profile.
+- **DOGE: dogechain.info added, then removed in the same lane.**
+  Correct data in Node (200, exact agreement with BlockCypher) but
+  no `Access-Control-Allow-Origin` on `.info` or `.com`, so the
+  browser fails every fetch — proven in CDP round 2 (six
+  `net::ERR_FAILED`, same URL 200 in Node) and from a no-CSP probe
+  page, so it is CORS, not the app's CSP. Zelcore Blockbook and
+  DogeSoft return the same correct balance with the same defect;
+  Trezor Blockbook 403s, Blockchair 430s (IP blacklisted), NOWNodes /
+  CryptoAPIs / Ankr need a key, PublicNode has no Dogecoin RPC.
+  Adapter stays SoChain → BlockCypher (both CORS-clean); on
+  2026-11-24 both are quota-limited, so the row honestly shows
+  "Could not load balance" with Retry. Owner decision unchanged:
+  Blockchair with a key, or accept the outage (GAP-ANALYSIS.md §12).
+- **Linea history wired (Etherscan V2, keyless).** Chain 59144
+  answers `txlist` with status `"1"` and real transactions; the
+  other five blocked chains were probed and stay blocked (Routescan
+  "chain not supported" / `NO_BLOCKCHAINS_FOR_PARAMS`; Etherscan V2
+  "Free API access is not supported" (bsc, gnosis), "Missing or
+  unsupported chainid" (metis, fantom), 502 (opbnb); Blockscout 404s
+  and gnosis 403 Cloudflare — the browser fetch fails too, so it is
+  not a curl artefact). CDP: `/assets/linea` renders the real tx
+  `0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c`.
+  History verified is now 17 chains; five stay blocked (owner
+  decision §1 in GAP-ANALYSIS.md).
+- **Every RPC audited live through the app's adapters (38
+  endpoints).** All answer except the two 1RPC backups, which return
+  `-32001` "usage limit" (shared free tier exhausted) and were
+  replaced with dRPC (`https://eth.drpc.org`,
+  `https://aurora.drpc.org`), verified live through the adapter with
+  Vitalik's exact balance. The Solana backup
+  (`public.rpc.solanavibestation.com`), unreachable on 2026-11-23,
+  answers again. CSP is now 61 origins (56 mainnet + 5 temporary
+  devnet); the drift guard collects history hosts too.
+- **Build note (own goal, fixed in the lane).** The first CDP run
+  used `npx vite build` directly, which skips the `prebuild`
+  `copy-wasm.mjs` step — the wallet-core WASM 404d in the browser
+  and `loadCore()` aborted. The proper build is `npm run build`
+  (copy-wasm → tsc → vite build → palette-audit); the lane's later
+  runs used it and the WASM loads (HTTP 200). Lesson: never verify a
+  `vite build` invocation that bypasses `prebuild`.
+- **Observed, not Lane A scope.** The Linea asset screen's large
+  balance (`0.006803680919043338 ETH`) clips at the right card edge
+  at 390 px (viewed in `r3-04-linea-history-390.png`). Pre-existing
+  asset-detail layout; recorded here, not fixed in this lane.
+- **Gates:** tsc 0, `npm run build` 0, vitest 1883 passed / 5 skipped /
+  0 failed (97 files), lint 0 (apps/web), npm audit 0 vulnerabilities,
+  root `npm test` 0 (after `npm ci` in `tools/hdwallet-gen`, whose
+  `node_modules` was never installed in this worktree — pre-existing),
+  `generate-chains --check` 0. Root `npm run lint` cannot run here
+  (no root `node_modules`, `eslint: not found`) — pre-existing, not
+  a lane change.
+
+## §22 — Fix-all Lane H — the 13 "still needing your word" items (2026-11-23/24, branch panel-rebuild/fix-all-h)
+
+Lane H decided the 13 items by live preview (CDP against the statically
+served dist, served-JS hash verified against the dist hash) and code
+evidence. Hands-on Muse work, 0 Sol calls, 0 AgentRouter calls. Base:
+token-gaps 8191b2c. Gates on the lane tree: tsc 0, build 0, vitest 1808
+passed / 5 skipped / 0 failed (91 files), lint 0, npm audit 0
+vulnerabilities. Net diff (commit 1962d84): 46 files, +1,046 / -3,714 lines.
+
+### 1. 980 px breakpoint — DECIDED-AND-DONE
+Ported desktop-layout-v2's breakpoint, shell-only: `--breakpoint-desktop:
+61.25rem` in `apps/web/src/ui/styles/globals.css` (the token lives there,
+not in app.tsx as the brief said) and `lg:` → `desktop:` on the shell
+lines in `apps/web/src/app/app.tsx` and `sidebar-nav.tsx`. Verified live
+at exactly 980 px: the desktop shell renders (sidebar with Home, Assets,
+Receive, Send, Wallets, Transactions, Track, Import, Create, Security,
+Networks, Mnemonic backup, Welcome; Collapse sidebar) — final
+`final-nowallet-welcome-980.png`. Mobile at 390 px is unchanged (bottom
+nav, hero card). Deliberately NOT ported from v2: dvh → screen, the
+NetworkModePill removal, the BrowserRouter basename removal, the
+`/assets/:chain/:token` route removal, the Lane G zero-balance removal —
+that branch diverged in 283 files and carries regressions; those are a
+separate v2 follow-up, not the breakpoint.
+
+### 2. Devnet fiat suppression on token rows — DECIDED-AND-DONE (bug, fixed)
+Native rows suppressed fiat in devnet by design (`fiatDetail` returns
+zero when `devnet && fiat.kind === 'fiat'`); token rows hardcoded `false`
+in their `fiatDetail` call and `getTokenRowModel` took no devnet param —
+a latent bug, fixed by threading `devnet` through. The new test then
+caught a second instance: the hero ALSO valued test tokens
+(`tokenContribution` read live token prices with no devnet branch, putting
+"$25.00 (Partial)" in the hero for 25 test USDC) — fixed the same way
+(`tokenContribution` returns empty in devnet). Tests pin both: 25 USDC
+shows `$1.00` + `per USDC`, never `$25.00`; the hero is clean `$0.00`.
+
+### 3. Receive QR on step 1 — DECIDED-AND-RECORDED (leave the flow)
+Step 1 is a clean network picker (search + Popular + "All networks (18)")
+that fits at 390 px with no scroll; no network is chosen yet, so no
+address exists to encode — a QR here would show a default-chain address
+and risk a wrong-network payment. The QR is 2 taps away (network → token
+→ QR). The finish-product Lane H redesign already answered the underlying
+complaint. No change.
+
+### 4. Lane 3 questions — DECIDED-AND-DONE
+(a) The Create card back on Welcome STANDS: code in `welcome.tsx`,
+confirmed in preview at 1440 px (right column, coral button) — no change.
+(b) Quiet note under a genuinely fresh $0.00 ADDED: "Nothing here yet —
+receive on any chain to get started.", shown only when all balances
+loaded zero and nothing failed. A partial $0.00 still shows the failure
+note instead — the final CDP run confirmed that branch on the live egress
+(hero $0.00 + "Some balances or prices couldn't be checked just now.").
+(c) The four "Coming soon" cards (Android wallet, Smart contract creator,
+Multi-signature wallet, Connect an existing wallet) COLLAPSED into a
+native `<details>` (closed by default, "Coming soon" as `<summary>`,
+one tap away, no new dependency). Create at 390 px is now 1,276 px tall
+with one disclosure row instead of a whole extra screen of cards.
+
+### 5. Receive tagline — DECIDED-AND-DONE
+Restored from the Round 2 history (`git show d370c58`, Round 2 item 8,
+which removed it): "This is your address — share the drawing, keep the
+keys." It sits on the Receive DETAILS step, directly under the
+network/Back row, in the same `font-display text-xl` styling as before.
+Verified at 390 px: the QR card still sits above the fold (QR + "Any
+amount" + address + Ethereum/Native coin), the template minis still peek
+above the fold; the action row was already below the fold, so the cost
+is one line of scroll.
+
+### 6. The 12 EVM chains that are balance-only — DECIDED-AND-RECORDED (accept 6, count corrected)
+The "12" in the brief is stale: finish-product Lane B (2026-11-23) wired
+9 of the 15 non-ETH EVM chains — celo/op/scroll, aurora, avax/mantle,
+matic/arb/base. Truly unwired five: bsc, gnosis, opbnb, metis,
+fantom (matches the `history-sources.test.ts` header comment). Live
+probes from gray-pinee (2026-11-23): Routescan
+`api.routescan.io/v2/network/mainnet/evm/{chainId}/etherscan/api`
+returns "chain not supported" for all 10 remaining chain IDs (56, 137,
+42161, 8453, 100, 59144, 204, 1088, 1313161554, 250); the avax control
+(43114) returns status 1 with real txs and CORS `*`, proving the probe
+format valid. Blockscout hosts with a browser UA: bsc/linea/opbnb/metis/
+fantom `.blockscout.com` 404; gnosis.blockscout.com 301 → gnosisscan.io
+(Etherscan-family, keyed). Metis `andromeda-explorer.metis.io/api`
+returns status '1' with 2 real txs but NO `Access-Control-Allow-Origin`
+header — one header away from wiring; record this. Aurora re-verified:
+status '1', 2 real txs, CORS `*`. Verdict: accept the five as balance-only
+with an honest note in the UI. `evm.ts` now renders: "History is not
+connected for {chain} yet — no keyless indexer covers this chain, so only
+the balance shows here." (rendered verbatim: `humanReasonMessage` shows a
+reason that already reads as a human sentence as-is).
+
+Correction (merge lane, 2026-11-24): Linea is wired since FIX-ALL
+Lane A (Etherscan V2 keyless, real tx `0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c`
+rendered in CDP) — five stay unwired, not six; `evm.ts` and this item
+corrected, `history-sources.test.ts` and `chains.ts` already said five.
+
+### 7. Rotation funds invisible in the dashboard — DECIDED-AND-DONE (stated-not-shown)
+Evidence: `refreshBalances` reads only `vaultAddresses[chain][0]`
+(`wallet-context.tsx`); `receiveAddresses` is consumed only by Receive.
+Funds paid to a rotated address (index ≥ 1) are never fetched — invisible
+in dashboard, rows, hero and history. Earlier indices are not even stored
+(only the current index, in `bawa-receive-index:v1`). Showing them needs
+persisting used indices per chain + multi-address refresh + history merge
+— refresh-path surgery of the same class Lane 2 / item 13 proved
+infeasible to re-wire without behaviour change. Implemented instead: a
+quiet note on the Receive details step by the "New address" rotation
+control (shown only when `canRotate`, verified in the final preview):
+"New addresses come from the same phrase. Funds sent to an earlier
+address still belong to this wallet, but the dashboard only shows your
+main address on each chain." Follow-up for the owner: aggregate rotated
+addresses into the hero + merge their history, or show per-address rows.
+
+### 8. Multi-phrase vaults — PLAN ONLY (recorded, decision needed)
+Architecture (grounded): single JSON envelope in localStorage under
+`bawa-vault` (v1, AES-GCM-256, PBKDF2-SHA-256 600k, 16-byte salt, 12-byte
+IV; never a mnemonic/key/password), backup `bawa-vault-backup` (verbatim
+copy), auto-unlock key `bawa-vault-key`. Module
+`apps/web/src/wallet/vault.ts` (874 lines): `migrateEnvelope` /
+`VAULT_MIGRATORS`, `createVault`, `unlock` / `lock` / `autoUnlock`,
+`withMnemonic` / `withMnemonicAsync` (the closure holds THE mnemonic),
+`changePassword`, `restoreVaultFromBackup`, `deleteVault`,
+`readVaultAccounts` / `writeVaultAccounts`, `vaultProfiles`,
+`vaultProvenance`. Docs: `docs/vault-design.md` (165 lines). The whole
+app assumes one vault (one vaultState, one closure mnemonic, single-vault
+backup/restore/delete/lock, auto-lock key-storage invariant per vault).
+Options: (A) multiple envelopes — registry `bawa-vaults` /
+`bawa-vault:<id>` + active-vault pointer; per-vault password/salt/key;
+migrate the existing envelope to vault #1; per-vault backup/restore/
+delete/auto-lock key; vault switcher UI. (B) one envelope holding multiple
+mnemonics — one password unlocks all; all-or-nothing backup/restore;
+envelope version bump via `VAULT_MIGRATORS`. (C) status quo. Decision
+needed from the owner: per-vault passwords? switching UI? migration?
+Implementing touches the vault crypto boundary and every vaultState
+consumer — it does not fit safely in this lane. NOT implemented.
+
+### 9. The 4 unwired modules (1,079 lines) — DECIDED-AND-DONE (all deleted)
+Exact total: `engine/destination.ts` 602 + `wallet/adapters/
+confirmation.ts` 302 + `wallet/evm-typed-data.ts` 121 +
+`wallet/secret-handoff.ts` 54 = 1,079. Each imported only by its own test
+file; zero production importers, zero doc references in docs/ or
+.github/. Per module: destination.ts DELETE — Send already validates via
+`validateRecipient` in `wallet/send.ts` (landed 2026-11-19, Wallet Core +
+devnet testnet forms, wired into Send steps + deep links); wiring a
+parallel validator into the money path is wrong, and `MAINNET_PARAMS`
+(confirmations 6/12/19/1, derivation prefixes) duplicates data in
+`core.ts` / `chains.ts` / `confirmation-policy.ts`. adapters/
+confirmation.ts DELETE — wraps `engine/confirmation-policy.ts` and needs
+an `ObserveFn` implementation that does not exist; the track screen reads
+indexer confirmations one-shot with no polling, so wiring it would be a
+new live-polling feature, not a wire-up. evm-typed-data.ts DELETE — EIP-712
+helpers (viem `hashTypedData`, domain Bawa v1); zero references outside
+itself; no dApp connect, no EIP-712 signing feature. secret-handoff.ts
+DELETE — single-use in-memory secret handoff (`storeSecret` /
+`takeSecret`); no consumer — mnemonic flows read from the vault closure
+(`withMnemonic`); navigation carries no secrets (only `lock.tsx` `from`
+state). Deleted via `git rm` with their tests. Consequential orphan (NOT
+deleted — out of scope, for Lane I / repo-cleanup):
+`engine/confirmation-policy.ts` (470 lines + 602-line test +
+`__typetests__`) — its only production importer was the deleted adapter.
+
+### 10. DOGE fallback — DECIDED-AND-RECORDED (owner decision needed)
+Live probes from gray-pinee, 2026-11-23 ~20:03 UTC, fixture address
+`DU5VEHzdNfQWUnonpHkXVchYqi1mqC3S8K`: SoChain quota exhausted —
+"Lookups without a key are 2,500 a day per IP, and today's are used up;
+they reset at 00:00 UTC. A free API key gives you 75,000 a month..."
+(Quota is per client IP, so it may work on the owner's own IP; the outage
+the owner saw was SoChain 429s.) BlockCypher CORS-blocked in the real
+browser (confirmed in the baseline and final CDP console errors) — dead
+as a browser fallback. dogechain.info → 301 to dogechain.com;
+dogechain.com `/api/v1/address/balance/{addr}` returns correct data with
+rate-limit headers (limit 120, remaining 29) but NO
+`Access-Control-Allow-Origin` header — browser-blocked. dogebook.com
+(Blockbook): 307 to domainmonkey.com — dead domain. Trezor
+`doge1.trezor.io`: 403. `blockbook.dogecoin.org`: connection failed.
+Blockchair no-key: 430 "Your IP address is temporary blacklisted due to
+exceeding usage of API resources. Please apply for an API key" — keyed +
+blacklisted. Verdict: no working keyless fallback the browser can read.
+Owner decision needed — free SoChain API key (owner creates it; 75k/month
+free tier) vs Blockchair key vs accept the outage. Do NOT ship a fallback
+that cannot work in-browser. The DOGE row already fails honestly
+("Balance unavailable", no fake zero). Note: the fixture address was
+emptied — BlockCypher says `final_balance: 0`, `total_received ==
+total_sent == 1000781125175`, 6 txs — so dogechain.com's 0 is correct and
+the adapter doc's "confirmed 10007.79125175 DOGE" example is stale.
+
+### 11. ci.yml defines the web job twice — DECIDED-AND-DONE
+Deleted the first `web:` job (10-min timeout, build + `npm test` only).
+One `web:` job remains (20-min, full gates: typecheck, lint, vitest,
+build, bundle-size, audit, pinned deps, cycles, crypto-architecture,
+chains drift). YAML parses; jobs = docs-checks, e2e, floor-guard,
+node-tests, python-tests, web. `e2e`'s `needs: web` still resolves.
+
+### 12. The 16 jscpd clone pairs — DECIDED-AND-DONE (20 → 1)
+Method: `npx jscpd src --min-lines 5 --min-tokens 50`, excluding
+`**/*.test.ts` / `**/*.test.tsx` — 20 clones, 267 duplicated lines. The
+brief's "16" does not reproduce exactly (likely jscpd version drift or
+pair-vs-group counting; several pairs overlap into single blocks). The
+independent repo-hygiene audit (2026-11-24) found the same 20 groups /
+267 lines on token-gaps, confirming the count. Without the test exclusion
+the count is 438 clones (117 ts + 321 tsx) — mostly test-file mirrors,
+which are not duplication. Consolidated 19, each verified
+behaviour-identical by tsc 0 + targeted tests: (H) `sameTokenAddress` /
+`validUsdPrice` / `liquidityUsd` / `freshQuote` byte-identical between
+`dex-prices.ts` and `price-fallbacks.ts` → new leaf module
+`wallet/price-helpers.ts` (imports only `guards` at runtime + erased
+types — adds no edge to the documented prices ↔ price-fallbacks ↔
+dex-prices cycle); (W) `watchChains` / `exportChains` in
+`wallet-management.tsx` were the same 22-chain literal twice → both
+derive from `SUPPORTED_CHAINS`; (P) dex-prices' `fetchJson` was a second
+copy of `prices.ts` `fetchJsonWithTimeout` → one call + remap; (ton)
+`devnet-endpoints.ts` had a private copy of the exported `ton.ts`
+`base64ToHex` → deleted, imported; (types) `adapters/types.ts`
+`fetchJson` and the devnet BTC broadcast's inline fetch shared the
+timeout/abort/HTTP-error shape → new `fetchWithTimeout` in
+`adapters/types.ts`; (confirmation-policy) `evaluateTron` / `evaluateTon`
+returned the same unknown-evaluation literal in five places → module-level
+`unknownEvaluation(reason)` helper; (useDevnetToggle) the toggle preamble
++ logic shared by `app.tsx` `NetworkModePill` and
+`devnet-setting.tsx` `DevnetSetting` → new `state/use-devnet-toggle.ts`
+hook; (J) Receive/Send token-picker rows shared the `<li>` + `<button>`
+shell → new `screens/token-picker-row.tsx` `TokenPickerRow`; (A)
+`asset-detail.tsx` history list vs `transaction-history.tsx` rows shared
+the tx `<li>` → new `screens/tx-row.tsx` `TxRow` + `formatDate` (moved
+from transaction-history); (sol/trx) `checkAddress` / `rpcErrorMessage` /
+`dataList` preambles deduplicated; (trx) the two `readJsonFrom` try/catch
+blocks → `tryRead` thunk helper; (R) `usePrices` / `useTokenPrices` were
+the same scaffolding (idle/loading/ready, mounted + in-flight guards,
+no-fetch network error, 3 attempts with the same backoff, cache saved when
+anything is fresh) → generic `usePriceRefresh<E>` in `prices.ts` with the
+four differing pieces injected through an `implRef` (latest-ref pattern),
+so the refresh callbacks keep the callers' exact dependencies. One
+deliberate micro-difference, documented in the hook comment: the native
+hook used to check mounted between its two per-attempt fetches (CoinGecko,
+then fallbacks); the shared loop checks before and after the combined
+fetch — the only effect is one fallback fetch still firing after an
+unmount, its result discarded by the post-fetch mounted check, so no state
+update and no cache write can follow an unmount in either version. One
+clone LEFT, with reason: `state/wallet-context.tsx:1725-1733` (8 lines, 50
+tokens) — the useMemo VALUE object literal vs its DEPS array listing the
+same identifiers is a FALSE POSITIVE for consolidation: React's useMemo
+contract requires the deps array to mirror the value; there is nothing to
+dedupe without breaking the hook.
+
+### 13. Wallet-refresh re-wire — DECIDED-AND-DONE (deleted)
+`apps/web/src/state/wallet-refresh.ts` (401 lines) + tests
+`wallet-refresh-characterisation.test.tsx` (280) +
+`wallet-refresh-import-failure.test.tsx` (142) = 823 lines, deleted via
+`git rm`. Zero production importers (only the two test files imported
+`createRefresh`); `wallet-context.tsx` owns refresh inline
+(`refreshBalances` / `refreshTokenBalances`). The 6 infeasibility reasons
+(from `docs/MARKETING-FIX-PROGRAMME.md` (c2)): 4 hardcoded chains vs 21
+registry chains; mainnet-only vs devnet-aware; different retry policy
+(observable under 429s); `refreshing` / `stale` flags the context sets
+and UI renders; `bawa:balances-cache:v1` the context writes; token
+balances not covered at all. Redesign would mean rewriting the live
+refresh path — the proved-infeasible work — so delete, with gate proof
+(tsc 0, full vitest 1808 passed / 5 skipped / 0 failed on the lane tree).
+Docs fixed: `docs/runbooks/refresh-failure.md` was stale (claimed
+wallet-refresh.ts is "wrapped and re-exported by wallet-context.tsx" —
+false; and referenced `sanitiseReason` in wallet-refresh.ts — that
+function existed ONLY there; the live path produces reason tokens inline,
+e.g. `wallet-context.tsx:883`); header now points at
+`wallet-context.tsx` inline with the deletion noted.
+`docs/HOW-IT-WORKS.md:222` refresh pointer wallet-refresh.ts →
+wallet-context.tsx. Historical programme records mentioning wallet-refresh
+(`docs/MARKETING-FIX-PROGRAMME.md:63`, `docs/DECISIONS.md:816,955,1021`,
+`docs/REVERIFY-PROGRAMME.md:155`, `docs/GAP-ANALYSIS.md:616,618`) left as
+dated records.
+
+### Open decisions carried forward (unchanged from §18, minus the items decided above)
+Live-camera scan (needs the owner's phone); review/sign (needs a funded
+wallet); README showcase link (owner never named the repo — do NOT invent
+it); Android Gradle (no SDK/JDK on gray-pinee); ECDSA confirmation;
+one-time password migration (NOT ordered — do NOT implement); broadcast
+authorisation (NOT authorised — do NOT implement); M-39 (needs
+desktop/device work); QR 136/192; Receive details scroll 426 px (smaller
+buttons vs top-stack rework); E2E-02 devnet-derivation race (real app
+bug); faucets (owner must complete captchas); TonCenter keyed tier;
+xDAI+MNT no keyless price fallback; FTM low-liquidity pair;
+devnet+unlocked-vault Retry; asset-detail sticky Refresh; Number Ticker
+CDP-unverified (nonzero hero needs a funded wallet, forbidden).
+NEW from this lane: `engine/confirmation-policy.ts` orphaned by the item-9
+deletion (for Lane I / repo-cleanup); multi-phrase vaults (owner decision
+on options A/B/C); DOGE fallback (owner key decision); rotation-funds
+aggregation (follow-up design); Metis history is one CORS header away
+from wiring.
+
+## §23 — FIX-ALL merge lane (Lane J), 2026-11-24
+
+The FIX-ALL programme (Lanes A–I) was merged into `panel-rebuild/fix-all`
+by cherry-pick, then merged into `panel-rebuild/token-gaps`. Coordinator:
+hands-on Muse, 0 Sol calls. Base token-gaps `8191b2c`; fix-all code tip `62abe11`; merged into
+token-gaps at `343cd3a` (fast-forward from `6db1d1e`; the fix-all
+branch was deleted after the merge).
+
+### What was merged
+
+- Lane C `68aa8e6`, Lane G `0dd82de`, Lane I docs `2aab406`, Lane E
+  `24fcd20`, Lane I 980 px `3fce3f7`, Lane A `3e18b7b`, Lane B `23ae583`,
+  Lane D `09cf474`, Lane F `c518704`, Lane H `a72ebf7`, Lane I rename
+  `6a8cdf5`. Token-gaps `df48d9c` (README-FULL fix), `3a05657` (redrawn
+  diagrams), `5e88c07` (re-shot screenshots + grid) and `8aefab7`
+  (HOW-IT-WORKS trace fix) merged in — none reverted.
+- Merge-lane commits: `b534c4f` (Linea out of the balance-only list;
+  E2E-05 manifest corrected), `62a8d59` (HOW-IT-WORKS trace
+  re-verified against the merged tree: 48/48 refs pass), `313cacb`
+  (Lane F tests/prose reconciled with Lane A/B data; merge join
+  defects fixed).
+
+### Decisions taken in the merge lane
+
+1. **confirmation-policy.ts — KEEP.** Lane H's module deletion orphaned
+   it (no production importer; only its own `__typetests__` file
+   imports it). The owner's 2026-11-20 decision stands: the file stays
+   spec-only. Orphan status recorded, not silently deleted.
+2. **E2E-05 manifest — UPDATED, not landed via wallet-refresh.ts.**
+   `wallet-refresh.ts` was deleted by Lane H, so landing it is no
+   longer an option. `apps/web/e2e/manifest.json` E2E-05 now asserts
+   the honest blank state the rewritten spec pins.
+3. **Linea — out of the balance-only list.** Lane A wired Linea
+   history via Etherscan V2 (keyless). Five chains stay unwired
+   (bsc, gnosis, opbnb, metis, fantom), not six.
+4. **CSP — 62 unique origins (57 mainnet + 5 devnet).** Union of
+   Lane A's and Lane F's origin lists, minus dead `1rpc.io` (Lane A:
+   -32001 usage-limit exhausted on this egress). `1rpc.io` survives
+   only in comments documenting its removal.
+5. **priceFallbackSourcesFor — kept as the API.** Lane F's Prices
+   card states the fallback order in words rather than calling the
+   function. That drift is recorded here, not re-engineered in the
+   merge lane.
+6. **Price-source truth after the merge (Lane B over Lane F's
+   numbers):** CoinLore covers 19 chains, DexScreener 13 wrapped
+   contracts; TonAPI covers TON, Coinbase covers LTC; the three
+   chains CoinLore misses are all covered another way. **No chain is
+   CoinGecko-alone any more** (pinned by a new every-chain test).
+7. **980 px breakpoint — one port.** Lane H and Lane I ported
+   desktop-layout-v2's breakpoint identically (`lg:` → `desktop:`);
+   only comment wording differed. HEAD (Lane I) wording taken, plus
+   both border assertions in `app.test.tsx`.
+
+### Merge defects found and fixed in the lane
+
+- `trx.ts`: the hand-merge left a second `resolveBaseUrls` /
+  `readJsonFrom` pair and a second `identityChecked` (Lane A had
+  inserted its PublicNode comment before those lines in its file).
+  Removed; all declarations single; tsc clean.
+- Line-join defects: the marker-regex resolver dropped the newline
+  after a resolved hunk when the next line was not blank, joining
+  lines in `app.test.tsx` (comment swallowed an `await`), `app.tsx`,
+  `globals.test.ts` (comment swallowed an `expect`),
+  `price-fallbacks.ts` (`}export function`), `HOW-IT-WORKS.md`
+  (Prices + Receive rows joined) and `DECISIONS.md` (trailing
+  newline). Found by tsc (TS1128); fixed by `fix-joins.py`.
+- Lane F's new tests were stale against the merged data: ETH
+  registry lists dRPC, not 1RPC; CoinLore covers Gnosis/Mantle/
+  Fantom. Tests, Prices-card prose, HOW-IT-WORKS bullets,
+  GAP-ANALYSIS (history 16 → 17 chains) and an ADR-0007 amendment
+  updated to the new truth. Mantle also has a DexScreener leg
+  (wrapped MNT).
+
+### Gates on the merged tree
+
+tsc 0, build 0, build:e2e 0, vitest 1858 passed / 5 skipped /
+0 failed, lint apps/web 0, lint root 0, root test 0, npm audit
+0 vulnerabilities. E2E: 23 of 27 verified passing on the merged
+tree (17 in the full run, 6 more on targeted re-runs after the
+stale-spec fixes: E2E-19 ETH, LANE-F switch, E2E-05, E2E-04,
+E2E-02, Item D MY). 4 never passed in any Lane J run, all
+live-network with per-test evidence: E2E-06 SHIB (add dialog never
+opened), Item D DISC ("Token added" never appeared; Solana RPC
+degraded), E2E-13 SPL USDT (Metaplex verification over degraded
+Solana RPC), E2E-19 SOL fallback (backup Vibe Station unreachable).
+Window-flip proof: MY failed in the full run (2.0 m timeout) and
+passed on re-run (3.2 s); NOT passed in the full run (2.8 s) and
+failed on re-run (2.0 m) — the suite is network-window-dependent,
+not deterministically green. The full run's last three tests
+initially failed on a dead preview server ([WebServer] Terminated
+mid-run, ERR_CONNECTION_REFUSED) — infrastructure, not the app;
+all three passed on re-run. Two stale-spec families were fixed in
+the merge lane, not waived: the ETH backup is dRPC not 1RPC
+(E2E-19 ETH + LANE-F switch), and the item19 custom-RPC choice
+must be on the CSP allowlist (ankr -> Flashbots; the manager
+correctly rejects ankr with "the browser would block it"). CDP
+re-verification at 390/820/980/1440/1919 with screenshots viewed
+(see Lane J report).
+
+### Branch deletions (Lane I list, executed by Lane J)
+
+Deleted after the merge, each verified first-hand with 0 unique
+code and confirmed by fresh ls-remote: `devnet-temp` (`915054b`),
+`token-discovery` (`176613f`), `ui-ux-fixes` (`333880f`),
+`adopt-proper` (`21ce11d`) — their unique commits were all
+programme-record docs, superseded by token-gaps' corrected
+versions (their `CREATE-EXAMPLE-WALLET.md` copies carried a stale
+blob: no `-L`, wrong wasm path, absolute GitHub link, vs
+token-gaps' corrected `b8319c2`); `readme-marketing` (`8aefab7`,
+0 unique commits, ancestor of token-gaps — its work had already
+landed as `6d4bfbf`/`6db1d1e` on token-gaps and `bcc8555`/`8126b8e`
+on main); `fix-all` itself (`343cd3a`, tip == token-gaps tip after
+the merge). KEPT: `desktop-layout-v2` (`15af54c`) — 40 unique code
+files (+1,755/−197 since merge-base `67c48e2`): the two-column
+desktop layout (`ed0abba`/`0e194f4`) deliberately not ported by
+Lane H (v2 regressions; only the 980 px shell was ported).
+Final remote count: 4 branches — main, token-gaps, gh-pages,
+desktop-layout-v2.
+
+### Merge-lane fixes found by re-verification (after the gates above)
+
+8. **E2E specs expected dead 1RPC as the ETH backup.** E2E-19 ETH
+   and the Lane F switch spec asserted `1rpc.io`; the merged registry
+   lists dRPC (Lane A). Fixed to `eth.drpc.org`; the Lane F switch
+   test then passed live (10.2 s). The item19 custom-RPC choice
+   (ankr) is correctly rejected by Lane F's allowlist gate ("the
+   browser would block it") — replaced with Flashbots, which is on
+   the allowlist and not in the registry; the test then passed.
+   The full run's last three tests failed on a dead preview server
+   ([WebServer] Terminated mid-run) — infrastructure, not the app;
+   all three passed on re-run.
+9. **Linea history rendered "No transactions yet" on re-verification.**
+   Root cause, proven live: Etherscan V2's keyless tier is 1 request
+   per 5 s per IP and answers NOTOK "Missing/Invalid API Key" inside
+   the window — the same message as a missing key. The app fires the
+   history refresh twice in quick succession, the second call lands
+   inside the window, and the store's request counter discards the
+   first (good) result, so the page ends empty. An empty `&apikey=`
+   parameter was tried first and proven a placebo (a quiet call
+   without it returns status 1; a call inside the window still
+   returns NOTOK with it) — reverted, not shipped. Fix: the EVM
+   adapter retries a keyless-quota NOTOK once after 6 s, with a
+   regression test. Proved live in CDP: NOTOK, NOTOK, then status 1
+   with the real tx, and 0x75dfb5f5... renders under Recent
+   transactions (five real Linea txs for the watched address).

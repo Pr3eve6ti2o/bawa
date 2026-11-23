@@ -44,7 +44,7 @@ on them:
 
 | Gap | What is missing | Status |
 |---|---|---|
-| 1 | EVM history for 6 of 16 EVM chains (9 of 15 non-ETH wired 2026-11-23, Lane B) | Fixed here (Lane D: 3 of 15 wired; Lane B: 9 of 15 wired; 6 remain — see §1) |
+| 1 | EVM history for 5 of 16 EVM chains (10 of 15 non-ETH wired; Fix-All Lane A wired Linea 2026-11-24) | Fixed here (Lane D: 3 of 15 wired; Lane B: 9 of 15 wired; Fix-All Lane A: Linea wired; 5 remain — see §1) |
 | 2 | Multi-phrase vaults (one phrase per vault today) | Decision needed |
 | 3 | Devnet adapters for 9 chains, 6 logo-only ERC-20s | Fixed here (Lane D: mainnet half; see §3) |
 | 4 | E2E harness against the `/bawa/` build | Fixed here (harness) + found bug (E2E-02 devnet-derivation race, see §4) |
@@ -223,8 +223,8 @@ on all 16 EVM chains):
   (`status: 'ok'`, `result: 'success'`, block, confirmations, value,
   from/to/fee, timestamp — the exact shape `parseEthTx` reads).
 
-History verified is now 16 chains: btc, eth, trx, ton, sol, matic,
-arb, op, base, avax, ltc, doge, celo, mantle, scroll, aurora. The
+History verified is now 17 chains: btc, eth, trx, ton, sol, matic,
+arb, op, base, avax, ltc, doge, celo, linea, mantle, scroll, aurora. The
 `/track` hash lookup (`wallet/tracker.ts`) now covers eight
 Blockscout v2 chains — eth, op, scroll, celo, aurora, matic, base,
 arb (same v2 shape, parameterised `parseEthTx`); avax/mantle lookup
@@ -302,6 +302,78 @@ regressions since Lane B: the Solana backup RPC
 this egress (probed empty), so E2E-19 Solana failover fails on the
 merged tree AND on the pristine `d47d282` baseline; CoinGecko 429s
 make the SHIB/NOT price specs flip by run. Neither is a merge defect.
+
+**Fix-All Lane A (2026-11-24, branch `panel-rebuild/fix-all-a`,
+hands-on Muse, 0 Sol calls).** One more chain wired, five stay
+blocked, and the watch-only failures are fixed or honestly bounded:
+
+- **Linea wired — history verified is now 17 chains.** Etherscan V2
+  answers keyless for chain 59144
+  (`https://api.etherscan.io/v2/api?chainid=59144`, `txlist`,
+  status `"1"`, message `"OK-Missing/Invalid API Key, rate limit of
+  1/5sec applied"`, real transactions — Vitalik receiving
+  `20000000000000` wei, hash `0x75dfb5f5…`). Wired in `chains.ts`
+  (`historyBaseUrl`, `historyExplorerBase: https://lineascan.build`),
+  `evm.ts` (history URL joins with `&` when the base already carries
+  `?`), CSP (`api.etherscan.io` + `lineascan.build`). CDP proof:
+  `/assets/linea` renders the real transaction
+  `0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c`
+  ("Received 0.00002 ETH") in two separate CDP runs, viewed at
+  390 px. The other five stay blocked — evidence 2026-11-24:
+  Routescan v2 Etherscan API `"chain not supported"` and Routescan v2
+  REST `NO_BLOCKCHAINS_FOR_PARAMS` / `BLOCKCHAIN_NOTFOUND` for all
+  five; Etherscan V2 no-key "Free API access is not supported for
+  this chain" (bsc, gnosis), "Missing or unsupported chainid"
+  (metis, fantom), 502 twice (opbnb); Blockscout hosts 404
+  (bsc/linea/opbnb/metis/fantom) or 403 Cloudflare (gnosis —
+  the browser fetch fails too, `TypeError: Failed to fetch`, from a
+  no-CSP probe page, so it is not the app's CSP blocking it);
+  bscscan/lineascan V1 deprecated; `api.gnosisscan.io`,
+  `api.ftmscan.com`, `api.opbnbscan.com` unreachable from this
+  egress; Metis explorers 504 twice. Owner decision §1 still stands
+  for the five (keyed Etherscan V2 or accept balance-only).
+- **TRX watch-only fixed.** Trongrid 429s under load; the adapter
+  now falls back to TronScan
+  (`https://apilist.tronscanapi.com`, balance + history, contractType
+  1 transfers only) and the registry gains the PublicNode full node
+  (`https://tron-rpc.publicnode.com`, `/wallet/*` identity/fee) as
+  second RPC. Three-way agreement in one probe run: Trongrid =
+  TronScan = PublicNode = 20032755932541 SUN. CDP proof: `/wallets`
+  shows `Balance: 20,032,755.932541 TRX` for
+  `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5`, viewed at 390 px.
+- **TON: the 0 was genuine; the funded wallet renders.** TonCenter
+  and TonAPI agree the tested address holds 0 (active v4r2 wallet).
+  A funded address (`UQAXDV0lgZTFoAkp_pwBwJbY1Gg8yppMrp2rU7JF6dBG3B5B`,
+  41.293091416 TON, v5r1) renders `Balance: 41.293091416 TON` in CDP,
+  and the zero address renders `Balance: 0 TON` in a separate CDP
+  run — no adapter change needed. (One watch-only entry per chain:
+  the store holds a single TON slot, so the funded and zero
+  addresses cannot be watched in the same browser profile.)
+- **DOGE: best honest state, not a fix.** dogechain.info was added
+  as a fallback and removed in the same lane: it returns the right
+  data in Node (200, exact agreement with BlockCypher) but sends no
+  `Access-Control-Allow-Origin`, so every browser fetch fails
+  (`net::ERR_FAILED` ×6 in CDP round 2; the `.info` host 301s to
+  dogechain.com, which also sends no CORS headers). Zelcore's
+  Blockbook and DogeSoft's explorer return the same correct balance
+  with the same no-CORS problem; Trezor Blockbook 403s, Blockchair
+  430s (IP blacklisted), NOWNodes/CryptoAPIs/Ankr need a key. The
+  adapter stays SoChain → BlockCypher (both CORS-clean). On
+  2026-11-24 both are quota-limited (SoChain 2,500/day/IP exhausted,
+  BlockCypher 429), so the row honestly shows "Could not load
+  balance" with Retry — verified in CDP, viewed at 390 px. The
+  decision (§6 below) is unchanged: Blockchair with a key, or accept
+  the outage whenever SoChain is exhausted.
+- **Every RPC audited live through the app's adapters (38
+  endpoints).** All answer except two 1RPC backups, which return
+  `-32001` "usage limit" (shared free tier exhausted) and were
+  replaced with dRPC, verified live through the adapter with
+  Vitalik's exact balance: ETH `https://eth.drpc.org`,
+  Aurora `https://aurora.drpc.org`. The Solana backup
+  (`public.rpc.solanavibestation.com`), unreachable on 2026-11-23,
+  answers again (0.00236821 SOL). Every other primary + backup
+  returns the ground-truth balance for its funded address. CSP is
+  now 61 origins (56 mainnet + 5 temporary devnet).
 
 ## 2. Multi-phrase vaults
 
@@ -941,6 +1013,28 @@ exhausted.
 list and fallback order); `DEVNET-ISSUES.md` alongside the other
 provider notes; Doc 06 §10 (price and balance provider policy).
 
+**Fix-All Lane A (2026-11-24) — re-checked, still no browser
+fallback.** dogechain.info was added as the fallback and removed in
+the same lane: Node 200 with the exact balance
+("27164003668.40032381", agreeing with BlockCypher's
+2716400366840032381 koinu), but no `Access-Control-Allow-Origin` on
+either `.info` or `.com`, so the browser fails every fetch
+(`net::ERR_FAILED` ×6 in CDP round 2, from a no-CSP probe page as
+well as from the app). Two further correct-data sources have the
+same defect: Zelcore's Blockbook
+(`blockbook.doge.zelcore.io/api/v2/address/…`, balance
+"2716400366840032381", exact match) and DogeSoft's explorer
+(`explorer.dogesoft.io/api/wallet/address/…/balance`,
+2716400366840032378 koinu — 3 koinu off the other three sources).
+Trezor Blockbook 403s this egress, Blockchair still 430s (IP
+blacklisted, re-checked 2026-11-24), NOWNodes Blockbook 401s
+without a key, PublicNode has no Dogecoin RPC (404), Ankr needs a
+key. The adapter is back to SoChain → BlockCypher, both CORS-clean;
+on 2026-11-24 both are quota-limited (SoChain daily budget
+exhausted, BlockCypher 429), so the row honestly shows "Could not
+load balance" with Retry (CDP, viewed at 390 px). The decision
+below (§6) is unchanged.
+
 ## 13. Price-source freshness: Fantom "Price expired" (Lane D)
 
 **What is missing.** The dashboard marks a price "Price expired"
@@ -1284,12 +1378,12 @@ Live endpoint checks, same day, from the build machine:
 ## Decisions needed from the owner
 
 1. **EVM history: Etherscan key, or another indexer?** The in-code
-   record already frames it this way. Keyless paths now cover 10 of
+   record already frames it this way. Keyless paths now cover 11 of
    16 EVM chains (eth, op, scroll, celo, aurora, avax, mantle, matic,
-   base, arb — wired 2026-11-23 by Lane B of Finish the Product,
-   probed live); a key covers the remaining 6 (bsc, gnosis, linea,
-   opbnb, metis, fantom). A key needs the owner's approval
-   and a safe place to live.
+   base, arb — wired 2026-11-23 by Lane B of Finish the Product —
+   plus linea, wired 2026-11-24 by Fix-All Lane A, probed live); a key
+   covers the remaining 5 (bsc, gnosis, opbnb, metis, fantom). A key
+   needs the owner's approval and a safe place to live.
 2. **E1 renewal or removal by 2027-02-20.** Renew the devnet
    exception or run the removal checklist in `docs/DECISIONS.md`.
 3. **Faucet captchas in the owner's browser.** Wallet-A devnet
@@ -1303,7 +1397,10 @@ Live endpoint checks, same day, from the build machine:
 6. **DOGE second source: Blockchair with a key, or accept the
    outage.** Blockchair is CORS-friendly and its keyless tier is
    1,440 requests a day, but this egress IP is already blacklisted
-   keyless. A key is a keyed service and needs approval.
+   keyless (re-checked 2026-11-24 by Fix-All Lane A, still 430). A key
+   is a keyed service and needs approval. (Same lane confirmed
+   dogechain.info, Zelcore Blockbook and DogeSoft cannot serve a
+   browser at all — correct data, no CORS headers.)
 7. **Fantom price: widen the window, switch source or id, or reword
    "Price expired".** BlueWallet's comparison point is a 30-minute
    window with no expiry label. The pick is the owner's.
