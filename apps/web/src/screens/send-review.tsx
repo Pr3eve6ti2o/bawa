@@ -43,11 +43,11 @@ const approvalStageCopy = {
     helper: 'Signing the send offline. Nothing will be broadcast.',
   },
   signed: {
-    heading: 'Signed — broadcast disabled',
+    heading: 'Signed, not broadcast',
     helper: 'The send has been signed offline. Broadcasting is disabled.',
   },
   'broadcast-disabled': {
-    heading: 'Signed — broadcast disabled',
+    heading: 'Signed, not broadcast',
     helper: 'The send is signed offline. Broadcasting remains disabled.',
   },
   'broadcast-devnet': {

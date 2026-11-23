@@ -22,6 +22,7 @@ import {
   splitMnemonicAndPassphrase,
 } from '../wallet/bip39-validation';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
+import { ChainSearchSelect } from './chain-search-select';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
 import { Badge } from '../ui/components/badge';
@@ -360,7 +361,7 @@ export function ImportWalletScreen() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle>Import a wallet</CardTitle>
-            <Badge variant="secondary">WATCH-ONLY LABELLED BELOW</Badge>
+            <Badge variant="secondary">Watch-only labelled below</Badge>
           </div>
           <CardDescription>
             Restore a wallet from its recovery phrase, or track a wallet
@@ -423,7 +424,7 @@ export function ImportWalletScreen() {
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="12, 15, 18, 21 or 24 words — or 25 words if your wallet uses an extra word"
+                    placeholder="12, 15, 18, 21 or 24 words, or 25 if your wallet uses an extra word"
                     required
                   />
                   <p className="text-sm text-muted-foreground">
@@ -740,26 +741,18 @@ export function ImportWalletScreen() {
             aria-busy={isAdding}
             onSubmit={(event) => void handleSubmit(event)}
           >
-            <fieldset disabled={isAdding} className="space-y-2">
-              <legend className="text-sm font-medium">Chain</legend>
-              <div className="flex gap-2">
-                {chains.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    aria-pressed={chain === option}
-                    onClick={() => setChain(option)}
-                       className={`h-10 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                         chain === option
-                           ? 'bg-primary-solid text-primary-foreground'
-                           : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-                       }`}
-                  >
-                    {option.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+            {/* UI/UX Round 2, item 3: the chain picker was one horizontal
+                row of 22 pills that slid sideways and cut the later
+                chains off past the edge. It is now a search bar: click
+                it and the full list opens, typing filters it, and the
+                chains picked before stay in a Recent row below it. */}
+            <ChainSearchSelect
+              chains={chains}
+              value={chain}
+              onChange={setChain}
+              id="watch-only-chain-search"
+              disabled={isAdding}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="wallet-xpub">{inputConfigByChain[chain].label}</Label>
@@ -793,7 +786,7 @@ export function ImportWalletScreen() {
                 placeholder="e.g. Savings" autoComplete="off" disabled={isAdding}
                 maxLength={40}
               />
-              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser — do not enter secrets.</p>
+              <p className="text-xs text-muted-foreground">Labels are stored in plain text in this browser. Do not enter secrets.</p>
             </div>
 
             {error && (

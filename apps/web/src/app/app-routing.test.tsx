@@ -1,6 +1,6 @@
 
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { App } from './app';
@@ -25,7 +25,8 @@ async function mountApp(path: string) {
     if (
       text.includes('Recent transactions') ||
       text.includes('Portfolio balance') ||
-      text.includes('Create wallet')
+      text.includes('Create wallet') ||
+      text.includes('No wallet yet')
     ) {
       break;
     }
@@ -116,6 +117,46 @@ describe('app routing — asset detail (Lane B)', () => {
     try {
       expect(mounted.div.textContent).toContain('Create wallet');
       expect(mounted.div.textContent).not.toContain('Recent transactions');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('app routing — subpath basename (UI/UX round 2, deep-link fix)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    sessionStorage.clear();
+  });
+
+  it('renders the Send screen for a /bawa/send deep link when built with base /bawa/', async () => {
+    // The Pages build serves the app under /bawa/. Without a matching
+    // BrowserRouter basename the router sees /bawa/send, matches
+    // nothing, and renders the app's own "Page not found".
+    vi.stubEnv('BASE_URL', '/bawa/');
+    const mounted = await mountApp(
+      '/bawa/send?chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5',
+    );
+    try {
+      expect(mounted.div.textContent).toContain('Send');
+      expect(mounted.div.textContent).toContain('No wallet yet');
+      expect(mounted.div.textContent).toContain(
+        'This link asks to send 0.5 ETH',
+      );
+      expect(mounted.div.textContent).not.toContain('Page not found');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('renders Page not found for a /bawa/send link when built for the domain root', async () => {
+    // Control: with the root build the basename is '/', so /bawa/send
+    // is not a route at all.
+    const mounted = await mountApp(
+      '/bawa/send?chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5',
+    );
+    try {
+      expect(mounted.div.textContent).toContain('Page not found');
     } finally {
       await mounted.cleanup();
     }

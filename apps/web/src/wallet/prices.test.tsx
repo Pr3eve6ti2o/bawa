@@ -1349,7 +1349,9 @@ describe('usePrices devnet (temporary devnet mode)', () => {
   let devnetLatest: ReturnType<typeof usePrices> | null = null;
 
   function ProbeDevnet(): null {
-    devnetLatest = usePrices({ devnet: true });
+    // Round 2, item 6: the devnet option is gone — the feed is public
+    // market data, so it loads in devnet mode exactly as on mainnet.
+    devnetLatest = usePrices();
     return null;
   }
 
@@ -1385,8 +1387,12 @@ describe('usePrices devnet (temporary devnet mode)', () => {
     };
   }
 
-  it('never loads cached mainnet prices and never fetches in devnet mode', async () => {
-    // Seed a fresh mainnet cache: the normal probe would show it.
+  it('loads cached prices and fetches live prices in devnet mode', async () => {
+    // Seed a fresh cache: the probe shows it, as on mainnet — the
+    // per-unit price is public market data for the native asset, and
+    // the devnet gate that starved the feed is gone (Round 2, item 6).
+    // Fiat valuation of test balances stays off at the display layer
+    // (dashboard hero, asset rows), not by starving this feed.
     saveCachedPrices(parsePriceResponse(freshPayload(), NOW_MS), NOW_MS);
     expect(loadCachedPrices(NOW_MS)).not.toBeNull();
     const stub = vi.fn(async () => ({
@@ -1402,23 +1408,18 @@ describe('usePrices devnet (temporary devnet mode)', () => {
         status: 'idle',
         lastFetchedAtMs: null,
       });
-      for (const entry of Object.values(devnetLatest!.state.entries)) {
-        expect(entry).toMatchObject({
-          status: 'unavailable',
-          reason: 'missing',
-        });
-      }
+      // The seeded cache is visible immediately.
+      expect(devnetLatest!.state.entries.btc).toMatchObject({
+        status: 'fresh',
+      });
       await act(async () => {
         devnetLatest?.refresh();
         await Promise.resolve();
       });
-      expect(stub).not.toHaveBeenCalled();
-      expect(devnetLatest!.state.status).toBe('idle');
+      expect(stub).toHaveBeenCalled();
+      expect(devnetLatest!.state.status).toBe('ready');
       for (const entry of Object.values(devnetLatest!.state.entries)) {
-        expect(entry).toMatchObject({
-          status: 'unavailable',
-          reason: 'missing',
-        });
+        expect(entry).toMatchObject({ status: 'fresh' });
       }
     } finally {
       await cleanup();

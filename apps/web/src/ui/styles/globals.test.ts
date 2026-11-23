@@ -53,11 +53,11 @@ describe('globals.css', () => {
     );
   });
 
-  it('uses Caveat for --font-display and imports @fontsource/caveat', () => {
+  it('uses Baloo 2 for --font-display and imports @fontsource-variable/baloo-2', () => {
     expect(css).toMatch(
       containingAll(
-        /--font-display\s*:[^;{}]*\bCaveat\b/,
-        /@import\s+[^;{}]*@fontsource\/caveat(?=[/'"\s);])/,
+        /--font-display\s*:[^;{}]*\bBaloo 2\b/,
+        /@import\s+[^;{}]*@fontsource-variable\/baloo-2(?=[/'"\s);])/,
       ),
     );
   });

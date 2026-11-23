@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 import { humanReasonMessage, useWallet } from '../state/wallet-context';
 import type { ChainId } from '../engine/boundary';
 import { chainConfig } from '../wallet/chains';
+import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { unitPriceForChain, usePrices } from '../wallet/prices';
 import { useTokenPrices } from '../wallet/token-prices';
@@ -74,7 +75,7 @@ export function AssetDetailScreen() {
   // strip and the asset list (usePrices pattern: auto-fetch on mount,
   // refresh about every 60 seconds). No price is ever invented: a
   // missing/expired/failed feed reads as such in the Details block.
-  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
   useEffect(() => {
     if (pricesState.status === 'idle') {
       refreshPrices();
@@ -99,7 +100,7 @@ export function AssetDetailScreen() {
     () => (tokenRecord === undefined ? [] : [tokenRecord]),
     [tokenRecord],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
   useEffect(() => {
     if (tokenRecord === undefined || tokenPricesState.status !== 'idle') return;
     refreshTokenPrices();
@@ -168,10 +169,19 @@ export function AssetDetailScreen() {
   const displaySymbol = tokenRecord !== undefined ? tokenRecord.symbol : config.symbol;
   const displayDecimals = tokenRecord !== undefined ? tokenRecord.decimals : CHAIN_DECIMALS[chainId];
   const displayTitle = tokenRecord !== undefined ? tokenRecord.symbol : config.displayName;
+  // Round 2, item 6: in devnet mode the network is the test network, not
+  // mainnet — the label must say so, now that live prices show here too.
+  const devnetConfig = devnetEnabled
+    ? devnetChainConfigOrUndefined(chainId)
+    : undefined;
+  const networkLabel =
+    devnetConfig !== undefined
+      ? devnetConfig.devnetName
+      : `${config.displayName} mainnet`;
   const displaySubtitle =
     tokenRecord !== undefined
       ? `${tokenRecord.name} on ${config.displayName}`
-      : `${config.displayName} mainnet`;
+      : networkLabel;
   const unitPrice = tokenRecord !== undefined
     ? unitPriceForChain(tokenPricesState.entries[tokenKeyOf(tokenRecord)], Date.now())
     : unitPriceForChain(pricesState.entries[chainId], Date.now());
@@ -236,7 +246,7 @@ export function AssetDetailScreen() {
           <span aria-hidden="true" className="inline-flex size-12 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun text-ink">
             <svg viewBox="0 0 48 48" aria-hidden="true" className="size-10 rotate-3">
               <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={24}>{displaySymbol}</text>
+              <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={24}>{displaySymbol}</text>
             </svg>
           </span>
           <div>
@@ -272,7 +282,7 @@ export function AssetDetailScreen() {
             </p>
             {vaultState === 'locked' ? (
               <>
-                <p className="text-sm text-panel-text-muted">Locked — unlock to see balances.</p>
+                <p className="text-sm text-panel-text-muted">Locked. Unlock to see balances.</p>
                 <Button type="button" variant="outline" asChild>
                   <Link to="/lock">Unlock</Link>
                 </Button>
@@ -380,7 +390,7 @@ export function AssetDetailScreen() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <dt className="text-muted-foreground">Network</dt>
-                <dd className="font-semibold">{`${config.displayName} mainnet`}</dd>
+                <dd className="font-semibold">{networkLabel}</dd>
               </div>
               {tokenRecord !== undefined && (
                 <>
@@ -485,7 +495,7 @@ export function AssetDetailScreen() {
             </p>
             {vaultState === 'locked' ? (
               <>
-                <p className="text-sm text-panel-text-muted">Locked — unlock to see activity.</p>
+                <p className="text-sm text-panel-text-muted">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="outline" asChild>
                   <Link to="/lock">Unlock</Link>
                 </Button>
@@ -595,7 +605,7 @@ export function AssetDetailScreen() {
               <dt className="text-sm text-muted-foreground">Derivation</dt>
               <dd className="break-all text-sm">
                 {chain === 'ton' ? (
-                  'No derivation — single imported address (TON path m/44\'/607\'/0\' is fully hardened).'
+                  'Single imported address, no derivation. TON path m/44\'/607\'/0\' is fully hardened.'
                 ) : (
                   // The three documented templates first; every other
                   // chain falls back to its registry path (account 0,

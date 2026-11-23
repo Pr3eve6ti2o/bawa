@@ -350,7 +350,7 @@ describe('asset detail screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see balances.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();
@@ -404,7 +404,7 @@ describe('asset detail screen', () => {
         (candidate) => candidate.textContent === 'Retry',
       );
       expect(retryButtons).toHaveLength(0);
-      expect(mounted.div.textContent).toContain('Locked — unlock to see activity.');
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see activity.');
       expect(mounted.div.querySelector('a[href="/lock"]')).not.toBeNull();
     } finally {
       await mounted.cleanup();

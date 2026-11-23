@@ -27,6 +27,9 @@ export function chainStripDisplay(
   vaultState: "no-vault" | "locked" | "unlocked",
   pricesLoading: boolean,
   mode: "welcome" | "dashboard",
+  // Round 2, item 6: in devnet mode no fiat value is ever shown for a
+  // test balance — the secondary falls back to the live per-unit price.
+  devnet = false,
 ): ChainStripDisplayResult {
   const unitPrice = unitPriceForChain(entry, nowMs);
   const freshness: ChainStripDisplayResult["freshness"] =
@@ -98,7 +101,7 @@ export function chainStripDisplay(
   }
 
   const fiatValue =
-    hasFreshPrice && entry !== undefined
+    hasFreshPrice && entry !== undefined && !devnet
       ? fiatValueForBalance(chain, balance, entry, nowMs)
       : undefined;
   const fiatText = fiatValue?.kind === "fiat" ? fiatValue.text : undefined;

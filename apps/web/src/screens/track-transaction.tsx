@@ -115,12 +115,12 @@ function TrackGuide({ onUseExample }: { onUseExample: () => void }) {
 
       <div className="mt-6 rounded-bawa border-2 border-ink bg-paper p-4">
         <h3 className="font-semibold text-ink">
-          Try a real one — the first Bitcoin transaction
+          Try the first Bitcoin transaction
         </h3>
         <p className="mt-2 text-sm text-ink">
-          This is a real public Bitcoin transaction: the coinbase transaction
-          of the genesis block. Looking it up fetches the live result from
-          the indexer — nothing here is a pre-filled answer.
+          This is the coinbase transaction of the genesis block, a real
+          public Bitcoin transaction. Looking it up fetches the live result
+          from the indexer.
         </p>
         <code className="mt-3 block break-all font-mono text-sm text-panel-text">
           {GENESIS_BTC_HASH}
@@ -153,7 +153,7 @@ function TransactionDetails({ data, chain, checkedAt }: {
         <p className='font-medium'>
           {data.statusLabel}{' — '}
           {data.confirmations === null
-            ? 'Confirmations unknown — the indexer reports no block number'
+            ? 'Confirmations unknown. The indexer reports no block number'
             : `${data.confirmations.toLocaleString('en-GB')} confirmations`}
         </p>
         <p className='text-sm text-muted-foreground'>
@@ -333,7 +333,7 @@ export function TrackTransactionScreen() {
             <AlertDescription className='space-y-2'>
               <p>Transaction not found.</p>
               {lookup.result.note && <p>{lookup.result.note}</p>}
-              <p>Check the hash and chain, or try again later — indexers can lag.</p>
+              <p>Check the hash and chain, or try again later. Indexers can lag.</p>
             </AlertDescription>
           </Alert>
         )}

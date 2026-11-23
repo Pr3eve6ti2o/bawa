@@ -238,7 +238,7 @@ export function AddTokenDialog({
     setSearchCandidates(null);
     setSearchError(null);
     setStatus(
-      `${candidate.name} (${candidate.symbol}) on ${chainConfig(candidate.chain).displayName} — check the contract below, then Add.`,
+      `${candidate.name} (${candidate.symbol}) on ${chainConfig(candidate.chain).displayName}. Check the contract below, then Add.`,
     );
     setError(null);
   };

@@ -285,15 +285,33 @@ export interface BawaSendLinkParams {
  * The Bawa web deep link: opens this app's Send screen with the payment
  * prefilled. Works on desktop browsers too (no app install needed), and
  * covers chains with no payment-URI standard (TRON). The Send screen
- * parses it on mount (see send.tsx).
+ * parses it on mount (see send.tsx). The deployment subpath is kept
+ * (see appBasePath): a link shared from the Pages preview reads
+ * https://pr3eve6ti2o.github.io/bawa/send?... — without the /bawa/
+ * prefix it points at the domain root and never reaches the app.
  */
+/**
+ * The deployment subpath (Vite `base`): '' at the domain root, '/bawa'
+ * on the GitHub Pages project site. A shared link must keep it — a
+ * link built from window.location.origin alone points at the domain
+ * root and never reaches the app on a subpath deployment (the shared
+ * link from the Pages preview was exactly that: /send?... with the
+ * /bawa/ prefix missing). Read at call time so tests can stub
+ * import.meta.env.BASE_URL.
+ */
+export function appBasePath(): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  if (base === '/') return '';
+  return base.replace(/\/$/, '');
+}
+
 export function buildBawaSendLink(origin: string, params: BawaSendLinkParams): string {
   const query = new URLSearchParams();
   query.set('chain', params.chain);
   query.set('to', params.to);
   if (params.amount !== undefined) query.set('amount', params.amount);
   if (params.token !== undefined) query.set('token', params.token);
-  return `${origin.replace(/\/$/, '')}/send?${query.toString()}`;
+  return `${origin.replace(/\/$/, '')}${appBasePath()}/send?${query.toString()}`;
 }
 
 export function parseBawaSendLink(
@@ -308,6 +326,53 @@ export function parseBawaSendLink(
   const amount = params.get('amount') ?? undefined;
   const token = params.get('token') ?? undefined;
   return { chain, to, amount, token };
+}
+
+// Pending send link (UI/UX round 2, deep-link fix): the payment a
+// shared link asked for, kept across the cold-start gap.
+//
+// The Send screen parses the link from the URL on mount, but on a
+// cold start the wallet may not exist yet (or the vault may be
+// locked), so there is nothing to prefill into. The link is stored
+// here so creating or importing a wallet — or unlocking — does not
+// lose it: the Send screen resumes it on its next mount, and the
+// create-wallet ready screen offers to continue straight to it.
+//
+// sessionStorage, not localStorage, so the intent dies with the tab
+// (the lock-return-to precedent in app.tsx). The stored value is the
+// raw query string, re-validated through parseBawaSendLink on read,
+// so a hand-edited or stale value can never inject an invalid link.
+// All access is guarded: private-mode storage must never break Send.
+export const PENDING_SEND_LINK_KEY = 'bawa-pending-send-link';
+
+export function savePendingSendLink(search: string): void {
+  try {
+    sessionStorage.setItem(PENDING_SEND_LINK_KEY, search.replace(/^\?/, ''));
+  } catch {
+    // Storage unavailable — the link still applies from the URL.
+  }
+}
+
+export function readPendingSendLinkSearch(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_SEND_LINK_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function readPendingSendLink(): BawaSendLinkParams | null {
+  const search = readPendingSendLinkSearch();
+  if (search === null || search === '') return null;
+  return parseBawaSendLink(search);
+}
+
+export function clearPendingSendLink(): void {
+  try {
+    sessionStorage.removeItem(PENDING_SEND_LINK_KEY);
+  } catch {
+    // Nothing to clear.
+  }
 }
 
 // QR as a shareable image (UI/UX fixes, item 4).
@@ -342,6 +407,13 @@ export interface QrRenderContext {
     width: number,
     height: number,
   ): void;
+  // Text — only the card renderer needs these, so they stay optional
+  // and the bare-QR fakes (which never draw text) keep compiling.
+  font?: string;
+  textAlign?: string;
+  textBaseline?: string;
+  fillText?: (text: string, x: number, y: number) => void;
+  measureText?: (text: string) => { width: number };
 }
 
 export interface QrRenderCanvas {
@@ -363,6 +435,48 @@ const browserQrRenderDeps: QrRenderDeps = {
     document.createElement('canvas') as unknown as QrRenderCanvas,
   createImage: () => new Image() as unknown as QrRenderImage,
 };
+
+/** Loads one image URL, rejecting when it cannot load in time. */
+async function loadQrImage(
+  src: string,
+  deps: QrRenderDeps,
+  timeoutMs: number,
+): Promise<QrRenderImage> {
+  const image = deps.createImage();
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('The QR code image could not be loaded.')),
+      timeoutMs,
+    );
+    image.onload = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    image.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('The QR code image could not be loaded.'));
+    };
+    image.src = src;
+  });
+  return image;
+}
+
+/**
+ * Loads one image URL, or null when it cannot load in time. Logos on
+ * the shared card are decorative — a missing logo must never block
+ * the share, so the card draws without it.
+ */
+async function loadCardImageOrNull(
+  src: string,
+  deps: QrRenderDeps,
+  timeoutMs: number,
+): Promise<QrRenderImage | null> {
+  try {
+    return await loadQrImage(src, deps, timeoutMs);
+  } catch {
+    return null;
+  }
+}
 
 /** Renders an SVG QR markup string to a PNG blob at the given pixel size. */
 export async function qrSvgToPngBlob(
@@ -393,22 +507,7 @@ export async function qrSvgToPngBlob(
   // while the same SVG loads from a data URL. The 10 s timeout keeps
   // the share from hanging silently if a browser stalls the load.
   const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
-  const image = deps.createImage();
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error('The QR code image could not be loaded.')),
-      10_000,
-    );
-    image.onload = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-    image.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error('The QR code image could not be loaded.'));
-    };
-    image.src = svgUrl;
-  });
+  const image = await loadQrImage(svgUrl, deps, 10_000);
   ctx.fillStyle = QR_PAPER_COLOR;
   ctx.fillRect(0, 0, pixels, pixels);
   ctx.drawImage(image, 0, 0, pixels, pixels);
@@ -429,5 +528,190 @@ export async function qrSvgToPngFile(
   deps: QrRenderDeps = browserQrRenderDeps,
 ): Promise<File> {
   const blob = await qrSvgToPngBlob(svgMarkup, pixels, deps);
+  return new File([blob], fileName, { type: 'image/png' });
+}
+
+// The QR card as a shareable image (UI/UX Round 2, item 1).
+//
+// Sharing used to send the bare QR. The card is what the recipient
+// needs — QR, amount, address, token + chain with both logos — so
+// the shared PNG draws the same card the screen shows, in the same
+// order, on the same paper. The layout is measured, not guessed:
+// the address wraps to the canvas width and the token row centres
+// itself around the label and whichever logos loaded. A logo that
+// fails to load is skipped, never a blocker; a QR that fails to
+// load rejects, because a card without its QR is useless.
+//
+// Colours are the QR's own ink-on-paper (#2B2B2B on #FFFDF7) — no
+// new palette entries.
+
+export interface QrCardPngDetails {
+  /** e.g. '25 USDC', or 'Any amount' when no amount is set. */
+  amountText: string;
+  address: string;
+  /** e.g. 'usdc (base)' — qrCardTokenLabel in screens/qr-card. */
+  tokenLabel: string;
+  /** Bundled Trust Wallet logo URLs; either may be absent. */
+  tokenLogoSrc?: string;
+  chainLogoSrc?: string;
+}
+
+const QR_CARD_WIDTH = 640;
+const QR_CARD_PAD = 36;
+const QR_CARD_QR = 360;
+const QR_CARD_LOGO = 44;
+const QR_CARD_INK = '#2B2B2B';
+
+/**
+ * Greedy character wrap: addresses have no spaces to break on, so
+ * the break falls wherever the line fills. Pure, so tests can check
+ * it without a canvas.
+ */
+export function wrapCardText(
+  text: string,
+  maxWidth: number,
+  measureWidth: (text: string) => number,
+): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const ch of text) {
+    if (line === '' || measureWidth(line + ch) <= maxWidth) {
+      line += ch;
+    } else {
+      lines.push(line);
+      line = ch;
+    }
+  }
+  if (line !== '') lines.push(line);
+  return lines;
+}
+
+export async function qrCardToPngBlob(
+  svgMarkup: string,
+  details: QrCardPngDetails,
+  deps: QrRenderDeps = browserQrRenderDeps,
+): Promise<Blob> {
+  if (
+    typeof svgMarkup !== 'string' ||
+    svgMarkup.trim() === '' ||
+    !svgMarkup.includes('<svg')
+  ) {
+    throw new Error('Cannot share the QR code: no QR image was rendered.');
+  }
+  if (details.address.trim() === '' || details.tokenLabel.trim() === '') {
+    throw new Error('Cannot share the QR card: the payment details are missing.');
+  }
+  const canvas = deps.createCanvas();
+  const measureCtx = canvas.getContext('2d');
+  if (measureCtx === null) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  if (measureCtx.fillText === undefined || measureCtx.measureText === undefined) {
+    throw new Error('The QR card cannot be drawn on this device.');
+  }
+  // The QR must load — a card without it is useless. Logos are
+  // decorative and may fail (3 s each); the card draws without them.
+  const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
+  const qrImage = await loadQrImage(svgUrl, deps, 10_000);
+  const tokenLogo =
+    details.tokenLogoSrc === undefined
+      ? null
+      : await loadCardImageOrNull(details.tokenLogoSrc, deps, 3_000);
+  const chainLogo =
+    details.chainLogoSrc === undefined
+      ? null
+      : await loadCardImageOrNull(details.chainLogoSrc, deps, 3_000);
+
+  // Measure first: the canvas height depends on the wrapped address.
+  const contentWidth = QR_CARD_WIDTH - QR_CARD_PAD * 2;
+  measureCtx.font = '20px ui-monospace, monospace';
+  const addressLines = wrapCardText(
+    details.address,
+    contentWidth,
+    (text) => measureCtx.measureText!(text).width,
+  );
+  measureCtx.font = '600 28px system-ui, sans-serif';
+  const labelWidth = measureCtx.measureText(details.tokenLabel).width;
+  const logoSpan =
+    (tokenLogo === null ? 0 : QR_CARD_LOGO + 12) +
+    (chainLogo === null ? 0 : 12 + QR_CARD_LOGO);
+  const tokenRowWidth = logoSpan + labelWidth;
+
+  // Rows, top to bottom — the same order as the on-screen card:
+  // QR, amount, address, token + chain. All gaps are fixed; only
+  // the address height varies.
+  const amountHeight = 44;
+  const addressHeight = addressLines.length * 28;
+  const height =
+    QR_CARD_PAD +
+    QR_CARD_QR +
+    24 +
+    amountHeight +
+    16 +
+    addressHeight +
+    20 +
+    QR_CARD_LOGO +
+    QR_CARD_PAD;
+
+  canvas.width = QR_CARD_WIDTH;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null || ctx.fillText === undefined || ctx.measureText === undefined) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  ctx.fillStyle = QR_PAPER_COLOR;
+  ctx.fillRect(0, 0, QR_CARD_WIDTH, height);
+  ctx.fillStyle = QR_CARD_INK;
+  ctx.textBaseline = 'top';
+
+  const qrX = (QR_CARD_WIDTH - QR_CARD_QR) / 2;
+  ctx.drawImage(qrImage, qrX, QR_CARD_PAD, QR_CARD_QR, QR_CARD_QR);
+
+  let y = QR_CARD_PAD + QR_CARD_QR + 24;
+  ctx.font = '700 36px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(details.amountText, QR_CARD_WIDTH / 2, y);
+  y += amountHeight + 16;
+
+  ctx.font = '20px ui-monospace, monospace';
+  for (const line of addressLines) {
+    ctx.fillText(line, QR_CARD_WIDTH / 2, y);
+    y += 28;
+  }
+  y += 20;
+
+  // Token row: logos flank the label, the whole row centred.
+  ctx.font = '600 28px system-ui, sans-serif';
+  let rowX = (QR_CARD_WIDTH - tokenRowWidth) / 2;
+  if (tokenLogo !== null) {
+    ctx.drawImage(tokenLogo, rowX, y, QR_CARD_LOGO, QR_CARD_LOGO);
+    rowX += QR_CARD_LOGO + 12;
+  }
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(details.tokenLabel, rowX, y + QR_CARD_LOGO / 2);
+  rowX += labelWidth;
+  if (chainLogo !== null) {
+    rowX += 12;
+    ctx.drawImage(chainLogo, rowX, y, QR_CARD_LOGO, QR_CARD_LOGO);
+  }
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), 'image/png');
+  });
+  if (blob === null) {
+    throw new Error('The QR code could not be rendered on this device.');
+  }
+  return blob;
+}
+
+/** Renders the QR card to a PNG File ready for navigator.share. */
+export async function qrCardToPngFile(
+  svgMarkup: string,
+  details: QrCardPngDetails,
+  fileName: string,
+  deps: QrRenderDeps = browserQrRenderDeps,
+): Promise<File> {
+  const blob = await qrCardToPngBlob(svgMarkup, details, deps);
   return new File([blob], fileName, { type: 'image/png' });
 }

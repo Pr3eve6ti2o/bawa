@@ -178,6 +178,24 @@ describe.sequential('MnemonicBackupScreen (Phase 1.3)', () => {
     }
   });
 
+  it('keeps the backup guidance as one compact list, not four repeated cards', async () => {
+    await createVault(TEST_MNEMONIC, TEST_PASSWORD, TEST_VAULT_PROFILE_IDS);
+    const { div, cleanup } = await mountBackupScreen();
+    try {
+      const text = div.textContent ?? '';
+      expect(text).toContain('Words written on paper');
+      expect(text).toContain('Never photographed');
+      expect(text).toContain(
+        'These are reminders, not proof that the steps are done.',
+      );
+      // The "not verified" note is said once in the section intro, not
+      // repeated under every item.
+      expect(text).not.toContain('Guidance. Not verified by this app.');
+    } finally {
+      await cleanup();
+    }
+  });
+
   it('hides the reveal section without a vault', async () => {
     const { div, cleanup } = await mountBackupScreen();
     try {

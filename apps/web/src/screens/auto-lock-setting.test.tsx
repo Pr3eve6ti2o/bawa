@@ -96,7 +96,7 @@ describe('AutoLockSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Auto-lock off');
+      expect(div.textContent).toContain('Auto-lock is off');
       expect(div.textContent).toContain('stays unlocked on this device');
     } finally {
       cleanup();
@@ -126,7 +126,7 @@ describe('AutoLockSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Auto-lock on');
+      expect(div.textContent).toContain('Auto-lock is on');
       expect(div.textContent).toContain(
         'locks after 5 minutes without activity',
       );
@@ -140,7 +140,7 @@ describe('AutoLockSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Auto-lock on');
+      expect(div.textContent).toContain('Auto-lock is on');
       expect(div.textContent).toContain(
         'locks immediately when you leave this page',
       );
@@ -181,7 +181,7 @@ describe('AutoLockSetting', () => {
 
     try {
       expect(div.textContent).toContain(
-        'No vault yet — create or import a wallet first.',
+        'No vault yet. Create or import a wallet first.',
       );
     } finally {
       cleanup();

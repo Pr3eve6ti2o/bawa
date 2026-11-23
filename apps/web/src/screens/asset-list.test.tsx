@@ -298,7 +298,7 @@ describe('asset list screen', () => {
       const unlock = mounted.div.querySelector('a[href="/lock"]');
       expect(unlock).not.toBeNull();
       expect(unlock?.textContent).toContain('Unlock');
-      expect(mounted.div.textContent).toContain('Locked — unlock to see balances.');
+      expect(mounted.div.textContent).toContain('Locked. Unlock to see balances.');
     } finally {
       await mounted.cleanup();
     }

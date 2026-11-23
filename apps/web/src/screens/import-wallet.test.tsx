@@ -53,6 +53,8 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
   const TON_ADDRESS = 'UQC7gZvGVdCxZhPAazZj43bagBcSYfNvwQZomejemM5wD3zn';
 
   async function mountImportScreen() {
+    // Fresh recents per mount: the picker reads them from localStorage.
+    window.localStorage.clear();
     const previousUrl = window.location.href;
     const previousState = window.history.state;
     const previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
@@ -110,12 +112,39 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     });
   }
 
+  // UI/UX Round 2, item 3: the chain picker is a search bar now, not a
+  // row of pills. Focus (or click) the search to open the full list,
+  // then pick the chain by its name.
+  async function selectChain(div: HTMLDivElement, name: string) {
+    const search = div.querySelector<HTMLInputElement>(
+      '#watch-only-chain-search',
+    );
+    expect(search).not.toBeNull();
+    await act(async () => {
+      search!.focus();
+      search!.click();
+    });
+    await act(async () => {
+      for (let i = 0; i < 20 && !div.querySelector('[role="listbox"]'); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    });
+    const option = [...div.querySelectorAll('[role="option"]')].find(
+      (candidate) => candidate.textContent?.includes(name),
+    );
+    expect(option, `watch-only picker offers ${name}`).not.toBeUndefined();
+    await act(async () => {
+      option!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      (option as HTMLElement).click();
+    });
+  }
+
   it('switches the label to TON public address when TON is clicked', async () => {
     const { div, cleanup } = await mountImportScreen();
     try {
       // Lane C: restore-first is the default tab — switch to Watch-only first.
       await clickTabTrigger(div, 'Watch-only');
-      await clickButton(div, 'TON');
+      await selectChain(div, 'TON');
       expect(
         div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
       ).toBe('TON public address');
@@ -130,7 +159,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     try {
       // Lane C: restore-first is the default tab — switch to Watch-only first.
       await clickTabTrigger(div, 'Watch-only');
-      await clickButton(div, 'TON');
+      await selectChain(div, 'TON');
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
       await act(async () => {
@@ -156,7 +185,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     try {
       // Lane C: restore-first is the default tab — switch to Watch-only first.
       await clickTabTrigger(div, 'Watch-only');
-      await clickButton(div, 'TON');
+      await selectChain(div, 'TON');
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
       await act(async () => {
@@ -177,21 +206,60 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
       await cleanup();
     }
   });
-  it('offers all 13 chains in the watch-only picker, including SOL', async () => {
+  it('offers all 22 chains in the watch-only search, including SOL', async () => {
     // Token gaps, item 6 + item 8: the watch-only picker offered only
     // BTC/ETH/TRX/TON even though validation, derivation and the label
-    // map already cover all 13 chains — a SOL address could not be
-    // watched at all. The picker must offer every registry chain.
+    // map already cover all 22 registry chains — a SOL address could not
+    // be watched at all. UI/UX Round 2, item 3: the picker is a search
+    // bar now, so the test opens it and checks every chain is an option.
     const { div, cleanup } = await mountImportScreen();
     try {
       await clickTabTrigger(div, 'Watch-only');
-      for (const chain of ['SOL', 'DOGE', 'LTC', 'BSC', 'BASE', 'AVAX']) {
-        const button = [...div.querySelectorAll('button')].find(
-          (candidate) => candidate.textContent === chain,
-        );
-        expect(button, `watch-only picker offers ${chain}`).not.toBeUndefined();
+      const search = div.querySelector<HTMLInputElement>(
+        '#watch-only-chain-search',
+      );
+      expect(search).not.toBeNull();
+      await act(async () => {
+        search!.focus();
+        search!.click();
+      });
+      await act(async () => {
+        for (let i = 0; i < 20 && !div.querySelector('[role="listbox"]'); i++) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      const options = [...div.querySelectorAll('[role="option"]')];
+      expect(options).toHaveLength(22);
+      for (const name of [
+        'Bitcoin',
+        'Ethereum',
+        'TRON',
+        'TON',
+        'Solana',
+        'BNB Smart Chain',
+        'Polygon',
+        'Arbitrum One',
+        'OP Mainnet',
+        'Base',
+        'Avalanche C-Chain',
+        'Litecoin',
+        'Dogecoin',
+        'Gnosis',
+        'Celo',
+        'Linea',
+        'Mantle',
+        'Scroll',
+        'opBNB',
+        'Metis',
+        'Aurora',
+        'Fantom',
+      ]) {
+        expect(
+          options.some((option) => option.textContent?.includes(name)),
+          `watch-only picker offers ${name}`,
+        ).toBe(true);
       }
-      await clickButton(div, 'SOL');
+      await selectChain(div, 'SOL');
       expect(
         div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
       ).toBe('Solana public address');
@@ -207,7 +275,7 @@ describe.sequential('ImportWalletScreen TON (R01)', () => {
     const { div, cleanup } = await mountImportScreen();
     try {
       await clickTabTrigger(div, 'Watch-only');
-      await clickButton(div, 'SOL');
+      await selectChain(div, 'SOL');
       const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
       expect(input).not.toBeNull();
       await act(async () => {
@@ -326,7 +394,7 @@ describe.sequential('ImportWalletScreen (T41)', () => {
         watchOnlyTab!.click();
       });
       expect(div.textContent).toContain('Labels are stored in plain text in this browser');
-      expect(div.textContent).toContain('do not enter secrets');
+      expect(div.textContent).toContain('Do not enter secrets');
     } finally {
       try {
         await act(async () => {

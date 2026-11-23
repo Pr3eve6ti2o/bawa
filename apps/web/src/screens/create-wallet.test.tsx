@@ -139,6 +139,7 @@ async function generate(div: HTMLDivElement) {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
   vi.mocked(createWallet).mockResolvedValue(TEST_MNEMONIC);
   vi.mocked(createVault).mockResolvedValue(undefined);
   vi.mocked(hasVault).mockReturnValue(false);
@@ -250,6 +251,74 @@ describe('create wallet screen', () => {
       expect(text).toContain(TEST_ADDRESSES.eth[0]);
       expect(text).toContain(TEST_ADDRESSES.trx[0]);
       expect(text).toContain(TEST_ADDRESSES.ton[0]);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('offers to continue to a pending send link from the ready screen', async () => {
+    // (UI/UX round 2, deep-link fix): the wallet was created from a
+    // shared payment link — the ready screen must offer to continue
+    // to Send with that payment filled in, not drop the link.
+    sessionStorage.setItem(
+      'bawa-pending-send-link',
+      'chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5',
+    );
+    const mounted = await mountScreen();
+    try {
+      await generate(mounted.div);
+      await act(async () => {
+        findButton(mounted.div, 'I have written them down').click();
+      });
+      const words = TEST_MNEMONIC.split(' ');
+      const inputs = [...mounted.div.querySelectorAll('input[id^="confirm-word-"]')];
+      expect(inputs.length).toBe(3);
+      await act(async () => {
+        inputs.forEach((input) => {
+          const position = Number(
+            (input as HTMLInputElement).id.replace('confirm-word-', ''),
+          );
+          setInputValue(input as HTMLInputElement, words[position] as string);
+        });
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Confirm and create wallet').click();
+      });
+      await settle();
+      expect(mounted.div.textContent).toContain('Your wallet is ready');
+      const link = mounted.div.querySelector(
+        'a[href="/send?chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5"]',
+      );
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Continue to your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows no continue-to-send link without a pending send link', async () => {
+    const mounted = await mountScreen();
+    try {
+      await generate(mounted.div);
+      await act(async () => {
+        findButton(mounted.div, 'I have written them down').click();
+      });
+      const words = TEST_MNEMONIC.split(' ');
+      const inputs = [...mounted.div.querySelectorAll('input[id^="confirm-word-"]')];
+      await act(async () => {
+        inputs.forEach((input) => {
+          const position = Number(
+            (input as HTMLInputElement).id.replace('confirm-word-', ''),
+          );
+          setInputValue(input as HTMLInputElement, words[position] as string);
+        });
+      });
+      await act(async () => {
+        findButton(mounted.div, 'Confirm and create wallet').click();
+      });
+      await settle();
+      expect(mounted.div.textContent).toContain('Your wallet is ready');
+      expect(mounted.div.textContent).not.toContain('Continue to your send');
     } finally {
       await mounted.cleanup();
     }

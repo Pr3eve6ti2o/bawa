@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { hasVault, vaultProfiles, verifyVaultPassword, withMnemonic } from '../wallet/vault';
 import { profileFor } from '../wallet/chains';
-import { ChecklistCard } from '../ui/components/checklist-card';
 import { Button } from '../ui/components/button';
 import {
   Card,
@@ -14,11 +13,14 @@ import {
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 
+// Round 2: the four backup reminders are one compact list, not four
+// large cards repeating the same "not verified" note. The section intro
+// already says these are reminders this app cannot verify.
 const guidanceItems = [
-  { id: 'paper', label: 'Words written on paper', description: 'Guidance — not verified by this app.' },
-  { id: 'offline', label: 'Stored offline in two places', description: 'Guidance — not verified by this app.' },
-  { id: 'sharing', label: 'Never shared', description: 'Guidance — not verified by this app.' },
-  { id: 'photo', label: 'Never photographed', description: 'Guidance — not verified by this app.' },
+  { id: 'paper', label: 'Words written on paper' },
+  { id: 'offline', label: 'Stored offline in two places' },
+  { id: 'sharing', label: 'Never shared' },
+  { id: 'photo', label: 'Never photographed' },
 ];
 
 const PROFILE_LABELS: Record<string, string> = {
@@ -170,7 +172,7 @@ export function MnemonicBackupScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card className="rounded-xl">
         <CardHeader>
           <CardTitle>Mnemonic backup</CardTitle>
@@ -180,44 +182,46 @@ export function MnemonicBackupScreen() {
               : 'Your recovery phrase backs up the vault wallet on this device. This app cannot verify that you have followed the steps below.'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {profiles === null ? (
             <>
               <p className="text-sm leading-relaxed">
                 Create a wallet or restore one from its recovery phrase
-                first. Until then there is no recovery phrase to back up.
+                first.
               </p>
               <Button asChild className="h-auto whitespace-normal py-3 text-center">
                 <Link to="/create-wallet">Create a wallet</Link>
               </Button>
             </>
           ) : (
-            <>
-              <p className="text-sm leading-relaxed">
+            // Round 2: one compact list instead of four separate
+            // paragraphs — same four facts, a third of the height.
+            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
+              <li>
                 The 24 words you wrote down when the wallet was created are
                 the only backup. Write them on paper and store the paper
                 offline in two places.
-              </p>
-              <p className="text-sm leading-relaxed">
+              </li>
+              <li>
                 If you lose these words, the wallet cannot be recovered —
                 Bawa cannot reset your recovery phrase.
-              </p>
-              <p className="text-sm leading-relaxed">
+              </li>
+              <li>
                 Never photograph the words, share them or paste them into any
                 app or website.
-              </p>
-              <p className="text-sm leading-relaxed">
+              </li>
+              <li>
                 An extended public key alone cannot recover spending access —
                 it only restores watch-only monitoring. Spending access is
                 restored from the 24 words.
-              </p>
-            </>
+              </li>
+            </ul>
           )}
         </CardContent>
       </Card>
 
       {profiles !== null && (
-        <section aria-labelledby="backup-profiles" className="space-y-3">
+        <section aria-labelledby="backup-profiles" className="space-y-2">
           <h2 id="backup-profiles" className="text-lg font-semibold">
             Recovery profiles
           </h2>
@@ -226,20 +230,25 @@ export function MnemonicBackupScreen() {
             with a different profile recovers different addresses — back up
             the profile names with the words.
           </p>
-          <ul className="space-y-2">
+          {/* Round 2: one compact row per profile instead of four tall
+              cards — the profile id and its stored state on one line. */}
+          <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
             {BACKUP_CHAINS.map((chain) => {
               const profileId = profileFor(chain);
               const stored = profiles.includes(profileId);
               return (
-                <li key={chain} className="rounded-bawa-sm border-2 border-ink bg-paper p-4">
-                  <div className="text-sm font-semibold text-ink">
+                <li
+                  key={chain}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2"
+                >
+                  <span className="text-sm font-semibold text-ink">
                     {PROFILE_LABELS[profileId] ?? profileId}
-                  </div>
-                  <div className="mt-1 text-xs leading-relaxed text-ink">
+                  </span>
+                  <span className="text-xs leading-relaxed text-ink">
                     {stored
                       ? 'Stored with this vault.'
-                      : 'Not stored with this vault — restoring with this profile would recover different addresses.'}
-                  </div>
+                      : 'Not stored with this vault. Restoring with this profile would recover different addresses.'}
+                  </span>
                 </li>
               );
             })}
@@ -248,18 +257,24 @@ export function MnemonicBackupScreen() {
       )}
 
       {profiles !== null && (
-        <section aria-label="Backup guidance" className="space-y-3">
+        <section aria-label="Backup guidance" className="space-y-2">
           <p className="text-sm text-ink">
-            These items are reminders, not a record of completed steps. This
+            These are reminders, not proof that the steps are done. This
             app cannot verify that you have followed them.
           </p>
-          {guidanceItems.map((item) => (
-            <ChecklistCard
-              key={item.id}
-              title={item.label}
-              description={item.description}
-            />
-          ))}
+          {/* Round 2: one compact list, not four cards. No check mark:
+              these are reminders, not completed steps. */}
+          <ul className="divide-y rounded-bawa-sm border-2 border-ink bg-paper">
+            {guidanceItems.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-baseline gap-2 px-3 py-2 text-sm text-ink"
+              >
+                <span aria-hidden="true" className="text-muted-foreground">–</span>
+                {item.label}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -282,7 +297,7 @@ export function MnemonicBackupScreen() {
           )}
 
           {stage === 'password' && (
-            <form onSubmit={handleVerifyPassword} className="space-y-5">
+            <form onSubmit={handleVerifyPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="reveal-password">Vault password</Label>
                 <Input
@@ -315,7 +330,7 @@ export function MnemonicBackupScreen() {
           )}
 
           {stage === 'quiz' && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Answer all three questions correctly to show the phrase.
               </p>

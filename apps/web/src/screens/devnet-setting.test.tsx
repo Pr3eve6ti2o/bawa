@@ -73,8 +73,8 @@ describe('DevnetSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Devnet off');
-      expect(div.textContent).toContain('the wallet uses mainnet');
+      expect(div.textContent).toContain('Devnet is off');
+      expect(div.textContent).toContain('The wallet uses mainnet');
       expect(div.textContent).not.toContain('Bitcoin testnet4');
     } finally {
       cleanup();
@@ -122,8 +122,8 @@ describe('DevnetSetting', () => {
     const { div, cleanup } = mount();
 
     try {
-      expect(div.textContent).toContain('Devnet on');
-      expect(div.textContent).toContain('temporary test mode');
+      expect(div.textContent).toContain('Devnet is on');
+      expect(div.textContent).toContain('Temporary test mode');
       expect(div.textContent).toContain('valueless test tokens');
       expect(div.textContent).toContain('without touching mainnet');
     } finally {
@@ -151,7 +151,7 @@ describe('DevnetSetting', () => {
 
     try {
       expect(div.textContent).toContain(
-        'No vault yet — create or import a wallet first.',
+        'No vault yet. Create or import a wallet first.',
       );
       expect((getSwitch(div) as HTMLButtonElement).disabled).toBe(true);
     } finally {

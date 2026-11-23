@@ -270,12 +270,12 @@ describe('SendReview approval stages', () => {
     },
     {
       stage: 'signed',
-      heading: 'Signed — broadcast disabled',
+      heading: 'Signed, not broadcast',
       signDisabled: true,
     },
     {
       stage: 'broadcast-disabled',
-      heading: 'Signed — broadcast disabled',
+      heading: 'Signed, not broadcast',
       signDisabled: true,
     },
   ];

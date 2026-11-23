@@ -105,14 +105,14 @@ export function AutoLockSetting() {
 
         {!hasVault && (
           <p className="text-sm text-ink">
-            No vault yet — create or import a wallet first.
+            No vault yet. Create or import a wallet first.
           </p>
         )}
 
         {hasVault && !autoLockEnabled && (
           <p className="text-sm text-ink">
-            Auto-lock off — your wallet stays unlocked on this device. Anyone
-            with access to this device can open it.
+            Auto-lock is off. Your wallet stays unlocked on this device.
+            Anyone with access to this device can open it.
           </p>
         )}
 
@@ -139,8 +139,8 @@ export function AutoLockSetting() {
             {hasVault && (
               <p className="text-sm text-ink">
                 {autoLockMinutes > 0
-                  ? `Auto-lock on — your wallet locks after ${AUTO_LOCK_LABELS[autoLockMinutes]} without activity. You will need your vault password to unlock it.`
-                  : 'Auto-lock on — your wallet locks immediately when you leave this page. You will need your vault password to unlock it.'}
+                  ? `Auto-lock is on. Your wallet locks after ${AUTO_LOCK_LABELS[autoLockMinutes]} without activity. You will need your vault password to unlock it.`
+                  : 'Auto-lock is on. Your wallet locks immediately when you leave this page. You will need your vault password to unlock it.'}
               </p>
             )}
           </div>

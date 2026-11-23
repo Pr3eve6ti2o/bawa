@@ -90,7 +90,7 @@ describe('NetworkModePill', () => {
 
     try {
       const pill = getPill(div);
-      expect(pill.textContent).toBe('Devnet — test mode');
+      expect(pill.textContent).toBe('Devnet test mode');
       expect(pill.getAttribute('aria-pressed')).toBe('true');
 
       await act(async () => {

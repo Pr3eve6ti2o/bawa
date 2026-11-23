@@ -33,9 +33,9 @@ export function SecuritySettingsScreen() {
         <h2 className="flex items-center gap-2 text-lg font-bold text-ink"><BawaIcon name="shield" className="size-6" /> What this wallet does</h2>
         <ul className="mt-3 max-w-[75ch] list-disc space-y-2 pl-5 text-sm text-ink">
           <li>Your recovery phrase is created in this browser and kept encrypted in the vault on this device.</li>
-          <li>Your private keys stay in memory on this device while the wallet is open. The wallet never saves them unencrypted, never writes them to logs, and never sends them online.</li>
+          <li>Your private keys stay in memory on this device while the wallet is open. They are never saved unencrypted, written to logs or sent online.</li>
           <li>Signing happens offline on this device.</li>
-          <li>Sending funds is switched off until it is separately approved — signing alone never moves your funds.</li>
+          <li>Sending funds is switched off until it is separately approved. Signing alone never moves your funds.</li>
         </ul>
       </div>
 
@@ -47,10 +47,10 @@ export function SecuritySettingsScreen() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="max-w-[75ch] text-sm text-ink">
-            Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach — anyone with the phrase can take the funds.
+            Your recovery phrase is stored encrypted in this browser&apos;s vault. Write it down on paper and keep it somewhere only you can reach. Anyone with the phrase can take the funds.
           </p>
           <p className="max-w-[75ch] text-sm text-ink">
-            Back up first: this wallet shows no receiving address — and cannot receive funds — until you have written down your recovery phrase.
+            Back up first. This wallet shows no receiving address and cannot receive funds until you have written down your recovery phrase.
           </p>
           <Link
             to="/mnemonic-backup"

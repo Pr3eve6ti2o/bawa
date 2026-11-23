@@ -8,6 +8,7 @@ import { BawaIcon } from '../ui/components/icons';
 import { loadCore } from '../engine/boundary';
 import { useWallet } from '../state/wallet-context';
 import { createWallet } from '../wallet/core';
+import { readPendingSendLinkSearch } from '../wallet/payment-links';
 import { createVault, hasVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
@@ -488,17 +489,17 @@ export function CreateWalletScreen() {
                 or website.
               </AlertDescription>
             </Alert>
-            <ol aria-label="Recovery phrase" className="grid grid-cols-3 gap-2 lg:grid-cols-4">
+            <ol aria-label="Recovery phrase" className="grid grid-cols-2 gap-2 lg:grid-cols-3">
               {words.map((word, index) => (
                 <li
                   key={index}
-                  className="flex h-12 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-3"
+                  className="flex h-12 min-w-0 items-center gap-2 rounded-bawa-sm border-2 border-ink bg-paper px-2"
                 >
                   <span className="text-body-sm font-medium text-ink">
                     {index + 1}.
                   </span>
                   {' '}
-                  <span className="font-display text-xl font-semibold text-ink">{word}</span>
+                  <span className="font-display text-base font-semibold text-ink">{word}</span>
                 </li>
               ))}
             </ol>
@@ -588,6 +589,21 @@ export function CreateWalletScreen() {
               Keep your written recovery phrase safe. If you lose this device,
               it is the only way to recover your wallet.
             </p>
+            {(() => {
+              // Deep-link continuation (UI/UX round 2, deep-link fix):
+              // this wallet was created from a shared payment link. Offer
+              // to go straight to the Send screen with that payment
+              // filled in, instead of leaving the user on the dashboard
+              // with the link lost. The stored query is re-validated by
+              // the Send screen on arrival.
+              const pendingSearch = readPendingSendLinkSearch();
+              if (pendingSearch === null || pendingSearch === '') return null;
+              return (
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to={`/send?${pendingSearch}`}>Continue to your send</Link>
+                </Button>
+              );
+            })()}
             <Button asChild className="h-auto whitespace-normal py-3 text-center">
               <Link to="/mnemonic-backup">Review your backup checklist</Link>
             </Button>

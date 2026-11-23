@@ -166,8 +166,8 @@ export function WalletManagementScreen() {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Your recovery phrase holds all your accounts. Each account is
-            one wallet made from the same phrase — Account 1, Account 2,
-            and so on — and each has its own addresses on every chain.
+            one wallet made from the same phrase, and each has its own
+            addresses on every chain.
             That is the multichain wallet: one address per chain, all
             chains, for the account you are using. The HD wallet is
             different: for a payment you can ask for a fresh receiving

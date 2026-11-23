@@ -19,9 +19,9 @@ import { AddTokenDialog } from './add-token';
 export function AssetListScreen() {
   const [hideZero, setHideZero] = useState(false);
   const [addTokenOpen, setAddTokenOpen] = useState(false);
-  const { customTokens, devnetEnabled } = useWallet();
+  const { customTokens } = useWallet();
 
-  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: devnetEnabled });
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
   const pricesLoading = pricesState.status === 'loading';
 
   // Token prices (token discovery): the same CoinGecko feed, one batched
@@ -32,7 +32,7 @@ export function AssetListScreen() {
     () => [...DEFAULT_TOKENS, ...(customTokens ?? [])],
     [customTokens],
   );
-  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList, { devnet: devnetEnabled });
+  const { state: tokenPricesState, refresh: refreshTokenPrices } = useTokenPrices(tokenList);
   const tokenPricesLoading = tokenPricesState.status === 'loading';
 
   useEffect(() => {

@@ -268,7 +268,7 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
       const text = mounted.div.textContent ?? '';
       expect(text).toContain('Welcome to Bawa');
       expect(text).toContain(
-        'Bawa is a guide made for humans and AI agents',
+        'Bawa is a guide for humans and AI agents',
       );
       expect(text).toContain('crypto wallets');
       expect(text).toContain('web wallets');

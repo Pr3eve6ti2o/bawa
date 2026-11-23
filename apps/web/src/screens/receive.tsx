@@ -5,7 +5,7 @@ import { useWallet } from '../state/wallet-context';
 import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
-import { buildBawaSendLink, buildPaymentUri, qrSvgToPngFile } from '../wallet/payment-links';
+import { buildBawaSendLink, buildPaymentUri, qrCardToPngFile } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
   isVerifiedToken,
@@ -16,6 +16,8 @@ import {
   type TokenRecord,
 } from '../wallet/tokens';
 import { AddTokenDialog } from './add-token';
+import { QrCard, qrCardTokenLabel } from './qr-card';
+import { chainLogoFor, tokenLogoFor } from './token-logo';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Button } from '../ui/components/button';
 import { Card } from '../ui/components/card';
@@ -228,11 +230,12 @@ export function ReceiveScreen() {
   async function sharePayment() {
     if (!address || !shareLink) return;
     setCopyStatus('');
-    // Sharing attaches the QR as a PNG image (UI/UX fixes, item 4):
-    // the file is what the recipient's wallet scans; the payment URI
-    // stays in the text and the Bawa link in the URL. When the
-    // platform cannot share files, the PNG downloads instead — the
-    // link is only copied as a last resort.
+    // Sharing attaches the QR card as a PNG image (UI/UX Round 2,
+    // item 1): the file is the card — QR, amount, address, token +
+    // chain with both logos — the same card the screen shows. The
+    // payment URI stays in the text and the Bawa link in the URL.
+    // When the platform cannot share files, the PNG downloads
+    // instead — the link is only copied as a last resort.
     const file = await qrPngFile();
     if (
       file !== null &&
@@ -246,7 +249,7 @@ export function ReceiveScreen() {
           text: paymentUri ?? address,
           url: shareLink,
         });
-        setCopyStatus('QR code shared.');
+        setCopyStatus('Card shared.');
         return;
       } catch (error: unknown) {
         // A cancelled share sheet is not an error; fall through to download.
@@ -257,7 +260,7 @@ export function ReceiveScreen() {
       try {
         downloadBlob(file, file.name);
         setCopyStatus(
-          'Sharing is not available here — the QR code was downloaded instead.',
+          'Sharing is not available here. The QR code was downloaded instead.',
         );
         return;
       } catch {
@@ -271,12 +274,27 @@ export function ReceiveScreen() {
     return `bawa-receive-${chain}${effectiveToken ? `-${effectiveToken.symbol.toLowerCase()}` : ''}.png`;
   }
 
+  // The amount as the card shows it — null when no amount is set.
+  const amountText =
+    amount.trim() === '' || amountError
+      ? null
+      : `${amount.trim()} ${assetSymbol}`;
+
   async function qrPngFile(): Promise<File | null> {
-    const svg = qrRef.current?.querySelector('svg');
-    if (!svg) return null;
+    const svg = qrRef.current?.querySelector('#qr-card-qr svg');
+    if (!svg || !address || !chain) return null;
     try {
-      return await qrSvgToPngFile(
+      return await qrCardToPngFile(
         new XMLSerializer().serializeToString(svg),
+        {
+          amountText: amountText ?? 'Any amount',
+          address,
+          tokenLabel: qrCardTokenLabel(effectiveToken, chain),
+          tokenLogoSrc: tokenLogoFor(
+            effectiveToken === null ? config.symbol : effectiveToken.symbol,
+          ),
+          chainLogoSrc: chainLogoFor(chain) ?? tokenLogoFor(chain),
+        },
         qrFileName(),
       );
     } catch {
@@ -298,14 +316,14 @@ export function ReceiveScreen() {
   async function downloadQr() {
     const file = await qrPngFile();
     if (!file) {
-      setCopyStatus('Unable to download the QR code.');
+      setCopyStatus('Unable to download the card.');
       return;
     }
     try {
       downloadBlob(file, file.name);
-      setCopyStatus('QR code downloaded.');
+      setCopyStatus('Card downloaded.');
     } catch {
-      setCopyStatus('Unable to download the QR code.');
+      setCopyStatus('Unable to download the card.');
     }
   }
 
@@ -349,9 +367,8 @@ export function ReceiveScreen() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <h1 className="text-2xl font-semibold text-ink">Receive</h1>
-      <p className="font-display text-xl text-ink">This is your address — share the drawing, keep the keys.</p>
       <p className="text-body-sm font-medium text-panel-text-muted">
         {step === 'chain'
           ? 'Step 1 of 3: Network'
@@ -362,39 +379,41 @@ export function ReceiveScreen() {
 
       {step === 'chain' && (
       <section aria-labelledby="receive-addresses-heading" className="space-y-3">
-        <h2 id="receive-addresses-heading" className="text-lg font-semibold text-ink">
+        {/* Round 2, item 8: the step label above ("Step 1 of 3: Network")
+            is the visible title; the heading stays for screen readers. */}
+        <h2 id="receive-addresses-heading" className="sr-only">
           Choose a network
         </h2>
-        <p className="text-sm text-ink">
-          Pick a network, then a token or coin to receive.
-        </p>
-        <ul className="space-y-2">
+        {/* Round 2, item 8: the 22-row list scrolled past the viewport.
+            One-line buttons (name + symbol inline) in a two-column
+            grid fit all 22 networks on one screen at 390 px — the same
+            text per button, so the step still reads as a network picker. */}
+        <ul className="grid grid-cols-2 gap-1.5">
           {chains.map((available) => {
             const listConfig = chainConfig(available);
             const selected = available === chain;
             return (
               <li
                 key={available}
-                className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
                   selected ? 'bg-sun' : 'bg-paper'
                 }`}
               >
                 <button
                   type="button"
                   aria-pressed={selected}
+                  title={listConfig.displayName}
                   onClick={() => selectChain(available)}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                 >
-                  <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                    <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                  <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                    <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
                       <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                      <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={20}>{listConfig.symbol}</text>
+                      <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={20}>{listConfig.symbol}</text>
                     </svg>
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">
-                      {listConfig.displayName} · {listConfig.symbol}
-                    </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight">
+                    {listConfig.displayName} {listConfig.symbol}
                   </span>
                 </button>
               </li>
@@ -406,20 +425,19 @@ export function ReceiveScreen() {
 
       {step === 'token' && (
       <section aria-labelledby="receive-tokens-heading" className="space-y-3">
-        <h2 id="receive-tokens-heading" className="text-lg font-semibold text-ink">
-          Receive a token
-        </h2>
-        <p className="flex items-center justify-between gap-3 text-sm text-ink">
-          <span>{`Network: ${config.displayName}`}</span>
-          <Button type="button" variant="outline" onClick={() => setStep('chain')}>
+        {/* Round 2, item 8: the heading, network and Back share one row
+            and the explainer is gone — the native coin first, then every
+            token, with a tick for verified, reads without it. */}
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="receive-tokens-heading" className="text-lg font-semibold text-ink">
+            {`Token · ${config.displayName}`}
+          </h2>
+          <Button type="button" variant="outline" size="sm" onClick={() => setStep('chain')}>
             Back
           </Button>
-        </p>
-        <p className="text-sm text-ink">
-          {`The ${config.displayName} native coin first, then every token on this network — choose one to receive it. A tick means the token is verified: it is one of the wallet's curated tokens, or its contract resolved to a real CoinGecko listing.`}
-        </p>
+        </div>
         <div className="space-y-1">
-          <Label htmlFor="receive-token-filter" className="text-sm font-medium">
+          <Label htmlFor="receive-token-filter" className="sr-only">
             Find a token by ticker or name
           </Label>
           <Input
@@ -427,8 +445,8 @@ export function ReceiveScreen() {
             type="text"
             value={tokenFilter}
             onChange={(event) => setTokenFilter(event.target.value)}
-            placeholder="e.g. USDC"
-            className="h-12"
+            placeholder="Find a token by ticker or name — e.g. USDC"
+            className="h-11"
           />
         </div>
         {orderedAssets.length === 0 ? (
@@ -444,7 +462,7 @@ export function ReceiveScreen() {
                 return (
                   <li
                     key={`native:${chain}`}
-                    className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                    className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
                       selectedToken === null ? 'bg-sun' : 'bg-paper'
                     }`}
                   >
@@ -452,19 +470,16 @@ export function ReceiveScreen() {
                       type="button"
                       aria-pressed={selectedToken === null}
                       onClick={() => selectToken(null)}
-                      className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                     >
-                      <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                        <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                      <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
                           <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                          <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{config.symbol}</text>
+                          <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{config.symbol}</text>
                         </svg>
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">
-                          {config.displayName} · {config.symbol}
-                        </span>
-                        <span className="block text-sm text-ink">Native coin</span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                        {config.displayName} · {config.symbol} · Native coin
                       </span>
                     </button>
                   </li>
@@ -478,7 +493,7 @@ export function ReceiveScreen() {
               return (
                 <li
                   key={`${token.chain}:${token.contract.toLowerCase()}`}
-                  className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                  className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
                     selected ? 'bg-sun' : 'bg-paper'
                   }`}
                 >
@@ -486,23 +501,21 @@ export function ReceiveScreen() {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => selectToken(token)}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                   >
-                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                    <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
                         <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{token.symbol}</text>
+                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token.symbol}</text>
                       </svg>
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">
-                        {token.name} · {token.symbol}
-                        {isVerifiedToken(token) && (
-                          <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                        )}
-                      </span>
-                      <span className="block text-sm text-ink">
-                        {tokenConfig.displayName} · {shortContract(token.contract)}
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                      {token.name} · {token.symbol}
+                      {isVerifiedToken(token) && (
+                        <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                      )}
+                      <span className="font-normal text-ink">
+                        {` · ${tokenConfig.displayName} · ${shortContract(token.contract)}`}
                       </span>
                     </span>
                   </button>
@@ -511,7 +524,7 @@ export function ReceiveScreen() {
             })}
           </ul>
         )}
-        <Button type="button" variant="outline" onClick={() => setAddTokenOpen(true)}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setAddTokenOpen(true)}>
           Add token
         </Button>
         <AddTokenDialog open={addTokenOpen} onOpenChange={setAddTokenOpen} />
@@ -519,7 +532,7 @@ export function ReceiveScreen() {
       )}
 
       {step === 'details' && (
-        <>
+        <div className="space-y-3">
       <p className="flex items-center justify-between gap-3 text-sm text-ink">
         <span>{`${config.displayName} · ${assetSymbol}`}</span>
         <Button type="button" variant="outline" onClick={() => setStep('token')}>
@@ -529,7 +542,7 @@ export function ReceiveScreen() {
 
       <Alert>
         <AlertDescription>
-          Send only on the selected network — the sender must use the network you selected, even where addresses look the same.
+          {`Send only on ${devnetEnabled ? (devnetChainConfigOrUndefined(chain)?.devnetName ?? config.displayName) : config.displayName} — the sender must use this network.`}
         </AlertDescription>
       </Alert>
 
@@ -562,31 +575,29 @@ export function ReceiveScreen() {
         </div>
       )}
 
-      <Card className="rounded-xl border-border bg-card p-6 text-foreground">
+      <Card className="rounded-xl border-border bg-card p-3 text-foreground">
         {address ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* Paper surround keeps the QR scannable — Ink modules on Paper. */}
-              <div id="receive-qr" ref={qrRef} className="shrink-0 rounded-bawa-sm border-2 border-ink bg-paper p-4">
-                <QRCodeSVG
-                  value={mainQr}
-                  size={192}
-                  marginSize={4}
-                  level="H"
-                  fgColor="#2B2B2B"
-                  bgColor="#FFFDF7"
-                  title={mainQr}
-                />
-              </div>
-              {paymentUriUnavailable && (
-                <p className="text-sm text-ink">
-                  Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
-                  standard payment-request link, so the QR encodes the address only. The share
-                  link below still carries the amount.)
-                </p>
-              )}
+          <div className="flex flex-col items-center gap-2">
+            {/* The QR card (UI/UX Round 2, item 1): QR, amount,
+                address, token + chain with both logos — the same
+                card the Share and Download buttons send out. */}
+            <div id="receive-qr" ref={qrRef} className="w-full max-w-md">
+              <QrCard
+                qrValue={mainQr}
+                amountText={amountText}
+                address={address}
+                token={effectiveToken}
+                chain={chain}
+              />
             </div>
-            <div className="flex items-start justify-center gap-3">
+            {paymentUriUnavailable && (
+              <p className="text-sm text-ink">
+                Requested amount: {amount.trim()} {assetSymbol} (shown as text — TRON has no
+                standard payment-request link, so the QR encodes the address only. The share
+                link below still carries the amount.)
+              </p>
+            )}
+            <div className="flex items-start justify-center gap-2">
               {smallQrs.map((candidate) => (
                 <button
                   key={candidate.id}
@@ -594,12 +605,12 @@ export function ReceiveScreen() {
                   disabled={candidate.value === null}
                   aria-label={`Show ${candidate.label.toLowerCase()} QR`}
                   onClick={() => setTemplate(candidate.id)}
-                  className="flex flex-col items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-2 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-50"
+                  className="flex flex-col items-center gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-1.5 text-xs text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-50"
                 >
                   {candidate.value !== null ? (
                     <QRCodeSVG
                       value={candidate.value}
-                      size={64}
+                      size={40}
                       marginSize={2}
                       level="H"
                       fgColor="#2B2B2B"
@@ -607,7 +618,7 @@ export function ReceiveScreen() {
                       title={candidate.value}
                     />
                   ) : (
-                    <span className="flex h-16 w-16 items-center justify-center text-center">
+                    <span className="flex h-10 w-10 items-center justify-center text-center">
                       Not available
                     </span>
                   )}
@@ -616,14 +627,19 @@ export function ReceiveScreen() {
               ))}
             </div>
             <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
+            {/* The address number is the HD indicator — which receiving
+                address of this account this is — so it stays, kept to
+                one line. */}
             {vaultAddress !== undefined && !isWatchOnly && (
-              <p className="w-full text-center text-sm text-ink">
+              <p className="w-full text-center text-xs text-ink">
                 {canRotate
-                  ? `Receiving address ${receiveIndex + 1} of this account — choose New address for a fresh one for the next payment.`
-                  : `${config.displayName} has one address per wallet, so there is no new address to generate.`}
+                  ? `Receiving address ${receiveIndex + 1} of this account.`
+                  : `${config.displayName} has one address per wallet.`}
               </p>
             )}
-            <p data-testid="receive-share-link" className="w-full break-all text-center font-mono text-xs text-ink">
+            {/* The share link is long; the row shows one truncated line
+                (the full link stays in the DOM and copies whole). */}
+            <p data-testid="receive-share-link" title={shareLink} className="w-full truncate text-center font-mono text-xs text-ink">
               {shareLink}
             </p>
             <div className="flex flex-wrap justify-center gap-2">
@@ -647,7 +663,7 @@ export function ReceiveScreen() {
                 Copy link
               </Button>
               <Button type="button" variant="outline" onClick={() => void downloadQr()}>
-                Download QR
+                Download card
               </Button>
             </div>
           </div>
@@ -659,7 +675,7 @@ export function ReceiveScreen() {
             </Link>
           </div>
         )}
-        <p role="status" className="mt-4 text-center text-sm text-ink">
+        <p role="status" className="mt-3 text-center text-sm text-ink">
           {copyStatus}
         </p>
       </Card>
@@ -684,7 +700,7 @@ export function ReceiveScreen() {
       <p className="text-sm text-ink">
         Only share this address to receive funds. Check the address carefully before accepting funds.
       </p>
-        </>
+        </div>
       )}
     </div>
   );

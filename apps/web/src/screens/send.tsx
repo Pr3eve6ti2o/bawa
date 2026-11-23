@@ -1,6 +1,9 @@
 // Send screen (Phase 4, assembled hands-on from Sol p1/p2/p3/p5 + probes).
-// Multi-step flow: asset (chain + token) → recipient (+QR scanner) → amount/fees → review
-// (Sol p3 SendReview) → offline sign → result. Broadcast is DISABLED until
+// Stepped flow (Round 2, item 8): chain → token → address + amount in
+// one place → review → offline sign → result. Each step fits the
+// viewport without scrolling to reach the next control: the chain step
+// is chips only, the token step lists one chain's assets, and the
+// recipient and amount share one step. Broadcast is DISABLED until
 // separately authorised: the flow signs offline and stops there. Nothing
 // here broadcasts, and the UI never presents send as working — the review
 // and result both state the broadcast block plainly, and the only action
@@ -9,8 +12,9 @@
 // when devnet is on, the signed transaction broadcasts to the test
 // network via broadcastSignedDevnet. Mainnet still never broadcasts.
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Button } from '../ui/components/button';
+import { ScanIcon } from '../ui/components/icons';
 import { Input } from '../ui/components/input';
 import { Label } from '../ui/components/label';
 import {
@@ -23,8 +27,12 @@ import { DEVNET_CHAIN_CONFIGS, devnetChainConfig } from '../wallet/devnet-endpoi
 import { CHAIN_DECIMALS, formatNativeWithSymbol } from '../wallet/chain-amount-format';
 import { formatFeePreview } from '../wallet/money';
 import {
+  clearPendingSendLink,
   parseBawaSendLink,
   parsePaymentUri,
+  readPendingSendLink,
+  savePendingSendLink,
+  type BawaSendLinkParams,
 } from '../wallet/payment-links';
 import {
   DEFAULT_TOKENS,
@@ -49,7 +57,7 @@ import {
 import { getLatestBlockHeader } from '../wallet/adapters/trx';
 import { getAdapterForMode } from '../wallet/adapters';
 import { recordPendingBroadcastDevnet } from '../state/pending-broadcasts';
-import { getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
+import { accountName, getSessionPassphrase, withMnemonicAsync } from '../wallet/vault';
 import { BROADCAST_DISABLED_MESSAGE } from '../wallet/adapters/types';
 import { QrScanner } from '../wallet/qr-scanner';
 import { SendReview } from './send-review';
@@ -62,7 +70,7 @@ import type { ChainId } from '../engine/boundary';
 // pretending to send (token gaps, item 4).
 const SIGNING_CHAINS: readonly ChainId[] = ['btc', 'eth', 'trx', 'ton'];
 
-type Step = 'asset' | 'recipient' | 'amount' | 'review' | 'result';
+type Step = 'chain' | 'token' | 'details' | 'review' | 'result';
 
 type SignState =
   | { status: 'idle' }
@@ -83,9 +91,43 @@ type DevnetBroadcastState =
   | { status: 'submitted'; txHash: string; explorerUrl: string }
   | { status: 'error'; reason: string };
 
+// Field-by-field link equality: the sync effect below re-runs when
+// state changes, and must not re-set state with a fresh-but-equal
+// object (that would loop).
+function sameLink(
+  a: BawaSendLinkParams | null,
+  b: BawaSendLinkParams | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.chain === b.chain &&
+    a.to === b.to &&
+    a.amount === b.amount &&
+    a.token === b.token
+  );
+}
+
 export function SendScreen() {
-  const { vaultState, vaultAddresses, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
+  const { vaultState, vaultAddresses, vaultAccount, vaultAccounts: vaultAccountsRaw, selectVaultAccount, balances, selectedChain, customTokens, tokenBalances, devnetEnabled } = useWallet();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  // Older mocked contexts may not provide the account fields; default
+  // them so the screen still renders (wallet-management.tsx does the
+  // same). In production the provider always supplies them.
+  const vaultAccounts = vaultAccountsRaw ?? [];
+  // Pending deep link (UI/UX round 2, deep-link fix): the payment the
+  // link that opened this screen asked for. Starts from the URL; the
+  // sync effect below resumes a stored one when the URL has none (the
+  // user came back from creating, importing or unlocking a wallet).
+  const [pendingLink, setPendingLink] = useState<BawaSendLinkParams | null>(() =>
+    parseBawaSendLink(`?${searchParams.toString()}`),
+  );
+  // The vault account chosen for this link. Null until the chooser is
+  // resolved (or the link needs none — a single account applies at
+  // once). Kept in state, not a ref, so choosing re-renders.
+  const [chosenAccount, setChosenAccount] = useState<number | null>(null);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+  const [chooserError, setChooserError] = useState<string | null>(null);
   const chainsWithWallet: ChainId[] = SUPPORTED_CHAINS.filter(
     (chain) => (vaultAddresses[chain] ?? []).length > 0,
   );
@@ -94,11 +136,10 @@ export function SendScreen() {
       ? selectedChain
       : (chainsWithWallet[0] ?? 'eth'),
   );
-  const [step, setStep] = useState<Step>('asset');
+  const [step, setStep] = useState<Step>('chain');
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [scannerError, setScannerError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [preview, setPreview] = useState<SendPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -147,7 +188,9 @@ export function SendScreen() {
   function selectChain(next: ChainId): void {
     setChain(next);
     setSelectedToken(null);
-    setStep('asset');
+    // Picking a chain advances to the token step (Round 2, item 8):
+    // chain and token are separate steps now.
+    setStep('token');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
@@ -155,32 +198,48 @@ export function SendScreen() {
     setSignState({ status: 'idle' });
     setPrefillNote(null);
     setDevnetBroadcast({ status: 'idle' });
+    // A manual chain change abandons the deep link: it must not
+    // re-apply on the next mount. The link params leave the URL too,
+    // or the sync effect above would resurrect the link from them.
+    if (pendingLink !== null) {
+      setPendingLink(null);
+      clearPendingSendLink();
+      navigate('/send', { replace: true });
+    }
   }
 
   function selectToken(token: TokenRecord | null): void {
     setSelectedToken(token);
-    setStep('recipient');
+    setStep('details');
     setRecipient('');
     setRecipientError(null);
     setAmount('');
     setPreview(null);
     setSignState({ status: 'idle' });
     setPrefillNote(null);
+    // A manual token change abandons the deep link, same as a chain
+    // change above: clear it and strip its params from the URL.
+    if (pendingLink !== null) {
+      setPendingLink(null);
+      clearPendingSendLink();
+      navigate('/send', { replace: true });
+    }
   }
 
   // Prefill a payment from a Bawa web link (/send?chain=&to=&amount=
   // &token=) or a scanned payment URI (token gaps, item 3). The link
   // opens this screen with chain, recipient, amount and token filled
-  // in; when the recipient validates, the flow moves to the amount
-  // step so both are visible prefilled. A link for a chain with no
-  // wallet here is ignored — its chain button stays disabled.
+  // in; the flow lands on the details step so both are visible
+  // prefilled. Returns false when the
+  // payment's chain has no wallet here — the caller says so, instead
+  // of the scan silently doing nothing (UI/UX Round 2, item 1).
   async function applyPrefill(prefill: {
     chain: ChainId;
     to: string;
     amount?: string;
     tokenContract?: string;
-  }): Promise<void> {
-    if ((vaultAddresses[prefill.chain] ?? []).length === 0) return;
+  }): Promise<boolean> {
+    if ((vaultAddresses[prefill.chain] ?? []).length === 0) return false;
     const tokenRecord =
       prefill.tokenContract === undefined
         ? null
@@ -193,12 +252,12 @@ export function SendScreen() {
     setSelectedToken(tokenRecord);
     setRecipient(prefill.to);
     if (prefill.amount !== undefined) setAmount(prefill.amount);
-    setStep('recipient');
+    setStep('details');
     setPreview(null);
     setSignState({ status: 'idle' });
     if (prefill.tokenContract !== undefined && tokenRecord === null) {
       setPrefillNote(
-        'This link pays a token that is not in your wallet yet — add it from its contract address first.',
+        'This link pays a token that is not in your wallet yet. Add it from its contract address first.',
       );
     } else {
       setPrefillNote(null);
@@ -206,39 +265,139 @@ export function SendScreen() {
     const result = await validateRecipient(prefill.chain, prefill.to);
     if (result.ok) {
       setRecipientError(null);
-      setStep('amount');
     } else {
       setRecipientError(result.reason);
     }
+    return true;
   }
 
+  // Deep-link sync (UI/UX round 2, deep-link fix): a link in the URL
+  // becomes the pending link and is stored, so it survives the trip
+  // to create, import or unlock. With no link in the URL, a stored
+  // one is resumed (the user came back from one of those screens).
   useEffect(() => {
-    if (prefillApplied.current) return;
     const search = searchParams.toString();
-    if (search === '') return;
-    const link = parseBawaSendLink(`?${search}`);
-    if (link === null) return;
+    if (search !== '') {
+      const link = parseBawaSendLink(`?${search}`);
+      if (link !== null) {
+        savePendingSendLink(search);
+        setPendingLink((current) => (sameLink(current, link) ? current : link));
+        return;
+      }
+    }
+    if (pendingLink === null) {
+      const stored = readPendingSendLink();
+      if (stored !== null) setPendingLink(stored);
+    }
+  }, [searchParams, pendingLink]);
+
+  // Deep-link apply (UI/UX round 2, deep-link fix): the pending link
+  // prefills once the wallet can actually send from its chain. The
+  // old code applied once, on mount, against the mount render's
+  // vaultAddresses — on a cold start the vault is locked (or absent)
+  // at mount, so the addresses are empty, the apply bailed out, and
+  // the once-only guard meant it never retried after unlock or
+  // hydration. This effect re-runs whenever the wallet state changes
+  // and applies the first time the address is there; the flag is set
+  // only when the apply really runs, and cleared again if it reports
+  // no address yet. While the vault is locked or there is no vault
+  // the link waits (the panels below explain that) — it is never
+  // dropped. With more than one vault account the chooser must
+  // resolve first, and the apply waits until the chosen account's
+  // addresses are in state.
+  useEffect(() => {
+    if (pendingLink === null || prefillApplied.current) return;
+    if (vaultState !== 'unlocked') return;
+    if ((vaultAddresses[pendingLink.chain] ?? []).length === 0) return;
+    if (vaultAccounts.length > 1 && selectVaultAccount !== undefined) {
+      if (chosenAccount === null) return;
+      if (vaultAccount?.account !== chosenAccount) return;
+    }
     prefillApplied.current = true;
     void applyPrefill({
-      chain: link.chain,
-      to: link.to,
-      amount: link.amount,
-      tokenContract: link.token,
+      chain: pendingLink.chain,
+      to: pendingLink.to,
+      amount: pendingLink.amount,
+      tokenContract: pendingLink.token,
+    }).then((applied) => {
+      if (applied) {
+        clearPendingSendLink();
+      } else {
+        prefillApplied.current = false;
+        setPrefillNote(
+          `This link is for ${chainConfig(pendingLink.chain).displayName}, which has no wallet here yet.`,
+        );
+      }
     });
-    // The link is applied once, on mount, from the URL that opened
-    // this screen. applyPrefill is stable by construction (it only
-    // reads the wallet snapshot from the mount render), so the empty
-    // dependency list is intentional.
-  }, []);
+    // applyPrefill reads the wallet snapshot from this render; the
+    // effect re-runs when that snapshot changes, so the closure is
+    // always fresh enough — the dependency list names exactly the
+    // values the decision reads.
+  }, [pendingLink, vaultState, vaultAddresses, vaultAccount, vaultAccounts, selectVaultAccount, chosenAccount]);
 
-  async function handleRecipientNext(): Promise<void> {
-    const result = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
-    if (!result.ok) {
-      setRecipientError(result.reason);
+  // Wallet chooser (UI/UX round 2, deep-link fix): with more than one
+  // vault account the link asks which wallet sends it, instead of
+  // silently using whichever account is selected. Choosing switches
+  // the account (the apply effect above then prefills once the new
+  // account's addresses are in state); picking the current account
+  // just resolves the chooser. A failed switch leaves the chooser up
+  // with the reason.
+  async function chooseAccountForLink(account: number): Promise<void> {
+    if (switchingAccount) return;
+    setChooserError(null);
+    if (account === vaultAccount?.account || selectVaultAccount === undefined) {
+      setChosenAccount(account);
+      return;
+    }
+    setSwitchingAccount(true);
+    try {
+      await selectVaultAccount(account);
+      setChosenAccount(account);
+    } catch (error: unknown) {
+      setChooserError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setSwitchingAccount(false);
+    }
+  }
+
+  // The payment a pending link asks for, in plain words. Shown on
+  // the no-wallet, locked and chooser panels so the link is never a
+  // silent redirect: the user always sees what it asked for before
+  // anything else happens.
+  function pendingLinkSummary(link: BawaSendLinkParams) {
+    const tokenForLink =
+      link.token === undefined
+        ? null
+        : (allTokens.find(
+            (token) =>
+              token.chain === link.chain &&
+              token.contract.toLowerCase() === link.token!.toLowerCase(),
+          ) ?? null);
+    const symbol = tokenForLink?.symbol ?? chainConfig(link.chain).symbol;
+    const amountText =
+      link.amount === undefined ? `some ${symbol}` : `${link.amount} ${symbol}`;
+    return (
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        This link asks to send{' '}
+        <span className="font-semibold text-ink">{amountText}</span> to{' '}
+        <code className="break-all font-mono text-ink">{link.to}</code> on{' '}
+        {chainConfig(link.chain).displayName}.
+      </p>
+    );
+  }
+
+  // Round 2, item 8: recipient and amount share one step, so there is a
+  // single Continue: validate the recipient, then preview the amount.
+  // A bad recipient stops here with its error; a token or a chain
+  // without offline signing reports honestly instead of previewing.
+  async function handleDetailsNext(): Promise<void> {
+    const recipientResult = await validateRecipient(chain, recipient, { devnet: devnetEnabled });
+    if (!recipientResult.ok) {
+      setRecipientError(recipientResult.reason);
       return;
     }
     setRecipientError(null);
-    setStep('amount');
+    await handleAmountNext();
   }
 
   async function handleScan(value: string): Promise<void> {
@@ -246,26 +405,38 @@ export function SendScreen() {
     // A scanned payment URI (BIP-21, EIP-681, Solana Pay, TON) or a
     // Bawa web link prefills the whole payment — chain, recipient,
     // amount and token — instead of being treated as a bare address.
+    // When the QR's chain has no wallet here, say so on this screen
+    // instead of silently staying put (UI/UX Round 2, item 1).
     const payment = parsePaymentUri(value, allTokens);
     if (payment.ok) {
-      await applyPrefill({
+      const applied = await applyPrefill({
         chain: payment.request.chain,
         to: payment.request.address,
         amount: payment.request.amount,
         tokenContract: payment.request.tokenContract,
       });
+      if (!applied) {
+        setPrefillNote(
+          `This QR is for ${chainConfig(payment.request.chain).displayName}, which has no wallet here yet.`,
+        );
+      }
       return;
     }
     if (value.startsWith('http')) {
       try {
         const link = parseBawaSendLink(new URL(value).search);
         if (link !== null) {
-          await applyPrefill({
+          const applied = await applyPrefill({
             chain: link.chain,
             to: link.to,
             amount: link.amount,
             tokenContract: link.token,
           });
+          if (!applied) {
+            setPrefillNote(
+              `This QR is for ${chainConfig(link.chain).displayName}, which has no wallet here yet.`,
+            );
+          }
           return;
         }
       } catch {
@@ -275,7 +446,8 @@ export function SendScreen() {
     setRecipient(value);
     const result = await validateRecipient(chain, value, { devnet: devnetEnabled });
     setRecipientError(result.ok ? null : result.reason);
-    if (result.ok) setStep('amount');
+    // The amount input shares this step, so a valid scan just fills
+    // the recipient — there is no step to advance to.
   }
 
   async function handleAmountNext(): Promise<void> {
@@ -515,7 +687,7 @@ export function SendScreen() {
   >(null);
 
   useEffect(() => {
-    if (step !== 'amount') return;
+    if (step !== 'details') return;
     let cancelled = false;
     setFeeEstimate(null);
     if (selectedToken !== null) {
@@ -569,9 +741,36 @@ export function SendScreen() {
   }
 
   if (chainsWithWallet.length === 0 || !from) {
+    // Locked vault, no addresses in state (UI/UX round 2, deep-link
+    // fix): the vault exists — the header says so — so "No wallet
+    // yet" is the wrong message here. The link waits until the vault
+    // is unlocked; the lock screen returns to this URL, and the apply
+    // effect above then prefills.
+    if (vaultState === 'locked') {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+          {pendingLink !== null && pendingLinkSummary(pendingLink)}
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {pendingLink !== null
+              ? 'Your wallet is locked. Unlock it to continue with this send.'
+              : 'Your wallet is locked. Unlock it to send.'}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/lock"
+              className="text-sm font-medium text-primary underline underline-offset-4"
+            >
+              Unlock your wallet
+            </Link>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {pendingLink !== null && pendingLinkSummary(pendingLink)}
         <p className="text-sm leading-relaxed text-muted-foreground">
           No wallet yet. Create or import a wallet first — sending needs a
           vault address to send from.
@@ -590,32 +789,105 @@ export function SendScreen() {
             Import a wallet
           </Link>
         </div>
+        {pendingLink !== null && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This payment is kept — once your wallet is ready, open Send
+            and it will be filled in.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Wallet chooser (UI/UX round 2, deep-link fix): more than one
+  // vault account, and the link has not picked one yet. The current
+  // account shows its address on the link's chain; the other
+  // accounts' addresses appear once they are chosen (only the
+  // selected account's addresses are in state).
+  if (
+    pendingLink !== null &&
+    vaultState === 'unlocked' &&
+    vaultAccounts.length > 1 &&
+    selectVaultAccount !== undefined &&
+    chosenAccount === null
+  ) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {pendingLinkSummary(pendingLink)}
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Choose which wallet sends this payment.
+        </p>
+        <ul className="space-y-2">
+          {vaultAccounts.map((account) => {
+            const isCurrent = account === vaultAccount?.account;
+            const address = isCurrent
+              ? (vaultAddresses[pendingLink.chain] ?? [])[0]
+              : undefined;
+            return (
+              <li key={account}>
+                <button
+                  type="button"
+                  disabled={switchingAccount}
+                  onClick={() => void chooseAccountForLink(account)}
+                  className="flex w-full flex-col gap-1 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral disabled:opacity-60"
+                >
+                  <span className="text-sm font-semibold">
+                    {accountName(account)}
+                    {isCurrent ? ' · Current wallet' : ''}
+                  </span>
+                  {address !== undefined && (
+                    <span className="break-all font-mono text-sm">{address}</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {switchingAccount && (
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            Switching wallet…
+          </p>
+        )}
+        {chooserError && (
+          <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+            {chooserError}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Send</h1>
+        {/* Round 2, item 8: the banner sets expectations at flow entry
+            (chain) and where the user acts (details onwards). The token
+            step is a pure picker — the banner hides there so all eight
+            token rows fit without scrolling. */}
+        {step !== 'token' && (
         <p
           role="note"
           className="rounded-bawa border-2 border-ink bg-sun p-4 text-sm text-ink"
         >
           {devnetEnabled
-            ? `Devnet test mode — this send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
-            : 'Sending funds is switched off until it is separately approved. This flow signs offline only — nothing here sends cryptocurrency anywhere.'}
+            ? `Devnet test mode. This send broadcasts to the ${devnetChainConfig(chain).devnetName} test network only. Test tokens have no value.`
+            : 'Sending funds is switched off until it is separately approved. This flow signs offline only. Nothing here sends cryptocurrency anywhere.'}
         </p>
+        )}
       </header>
 
       {(() => {
-        const steps = ['Asset', 'Recipient', 'Amount', 'Review', 'Sign', 'Result'] as const;
+        // Round 2, item 8: chain → token → address + amount → review →
+        // sign → result. The recipient and amount are one step now.
+        const steps = ['Chain', 'Token', 'Address & amount', 'Review', 'Sign', 'Result'] as const;
         const activeIndex =
-          step === 'asset'
+          step === 'chain'
             ? 0
-            : step === 'recipient'
+            : step === 'token'
               ? 1
-              : step === 'amount'
+              : step === 'details'
               ? 2
               : step === 'review' || step === 'result'
                 ? {
@@ -660,44 +932,82 @@ export function SendScreen() {
         );
       })()}
 
-      {step === 'asset' && (
-        <>
-      <div
-        role="group"
-        aria-label="Chain"
-        className="flex flex-wrap gap-2"
-      >
-        {SUPPORTED_CHAINS.map((candidate) => {
-          const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
-          return (
-            <Button
-              key={candidate}
-              type="button"
-              variant={candidate === chain ? 'default' : 'outline'}
-              disabled={!hasWallet}
-              aria-pressed={candidate === chain}
-              title={
-                hasWallet
-                  ? undefined
-                  : `No ${chainConfig(candidate).displayName} wallet`
-              }
-              onClick={() => selectChain(candidate)}
-            >
-              {chainConfig(candidate).displayName}
-            </Button>
-          );
-        })}
+      {step === 'chain' && (
+        <section aria-labelledby="send-chain-heading" className="space-y-3">
+          <h2 id="send-chain-heading" className="text-lg font-semibold">
+            Choose a network
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Only networks with a wallet here can send.
+          </p>
+      {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
+          the network, token, amount and address by itself, so the
+          scanner lives here too — not only on the recipient step,
+          after the network and token were already picked by hand. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3">
+        <button
+          type="button"
+          aria-label="Scan QR code"
+          aria-expanded={showScanner}
+          title="Scan QR code"
+          onClick={() => setShowScanner((current) => !current)}
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+        >
+          <ScanIcon className="h-11 w-11 text-ink" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-ink">Scan a QR code</p>
+          <p className="text-sm text-muted-foreground">
+            Scan a payment QR and the network, token, amount and address fill in themselves.
+          </p>
+        </div>
       </div>
-
-      <section aria-labelledby="send-asset-heading" className="space-y-3">
-        <h2 id="send-asset-heading" className="text-lg font-semibold">
-          {`Asset · ${config.displayName}`}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          The native coin and every token on this network. Token sends are
-          not built yet — picking a token shows that honestly instead of
-          pretending to send it.
+      {prefillNote && (
+        <p role="note" className="text-sm text-ink">
+          {prefillNote}
         </p>
+      )}
+      {showScanner && (
+        <QrScanner
+          onScan={(value) => void handleScan(value)}
+          onCancel={() => setShowScanner(false)}
+        />
+      )}
+          <div
+            role="group"
+            aria-label="Chain"
+            className="flex flex-wrap gap-2"
+          >
+            {SUPPORTED_CHAINS.map((candidate) => {
+              const hasWallet = (vaultAddresses[candidate] ?? []).length > 0;
+              return (
+                <Button
+                  key={candidate}
+                  type="button"
+                  variant={candidate === chain ? 'default' : 'outline'}
+                  disabled={!hasWallet}
+                  aria-pressed={candidate === chain}
+                  className="h-9"
+                  title={
+                    hasWallet
+                      ? undefined
+                      : `No ${chainConfig(candidate).displayName} wallet`
+                  }
+                  onClick={() => selectChain(candidate)}
+                >
+                  {chainConfig(candidate).displayName}
+                </Button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {step === 'token' && (
+      <section aria-labelledby="send-token-heading" className="space-y-3">
+        <h2 id="send-token-heading" className="text-lg font-semibold">
+          {`Token · ${config.displayName}`}
+        </h2>
         <ul className="space-y-2">
           {orderAssetsByBalance([
             {
@@ -727,7 +1037,7 @@ export function SendScreen() {
               return (
                 <li
                   key={token === null ? `native:${chain}` : `${token.chain}:${token.contract.toLowerCase()}`}
-                  className={`flex items-center gap-3 rounded-bawa-sm border-2 border-ink p-3 ${
+                  className={`flex items-center gap-2 rounded-bawa-sm border-2 border-ink p-1.5 ${
                     selected ? 'bg-sun' : 'bg-paper'
                   }`}
                 >
@@ -735,28 +1045,26 @@ export function SendScreen() {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => selectToken(token)}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
+                    className="flex min-w-0 flex-1 items-center gap-2 rounded-bawa-sm text-left text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coral"
                   >
-                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
-                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-7 rotate-3">
+                    <span aria-hidden="true" className="inline-flex size-6 shrink-0 -rotate-3 items-center justify-center rounded-bawa-sm border-2 border-ink bg-paper text-ink">
+                      <svg viewBox="0 0 48 48" aria-hidden="true" className="size-5 rotate-3">
                         <path d="M24 4C35 3 44 13 43 24C45 35 34 45 24 43C12 45 3 35 5 24C3 13 13 3 24 4Z" fill="none" stroke="currentColor" strokeWidth={2} />
-                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Caveat, cursive" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
+                        <text x="24" y="24" textAnchor="middle" dominantBaseline="central" fill="currentColor" fontFamily="Baloo 2, Inter, sans-serif" fontSize={14}>{token === null ? config.symbol : token.symbol}</text>
                       </svg>
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">
-                        {label}
-                        {token !== null && isVerifiedToken(token) && (
-                          <span className="ml-2" aria-label="Verified token">✓ Verified</span>
-                        )}
-                      </span>
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                      {label}
+                      {token !== null && isVerifiedToken(token) && (
+                        <span className="ml-2" aria-label="Verified token">✓ Verified</span>
+                      )}
                       {token !== null && (
-                        <span className="block text-sm text-ink">
-                          {config.displayName} · {shortContract(token.contract)}
+                        <span className="font-normal text-ink">
+                          {` · ${config.displayName} · ${shortContract(token.contract)}`}
                         </span>
                       )}
                       {token === null && (
-                        <span className="block text-sm text-ink">Native coin</span>
+                        <span className="font-normal text-ink"> · Native coin</span>
                       )}
                     </span>
                   </button>
@@ -775,10 +1083,9 @@ export function SendScreen() {
           </p>
         )}
         </section>
-        </>
       )}
 
-      {step !== 'asset' && (
+      {step !== 'chain' && (
         <p className="flex items-center justify-between gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-3 text-sm text-ink">
           <span>
             <span className="font-semibold">
@@ -787,25 +1094,57 @@ export function SendScreen() {
                 : `${selectedToken.name} · ${selectedToken.symbol}`}
             </span>
           </span>
-          <Button type="button" variant="outline" onClick={() => setStep('asset')}>
+          <Button type="button" variant="outline" onClick={() => setStep('chain')}>
             Change
           </Button>
         </p>
       )}
 
-      {step === 'recipient' && (
-        <section aria-labelledby="send-recipient-heading" className="space-y-4">
-          <h2 id="send-recipient-heading" className="text-lg font-semibold">
-            {`Recipient · ${config.displayName}`}
+      {step === 'details' && (
+        <section aria-labelledby="send-details-heading" className="space-y-3">
+          {/* Round 2, item 8: the step label above ("Step 3 of 6:
+              Address & amount") is the visible title; the heading stays
+              for screen readers so the section keeps its name. */}
+          <h2 id="send-details-heading" className="sr-only">
+            {`Address & amount · ${config.displayName}`}
           </h2>
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">From</dt>
+              <dd className="min-w-0 truncate font-mono" title={from}>{from}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">To</dt>
+              <dd className="min-w-0 truncate font-mono" title={recipient}>{recipient === '' ? '—' : recipient}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="shrink-0 text-ink">Balance</dt>
+              <dd>{balanceText}</dd>
+            </div>
+          </dl>
           <p className="text-sm text-muted-foreground">
-            Sending from{' '}<span className="break-all font-mono">{from}</span>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Check the full address and network carefully — a transaction, once sent, cannot be reversed.
+            Check the address — sent funds cannot be reversed.
           </p>
           <div className="space-y-2">
-            <Label htmlFor="send-recipient">Recipient address</Label>
+            <div className="flex items-end justify-between gap-3">
+              <Label htmlFor="send-recipient">Recipient address</Label>
+              {/* Scan icon from the owner's reference (UI/UX Round 2,
+                  item 9): a black circle with white corner brackets.
+                  Same toggle as the chain-step scan card, with the
+                  item-9 label and expanded state. */}
+              <button
+                type="button"
+                aria-label="Scan QR code"
+                aria-expanded={showScanner}
+                title="Scan QR code"
+                onClick={() => {
+                  setShowScanner((current) => !current);
+                }}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+              >
+                <ScanIcon className="h-11 w-11 text-ink" />
+              </button>
+            </div>
             <Input
               id="send-recipient"
               type="text"
@@ -825,61 +1164,12 @@ export function SendScreen() {
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" variant="outline" onClick={() => setStep('asset')}>
-              Back
-            </Button>
-            <Button type="button" onClick={() => void handleRecipientNext()}>
-              Continue
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setScannerError(null);
-                setShowScanner((current) => !current);
-              }}
-            >
-              {showScanner ? 'Hide scanner' : 'Scan QR'}
-            </Button>
-          </div>
           {showScanner && (
             <QrScanner
               onScan={(value) => void handleScan(value)}
               onCancel={() => setShowScanner(false)}
-              onError={(message) => {
-                setScannerError(message);
-                setShowScanner(false);
-              }}
             />
           )}
-          {scannerError && (
-            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-              {scannerError}
-            </p>
-          )}
-        </section>
-      )}
-
-      {step === 'amount' && (
-        <section aria-labelledby="send-amount-heading" className="space-y-4">
-          <h2 id="send-amount-heading" className="text-lg font-semibold">
-            {`Amount · ${config.displayName}`}
-          </h2>
-          <dl className="space-y-1 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">From</dt>
-              <dd className="min-w-0 break-all font-mono">{from}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">To</dt>
-              <dd className="min-w-0 break-all font-mono">{recipient}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-ink">Balance</dt>
-              <dd>{balanceText}</dd>
-            </div>
-          </dl>
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="send-amount">{`Amount (${assetSymbol})`}</Label>
@@ -907,8 +1197,7 @@ export function SendScreen() {
                 Estimated fee:{' '}
                 {/* Estimated fee is a preview: Decimal rounds display to 6 places; the review screen keeps the exact fee. */}
                 {formatFeePreview(feeEstimate.feeBaseUnits, CHAIN_DECIMALS[chain], config.symbol)}
-                . The fee may change before signing. Max leaves the estimated
-                fee in your wallet.
+                {' — it may change before signing.'}
               </p>
             )}
             {feeEstimate?.ok && chain !== 'eth' && chain !== 'ton' && (
@@ -919,31 +1208,29 @@ export function SendScreen() {
                 {`Fee estimate unavailable: ${feeEstimate.reason}`}
               </p>
             )}
-            {!maxInfo.enabled && (
-              <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
-            )}
-            {preview && !preview.ok && (
-              <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
-                {preview.reason}
-              </p>
-            )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setStep('recipient')}
-            >
+            <Button type="button" variant="outline" onClick={() => setStep('token')}>
               Back
             </Button>
             <Button
               type="button"
               disabled={previewBusy}
-              onClick={() => void handleAmountNext()}
+              onClick={() => void handleDetailsNext()}
             >
               {previewBusy ? 'Checking…' : 'Review'}
             </Button>
           </div>
+          {/* The Max and preview notes sit below the action row so the
+              Review button stays in view without scrolling. */}
+          {!maxInfo.enabled && (
+            <p className="text-sm text-muted-foreground">{maxInfo.reason}</p>
+          )}
+          {preview && !preview.ok && (
+            <p role="alert" className="text-sm text-ink bawa-squiggle-underline">
+              {preview.reason}
+            </p>
+          )}
         </section>
       )}
 
@@ -961,7 +1248,7 @@ export function SendScreen() {
             )}
             fee={
               preview.feeUnknown
-                ? 'Unknown — charged by the network at broadcast'
+                ? 'Unknown. Charged by the network at broadcast.'
                 : formatNativeWithSymbol(
                     preview.feeBaseUnits,
                     CHAIN_DECIMALS[chain],
@@ -987,7 +1274,7 @@ export function SendScreen() {
             devnetNetworkName={
               devnetEnabled ? devnetChainConfig(chain).devnetName : undefined
             }
-            onBack={() => setStep('amount')}
+            onBack={() => setStep('details')}
             onSign={() => void handleSign()}
           />
           {signState.status === 'signing' && (
@@ -1016,12 +1303,12 @@ export function SendScreen() {
       {step === 'result' && signState.status === 'signed' && (
         <section aria-labelledby="send-result-heading" className="space-y-4">
           <h2 id="send-result-heading" className="text-lg font-semibold">
-            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed — not sent'}
+            {devnetEnabled ? 'Send broadcast to the test network' : 'Send signed, not sent'}
           </h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             {devnetEnabled
               ? `The transaction was signed offline with your vault key and broadcast to the ${devnetChainConfig(chain).devnetName} test network. Test tokens have no value.`
-              : 'The transaction was signed offline with your vault key. It was not sent anywhere: sending funds is switched off until it is separately approved.'}
+              : 'The transaction was signed offline with your vault key. It was not sent anywhere. Sending funds is switched off until it is separately approved.'}
           </p>
           {devnetEnabled && devnetBroadcast.status === 'broadcasting' && (
             <p aria-live="polite" className="text-sm text-muted-foreground">
@@ -1090,6 +1377,8 @@ export function SendScreen() {
         </section>
       )}
 
+      {/* The bottom nav is hidden on /send, so this is the in-flow way
+          across to Receive — kept, and the chain chips shrink instead. */}
       <Link
         to="/receive"
         className="inline-block text-sm font-medium underline underline-offset-4"

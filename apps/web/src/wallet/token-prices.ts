@@ -502,11 +502,14 @@ function mergePreservingFreshTokenQuotes(
 
 export function useTokenPrices(
   tokens: readonly TokenRecord[],
-  options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
+  options?: { sleep?: (ms: number) => Promise<void> },
 ): { state: TokenPricesState; refresh: () => void } {
-  // TEMPORARY devnet mode: devnet tokens have no market price. Never
-  // load cached mainnet prices for testnet balances, and never fetch.
-  const devnet = options?.devnet === true;
+  // Round 2, item 6: same as usePrices — token prices are public market
+  // data, so they load in devnet mode too and the token rows show their
+  // per-unit price. In devnet mode token balances stay unavailable
+  // ('devnet-no-tokens'), so no fiat value is ever computed from a
+  // devnet token balance; the hero total never sees token prices either
+  // (see dashboard.tsx).
   const requests = tokenPriceRequests(tokens);
   const requestKey = requests.map((r) => tokenPriceRequestKey(r)).sort().join('|');
   const requestsRef = useRef(requests);
@@ -516,14 +519,10 @@ export function useTokenPrices(
   const [state, setState] = useState<TokenPricesState>(() => {
     const keys = requests.map((r) => r.key);
     let entries: TokenPriceMap;
-    if (devnet) {
+    try {
+      entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
+    } catch {
       entries = tokenPriceEntries(keys);
-    } else {
-      try {
-        entries = loadCachedTokenPrices(Date.now(), keys) ?? tokenPriceEntries(keys);
-      } catch {
-        entries = tokenPriceEntries(keys);
-      }
     }
     return { status: 'idle', entries, lastFetchedAtMs: null };
   });
@@ -539,21 +538,7 @@ export function useTokenPrices(
     };
   }, []);
 
-  // Reset to no-prices when devnet mode turns on; the caller re-fetches
-  // when it turns back off.
-  useEffect(() => {
-    if (devnet) {
-      setState({
-        status: 'idle',
-        entries: tokenPriceEntries(requestsRef.current.map((r) => r.key)),
-        lastFetchedAtMs: null,
-      });
-    }
-  }, [devnet]);
-
   const refresh = useCallback(() => {
-    // Devnet tokens have no market price: refresh is a no-op.
-    if (devnet) return;
     if (!mounted.current || state.status === 'loading' || inFlight.current) return;
     const currentRequests = requestsRef.current;
     const keys = currentRequests.map((r) => r.key);
@@ -652,7 +637,7 @@ export function useTokenPrices(
         inFlight.current = false;
       }
     })();
-  }, [state.status, sleep, requestKey, devnet]);
+  }, [state.status, sleep, requestKey]);
 
   return { state, refresh };
 }

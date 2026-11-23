@@ -151,7 +151,7 @@ export function RecentActivity() {
             ))}
             {isLocked && unavailableChains.length > 0 && (
               <div className="flex items-center justify-between gap-3 rounded-xl border border-panel-border bg-panel-surface px-4 py-3">
-                <p className="text-sm text-panel-text-soft">Locked — unlock to see activity.</p>
+                <p className="text-sm text-panel-text-soft">Locked. Unlock to see activity.</p>
                 <Button type="button" variant="outline" asChild className="h-11 shrink-0">
                   <Link to="/lock">Unlock</Link>
                 </Button>

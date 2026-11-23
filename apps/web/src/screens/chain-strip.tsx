@@ -32,7 +32,7 @@ export function PopularChainsStrip({
   const wallet = useWallet();
   const balances = wallet?.balances;
   const vaultState = wallet?.vaultState ?? "no-vault";
-  const { state: pricesState, refresh: refreshPrices } = usePrices({ devnet: wallet?.devnetEnabled });
+  const { state: pricesState, refresh: refreshPrices } = usePrices();
 
   useEffect(() => {
     if (
@@ -84,6 +84,7 @@ export function PopularChainsStrip({
             vaultState,
             pricesLoading ?? pricesState.status === "loading",
             mode,
+            wallet?.devnetEnabled === true,
           );
           const shownPrimary =
             hideBalance &&
@@ -134,7 +135,7 @@ export function PopularChainsStrip({
                           textAnchor="middle"
                           dominantBaseline="central"
                           fill="currentColor"
-                          fontFamily="Caveat, cursive"
+                          fontFamily="Baloo 2, Inter, sans-serif"
                           fontSize={24}
                         >
                           {config.symbol}

@@ -139,16 +139,17 @@ describe('CreateScreen', () => {
 
     expect(briefs).toHaveLength(4);
     briefs.forEach((card) => {
-      expect(card.textContent).toContain(
-        "Coming soon. This isn't available yet.",
-      );
+      // The Coming soon badge is the whole notice now; a brief card
+      // offers no action to open it.
+      expect(card.textContent).toContain('Coming soon');
+      expect(card.querySelector('a, button')).toBeNull();
     });
   });
 
   it('shows the separate dashboard note', () => {
     expect(
       elementsWithExactText(
-        'Your wallet dashboard stays separate. Creating a wallet here does not replace it.',
+        'Creating a wallet here does not replace your dashboard.',
       ),
     ).toHaveLength(1);
   });

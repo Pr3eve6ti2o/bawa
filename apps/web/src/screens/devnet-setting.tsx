@@ -45,7 +45,7 @@ export function DevnetSetting() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Devnet — temporary test mode</CardTitle>
+        <CardTitle>Temporary devnet test mode</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -64,21 +64,21 @@ export function DevnetSetting() {
 
         {!hasVault && (
           <p className="text-sm text-ink">
-            No vault yet — create or import a wallet first.
+            No vault yet. Create or import a wallet first.
           </p>
         )}
 
         {hasVault && !devnetEnabled && (
           <p className="text-sm text-ink">
-            Devnet off — the wallet uses mainnet.
+            Devnet is off. The wallet uses mainnet.
           </p>
         )}
 
         {devnetEnabled && (
           <div className="space-y-3">
             <p className="text-sm text-ink">
-              Devnet on — temporary test mode. The wallet connects to test
-              networks only, with valueless test tokens. Devnet can be
+              Devnet is on. Temporary test mode. The wallet connects to
+              test networks only, with valueless test tokens. Devnet can be
               removed later without touching mainnet.
             </p>
             <ul className="space-y-3">
