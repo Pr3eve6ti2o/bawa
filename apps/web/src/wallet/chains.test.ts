@@ -295,10 +295,10 @@ describe('chains registry', () => {
     // verified — Optimism, Scroll, Celo, Aurora (Blockscout
     // instances), Avalanche, Mantle (Routescan), and Polygon, Base,
     // Arbitrum via a headless-Chromium fetch (plain curl gets 403
-    // Cloudflare). The six remaining EVM chains stay blocked: bsc,
-    // gnosis, linea, opbnb, metis, fantom — no working keyless public
-    // history indexer exists for them (owner decision: Etherscan API
-    // key or another indexer).
+    // Cloudflare). Fix-All Lane A adds Linea via Etherscan V2, keyless.
+    // The five remaining EVM chains stay blocked: bsc, gnosis, opbnb,
+    // metis, fantom — no working keyless public history indexer exists
+    // for them (owner decision: Etherscan API key or another indexer).
     expect(availableFor('history')).toEqual([
       'btc',
       'eth',
@@ -313,6 +313,7 @@ describe('chains registry', () => {
       'ltc',
       'doge',
       'celo',
+      'linea',
       'mantle',
       'scroll',
       'aurora',
@@ -321,7 +322,7 @@ describe('chains registry', () => {
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
   });
 
-  it('pins a keyless history indexer only for the nine live-probed EVM chains (Lane B)', () => {
+  it('pins a keyless history indexer only for the ten live-probed EVM chains (Lane B + Fix-All Lane A)', () => {
     // The adapter reads history from the pinned URL, so a chain with a
     // verified history capability must carry its endpoint here, and a
     // blocked chain must not carry one — a stale URL would fetch history
@@ -346,10 +347,17 @@ describe('chains registry', () => {
     expect(CHAINS.base.historyExplorerBase).toBe('https://base.blockscout.com');
     expect(CHAINS.arb.historyBaseUrl).toBe('https://arbitrum.blockscout.com/api');
     expect(CHAINS.arb.historyExplorerBase).toBe('https://arbitrum.blockscout.com');
+    // Fix-All Lane A: Linea via Etherscan V2, keyless — probed live
+    // 2026-11-24, real transactions, 1 req/5s keyless tier. The base
+    // URL carries ?chainid=59144; the adapter joins txlist params
+    // with '&' (see evm.ts).
+    expect(CHAINS.linea.historyBaseUrl).toBe(
+      'https://api.etherscan.io/v2/api?chainid=59144',
+    );
+    expect(CHAINS.linea.historyExplorerBase).toBe('https://lineascan.build');
     for (const chain of [
       'bsc',
       'gnosis',
-      'linea',
       'opbnb',
       'metis',
       'fantom',
@@ -474,8 +482,10 @@ describe('chains registry', () => {
       // Lane B (Finish the Product, 2026-11-23): celo, mantle, scroll
       // and aurora history is verified — Celo/Scroll/Aurora via
       // Blockscout instances, Mantle via Routescan, all probed live
-      // returning real transactions. Gnosis, Linea, opBNB, Metis and
-      // Fantom stay blocked: no working keyless indexer.
+      // returning real transactions. Gnosis, opBNB, Metis and Fantom
+      // stay blocked: no working keyless indexer. Fix-All Lane A
+      // (2026-11-24): Linea joins them — Etherscan V2 answers keyless
+      // for chain 59144, probed live with real transactions.
       if (
         chain === 'celo' ||
         chain === 'mantle' ||
@@ -484,6 +494,9 @@ describe('chains registry', () => {
       ) {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
+      } else if (chain === 'linea') {
+        expect(caps.history.status).toBe('verified');
+        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-24');
       } else {
         expect(caps.history.status).toBe('blocked');
         expect(caps.history.evidence).toContain('never faked');
@@ -503,9 +516,16 @@ describe('chains registry', () => {
     ]);
     expect(CHAINS.eth.rpcEndpoints).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
-    expect(CHAINS.trx.rpcEndpoints).toEqual(['https://api.trongrid.io']);
+    expect(CHAINS.trx.rpcEndpoints).toEqual([
+      'https://api.trongrid.io',
+      // Fix-All Lane A: PublicNode TRON full node — answers /wallet/*
+      // (identity, fee) when Trongrid 429s; /v1/* paths 404 there and
+      // the TronScan fallback owns balance/history. Probed live
+      // 2026-11-24: Trongrid 429, PublicNode 200, same balance.
+      'https://tron-rpc.publicnode.com',
+    ]);
     expect(CHAINS.ton.rpcEndpoints).toEqual([
       'https://toncenter.com/api/v2/jsonRPC',
     ]);
@@ -581,7 +601,7 @@ describe('chains registry', () => {
     ]);
     expect(CHAINS.aurora.rpcEndpoints).toEqual([
       'https://mainnet.aurora.dev',
-      'https://1rpc.io/aurora',
+      'https://aurora.drpc.org',
     ]);
     expect(CHAINS.fantom.rpcEndpoints).toEqual([
       'https://rpc.fantom.network',
@@ -608,7 +628,8 @@ describe('chains registry', () => {
     expect(() => assertSupported('doge', 'history')).not.toThrow();
     // Lane B: the nine newly-wired EVM history chains (six live-probed
     // by curl, three more by a headless-Chromium fetch — curl is 403
-    // Cloudflare on those three, the browser answers).
+    // Cloudflare on those three, the browser answers). Fix-All Lane A
+    // adds Linea (Etherscan V2, keyless, probed live 2026-11-24).
     expect(() => assertSupported('op', 'history')).not.toThrow();
     expect(() => assertSupported('avax', 'history')).not.toThrow();
     expect(() => assertSupported('celo', 'history')).not.toThrow();
@@ -618,6 +639,7 @@ describe('chains registry', () => {
     expect(() => assertSupported('matic', 'history')).not.toThrow();
     expect(() => assertSupported('arb', 'history')).not.toThrow();
     expect(() => assertSupported('base', 'history')).not.toThrow();
+    expect(() => assertSupported('linea', 'history')).not.toThrow();
     expect(() => assertSupported('bsc', 'history')).toThrow(/cannot do history/);
     expect(() => assertSupported('fantom', 'history')).toThrow(/cannot do history/);
     expect(() => assertSupported('sol', 'derive')).not.toThrow();
@@ -780,7 +802,7 @@ describe('capabilities.json registry shape and identity', () => {
       profileId: 'bawa-evm-bip44-v1',
       rpcEndpoints: [
         'https://ethereum-rpc.publicnode.com',
-        'https://1rpc.io/eth',
+        'https://eth.drpc.org',
       ],
     },
     tron: {
@@ -801,7 +823,12 @@ describe('capabilities.json registry shape and identity', () => {
       networkId: 'tron:0x2b6653dc',
       assetId: 'tron:0x2b6653dc/slip44:195',
       profileId: 'bawa-trx-bip44-v1',
-      rpcEndpoints: ['https://api.trongrid.io'],
+      // Fix-All Lane A: PublicNode TRON full node joins Trongrid —
+      // answers /wallet/* when Trongrid 429s (probed live 2026-11-24).
+      rpcEndpoints: [
+        'https://api.trongrid.io',
+        'https://tron-rpc.publicnode.com',
+      ],
     },
     ton: {
       registryId: 'ton',
@@ -1515,11 +1542,12 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
           // adapters 2026-11-23, the celo/op/scroll history hosts
           // 2026-11-23 (live host response cross-checked against the
           // adapter's Blockscout-shaped parser; single source — the
-          // host itself, stated in the evidence). Any of the dates is
-          // accepted; the rule that a verified balance/history needs a
-          // dated cross-check stays intact.
+          // host itself, stated in the evidence), the Linea history
+          // host 2026-11-24 (Fix-All Lane A, Etherscan V2 keyless).
+          // Any of the dates is accepted; the rule that a verified
+          // balance/history needs a dated cross-check stays intact.
           expect(entry.evidence).toMatch(
-            /live mainnet cross-check 2026-11-(19|22|23)/,
+            /live mainnet cross-check 2026-11-(19|22|23|24)/,
           );
         } else if (entry.status === 'verified') {
           expect(entry.evidence).toMatch(/send\.test\.ts|core\.test\.ts/);
@@ -1552,7 +1580,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     const storage = memoryStorage();
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     expect(resolveRpcEndpoints('btc', storage)).toEqual([
       'https://mempool.space/api',
@@ -1588,14 +1616,14 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     const storage = memoryStorage({ [RPC_OVERRIDES_KEY]: 'not json {' });
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     const badShape = memoryStorage({
       [RPC_OVERRIDES_KEY]: JSON.stringify({ eth: 'https://x.invalid' }),
     });
     expect(resolveRpcEndpoints('eth', badShape)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     const badUrls = memoryStorage({
       [RPC_OVERRIDES_KEY]: JSON.stringify({
@@ -1626,7 +1654,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     expect(added).toEqual({ ok: true });
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
       'https://custom.invalid/eth',
     ]);
   });
@@ -1638,7 +1666,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     if (!added.ok) expect(added.reason).toMatch(/https/i);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
   });
 
@@ -1664,7 +1692,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     );
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     // Removing a registry endpoint is refused: the list is the registry.
     expect(
@@ -1676,7 +1704,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     const storage = memoryStorage();
     expect(promoteBackupEndpoint('eth', storage)).toBe(true);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
       'https://ethereum-rpc.publicnode.com',
     ]);
     // A second promote swaps back.
@@ -1697,7 +1725,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     expect(changed).not.toContain('doge');
     expect(changed).not.toContain('matic');
     expect(resolveRpcEndpoints('eth', storage)[0]).toBe(
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     );
     expect(resolveRpcEndpoints('doge', storage)).toEqual([
       'https://sochain.com/api/v3',
@@ -1712,7 +1740,7 @@ describe('RPC endpoint overrides (UI/UX fixes, item 19)', () => {
     resetRpcEndpoints('eth', storage);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     expect(resolveRpcEndpoints('btc', storage)).toContain(
       'https://custom.invalid/btc',

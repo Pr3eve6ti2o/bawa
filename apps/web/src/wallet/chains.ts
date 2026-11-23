@@ -231,6 +231,15 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * metis, fantom): no keyless public history indexer answers for
  * them (owner decision: Etherscan API key or another indexer).
  * (Merge: Lane B verified the other six the same day — see below.)
+ * Fix-All Lane A (2026-11-24): Linea is now wired — Etherscan's V2
+ * API answers keyless for chain 59144 (see
+ * HISTORY_EVIDENCE_2026_11_24_LINEA). Five stay blocked (bsc, gnosis,
+ * opbnb, metis, fantom): Routescan does not index any of them, the
+ * Etherscan V2 free tier refuses BSC/Gnosis and does not list
+ * Metis/Fantom chain ids, opBNB V2 502s, the Metis explorers 504, and
+ * no Blockscout host answers for them — probed live 2026-11-24, see
+ * the Lane A report. Gnosis's Blockscout host exists but Cloudflare
+ * 403s curl; it is decided by a browser fetch in CDP, not by curl.
  *
  * cross-check 2026-11-23 (second source) for history.
  *
@@ -246,6 +255,8 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * history stays blocked, never faked. (Merge: matic, arb and base
  * were listed here as blocked, but were verified the same day via
  * a headless-Chromium fetch — see HISTORY_EVIDENCE_2026_11_23_BROWSER below.)
+ * (Fix-All Lane A, 2026-11-24: Linea left this blocked set — Etherscan
+ * V2 answers keyless for chain 59144. Five remain blocked.)
  */
 const HISTORY_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Blockscout-shaped history) + '
@@ -266,6 +277,19 @@ const BALANCE_EVIDENCE_2026_11_23 =
 const HISTORY_EVIDENCE_2026_11_23_BROWSER =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
   + 'live mainnet cross-check 2026-11-23 in headless Chromium (keyless public indexer returns real transactions for a funded address; plain curl is 403 Cloudflare, the browser fetch answers) for history.';
+
+// Fix-All Lane A, 2026-11-24: Linea history via Etherscan's V2 API,
+// keyless — GET https://api.etherscan.io/v2/api?chainid=59144&
+// module=account&action=txlist&address=0xd8dA...6045 returns status 1
+// with real transactions and message
+// "OK-Missing/Invalid API Key, rate limit of 1/5sec applied" (no key
+// sent, no key needed; the 1 req/5s limit is the keyless tier). Single
+// source — the host itself, no second keyless indexer answers for
+// Linea. The adapter joins the txlist params with '&' because the
+// base URL already carries ?chainid=59144 (see evm.ts).
+const HISTORY_EVIDENCE_2026_11_24_LINEA =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Etherscan V2 history) + '
+  + 'live mainnet cross-check 2026-11-24: Etherscan V2 returns real Linea transactions for a known address keyless (status 1, 1 req/5s keyless tier), and the live response matches the txlist shape the adapter parses. Single source — the host itself, no second keyless indexer answers for Linea.';
 
 function capabilitiesForBalanceChain(
   chain: ChainId,
@@ -390,7 +414,7 @@ export const GENERATED_CHAIN_FACTS: Record<
     profileId: 'bawa-evm-bip44-v1',
     rpcEndpoints: [
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ],
     evmChainId: 1,
   },
@@ -401,7 +425,10 @@ export const GENERATED_CHAIN_FACTS: Record<
     networkId: 'tron:0x2b6653dc',
     assetId: 'tron:0x2b6653dc/slip44:195',
     profileId: 'bawa-trx-bip44-v1',
-    rpcEndpoints: ['https://api.trongrid.io'],
+    rpcEndpoints: [
+      'https://api.trongrid.io',
+      'https://tron-rpc.publicnode.com',
+    ],
     evmChainId: null,
   },
   ton: {
@@ -697,7 +724,16 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://linea-rpc.publicnode.com',
       'https://rpc.linea.build'],
     evmChainId: 59144,
-    capabilities: capabilitiesForBalanceChain('linea', BALANCE_EVIDENCE_2026_11_23),
+    // Fix-All Lane A: probed live 2026-11-24 — Etherscan V2 answers
+    // keyless for chain 59144 with real transactions.
+    historyBaseUrl: 'https://api.etherscan.io/v2/api?chainid=59144',
+    historyExplorerBase: 'https://lineascan.build',
+    capabilities: capabilitiesForBalanceChain(
+      'linea',
+      BALANCE_EVIDENCE_2026_11_23,
+      true,
+      HISTORY_EVIDENCE_2026_11_24_LINEA,
+    ),
   },
   mantle: {
     id: 'mantle',
@@ -785,7 +821,7 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       return `m/44'/60'/${account}'/0/${index}`;
     },
     rpcEndpoints: ['https://mainnet.aurora.dev',
-      'https://1rpc.io/aurora'],
+      'https://aurora.drpc.org'],
     evmChainId: 1313161554,
     // Lane B: probed live 2026-11-23 — txlist returns real transactions.
     historyBaseUrl: 'https://explorer.aurora.dev/api',

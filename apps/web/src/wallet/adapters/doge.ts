@@ -11,10 +11,33 @@
  * DU5VEHzdNfQWUnonpHkXVchYqi1mqC3S8K, agreeing exactly with
  * BlockCypher's final_balance 1000779125175 koinu. BlockCypher stays
  * as fallback (its 429-without-CORS failure is load-dependent, which
- * is why SoChain is primary). Chain identity rests on SoChain's
- * network_info reporting a live block count, falling back to
- * BlockCypher's chain endpoint reporting name 'DOGE' (cached per
- * instance). History is built the same way: SoChain v3 /transactions
+ * is why SoChain is primary). Fix-All Lane A (2026-11-24): a second
+ * fallback, dogechain.info, was added and then REMOVED in the same
+ * lane — it returns the right data in Node (200, balance
+ * "27164003668.40032381" for DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke,
+ * agreeing exactly with BlockCypher's final_balance
+ * 2716400366840032381) but sends no Access-Control-Allow-Origin, so
+ * every browser fetch fails (TypeError / net::ERR_FAILED, six times
+ * in the CDP round-2 run, while the same URL 200s in Node; the
+ * .info host 301s to dogechain.com, which also sends no CORS
+ * headers). Zelcore's Blockbook and DogeSoft's explorer return the
+ * same correct balance with the same no-CORS problem; Trezor's
+ * Blockbook 403s this egress, Blockchair 430s (IP blacklisted),
+ * NOWNodes/CryptoAPIs/Ankr need a key. So the browser path stays
+ * two sources, both CORS-clean: SoChain primary (2,500 lookups/day/IP
+ * keyless, resets 00:00 UTC) and BlockCypher fallback. When both are
+ * quota-limited the row honestly reports "Could not load balance"
+ * with Retry — never a faked balance. The dogechain.info/tx/ links
+ * in history entries stay: they are navigation links, not fetches,
+ * and need no CORS. Dogechain is BALANCE ONLY anyway: its
+ * /transactions entries carry block/hash/time/value with no direction
+ * (no inputs/outputs, no balance_change), so history stays SoChain
+ * -> BlockCypher and never guesses a direction.
+ * Chain identity rests on SoChain's network_info reporting a live
+ * block count, falling back to BlockCypher's chain endpoint reporting
+ * name 'DOGE' (cached per instance); when both are down the identity
+ * error is reported — no third source can prove the network.
+ * History is built the same way: SoChain v3 /transactions
  * (in + out, merged newest-first) with BlockCypher /full as fallback.
  * Fee-quote and tx inputs are not built — they report unavailable,
  * never faked. Broadcast stays disabled.
@@ -265,6 +288,10 @@ export function createDogeAdapter(
       return { status: 'error', reason: 'Invalid Dogecoin address' };
     }
     const identity = await requireMainnet();
+    // Both identity sources are down: report the identity error — no
+    // third source can prove the network (dogechain.info was removed
+    // as an identity fallback in Fix-All Lane A: it sends no CORS
+    // headers, so a browser can never read it).
     if (identity) return identity;
     // Primary: SoChain confirmed balance (decimal DOGE string).
     try {

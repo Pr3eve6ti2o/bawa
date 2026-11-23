@@ -143,6 +143,68 @@ describe('evm adapter — history', () => {
       });
     }
   });
+
+  it('reads Linea history through Etherscan V2, joining params with & after ?chainid=', async () => {
+    // Fix-All Lane A: the Linea base URL carries ?chainid=59144, so the
+    // txlist params must join with '&' — a second '?' would make the
+    // whole query one opaque parameter. The live keyless response
+    // carries message "OK-Missing/Invalid API Key, rate limit of
+    // 1/5sec applied" with status '1' and real transactions.
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: '1',
+        message: 'OK-Missing/Invalid API Key, rate limit of 1/5sec applied',
+        result: [
+          {
+            hash: '0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c',
+            from: '0x8915e470d0dd8a7830d96d6710cd2f4262dd7c40',
+            to: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045',
+            value: '20000000000000',
+            timeStamp: '1782299939',
+            txreceipt_status: '1',
+            isError: '0',
+          },
+        ],
+      }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const adapter = createEvmAdapter(
+      {
+        chain: 'linea',
+        networkId: 'eip155:59144',
+        rpcUrl: 'https://linea-rpc.publicnode.com',
+        evmChainId: 59144,
+        chainName: 'Linea',
+        nativeSymbol: 'ETH',
+        source: 'publicnode',
+        historyBaseUrl: 'https://api.etherscan.io/v2/api?chainid=59144',
+        historyExplorerBase: 'https://lineascan.build',
+      },
+      { client: mockClient({ getChainId: vi.fn(async () => 59144) }) },
+    );
+    const result = await adapter.getHistory(
+      '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    );
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('etherscan-v2');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        hash: '0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c',
+        direction: 'in',
+        amountBaseUnits: '20000000000000',
+        explorerUrl:
+          'https://lineascan.build/tx/0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c',
+      });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = String(fetchMock.mock.calls[0]?.[0] ?? '');
+    expect(url).toBe(
+      'https://api.etherscan.io/v2/api?chainid=59144&module=account&action=txlist&address=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045&page=1&offset=20&sort=desc',
+    );
+  });
 });
 
 describe('evm adapter — broadcast', () => {

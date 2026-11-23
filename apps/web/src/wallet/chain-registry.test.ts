@@ -84,7 +84,7 @@ describe('chain registry — token discovery', () => {
     ]);
     expect(CHAINS.aurora.rpcEndpoints).toEqual([
       'https://mainnet.aurora.dev',
-      'https://1rpc.io/aurora',
+      'https://aurora.drpc.org',
     ]);
     expect(CHAINS.fantom.rpcEndpoints).toEqual([
       'https://rpc.fantom.network',

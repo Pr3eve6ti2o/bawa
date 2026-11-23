@@ -1475,3 +1475,81 @@ scan method + verify-before-deleting rule), `order-traceability-checklist`
 - **Gates on this lane tree (Node 22, after `npm ci`):** `tsc --noEmit` 0,
   `npm run build` 0 (palette audit passed), `vitest` 97 files, 1873 passed
   / 5 skipped / 0 failed, `eslint` 0, `npm audit` 0 vulnerabilities.
+
+## §21 — FIX-ALL programme, Lane A (watch-only, history, RPCs) — 2026-11-24
+
+Hands-on Muse, 0 Sol calls, 0 AgentRouter calls. Worktree
+`bawa-fixall-a`, branch `panel-rebuild/fix-all-a`, base `8191b2c`
+(token-gaps tip). Lane report:
+`/home/boxd/workspace/bawa-fix-all/LANE-A-REPORT.md`.
+
+- **TRX watch-only fixed (TronScan fallback + PublicNode backup).**
+  Trongrid 429s under load (`/v1/accounts/` and `/wallet/getaccount`
+  both 429 in the probe runs). The adapter now falls back to TronScan
+  (`https://apilist.tronscanapi.com`, balance + history, TransferContract
+  only, direction from owner/to) and the registry gains PublicNode's
+  TRON full node (`https://tron-rpc.publicnode.com`) as second RPC —
+  it answers `/wallet/*` (identity, fee) but 404s `/v1/*`, which is
+  why TronScan owns balance/history. Mainnet-only gate: the fallback
+  never runs on devnet (Nile). CDP: `/wallets` shows
+  `20,032,755.932541 TRX` for `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5`,
+  matching Trongrid = TronScan = PublicNode in one probe run.
+- **TON: the 0 was genuine.** TonCenter and TonAPI agree the tested
+  address holds 0 (active v4r2 wallet). No adapter change: the TonAPI
+  fallback already existed. Funded address
+  `UQAXDV0lgZTFoAkp_pwBwJbY1Gg8yppMrp2rU7JF6dBG3B5B`
+  (41.293091416 TON, v5r1) renders in CDP, and the zero address
+  renders `Balance: 0 TON` in a separate run. Known limit: the
+  watch-only store holds one entry per chain, so two TON addresses
+  cannot be watched in one browser profile.
+- **DOGE: dogechain.info added, then removed in the same lane.**
+  Correct data in Node (200, exact agreement with BlockCypher) but
+  no `Access-Control-Allow-Origin` on `.info` or `.com`, so the
+  browser fails every fetch — proven in CDP round 2 (six
+  `net::ERR_FAILED`, same URL 200 in Node) and from a no-CSP probe
+  page, so it is CORS, not the app's CSP. Zelcore Blockbook and
+  DogeSoft return the same correct balance with the same defect;
+  Trezor Blockbook 403s, Blockchair 430s (IP blacklisted), NOWNodes /
+  CryptoAPIs / Ankr need a key, PublicNode has no Dogecoin RPC.
+  Adapter stays SoChain → BlockCypher (both CORS-clean); on
+  2026-11-24 both are quota-limited, so the row honestly shows
+  "Could not load balance" with Retry. Owner decision unchanged:
+  Blockchair with a key, or accept the outage (GAP-ANALYSIS.md §12).
+- **Linea history wired (Etherscan V2, keyless).** Chain 59144
+  answers `txlist` with status `"1"` and real transactions; the
+  other five blocked chains were probed and stay blocked (Routescan
+  "chain not supported" / `NO_BLOCKCHAINS_FOR_PARAMS`; Etherscan V2
+  "Free API access is not supported" (bsc, gnosis), "Missing or
+  unsupported chainid" (metis, fantom), 502 (opbnb); Blockscout 404s
+  and gnosis 403 Cloudflare — the browser fetch fails too, so it is
+  not a curl artefact). CDP: `/assets/linea` renders the real tx
+  `0x75dfb5f5c555ec25c87e3c7d0ff5401ec84fd7129ac8cfcb1935692435e97c9c`.
+  History verified is now 17 chains; five stay blocked (owner
+  decision §1 in GAP-ANALYSIS.md).
+- **Every RPC audited live through the app's adapters (38
+  endpoints).** All answer except the two 1RPC backups, which return
+  `-32001` "usage limit" (shared free tier exhausted) and were
+  replaced with dRPC (`https://eth.drpc.org`,
+  `https://aurora.drpc.org`), verified live through the adapter with
+  Vitalik's exact balance. The Solana backup
+  (`public.rpc.solanavibestation.com`), unreachable on 2026-11-23,
+  answers again. CSP is now 61 origins (56 mainnet + 5 temporary
+  devnet); the drift guard collects history hosts too.
+- **Build note (own goal, fixed in the lane).** The first CDP run
+  used `npx vite build` directly, which skips the `prebuild`
+  `copy-wasm.mjs` step — the wallet-core WASM 404d in the browser
+  and `loadCore()` aborted. The proper build is `npm run build`
+  (copy-wasm → tsc → vite build → palette-audit); the lane's later
+  runs used it and the WASM loads (HTTP 200). Lesson: never verify a
+  `vite build` invocation that bypasses `prebuild`.
+- **Observed, not Lane A scope.** The Linea asset screen's large
+  balance (`0.006803680919043338 ETH`) clips at the right card edge
+  at 390 px (viewed in `r3-04-linea-history-390.png`). Pre-existing
+  asset-detail layout; recorded here, not fixed in this lane.
+- **Gates:** tsc 0, `npm run build` 0, vitest 1883 passed / 5 skipped /
+  0 failed (97 files), lint 0 (apps/web), npm audit 0 vulnerabilities,
+  root `npm test` 0 (after `npm ci` in `tools/hdwallet-gen`, whose
+  `node_modules` was never installed in this worktree — pre-existing),
+  `generate-chains --check` 0. Root `npm run lint` cannot run here
+  (no root `node_modules`, `eslint: not found`) — pre-existing, not
+  a lane change.

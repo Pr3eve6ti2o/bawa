@@ -206,7 +206,7 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(mounted.div.textContent).toContain('RPC endpoints');
       const eth = rowFor(mounted, 'Ethereum');
       expect(eth.textContent).toContain('ethereum-rpc.publicnode.com');
-      expect(eth.textContent).toContain('1rpc.io');
+      expect(eth.textContent).toContain('eth.drpc.org');
       expect(eth.textContent).toContain('Primary');
       expect(eth.textContent).toContain('Backup');
       const btc = rowFor(mounted, 'Bitcoin');
@@ -235,9 +235,9 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       const primary = [...updated.querySelectorAll('span')].find(
         (s) => s.textContent === 'Primary',
       );
-      expect(updated.textContent).toContain('1rpc.io');
+      expect(updated.textContent).toContain('eth.drpc.org');
       expect(primary?.previousSibling?.textContent).toContain(
-        '1rpc.io',
+        'eth.drpc.org',
       );
     } finally {
       await mounted.cleanup();
@@ -333,7 +333,7 @@ describe('NetworkSelectionScreen — RPC endpoints (UI/UX fixes, item 19)', () =
       expect(switchAll).toBeDefined();
       await clickButton(switchAll!);
       expect(rowFor(mounted, 'Ethereum').textContent).toContain(
-        '1rpc.io',
+        'eth.drpc.org',
       );
       expect(rowFor(mounted, 'Bitcoin').textContent).toContain('blockstream.info');
       const resetAll = [...mounted.div.querySelectorAll('button')].find(

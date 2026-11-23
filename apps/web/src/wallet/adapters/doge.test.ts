@@ -120,6 +120,38 @@ describe('dogecoin adapter — balance', () => {
     }
   });
 
+  // Fix-All Lane A (2026-11-24): SoChain 429s (daily keyless quota
+  // exhausted) and BlockCypher is the only remaining fallback —
+  // dogechain.info was removed in this lane because it sends no CORS
+  // headers, so a browser can never read it (proven in CDP round 2:
+  // the same URL 200s in Node and ERR_FAILEDs in the browser).
+  it('falls back to BlockCypher when SoChain 429s (Fix-All Lane A)', async () => {
+    const adapter = createDogeAdapter({
+      transport: dogeTransport({
+        ...okHandlers,
+        sochainBalance: new Error('HTTP 429'),
+      }),
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('1000000000');
+      expect(result.data.source).toBe('blockcypher');
+    }
+  });
+
+  it('errors when both identity sources are down', async () => {
+    const adapter = createDogeAdapter({
+      transport: dogeTransport({
+        ...okHandlers,
+        networkInfo: new Error('Network error: sochain unreachable'),
+        chain: new Error('Network error: blockcypher unreachable'),
+      }),
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+  });
+
   it('reports an exact zero, not an error', async () => {
     const adapter = createDogeAdapter({
       transport: dogeTransport({
@@ -174,6 +206,16 @@ describe('sochainConfirmedToKoinu', () => {
     expect(sochainConfirmedToKoinu('0.00000001')).toBe('1');
     expect(sochainConfirmedToKoinu('0')).toBe('0');
     expect(sochainConfirmedToKoinu('1.5')).toBe('150000000');
+  });
+
+  it('converts the live ground-truth DOGE value exactly (Fix-All Lane A)', () => {
+    // Probed live 2026-11-24 for DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke:
+    // decimal "27164003668.40032381" (dogechain.info, Node only — no
+    // CORS, so unusable in the browser) agrees exactly with
+    // BlockCypher final_balance 2716400366840032381 koinu.
+    expect(sochainConfirmedToKoinu('27164003668.40032381')).toBe(
+      '2716400366840032381',
+    );
   });
 
   it('returns null for a malformed confirmed value', () => {

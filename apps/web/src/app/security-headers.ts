@@ -20,7 +20,7 @@
 // - img-src 'self' data:: QR codes are inline SVG (no raster fetch); data:
 //   is kept for favicon-style assets. font-src 'self' data:: @fontsource
 //   woff2 is self-hosted; data: covers inlined font subsets if any.
-// - connect-src 'self' plus the fifty-six pinned provider origins: the
+// - connect-src 'self' plus the sixty-one pinned provider origins: the
 //   same-origin wallet-core.wasm fetch plus the read-only balance/history
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
@@ -36,10 +36,12 @@
 //   was retired by the token-gaps programme (2026-11-22): it 403s browser
 //   requests. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL) and DexScreener https://api.dexscreener.com (keyless public API, the fallback price source for tokens CoinGecko does not list — README showcase + Add Token, item D, 2026-11-23; TonAPI rates for TON Jettons need no new origin, https://tonapi.io is already pinned). Lane C (FINISH THE PRODUCT, 2026-11-23): the CoinGecko fallback chain — CoinLore https://api.coinlore.net (keyless batched native-asset quotes, verified live) and Coinbase https://api.exchange.coinbase.com (keyless, LTC only, verified live); both fetch through price-fallbacks.ts when a CoinGecko quote is stale or missing.
 //   UI/UX fixes, item 19 (2026-11-23): the backup RPCs — ETH
-//   https://1rpc.io (1RPC gateway; blastapi.io was the first backup but
-//   is unreachable from the browser — still TypeError after the CSP fix,
-//   and intermittent 403 from curl — so it was dropped 2026-11-23),
-//   BTC https://blockstream.info,
+//   https://eth.drpc.org (dRPC public gateway; 1RPC was the backup
+//   until 2026-11-24, when its shared free tier hit its usage limit
+//   and every call returned -32001 "usage limit"; blastapi.io was the
+//   first backup but is unreachable from the browser — still TypeError
+//   after the CSP fix, and intermittent 403 from curl — so it was
+//   dropped 2026-11-23), BTC https://blockstream.info,
 //   BSC https://bsc-dataseed.binance.org, Optimism
 //   https://mainnet.optimism.io, Avalanche https://api.avax.network, TON
 //   balance fallback https://tonapi.io. UI/UX fixes, item 14 (2026-11-23):
@@ -52,21 +54,37 @@
 //   https://opbnb-rpc.publicnode.com +
 //   https://opbnb-mainnet-rpc.bnbchain.org, Metis
 //   https://metis-rpc.publicnode.com + https://andromeda.metis.io, Aurora
-//   https://mainnet.aurora.dev + https://1rpc.io, Fantom
-//   https://rpc.fantom.network + https://rpc2.fantom.network. Lane B
+//   https://mainnet.aurora.dev + https://aurora.drpc.org (dRPC public
+//   gateway, replacing 1RPC 2026-11-24 for the same usage-limit reason),
+//   Fantom https://rpc.fantom.network + https://rpc2.fantom.network. Lane B
 //   (Finish the Product, 2026-11-23): the nine newly-wired history
 //   hosts — Optimism https://explorer.optimism.io, Scroll
 //   https://scrollscan.com, Celo https://celo.blockscout.com, Aurora
 //   https://explorer.aurora.dev, Avalanche + Mantle via Routescan
 //   https://api.routescan.io, Polygon https://polygon.blockscout.com,
 //   Base https://base.blockscout.com, Arbitrum
-//   https://arbitrum.blockscout.com. The history hosts were live-probed
-//   before pinning; without them the browser refuses the history fetch
-//   (CSP) and the chain shows "history unavailable" even though the
-//   adapter is wired — caught live in CDP 2026-11-23. A chain or
-//   backup added to the registry without a matching entry here is dead in
-//   the browser — CSP refuses the fetch before any request is sent — so
-//   the security-headers test pins every registry origin (drift guard).
+//   https://arbitrum.blockscout.com. Fix-All Lane A (2026-11-24): four
+//   more origins, each live-probed before pinning — TRX TronScan
+//   balance/history fallback https://apilist.tronscanapi.com, TRX
+//   PublicNode full-node backup https://tron-rpc.publicnode.com, Linea
+//   history via Etherscan V2 https://api.etherscan.io plus its
+//   explorer base https://lineascan.build (the /track lookup fetches
+//   the explorer base, so it is a fetch origin too). The same lane
+//   also replaced the two dead 1RPC backups (usage limit -32001,
+//   2026-11-24) with dRPC: ETH https://eth.drpc.org, Aurora
+//   https://aurora.drpc.org — both verified live returning Vitalik's
+//   exact on-chain balance; https://1rpc.io is no longer pinned.
+//   dogechain.info was pinned and then removed in the same lane: it
+//   sends no CORS headers, so a browser can never fetch it (CDP
+//   round 2: the same URL 200s in Node and ERR_FAILEDs in the
+//   browser) — see the DOGE adapter header for the full evidence.
+//   hosts were live-probed before pinning; without them the browser
+//   refuses the history fetch (CSP) and the chain shows "history
+//   unavailable" even though the adapter is wired — caught live in
+//   CDP 2026-11-23. A chain or backup added to the registry without a
+//   matching entry here is dead in the browser — CSP refuses the fetch
+//   before any request is sent — so the security-headers test pins
+//   every registry origin (drift guard).
 //   TEMPORARY devnet mode (Lane D, 2026-11-22): five more origins for the
 //   test networks — ETH Sepolia https://ethereum-sepolia-rpc.publicnode.com
 //   (RPC) and https://eth-sepolia.blockscout.com (history), TRX Nile
@@ -76,7 +94,7 @@
 //   refuses every devnet fetch and devnet mode is dead in the app even
 //   though the endpoints answer curl. Devnet is TEMPORARY: the removal
 //   checklist in docs/DECISIONS.md reverts this line and the test to the
-//   fifty-one mainnet origins.
+//   fifty-six mainnet origins.
 //   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
@@ -90,7 +108,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://1rpc.io https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.drpc.org https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.etherscan.io https://lineascan.build https://api.trongrid.io https://apilist.tronscanapi.com https://tron-rpc.publicnode.com https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://aurora.drpc.org https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

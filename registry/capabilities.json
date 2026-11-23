@@ -440,7 +440,7 @@
       "profileId": "bawa-evm-bip44-v1",
       "rpcEndpoints": [
         "https://ethereum-rpc.publicnode.com",
-        "https://1rpc.io/eth"
+        "https://eth.drpc.org"
       ]
     },
     "tron": {
@@ -462,7 +462,8 @@
       "assetId": "tron:0x2b6653dc/slip44:195",
       "profileId": "bawa-trx-bip44-v1",
       "rpcEndpoints": [
-        "https://api.trongrid.io"
+        "https://api.trongrid.io",
+        "https://tron-rpc.publicnode.com"
       ]
     },
     "ton": {

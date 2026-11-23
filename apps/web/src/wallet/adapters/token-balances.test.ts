@@ -417,7 +417,7 @@ describe('evmClientForChain — RPC failover (UI/UX fixes, item 19)', () => {
     expect(result.status).toBe('ok');
     if (result.status === 'ok') {
       expect(result.data.valueBaseUnits).toBe('2500000');
-      expect(result.data.source).toBe('1rpc.io');
+      expect(result.data.source).toBe('eth.drpc.org');
     }
   });
 

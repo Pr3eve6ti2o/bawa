@@ -45,6 +45,48 @@ function mockFetchRawSequence(responses: RawResponse[]): ReturnType<typeof vi.fn
 const okBody = (body: unknown): RawResponse => ({ ok: true, status: 200, body });
 const http503 = (): RawResponse => ({ ok: false, status: 503, body: {} });
 const http404 = (): RawResponse => ({ ok: false, status: 404, body: {} });
+const http429 = (): RawResponse => ({ ok: false, status: 429, body: {} });
+
+// TronScan fallback fixtures (Fix-All Lane A): the live shapes probed
+// 2026-11-24 for TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5.
+const TRONSCAN_ACCOUNT = {
+  balance: 20032755932541,
+  address: ADDRESS,
+  trc20token_balances: [],
+};
+const TRONSCAN_TXS = {
+  total: 3,
+  rangeTotal: 3,
+  data: [
+    {
+      hash: 'tx-out',
+      contractType: 1,
+      ownerAddress: ADDRESS,
+      toAddress: OTHER,
+      amount: '5000000',
+      timestamp: 1700000000000,
+      confirmed: true,
+    },
+    {
+      hash: 'tx-trigger',
+      contractType: 31,
+      ownerAddress: OTHER,
+      toAddress: ADDRESS,
+      amount: '0',
+      timestamp: 1700000001000,
+      confirmed: true,
+    },
+    {
+      hash: 'tx-in',
+      contractType: 1,
+      ownerAddress: OTHER,
+      toAddress: ADDRESS,
+      amount: '1000000',
+      timestamp: 1700000002000,
+      confirmed: true,
+    },
+  ],
+};
 
 const NOW_BLOCK = {
   block_header: { raw_data: { number: 70000000, timestamp: 1700000000000 } },
@@ -107,13 +149,35 @@ describe('trx adapter — retry (item 2)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  it('does not retry a terminal 404', async () => {
-    const fetchMock = mockFetchRawSequence([okBody(NOW_BLOCK), http404()]);
+  it('does not retry a terminal 404, and falls back to TronScan', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody(TRONSCAN_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('20032755932541');
+      expect(result.source).toBe('tronscan');
+    }
+    // 1 identity + 1 balance attempt (the 404 was terminal, never
+    // retried) + 1 TronScan fallback read.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('reports the Trongrid error when TronScan also fails', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      http404(),
+    ]);
     const adapter = createTronAdapter();
     const result = await adapter.getBalance(ADDRESS);
     expect(result.status).toBe('error');
-    // 1 identity + 1 balance attempt: a 404 is terminal, never retried.
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    if (result.status === 'error') expect(result.reason).toBe('HTTP 404');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -183,6 +247,108 @@ describe('trx adapter — history', () => {
     const adapter = createTronAdapter();
     const result = await adapter.getHistory(ADDRESS);
     expect(result).toEqual(expect.objectContaining({ status: 'ok', data: [] }));
+  });
+});
+
+describe('trx adapter — TronScan fallback (Fix-All Lane A)', () => {
+  it('reads the balance from TronScan when Trongrid identity 429s', async () => {
+    const fetchMock = mockFetchRawSequence([
+      http429(),
+      http429(),
+      http429(),
+      okBody(TRONSCAN_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('20032755932541');
+      expect(result.source).toBe('tronscan');
+    }
+    // 3 identity attempts (429 is retried, then gives up) + 1 TronScan read.
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('reads the balance from TronScan when the Trongrid balance 429s', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http429(),
+      http429(),
+      http429(),
+      okBody(TRONSCAN_ACCOUNT),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.data.valueBaseUnits).toBe('20032755932541');
+      expect(result.source).toBe('tronscan');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('reads history from TronScan when the Trongrid history 429s', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http429(),
+      http429(),
+      http429(),
+      okBody(TRONSCAN_TXS),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('tronscan');
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0]).toMatchObject({
+        hash: 'tx-out',
+        direction: 'out',
+        amountBaseUnits: '5000000',
+        counterparty: OTHER,
+      });
+      expect(result.data[1]).toMatchObject({
+        hash: 'tx-in',
+        direction: 'in',
+        amountBaseUnits: '1000000',
+      });
+      expect(result.data[0]?.explorerUrl).toBe(
+        'https://tronscan.org/#/transaction/tx-out',
+      );
+    }
+    // 1 identity + 3 Trongrid history attempts + 1 TronScan read.
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('rejects a TronScan balance for a different address', async () => {
+    const fetchMock = mockFetchRawSequence([
+      okBody(NOW_BLOCK),
+      http404(),
+      okBody({ balance: 1, address: OTHER }),
+    ]);
+    const adapter = createTronAdapter();
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    if (result.status === 'error') expect(result.reason).toBe('HTTP 404');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('never touches TronScan on the devnet adapter', async () => {
+    const fetchMock = mockFetchRawSequence([
+      http429(),
+      http429(),
+      http429(),
+    ]);
+    const adapter = createTronAdapter({
+      networkId: 'tron:nile',
+      baseUrl: 'https://nile.trongrid.io',
+    });
+    const result = await adapter.getBalance(ADDRESS);
+    expect(result.status).toBe('error');
+    const urls = fetchMock.mock.calls.map((call) => String(call[0] ?? ''));
+    expect(urls).toHaveLength(3);
+    expect(urls.every((url) => url.includes('nile.trongrid.io'))).toBe(true);
+    expect(urls.some((url) => url.includes('tronscanapi'))).toBe(false);
   });
 });
 

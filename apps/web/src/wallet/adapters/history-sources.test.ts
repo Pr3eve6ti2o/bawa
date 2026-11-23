@@ -5,7 +5,9 @@
  * shape with real transactions. (Merge: Lane B wired six more the same
  * day, so nine of fifteen non-ETH EVM chains are wired and six stay
  * unwired — bsc, gnosis, linea, opbnb, metis, fantom; see
- * EVM_HISTORY_SOURCES and docs/GAP-ANALYSIS.md §1.)
+ * EVM_HISTORY_SOURCES and docs/GAP-ANALYSIS.md §1. Fix-All Lane A,
+ * 2026-11-24: Linea is wired too, via Etherscan V2 keyless — ten
+ * wired, five unwired: bsc, gnosis, opbnb, metis, fantom.)
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicClient } from 'viem';

@@ -8,8 +8,12 @@
  * Etherscan-compatible txlist API whenever a history endpoint is
  * configured — Ethereum, Optimism, Scroll, Celo and Aurora via
  * Blockscout instances, Avalanche and Mantle via Routescan (Lane B,
- * 2026-11-23); the other EVM chains report history unavailable — never
- * faked. Broadcast stays disabled.
+ * 2026-11-23), Linea via Etherscan's V2 API keyless (Fix-All Lane A,
+ * 2026-11-24: api.etherscan.io/v2/api?chainid=59144 answers real
+ * transactions with no key, rate-limited to 1 req/5s — the base URL
+ * carries the chainid query, so the txlist params join with '&');
+ * the other EVM chains report history unavailable — never faked.
+ * Broadcast stays disabled.
  */
 import {
   createPublicClient,
@@ -145,10 +149,14 @@ export function createEvmAdapter(
   // The history source label names the indexer that answered: an
   // explicit config label wins (Lane D: optimism-explorer, scrollscan);
   // otherwise derive it from the URL — Routescan for Avalanche/Mantle,
-  // Blockscout instances for the rest (Lane B).
+  // Etherscan V2 for Linea, Blockscout instances for the rest (Lane B).
   const historySource =
     config.historySource ??
-    (historyBaseUrl?.includes('routescan') ? 'routescan' : 'blockscout');
+    (historyBaseUrl?.includes('routescan')
+      ? 'routescan'
+      : historyBaseUrl?.includes('etherscan.io')
+        ? 'etherscan-v2'
+        : 'blockscout');
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });
@@ -233,8 +241,13 @@ export function createEvmAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
+    // A history base URL may already carry a query string (Linea's
+    // Etherscan V2 base carries ?chainid=59144): join with '&' then,
+    // '?' otherwise. A second '?' would make the whole query one
+    // opaque parameter and Etherscan would ignore the txlist module.
+    const separator = historyBaseUrl.includes('?') ? '&' : '?';
     const url =
-      `${historyBaseUrl}?module=account&action=txlist` +
+      `${historyBaseUrl}${separator}module=account&action=txlist` +
       `&address=${address}&page=1&offset=${limit}&sort=desc`;
     let raw: unknown;
     try {
