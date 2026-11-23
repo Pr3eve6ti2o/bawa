@@ -5,13 +5,19 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { SendScreen } from './send';
 import { useWallet } from '../state/wallet-context';
+import { getAdapterForMode } from '../wallet/adapters';
 import type { ChainAdapter } from '../wallet/adapters/types';
 
-vi.mock('../state/wallet-context', () => ({
-  useWallet: vi.fn(),
-  ensureAdapters: vi.fn(async () => undefined),
-  ensureDevnetAdapters: vi.fn(async () => undefined),
-}));
+vi.mock('../state/wallet-context', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../state/wallet-context')>();
+  return {
+    ...actual,
+    useWallet: vi.fn(),
+    ensureAdapters: vi.fn(async () => undefined),
+    ensureDevnetAdapters: vi.fn(async () => undefined),
+  };
+});
 
 const ethAdapter: ChainAdapter = {
   chain: 'eth',
@@ -486,6 +492,36 @@ describe('send screen', () => {
         "Sending USDC isn't available yet",
       );
       expect(mounted.div.textContent).not.toContain('Review your send');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('a rate-limited fee estimate shows the human sentence, never the raw HTTP 429', async () => {
+    // Lane D: a TRON getchainparameters 429 surfaced as a bare "HTTP 429"
+    // on the send details step. The codebase rule (wallet-context) is
+    // that no screen renders a raw reason; the fee line must use the
+    // human sentence instead.
+    setWallet();
+    const failingAdapter = {
+      ...ethAdapter,
+      estimateFee: async () => ({ status: 'error', reason: 'HTTP 429' }),
+    };
+    vi.mocked(getAdapterForMode).mockReturnValueOnce(
+      failingAdapter as unknown as ChainAdapter,
+    );
+    const mounted = await mountScreen();
+    try {
+      await clickContaining(mounted.div, 'Ethereum');
+      await clickContaining(mounted.div, 'Ethereum · ETH');
+      await waitForText(
+        mounted.div,
+        'Fee estimate unavailable: The network is busy or unreachable. Please try again in a moment.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Fee estimate unavailable: The network is busy or unreachable. Please try again in a moment.',
+      );
+      expect(mounted.div.textContent).not.toContain('HTTP 429');
     } finally {
       await mounted.cleanup();
     }
