@@ -167,3 +167,79 @@ checklist: `docs/REVERIFY-CHECKLIST.md`. Hands-on Muse, 0 Sol calls.
   3's follow-up commit was skipped because its content was already
   in the tree from that resolution. Nothing from any lane was
   dropped.
+## 13. Deep Audit + Devnet E2E programme — 5 lanes, merged into token-gaps (2026-11-23)
+
+**Decision: the 5-lane Deep Audit + Devnet E2E programme (owner order
+2026-11-23 ~18:10 IST) is complete and merged into
+`panel-rebuild/token-gaps`.** Branch `panel-rebuild/deep-audit-devnet`
+(branched from token-gaps `b089c28`, devnet mode brought in from
+`panel-rebuild/devnet-temp` `21f4726`, reverify-pro's token-gaps tip
+`71326e1` merged in) was merged into token-gaps by the coordinator
+(hands-on Muse, 0 Sol calls). No code merged into adopt-proper or
+main. Full record: `docs/DEEP-AUDIT-DEVNET-PROGRAMME.md`;
+`docs/GAP-ANALYSIS.md` (24 gaps, repos checked live).
+
+Decisions and findings recorded here:
+
+- **HD wallet verified; bot xpub export added.** All 22 chains match
+  both independent oracles (Python bip_utils + Wallet Core 4.9.3)
+  at indexes 0/1/2/5. There was no xpub export at all before this
+  programme; the wallet now exposes per-chain account public keys
+  on demand for the owner's bot (BTC zpub `m/84'/0'/0'`, LTC Ltub
+  `m/84'/2'/0'`, DOGE dpub `m/44'/3'/0'`, TRX + all EVM xpub
+  `m/44'/60'/0'`; TON/SOL one address per wallet). The bot use
+  case is YES for 20 chains. DOGE dpub is now accepted on import
+  (Wallet Core emits dpub; import only allowed dgub, so the wallet
+  rejected its own export). LTC zpub stays rejected — it is BTC's
+  version prefix, intentionally. SOL multi-address and TON
+  one-address are by design (owner decisions to confirm as final);
+  the bot must use shared `m/44'/60'` for CELO, not SLIP-44 527.
+- **Devnet Issue 5 CLOSED with live proof.** The TON first-send
+  state init IS present in the app-signed BOC (code hash
+  `feb5ff68...`, V4R2, init address == wallet C's address exactly;
+  TonViewer tx `4f35a862...fe4a42c0`, contract deploy, C uninit to
+  active). The 2026-11-22 missing-init inference was wrong (that
+  decode was of a garbage-seqno BOC). At seqno 0 Wallet Core
+  4.9.3 sets valid_until to UINT32_MAX, so the first-send message
+  is deterministic and never expires. The vendored-BOC-builder fix
+  sketch is not needed.
+- **Devnet Issue 6 FIXED in place.** `/track` resolves TON message
+  hashes (0x-prefixed and base64 `in_msg.hash`); the exact landed
+  A to B tx was returned in CDP.
+- **Devnet faucets still 0 tokens (Issue 7).** Retried 2026-11-23:
+  pk910 IP block is gone, new block `[INVALID_CAPTCHA]`; nileex
+  Turnstile never completes; coinfaucet.eu hCaptcha; ZalalenA
+  Turnstile gate never clears. Owner action: complete the captchas
+  in their own browser with the wallet-A addresses. BTC/ETH/TRX
+  stay NOT PROVEN on devnet until then.
+- **Watch-only rejects devnet TON addresses (new finding).** A
+  deliberate boundary (`validateWatchOnlyImport` /
+  `deriveAddress` call `validateTonAddress` with no devnet
+  option). Not fixed in this programme — threading devnet through
+  validation, derivation and balance adapters is multi-site with
+  mainnet safety implications and overrides a recorded deliberate
+  decision. Needs an owner decision; fix sketch in the Lane B
+  report; recorded as gap 21 in `docs/GAP-ANALYSIS.md`.
+- **E2E harness fixed (ADR-0011).** Root-base `build:e2e` +
+  `preview:e2e`; CI e2e job builds with `build:e2e`; Playwright
+  config reads `E2E_PORT` (default 4193) so a shared machine
+  cannot silently test another lane's build. Pages build untouched.
+- **Re-verification:** nearly all Round 2 and showcase claims
+  HOLD in CDP. One regression found and partially fixed (Send
+  chain scroll 936 back to 844; Receive details 1446 to 1390;
+  Share/Copy link/Download still need ~40–90 px scroll — owner
+  decision: smaller buttons or top-stack rework). The hard-coded
+  "Account 01" header now follows the selected account. Fantom
+  price always "Price expired" (CoinGecko quote ~6.2 h stale vs
+  the 10-min window — owner decision). DOGE has no working browser
+  fallback when SoChain is rate-limited (owner decision on a
+  second CORS-friendly source). Refresh-burst duplicates and the
+  429 retry storm are measured and handed to the gap analysis
+  (gap 5).
+- **Merge notes.** The programme branch merged devnet-temp in
+  first (1 DECISIONS.md conflict: devnet side added nothing in
+  that hunk), then reverify-pro's token-gaps tip `71326e1` (clean).
+  Lane cherry-picks were all clean except Lane E's
+  `docs/index.md` (kept reverify-pro's two entries plus the
+  gap-analysis entry). Lane A's and Lane C's header fixes composed
+  (both headers now use `accountName(vaultAccount.account)`).
