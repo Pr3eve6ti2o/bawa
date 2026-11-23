@@ -17,7 +17,7 @@
  * disabled.
  */
 import {
-  BROADCAST_DISABLED_MESSAGE,
+  createDisabledBroadcast,
   endpointHost,
   httpFetchTransport,
   resolveEndpoints,
@@ -321,9 +321,7 @@ export function createSolanaAdapter(
   ): Promise<AdapterResult<TxInput>> =>
     unavailable('Transaction inputs are not connected for Solana yet.');
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  const broadcast = createDisabledBroadcast();
 
   return {
     chain: 'sol',

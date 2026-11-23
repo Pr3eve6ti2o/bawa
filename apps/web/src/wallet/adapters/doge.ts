@@ -20,7 +20,7 @@
  * never faked. Broadcast stays disabled.
  */
 import {
-  BROADCAST_DISABLED_MESSAGE,
+  createDisabledBroadcast,
   assertNetworkId,
   httpFetchTransport,
   toAdapterError,
@@ -34,6 +34,7 @@ import {
 } from './types';
 import { isRecord } from '../guards';
 import { withRetry } from '../retry';
+import { balanceResult, parseBlockcypherBalance } from './utxo-shared';
 
 const NETWORK_ID =
   'bip122:1a91e3dace36e2be3bf030a65679fe821aa1d6ef92e7c9902eb318182c355691';
@@ -256,25 +257,6 @@ export function createDogeAdapter(
     return null;
   };
 
-  const balanceResult = (
-    valueBaseUnits: string,
-    source: string,
-    address: string,
-  ): AdapterResult<AdapterBalance> => ({
-    status: 'ok',
-    data: {
-      chain: 'doge',
-      address,
-      networkId: NETWORK_ID,
-      valueBaseUnits,
-      decimals: DECIMALS,
-      source,
-      fetchedAt: Date.now(),
-    },
-    source,
-    fetchedAt: Date.now(),
-  });
-
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
@@ -294,7 +276,7 @@ export function createDogeAdapter(
         if (isRecord(data) && typeof data['confirmed'] === 'string') {
           const koinu = sochainConfirmedToKoinu(data['confirmed']);
           if (koinu !== null) {
-            return balanceResult(koinu, SOCHAIN_SOURCE, address);
+            return balanceResult('doge', NETWORK_ID, DECIMALS, koinu, SOCHAIN_SOURCE, address);
           }
         }
       }
@@ -308,11 +290,18 @@ export function createDogeAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    const finalBalance = isRecord(raw) ? raw['final_balance'] : undefined;
-    if (typeof finalBalance !== 'number') {
+    const finalBalance = parseBlockcypherBalance(raw);
+    if (finalBalance === undefined) {
       return { status: 'error', reason: 'Invalid response: expected final_balance' };
     }
-    return balanceResult(String(Math.trunc(finalBalance)), BLOCKCYPHER_SOURCE, address);
+    return balanceResult(
+      'doge',
+      NETWORK_ID,
+      DECIMALS,
+      String(Math.trunc(finalBalance)),
+      BLOCKCYPHER_SOURCE,
+      address,
+    );
   };
 
   const unavailable = <T,>(reason: string): AdapterResult<T> => ({
@@ -390,9 +379,7 @@ export function createDogeAdapter(
   ): Promise<AdapterResult<TxInput>> =>
     unavailable('Transaction inputs are not connected for Dogecoin yet.');
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  const broadcast = createDisabledBroadcast();
 
   return {
     chain: 'doge',

@@ -1,12 +1,11 @@
 import { hexToBytes, sha256 } from 'viem';
 import { isRecord } from '../guards';
 import {
-  BROADCAST_DISABLED_MESSAGE,
+  createDisabledBroadcast,
   endpointHost,
   httpFetchTransport,
   resolveEndpoints,
   toAdapterError,
-  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -18,6 +17,7 @@ import {
   type TxInput,
 } from './types';
 import { withRetry } from '../retry';
+import { createMempoolReader } from './utxo-shared';
 
 const NETWORK_ID = 'tron:0x2b6653dc';
 const BASE_URL = 'https://api.trongrid.io';
@@ -125,17 +125,7 @@ export function createTronAdapter(
   // retry — so a dead primary fails over after one attempt, not nine.
   const resolveBaseUrls = (): string[] =>
     resolveEndpoints(overrides.baseUrls, [baseUrl]);
-  const readJsonFrom = (
-    urlFor: (base: string) => string,
-    operation: string,
-  ): Promise<{ raw: unknown; endpoint: string }> =>
-    withRetry(
-      () =>
-        tryEndpoints(resolveBaseUrls(), (base) =>
-          transport.request(urlFor(base)),
-        ),
-      { operation },
-    ).then(({ result, endpoint }) => ({ raw: result, endpoint }));
+  const readJsonFrom = createMempoolReader(transport, resolveBaseUrls);
   // Chain-identity check result, cached per instance: TRON has no on-chain
   // chain-id, so identity rests on the pinned endpoint responding
   // with a well-formed block. The endpoint URL is fixed at
@@ -346,10 +336,7 @@ export function createTronAdapter(
 
   // Mainnet: always throws. Devnet: the injected devnet broadcast.
   const broadcast: ChainAdapter['broadcast'] =
-    overrides.broadcast ??
-    (async (_signedTx: unknown): Promise<never> => {
-      throw new Error(BROADCAST_DISABLED_MESSAGE);
-    });
+    overrides.broadcast ?? createDisabledBroadcast();
 
   return {
     chain: 'trx',

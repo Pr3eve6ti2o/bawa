@@ -7,13 +7,11 @@
  * mempool.space-compatible Litecoin explorer. Broadcast stays disabled.
  */
 import {
-  BROADCAST_DISABLED_MESSAGE,
-  assertNetworkId,
+  createDisabledBroadcast,
   endpointHost,
   httpFetchTransport,
   resolveEndpoints,
   toAdapterError,
-  tryEndpoints,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -24,7 +22,15 @@ import {
   type TxInput,
 } from './types';
 import { isRecord } from '../guards';
-import { withRetry } from '../retry';
+import {
+  balanceResult,
+  createMempoolReader,
+  parseBlockcypherBalance,
+  parseChainStatsBalance,
+  parseMempoolHistory,
+  parseUtxoEntries,
+  verifyGenesisBlock,
+} from './utxo-shared';
 
 const NETWORK_ID =
   'bip122:12a765e31ffd4059bada1e25190f6e98c99d9714d334efa41a195a7e7e04bfe2';
@@ -77,17 +83,7 @@ export function createLtcAdapter(
   // when the mempool list is exhausted.
   const resolveBaseUrls = (): string[] =>
     resolveEndpoints(overrides.baseUrls, [baseUrl]);
-  const readJsonFrom = (
-    urlFor: (base: string) => string,
-    operation: string,
-  ): Promise<{ raw: unknown; endpoint: string }> =>
-    withRetry(
-      () =>
-        tryEndpoints(resolveBaseUrls(), (base) =>
-          transport.request(urlFor(base)),
-        ),
-      { operation },
-    ).then(({ result, endpoint }) => ({ raw: result, endpoint }));
+  const readJsonFrom = createMempoolReader(transport, resolveBaseUrls);
   // Chain-identity check result, cached per instance: the genesis block
   // hash proves the endpoint serves Litecoin mainnet. The endpoint URL is
   // fixed at construction, so one check per instance is enough.
@@ -103,20 +99,11 @@ export function createLtcAdapter(
         (base) => `${base}/blocks/0`,
         'ltc.identity',
       );
-      const blocks = Array.isArray(raw) ? raw : [];
-      const genesis = isRecord(blocks[0]) ? blocks[0]['id'] : undefined;
-      if (typeof genesis !== 'string') {
-        return {
-          status: 'error',
-          reason: 'Network identity check failed: no genesis block returned.',
-        };
-      }
-      try {
-        assertNetworkId(genesis, GENESIS_HASH, endpointHost(endpoint));
-      } catch (error: unknown) {
+      const verified = verifyGenesisBlock(raw, endpoint, GENESIS_HASH);
+      if (verified) {
         // A wrong genesis is a chain mismatch, not a transient failure:
         // fail closed, never fall back to BlockCypher for identity.
-        return toAdapterError(error);
+        return verified;
       }
       identityChecked = true;
       return null;
@@ -143,25 +130,6 @@ export function createLtcAdapter(
     return null;
   };
 
-  const balanceResult = (
-    valueBaseUnits: string,
-    source: string,
-    address: string,
-  ): AdapterResult<AdapterBalance> => ({
-    status: 'ok',
-    data: {
-      chain: 'ltc',
-      address,
-      networkId: NETWORK_ID,
-      valueBaseUnits,
-      decimals: DECIMALS,
-      source,
-      fetchedAt: Date.now(),
-    },
-    source,
-    fetchedAt: Date.now(),
-  });
-
   const getBalance = async (
     address: string,
   ): Promise<AdapterResult<AdapterBalance>> => {
@@ -175,19 +143,18 @@ export function createLtcAdapter(
         (base) => `${base}/address/${address}`,
         'ltc.getBalance',
       );
-      const stats = isRecord(raw) ? raw['chain_stats'] : undefined;
-      if (!isRecord(stats)) {
-        return { status: 'error', reason: 'Invalid response: expected chain stats' };
+      const parsed = parseChainStatsBalance(raw);
+      if (!parsed.ok) {
+        return { status: 'error', reason: parsed.reason };
       }
-      const funded = stats['funded_txo_sum'];
-      const spent = stats['spent_txo_sum'];
-      if (typeof funded !== 'number' || typeof spent !== 'number') {
-        return { status: 'error', reason: 'Invalid response: expected txo sums' };
-      }
-      // JSON numbers lose precision above Number.MAX_SAFE_INTEGER; fine for a
-      // personal wallet, recorded limitation.
-      const balance = BigInt(Math.trunc(funded)) - BigInt(Math.trunc(spent));
-      return balanceResult(balance.toString(), endpointHost(endpoint), address);
+      return balanceResult(
+        'ltc',
+        NETWORK_ID,
+        DECIMALS,
+        parsed.balance.toString(),
+        endpointHost(endpoint),
+        address,
+      );
     } catch {
       // Mempool list exhausted: BlockCypher balance (final_balance).
     }
@@ -199,11 +166,14 @@ export function createLtcAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    const finalBalance = isRecord(raw) ? raw['final_balance'] : undefined;
-    if (typeof finalBalance !== 'number') {
+    const finalBalance = parseBlockcypherBalance(raw);
+    if (finalBalance === undefined) {
       return { status: 'error', reason: 'Invalid response: expected final_balance' };
     }
     return balanceResult(
+      'ltc',
+      NETWORK_ID,
+      DECIMALS,
       String(Math.trunc(finalBalance)),
       BLOCKCYPHER_SOURCE,
       address,
@@ -229,78 +199,15 @@ export function createLtcAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (!Array.isArray(raw)) {
+    const txs = parseMempoolHistory(raw, {
+      chain: 'ltc',
+      networkId: NETWORK_ID,
+      explorerBaseUrl: 'https://litecoinspace.org',
+      address,
+      limit,
+    });
+    if (txs === null) {
       return { status: 'error', reason: 'Invalid response: expected a transaction list' };
-    }
-    const txs: AdapterTx[] = [];
-    for (const entry of raw.slice(0, limit)) {
-      if (!isRecord(entry)) continue;
-      const txid = typeof entry['txid'] === 'string' ? entry['txid'] : '';
-      const vin = Array.isArray(entry['vin']) ? entry['vin'] : [];
-      const vout = Array.isArray(entry['vout']) ? entry['vout'] : [];
-      const status = isRecord(entry['status']) ? entry['status'] : undefined;
-      const confirmed = status?.['confirmed'] === true;
-      const blockTime =
-        typeof status?.['block_time'] === 'number' ? status['block_time'] : NaN;
-
-      let inSum = 0n;
-      let outToSelf = 0n;
-      let outToOthers = 0n;
-      let counterparty: string | null = null;
-      for (const input of vin) {
-        const prevout = isRecord(input) ? input['prevout'] : undefined;
-        const addr =
-          isRecord(prevout) && typeof prevout['scriptpubkey_address'] === 'string'
-            ? prevout['scriptpubkey_address']
-            : '';
-        const value =
-          isRecord(prevout) && typeof prevout['value'] === 'number'
-            ? BigInt(Math.trunc(prevout['value']))
-            : 0n;
-        if (addr === address) {
-          inSum += value;
-        } else if (!counterparty && addr !== '') {
-          counterparty = addr;
-        }
-      }
-      for (const output of vout) {
-        const addr =
-          isRecord(output) && typeof output['scriptpubkey_address'] === 'string'
-            ? output['scriptpubkey_address']
-            : '';
-        const value =
-          isRecord(output) && typeof output['value'] === 'number'
-            ? BigInt(Math.trunc(output['value']))
-            : 0n;
-        if (addr === address) {
-          outToSelf += value;
-        } else {
-          outToOthers += value;
-          if (!counterparty && addr !== '') counterparty = addr;
-        }
-      }
-      const inVin = inSum > 0n;
-      const inVout = outToSelf > 0n;
-      // 'self' only when every output returns to this address (a send with
-      // change is an 'out', not a self-transfer).
-      const direction =
-        inVin && inVout && outToOthers === 0n ? 'self' : inVout && !inVin ? 'in' : 'out';
-      txs.push({
-        hash: txid,
-        chain: 'ltc',
-        networkId: NETWORK_ID,
-        direction,
-        amountBaseUnits:
-          direction === 'in'
-            ? outToSelf.toString()
-            : direction === 'out'
-              ? outToOthers.toString()
-              : outToSelf.toString(),
-        counterparty,
-        timestamp: Number.isFinite(blockTime) ? blockTime * 1000 : null,
-        status: confirmed ? 'confirmed' : 'pending',
-        explorerUrl: `https://litecoinspace.org/tx/${txid}`,
-      });
     }
     return { status: 'ok', data: txs, source: endpointHost(endpoint), fetchedAt: Date.now() };
   };
@@ -356,17 +263,9 @@ export function createLtcAdapter(
     } catch (error: unknown) {
       return toAdapterError(error);
     }
-    if (!Array.isArray(raw)) {
+    const utxos = parseUtxoEntries(raw);
+    if (utxos === null) {
       return { status: 'error', reason: 'Invalid response: expected a UTXO list' };
-    }
-    const utxos: { txid: string; vout: number; valueBaseUnits: string }[] = [];
-    for (const entry of raw) {
-      if (!isRecord(entry)) continue;
-      const txid = typeof entry['txid'] === 'string' ? entry['txid'] : '';
-      const vout = typeof entry['vout'] === 'number' ? entry['vout'] : -1;
-      const value = typeof entry['value'] === 'number' ? entry['value'] : NaN;
-      if (!txid || vout < 0 || !Number.isFinite(value)) continue;
-      utxos.push({ txid, vout, valueBaseUnits: String(Math.trunc(value)) });
     }
     return {
       status: 'ok',
@@ -376,9 +275,7 @@ export function createLtcAdapter(
     };
   };
 
-  const broadcast = async (_signedTx: unknown): Promise<never> => {
-    throw new Error(BROADCAST_DISABLED_MESSAGE);
-  };
+  const broadcast = createDisabledBroadcast();
 
   return {
     chain: 'ltc',

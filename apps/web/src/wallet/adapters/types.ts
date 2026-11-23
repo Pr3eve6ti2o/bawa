@@ -132,6 +132,17 @@ export const BROADCAST_DISABLED_MESSAGE =
   'Sending funds is switched off until it is separately approved.';
 
 /**
+ * Broadcast that always throws: mainnet broadcast stays disabled
+ * until separately authorised. One definition — seven adapters had
+ * their own copy of the same throw (marketing-fix Lane 2).
+ */
+export function createDisabledBroadcast(): ChainAdapter['broadcast'] {
+  return async (_signedTx: unknown): Promise<never> => {
+    throw new Error(BROADCAST_DISABLED_MESSAGE);
+  };
+}
+
+/**
  * What a broadcast returns. Mainnet adapters never return one: their
  * broadcast() always throws BROADCAST_DISABLED_MESSAGE. Devnet adapters
  * (temporary, see wallet/devnet-endpoints.ts) return this on success.
