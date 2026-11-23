@@ -86,7 +86,7 @@ describe('app nav — focused flows and sidebar collapse (Lane A)', () => {
   });
 
   it('collapses the sidebar to an icon rail and back', async () => {
-    const mounted = await mountApp('/', 'Welcome to Bawa Web Wallet');
+    const mounted = await mountApp('/', 'Welcome to Bawa');
     try {
       const aside = () => mounted.div.querySelector('aside');
       expect(aside()?.className).toContain('lg:w-[224px]');
@@ -108,7 +108,7 @@ describe('app nav — focused flows and sidebar collapse (Lane A)', () => {
   });
 
   it('keeps the bottom nav and shows the More menu with all destinations, which navigate', async () => {
-    const mounted = await mountApp('/', 'Welcome to Bawa Web Wallet');
+    const mounted = await mountApp('/', 'Welcome to Bawa');
     try {
       // Two navs share the label: the desktop sidebar (first in the DOM)
       // and the mobile bottom nav (second). The More button lives only in

@@ -3,6 +3,7 @@ import {
   BIP39_PBKDF2_ROUNDS,
   bip39SeedHex,
   generateBip39Mnemonic,
+  splitMnemonicAndPassphrase,
   validateBip39Mnemonic,
 } from './bip39-validation';
 
@@ -226,4 +227,91 @@ describe('generateBip39Mnemonic', () => {
       ).toThrow(Error);
     },
   );
+});
+
+describe('splitMnemonicAndPassphrase', () => {
+  // Lane C, item 5: one import field takes a 12/15/18/21/24-word phrase,
+  // and the 25-word form (24 words + an extra word as the passphrase) in
+  // the same flow — no second section. Anything past 24 words is the
+  // passphrase; the longest valid BIP-39 mnemonic wins.
+  const FIFTEEN =
+    'ripple scissors kick mammal hire column oak again sun offer wealth tomorrow wagon turn fatal';
+  // Deterministic 24-word vector (fixed entropy, never a real secret).
+  const TWENTY_FOUR = generateBip39Mnemonic(
+    256,
+    Uint8Array.from([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+      20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    ]),
+  );
+
+  it('accepts a 12-word phrase with no passphrase', () => {
+    expect(splitMnemonicAndPassphrase(MNEMONIC_12)).toEqual({
+      mnemonic: MNEMONIC_12,
+      passphrase: '',
+    });
+  });
+
+  it('accepts a 15-word phrase with no passphrase', () => {
+    expect(splitMnemonicAndPassphrase(FIFTEEN)).toEqual({
+      mnemonic: FIFTEEN,
+      passphrase: '',
+    });
+  });
+
+  it('accepts a 24-word phrase with no passphrase', () => {
+    expect(splitMnemonicAndPassphrase(TWENTY_FOUR)).toEqual({
+      mnemonic: TWENTY_FOUR,
+      passphrase: '',
+    });
+  });
+
+  it('treats the 25th word as the passphrase', () => {
+    expect(splitMnemonicAndPassphrase(`${TWENTY_FOUR} TREZOR`)).toEqual({
+      mnemonic: TWENTY_FOUR,
+      passphrase: 'TREZOR',
+    });
+  });
+
+  it('treats words past a 12-word mnemonic as the passphrase', () => {
+    expect(splitMnemonicAndPassphrase(`${MNEMONIC_12} extra`)).toEqual({
+      mnemonic: MNEMONIC_12,
+      passphrase: 'extra',
+    });
+  });
+
+  it('keeps a multi-word passphrase together', () => {
+    expect(
+      splitMnemonicAndPassphrase(`${TWENTY_FOUR} first second`),
+    ).toEqual({
+      mnemonic: TWENTY_FOUR,
+      passphrase: 'first second',
+    });
+  });
+
+  it('normalises extra whitespace and newlines', () => {
+    expect(
+      splitMnemonicAndPassphrase(`  ${MNEMONIC_12.split(' ').join('  \n')}  TREZOR  `),
+    ).toEqual({ mnemonic: MNEMONIC_12, passphrase: 'TREZOR' });
+  });
+
+  it('rejects too few words', () => {
+    expect(() => splitMnemonicAndPassphrase('hello world')).toThrow(
+      /12-, 15-, 18-, 21- or 24-word/,
+    );
+  });
+
+  it('rejects 24 words with a bad checksum', () => {
+    expect(() => splitMnemonicAndPassphrase('abandon '.repeat(24).trim())).toThrow(
+      /not a valid recovery phrase/,
+    );
+  });
+
+  it('rejects words that are not in the BIP-39 list', () => {
+    expect(() =>
+      splitMnemonicAndPassphrase(
+        'hello world this is not a valid phrase at all really truly',
+      ),
+    ).toThrow(/not a valid recovery phrase/);
+  });
 });

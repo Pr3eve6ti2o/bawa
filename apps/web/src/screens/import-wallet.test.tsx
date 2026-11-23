@@ -501,17 +501,15 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
   }, 30_000);
 
   it('derives the preview with the passphrase when one is entered', async () => {
+    // Lane C, item 5: the 25-word form lives in the SAME field as the
+    // 24-word form — there is no second section. Pasting 25 words uses
+    // the 25th word as the recovery passphrase.
     const { div, cleanup } = await mountImportScreen();
     try {
       await openPhraseMode(div);
-      const passphrase = div.querySelector<HTMLInputElement>(
-        '#import-passphrase',
-      );
-      expect(passphrase).not.toBeNull();
-      await act(async () => {
-        setInputValue(passphrase!, 'TREZOR');
-      });
-      await restorePhrase(div, VALID_MNEMONIC);
+      // The separate passphrase field is gone: one field takes both forms.
+      expect(div.querySelector('#import-passphrase')).toBeNull();
+      await restorePhrase(div, `${VALID_MNEMONIC} TREZOR`);
       await waitFor(div, () =>
         (div.textContent ?? '').includes('Check the restored addresses'),
       );
@@ -519,10 +517,107 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
       const withoutPassphrase = await deriveAddresses(VALID_MNEMONIC);
       expect(div.textContent).toContain(withPassphrase.eth);
       expect(div.textContent).not.toContain(withoutPassphrase.eth);
+      expect(div.textContent).toContain('An extra word was used as your recovery passphrase');
     } finally {
       await cleanup();
     }
   }, 30_000);
+
+  it('offers to add a new account when the same phrase is imported again', async () => {
+    // Lane C, item 6: importing the SAME phrase twice used to hit the
+    // "delete your vault first" wall. Now it offers a new account from
+    // the same phrase — Account 2 — with no deletion.
+    const { readVaultAccounts } = await import('../wallet/vault');
+    const first = await mountImportScreen();
+    try {
+      await openPhraseMode(first.div);
+      await restorePhrase(first.div, VALID_MNEMONIC);
+      await waitFor(first.div, () =>
+        (first.div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const password = first.div.querySelector<HTMLInputElement>(
+        '#import-vault-password',
+      );
+      const confirm = first.div.querySelector<HTMLInputElement>(
+        '#import-vault-password-confirm',
+      );
+      await act(async () => {
+        setInputValue(password!, TEST_PASSWORD);
+        setInputValue(confirm!, TEST_PASSWORD);
+      });
+      await clickButton(first.div, 'Save to vault');
+      await waitFor(first.div, () =>
+        (first.div.textContent ?? '').includes('Wallet restored'),
+      );
+      expect(readVaultAccounts()).toEqual([0]);
+    } finally {
+      await first.cleanup();
+    }
+    const second = await mountImportScreen();
+    try {
+      await openPhraseMode(second.div);
+      await restorePhrase(second.div, VALID_MNEMONIC);
+      await waitFor(second.div, () =>
+        (second.div.textContent ?? '').includes('This is the same recovery phrase'),
+      );
+      expect(second.div.textContent).not.toContain('delete the existing vault');
+      await clickButton(second.div, 'Add as Account 2');
+      await waitFor(second.div, () =>
+        (second.div.textContent ?? '').includes('Account 2 added'),
+      );
+      expect(readVaultAccounts()).toEqual([0, 1]);
+    } finally {
+      await second.cleanup();
+    }
+  }, 60_000);
+
+  it('warns instead of replacing when a different phrase is imported', async () => {
+    // Lane C, item 6: a DIFFERENT phrase still needs a vault replace —
+    // one vault holds one phrase — but the screen now says so after
+    // comparing, instead of blocking before the phrase is even read.
+    const { generateBip39Mnemonic } = await import('../wallet/bip39-validation');
+    const other = generateBip39Mnemonic(
+      256,
+      Uint8Array.from({ length: 32 }, (_, i) => 255 - i),
+    );
+    expect(other).not.toBe(VALID_MNEMONIC);
+    const first = await mountImportScreen();
+    try {
+      await openPhraseMode(first.div);
+      await restorePhrase(first.div, VALID_MNEMONIC);
+      await waitFor(first.div, () =>
+        (first.div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const password = first.div.querySelector<HTMLInputElement>(
+        '#import-vault-password',
+      );
+      const confirm = first.div.querySelector<HTMLInputElement>(
+        '#import-vault-password-confirm',
+      );
+      await act(async () => {
+        setInputValue(password!, TEST_PASSWORD);
+        setInputValue(confirm!, TEST_PASSWORD);
+      });
+      await clickButton(first.div, 'Save to vault');
+      await waitFor(first.div, () =>
+        (first.div.textContent ?? '').includes('Wallet restored'),
+      );
+    } finally {
+      await first.cleanup();
+    }
+    const second = await mountImportScreen();
+    try {
+      await openPhraseMode(second.div);
+      await restorePhrase(second.div, other);
+      await waitFor(second.div, () =>
+        (second.div.textContent ?? '').includes('This is a different recovery phrase'),
+      );
+      expect(second.div.textContent).toContain('delete the existing vault');
+      expect(second.div.textContent).toContain('Add an account from your current phrase');
+    } finally {
+      await second.cleanup();
+    }
+  }, 60_000);
 
   it('saves the restored wallet to the vault', async () => {
     const { div, cleanup } = await mountImportScreen();

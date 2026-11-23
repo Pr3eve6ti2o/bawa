@@ -15,13 +15,18 @@ import {
   restoreWallet,
   type WalletAddresses,
 } from '../wallet/core';
-import { createVault, hasVault } from '../wallet/vault';
+import { accountName, createVault, hasVault } from '../wallet/vault';
 import { setPassphraseUsed } from '../wallet/passphrase';
+import {
+  IMPORT_PHRASE_HINT,
+  splitMnemonicAndPassphrase,
+} from '../wallet/bip39-validation';
 import { profileFor, SUPPORTED_CHAINS } from '../wallet/chains';
 import { Alert, AlertDescription } from '../ui/components/alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/components/tabs';
 import { Badge } from '../ui/components/badge';
 import { Button } from '../ui/components/button';
+import { CopyButton } from '../ui/components/copy-button';
 import {
   Card,
   CardContent,
@@ -121,10 +126,20 @@ const CHAIN_LABELS: Record<string, string> = {
 };
 
 type ImportMode = 'phrase' | 'watch-only';
-type PhraseStep = 'enter' | 'preview' | 'saved';
+type PhraseStep = 'enter' | 'preview' | 'saved' | 'same' | 'different';
 
 export function ImportWalletScreen() {
-  const { xpubs, addXpub, refreshVaultAccounts } = useWallet();
+  const {
+    xpubs,
+    addXpub,
+    refreshVaultAccounts,
+    resetReceiveRotation = () => {},
+    vaultAddresses,
+    vaultAccounts,
+    vaultPassphraseNeeded,
+    createVaultAccounts,
+    selectVaultAccount,
+  } = useWallet();
   const imported = chains
     .map((id) => xpubs[id])
     .filter((wallet): wallet is WatchOnlyWallet => wallet !== null);
@@ -145,16 +160,23 @@ export function ImportWalletScreen() {
   const [phraseError, setPhraseError] = useState<string | null>(null);
   const [vaultPassword, setVaultPassword] = useState('');
   const [vaultPasswordConfirm, setVaultPasswordConfirm] = useState('');
-  // Optional BIP-39 passphrase (25th word): never stored. It also shapes the previewed addresses below.
-  const [passphrase, setPassphrase] = useState('');
+  // The recovery passphrase (extra word) that came with the pasted
+  // phrase, if any — from the split, never typed separately. It is never
+  // stored; it shapes the previewed addresses below.
+  const [splitPassphrase, setSplitPassphrase] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [vaultExists, setVaultExists] = useState(false);
+  const [addedAccount, setAddedAccount] = useState<number | null>(null);
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  // True when a vault exists but its addresses are not in memory (it is
+  // locked), so a pasted phrase cannot be compared with it yet.
+  const [compareUnavailable, setCompareUnavailable] = useState(false);
 
   // Clear the phrase when the screen unmounts.
   useEffect(() => () => {
     setPhrase('');
-    setPassphrase('');
+    setSplitPassphrase('');
     setNormalizedMnemonic(null);
   }, []);
 
@@ -166,38 +188,86 @@ export function ImportWalletScreen() {
     event.preventDefault();
     if (isRestoring) return;
     setPhraseError(null);
-    if (hasVault()) {
-      setVaultExists(true);
-      return;
-    }
-    const normalized = phrase.trim().split(/\s+/u).join(' ');
-    const wordCount = normalized === '' ? 0 : normalized.split(' ').length;
-    // Clear the input immediately: a rejected phrase must not linger.
+    setAddedAccount(null);
+    setCompareUnavailable(false);
+    // One field takes every form: 12/15/18/21/24 words, or more words
+    // where the rest is the recovery passphrase (the 25-word form).
+    // The input is cleared immediately: a rejected phrase must not linger.
+    const pasted = phrase;
     setPhrase('');
-    // BIP-39 word counts are 12/15/18/21/24. The gate used to accept
-    // only 12 or 24, which rejected the repo's own published 15-word
-    // test vector (docs/mainnet/MAINNET-VECTORS.md) before validation
-    // ever ran. Any other count is still rejected here; a valid count
-    // with invalid words is rejected by restoreWallet below.
-    if (![12, 15, 18, 21, 24].includes(wordCount)) {
-      setPhraseError('Enter a 12-, 15-, 18-, 21- or 24-word recovery phrase.');
+    let split: { mnemonic: string; passphrase: string };
+    try {
+      split = splitMnemonicAndPassphrase(pasted);
+    } catch (cause) {
+      setPhraseError(cause instanceof Error ? cause.message : IMPORT_PHRASE_HINT);
       return;
     }
     setIsRestoring(true);
     try {
-      const restored = await restoreWallet(normalized);
-      const addresses = await deriveAddresses(restored, passphrase);
+      const restored = await restoreWallet(split.mnemonic);
+      const addresses = await deriveAddresses(restored, split.passphrase);
       setNormalizedMnemonic(restored);
+      setSplitPassphrase(split.passphrase);
       setDerived(addresses);
+      // Lane C, item 6: a vault already exists. The old code blocked
+      // here and told the user to delete it — even for the SAME phrase.
+      // Instead, compare the derived addresses with the vault's: the
+      // same phrase offers a new account from it; a different phrase
+      // still needs a vault replace (one vault per phrase).
+      if (hasVault()) {
+        const currentEth = vaultAddresses.eth[0];
+        const currentBtc = vaultAddresses.btc[0];
+        if (currentEth === undefined || currentBtc === undefined) {
+          // The vault is locked, so its addresses are not in memory
+          // and nothing can be compared yet.
+          setCompareUnavailable(true);
+          setPhraseStep('different');
+        } else if (
+          addresses.eth === currentEth &&
+          addresses.btc === currentBtc
+        ) {
+          setPhraseStep('same');
+        } else {
+          setPhraseStep('different');
+        }
+        return;
+      }
       setPhraseStep('preview');
     } catch {
       setNormalizedMnemonic(null);
       setDerived(null);
+      setSplitPassphrase('');
       setPhraseError(
         'That recovery phrase is not valid. Check every word and try again.',
       );
     } finally {
       setIsRestoring(false);
+    }
+  }
+
+  // Lane C, item 6: the pasted phrase is the same as the vault's.
+  // Add a new account from it (Account 2, Account 3, …) — no deletion,
+  // no replacement. Blocked while the vault's recovery passphrase is
+  // unknown to the session: a new account derived without it would get
+  // the wrong addresses.
+  async function handleAddSamePhraseAccount() {
+    if (isAddingAccount) return;
+    setPhraseError(null);
+    setIsAddingAccount(true);
+    try {
+      const added = await createVaultAccounts(1);
+      const next = added[0];
+      if (next === undefined) throw new Error('No account was created.');
+      await selectVaultAccount(next);
+      setAddedAccount(next);
+    } catch (cause) {
+      setPhraseError(
+        cause instanceof Error
+          ? cause.message
+          : 'The account could not be added. Please try again.',
+      );
+    } finally {
+      setIsAddingAccount(false);
     }
   }
 
@@ -217,6 +287,7 @@ export function ImportWalletScreen() {
     try {
       const profileIds = [...new Set(SUPPORTED_CHAINS.map((chainId) => profileFor(chainId)))];
       const mnemonic = normalizedMnemonic;
+      const passphrase = splitPassphrase;
       // Merge 1 (Lane B): an imported mnemonic is recorded as
       // 'imported', not 'created' — createVault's default provenance is
       // 'created', which is only correct for the create-wallet flow.
@@ -224,11 +295,13 @@ export function ImportWalletScreen() {
         source: 'imported',
         isTesting: false,
       });
+      // A new phrase starts HD receive rotation at index 0.
+      resetReceiveRotation();
       setNormalizedMnemonic(null);
       setVaultPassword('');
       setVaultPasswordConfirm('');
       setPassphraseUsed(passphrase.length > 0);
-      setPassphrase('');
+      setSplitPassphrase('');
       await refreshVaultAccounts();
       setPhraseStep('saved');
     } catch {
@@ -306,34 +379,22 @@ export function ImportWalletScreen() {
       </Card>
 
       {mode === 'phrase' && vaultExists && (
-        <Card className="rounded-xl">
-          <CardHeader>
-            <CardTitle>A wallet already exists</CardTitle>
-            <CardDescription>
-              This browser already has an encrypted vault. Importing a
-              recovery phrase would replace it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm leading-relaxed">
-              To restore a different wallet, delete the existing vault from
-              security settings first. Make sure you have its recovery phrase
-              written down — deleting a vault without its phrase loses the
-              wallet.
-            </p>
-            <Button asChild className="h-auto whitespace-normal py-3 text-center">
-              <Link to="/security">Go to security settings</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <Alert>
+          <AlertDescription>
+            You already have a wallet on this device. If the phrase below
+            is the same as your current wallet&apos;s phrase, you can add a
+            new account from it instead of replacing anything. A different
+            phrase would replace the vault.
+          </AlertDescription>
+        </Alert>
       )}
 
-      {mode === 'phrase' && !vaultExists && phraseStep === 'enter' && (
+      {mode === 'phrase' && phraseStep === 'enter' && (
         <Card className="rounded-xl">
           <CardHeader>
             <CardTitle>Restore from a recovery phrase</CardTitle>
             <CardDescription>
-              Enter the 12, 15, 18, 21 or 24 words of the wallet you want to restore.
+              Enter the words of the wallet you want to restore, in order.
               They are used once to derive your addresses, then cleared.
             </CardDescription>
           </CardHeader>
@@ -362,32 +423,17 @@ export function ImportWalletScreen() {
                     autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="12, 15, 18, 21 or 24 words, separated by spaces"
+                    placeholder="12, 15, 18, 21 or 24 words — or 25 words if your wallet uses an extra word"
                     required
                   />
                   <p className="text-sm text-muted-foreground">
                     Only enter a recovery phrase on this screen, on this
                     device. Never paste it into any other app or website.
                     Press Tab to complete the word you are typing when it
-                    has only one possible completion.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="import-passphrase">
-                    Recovery passphrase (optional)
-                  </Label>
-                  <Input
-                    id="import-passphrase"
-                    type="password"
-                    autoComplete="off"
-                    value={passphrase}
-                    onChange={(event) => setPassphrase(event.target.value)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Optional BIP-39 passphrase (25th word). It is never
-                    stored — you will need it again if you restore this wallet
-                    elsewhere. The
-                    previewed addresses below are derived with it.
+                    has only one possible completion. If your wallet uses an
+                    extra word (a 25th word), paste all 25 words here —
+                    the extra word is your recovery passphrase, used to
+                    derive the addresses below. It is never stored.
                   </p>
                 </div>
                 {phraseError && (
@@ -404,6 +450,156 @@ export function ImportWalletScreen() {
         </Card>
       )}
 
+      {mode === 'phrase' && phraseStep === 'same' && derived !== null && (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>This is the same recovery phrase</CardTitle>
+            <CardDescription>
+              The addresses match your current wallet. You can add a new
+              account from this phrase — there is no need to delete
+              anything.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-3">
+              {DISPLAY_ORDER.map((chainId) => (
+                <li key={chainId} className="space-y-1">
+                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                    {derived[chainId]}
+                  </code>
+                </li>
+              ))}
+            </ul>
+            {addedAccount !== null ? (
+              <>
+                <p role="status" className="text-sm leading-relaxed">
+                  {accountName(addedAccount)} added. It is a new account
+                  from the same recovery phrase, with its own addresses.
+                </p>
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to="/wallets">See your accounts</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                {vaultPassphraseNeeded && splitPassphrase !== '' && (
+                  <Alert>
+                    <AlertDescription>
+                      This wallet uses a recovery passphrase, and this
+                      browser does not know it right now. Unlock your
+                      wallet with your recovery passphrase first, then add
+                      the account — adding it now would derive the wrong
+                      addresses.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <Button
+                  type="button"
+                  disabled={isAddingAccount || (vaultPassphraseNeeded && splitPassphrase !== '')}
+                  onClick={() => void handleAddSamePhraseAccount()}
+                  className="h-auto whitespace-normal py-3 text-center"
+                >
+                  {isAddingAccount
+                    ? 'Adding…'
+                    : `Add as ${accountName(vaultAccounts.length === 0 ? 0 : Math.max(...vaultAccounts) + 1)}`}
+                </Button>
+                {vaultPassphraseNeeded && splitPassphrase !== '' && (
+                  <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+                    <Link to="/lock">Unlock with your recovery passphrase</Link>
+                  </Button>
+                )}
+              </>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setPhraseStep('enter');
+                setDerived(null);
+                setNormalizedMnemonic(null);
+                setSplitPassphrase('');
+                setAddedAccount(null);
+              }}
+            >
+              Back
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === 'phrase' && phraseStep === 'different' && derived !== null && (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>
+              {compareUnavailable
+                ? 'Your wallet is locked'
+                : 'This is a different recovery phrase'}
+            </CardTitle>
+            <CardDescription>
+              {compareUnavailable
+                ? 'Your wallet is locked, so this phrase could not be compared with it yet.'
+                : 'The addresses do not match your current wallet.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="space-y-3">
+              {DISPLAY_ORDER.map((chainId) => (
+                <li key={chainId} className="space-y-1">
+                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <code className="block break-all rounded-md bg-muted p-3 text-sm">
+                    {derived[chainId]}
+                  </code>
+                </li>
+              ))}
+            </ul>
+            {compareUnavailable ? (
+              <p className="text-sm leading-relaxed">
+                Unlock your wallet first, then restore this phrase again to
+                compare it. To use a different phrase instead, delete the
+                existing vault from security settings — make sure you have
+                its recovery phrase written down first.
+              </p>
+            ) : (
+              <p className="text-sm leading-relaxed">
+                To use this phrase, delete the existing vault from security
+                settings first. Make sure you have its recovery phrase
+                written down — deleting a vault without its phrase loses
+                the wallet. Or keep your current wallet and add another
+                account from it on the Wallets screen.
+              </p>
+            )}
+            <div className="flex flex-col gap-3">
+              {compareUnavailable ? (
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to="/lock">Unlock your wallet</Link>
+                </Button>
+              ) : (
+                <Button asChild className="h-auto whitespace-normal py-3 text-center">
+                  <Link to="/wallets">Add an account from your current phrase</Link>
+                </Button>
+              )}
+              <Button asChild variant="outline" className="h-auto whitespace-normal py-3 text-center">
+                <Link to="/security">Go to security settings</Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPhraseStep('enter');
+                  setDerived(null);
+                  setNormalizedMnemonic(null);
+                  setSplitPassphrase('');
+                  setCompareUnavailable(false);
+                }}
+              >
+                Back
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {mode === 'phrase' && !vaultExists && phraseStep === 'preview' && derived !== null && (
         <Card className="rounded-xl">
           <CardHeader>
@@ -415,10 +611,25 @@ export function ImportWalletScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {splitPassphrase !== '' && (
+              <Alert>
+                <AlertDescription>
+                  An extra word was used as your recovery passphrase to
+                  derive these addresses. It is never stored — you will
+                  need it again if you restore this wallet elsewhere.
+                </AlertDescription>
+              </Alert>
+            )}
             <ul className="space-y-3">
               {DISPLAY_ORDER.map((chainId) => (
                 <li key={chainId} className="space-y-1">
-                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                    <CopyButton
+                      value={derived[chainId]}
+                      label={`Copy ${CHAIN_LABELS[chainId]} address`}
+                    />
+                  </div>
                   <code className="block break-all rounded-md bg-muted p-3 text-sm">
                     {derived[chainId]}
                   </code>
@@ -432,6 +643,7 @@ export function ImportWalletScreen() {
                  setPhraseStep('enter');
                  setDerived(null);
                  setNormalizedMnemonic(null);
+                 setSplitPassphrase('');
                }}
              >
                Edit recovery phrase
@@ -485,7 +697,13 @@ export function ImportWalletScreen() {
             <ul className="space-y-3">
               {DISPLAY_ORDER.map((chainId) => (
                 <li key={chainId} className="space-y-1">
-                  <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">{CHAIN_LABELS[chainId]}</div>
+                    <CopyButton
+                      value={derived[chainId]}
+                      label={`Copy ${CHAIN_LABELS[chainId]} address`}
+                    />
+                  </div>
                   <code className="block break-all rounded-md bg-muted p-3 text-sm">
                     {derived[chainId]}
                   </code>

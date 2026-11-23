@@ -81,7 +81,7 @@ describe('app routing — asset detail (Lane B)', () => {
     // the 'Loading…' fallback would still be showing.
     const mounted = await mountApp('/');
     try {
-      expect(mounted.div.textContent).toContain('Welcome to Bawa Web Wallet');
+      expect(mounted.div.textContent).toContain('Welcome to Bawa');
       act(() => {
         window.history.pushState({}, '', '/assets/btc');
         window.dispatchEvent(new PopStateEvent('popstate'));
@@ -92,7 +92,7 @@ describe('app routing — asset detail (Lane B)', () => {
       expect(mounted.div.textContent).toContain('Balance unavailable');
       expect(mounted.div.textContent).not.toContain('Loading…');
       expect(mounted.div.textContent).not.toContain(
-        'Welcome to Bawa Web Wallet',
+        'Welcome to Bawa',
       );
     } finally {
       await mounted.cleanup();

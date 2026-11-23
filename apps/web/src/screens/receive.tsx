@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWallet } from '../state/wallet-context';
-import { availableFor, chainConfig, type ChainId } from '../wallet/chains';
+import { availableFor, canRotateReceiveAddress, chainConfig, type ChainId } from '../wallet/chains';
 import { devnetChainConfigOrUndefined } from '../wallet/devnet-endpoints';
 import { CHAIN_DECIMALS, decimalToBaseUnits } from '../wallet/chain-amount-format';
 import { buildBawaSendLink, buildPaymentUri, qrSvgToPngFile } from '../wallet/payment-links';
@@ -27,7 +27,23 @@ import { Label } from '../ui/components/label';
 type QrTemplate = 'address' | 'payment' | 'link';
 
 export function ReceiveScreen() {
-  const { addresses, balances, tokenBalances, vaultAddresses, selectedChain, setSelectedChain, customTokens, devnetEnabled } = useWallet();
+  const {
+    addresses,
+    balances,
+    tokenBalances,
+    vaultAddresses,
+    selectedChain,
+    setSelectedChain,
+    customTokens,
+    devnetEnabled,
+    receiveAddresses: receiveAddressesRaw,
+    receiveIndices: receiveIndicesRaw,
+    nextReceiveAddress,
+  } = useWallet();
+  // Older mocked contexts may not provide the new fields; default them
+  // so the screen still renders on the account address.
+  const receiveAddresses = receiveAddressesRaw ?? {};
+  const receiveIndices = receiveIndicesRaw ?? {};
   const [copyStatus, setCopyStatus] = useState('');
   const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<TokenRecord | null>(null);
@@ -36,6 +52,7 @@ export function ReceiveScreen() {
   // Item 20: stepped flow — network, then token, then amount + QR.
   const [step, setStep] = useState<'chain' | 'token' | 'details'>('chain');
   const [template, setTemplate] = useState<QrTemplate | null>(null);
+  const [isRotating, setIsRotating] = useState(false);
   const qrRef = useRef<HTMLDivElement | null>(null);
 
   const chains = availableFor('receive');
@@ -92,8 +109,38 @@ export function ReceiveScreen() {
   const watchAddress = chain
     ? addresses[chain].find((entry) => entry.index === 0)?.address
     : undefined;
-  const address = vaultAddress ?? watchAddress;
+  // Lane C, item 8 — the HD wallet: the QR card shows the receiving
+  // address for this account, derived from the next unused index, while
+  // the list above keeps the multichain view (one address per network).
+  // While the rotation is still loading, fall back to the account address.
+  const hdAddress = chain ? receiveAddresses[chain] ?? null : null;
+  const address = hdAddress ?? vaultAddress ?? watchAddress;
   const isWatchOnly = address !== undefined && vaultAddress === undefined;
+  const receiveIndex = chain ? receiveIndices[chain] ?? 0 : 0;
+  // Rotation only applies to the vault's own addresses: a watch-only
+  // address has no phrase to derive from, and SOL/TON have one address
+  // per wallet by design.
+  const canRotate =
+    chain !== undefined &&
+    vaultAddress !== undefined &&
+    !isWatchOnly &&
+    canRotateReceiveAddress(chain);
+
+  async function newReceiveAddress(): Promise<void> {
+    if (!chain || !nextReceiveAddress || isRotating) return;
+    setIsRotating(true);
+    setCopyStatus('');
+    try {
+      await nextReceiveAddress(chain);
+      setCopyStatus('New receiving address ready.');
+    } catch (cause) {
+      setCopyStatus(
+        cause instanceof Error ? cause.message : 'Unable to make a new address.',
+      );
+    } finally {
+      setIsRotating(false);
+    }
+  }
 
   const amountError =
     amount.trim() === ''
@@ -569,6 +616,13 @@ export function ReceiveScreen() {
               ))}
             </div>
             <p className="w-full break-all text-center font-mono text-sm text-foreground">{address}</p>
+            {vaultAddress !== undefined && !isWatchOnly && (
+              <p className="w-full text-center text-sm text-ink">
+                {canRotate
+                  ? `Receiving address ${receiveIndex + 1} of this account — choose New address for a fresh one for the next payment.`
+                  : `${config.displayName} has one address per wallet, so there is no new address to generate.`}
+              </p>
+            )}
             <p data-testid="receive-share-link" className="w-full break-all text-center font-mono text-xs text-ink">
               {shareLink}
             </p>
@@ -576,6 +630,16 @@ export function ReceiveScreen() {
               <Button type="button" onClick={() => void copyAddress()}>
                 Copy address
               </Button>
+              {canRotate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void newReceiveAddress()}
+                  disabled={isRotating || !nextReceiveAddress}
+                >
+                  {isRotating ? 'Making address…' : 'New address'}
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={() => void sharePayment()}>
                 Share
               </Button>

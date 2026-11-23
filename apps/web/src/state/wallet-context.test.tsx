@@ -2,7 +2,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import { WalletProvider, useWallet } from './wallet-context';
+import {
+  RECEIVE_INDEX_KEY,
+  WalletProvider,
+  nextReceiveIndex,
+  readReceiveIndices,
+  resetReceiveIndices,
+  useWallet,
+  writeReceiveIndices,
+} from './wallet-context';
 import { getAdapter } from '../wallet/adapters';
 import { fetchTokenBalance } from '../wallet/adapters/token-balances';
 import { deriveAddressesAt } from '../wallet/core';
@@ -625,5 +633,55 @@ describe('wallet context — temporary devnet mode', () => {
     } finally {
       await second.cleanup();
     }
+  });
+});
+
+describe('receive indices', () => {
+  // Lane C, item 8: the HD wallet gives a fresh receiving address (and QR)
+  // for each payment, derived from the next unused address index. The
+  // record is sparse — a chain with no stored index is at index 0.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('starts at index 0 for every chain', () => {
+    const indices = readReceiveIndices();
+    for (const chain of [
+      'btc', 'eth', 'trx', 'ton', 'sol', 'bsc', 'matic', 'arb', 'op',
+      'base', 'avax', 'ltc', 'doge',
+    ] as const) {
+      expect(indices[chain] ?? 0).toBe(0);
+    }
+  });
+
+  it('advances one chain without touching the others', () => {
+    const next = nextReceiveIndex('eth', readReceiveIndices());
+    expect(next).toBe(1);
+    writeReceiveIndices({ ...readReceiveIndices(), eth: next });
+    expect(readReceiveIndices().eth).toBe(1);
+    expect(readReceiveIndices().btc ?? 0).toBe(0);
+  });
+
+  it('treats corrupt storage as all-zero instead of throwing', () => {
+    localStorage.setItem(RECEIVE_INDEX_KEY, 'not-json{');
+    expect(readReceiveIndices().eth ?? 0).toBe(0);
+    localStorage.setItem(
+      RECEIVE_INDEX_KEY,
+      JSON.stringify({ version: 1, eth: 'x', btc: -2 }),
+    );
+    const indices = readReceiveIndices();
+    expect(indices.eth ?? 0).toBe(0);
+    expect(indices.btc ?? 0).toBe(0);
+  });
+
+  it('resets every chain to index 0', () => {
+    writeReceiveIndices({ eth: 3, btc: 2 });
+    resetReceiveIndices();
+    expect(readReceiveIndices().eth ?? 0).toBe(0);
+    expect(readReceiveIndices().btc ?? 0).toBe(0);
   });
 });

@@ -202,9 +202,11 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
       ).not.toHaveLength(0);
       // The no-vault strip makes no price fetch.
       expect(refresh).not.toHaveBeenCalled();
-      // The page still offers wallet creation without scrolling the
-      // desktop layout: the Create card is unchanged.
-      expect(text).toContain('Create a wallet');
+      // Lane C, item 9: the Create card is gone from the welcome
+      // section — the page still offers a way in without scrolling the
+      // desktop layout: the Import card stays.
+      expect(text).not.toContain('Create a wallet');
+      expect(text).toContain('Import a wallet');
     } finally {
       await mounted.cleanup();
     }
@@ -248,4 +250,50 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
   // Vault-lock removal: the strip used to point at unlocking when the
   // vault was locked. There is no locked state any more — an existing
   // vault always shows its balances, so no such test remains.
+});
+
+describe('welcome screen — introduction (Lane C, item 9)', () => {
+  async function mountIntro() {
+    setWallet('no-vault', balancesFor({}));
+    setPrices(
+      { status: 'idle', entries: idleEntries(), lastFetchedAtMs: null },
+      () => {},
+    );
+    return mountScreen();
+  }
+
+  it('explains what Bawa is and what it is for', async () => {
+    const mounted = await mountIntro();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).toContain('Welcome to Bawa');
+      expect(text).toContain(
+        'Bawa is a guide made for humans and AI agents',
+      );
+      expect(text).toContain('crypto wallets');
+      expect(text).toContain('web wallets');
+      expect(text).toContain('Android wallets');
+      expect(text).toContain('HD wallets');
+      expect(text).toContain('smart contracts');
+      expect(text).toContain('What you can do with Bawa');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('has no create-wallet call to action', async () => {
+    const mounted = await mountIntro();
+    try {
+      const text = mounted.div.textContent ?? '';
+      expect(text).not.toContain('Create a wallet');
+      expect(
+        mounted.div.querySelector('a[href="/create-wallet"]'),
+      ).toBeNull();
+      expect(
+        mounted.div.querySelector('a[href="/import-wallet"]'),
+      ).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
 });

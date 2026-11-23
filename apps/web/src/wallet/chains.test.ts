@@ -4,6 +4,7 @@ import {
   assertHardenedEd25519Path,
   assertSupported,
   availableFor,
+  canRotateReceiveAddress,
   capabilitiesFor,
   CHAINS,
   chainConfig,
@@ -240,9 +241,9 @@ describe('chains registry', () => {
     ]);
   });
 
-  it('lists all twenty-two chains for balance, and the four adapter chains for history and three for fee-quote', () => {
+  it('lists all twenty-two chains for balance, seven chains for history, and three for fee-quote', () => {
     // Token discovery (2026-11-22): balance adapters now exist for all
-    // 13 chains, so availableFor('balance') is the full registry.
+    // 22 chains, so availableFor('balance') is the full registry.
     // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains use
     // the same generic EVM adapter, so balance covers all 22 chains.
     expect(availableFor('balance')).toEqual([
@@ -269,7 +270,19 @@ describe('chains registry', () => {
       'aurora',
       'fantom',
     ]);
-    expect(availableFor('history')).toEqual(['btc', 'eth', 'trx', 'ton']);
+    // Lane C, item 16 (2026-11-23): ltc/doge/sol history is verified —
+    // adapters + live mainnet cross-check 2026-11-23 (second source).
+    // The five non-ETH EVM chains stay blocked: no keyless public
+    // history indexer exists for them (owner decision: keyed indexer).
+    expect(availableFor('history')).toEqual([
+      'btc',
+      'eth',
+      'trx',
+      'ton',
+      'sol',
+      'ltc',
+      'doge',
+    ]);
     // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
   });
@@ -319,12 +332,11 @@ describe('chains registry', () => {
       expect(caps.restore.status).toBe('verified');
       expect(caps.receive.status).toBe('verified');
       // Token discovery (2026-11-22): balance is verified for the nine
-      // extended chains (live mainnet cross-check 2026-11-22); history,
-      // fee-quote and the send steps stay blocked — never faked.
+      // extended chains (live mainnet cross-check 2026-11-22); the
+      // send steps stay blocked — never faked.
       expect(caps.balance.status).toBe('verified');
       expect(caps.balance.evidence).toContain('live mainnet cross-check 2026-11-22');
       for (const capability of [
-        'history',
         'fee-quote',
         'unsigned-plan',
         'local-sign',
@@ -332,6 +344,17 @@ describe('chains registry', () => {
       ] as const) {
         expect(caps[capability].status).toBe('blocked');
         expect(caps[capability].evidence).toContain('never faked');
+      }
+      // Lane C, item 16 (2026-11-23): history is verified for sol/ltc/
+      // doge (adapters + live mainnet cross-check 2026-11-23, second
+      // source) and stays blocked for the five non-ETH EVM chains —
+      // no keyless public history indexer exists for them.
+      if (chain === 'sol' || chain === 'ltc' || chain === 'doge') {
+        expect(caps.history.status).toBe('verified');
+        expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
+      } else {
+        expect(caps.history.status).toBe('blocked');
+        expect(caps.history.evidence).toContain('never faked');
       }
     }
     // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains
@@ -479,7 +502,10 @@ describe('chains registry', () => {
     expect(() => assertSupported('sol', 'local-sign')).toThrow(
       /cannot do local-sign/,
     );
-    expect(() => assertSupported('ltc', 'history')).toThrow(/cannot do history/);
+    expect(() => assertSupported('ltc', 'history')).not.toThrow();
+    expect(() => assertSupported('sol', 'history')).not.toThrow();
+    expect(() => assertSupported('doge', 'history')).not.toThrow();
+    expect(() => assertSupported('bsc', 'history')).toThrow(/cannot do history/);
     expect(() => assertSupported('sol', 'derive')).not.toThrow();
   });
 
@@ -1371,9 +1397,10 @@ describe('simulation and evidence levels (S7, items 9+23 chains halves)', () => 
           // A dated live mainnet cross-check justifies the level: the
           // Phase 2 chains were cross-checked 2026-11-19, the nine
           // token-discovery chains 2026-11-22, the nine UI/UX-fixes
-          // item-14 chains 2026-11-23. Any of the three dates is
-          // accepted; the rule that a verified balance needs a dated
-          // cross-check stays intact.
+          // item-14 chains 2026-11-23, the ltc/doge/sol history
+          // adapters 2026-11-23. Any of the dates is accepted; the rule
+          // that a verified balance/history needs a dated cross-check
+          // stays intact.
           expect(entry.evidence).toMatch(
             /live mainnet cross-check 2026-11-(19|22|23)/,
           );
@@ -1622,4 +1649,16 @@ describe('UI/UX fixes item 14 — nine new EVM chains', () => {
       expect(capabilitiesFor(chain.id).balance.status).toBe('verified');
     },
   );
+});
+
+describe('canRotateReceiveAddress', () => {
+  // Lane C, item 8: every chain rotates except SOL and TON, whose paths
+  // are fully hardened (one address per wallet by design).
+  it('rotates every chain except SOL and TON', () => {
+    for (const chain of SUPPORTED_CHAINS) {
+      expect(canRotateReceiveAddress(chain)).toBe(
+        chain !== 'sol' && chain !== 'ton',
+      );
+    }
+  });
 });

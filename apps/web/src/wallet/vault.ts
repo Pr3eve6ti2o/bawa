@@ -434,6 +434,9 @@ export async function createVault(
   }
   writeEnvelope(envelope);
   writeVaultBackup();
+  // Lane C, items 6/7/17: a fresh phrase starts with one account,
+  // Account 1. Further accounts are recorded by the wallet context.
+  writeVaultAccounts([0]);
   unlockedKey = key;
   unlockedMnemonic = mnemonic;
   unlockedPassphrase = passphrase;
@@ -712,14 +715,122 @@ export async function restoreVaultFromBackup(password: string): Promise<void> {
  * Deletes the vault, its stored key and its backup, dropping every
  * closure reference. The backup goes with the vault: a deleted vault
  * must not be resurrectable from a copy the user asked to delete.
+ * The accounts created from its phrase go with it too (Lane C): a new
+ * phrase starts over at Account 1. (HD receive rotation is reset by the
+ * wallet context's resetReceiveRotation, called by the screen that
+ * deletes the vault.)
  */
 export function deleteVault(): void {
   getStorage().removeItem(VAULT_STORAGE_KEY);
   deleteStoredKey();
   deleteVaultBackup();
+  clearVaultAccounts();
   unlockedKey = null;
   unlockedMnemonic = null;
   unlockedPassphrase = null;
+}
+
+// --- Lane C, items 6/7/17: vault accounts ---------------------------------
+// One recovery phrase holds many named accounts. Account index 0 is
+// "Account 1", index 1 is "Account 2", and so on. Only public account
+// index numbers are persisted here — never a recovery phrase, passphrase
+// or key. The vault owns the phrase; this record only says which
+// accounts from it the user has created.
+export const VAULT_ACCOUNTS_KEY = 'bawa-vault-accounts:v1';
+export const MAX_VAULT_ACCOUNTS = 200;
+export const MAX_CREATE_AT_ONCE = 50;
+
+/** "Account 1" for index 0, "Account 2" for index 1, and so on. */
+export function accountName(account: number): string {
+  if (!Number.isSafeInteger(account) || account < 0) {
+    throw new RangeError('account must be a non-negative safe integer');
+  }
+  return `Account ${account + 1}`;
+}
+
+function cleanAccounts(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const cleaned = value.filter(
+    (entry): entry is number =>
+      Number.isSafeInteger(entry) && (entry as number) >= 0,
+  );
+  return [...new Set(cleaned)].sort((a, b) => a - b);
+}
+
+export function readVaultAccounts(): number[] {
+  try {
+    const raw = localStorage.getItem(VAULT_ACCOUNTS_KEY);
+    if (raw === null) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      (parsed as { version?: unknown }).version !== 1 ||
+      !Array.isArray((parsed as { accounts?: unknown }).accounts)
+    ) {
+      return [];
+    }
+    return cleanAccounts((parsed as { accounts: unknown[] }).accounts).slice(
+      0,
+      MAX_VAULT_ACCOUNTS,
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function writeVaultAccounts(accounts: number[]): void {
+  if (
+    accounts.some(
+      (entry) => !Number.isSafeInteger(entry) || (entry as number) < 0,
+    )
+  ) {
+    throw new RangeError(
+      'accounts must be non-negative safe integers',
+    );
+  }
+  const cleaned = cleanAccounts(accounts);
+  if (cleaned.length > MAX_VAULT_ACCOUNTS) {
+    throw new RangeError('too many accounts');
+  }
+  localStorage.setItem(
+    VAULT_ACCOUNTS_KEY,
+    JSON.stringify({ version: 1, accounts: cleaned }),
+  );
+}
+
+/**
+ * The merged list after creating `count` NEW accounts after the highest
+ * existing one (Account 1 exists → 10 more gives Account 2–11).
+ * Pure: it does not write anything.
+ */
+export function nextVaultAccounts(
+  existing: number[],
+  count: number,
+): number[] {
+  if (
+    !Number.isSafeInteger(count) ||
+    count < 1 ||
+    count > MAX_CREATE_AT_ONCE
+  ) {
+    throw new RangeError(
+      `Count must be between 1 and ${MAX_CREATE_AT_ONCE}.`,
+    );
+  }
+  const cleaned = cleanAccounts(existing);
+  const highest = cleaned.length === 0 ? -1 : cleaned[cleaned.length - 1] as number;
+  const next = [...cleaned];
+  for (let offset = 1; offset <= count; offset += 1) {
+    next.push(highest + offset);
+  }
+  if (next.length > MAX_VAULT_ACCOUNTS) {
+    throw new RangeError('too many accounts');
+  }
+  return next;
+}
+
+export function clearVaultAccounts(): void {
+  localStorage.removeItem(VAULT_ACCOUNTS_KEY);
 }
 
 /**
