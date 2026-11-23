@@ -116,8 +116,8 @@ The registry covers 22 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, bas
 
 ## Project structure
 
-Verified against the `panel-rebuild/token-gaps` tree at `8191b2c`
-(Lane I, FIX-ALL programme, 2026-11-24). Counts are tracked
+Verified against the `panel-rebuild/fix-all` tree at `62abe11`
+(Lane J, FIX-ALL programme, 2026-11-24). Counts are tracked
 files (`git ls-files`).
 
 ```text

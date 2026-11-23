@@ -1837,3 +1837,135 @@ deletion (for Lane I / repo-cleanup); multi-phrase vaults (owner decision
 on options A/B/C); DOGE fallback (owner key decision); rotation-funds
 aggregation (follow-up design); Metis history is one CORS header away
 from wiring.
+
+## §23 — FIX-ALL merge lane (Lane J), 2026-11-24
+
+The FIX-ALL programme (Lanes A–I) was merged into `panel-rebuild/fix-all`
+by cherry-pick, then merged into `panel-rebuild/token-gaps`. Coordinator:
+hands-on Muse, 0 Sol calls. Base token-gaps `8191b2c`; fix-all code tip `62abe11`; merged into
+token-gaps at `<MERGE-SHA — recorded after the merge; see the
+FIX-ALL programme record>`.
+
+### What was merged
+
+- Lane C `68aa8e6`, Lane G `0dd82de`, Lane I docs `2aab406`, Lane E
+  `24fcd20`, Lane I 980 px `3fce3f7`, Lane A `3e18b7b`, Lane B `23ae583`,
+  Lane D `09cf474`, Lane F `c518704`, Lane H `a72ebf7`, Lane I rename
+  `6a8cdf5`. Token-gaps `df48d9c` (README-FULL fix), `3a05657` (redrawn
+  diagrams), `5e88c07` (re-shot screenshots + grid) and `8aefab7`
+  (HOW-IT-WORKS trace fix) merged in — none reverted.
+- Merge-lane commits: `b534c4f` (Linea out of the balance-only list;
+  E2E-05 manifest corrected), `62a8d59` (HOW-IT-WORKS trace
+  re-verified against the merged tree: 48/48 refs pass), `313cacb`
+  (Lane F tests/prose reconciled with Lane A/B data; merge join
+  defects fixed).
+
+### Decisions taken in the merge lane
+
+1. **confirmation-policy.ts — KEEP.** Lane H's module deletion orphaned
+   it (no production importer; only its own `__typetests__` file
+   imports it). The owner's 2026-11-20 decision stands: the file stays
+   spec-only. Orphan status recorded, not silently deleted.
+2. **E2E-05 manifest — UPDATED, not landed via wallet-refresh.ts.**
+   `wallet-refresh.ts` was deleted by Lane H, so landing it is no
+   longer an option. `apps/web/e2e/manifest.json` E2E-05 now asserts
+   the honest blank state the rewritten spec pins.
+3. **Linea — out of the balance-only list.** Lane A wired Linea
+   history via Etherscan V2 (keyless). Five chains stay unwired
+   (bsc, gnosis, opbnb, metis, fantom), not six.
+4. **CSP — 62 unique origins (57 mainnet + 5 devnet).** Union of
+   Lane A's and Lane F's origin lists, minus dead `1rpc.io` (Lane A:
+   -32001 usage-limit exhausted on this egress). `1rpc.io` survives
+   only in comments documenting its removal.
+5. **priceFallbackSourcesFor — kept as the API.** Lane F's Prices
+   card states the fallback order in words rather than calling the
+   function. That drift is recorded here, not re-engineered in the
+   merge lane.
+6. **Price-source truth after the merge (Lane B over Lane F's
+   numbers):** CoinLore covers 19 chains, DexScreener 13 wrapped
+   contracts; TonAPI covers TON, Coinbase covers LTC; the three
+   chains CoinLore misses are all covered another way. **No chain is
+   CoinGecko-alone any more** (pinned by a new every-chain test).
+7. **980 px breakpoint — one port.** Lane H and Lane I ported
+   desktop-layout-v2's breakpoint identically (`lg:` → `desktop:`);
+   only comment wording differed. HEAD (Lane I) wording taken, plus
+   both border assertions in `app.test.tsx`.
+
+### Merge defects found and fixed in the lane
+
+- `trx.ts`: the hand-merge left a second `resolveBaseUrls` /
+  `readJsonFrom` pair and a second `identityChecked` (Lane A had
+  inserted its PublicNode comment before those lines in its file).
+  Removed; all declarations single; tsc clean.
+- Line-join defects: the marker-regex resolver dropped the newline
+  after a resolved hunk when the next line was not blank, joining
+  lines in `app.test.tsx` (comment swallowed an `await`), `app.tsx`,
+  `globals.test.ts` (comment swallowed an `expect`),
+  `price-fallbacks.ts` (`}export function`), `HOW-IT-WORKS.md`
+  (Prices + Receive rows joined) and `DECISIONS.md` (trailing
+  newline). Found by tsc (TS1128); fixed by `fix-joins.py`.
+- Lane F's new tests were stale against the merged data: ETH
+  registry lists dRPC, not 1RPC; CoinLore covers Gnosis/Mantle/
+  Fantom. Tests, Prices-card prose, HOW-IT-WORKS bullets,
+  GAP-ANALYSIS (history 16 → 17 chains) and an ADR-0007 amendment
+  updated to the new truth. Mantle also has a DexScreener leg
+  (wrapped MNT).
+
+### Gates on the merged tree
+
+tsc 0, build 0, build:e2e 0, vitest 1858 passed / 5 skipped /
+0 failed, lint apps/web 0, lint root 0, root test 0, npm audit
+0 vulnerabilities. E2E: 23 of 27 verified passing on the merged
+tree (17 in the full run, 6 more on targeted re-runs after the
+stale-spec fixes: E2E-19 ETH, LANE-F switch, E2E-05, E2E-04,
+E2E-02, Item D MY). 4 never passed in any Lane J run, all
+live-network with per-test evidence: E2E-06 SHIB (add dialog never
+opened), Item D DISC ("Token added" never appeared; Solana RPC
+degraded), E2E-13 SPL USDT (Metaplex verification over degraded
+Solana RPC), E2E-19 SOL fallback (backup Vibe Station unreachable).
+Window-flip proof: MY failed in the full run (2.0 m timeout) and
+passed on re-run (3.2 s); NOT passed in the full run (2.8 s) and
+failed on re-run (2.0 m) — the suite is network-window-dependent,
+not deterministically green. The full run's last three tests
+initially failed on a dead preview server ([WebServer] Terminated
+mid-run, ERR_CONNECTION_REFUSED) — infrastructure, not the app;
+all three passed on re-run. Two stale-spec families were fixed in
+the merge lane, not waived: the ETH backup is dRPC not 1RPC
+(E2E-19 ETH + LANE-F switch), and the item19 custom-RPC choice
+must be on the CSP allowlist (ankr -> Flashbots; the manager
+correctly rejects ankr with "the browser would block it"). CDP
+re-verification at 390/820/980/1440/1919 with screenshots viewed
+(see Lane J report).
+
+### Branch deletions (Lane I list, executed by Lane J)
+
+`<Recorded after the merge in the FIX-ALL programme record and the
+final Lane J report: branch, unique-commit evidence, deletion
+verification. A document cannot name its own merge commit.>`
+
+### Merge-lane fixes found by re-verification (after the gates above)
+
+8. **E2E specs expected dead 1RPC as the ETH backup.** E2E-19 ETH
+   and the Lane F switch spec asserted `1rpc.io`; the merged registry
+   lists dRPC (Lane A). Fixed to `eth.drpc.org`; the Lane F switch
+   test then passed live (10.2 s). The item19 custom-RPC choice
+   (ankr) is correctly rejected by Lane F's allowlist gate ("the
+   browser would block it") — replaced with Flashbots, which is on
+   the allowlist and not in the registry; the test then passed.
+   The full run's last three tests failed on a dead preview server
+   ([WebServer] Terminated mid-run) — infrastructure, not the app;
+   all three passed on re-run.
+9. **Linea history rendered "No transactions yet" on re-verification.**
+   Root cause, proven live: Etherscan V2's keyless tier is 1 request
+   per 5 s per IP and answers NOTOK "Missing/Invalid API Key" inside
+   the window — the same message as a missing key. The app fires the
+   history refresh twice in quick succession, the second call lands
+   inside the window, and the store's request counter discards the
+   first (good) result, so the page ends empty. An empty `&apikey=`
+   parameter was tried first and proven a placebo (a quiet call
+   without it returns status 1; a call inside the window still
+   returns NOTOK with it) — reverted, not shipped. Fix: the EVM
+   adapter retries a keyless-quota NOTOK once after 6 s, with a
+   regression test. Proved live in CDP: NOTOK, NOTOK, then status 1
+   with the real tx, and 0x75dfb5f5... renders under Recent
+   transactions (five real Linea txs for the watched address).
