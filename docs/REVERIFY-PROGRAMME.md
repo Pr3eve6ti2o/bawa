@@ -150,7 +150,7 @@ removed (967 lines) plus 3 dead exports (`AdapterStatus`,
 `PRICE_PROVIDER_NAME`, `SendProgressStage`). Four unwired modules
 flagged, not removed: `engine/destination.ts` (700 lines),
 `wallet/adapters/confirmation.ts` (302 lines),
-`wallet/evm-typed-data.ts` (121 lines), `wallet/secretHandoff.ts`
+`wallet/evm-typed-data.ts` (121 lines), `wallet/secret-handoff.ts`
 (54 lines) — tested, documented capabilities with no non-test
 importer. The `send.ts`/`core.ts` split and the `wallet-refresh.ts`
 re-wire were recorded as still open, not attempted (see "Still
@@ -394,7 +394,7 @@ item 10, commit `b089c28`).
   functional change, not polish.
 - **Unwired modules (Lane 4):** `engine/destination.ts`,
   `wallet/adapters/confirmation.ts`, `wallet/evm-typed-data.ts`,
-  `wallet/secretHandoff.ts` — wire them, or delete them by explicit
+  `wallet/secret-handoff.ts` — wire them, or delete them by explicit
   decision. Largest remaining dead-looking surface (1277 lines
   combined).
 - **Unused dependencies (merge-lane knip run):** 7 `@radix-ui/*`

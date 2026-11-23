@@ -113,3 +113,80 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Android Add path](android-evidence.md) — `UNVERIFIED`: APK installation and launch do not verify Add.
 
 The registry covers 22 chains: btc, eth, trx, ton, sol, bsc, matic, arb, op, base, avax, ltc, doge, gnosis, celo, linea, mantle, scroll, opbnb, metis, aurora, fantom. Chain-level IMPLEMENTED_AND_VERIFIED means verified in at least one explicitly identified profile. Network operations are verified for btc, eth, trx, ton only. The 18 additional chains are scoped to the multichain-extended-wallet profile. The 13-chain registry in registry/capabilities.json (chainSupport) was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
+
+## Project structure
+
+Verified against the `panel-rebuild/token-gaps` tree at `d47d282`
+(Lane E, Finish the Product programme, 2026-11-23). Counts are tracked
+files (`git ls-files`).
+
+```text
+bawa/
+  README.md, WALLET_BUILDER.md, ARCHITECTURE.md, CONSTRAINTS.md,
+  AGENTS.md, NAMING-MAP.md, SECURITY.md, CHANGELOG.md, CONTRIBUTING.md
+    Root docs: the front door, the builder entry point, the code map and
+    invariants, the test/quality floor, repo instructions, naming
+    decisions, security posture, history, contribution guide.
+  apps/
+    web/            (273 files) The wallet web app: React 19 + TypeScript
+                    + Vite + vitest. Entry `src/main.tsx`; `src/app`
+                    (routing, shell), `src/screens` (57 files, one
+                    screen per route), `src/state` (wallet context and
+                    refresh), `src/wallet` (80 files: chains, vault,
+                    adapters, send, prices, tokens), `src/engine`
+                    (address codecs, boundary, destination validation,
+                    confirmation policy), `src/ui` (components, styles),
+                    `src/assets` (chain/token icons), `e2e/` (13
+                    Playwright specs, plus helpers and manifest),
+                    `scripts/` (wasm copy,
+                    palette audit, chains generation).
+    android/        (30 files) The Android starter (Kotlin): app, core
+                    (derivation/confirmation policy, key validation),
+                    ui screens and ViewModel.
+  docs/             (216 files) The guide and programme records, in
+                    Diátaxis order (see the sections above): numbered
+                    docs 01-16, platform guides, reference, evidence,
+                    archive. The single entry point is this index.
+  registry/         (6 files) Machine-readable registries: 4 JSON
+                    (`capabilities`, `engines`, `profiles`, `ui`) + 2
+                    schemas (`profile`, `registry`).
+  packages/
+    contracts/      The `@bawa/contracts` package (package + index).
+  scripts/          (20 files) Builder and gate scripts (`.mjs`):
+                    `build-wallet`, `generate-project`, `plan-build`,
+                    `classify-request`, `quality-gates`, `gate-verdict`,
+                    `secret-scan`, `check-wallet-cycles`,
+                    `check-lockfiles`, `check-pinned-dependencies`,
+                    `validate-registry`, `check-live-prices`, `setup`,
+                    `build-platforms`, `run-test-suites`, plus
+                    `crypto-architecture` and `build-wallet` /
+                    `plan-build` test files, and `generate-templates/`.
+  tools/            (20 files) Python CLIs (`bawa_cli`, `make_wallet`,
+                    `decrypt_seed`, `check-links`) and Node tools:
+                    `hdwallet-gen/` (Trust Wallet Core derivation),
+                    `mainnet-fees/`, `mainnet-guards/`,
+                    `mainnet-signing/`, `mainnet-tx/`, `verify-sign/`.
+  tests/            (31 files) Node `.mjs` suites run by
+                    `scripts/quality-gates.mjs`: registry, derivation
+                    vectors, mainnet guards/fees/signing, failure modes,
+                    lockfiles, secret scan, gate verdicts.
+  test/             (12 files) The older Python + JS smoke suite
+                    (`test_*.py`, `smoke.test.js`,
+                    `register-links.test.js`, `differential_test.py`,
+                    `fixture-oracle.py`): run by CI `python-tests` and
+                    by the root `npm test` (via `tools/hdwallet-gen`).
+                    `test/` and `tests/` are different runners; merging
+                    them is a runner-consolidation decision, not a
+                    rename (Lane E, 2026-11-23).
+  ai/               (19 files) Builder capability detection and
+                    profiles for the AI Wallet Builder.
+  .github/workflows/ `ci.yml` (web, node-tests, python-tests,
+                    docs-checks, e2e, floor-guard) and `security-audit.yml`.
+```
+
+Naming: source files are kebab-case throughout `apps/web/src`
+(`secret-handoff.ts`, not `secretHandoff.ts` — renamed Lane E,
+2026-11-23). The Android tree keeps Java/Kotlin PascalCase by
+convention. Deliberate near-duplicate names are recorded in
+[NAMING-MAP.md](../NAMING-MAP.md) (for example the
+`confirmation-policy.md` spec beside `confirmation-policy.ts`).

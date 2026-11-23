@@ -820,7 +820,7 @@ checklist: `docs/REVERIFY-CHECKLIST.md`. Hands-on Muse, 0 Sol calls.
   stale/refreshing flags. Neither is polish work.
 - **Unwired modules stay:** `engine/destination.ts`,
   `wallet/adapters/confirmation.ts`, `wallet/evm-typed-data.ts`,
-  `wallet/secretHandoff.ts` — wire them, or delete them by explicit
+  `wallet/secret-handoff.ts` — wire them, or delete them by explicit
   decision.
 - **Merge decisions.** The Lane 2 / Lane 3 README conflict was
   resolved by keeping Lane 2's canonical Screenshots section; Lane

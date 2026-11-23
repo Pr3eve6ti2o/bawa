@@ -27,7 +27,7 @@ offer, and anyone who learns the words can spend from the wallet.
   `localStorage`, or logs. JavaScript strings cannot be overwritten,
   so "dropped" is the guarantee — not byte-level erasure.
 - **Single-use handoff.** Secrets passed between screens use
-  `apps/web/src/wallet/secretHandoff.ts`: in-memory only, under
+  `apps/web/src/wallet/secret-handoff.ts`: in-memory only, under
   incrementing numeric IDs, consumed on retrieval, never persisted,
   never put in navigation state, never logged. IDs are routing
   handles, not authorisation tokens, and deletion is not guaranteed

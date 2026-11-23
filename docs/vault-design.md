@@ -67,7 +67,7 @@ reference to the key and the mnemonic. JavaScript strings are
 immutable, so "zeroing" means dropping every reference, not overwriting
 bytes; no copy is retained anywhere after `lock()`. The same limit
 applies to the single-use secret handoff
-(`apps/web/src/wallet/secretHandoff.ts`): deleting an entry drops the
+(`apps/web/src/wallet/secret-handoff.ts`): deleting an entry drops the
 reference and is not guaranteed memory erasure.
 
 ## Backup and restore

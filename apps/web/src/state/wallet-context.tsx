@@ -34,7 +34,7 @@ import {
 import { isPassphraseUsed } from '../wallet/passphrase';
 import type { BalanceState } from '../wallet/balance-state';
 
-export type { BalanceState, BalanceStatus } from '../wallet/balance-state';
+export type { BalanceState } from '../wallet/balance-state';
 
 let vaultCorePromise: Promise<typeof import('../wallet/core')> | undefined;
 

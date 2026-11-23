@@ -6,9 +6,9 @@ import {
   pendingSecretCount,
   storeSecret,
   takeSecret,
-} from './secretHandoff';
+} from './secret-handoff';
 
-describe('secretHandoff', () => {
+describe('secret-handoff', () => {
   beforeEach(() => {
     clearSecrets();
   });
