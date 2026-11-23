@@ -45,6 +45,7 @@ Expected output:
 Route: Create an HD Cryptocurrency Wallet
 Kind: [EXISTING TOOL]
 Details: python3 tools/make_wallet.py
+Runs with inherited stdio; exact YES confirmation is required.
 Command (shown, not executed): python3 tools/make_wallet.py
 ```
 
