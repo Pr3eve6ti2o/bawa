@@ -195,15 +195,36 @@ describe('transaction history screen', () => {
     }
   });
 
-  it('shows the unavailable note and a retry for a failed chain', async () => {
+  it('shows the unavailable note and a retry for a failed chain when the wallet has activity', async () => {
+    // The Retry appears because the wallet HAS activity (a loaded BTC
+    // transaction), so the failed TRON fetch is a real failure worth
+    // retrying.
     setWallet({
       ...perChainEmpty(),
+      btc: { status: 'loaded', txs: [tx('btctx1', 'btc', 'out', '50000')] },
       trx: { status: 'unavailable', reason: 'down', txs: [] },
     });
     const mounted = await mountScreen();
     try {
       expect(mounted.div.textContent).toContain('TRON history unavailable');
       expect(mounted.div.textContent).toContain('Retry');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows only the empty state for a failed chain when the wallet has no activity', async () => {
+    // Marketing fix, Lane 1: a fresh wallet with no transactions shows
+    // "No transactions yet", not "history unavailable" + a dead Retry.
+    setWallet({
+      ...perChainEmpty(),
+      trx: { status: 'unavailable', reason: 'down', txs: [] },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).toContain('No transactions yet');
+      expect(mounted.div.textContent).not.toContain('history unavailable');
+      expect(mounted.div.textContent).not.toContain('Retry');
     } finally {
       await mounted.cleanup();
     }

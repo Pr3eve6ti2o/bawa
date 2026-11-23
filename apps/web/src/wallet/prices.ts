@@ -717,14 +717,15 @@ export function portfolioTotal(
     // Nothing priced. A known non-zero amount with no fresh price makes
     // the total undecidable — never report $0.00 for it. But when every
     // balance that did load is zero and only failed loads are unknown,
-    // the loaded total is genuinely $0.00: report it as a partial total
-    // (the dashboard's "some balances are missing" note discloses the
-    // failed chains) instead of the bare 'Unavailable' a fresh wallet
-    // used to see. Nothing loaded at all stays 'unavailable'.
+    // the loaded total is genuinely $0.00: report it as a clean zero
+    // total with partial: true (the dashboard shows the plain $0.00
+    // hero plus a quiet "couldn't check every balance" note, never the
+    // alarming "$0.00 (Partial)" a fresh wallet used to see). Nothing
+    // loaded at all stays 'unavailable'.
     if (hasUnpricedNonzero || !loadedZero) {
       return { status: 'unavailable', text: 'Unavailable', partial: false };
     }
-    return { status: 'partial', text: '$0.00', partial: true };
+    return { status: 'zero', text: '$0.00', partial: true };
   }
   return {
     status: partial ? 'partial' : 'total',

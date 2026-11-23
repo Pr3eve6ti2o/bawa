@@ -481,7 +481,14 @@ export function AssetDetailScreen() {
               ))}
             </ul>
           </>
-        ) : chainHistory.status === 'empty' ? (
+        ) : chainHistory.status === 'empty' ||
+          (vaultState !== 'locked' && recentTxs.length === 0) ? (
+          // No known transactions for this chain (and the vault open):
+          // a failed history fetch is not an error the user can act on,
+          // so this reads as the empty state, never as "history
+          // unavailable" + a dead Retry. Only while locked does the
+          // failure surface — with an Unlock prompt, not a Retry — and
+          // only a chain with known transactions keeps its Retry.
           <p className="rounded-lg border p-4 text-sm text-muted-foreground">
             No transactions yet for this chain.
           </p>

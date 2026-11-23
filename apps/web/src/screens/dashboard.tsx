@@ -134,6 +134,7 @@ export function DashboardScreen() {
     noPriceFeed: boolean;
     retry: boolean;
     partialNote: boolean;
+    quietNote: boolean;
     showAttribution: boolean;
     priceError: 'rate-limited' | 'network' | 'provider' | 'timeout' | null;
     balancesFailed: boolean;
@@ -142,6 +143,7 @@ export function DashboardScreen() {
     noPriceFeed: false,
     retry: false,
     partialNote: false,
+    quietNote: false,
     showAttribution: false,
     priceError: null,
     balancesFailed: false,
@@ -233,11 +235,18 @@ export function DashboardScreen() {
 
         switch (total.status) {
           case 'zero':
+            // A zero total reads as a clean $0.00 even when some loads
+            // failed (portfolioTotal reports that as zero + partial:
+            // true). The failure is disclosed by a quiet note under
+            // the hero, never by an alarming "(Partial)" on it — a
+            // fresh wallet whose balances all loaded as zero must not
+            // look broken.
             return {
               text: '$0.00',
               noPriceFeed: false,
               retry: false,
               partialNote: false,
+              quietNote: total.partial,
               showAttribution: false,
               priceError: null,
               balancesFailed: false,
@@ -248,6 +257,7 @@ export function DashboardScreen() {
               noPriceFeed: false,
               retry: false,
               partialNote: false,
+              quietNote: false,
               showAttribution: true,
               priceError: null,
               balancesFailed: false,
@@ -258,6 +268,7 @@ export function DashboardScreen() {
               noPriceFeed: false,
               retry: false,
               partialNote: true,
+              quietNote: false,
               showAttribution: true,
               priceError: null,
               balancesFailed: false,
@@ -268,6 +279,7 @@ export function DashboardScreen() {
               noPriceFeed: true,
               retry: allHeroFailed,
               partialNote: false,
+              quietNote: false,
               showAttribution: false,
               priceError: sharedPriceError,
               // Balances failed, not (only) prices: the message below names
@@ -324,6 +336,9 @@ export function DashboardScreen() {
         )}
         {hero.partialNote && (
           <p className="text-xs leading-[18px] text-panel-text-muted">Partial total. Some balances or prices are missing, so this total may be incomplete. Failed balances count as 0.</p>
+        )}
+        {hero.quietNote && (
+          <p className="text-xs leading-[18px] text-panel-text-muted">Some balances or prices couldn&apos;t be checked just now.</p>
         )}
         {hero.noPriceFeed && (
           <p className="text-xs leading-[18px] text-panel-text-muted">

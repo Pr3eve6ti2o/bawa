@@ -373,8 +373,27 @@ describe('text spacing', () => {
   });
 
   it('failed history reads with real spaces', async () => {
+    // The wallet has activity (one loaded BTC transaction), so the
+    // failed TON fetch keeps its unavailable block — the spacing
+    // assertion still has text to read.
     setWallet({
       ...perChainLoaded(),
+      btc: {
+        status: 'loaded',
+        txs: [
+          {
+            hash: '0xabc',
+            chain: 'btc',
+            networkId: 'bitcoin:mainnet',
+            direction: 'in',
+            amountBaseUnits: '100000',
+            counterparty: 'bc1sender',
+            timestamp: 1700000000000,
+            status: 'confirmed',
+            explorerUrl: 'https://mempool.space/tx/0xabc',
+          },
+        ],
+      },
       ton: { status: 'unavailable', reason: 'no-adapter', txs: [] },
     });
     const mounted = await mountScreen(
@@ -390,8 +409,26 @@ describe('text spacing', () => {
   });
 
   it('recent activity unavailable reads with real spaces', async () => {
+    // Same activity fixture as the test above: the TON block renders
+    // only because the wallet has a loaded transaction elsewhere.
     setWallet({
       ...perChainLoaded(),
+      btc: {
+        status: 'loaded',
+        txs: [
+          {
+            hash: '0xabc',
+            chain: 'btc',
+            networkId: 'bitcoin:mainnet',
+            direction: 'in',
+            amountBaseUnits: '100000',
+            counterparty: 'bc1sender',
+            timestamp: 1700000000000,
+            status: 'confirmed',
+            explorerUrl: 'https://mempool.space/tx/0xabc',
+          },
+        ],
+      },
       ton: { status: 'unavailable', reason: 'no-adapter', txs: [] },
     });
     const mounted = await mountScreen(<RecentActivity />);

@@ -440,6 +440,61 @@ async function fetchWithRetry<T>(
   return last as AdapterResult<T>;
 }
 
+/**
+ * Bounded-concurrency runner for the three refreshers (balances,
+ * history, token balances). One shared instance per provider caps ALL
+ * refresh network calls together — not per refresher.
+ *
+ * Why: unlocking a wallet used to fire the whole 43-row dashboard at
+ * once — 22 native balance reads + 21 token balance reads + 7 history
+ * reads + 2 CoinGecko batches, ~50 requests in the first second, most
+ * of them JSON-RPC against the same free-tier hosts (14 EVM chains on
+ * *.publicnode.com, each balance read a getChainId + getBalance pair).
+ * The free tiers 429, fetchWithRetry retries each 3x, and the hero
+ * reads "$0.00 (Partial)" on a wallet whose every balance is zero.
+ * Four concurrent network calls, with retries inside the slot, keeps
+ * the burst inside the free tier while the rows still settle in a few
+ * seconds. Pure promise queueing — no timers — so fake-timer tests are
+ * unaffected. The cap is deliberately small; raise it only with a live
+ * 429 measurement behind the change.
+ */
+export interface RefreshLimiter {
+  run<T>(task: () => Promise<T>): Promise<T>;
+}
+
+export function createRefreshLimiter(limit: number): RefreshLimiter {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  const release = (): void => {
+    active -= 1;
+    const next = queue.shift();
+    if (next !== undefined) next();
+  };
+  return {
+    run<T>(task: () => Promise<T>): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        const start = (): void => {
+          active += 1;
+          task().then(
+            (value) => {
+              release();
+              resolve(value);
+            },
+            (error) => {
+              release();
+              reject(error);
+            },
+          );
+        };
+        if (active < limit) start();
+        else queue.push(start);
+      });
+    },
+  };
+}
+
+export const REFRESH_CONCURRENCY_LIMIT = 4;
+
 // --- Lane G: persisted public vault addresses (see VAULT_ADDRESSES_KEY) ---
 const isStoredAddress = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 128 && !/\s/.test(value);
@@ -708,6 +763,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Per-token request generations (same stale-write guard as the
   // per-chain counters above, keyed by tokenKey).
   const tokenBalanceRequests = useRef<Record<string, number>>({});
+  // Shared refresh limiter (see createRefreshLimiter): one instance
+  // caps balances + history + token balances together at 4 concurrent
+  // network calls, so the three refreshers can never re-form the burst.
+  const refreshLimiter = useRef(createRefreshLimiter(REFRESH_CONCURRENCY_LIMIT));
   const lifetime = useRef(0);
 
   // Refs serialise commands and prevent stale asynchronous results being applied.
@@ -808,7 +867,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous.status !== 'loading') {
         setBalance({ status: 'loading' });
       }
-      const result = await fetchWithRetry(() => adapter.getBalance(address));
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() => adapter.getBalance(address)),
+      );
       if (request !== balanceRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
@@ -879,7 +940,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous.status !== 'loading') {
         setHistory({ status: 'loading', txs: [] });
       }
-      const result = await fetchWithRetry(() => adapter.getHistory(address, 25));
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() => adapter.getHistory(address, 25)),
+      );
       if (request !== historyRequests.current[chain]) return;
       if (result.status === 'ok') {
         const fetchedAtMs = Date.now();
@@ -966,13 +1029,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       } else if (previous === undefined || previous.status !== 'loading') {
         setTokenBalance({ status: 'loading' });
       }
-      const result = await fetchWithRetry(() =>
-        fetchTokenBalance({
-          chain: token.chain,
-          contract: token.contract,
-          ownerAddress: address,
-          decimals: token.decimals,
-        }),
+      const result = await refreshLimiter.current.run(() =>
+        fetchWithRetry(() =>
+          fetchTokenBalance({
+            chain: token.chain,
+            contract: token.contract,
+            ownerAddress: address,
+            decimals: token.decimals,
+          }),
+        ),
       );
       if (request !== tokenBalanceRequests.current[key]) return;
       if (result.status === 'ok') {

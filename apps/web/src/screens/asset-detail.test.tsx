@@ -286,6 +286,9 @@ describe('asset detail screen', () => {
   });
 
   it('never shows the raw history reason', async () => {
+    // The ETH failure keeps its block (and its Retry) only because the
+    // chain has a retained transaction: a failed fetch with no known
+    // activity reads as the empty state instead.
     setWallet(
       {
         ...perChain({ status: 'unavailable', reason: 'no-adapter' }),
@@ -293,7 +296,23 @@ describe('asset detail screen', () => {
       },
       {
         ...perChain(emptyHistory),
-        eth: { status: 'error', reason: 'no-adapter', txs: [] },
+        eth: {
+          status: 'error',
+          reason: 'no-adapter',
+          txs: [
+            {
+              hash: '0xabc',
+              chain: 'eth',
+              networkId: 'eip155:1',
+              direction: 'in',
+              amountBaseUnits: '1000000000000000000',
+              counterparty: '0xSender',
+              timestamp: 1700000000000,
+              status: 'confirmed',
+              explorerUrl: 'https://eth.blockscout.com/tx/0xabc',
+            },
+          ],
+        },
       },
     );
     const mounted = await mountScreen('/assets/eth');
