@@ -4,8 +4,7 @@ Owner order 2026-11-23 ~15:28 IST: 10 items, worked one by one and
 reported per item. Coordinator `7a83a6c9`, hands-on Muse, 0 Sol calls.
 Branch `panel-rebuild/ui-ux-round2`, branched from token-gaps `231ecbf`.
 Merged into `panel-rebuild/token-gaps` by Lane E on 2026-11-23 (merge
-commit recorded in the token-gaps copy of this file; this copy was
-written on `ui-ux-round2` before the merge). No code merged into
+commit `6147b74`). No code merged into
 `panel-rebuild/adopt-proper` or `main` — those stay untouched for code.
 Doc-only updates from this programme (item 10) were pushed to `main`
 and every active remote branch the same day, per the owner's order.
@@ -92,7 +91,7 @@ Run on the merged tree (commit `5da29a8`), Node 22.23.4,
 | `panel-rebuild/desktop-layout-v2` | `79b5b75` | Untouched for code. Doc-only update from this programme. |
 | `panel-rebuild/devnet-temp` | `783b43f` | Untouched for code. Doc-only update from this programme. |
 | `panel-rebuild/token-discovery` | `743d071` | Untouched for code. Doc-only update from this programme. |
-| `panel-rebuild/token-gaps` | `315b5a7` | Merge of `ui-ux-round2` into token-gaps. Contains all 10 round-2 items plus the token-gaps work and the README showcase and Add Token work from the parallel programme. Further work continues on top of token-gaps, per the owner's merge-destination decision (2026-11-23 ~05:11 IST). |
+| `panel-rebuild/token-gaps` | `6147b74` | Merge of `ui-ux-round2` (docs, item 10) into token-gaps. The code merge was `315b5a7`. Contains all 10 round-2 items plus the token-gaps work and the README showcase and Add Token work from the parallel programme. Further work continues on top of token-gaps, per the owner's merge-destination decision (2026-11-23 ~05:11 IST). |
 | `panel-rebuild/ui-ux-round2` | `5da29a8` | Programme branch. Code complete; doc updates from item 10 pushed here first. |
 | `panel-rebuild/readme-showcase-token` | `eab8861` | Parallel programme (README showcase plus Add Token). Not touched by this lane. Its work is already in token-gaps. |
 | `gh-pages` | `ee63a13` | Pages site source. Not touched by this programme. |
