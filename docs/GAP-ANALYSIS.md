@@ -293,6 +293,16 @@ probe time); DOGE `DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke` has no working
 in-app source that day (ground truth via dogechain.info:
 27,164,003,668.40 DOGE).
 
+**Merge-lane re-verification (Lane F, 2026-11-23, merged tree, CDP).**
+Celo history settles live on "No transactions yet for this chain."
+(`/assets/celo`, fresh wallet). Watch-only Vitalik fans out 16/16 live
+on `/wallets`. The six blocked chains are unchanged. Two live-network
+regressions since Lane B: the Solana backup RPC
+(`public.rpc.solanavibestation.com`) is currently unreachable from
+this egress (probed empty), so E2E-19 Solana failover fails on the
+merged tree AND on the pristine `d47d282` baseline; CoinGecko 429s
+make the SHIB/NOT price specs flip by run. Neither is a merge defect.
+
 ## 2. Multi-phrase vaults
 
 **What is missing.** The vault holds one recovery phrase. The envelope

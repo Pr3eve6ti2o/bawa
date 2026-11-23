@@ -1241,3 +1241,88 @@ from token-gaps `e290654`; commit SHA in the lane report.
 - **Gates:** tsc 0, build 0, vitest 1775 passed / 5 skipped / 0
   failed (baseline 1738/5/0), lint 0, npm audit 0 vulnerabilities,
   `generate-chains.mjs --check` OK, root `npm test` 0.
+## §18 — Finish-the-product programme, merge lane (Lane F) — 2026-11-23
+
+Hands-on Muse, 0 Sol calls. Worktree `bawa-finish-product-worktree`.
+Cherry-picked all 10 lane commits onto `panel-rebuild/finish-product`
+(`d47d282` base) in order E, A, C, K, G, H, I, J, D, B-last; follow-up
+commit `69f7d8c` + SVG fix `e0f0c0a`. Merged into `token-gaps` as [SHA TBD].
+
+- **Merge order.** B last because its base was `e290654` (rebase onto
+  `d47d282`, 11 conflicts). C and A merged before K's follow-ups so the
+  stale price-fallback copy and derivation paths were fixed on the merged
+  tree, not on a lane branch.
+- **Merged CSP is 56 total origins, 51 mainnet.** Lane B added 8 history
+  hosts; 3 overlapped Lane D's gap-1 origins (deduplicated). The
+  `security-headers.test.ts` `httpsOrigins` array is rebuilt from the
+  merged string so the two can never drift. History verified is 16 chains
+  (`btc, eth, trx, ton, sol, matic, arb, op, base, avax, ltc, doge, celo,
+  mantle, scroll, aurora`); six stay blocked (`bsc, gnosis, linea, opbnb,
+  metis, fantom`) — no working keyless indexer (owner decision §1 in
+  GAP-ANALYSIS.md).
+- **Chain-strip removal wins.** `chain-strip.tsx` / `chain-strip-display.ts`
+  / `chain-strip.test.tsx` deleted (owner order via Lane J); verified no
+  production importers.
+- **`--bawa-shadow`: keep as-is.** The Oishi hard-offset-shadow treatment
+  was explicitly ordered by the research steer. A flat 4 px ink offset is
+  not the blur/glow the `globals.test.ts` box-shadow guard covers, and the
+  guard bans literal `box-shadow` in `globals.css` source — the token holds
+  the value in a CSS variable, so the source stays clean. If the owner
+  wants the guard to ban offset shadows too, that is a new decision.
+- **QR 136 px vs 192 px spec: keep 136 px.** Owner decision; measured live
+  at 136×136 in CDP. Do not change silently.
+- **Recent Activity vs Transactions divergence (both tested, intentional).**
+  On Recent Activity, a failed history is not an empty history: the
+  unavailable + Retry block renders when the wallet has activity, while
+  locked, or when any chain failed with a reason other than `no-address`
+  (`no-address` is the initial state, not a failure). On the Transactions
+  screen the merged semantics show neither state with no activity (the
+  honest empty state, E2E-05). The two screens differ by design; do not
+  "unify" them without an owner decision.
+- **Merge defects found by gates and fixed in place (all in commit
+  `69f7d8c`).** `dex-prices.ts` lost Lane C's `PRICE_FETCH_TIMEOUT_MS`
+  import + local `isAbortError` in the resolution (tsc caught it);
+  `chains.ts` had a stray comment line + a duplicate
+  `HISTORY_EVIDENCE_2026_11_23` const git auto-merged; `chains.test.ts`
+  had a dead `else if (chain === 'op')` outside the resolved region. The
+  lesson stands: a cherry-pick that "succeeds" still needs the full suite
+  on the merged tree before it is trusted.
+- **CDP re-verification (this lane, root-base build).** SOL rotation live
+  (`AWJmCKgC…` → `C4McuDyE…`, QR decodes to the rotated address); TON
+  second address live (`UQBlsndF…` → `UQDI4-PA…`); CELO shares the ETH
+  address live; LTC zpub import live (toast + Imported wallets entry);
+  watch-only Vitalik 16/16 live; CoinGecko-blocked prices live (CoinLore
+  BTC $61,878.40, ETH $1,763.80; Fantom $0.029092 DexScreener); Celo history
+  empty state live; Transactions honest empty state live; no Retry / no
+  "Balance unavailable" / real logos at 390/1440/1919; Receive redesign +
+  136 px QR + 3 templates live; single Create button live; no Popular
+  chains on the homepage + Scan tile live; cold load 1,376,967 bytes
+  (390 ms settle ~3.2 s unthrottled, ~5.3 s Slow 4G); both SVGs render
+  (architecture line fixed after a viewed clip). The Recent Activity "No
+  activity yet" empty state was NOT captured live in CDP — the indexers
+  429'd on both runs, so Lane C's all-failed unavailable state rendered
+  instead (correct behaviour); it is covered by unit test + E2E-05.
+- **Gates:** tsc 0, build 0, build:e2e 0, vitest 1871 passed / 5 skipped /
+  0 failed (97 files), lint 0 (apps/web + root), npm audit 0
+  vulnerabilities, root `npm test` 0, root `npm run check` 0. E2E: full
+  suite 15/24 pass, 9 fail (13.3 min) — E2E-06, E2E-03, E2E-13, E2E-18,
+  E2E-19, E2E-02, Item D DISC, Item D MY, E2E-05. Alone on the merged tree
+  E2E-03 and E2E-18 pass; E2E-06, E2E-19, E2E-02, E2E-05, E2E-13, DISC fail
+  identically on the pristine `d47d282` baseline (pre-existing, not merge
+  defects; the CoinGecko failure flipped: NOT on baseline, SHIB on merged).
+  E2E-02 is the known real devnet-derivation race. The rest are
+  live-network (Solana backup RPC unreachable from this egress, CoinGecko
+  429s, public-RPC rate limits). E2E is NOT claimed green.
+- **Open decisions carried forward (unchanged).** QR 136/192; Receive
+  details scroll 426 px (smaller buttons vs top-stack rework); E2E-02
+  devnet-derivation race (real app bug); 12 EVM chains balance-only
+  without a keyed API; rotation funds invisible in the dashboard;
+  multi-phrase vaults; faucets (owner must complete captchas); TonCenter
+  keyed tier; DOGE fallback (Blockchair key or accept outage); xDAI+MNT
+  no keyless price fallback; FTM low-liquidity pair; devnet+unlocked-vault
+  Retry; asset-detail sticky Refresh; Number Ticker CDP-unverified
+  (nonzero hero needs a funded wallet, forbidden); live-camera scan
+  unverified (needs the owner's phone); review/sign CDP-unverified;
+  Receive tagline (owner must say which line goes); README showcase link
+  (item A waits on the owner's link); `ci.yml` defines the `web` job
+  twice (second shadows the first — owner/merge-lane decision).
