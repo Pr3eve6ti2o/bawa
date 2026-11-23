@@ -20,7 +20,7 @@
 // - img-src 'self' data:: QR codes are inline SVG (no raster fetch); data:
 //   is kept for favicon-style assets. font-src 'self' data:: @fontsource
 //   woff2 is self-hosted; data: covers inlined font subsets if any.
-// - connect-src 'self' plus the forty-six pinned provider origins: the
+// - connect-src 'self' plus the forty-eight pinned provider origins: the
 //   same-origin wallet-core.wasm fetch plus the read-only balance/history
 //   adapter endpoints — BTC https://mempool.space, ETH
 //   https://ethereum-rpc.publicnode.com (RPC) and https://eth.blockscout.com
@@ -31,7 +31,7 @@
 //   https://litecoinspace.org, Dogecoin https://sochain.com (primary) +
 //   https://api.blockcypher.com (fallback). api.mainnet-beta.solana.com
 //   was retired by the token-gaps programme (2026-11-22): it 403s browser
-//   requests. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL) and DexScreener https://api.dexscreener.com (keyless public API, the fallback price source for tokens CoinGecko does not list — README showcase + Add Token, item D, 2026-11-23; TonAPI rates for TON Jettons need no new origin, https://tonapi.io is already pinned).
+//   requests. Price feed: CoinGecko https://api.coingecko.com (keyless public API, on-demand quotes only; the optional free Demo key is sent as a header, never as a URL) and DexScreener https://api.dexscreener.com (keyless public API, the fallback price source for tokens CoinGecko does not list — README showcase + Add Token, item D, 2026-11-23; TonAPI rates for TON Jettons need no new origin, https://tonapi.io is already pinned). Lane C (FINISH THE PRODUCT, 2026-11-23): the CoinGecko fallback chain — CoinLore https://api.coinlore.net (keyless batched native-asset quotes, verified live) and Coinbase https://api.exchange.coinbase.com (keyless, LTC only, verified live); both fetch through price-fallbacks.ts when a CoinGecko quote is stale or missing.
 //   UI/UX fixes, item 19 (2026-11-23): the backup RPCs — ETH
 //   https://1rpc.io (1RPC gateway; blastapi.io was the first backup but
 //   is unreachable from the browser — still TypeError after the CSP fix,
@@ -63,7 +63,7 @@
 //   refuses every devnet fetch and devnet mode is dead in the app even
 //   though the endpoints answer curl. Devnet is TEMPORARY: the removal
 //   checklist in docs/DECISIONS.md reverts this line and the test to the
-//   forty-one mainnet origins.
+//   forty-three mainnet origins.
 //   No other origin, no wildcard. Explorer links (tronscan.org,
 //   tonviewer.com) are plain links, not fetches, so they need no entry.
 // - object-src 'none', base-uri 'self': no plugins, no <base> hijack.
@@ -77,7 +77,7 @@ export const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://1rpc.io https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://1rpc.io https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

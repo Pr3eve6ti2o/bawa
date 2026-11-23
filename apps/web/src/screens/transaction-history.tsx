@@ -48,6 +48,17 @@ export function TransactionHistoryScreen() {
     (chain) =>
       history[chain].status === 'unavailable' || history[chain].status === 'error',
   );
+  // Lane C: "No transactions yet" is earned only by a chain that
+  // actually loaded (loaded/empty) with zero transactions. A failed
+  // history is not an empty history — when every shown chain
+  // failed, the unavailable state below wins and the empty message
+  // must not show beside it. When some chains loaded empty and
+  // others failed, both statements are true (about different
+  // chains) and both show.
+  const anyLoaded = shownChains.some(
+    (chain) =>
+      history[chain].status === 'loaded' || history[chain].status === 'empty',
+  );
 
   return (
     <div className="space-y-6">
@@ -112,10 +123,12 @@ export function TransactionHistoryScreen() {
               <span className="sr-only">Loading transactions…</span>
             </div>
           ) : rows.length === 0 ? (
-            <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-              No transactions yet
-              {filter === 'all' ? '.' : ` for ${chainConfig(filter).displayName}.`}
-            </p>
+            anyLoaded ? (
+              <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                No transactions yet
+                {filter === 'all' ? '.' : ` for ${chainConfig(filter).displayName}.`}
+              </p>
+            ) : null
           ) : (
             <ul className="space-y-3">
               {rows.map((tx) => (

@@ -213,6 +213,59 @@ describe('transaction history screen', () => {
     }
   });
 
+  it('never shows "No transactions yet" when every shown chain failed (Lane C, merged)', async () => {
+    // Merged (Lane C + marketing-fix): a failed history is not an empty
+    // history, so the empty message must not show - and the unavailable
+    // block is withheld while the wallet has no activity, so neither
+    // state shows here.
+    setWallet({
+      ...perChainEmpty(),
+      btc: { status: 'unavailable', reason: 'down', txs: [] },
+      eth: { status: 'unavailable', reason: 'down', txs: [] },
+      trx: { status: 'error', reason: 'down', txs: [] },
+      ton: { status: 'unavailable', reason: 'down', txs: [] },
+    });
+    const mounted = await mountScreen();
+    try {
+      expect(mounted.div.textContent).not.toContain('No transactions yet');
+      expect(mounted.div.textContent).not.toContain('history unavailable');
+      expect(mounted.div.textContent).not.toContain('Retry');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows neither state when filtered to a failed chain with no activity (Lane C, merged)', async () => {
+    // Merged: filtered to the failed chain, nothing loaded - no empty
+    // message (nothing earned it) and no unavailable block (no activity).
+    setWallet({
+      ...perChainEmpty(),
+      eth: { status: 'unavailable', reason: 'down', txs: [] },
+    });
+    const mounted = await mountScreen();
+    try {
+      const pill = [...mounted.div.querySelectorAll('button')].find(
+        (button) => button.textContent === 'ETH',
+      );
+      expect(pill).toBeDefined();
+      await act(async () => {
+        pill?.click();
+      });
+      expect(mounted.div.textContent).not.toContain('No transactions yet');
+      expect(mounted.div.textContent).not.toContain('history unavailable');
+      expect(mounted.div.textContent).not.toContain('Retry');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  // NOTE (merge): Lane C's "shows both states when one chain loaded empty
+  // and another failed" is dropped - on this screen the two states are
+  // mutually exclusive by construction (the empty message renders only
+  // when rows.length === 0; the unavailable block only when rows.length
+  // > 0). The same scenario is covered by the test below, which asserts
+  // only the empty state. "Both states together" is a Recent Activity
+  // behaviour, where the gates are independent.
   it('shows only the empty state for a failed chain when the wallet has no activity', async () => {
     // Marketing fix, Lane 1: a fresh wallet with no transactions shows
     // "No transactions yet", not "history unavailable" + a dead Retry.

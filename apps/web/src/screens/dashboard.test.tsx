@@ -325,8 +325,17 @@ describe('dashboard screen', () => {
     try {
       // Two CoinGecko feeds now: native prices and token prices
       // (token discovery), each auto-fetching on mount.
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+      // Lane C: the native hook also runs the price-fallback chain
+      // (CoinLore + DexScreener + Coinbase) through this same stub
+      // for the chains the stub's 4-coin payload leaves missing, so
+      // the total call count is 11, not 2. Count CoinGecko calls
+      // only — the fallback legs are asserted in
+      // price-fallbacks.test.ts and prices.test.tsx.
+      const cgCalls = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('api.coingecko.com'),
+      );
+      expect(cgCalls).toHaveLength(2);
+      const urls = cgCalls.map((call) => String(call[0]));
       expect(urls.every((url) => url.includes('api.coingecko.com'))).toBe(true);
       expect(urls.some((url) => url.includes('ids=bitcoin,ethereum'))).toBe(true);
       expect(urls.some((url) => url.includes('ids=usd-coin,tether'))).toBe(true);
@@ -734,14 +743,20 @@ describe('dashboard screen', () => {
         await act(async () => {
           await vi.advanceTimersByTimeAsync(0);
         });
-        // Two feeds (native + token) on mount.
-        expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        // Two CoinGecko feeds (native + token) on mount. Lane C:
+        // count CoinGecko calls only — the fallback chain rides the
+        // same stub (see the mount test above).
+        const cgCalls = () =>
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+            ([url]) => String(url).includes('api.coingecko.com'),
+          );
+        expect(cgCalls()).toHaveLength(2);
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(60_000);
         });
         // Both feeds retry about every minute.
-        expect(globalThis.fetch).toHaveBeenCalledTimes(4);
+        expect(cgCalls()).toHaveLength(4);
       } finally {
         await mounted.cleanup();
       }

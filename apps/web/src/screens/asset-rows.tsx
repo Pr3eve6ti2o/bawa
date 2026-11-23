@@ -544,7 +544,18 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
   }
 
   // No fiat value exists for a zero balance, so the Value column shows
-  // "—" there — the per-unit price already has its own Price column.
+  // "—" there — but the per-unit price's source still belongs on the
+  // row (Lane C): when the quote is fresh, the detail line ("per BTC ·
+  // Updated just now · CoinGecko") renders under the "—", exactly as
+  // it does under a funded row's fiat value. Without it the fallback
+  // source was invisible on /assets — the list variant shows it, the
+  // table variant did not. Non-fresh rows show nothing extra: the
+  // Price column already states "Price expired" / "Price error".
+  // The detail WRAPS instead of truncating: at 1440 the Value column
+  // clipped "CoinLore" to "Coi…", and the long line squeezed the
+  // asset names to one letter at 390. The cell is capped at 11rem
+  // below the @md breakpoint so the left column keeps its width;
+  // above it the 1fr track constrains the wrap instead.
   const valueText = model.balanceStatus === 'zero' ? undefined : model.valueText;
 
   return (
@@ -574,15 +585,22 @@ function TableRow({ model, onRetry }: { model: AssetRowModel; onRetry: () => voi
           <span className="col-start-2 row-start-2 text-right @md:col-start-auto @md:row-start-auto">
             <TablePriceCell price={model.price} symbol={model.symbol} />
           </span>
-          <span className="col-start-2 row-start-1 text-right @md:col-start-auto @md:row-start-auto">
+          <span className="col-start-2 row-start-1 min-w-0 max-w-[11rem] text-right @md:col-start-auto @md:row-start-auto @md:max-w-none">
             {valueText === undefined ? (
-              <span className="text-[15px] font-semibold text-muted-foreground">—</span>
+              <>
+                <span className="text-[15px] font-semibold text-muted-foreground">—</span>
+                {model.price.kind === 'fresh' ? (
+                  <span className="block text-xs text-muted-foreground">
+                    {model.detail}
+                  </span>
+                ) : null}
+              </>
             ) : (
               <>
                 <span className="block text-[15px] font-bold text-foreground">
                   {valueText}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   {model.detail}
                 </span>
               </>

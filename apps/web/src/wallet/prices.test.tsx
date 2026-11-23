@@ -314,6 +314,50 @@ describe('price cache', () => {
     }
   });
 
+  it('round-trips a fallback quote with its source and provider id', () => {
+    const entries = parsePriceResponse(freshPayload(), NOW_MS);
+    const fantomFallback = {
+      status: 'fresh' as const,
+      quote: {
+        chain: 'fantom' as const,
+        assetId: PRICE_ASSET_IDS.fantom,
+        providerAssetId: '0x21be370d5312f44cB42ce377BC9b8a0cEF1A4C83',
+        usdPrice: '0.02973',
+        providerUpdatedAtMs: NOW_MS - 30_000,
+        fetchedAtMs: NOW_MS,
+        source: 'DexScreener' as const,
+      },
+    };
+    const store = makeStore();
+
+    saveCachedPrices({ ...entries, fantom: fantomFallback }, NOW_MS, store);
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded?.fantom).toEqual(fantomFallback);
+    expect(loaded?.btc).toMatchObject({
+      status: 'fresh',
+      quote: { source: 'CoinGecko', providerAssetId: PRICE_IDS.btc },
+    });
+  });
+
+  it('loads a pre-Lane-C record without a source as CoinGecko', () => {
+    const store = storeWithQuotes(cacheRecord());
+    const loaded = loadCachedPrices(NOW_MS, store);
+
+    expect(loaded?.btc).toEqual({
+      status: 'fresh',
+      quote: {
+        chain: 'btc',
+        assetId: PRICE_ASSET_IDS.btc,
+        providerAssetId: PRICE_IDS.btc,
+        usdPrice: '62683',
+        providerUpdatedAtMs: NOW_MS - 30_000,
+        fetchedAtMs: NOW_MS,
+        source: 'CoinGecko',
+      },
+    });
+  });
+
   it('loads a 20-minute-old cache as expired quotes', () => {
     const entries = parsePriceResponse(freshPayload(), NOW_MS);
     const store = makeStore();
@@ -940,6 +984,35 @@ describe('usePrices', () => {
     vi.restoreAllMocks();
   });
 
+  // Lane C: the hook now fetches the keyless fallbacks (CoinLore,
+  // DexScreener, TonAPI, Coinbase) for any chain whose CoinGecko
+  // quote is not fresh, so a stub must route by URL — a
+  // sequence-based stub would hand the CoinGecko payload to a
+  // fallback call (or vice versa). Fallback URLs answer with an
+  // empty body here (no pair / no coin), so the fallback resolves
+  // honestly unavailable and the test observes the CoinGecko path.
+  // Lane C: the stubbed fetch response shape. The explicit return
+  // type keeps tsc from inferring the multi-branch stub literals
+  // circularly (TS2577/TS7023 on the inline `headers.get`).
+  type StubPriceResponse = {
+    ok: boolean;
+    status: number;
+    json?: () => Promise<unknown>;
+    headers?: { get: (name: string) => string | null };
+  };
+  const isCoinGeckoCall = (call: unknown[]): boolean =>
+    typeof call[0] === 'string' &&
+    (call[0] as string).includes('api.coingecko.com');
+  const coinGeckoCalls = (stub: {
+    mock: { calls: unknown[][] };
+  }): unknown[][] => stub.mock.calls.filter(isCoinGeckoCall);
+  const fallbackEmptyResponse = (): StubPriceResponse => ({
+    ok: true,
+    status: 200,
+    json: async () => [],
+    headers: { get: () => null },
+  });
+
   async function mount() {
     const div = document.createElement('div');
     document.body.appendChild(div);
@@ -1030,7 +1103,9 @@ describe('usePrices', () => {
       const entries = Object.values(latest!.state.entries);
       expect(entries).toHaveLength(22);
       for (const entry of entries) expect(entry).toMatchObject({ status: 'error', reason: 'network' });
-      expect(stub).toHaveBeenCalledTimes(3);
+      // Three CoinGecko attempts. The fallback calls throw too (the
+      // same dead network) and are not CoinGecko attempts.
+      expect(coinGeckoCalls(stub)).toHaveLength(3);
     } finally {
       await cleanup();
     }
@@ -1104,18 +1179,25 @@ describe('usePrices', () => {
     try {
       const payload = freshPayload();
       const sleep = vi.fn((_ms: number) => Promise.resolve());
-      const fetchStub = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 429,
-          headers: { get: () => '30' },
-        })
-        .mockResolvedValueOnce({
+      let coinGeckoCallCount = 0;
+      const fetchStub = vi.fn(async (url: RequestInfo | URL): Promise<StubPriceResponse> => {
+        if (!String(url).includes('api.coingecko.com')) {
+          return fallbackEmptyResponse();
+        }
+        coinGeckoCallCount += 1;
+        if (coinGeckoCallCount === 1) {
+          return {
+            ok: false,
+            status: 429,
+            headers: { get: () => '30' },
+          };
+        }
+        return {
           ok: true,
           status: 200,
           json: async () => payload,
-        });
+        };
+      });
       vi.stubGlobal('fetch', fetchStub);
 
       ({ cleanup } = await mountWithSleep(sleep));
@@ -1128,7 +1210,7 @@ describe('usePrices', () => {
       expect(latest!.state.entries).toEqual(
         parsePriceResponse(payload, NOW_MS),
       );
-      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(coinGeckoCalls(fetchStub)).toHaveLength(2);
       expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([30_000]);
     } finally {
       try {
@@ -1146,14 +1228,21 @@ describe('usePrices', () => {
     try {
       const payload = freshPayload();
       const sleep = vi.fn((_ms: number) => Promise.resolve());
-      const fetchStub = vi
-        .fn()
-        .mockRejectedValueOnce(new TypeError('Network request failed'))
-        .mockResolvedValueOnce({
+      let coinGeckoCallCount = 0;
+      const fetchStub = vi.fn(async (url: RequestInfo | URL) => {
+        if (!String(url).includes('api.coingecko.com')) {
+          return fallbackEmptyResponse();
+        }
+        coinGeckoCallCount += 1;
+        if (coinGeckoCallCount === 1) {
+          throw new TypeError('Network request failed');
+        }
+        return {
           ok: true,
           status: 200,
           json: async () => payload,
-        });
+        };
+      });
       vi.stubGlobal('fetch', fetchStub);
 
       ({ cleanup } = await mountWithSleep(sleep));
@@ -1166,7 +1255,7 @@ describe('usePrices', () => {
       expect(latest!.state.entries).toEqual(
         parsePriceResponse(payload, NOW_MS),
       );
-      expect(fetchStub).toHaveBeenCalledTimes(2);
+      expect(coinGeckoCalls(fetchStub)).toHaveLength(2);
       expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([1000]);
     } finally {
       try {
@@ -1204,7 +1293,9 @@ describe('usePrices', () => {
           reason: 'rate-limited',
         });
       }
-      expect(fetchStub).toHaveBeenCalledTimes(3);
+      // Three CoinGecko attempts; the fallback calls answer 429 too
+      // and are not CoinGecko attempts.
+      expect(coinGeckoCalls(fetchStub)).toHaveLength(3);
       expect(sleep).toHaveBeenCalledTimes(2);
       expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([
         30_000,
@@ -1230,19 +1321,26 @@ describe('usePrices', () => {
       const payload = freshPayload();
       const expected = parsePriceResponse(payload, NOW_MS);
       const sleep = vi.fn((_ms: number) => Promise.resolve());
-      const fetchStub = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => payload,
-          headers: { get: () => null },
-        })
-        .mockResolvedValue({
+      let coinGeckoCallCount = 0;
+      const fetchStub = vi.fn(async (url: RequestInfo | URL): Promise<StubPriceResponse> => {
+        if (!String(url).includes('api.coingecko.com')) {
+          return fallbackEmptyResponse();
+        }
+        coinGeckoCallCount += 1;
+        if (coinGeckoCallCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => payload,
+            headers: { get: () => null },
+          };
+        }
+        return {
           ok: false,
           status: 429,
           headers: { get: () => '30' },
-        });
+        };
+      });
       vi.stubGlobal('fetch', fetchStub);
 
       ({ cleanup } = await mountWithSleep(sleep));
@@ -1258,7 +1356,7 @@ describe('usePrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       expect(latest!.state.entries).toEqual(expected);
-      expect(fetchStub).toHaveBeenCalledTimes(4);
+      expect(coinGeckoCalls(fetchStub)).toHaveLength(4);
     } finally {
       try {
         await cleanup?.();
@@ -1287,10 +1385,15 @@ describe('usePrices', () => {
       ).toHaveLength(1);
 
       const sleep = vi.fn((_ms: number) => Promise.resolve());
-      const fetchStub = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => payload,
+      const fetchStub = vi.fn(async (url: RequestInfo | URL) => {
+        if (!String(url).includes('api.coingecko.com')) {
+          return fallbackEmptyResponse();
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+        };
       });
       vi.stubGlobal('fetch', fetchStub);
 
@@ -1302,7 +1405,91 @@ describe('usePrices', () => {
 
       expect(latest!.state.status).toBe('ready');
       expect(latest!.state.entries).toEqual(mixed);
-      expect(fetchStub).toHaveBeenCalledTimes(1);
+      expect(coinGeckoCalls(fetchStub)).toHaveLength(1);
+      expect(sleep).not.toHaveBeenCalled();
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('fills an expired Fantom quote from the DexScreener fallback (Lane C)', async () => {
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      // CoinGecko's live Fantom quote: $0.02543177, ~8h stale, so it
+      // parses as expired while every other chain is fresh.
+      const payload = {
+        ...freshPayload(),
+        fantom: {
+          usd: 0.02543177,
+          last_updated_at: secondsBefore(8 * 3_600_000),
+        },
+      };
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      // Live shape, DexScreener tokens/v1/fantom/<WFTM>, 2026-11-23:
+      // the top pair is BOO/WFTM, WFTM as the quote token.
+      const wftmPair = {
+        chainId: 'fantom',
+        dexId: 'spookyswap',
+        pairAddress: '0xEc7178F4C41f346b2721907F5cF7628E388A7a58',
+        baseToken: {
+          address: '0x841FAD6EAe12c286d1Fd18d1d525DFfA75C7EFFE',
+          name: 'SpookyToken',
+          symbol: 'BOO',
+        },
+        quoteToken: {
+          address: '0x21be370d5312f44cB42ce377BC9b8a0cEF1A4C83',
+          name: 'Wrapped Fantom',
+          symbol: 'WFTM',
+        },
+        priceNative: '0.8779',
+        priceUsd: '0.02610',
+        liquidity: { usd: 54560.39, base: 2090000, quote: 1835000 },
+      };
+      const fetchStub = vi.fn(async (url: RequestInfo | URL) => {
+        const u = String(url);
+        if (u.includes('api.coingecko.com')) {
+          return { ok: true, status: 200, json: async () => payload };
+        }
+        if (u.includes('tokens/v1/fantom')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [wftmPair],
+            headers: { get: () => null },
+          };
+        }
+        return fallbackEmptyResponse();
+      });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+
+      expect(latest!.state.status).toBe('ready');
+      const fantom = latest!.state.entries.fantom;
+      expect(fantom.status).toBe('fresh');
+      if (fantom.status === 'fresh') {
+        expect(fantom.quote.source).toBe('DexScreener');
+        expect(Number(fantom.quote.usdPrice)).toBeCloseTo(0.02973, 4);
+      }
+      expect(latest!.state.entries.btc?.status).toBe('fresh');
+      if (latest!.state.entries.btc?.status === 'fresh') {
+        expect(latest!.state.entries.btc.quote.source).toBe('CoinGecko');
+      }
+      expect(
+        fetchStub.mock.calls.some(([u]) =>
+          String(u).includes('tokens/v1/fantom'),
+        ),
+      ).toBe(true);
       expect(sleep).not.toHaveBeenCalled();
     } finally {
       try {

@@ -213,6 +213,55 @@ function errorEntries(
   return Object.fromEntries(requests.map((request) => [request.key, { ...entry }]));
 }
 
+export async function fetchJson(
+  fetchFn: FetchFn,
+  url: string,
+): Promise<
+  | { status: 'ok'; payload: unknown }
+  | { status: 'error'; entries: Extract<PriceEntry, { status: 'error' }> }
+> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PRICE_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetchFn(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      const seconds = retryAfter !== null && retryAfter.trim() !== '' ? Number(retryAfter) : NaN;
+      const retryAfterMs = seconds * 1000;
+      return {
+        status: 'error',
+        entries: {
+          status: 'error',
+          reason: 'rate-limited',
+          ...(Number.isFinite(retryAfterMs) && retryAfterMs >= 0 ? { retryAfterMs } : {}),
+        },
+      };
+    }
+    if (!response.ok) {
+      return { status: 'error', entries: { status: 'error', reason: 'provider' } };
+    }
+    try {
+      return { status: 'ok', payload: await response.json() };
+    } catch (error: unknown) {
+      return {
+        status: 'error',
+        entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'provider' },
+      };
+    }
+  } catch (error: unknown) {
+    return {
+      status: 'error',
+      entries: { status: 'error', reason: isAbortError(error) ? 'timeout' : 'network' },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchDexScreenerPrices(
   fetchFn: FetchFn,
   requests: readonly DexPriceRequest[],

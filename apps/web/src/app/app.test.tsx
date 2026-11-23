@@ -77,7 +77,7 @@ describe.sequential('App', () => {
       expect(div.textContent).toContain('Bawa Web Wallet');
       expect(div.textContent).toContain('Welcome to Bawa');
       expect(div.textContent).toContain(
-        'Mainnet only. This wallet never connects to a test network',
+        'Mainnet by default. Devnet test mode is available from Networks.',
       );
       expect(div.textContent).not.toContain('No wallet yet');
     });
@@ -219,7 +219,7 @@ describe.sequential('App', () => {
           'Devnet test mode. This wallet connects to a test network',
         );
         expect(div.textContent).not.toContain(
-          'Mainnet only. This wallet never connects to a test network',
+          'Mainnet by default. Devnet test mode is available from Networks.',
         );
       });
     } finally {

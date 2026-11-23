@@ -39,7 +39,7 @@ export function NetworkSelectionScreen() {
         <p className="text-sm text-muted-foreground">
           {devnetEnabled
             ? "Devnet test mode is on. This wallet connects to test networks with valueless test tokens."
-            : "Mainnet only. This wallet never connects to a test network. Enable or disable chains. Disabled chains are hidden from your assets."}
+            : "Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. A temporary devnet test mode is available below."}
         </p>
       </header>
 

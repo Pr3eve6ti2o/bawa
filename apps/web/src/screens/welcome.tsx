@@ -117,7 +117,7 @@ export function WelcomeScreen() {
         <p>
           {devnetEnabled
             ? "Devnet test mode. This wallet connects to a test network with valueless test tokens."
-            : "Mainnet only. This wallet never connects to a test network."}
+            : "Mainnet by default. Devnet test mode is available from Networks."}
         </p>
         <p>
           Your balances come from public blockchain networks. This device signs transactions offline. You can send funds only after separate approval.

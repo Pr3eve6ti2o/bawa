@@ -133,11 +133,18 @@ describe('NetworkSelectionScreen', () => {
     }
   });
 
-  it('states mainnet-only and shows the devnet switch when devnet is off', async () => {
+  it('states mainnet by default and shows the devnet switch when devnet is off', async () => {
     setWallet([...SUPPORTED_CHAINS]);
     const mounted = await mountScreen();
     try {
+      // Lane C: "Mainnet only. This wallet never connects to a test
+      // network." was false — the devnet switch sits on this very
+      // screen. The copy must say mainnet is the default, not the
+      // only mode.
       expect(mounted.div.textContent).toContain(
+        'Mainnet by default. Enable or disable chains. Disabled chains are hidden from your assets. A temporary devnet test mode is available below.',
+      );
+      expect(mounted.div.textContent).not.toContain(
         'Mainnet only. This wallet never connects to a test network.',
       );
       expect(mounted.div.textContent).toContain('Temporary devnet test mode');

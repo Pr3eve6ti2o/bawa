@@ -22,10 +22,24 @@
  * DexPaprika rejected: forbids third-party display; no BTC; ETH/TRX only WETH/WTRX.
  * Live 2026-11-19: 'toncoin' returns {}; correct TON id is 'the-open-network'.
  * Refresh ~60s; MAX_QUOTE_AGE_MS permits at most 10 minutes of quote age.
+ * Fallbacks (Lane C, 2026-11-23; see wallet/price-fallbacks.ts for
+ * the live evidence): when a chain's CoinGecko quote is not fresh —
+ * rate-limited, error, or expired, as Fantom's `fantom` id is
+ * (~8h stale live, so it read "Price expired" forever) — usePrices
+ * fills the gap from CoinLore (batched, first), DexScreener wrapped
+ * natives (base-side, or the exact priceUsd/priceNative implied
+ * price for quote-side pairs), TonAPI for TON, Coinbase for LTC.
+ * 20 of 22 chains have a fallback; Gnosis and Mantle are
+ * CoinGecko-only (no verified keyless source). Rejected live:
+ * Binance (451 geo-block; binance.us FTM $0.4806 is a frozen
+ * quote, ~16x the live ~$0.03), CoinPaprika (same frozen FTM
+ * $0.4803), CoinCodex (fantom "not_trading_anymore"), Kraken (no
+ * CORS header). The row label shows the quote's real source.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isPlainObject, ownValue } from './guards';
+import { applyPriceFallbacks } from './price-fallbacks';
 import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
@@ -88,7 +102,7 @@ export const MAX_QUOTE_AGE_MS = 10 * 60 * 1000;
 export const PRICE_FETCH_TIMEOUT_MS = 10_000;
 export const PRICE_ATTRIBUTION_TEXT = 'Powered by CoinGecko';
 
-export type PriceSource = 'CoinGecko' | 'DexScreener' | 'TonAPI';
+export type PriceSource = 'CoinGecko' | 'DexScreener' | 'TonAPI' | 'CoinLore' | 'Coinbase';
 
 export type PriceQuote = {
   chain: ChainId;
@@ -399,7 +413,15 @@ export type PriceCacheStore = {
 export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: PriceCacheStore): void {
   try {
     const quotes: Array<
-      Pick<PriceQuote, 'chain' | 'usdPrice' | 'providerUpdatedAtMs' | 'fetchedAtMs'>
+      Pick<
+        PriceQuote,
+        | 'chain'
+        | 'usdPrice'
+        | 'providerUpdatedAtMs'
+        | 'fetchedAtMs'
+        | 'source'
+        | 'providerAssetId'
+      >
     > = [];
 
     for (const chain of Object.keys(PRICE_IDS) as ChainId[]) {
@@ -416,6 +438,13 @@ export function saveCachedPrices(entries: PriceMap, nowMs: number, store?: Price
         usdPrice: quote.usdPrice,
         providerUpdatedAtMs: quote.providerUpdatedAtMs,
         fetchedAtMs: quote.fetchedAtMs,
+        // Lane C: a fallback quote (CoinLore/DexScreener/TonAPI/
+        // Coinbase) must reload with its real source and provider
+        // id, or the row would misattribute it to CoinGecko. Old
+        // v1 records have neither field and still load as
+        // CoinGecko below.
+        source: quote.source,
+        providerAssetId: quote.providerAssetId,
       });
     }
 
@@ -492,14 +521,33 @@ export function loadCachedPrices(nowMs: number, store?: PriceCacheStore): PriceM
       }
 
       const chainId = chain as ChainId;
+      // Lane C: restore the cached quote's real source when the
+      // record carries one (fallback quotes, written since this
+      // lane). Anything else — old records, or a forged/unknown
+      // value — loads as CoinGecko, which is what every record
+      // written before this lane was.
+      const sourceValue = record['source'];
+      const source: PriceSource =
+        sourceValue === 'CoinGecko' ||
+        sourceValue === 'DexScreener' ||
+        sourceValue === 'TonAPI' ||
+        sourceValue === 'CoinLore' ||
+        sourceValue === 'Coinbase'
+          ? sourceValue
+          : 'CoinGecko';
+      const providerAssetIdValue = record['providerAssetId'];
+      const providerAssetId =
+        typeof providerAssetIdValue === 'string' && providerAssetIdValue !== ''
+          ? providerAssetIdValue
+          : PRICE_IDS[chainId];
       const quote: PriceQuote = {
         chain: chainId,
         assetId: PRICE_ASSET_IDS[chainId],
-        providerAssetId: PRICE_IDS[chainId],
+        providerAssetId,
         usdPrice,
         providerUpdatedAtMs,
         fetchedAtMs,
-        source: 'CoinGecko',
+        source,
       };
 
       entries[chainId] = isFreshQuote(quote, nowMs)
@@ -1030,7 +1078,20 @@ export function usePrices(
         for (let attempt = 0; attempt < 3; attempt += 1) {
           if (!mounted.current) return;
 
-          const entries = await fetchPrices(globalThis.fetch, Date.now());
+          // Lane C: CoinGecko first, then the keyless fallbacks
+          // (price-fallbacks.ts) for every chain whose quote is
+          // not fresh — a 429, an error, or an expired quote such
+          // as Fantom's. A chain no fallback prices keeps its
+          // CoinGecko entry, so the retry/backoff below still sees
+          // the real all-error state when nothing resolved.
+          const cgEntries = await fetchPrices(globalThis.fetch, Date.now());
+          if (!mounted.current) return;
+
+          const entries = await applyPriceFallbacks(
+            globalThis.fetch,
+            cgEntries,
+            Date.now(),
+          );
           if (!mounted.current) return;
 
           const values = Object.values(entries);

@@ -241,6 +241,85 @@ describe('asset list screen', () => {
     }
   });
 
+  it('shows the price source on zero-balance table rows, including a DexScreener fallback (Lane C)', async () => {
+    // Lane C, Part 1: the fallback chain is only trustworthy if the
+    // row says where its price came from. The table variant used to
+    // render the source (model.detail) only under a fiat value, so a
+    // zero-balance row showed "$0.02973 per FTM" with no source at
+    // all — the DexScreener fallback was invisible on /assets.
+    vi.mocked(availableFor).mockReturnValue(['btc', 'fantom']);
+    // Explicit return type: the multi-branch stub literals otherwise
+    // trip TS7023 on the inline `headers.get` (same as
+    // prices.test.tsx's StubPriceResponse).
+    type StubFetchResponse = {
+      ok: boolean;
+      status: number;
+      json: () => Promise<unknown>;
+      headers: { get: (name: string) => string | null };
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string): Promise<StubFetchResponse> => {
+        if (String(url).includes('api.coingecko.com')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => freshPayload(),
+            headers: { get: () => null },
+          };
+        }
+        if (String(url).includes('api.dexscreener.com')) {
+          // WFTM top pair is BOO/WFTM (quote-side): priceUsd is
+          // BOO's price, so the implied WFTM price is 0.02610/0.8779.
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              {
+                chainId: 'fantom',
+                pairAddress: '0x1a3b5b202e1a6d2b9d5f4a3b2c1d0e9f8a7b6c5d',
+                baseToken: {
+                  address: '0x841FAD6EAe12c286d1Fd18d1d525DFfA6Ce6eBEB',
+                  symbol: 'BOO',
+                },
+                quoteToken: {
+                  address: '0x21be370d5312f44cB42ce377BC9b8a0cEF1A4C83',
+                  symbol: 'WFTM',
+                },
+                priceNative: '0.8779',
+                priceUsd: '0.02610',
+                liquidity: { usd: 54000 },
+              },
+            ],
+            headers: { get: () => null },
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [],
+          headers: { get: () => null },
+        };
+      }),
+    );
+    vi.mocked(useWallet).mockReturnValue({
+      balances: balancesFor({
+        btc: { status: 'zero', value: '0' },
+        fantom: { status: 'zero', value: '0' },
+      }),
+      refreshBalances: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof useWallet>);
+    const mounted = await mountScreen();
+    try {
+      await waitForText(mounted, '$62,683.00');
+      await waitForText(mounted, '$0.02973');
+      expect(mounted.div.textContent).toContain('CoinGecko');
+      expect(mounted.div.textContent).toContain('DexScreener');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('retries a failed balance while unlocked', async () => {
     stubPriceFetch({
       ok: true,

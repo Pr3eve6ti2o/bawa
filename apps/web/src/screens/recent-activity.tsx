@@ -67,6 +67,10 @@ export function RecentActivity() {
             history?.[chain]?.status === 'error',
         );
 
+        // Merge (Lane C + marketing-fix): both gates apply - the empty
+        // message is earned by a chain that actually loaded, and the
+        // unavailable block appears only once the wallet has activity
+        // (or is locked).
         // A wallet with no activity anywhere shows the empty state only.
         // A failed history fetch for a chain with no known transactions
         // is not an error the user can act on, and its Retry is dead —
@@ -79,6 +83,22 @@ export function RecentActivity() {
         // history can load at all.
         const hasActivity = rows.length > 0;
         const showUnavailable = hasActivity || isLocked;
+
+        // Lane C: "No activity yet" is earned only by a chain that
+        // actually loaded (loaded/empty) with zero transactions. A
+        // failed history is not an empty history — when every chain
+        // failed, the unavailable rows below win. An absent record
+        // (no history mocked/supplied at all) keeps the old "no
+        // activity" reading: the real provider always supplies
+        // history, so an absent record is a mock, not a failure.
+        const anyLoaded = chains.some((chain) => {
+          const status = history?.[chain]?.status;
+          return (
+            status === undefined ||
+            status === 'loaded' ||
+            status === 'empty'
+          );
+        });
 
         return (
           <>
@@ -135,9 +155,9 @@ export function RecentActivity() {
               </ul>
             ) : loading ? (
               <Skeleton className="h-20 w-full rounded-xl" />
-            ) : (
+            ) : anyLoaded ? (
               <p className="rounded-xl border border-panel-border bg-panel-surface p-4 text-sm text-panel-text-soft">No activity yet</p>
-            )}
+            ) : null}
 
             {showUnavailable && unavailableChains.map((chain) => (
               <div

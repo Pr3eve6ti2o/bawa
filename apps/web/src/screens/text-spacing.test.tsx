@@ -441,6 +441,43 @@ describe('text spacing', () => {
     }
   });
 
+  it('recent activity never shows "No activity yet" when every chain failed (Lane C)', async () => {
+    // Same dual state as the Transactions screen: a failed history
+    // is not an empty history — the unavailable state wins.
+    setWallet({
+      btc: { status: 'unavailable', reason: 'down', txs: [] },
+      eth: { status: 'unavailable', reason: 'down', txs: [] },
+      trx: { status: 'error', reason: 'down', txs: [] },
+      ton: { status: 'unavailable', reason: 'down', txs: [] },
+      sol: { status: 'unavailable', reason: 'down', txs: [] },
+      bsc: { status: 'unavailable', reason: 'down', txs: [] },
+      matic: { status: 'unavailable', reason: 'down', txs: [] },
+      arb: { status: 'unavailable', reason: 'down', txs: [] },
+      op: { status: 'unavailable', reason: 'down', txs: [] },
+      base: { status: 'unavailable', reason: 'down', txs: [] },
+      avax: { status: 'unavailable', reason: 'down', txs: [] },
+      gnosis: { status: 'unavailable', reason: 'down', txs: [] },
+      celo: { status: 'unavailable', reason: 'down', txs: [] },
+      linea: { status: 'unavailable', reason: 'down', txs: [] },
+      mantle: { status: 'unavailable', reason: 'down', txs: [] },
+      scroll: { status: 'unavailable', reason: 'down', txs: [] },
+      opbnb: { status: 'unavailable', reason: 'down', txs: [] },
+      metis: { status: 'unavailable', reason: 'down', txs: [] },
+      aurora: { status: 'unavailable', reason: 'down', txs: [] },
+      fantom: { status: 'unavailable', reason: 'down', txs: [] },
+      ltc: { status: 'unavailable', reason: 'down', txs: [] },
+      doge: { status: 'unavailable', reason: 'down', txs: [] },
+    });
+    const mounted = await mountScreen(<RecentActivity />);
+    try {
+      expect(mounted.div.textContent).not.toContain('No activity yet');
+      expect(mounted.div.textContent).toContain('history unavailable');
+      expect(mounted.div.textContent).toContain('Retry');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it('unavailable asset row reads with real spaces', async () => {
     vi.mocked(useWallet).mockReturnValue({
       balances: {
