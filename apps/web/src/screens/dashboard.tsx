@@ -330,7 +330,7 @@ export function DashboardScreen() {
           </button>
         </div>
         <p className="text-display-lg font-bold tracking-tight text-ink"><span className="bawa-marker">{heroText}</span></p>
-        <p className="font-display text-xl text-ink">Your coins, drawn to scale. Almost.</p>
+        <p className="font-display text-xl text-ink">The total value of your coins, in US dollars.</p>
         {hero.showAttribution && (
           <p className="text-xs leading-[18px] text-panel-text-muted">{PRICE_ATTRIBUTION_TEXT}</p>
         )}

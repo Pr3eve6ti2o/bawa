@@ -943,7 +943,7 @@ export function SendScreen() {
             Choose a network
           </h2>
           <p className="text-sm text-muted-foreground">
-            Only networks with a wallet here can send.
+            Sending is switched off on mainnet. This flow signs offline only — nothing here sends cryptocurrency anywhere.
           </p>
       {/* Scan first (UI/UX Round 2, item 1): a payment QR fills in
           the network, token, amount and address by itself, so the

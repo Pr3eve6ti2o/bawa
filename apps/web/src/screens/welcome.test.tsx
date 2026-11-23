@@ -202,10 +202,12 @@ describe('welcome screen — Popular chains strip (Lane A)', () => {
       ).not.toHaveLength(0);
       // The no-vault strip makes no price fetch.
       expect(refresh).not.toHaveBeenCalled();
-      // Lane C, item 9: the Create card is gone from the welcome
-      // section — the page still offers a way in without scrolling the
-      // desktop layout: the Import card stays.
-      expect(text).not.toContain('Create a wallet');
+      // Marketing-fix Lane 3: the welcome offers both ways in without
+      // scrolling the desktop layout — the Create card (reversing Lane C
+      // item 9, which had removed it: a fresh user choosing a wallet
+      // must be able to start from the first screen) and the Import
+      // card.
+      expect(text).toContain('Create a wallet');
       expect(text).toContain('Import a wallet');
     } finally {
       await mounted.cleanup();
@@ -267,28 +269,40 @@ describe('welcome screen — introduction (Lane C, item 9)', () => {
     try {
       const text = mounted.div.textContent ?? '';
       expect(text).toContain('Welcome to Bawa');
+      // Marketing-fix Lane 3: the wallet leads, the guide follows.
+      // The guide sentence stays (Lane C item 9's positioning), but
+      // the first thing a choosing user reads is the wallet itself.
       expect(text).toContain(
-        'Bawa is a guide for humans and AI agents',
+        'Bawa is a self-custodial wallet that runs in your browser',
       );
-      expect(text).toContain('crypto wallets');
-      expect(text).toContain('web wallets');
-      expect(text).toContain('Android wallets');
-      expect(text).toContain('HD wallets');
-      expect(text).toContain('smart contracts');
-      expect(text).toContain('What you can do with Bawa');
+      expect(text).toContain('22 chains');
+      expect(text).toContain('Bawa is also a guide for humans and AI agents');
+      expect(text).toContain('What this wallet does');
+      expect(text).toContain('Receive on 22 chains');
+      expect(text).toContain('Real balances and prices');
+      expect(text).toContain('Watch any wallet');
+      expect(text).toContain('Add tokens');
+      // Sending is off by default, and the welcome says so plainly.
+      expect(text).toContain(
+        'Sending is switched off until it is separately approved',
+      );
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it('has no create-wallet call to action', async () => {
+  it('has a create-wallet call to action', async () => {
+    // Marketing-fix Lane 3: reverses Lane C item 9. A fresh user
+    // choosing a wallet must be able to start from the first screen —
+    // on mobile there is no Create entry in the bottom nav, so the
+    // welcome carries both ways in: Create and Import.
     const mounted = await mountIntro();
     try {
       const text = mounted.div.textContent ?? '';
-      expect(text).not.toContain('Create a wallet');
+      expect(text).toContain('Create a wallet');
       expect(
         mounted.div.querySelector('a[href="/create-wallet"]'),
-      ).toBeNull();
+      ).not.toBeNull();
       expect(
         mounted.div.querySelector('a[href="/import-wallet"]'),
       ).not.toBeNull();

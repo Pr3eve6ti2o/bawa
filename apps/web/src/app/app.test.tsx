@@ -193,11 +193,13 @@ describe.sequential('App', () => {
     });
   });
 
-  it('renders the Create screen with all seven tools', async () => {
+  it('renders the Create screen with all six tools', async () => {
     await withRenderedApp('/create', (div) => {
       expect(div.querySelector('#create-title')?.textContent).toBe('Create');
-      expect(div.textContent).toContain('Multichain wallet');
-      expect(div.textContent).toContain('HD wallet');
+      // Marketing-fix Lane 3: one wallet card, not two for the same setup.
+      expect(div.textContent).toContain('Create a wallet');
+      expect(div.textContent).not.toContain('Multichain wallet');
+      expect(div.textContent).not.toContain('HD wallet');
       expect(div.textContent).toContain('Web wallet');
       expect(div.textContent).toContain('Android wallet');
       expect(div.textContent).toContain('Smart contract creator');

@@ -59,10 +59,9 @@ describe('CreateScreen', () => {
     expect(heading?.textContent).toBe('Create');
   });
 
-  it('lists all seven tool names in order', () => {
+  it('lists all six tool names in order', () => {
     const names = [
-      'Multichain wallet',
-      'HD wallet',
+      'Create a wallet',
       'Web wallet',
       'Android wallet',
       'Smart contract creator',
@@ -73,7 +72,7 @@ describe('CreateScreen', () => {
       container.querySelectorAll('section > ul > li'),
     );
 
-    expect(cards).toHaveLength(7);
+    expect(cards).toHaveLength(6);
     names.forEach((name, index) => {
       expect(elementsWithExactText(name)).toHaveLength(1);
       expect(cards[index]?.textContent).toContain(name);
@@ -84,16 +83,16 @@ describe('CreateScreen', () => {
     expect(elementsWithExactText('Coming soon')).toHaveLength(4);
   });
 
-  it('shows exactly three Available badges', () => {
-    expect(elementsWithExactText('Available')).toHaveLength(3);
+  it('shows exactly two Available badges', () => {
+    expect(elementsWithExactText('Available')).toHaveLength(2);
   });
 
   it('the web wallet is available and opens the dashboard', () => {
     // Lane C, item 10: the web wallet exists — it is this app — so it
     // is Available, not Coming soon, and it opens the dashboard.
-    expect(container.textContent).toContain('Three options are ready today');
+    expect(container.textContent).toContain('Two options are ready today');
     const cards = Array.from(container.querySelectorAll('section > ul > li'));
-    const webWallet = cards[2];
+    const webWallet = cards[1];
     expect(webWallet?.textContent).toContain('Available');
     expect(webWallet?.textContent).not.toContain('Coming soon');
     const link = webWallet?.querySelector('a[href="/"]');
@@ -101,15 +100,17 @@ describe('CreateScreen', () => {
     expect(link?.getAttribute('aria-label')).toBe('Open web wallet');
   });
 
-  it('links only the two working cards to /create-wallet', () => {
+  it('links only the one wallet card to /create-wallet', () => {
+    // Marketing-fix Lane 3: the multichain wallet and the HD wallet
+    // were the same wallet and the same setup, presented as two cards.
+    // There is one card now.
     const links = Array.from(
       container.querySelectorAll('a[href="/create-wallet"]'),
     );
 
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(1);
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
-      'Open Multichain wallet creation',
-      'Open HD wallet creation',
+      'Create your wallet',
     ]);
 
     container.querySelectorAll('article').forEach((card) => {
@@ -124,7 +125,7 @@ describe('CreateScreen', () => {
     // commit hashes, licence notes or implementation references render.
     const links = Array.from(container.querySelectorAll('a'));
 
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(2);
     links.forEach((link) => {
       expect(['/create-wallet', '/']).toContain(link.getAttribute('href'));
     });
@@ -146,11 +147,17 @@ describe('CreateScreen', () => {
     });
   });
 
-  it('shows the separate dashboard note', () => {
-    expect(
-      elementsWithExactText(
-        'Creating a wallet here does not replace your dashboard.',
-      ),
-    ).toHaveLength(1);
+  it('offers one wallet card, not two for the same setup', () => {
+    // Marketing-fix Lane 3: the old Multichain and HD cards opened the
+    // same creation flow. One card now, named for what it is, stating
+    // the 22-chain scope the old cards understated as four chains.
+    expect(container.textContent).toContain('Create a wallet');
+    expect(container.textContent).toContain('22 chains');
+    expect(container.textContent).not.toContain('Multichain wallet');
+    expect(container.textContent).not.toContain('HD wallet');
+    expect(container.textContent).not.toContain('Same setup as');
+    expect(container.textContent).not.toContain(
+      'Creating a wallet here does not replace your dashboard.',
+    );
   });
 });

@@ -21,27 +21,19 @@ type Tool = {
 // from (repository names, commit hashes, licences, WASM/JNI notes) was
 // removed in the Lane C finalisation pass — a wallet user needs to know
 // what each tool does and whether it works yet, not where it came from.
-// The two wallet cards open the same creation flow; the copy says so
-// plainly instead of hiding it. The web wallet is this app, so it opens
-// the dashboard.
+// There is one wallet to create, not two: the multichain wallet and the
+// HD wallet are the same wallet and the same setup, so they are one card
+// (marketing-fix Lane 3). The web wallet is this app, so it opens the
+// dashboard.
 const tools: readonly Tool[] = [
   {
-    name: 'Multichain wallet',
+    name: 'Create a wallet',
     description:
-      'One wallet for Bitcoin, Ethereum, TRON and TON, with one recovery phrase. Same setup as the HD wallet.',
+      'One recovery phrase covers 22 chains — Bitcoin, Ethereum, Solana, TRON, TON and more — with one address per chain and a fresh receiving address for every payment.',
     status: 'working',
     href: '/create-wallet',
-    action: 'Open Multichain wallet creation',
+    action: 'Create your wallet',
     icon: 'wallet',
-  },
-  {
-    name: 'HD wallet',
-    description:
-      'One recovery phrase covers every account and address. Same setup as the Multichain wallet.',
-    status: 'working',
-    href: '/create-wallet',
-    action: 'Open HD wallet creation',
-    icon: 'key',
   },
   {
     name: 'Web wallet',
@@ -143,7 +135,7 @@ export function CreateScreen() {
         Create
       </h1>
       <p className="text-sm text-ink">
-        Choose what to create. Three options are ready today; the rest are coming
+        Choose what to create. Two options are ready today; the rest are coming
         soon.
       </p>
       <p className="text-sm text-ink">
@@ -157,9 +149,6 @@ export function CreateScreen() {
           </li>
         ))}
       </ul>
-      <p className="text-sm text-ink">
-        Creating a wallet here does not replace your dashboard.
-      </p>
     </section>
   );
 }

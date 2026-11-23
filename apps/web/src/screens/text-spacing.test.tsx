@@ -288,23 +288,24 @@ describe('text spacing', () => {
     try {
       // Lane C, item 9: the welcome steps are gone — the screen is an
       // introduction now. The spacing check moves to the new list and
-      // intro line: words must not run together.
+      // intro line: words must not run together. (Marketing-fix Lane 3:
+      // the intro and list now lead with the wallet.)
       expect(mounted.div.textContent).toContain(
-        'Bawa is a guide for humans and AI agents. It builds crypto wallets, web wallets, Android wallets, HD wallets and smart contracts from a few prompts',
+        'Bawa is a self-custodial wallet that runs in your browser. One recovery phrase covers 22 chains — Bitcoin, Ethereum, Solana, TRON, TON and more. Your keys are made on this device and encrypted with your vault password. They never leave it.',
       );
-      expect(mounted.div.textContent).not.toContain('Bawais a guide');
+      expect(mounted.div.textContent).not.toContain('Bawais a self-custodial');
       expect(mounted.div.textContent).toContain(
-        'Create a crypto wallet. One self-custodial multi-chain wallet, with one address per chain.',
+        'Receive on 22 chains. One wallet, one address per chain, with a QR code for each.',
       );
-      expect(mounted.div.textContent).not.toContain('Createa crypto wallet');
+      expect(mounted.div.textContent).not.toContain('Receiveon 22 chains');
       expect(mounted.div.textContent).toContain(
-        'Create a web wallet. This one runs in your browser. Nothing to install.',
-      );
-      expect(mounted.div.textContent).toContain(
-        'Create an HD wallet. A fresh receiving address for every payment.',
+        'Real balances and prices. Balances from public blockchains, prices from CoinGecko — no made-up numbers.',
       );
       expect(mounted.div.textContent).toContain(
-        'Create a smart contract. Guided step by step, from a prompt.',
+        'Watch any wallet. Follow balances and history from an extended public key, without ever holding its keys.',
+      );
+      expect(mounted.div.textContent).toContain(
+        'Add tokens. Add a whole chain to your wallet, or a single token by its contract address.',
       );
     } finally {
       await mounted.cleanup();
