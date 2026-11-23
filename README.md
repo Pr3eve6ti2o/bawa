@@ -29,7 +29,7 @@ Real screenshots of the example web wallet running from this branch, taken with 
 Prefer to build one yourself? Follow [Create the example web wallet](docs/CREATE-EXAMPLE-WALLET.md) — or run it straight from a terminal:
 
 ```sh
-git clone --branch panel-rebuild/readme-marketing https://github.com/Pr3eve6ti2o/bawa.git
+git clone --branch panel-rebuild/token-gaps https://github.com/Pr3eve6ti2o/bawa.git
 cd bawa
 cd apps/web
 npm ci
