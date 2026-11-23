@@ -121,9 +121,14 @@ export function QrCard({ qrValue, amountText, address, token, chain }: QrCardPro
       {/* Paper card is the QR surround: ink modules on paper, same as
           the bare QR had — no second border inside the card. */}
       <div id="qr-card-qr" className="shrink-0">
+        {/* 136 px, not 192: Round 2 item 8 sized the details QR at 136
+            so the Copy/Share/Download row clears the bottom nav at
+            390x844. The 192 value was A2's QrCard size, kept by the
+            Round-2 merge; the deep audit re-measured the merged tree
+            at scrollH 1446 with the actions below the fold. */}
         <QRCodeSVG
           value={qrValue}
-          size={192}
+          size={136}
           marginSize={4}
           level="H"
           fgColor="#2B2B2B"

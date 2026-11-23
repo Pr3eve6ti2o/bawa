@@ -597,6 +597,35 @@ export function ReceiveScreen() {
                 link below still carries the amount.)
               </p>
             )}
+            {/* Action row sits directly under the card (deep audit,
+                Lane A): with the template QRs + repeated address +
+                share link above it, Copy/Share/Download sat below
+                the 390px fold (scrollH 1446). The secondary rows
+                scroll below; the actions stay above it. */}
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button type="button" onClick={() => void copyAddress()}>
+                Copy address
+              </Button>
+              {canRotate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void newReceiveAddress()}
+                  disabled={isRotating || !nextReceiveAddress}
+                >
+                  {isRotating ? 'Making address…' : 'New address'}
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={() => void sharePayment()}>
+                Share
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void copyLink()}>
+                Copy link
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void downloadQr()}>
+                Download card
+              </Button>
+            </div>
             <div className="flex items-start justify-center gap-2">
               {smallQrs.map((candidate) => (
                 <button
@@ -642,30 +671,6 @@ export function ReceiveScreen() {
             <p data-testid="receive-share-link" title={shareLink} className="w-full truncate text-center font-mono text-xs text-ink">
               {shareLink}
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button type="button" onClick={() => void copyAddress()}>
-                Copy address
-              </Button>
-              {canRotate && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void newReceiveAddress()}
-                  disabled={isRotating || !nextReceiveAddress}
-                >
-                  {isRotating ? 'Making address…' : 'New address'}
-                </Button>
-              )}
-              <Button type="button" variant="outline" onClick={() => void sharePayment()}>
-                Share
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void copyLink()}>
-                Copy link
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void downloadQr()}>
-                Download card
-              </Button>
-            </div>
           </div>
         ) : (
           <div className="space-y-2">
