@@ -124,6 +124,100 @@ describe('parseDexScreenerResponse', () => {
     expect(entries[usdtKey]).toEqual({ status: 'unavailable', reason: 'missing' });
   });
 
+  it('derives the quote-side implied price when the token is only the quote', () => {
+    // Lane B, verified live 2026-11-24: Polygon USDT0 appears only
+    // as the quote in AIPF/USDT0 ($5.98M liquidity) — priceUsd
+    // $0.2953 is AIPF's price, priceNative 0.2953, so the implied
+    // USDT0 price is exactly $1.00. This was the last price error
+    // in the wallet with CoinGecko blocked (CDP, Lane B).
+    const usdt0 = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+    const usdt0Key = tokenKey('matic', usdt0);
+    const entries = parseDexScreenerResponse(
+      [
+        {
+          chainId: 'polygon',
+          dexId: 'uniswap',
+          pairAddress: '0xPair00000000000000000000000000000000000002',
+          baseToken: {
+            address: '0x2c72D25530191EBD244Eb6325E1892480b0e6E28',
+            name: 'AIPF',
+            symbol: 'AIPF',
+          },
+          quoteToken: { address: usdt0, name: 'Tether USD', symbol: 'USDT0' },
+          priceNative: '0.2953',
+          priceUsd: '0.2953',
+          liquidity: { usd: 5983124.87, base: 20260000, quote: 5983124 },
+        },
+      ],
+      [{ key: usdt0Key, chain: 'matic', contract: usdt0 }],
+      NOW_MS,
+    );
+    expect(entries[usdt0Key]).toEqual({
+      status: 'fresh',
+      quote: {
+        chain: 'matic',
+        assetId: usdt0,
+        providerAssetId: usdt0,
+        usdPrice: '1',
+        providerUpdatedAtMs: NOW_MS,
+        fetchedAtMs: NOW_MS,
+        source: 'DexScreener',
+      },
+    });
+  });
+
+  it('prefers the base-side pair over a quote-side pair', () => {
+    const entries = parseDexScreenerResponse(
+      [
+        antsPair({ priceUsd: '0.07673', liquidity: { usd: 100 } }),
+        {
+          chainId: 'bsc',
+          baseToken: {
+            address: '0x55d398326f99059fF775485246999027B3197955',
+            name: 'Tether USD',
+            symbol: 'USDT',
+          },
+          quoteToken: { address: ANTS, name: 'ANTS', symbol: 'ANTS' },
+          priceNative: '0.05',
+          priceUsd: '0.05',
+          liquidity: { usd: 999999999 },
+        },
+      ],
+      requests,
+      NOW_MS,
+    );
+    expect(entries[ANTS_KEY]).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '0.07673' },
+    });
+  });
+
+  it('rejects a quote-side pair with an unusable priceNative', () => {
+    const usdt0 = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+    const usdt0Key = tokenKey('matic', usdt0);
+    const quoteOnly = (priceNative: string): Record<string, unknown> => ({
+      chainId: 'polygon',
+      baseToken: {
+        address: '0x2c72D25530191EBD244Eb6325E1892480b0e6E28',
+        name: 'AIPF',
+        symbol: 'AIPF',
+      },
+      quoteToken: { address: usdt0, name: 'Tether USD', symbol: 'USDT0' },
+      priceNative,
+      priceUsd: '0.2953',
+      liquidity: { usd: 5983124.87 },
+    });
+    for (const bad of ['0', 'not-a-price']) {
+      expect(
+        parseDexScreenerResponse(
+          [quoteOnly(bad)],
+          [{ key: usdt0Key, chain: 'matic', contract: usdt0 }],
+          NOW_MS,
+        )[usdt0Key],
+      ).toEqual({ status: 'unavailable', reason: 'missing' });
+    }
+  });
+
   it('picks the highest-liquidity pair when several match', () => {
     const entries = parseDexScreenerResponse(
       [

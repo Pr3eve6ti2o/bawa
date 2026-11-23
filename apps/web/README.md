@@ -161,8 +161,10 @@ displayed in the asset rows with real balances from
 `src/wallet/adapters/token-balances.ts` (ERC-20 `balanceOf` via viem,
 TRC-20 `balanceOf` via TronGrid) and real prices from the CoinGecko
 token feed (`src/wallet/token-prices.ts`); they must never be shown with
-a fabricated balance. A token with no registered logo renders a readable
-ticker badge, never a broken image.
+a fabricated balance. A token with no registered logo renders an
+honest empty state (a plain ring, no fill, no ticker text), never a
+broken image and never a yellow text square (Lane B, 2026-11-24 —
+the yellow ticker badge read as a broken logo).
 
 ### Design tokens and UI patterns (Lane G research, 2026-11-23)
 

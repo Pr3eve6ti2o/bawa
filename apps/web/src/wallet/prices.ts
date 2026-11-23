@@ -29,12 +29,15 @@
  * fills the gap from CoinLore (batched, first), DexScreener wrapped
  * natives (base-side, or the exact priceUsd/priceNative implied
  * price for quote-side pairs), TonAPI for TON, Coinbase for LTC.
- * 20 of 22 chains have a fallback; Gnosis and Mantle are
- * CoinGecko-only (no verified keyless source). Rejected live:
- * Binance (451 geo-block; binance.us FTM $0.4806 is a frozen
+ * 22 of 22 chains have a fallback (Lane B, 2026-11-24: Gnosis
+ * xDAI via CoinLore DAI, Mantle MNT via CoinLore + DexScreener
+ * WMNT, Fantom FTM via CoinLore Sonic (S) + DexScreener implied
+ * — see wallet/price-fallbacks.ts for the live evidence). Rejected
+ * live: Binance (451 geo-block; binance.us FTM $0.4806 is a frozen
  * quote, ~16x the live ~$0.03), CoinPaprika (same frozen FTM
  * $0.4803), CoinCodex (fantom "not_trading_anymore"), Kraken (no
- * CORS header). The row label shows the quote's real source.
+ * CORS header, no FTM pair). The row label shows the quote's real
+ * source.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

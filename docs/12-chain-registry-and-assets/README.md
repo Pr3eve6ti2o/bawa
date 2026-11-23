@@ -323,7 +323,87 @@ Token tracking in `docs/06` and `docs/07` (ERC-20, TRC-20 and [SPL](https://gith
 - Chain logos live at `blockchains/<chain>/info/logo.png` upstream. The 22 vendored chain logos, with the directory corrections the registry itself requires: `bitcoin`, `ethereum`, `tron`, `ton`, `solana`, `smartchain` (BNB Smart Chain — NOT `binance`, which is the BNB Beacon Chain mark), `polygon`, `arbitrum`, `optimism`, `base`, `avalanchec`, `litecoin`, `doge`, `xdai` (Gnosis — `gnosis` does not exist upstream), `celo`, `linea`, `mantle`, `scroll`, `opbnb`, `metis`, `aurora`, `fantom`. Each logo's upstream `info.json` name was verified at fetch time.
 - Token logos live at `blockchains/ethereum/assets/<contract>/logo.png` upstream. The 8 vendored token logos: USDC `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, USDT `0xdAC17F958D2ee523a2206206994597C13D831ec7`, DAI `0x6B175474E89094C44Da98b954EedeAC495271d0F`, LINK `0x514910771AF9Ca656af840dff83E8264EcF986CA`, UNI `0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`, WBTC `0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599`, WETH `0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`, and USDT0 on Arbitrum `blockchains/arbitrum/assets/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png` (upstream name Tether USD, symbol USDT — the USDT0 contract on Arbitrum).
 - Served as WebP: the same Trust Wallet images, resized to 96 px and re-encoded at quality 85 — 39,670 bytes total vs 303,787 bytes for the PNGs (-87%). The original PNGs stay in `src/assets/chains` and `src/assets/tokens` as the canonical sources.
-- Trust Wallet resolves logos by contract address, not by symbol; the wallet's symbol map (plus aliases for the on-chain spellings the registry reports — `USD₮` → USDT, `USD₮0` → USDT0) is this wallet's simplification of that. A token with no registered logo renders a readable ticker badge, never a broken image. Full detail, including the per-logo fetch notes, is in `apps/web/README.md` ("Chain logos" and "Token logos").
+- Trust Wallet resolves logos by contract address, not by symbol; the wallet's symbol map (plus aliases for the on-chain spellings the registry reports — `USD₮` → USDT, `USD₮0` → USDT0) is this wallet's simplification of that. A token with no registered logo renders an honest empty state (a plain ring, no fill, no ticker text), never a broken image and never a yellow text square (Lane B removed the yellow ticker badge, 2026-11-24). Full detail, including the per-logo fetch notes, is in `apps/web/README.md` ("Chain logos" and "Token logos").
+
+### Token logos in the web wallet (canonical source)
+
+The web wallet shows a real logo for every chain and every default
+token, all the time. The canonical logo source is
+[Trust Wallet Assets](https://github.com/trustwallet/assets)
+(MIT licence, Copyright (c) 2019-2023 Trust Wallet), pinned at
+commit `e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e`. Nothing is
+fetched from the repo at runtime: the logos are copied into the
+app at `apps/web/src/assets/chains/` (natives) and
+`apps/web/src/assets/tokens/` (ERC-20s), each stored twice — the
+original PNG (canonical source) and a 96 px WebP at quality 85 —
+and rendered by `apps/web/src/screens/token-logo.tsx`
+(`CHAIN_LOGOS` chain-keyed, `TOKEN_LOGOS` symbol-keyed with the
+on-chain spelling aliases `USD₮` → USDT, `USD₮0` → USDT0).
+
+Native chain logos live at `blockchains/<dir>/info/logo.png`
+(`<dir>` is the Trust Wallet directory, not the Bawa chain id):
+
+| Bawa chain | Trust Wallet directory | Bawa chain | Trust Wallet directory |
+|---|---|---|---|
+| btc (Bitcoin) | `bitcoin` | doge (Dogecoin) | `doge` |
+| eth (Ethereum) | `ethereum` | gnosis (Gnosis) | `xdai` |
+| trx (TRON) | `tron` | celo (Celo) | `celo` |
+| ton (TON) | `ton` | linea (Linea) | `linea` |
+| sol (Solana) | `solana` | mantle (Mantle) | `mantle` |
+| bsc (BNB Smart Chain) | `smartchain` | scroll (Scroll) | `scroll` |
+| matic (Polygon) | `polygon` | opbnb (opBNB) | `opbnb` |
+| arb (Arbitrum One) | `arbitrum` | metis (Metis) | `metis` |
+| op (OP Mainnet) | `optimism` | aurora (Aurora) | `aurora` |
+| base (Base) | `base` | fantom (Fantom) | `fantom` |
+| avax (Avalanche C-Chain) | `avalanchec` | ltc (Litecoin) | `litecoin` |
+
+Directory corrections (a wrong directory shows the wrong mark):
+BSC is `smartchain`, not `binance` (BNB Beacon Chain); Avalanche
+C-Chain is `avalanchec`, not `avalanche`; Dogecoin is `doge`, not
+`dogecoin`; Gnosis is `xdai`, not `gnosis` (no such directory).
+Each logo's upstream `info.json` name was verified at fetch time.
+
+ERC-20 token logos live at
+`blockchains/ethereum/assets/<contract>/logo.png` (USDC
+`0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`, USDT
+`0xdAC17F958D2ee523a2206206994597C13D831ec7`, DAI
+`0x6B175474E89094C44Da98b954EedeAC495271d0F`, LINK
+`0x514910771AF9Ca656af840dff83E8264EcF986CA`, UNI
+`0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984`, WBTC
+`0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599`, WETH
+`0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`), except USDT0 at
+`blockchains/arbitrum/assets/0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9/logo.png`.
+Trust Wallet resolves logos by contract address, not by symbol;
+the symbol map is this wallet's simplification of that.
+
+Fetchable form (pinned commit — use this to verify a logo, never
+an unpinned `master` link):
+
+`https://raw.githubusercontent.com/trustwallet/assets/e8f61783ac6451fa8b7b1b4f72bf4a9607f6872e/blockchains/<dir>/info/logo.png`
+
+Live check 2026-11-24 (Lane B): six sampled URLs return HTTP 200
+at the pinned commit — Gnosis (`xdai`), Mantle, Fantom, Ethereum
+USDC, Arbitrum USDT0, Bitcoin.
+
+Fallback chain — what happens when a logo is missing (real logo →
+chain logo → honest empty state, never a yellow text square):
+a registered logo renders as the image; a chain with no chain
+logo falls back to its symbol's token logo; anything still
+missing — or an image that fails to load — renders an honest
+empty state (a plain ring, no fill, no ticker text), never a
+broken image and never a yellow text square. Lane B (2026-11-24)
+removed the yellow ticker badge the fallback used to render: it
+read as a broken logo (owner, 2026-11-23 — token icons as yellow
+text squares). The symbol is already shown as text beside the
+logo, so nothing is lost.
+
+Adding a logo: fetch `logo.png` from the pinned commit above,
+verify its upstream `info.json` name matches the token, store
+the PNG plus a 96 px WebP (quality 85) under
+`src/assets/chains/` or `src/assets/tokens/`, and register it in
+`token-logo.tsx` (`CHAIN_LOGOS` by chain id, `TOKEN_LOGOS` by
+symbol). Re-pin the commit only when the repo moves and every
+logo is re-verified against the new pin.
 
 ## Token identity
 

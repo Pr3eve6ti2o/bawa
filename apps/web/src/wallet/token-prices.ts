@@ -11,7 +11,12 @@
  * Tokens CoinGecko does NOT list are priced by the fallback in
  * dex-prices.ts instead (README showcase + Add Token, item D):
  * DexScreener for EVM/Solana/TRON tokens, TonAPI rates for TON
- * Jettons. A token no source prices stays "Price unavailable" — the
+ * Jettons. Lane B (2026-11-24): the same legs now back up the
+ * CoinGecko-LISTED tokens too — before this, a blocked CoinGecko
+ * took down all 21 default token prices while the natives fell
+ * back; a listed token whose CoinGecko quote is not fresh is
+ * priced from DexScreener / TonAPI instead (see fetchTokenPrices).
+ * A token no source prices stays "Price unavailable" — the
  * feed never invents a price. The row label shows the quote's real
  * source (see asset-rows / asset-detail), never a hardcoded provider.
  */
@@ -166,7 +171,11 @@ async function fetchCoingeckoTokenPrices(
  * for unlisted EVM/Solana/TRON tokens, TonAPI rates for unlisted TON
  * Jettons — the three fetches run in parallel and merge by tokenKey.
  * A source that fails reports errors only for its own tokens; the other
- * sources' quotes are unaffected.
+ * sources' quotes are unaffected. Lane B: a listed token whose
+ * CoinGecko quote is not fresh then falls back to the same
+ * DexScreener / TonAPI legs (only fresh fallback quotes replace the
+ * CoinGecko entry); Gnosis and Aurora tokens have no DexScreener leg
+ * (no pairs indexed live) and keep their honest CoinGecko state.
  */
 export async function fetchTokenPrices(
   fetchFn: typeof fetch,
@@ -201,7 +210,57 @@ export async function fetchTokenPrices(
       ? fetchTonJettonPrices(fetchFn, ton, resolvedNowMs)
       : Promise.resolve({} as TokenPriceMap),
   ]);
-  return { ...coingeckoEntries, ...dexEntries, ...tonEntries };
+  const merged: TokenPriceMap = { ...coingeckoEntries, ...dexEntries, ...tonEntries };
+
+  // Lane B (2026-11-24): back up the CoinGecko-listed tokens from
+  // DexScreener / TonAPI when their CoinGecko quote is not fresh —
+  // a blocked CoinGecko used to take down all 21 default token
+  // prices while the natives fell back. Only a fresh fallback quote
+  // replaces the CoinGecko entry; a token no fallback prices keeps
+  // its honest CoinGecko error / unavailable state. Needs the token
+  // records to resolve chain + contract, so a call without them
+  // (unit tests) simply skips this leg.
+  const staleListed = coingecko.filter(
+    (request) => merged[request.key]?.status !== 'fresh',
+  );
+  if (staleListed.length > 0 && tokens !== undefined) {
+    const dexFallback: Array<{
+      key: string;
+      chain: TokenRecord['chain'];
+      contract: string;
+    }> = [];
+    const tonFallback: Array<{ key: string; contract: string }> = [];
+    for (const request of staleListed) {
+      const token = tokens.find(
+        (candidate) =>
+          tokenKey(candidate.chain, candidate.contract) === request.key,
+      );
+      if (token === undefined) continue;
+      if (token.chain === 'ton') {
+        tonFallback.push({ key: request.key, contract: token.contract });
+      } else if (DEXSCREENER_CHAIN_FOR_CHAIN[token.chain] !== undefined) {
+        dexFallback.push({
+          key: request.key,
+          chain: token.chain,
+          contract: token.contract,
+        });
+      }
+    }
+    const [dexFallbackEntries, tonFallbackEntries] = await Promise.all([
+      dexFallback.length > 0
+        ? fetchDexScreenerPrices(fetchFn, dexFallback, resolvedNowMs)
+        : Promise.resolve({} as TokenPriceMap),
+      tonFallback.length > 0
+        ? fetchTonJettonPrices(fetchFn, tonFallback, resolvedNowMs)
+        : Promise.resolve({} as TokenPriceMap),
+    ]);
+    for (const entries of [dexFallbackEntries, tonFallbackEntries]) {
+      for (const [key, value] of Object.entries(entries)) {
+        if (value?.status === 'fresh') merged[key] = value;
+      }
+    }
+  }
+  return merged;
 }
 
 /** Fiat value of a token balance, mirroring fiatValueForBalance in prices.ts. */

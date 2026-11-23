@@ -390,6 +390,101 @@ describe('fetchTokenPrices with the fallback', () => {
     });
   });
 
+  it('falls back to DexScreener / TonAPI for LISTED tokens when CoinGecko 429s', async () => {
+    // Lane B: before this, a blocked CoinGecko took down all 21
+    // default token prices while the natives fell back. A listed
+    // token whose CoinGecko quote is not fresh is priced from the
+    // same legs the unlisted tokens use.
+    const usdc = tokenKey('eth', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    const link = tokenKey('eth', '0x514910771AF9Ca656af840dff83E8264EcF986CA');
+    const tonUsdt = tokenKey('ton', 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs');
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url.includes('api.coingecko.com')) {
+        return {
+          ok: false,
+          status: 429,
+          json: async () => ({}),
+          headers: { get: (name: string) => (name === 'Retry-After' ? '5' : null) },
+        };
+      }
+      if (url.includes('api.dexscreener.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            {
+              chainId: 'ethereum',
+              baseToken: {
+                address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+                name: 'USD Coin',
+                symbol: 'USDC',
+              },
+              quoteToken: {
+                address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+                name: 'Tether USD',
+                symbol: 'USDT',
+              },
+              priceUsd: '0.9995',
+              liquidity: { usd: 123456789 },
+            },
+            {
+              chainId: 'ethereum',
+              baseToken: {
+                address: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+                name: 'ChainLink Token',
+                symbol: 'LINK',
+              },
+              quoteToken: {
+                address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+                name: 'Wrapped Ether',
+                symbol: 'WETH',
+              },
+              priceUsd: '8.81',
+              liquidity: { usd: 98765432 },
+            },
+          ],
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      if (url.includes('tonapi.io')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            rates: {
+              EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs: {
+                prices: { USD: 0.999 },
+              },
+            },
+          }),
+          headers: { get: (_name: string): string | null => null },
+        };
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const requests = tokenIds().filter((r) =>
+      [usdc, link, tonUsdt].includes(r.key),
+    );
+    const entries = await fetchTokenPrices(
+      fetchFn as unknown as typeof fetch,
+      requests,
+      NOW_MS,
+      DEFAULT_TOKENS,
+    );
+    expect(entries[usdc]).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '0.9995', source: 'DexScreener' },
+    });
+    expect(entries[link]).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '8.81', source: 'DexScreener' },
+    });
+    expect(entries[tonUsdt]).toMatchObject({
+      status: 'fresh',
+      quote: { usdPrice: '0.999', source: 'TonAPI' },
+    });
+  });
+
   it('a CoinGecko 429 does not take down the DexScreener price', async () => {
     const fetchFn = vi.fn(async (url: string) => {
       if (url.includes('api.coingecko.com')) {
@@ -543,19 +638,37 @@ describe('useTokenPrices', () => {
       const payload = freshTokenPayload();
       const expected = parseTokenPriceResponse(payload, tokenIds(), NOW_MS, DEFAULT_TOKENS);
       const sleep = vi.fn((_ms: number) => Promise.resolve());
-      const fetchStub = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => payload,
-          headers: { get: () => null },
-        })
-        .mockResolvedValue({
+      // Lane B: the hook now also fires the DexScreener / TonAPI
+      // fallback legs on every retry attempt (same shape as the
+      // native feed), so the total call count is no longer 4 — count
+      // the CoinGecko calls instead, mirroring the native hook test.
+      // The fallback legs answer empty here, so no fresh fallback
+      // quote replaces the last good CoinGecko quotes.
+      let coinGeckoCallCount = 0;
+      const fetchStub = vi.fn(async (url: string) => {
+        if (!url.includes('api.coingecko.com')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [],
+            headers: { get: (_name: string): string | null => null },
+          };
+        }
+        coinGeckoCallCount += 1;
+        if (coinGeckoCallCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => payload,
+            headers: { get: () => null },
+          };
+        }
+        return {
           ok: false,
           status: 429,
           headers: { get: () => '30' },
-        });
+        };
+      });
       vi.stubGlobal('fetch', fetchStub);
 
       ({ cleanup } = await mountWithSleep(sleep));
@@ -571,7 +684,7 @@ describe('useTokenPrices', () => {
       });
       expect(latest!.state.status).toBe('ready');
       expect(latest!.state.entries).toEqual(expected);
-      expect(fetchStub).toHaveBeenCalledTimes(4);
+      expect(coinGeckoCallCount).toBe(4);
     } finally {
       try {
         await cleanup?.();

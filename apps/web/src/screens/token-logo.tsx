@@ -128,8 +128,8 @@ export function tokenLogoFor(symbol: string): string | undefined {
 /**
  * Native chain logo (40px default), rendered through TokenLogo so the
  * asset rows, asset detail, chain strip and receive/send pickers all
- * share one logo path: a real Trust Wallet logo when registered, a
- * readable ticker badge otherwise. Chain-keyed: Arbitrum, OP Mainnet
+ * share one logo path: a real Trust Wallet logo when registered, an
+ * honest empty state otherwise (Lane B). Chain-keyed: Arbitrum, OP Mainnet
  * and Base have their own marks — a symbol-keyed lookup would show the
  * Ethereum logo for all three. (Moved here from asset-rows, Lane G, so
  * the strip and pickers can use it without importing the rows module.)
@@ -164,8 +164,11 @@ type TokenLogoProps = {
 
 /**
  * Token logo (40px default). A missing logo — or one that fails to load —
- * renders a readable badge with the ticker text, never a broken image and
- * never an empty box.
+ * renders an honest empty state (a plain ring, no fill, no text),
+ * never a broken image and never a yellow text square (Lane B,
+ * 2026-11-24: the yellow ticker badge read as a broken logo, owner
+ * 2026-11-23; the symbol is already shown as text beside the logo,
+ * so nothing is lost).
  */
 export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
   const [failed, setFailed] = useState(false);
@@ -187,17 +190,16 @@ export function TokenLogo({ symbol, size = 40 }: TokenLogoProps) {
     );
   }
 
-  // Small sizes (the 24px receive/send picker icons) get smaller badge
-  // text so a four-letter ticker still fits inside the box.
-  const badgeTextClass = size <= 24 ? 'text-[9px]' : 'text-[11px]';
+  // Lane B (2026-11-24): a missing logo renders an honest empty
+  // state — a plain faded ring, no fill, no ticker text. The yellow
+  // ticker badge it replaces read as a broken logo (owner,
+  // 2026-11-23: token icons as yellow text squares).
   return (
     <span
       role="img"
       aria-label={`${symbol} logo unavailable`}
-      className={`flex size-10 shrink-0 items-center justify-center rounded-bawa-sm border-2 border-ink bg-sun ${badgeTextClass} font-bold uppercase text-ink`}
+      className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink opacity-40"
       style={style}
-    >
-      {symbol.trim().toUpperCase().slice(0, 4) || '?'}
-    </span>
+    />
   );
 }

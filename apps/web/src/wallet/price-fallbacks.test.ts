@@ -61,6 +61,54 @@ function coinLoreBatch(): Record<string, unknown>[] {
       tsupply: '120000000',
       msupply: '0',
     },
+    // Lane B, live 2026-11-24: MNT $0.400541 (CoinGecko $0.400169),
+    // DAI $1.00 (the xDAI price — 1:1 bridge peg), Sonic (S)
+    // $0.028313 (the FTM price — 1:1 migration successor).
+    {
+      id: '121595',
+      symbol: 'MNT',
+      name: 'Mantle',
+      nameid: 'mantle',
+      rank: 41,
+      price_usd: '0.400541',
+      percent_change_24h: '3.06',
+      price_btc: '0.000007',
+      market_cap_usd: '1302938889.81',
+      volume24: 22726855.868946888,
+      csupply: '3257610944.00',
+      tsupply: '6190453881',
+      msupply: '6190453881',
+    },
+    {
+      id: '32417',
+      symbol: 'DAI',
+      name: 'Dai',
+      nameid: 'dai',
+      rank: 20,
+      price_usd: '1.00',
+      percent_change_24h: '0.01',
+      price_btc: '0.000016',
+      market_cap_usd: '5360000000.00',
+      volume24: 123456789.0,
+      csupply: '5360000000.00',
+      tsupply: '5360000000',
+      msupply: '0',
+    },
+    {
+      id: '148191',
+      symbol: 'S',
+      name: 'Sonic (prev. FTM)',
+      nameid: 'sonic',
+      rank: 147,
+      price_usd: '0.028313',
+      percent_change_24h: '1.12',
+      price_btc: '0.00000045',
+      market_cap_usd: '90000000.00',
+      volume24: 12345678.0,
+      csupply: '3175000000.00',
+      tsupply: '3175000000',
+      msupply: '0',
+    },
   ];
 }
 
@@ -103,6 +151,30 @@ function wethPair(overrides: Record<string, unknown> = {}): Record<string, unkno
     priceNative: '1777.9564',
     priceUsd: '1777.95',
     liquidity: { usd: 123456789, base: 69400, quote: 123456789 },
+    ...overrides,
+  };
+}
+
+const WMNT = '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8';
+
+// Live shape, DexScreener tokens/v1/mantle/<WMNT>, 2026-11-24: the
+// single pair is Agni WMNT/USDT0 — WMNT is the BASE token, so
+// priceUsd ($0.4010) is WMNT's price. Liquidity $2,685,603.66;
+// CoinGecko MNT then: $0.400169.
+function wmntPair(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    chainId: 'mantle',
+    dexId: 'agni',
+    pairAddress: '0x0000000000000000000000000000000000000000',
+    baseToken: { address: WMNT, name: 'Wrapped Mantle', symbol: 'WMNT' },
+    quoteToken: {
+      address: '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE',
+      name: 'Tether USD',
+      symbol: 'USDT0',
+    },
+    priceNative: '0.4010',
+    priceUsd: '0.4010',
+    liquidity: { usd: 2685603.66, base: 6698000, quote: 2685603 },
     ...overrides,
   };
 }
@@ -200,13 +272,15 @@ describe('COINLORE_NATIVE_IDS', () => {
     // $0.0788 — a stale legacy listing, so Polygon is priced by
     // DexScreener (WPOL) instead.
     expect(COINLORE_NATIVE_IDS.matic).toBeUndefined();
-    // LTC and FTM are absent from CoinLore's top-500 tickers (live):
-    // LTC is priced by Coinbase, FTM by DexScreener.
+    // LTC is absent from CoinLore's top-500 tickers (live): it is
+    // priced by Coinbase instead.
     expect(COINLORE_NATIVE_IDS.ltc).toBeUndefined();
-    expect(COINLORE_NATIVE_IDS.fantom).toBeUndefined();
-    // Gnosis (xDAI) and Mantle (MNT) have no verified CoinLore quote.
-    expect(COINLORE_NATIVE_IDS.gnosis).toBeUndefined();
-    expect(COINLORE_NATIVE_IDS.mantle).toBeUndefined();
+    // Lane B (live 2026-11-24): Gnosis xDAI prices as DAI (1:1
+    // bridge peg), Mantle is MNT, Fantom FTM prices as Sonic (S)
+    // (1:1 migration successor — Opera retired 2026-06-30).
+    expect(COINLORE_NATIVE_IDS.gnosis).toBe('32417');
+    expect(COINLORE_NATIVE_IDS.mantle).toBe('121595');
+    expect(COINLORE_NATIVE_IDS.fantom).toBe('148191');
   });
 });
 
@@ -236,10 +310,13 @@ describe('NATIVE_WRAPPED_TOKENS', () => {
     // they have no DexScreener leg — CoinLore (ETH) covers them.
     expect(NATIVE_WRAPPED_TOKENS.linea).toBeUndefined();
     expect(NATIVE_WRAPPED_TOKENS.aurora).toBeUndefined();
-    // No verified wrapped contract for TRX, Metis or Mantle.
+    expect(NATIVE_WRAPPED_TOKENS.mantle).toEqual({
+      dexChain: 'mantle',
+      contract: WMNT,
+    });
+    // No verified wrapped contract for TRX or Metis.
     expect(NATIVE_WRAPPED_TOKENS.trx).toBeUndefined();
     expect(NATIVE_WRAPPED_TOKENS.metis).toBeUndefined();
-    expect(NATIVE_WRAPPED_TOKENS.mantle).toBeUndefined();
     // BTC, LTC, DOGE and TON have no DEX-wrapped native.
     expect(NATIVE_WRAPPED_TOKENS.btc).toBeUndefined();
     expect(NATIVE_WRAPPED_TOKENS.ltc).toBeUndefined();
@@ -304,6 +381,38 @@ describe('parseCoinLoreResponse', () => {
   });
 });
 
+describe('parseCoinLoreResponse Lane B rows', () => {
+  it('prices Gnosis xDAI from the DAI peg, Mantle MNT and Fantom from Sonic (S)', () => {
+    const entries = parseCoinLoreResponse(
+      coinLoreBatch(),
+      ['gnosis', 'mantle', 'fantom'],
+      NOW_MS,
+    );
+    expect(entries.gnosis).toEqual({
+      status: 'fresh',
+      quote: {
+        chain: 'gnosis',
+        assetId: PRICE_ASSET_IDS.gnosis,
+        providerAssetId: '32417',
+        usdPrice: '1',
+        providerUpdatedAtMs: NOW_MS,
+        fetchedAtMs: NOW_MS,
+        source: 'CoinLore',
+      },
+    });
+    expect(entries.mantle?.status).toBe('fresh');
+    if (entries.mantle?.status === 'fresh') {
+      expect(entries.mantle.quote.usdPrice).toBe('0.400541');
+      expect(entries.mantle.quote.source).toBe('CoinLore');
+    }
+    expect(entries.fantom?.status).toBe('fresh');
+    if (entries.fantom?.status === 'fresh') {
+      expect(entries.fantom.quote.usdPrice).toBe('0.028313');
+      expect(entries.fantom.quote.source).toBe('CoinLore');
+    }
+  });
+});
+
 describe('parseDexScreenerNativeResponse', () => {
   it('returns a fresh DexScreener quote when the wrapped token is the base token', () => {
     const entry = parseDexScreenerNativeResponse([wethPair()], 'eth', WETH, NOW_MS);
@@ -331,6 +440,22 @@ describe('parseDexScreenerNativeResponse', () => {
       expect(Number(entry.quote.usdPrice)).toBeCloseTo(0.02973, 4);
       expect(entry.quote.usdPrice).not.toBe('0.02610');
     }
+  });
+
+  it('returns a fresh DexScreener quote when WMNT is the base token', () => {
+    const entry = parseDexScreenerNativeResponse([wmntPair()], 'mantle', WMNT, NOW_MS);
+    expect(entry).toEqual({
+      status: 'fresh',
+      quote: {
+        chain: 'mantle',
+        assetId: PRICE_ASSET_IDS.mantle,
+        providerAssetId: WMNT,
+        usdPrice: '0.401',
+        providerUpdatedAtMs: NOW_MS,
+        fetchedAtMs: NOW_MS,
+        source: 'DexScreener',
+      },
+    });
   });
 
   it('marks the chain unavailable when no pair involves the wrapped token', () => {
@@ -483,6 +608,7 @@ describe('applyPriceFallbacks', () => {
       ltc: errorEntry,
       gnosis: errorEntry,
       mantle: errorEntry,
+      fantom: errorEntry,
     });
     const { fetchFn, calls } = stubFetch([
       { match: 'api.coinlore.net', body: coinLoreBatch() },
@@ -515,10 +641,24 @@ describe('applyPriceFallbacks', () => {
       expect(merged.ltc.quote.source).toBe('Coinbase');
       expect(merged.ltc.quote.usdPrice).toBe('42.956');
     }
-    // Gnosis and Mantle have no verified fallback: the CoinGecko
-    // error stands, honestly, instead of an invented price.
-    expect(merged.gnosis).toEqual(errorEntry);
-    expect(merged.mantle).toEqual(errorEntry);
+    // Lane B: Gnosis, Mantle and Fantom now have CoinLore fallbacks
+    // (DAI peg, MNT, Sonic (S)) — the CoinGecko error is replaced by
+    // a live quote with its real source, never an invented price.
+    expect(merged.gnosis?.status).toBe('fresh');
+    if (merged.gnosis?.status === 'fresh') {
+      expect(merged.gnosis.quote.source).toBe('CoinLore');
+      expect(merged.gnosis.quote.usdPrice).toBe('1');
+    }
+    expect(merged.mantle?.status).toBe('fresh');
+    if (merged.mantle?.status === 'fresh') {
+      expect(merged.mantle.quote.source).toBe('CoinLore');
+      expect(merged.mantle.quote.usdPrice).toBe('0.400541');
+    }
+    expect(merged.fantom?.status).toBe('fresh');
+    if (merged.fantom?.status === 'fresh') {
+      expect(merged.fantom.quote.source).toBe('CoinLore');
+      expect(merged.fantom.quote.usdPrice).toBe('0.028313');
+    }
     expect(calls.some((u) => u.includes('api.coinlore.net'))).toBe(true);
     expect(calls.some((u) => u.includes('tonapi.io'))).toBe(true);
     expect(calls.some((u) => u.includes('api.exchange.coinbase.com'))).toBe(true);
@@ -536,6 +676,42 @@ describe('applyPriceFallbacks', () => {
     expect(merged.btc).toEqual(freshCg('btc', '62683'));
     expect(merged.eth).toEqual(freshCg('eth', '1774.93'));
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('prices Mantle from DexScreener WMNT when CoinLore fails', async () => {
+    const { fetchFn } = stubFetch([
+      { match: 'api.coinlore.net', body: {}, throws: true },
+      { match: 'tokens/v1/mantle', body: [wmntPair()] },
+      { match: 'tokens/v1', body: [] },
+    ]);
+    const cg = cgEntries({ mantle: { status: 'error', reason: 'rate-limited' } });
+    for (const chain of Object.keys(cg) as Array<keyof PriceMap>) {
+      if (chain !== 'mantle') cg[chain] = freshCg(chain, '1');
+    }
+    const merged = await applyPriceFallbacks(fetchFn, cg, NOW_MS);
+    expect(merged.mantle?.status).toBe('fresh');
+    if (merged.mantle?.status === 'fresh') {
+      expect(merged.mantle.quote.source).toBe('DexScreener');
+      expect(merged.mantle.quote.usdPrice).toBe('0.401');
+    }
+  });
+
+  it('prices Fantom from CoinLore Sonic (S) and never reaches DexScreener', async () => {
+    const { fetchFn, calls } = stubFetch([
+      { match: 'api.coinlore.net', body: coinLoreBatch() },
+      { match: 'tokens/v1', body: [] },
+    ]);
+    const cg = cgEntries({ fantom: expiredCg('fantom', '0.02543177') });
+    for (const chain of Object.keys(cg) as Array<keyof PriceMap>) {
+      if (chain !== 'fantom') cg[chain] = freshCg(chain, '1');
+    }
+    const merged = await applyPriceFallbacks(fetchFn, cg, NOW_MS);
+    expect(merged.fantom?.status).toBe('fresh');
+    if (merged.fantom?.status === 'fresh') {
+      expect(merged.fantom.quote.source).toBe('CoinLore');
+      expect(merged.fantom.quote.usdPrice).toBe('0.028313');
+    }
+    expect(calls.some((u) => u.includes('tokens/v1/fantom'))).toBe(false);
   });
 
   it('keeps the original CoinGecko entry when every fallback fails', async () => {

@@ -19,14 +19,25 @@
  *    one call for many chains and its verified quotes track
  *    CoinGecko tightest; DexScreener's thin pairs wobble (CELO 8.5%,
  *    opBNB 1.4% off CoinGecko live).
+ *    Lane B (2026-11-24) adds the three missing chains here:
+ *    Mantle MNT id 121595 ($0.400541 live vs CoinGecko $0.400169,
+ *    +0.09%); Gnosis xDAI via DAI id 32417 ($1.00) — xDAI is DAI
+ *    locked 1:1 in the Gnosis bridge and redeemable for DAI, so the
+ *    DAI quote is the xDAI price, the same shape as the ETH-native
+ *    chains pricing as ETH; Fantom FTM via Sonic (S) id 148191
+ *    ($0.028313 live) — Fantom Opera retired 2026-06-30 and FTM
+ *    upgrades 1:1 to S, so S is FTM's redemption value (see the map
+ *    note for the evidence and the divergence caveat).
  * 2. DexScreener (tokens/v1/<chain>/<wrapped>) — on-chain price of
  *    the wrapped native, one call per chain. Base-side pair wins
  *    (highest liquidity). Quote-side only: the implied price
  *    priceUsd / priceNative — NOT priceUsd itself, which is the
  *    base token's price (the trap documented in dex-prices.ts).
  *    The implied price is exact arithmetic, and it is validated
- *    live: WFTM implied $0.02973 matches Sonic (S) at $0.029725
- *    on CoinLore the same day.
+ *    live: WFTM implied $0.02973 matched Sonic (S) at $0.029725
+ *    on CoinLore the same day (2026-11-23). Lane B (2026-11-24)
+ *    adds Mantle WMNT as a base-side pair (Agni WMNT/USDT0,
+ *    $0.4010, $2.69M liquidity — the second Mantle leg).
  * 3. TonAPI rates for TON, Coinbase Exchange ticker for LTC — the
  *    two chains CoinLore cannot cover (see the map notes).
  *
@@ -48,17 +59,35 @@
  *   stale legacy quotes — both are excluded from the map below,
  *   not trusted. CoinLore also lists neither LTC nor FTM in its
  *   top-500 tickers, and no XDAI or MNT quote was found.
- * - Gnosis (xDAI) and Mantle (MNT) have no verified keyless
- *   fallback at all: DexScreener returns [] there, CoinLore has
- *   no quote, and no wrapped contract verified. They stay
- *   CoinGecko-only; their CoinGecko quotes were fresh live.
+ * - Gnosis (xDAI) and Mantle (MNT) are fixed by Lane B
+ *   (2026-11-24, see leg 1 and the map notes): CoinLore DAI for
+ *   xDAI, CoinLore MNT plus DexScreener WMNT for Mantle.
+ * - REJECTED live by Lane B (do not re-add without fresh evidence):
+ *   DIA (api.diadata.org) Fantom WFTM $0.0382 — stale (Price ==
+ *   PriceYesterday, $0.18 volume) against CoinGecko $0.0252; DIA
+ *   Gnosis/Mantle 404. CryptoCompare min-api now requires an API
+ *   key (401). ParaSwap /prices has no CORS header and no longer
+ *   supports Fantom (250). Bybit and KuCoin geo-block this egress
+ *   (403 / 400302). Bitstamp ftmusd returns BTC data, not FTM.
+ *   Gemini FTMUSD matches CoinGecko ($0.0252) but has no CORS
+ *   header and $32/day volume. CoinCap is DNS-unresolvable from
+ *   this egress, so it cannot be verified live here. DexScreener
+ *   returns [] for Gnosis WXDAI and GNO, and for Aurora pairs.
+ *   Binance US / CoinPaprika FTM ($0.48 frozen), Kraken (no FTM
+ *   pair, no CORS) and Coinbase MNT/XDAI/FTM (404) stay rejected.
  *
- * Coverage after this module: 20 of 22 chains have at least one
- * fallback (all except Gnosis and Mantle). Fantom — the flagged
- * "Price expired" case — is covered by the DexScreener implied
- * price: CoinGecko's `fantom` id was ~8h stale live
+ * Coverage after this module: 22 of 22 chains have at least one
+ * fallback. Fantom — the flagged "Price expired" case — is
+ * covered twice: CoinLore Sonic (S) first, then the DexScreener
+ * implied price. CoinGecko's `fantom` id was ~8h stale live
  * (last_updated_at 1795417691 vs now 1795446545), so its quote
  * expires and the fallback replaces it with a live price.
+ * FTM divergence caveat (live 2026-11-24): CoinGecko FTM
+ * $0.0252 vs Sonic (S) $0.0283 vs DexScreener-implied $0.0287 —
+ * the Opera market is dead and its last-trade quotes wobble ~13%
+ * against the 1:1 redemption value. The fallback shows the
+ * redemption value with its real source label; it never invents
+ * a price, and the gap is recorded, not hidden.
  *
  * No timestamp comes back from any fallback source, so
  * providerUpdatedAtMs is the fetch time: the quote is fresh for
@@ -97,7 +126,20 @@ export const COINBASE_BASE_URL = 'https://api.exchange.coinbase.com';
  * Optimism, Base, Linea, Scroll, Aurora) price as ETH — never as
  * their governance tokens (ARB, OP) — and opBNB prices as BNB.
  * Every mapped id was verified live 2026-11-23 (see the module
- * note for the two excluded stale quotes and the two absent coins).
+ * note for the two excluded stale quotes and the two absent coins),
+ * except the three Lane B rows below, verified live 2026-11-24:
+ * gnosis prices as DAI (id 32417, $1.00) — xDAI is DAI locked 1:1
+ * in the Gnosis bridge, redeemable for DAI, so the DAI quote is
+ * the xDAI price; mantle is MNT (id 121595, $0.400541 live vs
+ * CoinGecko $0.400169, +0.09%); fantom prices as Sonic (S)
+ * (id 148191, $0.028313 live) — Fantom Opera retired 2026-06-30,
+ * FTM upgrades 1:1 to S with no end date announced for the
+ * ERC-20 route, and no deep FTM market remains (OKX delisted the
+ * FTM-USDT instrument, Coinbase has no FTM-USD product, Kraken
+ * has no FTM pair), so S is FTM's redemption value. Caveat: the
+ * dead Opera market's last-trade quotes sit ~13% below S
+ * (CoinGecko FTM $0.0252 live 2026-11-24) — the fallback shows
+ * the redemption value under its real CoinLore label.
  */
 export const COINLORE_NATIVE_IDS: Partial<Record<ChainId, string>> = {
   btc: '90',
@@ -116,6 +158,9 @@ export const COINLORE_NATIVE_IDS: Partial<Record<ChainId, string>> = {
   avax: '44883',
   celo: '44425',
   metis: '49563',
+  gnosis: '32417',
+  mantle: '121595',
+  fantom: '148191',
 };
 
 /**
@@ -126,13 +171,15 @@ export const COINLORE_NATIVE_IDS: Partial<Record<ChainId, string>> = {
  * MATIC->POL migration; CoinGecko POL $0.07882), arb/op/base/
  * scroll WETH ~$1,775-1,781, avax WAVAX $7.025, sol WSOL $75.98,
  * celo CELO $0.05273 (thin, $71k liquidity — last resort only),
- * opbnb WBNB quote-side implied $579.82, fantom WFTM quote-side
- * implied $0.02973.
+ *    opbnb WBNB quote-side implied $579.82, fantom WFTM quote-side
+ *    implied $0.02973, mantle WMNT base-side $0.4010 (Agni
+ *    WMNT/USDT0, $2.69M liquidity, live 2026-11-24).
  *
  * Linea and Aurora return [] from tokens/v1 for WETH (live), so
  * they have no DexScreener leg. TRX has no verified WTRX contract
- * on file; Metis and Mantle have no verified wrapped contract.
- * Gnosis is not indexed by DexScreener (see dex-prices.ts).
+ * on file; Metis has no verified wrapped contract. Gnosis returns
+ * [] from tokens/v1 for WXDAI and GNO (live 2026-11-24), so it
+ * has no DexScreener leg — CoinLore (DAI) covers it instead.
  */
 export const NATIVE_WRAPPED_TOKENS: Partial<
   Record<ChainId, { dexChain: string; contract: string }>
@@ -180,6 +227,10 @@ export const NATIVE_WRAPPED_TOKENS: Partial<
   opbnb: {
     dexChain: 'opbnb',
     contract: '0x4200000000000000000000000000000000000006',
+  },
+  mantle: {
+    dexChain: 'mantle',
+    contract: '0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8',
   },
   fantom: {
     dexChain: 'fantom',

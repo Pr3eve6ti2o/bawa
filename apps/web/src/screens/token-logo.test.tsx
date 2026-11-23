@@ -66,18 +66,20 @@ describe('TokenLogo', () => {
     expect(src).not.toBe('');
   });
 
-  it('renders an unknown symbol as a badge without an image', () => {
+  it('renders an unknown symbol as an honest empty state without an image', () => {
+    // Lane B: no yellow ticker badge — a plain ring, no fill, no text.
     mount('ZZZZ');
 
     expect(div.querySelector('img')).toBeNull();
 
-    const badge = div.querySelector('span[role="img"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('ZZZZ');
-    expect(badge?.getAttribute('aria-label')).toBe('ZZZZ logo unavailable');
+    const empty = div.querySelector('span[role="img"]');
+    expect(empty).not.toBeNull();
+    expect(empty?.textContent).toBe('');
+    expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.getAttribute('aria-label')).toBe('ZZZZ logo unavailable');
   });
 
-  it('replaces a failed token image with a badge', () => {
+  it('replaces a failed token image with an empty state', () => {
     mount('USDC');
 
     const img = div.querySelector('img');
@@ -89,10 +91,11 @@ describe('TokenLogo', () => {
 
     expect(div.querySelector('img')).toBeNull();
 
-    const badge = div.querySelector('span[role="img"]');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('USDC');
-    expect(badge?.getAttribute('aria-label')).toBe('USDC logo unavailable');
+    const empty = div.querySelector('span[role="img"]');
+    expect(empty).not.toBeNull();
+    expect(empty?.textContent).toBe('');
+    expect(empty?.className).not.toContain('bg-sun');
+    expect(empty?.getAttribute('aria-label')).toBe('USDC logo unavailable');
   });
 
   it('renders WETH and USDT0 as images, not ticker badges', () => {

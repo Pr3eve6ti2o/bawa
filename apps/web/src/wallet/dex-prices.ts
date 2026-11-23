@@ -4,8 +4,10 @@
  *
  * CoinGecko stays the first source: a token with a CoinGecko id is
  * priced by the batched /simple/price call in token-prices.ts and
- * never reaches this module. Only tokens WITHOUT a CoinGecko id come
- * here, in this order:
+ * never reaches this module first. Only tokens WITHOUT a CoinGecko
+ * id come here first, in this order — and Lane B (2026-11-24) sends
+ * listed tokens here too as a fallback when their CoinGecko quote
+ * is not fresh (see token-prices.ts fetchTokenPrices).
  *
  * 1. DexScreener (EVM, Solana, TRON) — keyless public API, no key,
  *    no registration. GET /tokens/v1/{chainId}/{address[,address...]}
@@ -19,11 +21,18 @@
  * The DexScreener trap (verified live 2026-11-23): priceUsd is the
  * BASE token's price, not the queried token's. tokens/v1/tron/USDT
  * returns a BTC-base pair priced $61,571.71 — USDT is only the quote
- * there. A pair counts only when its baseToken.address IS the queried
- * token (and its chainId matches). Otherwise the token is
- * "unavailable" from this source, never priced with its pair
- * partner's price. When several pairs match, the highest-liquidity
- * one wins.
+ * there — so priceUsd itself must never price the queried token.
+ * A base-side pair (baseToken.address IS the queried token, chainId
+ * matches) prices it directly. A quote-side pair prices it ONLY by
+ * the exact implied price priceUsd / priceNative (Lane B,
+ * 2026-11-24 — the same arithmetic as the native leg in
+ * price-fallbacks.ts): the base token's USD price divided by its
+ * price in queried-token units. Live proof: Polygon USDT0 appears
+ * only as the quote in AIPF/USDT0 ($5.98M liquidity, priceUsd
+ * $0.2953, priceNative 0.2953), and the implied price is exactly
+ * $1.00. A quote-side pair WITHOUT priceNative (the TRON USDT
+ * trap fixture) still prices nothing. When several pairs match,
+ * the highest-liquidity one wins, base-side first.
  *
  * No timestamp comes back from either source, so providerUpdatedAtMs
  * is the fetch time: the quote is fresh for the same 10-minute window
@@ -36,6 +45,7 @@
  * for known tokens there (WXDAI, GNO, USDC on Gnosis). Tokens on those
  * chains stay "Price unavailable" unless CoinGecko lists them.
  */
+import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { isRecord, ownValue } from './guards';
 import {
@@ -146,24 +156,63 @@ export function parseDexScreenerResponse(
   }
   for (const request of requests) {
     const dexChain = DEXSCREENER_CHAIN_FOR_CHAIN[request.chain];
-    let best: { price: string; liquidity: number } | null = null;
+    let bestBase: { price: string; liquidity: number } | null = null;
+    let bestQuote: { price: string; liquidity: number } | null = null;
     if (dexChain !== undefined) {
       for (const value of payload as unknown[]) {
         if (!isRecord(value)) continue;
         if (ownValue(value, 'chainId') !== dexChain) continue;
-        const baseToken = ownValue(value, 'baseToken');
-        if (!isRecord(baseToken)) continue;
-        const baseAddress = ownValue(baseToken, 'address');
-        if (typeof baseAddress !== 'string') continue;
-        if (!sameTokenAddress(baseAddress, request.contract)) continue;
-        const price = validUsdPrice(ownValue(value, 'priceUsd'));
-        if (price === null) continue;
         const liquidity = liquidityUsd(value);
-        if (best === null || liquidity > best.liquidity) {
-          best = { price, liquidity };
+        const baseToken = ownValue(value, 'baseToken');
+        if (isRecord(baseToken)) {
+          const baseAddress = ownValue(baseToken, 'address');
+          if (
+            typeof baseAddress === 'string' &&
+            sameTokenAddress(baseAddress, request.contract)
+          ) {
+            const price = validUsdPrice(ownValue(value, 'priceUsd'));
+            if (price !== null && (bestBase === null || liquidity > bestBase.liquidity)) {
+              bestBase = { price, liquidity };
+            }
+            continue;
+          }
+        }
+        // Quote-side only: the implied price priceUsd / priceNative
+        // (Lane B — same exact arithmetic as the native leg in
+        // price-fallbacks.ts). Never priceUsd itself, which is the
+        // base token's price. Needs priceNative: a quote-side pair
+        // without it (the TRON USDT trap fixture) prices nothing.
+        const quoteToken = ownValue(value, 'quoteToken');
+        if (!isRecord(quoteToken)) continue;
+        const quoteAddress = ownValue(quoteToken, 'address');
+        if (typeof quoteAddress !== 'string') continue;
+        if (!sameTokenAddress(quoteAddress, request.contract)) continue;
+        const basePrice = ownValue(value, 'priceUsd');
+        const priceNative = ownValue(value, 'priceNative');
+        if (
+          (typeof basePrice !== 'number' && typeof basePrice !== 'string') ||
+          (typeof priceNative !== 'number' && typeof priceNative !== 'string')
+        ) {
+          continue;
+        }
+        let implied: string | null = null;
+        try {
+          const ratio = new Decimal(String(basePrice)).div(
+            new Decimal(String(priceNative)),
+          );
+          if (ratio.isFinite() && ratio.gt(0)) {
+            implied = ratio.toString();
+          }
+        } catch {
+          implied = null;
+        }
+        if (implied === null) continue;
+        if (bestQuote === null || liquidity > bestQuote.liquidity) {
+          bestQuote = { price: implied, liquidity };
         }
       }
     }
+    const best = bestBase ?? bestQuote;
     entries[request.key] =
       best === null
         ? { status: 'unavailable', reason: 'missing' }
