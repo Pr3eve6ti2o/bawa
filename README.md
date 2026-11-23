@@ -1,6 +1,6 @@
 # Bawa
 
-[![CI build status for panel-rebuild/adopt-proper](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Fadopt-proper)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Fadopt-proper)
+[![CI build status for panel-rebuild/token-gaps](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Ftoken-gaps)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Ftoken-gaps)
 [![MIT licence](https://img.shields.io/github/license/Pr3eve6ti2o/bawa)](LICENSE)
 
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. If you write wallet code or use an AI coding agent, give the agent one plain request; it uses this repo to produce a real, buildable project.
@@ -16,6 +16,28 @@ It ships with 22 chains enabled by default: btc, eth, trx, ton, sol, bsc, matic,
 Do not confuse that number with the guide's number. The guide covers the full Trust Wallet Core registry of 168 chains. The example wallet enables 22 of them. Add Token adds more tokens by contract address and can enable any of the 22 chains; a chain outside the 22 cannot be added from the wallet, it needs a change to the registry first.
 
 To run the example wallet, follow [docs/CREATE-EXAMPLE-WALLET.md](docs/CREATE-EXAMPLE-WALLET.md).
+
+### Screenshots
+
+Real screenshots of the example web wallet running from this branch, taken with a fresh unfunded test wallet (zero balances, live prices). Desktop is 1440 px, mobile is 390 px.
+
+Two transient network states are visible and real, not defects in the shots: the mobile dashboard is marked "(Partial)" because some public balance and price feeds were rate-limited when it was captured, and the desktop recent-activity panel shows "Ethereum history unavailable" for the same reason.
+
+![Dashboard of the Bawa web wallet on desktop](docs/images/web-wallet-dashboard-desktop.png)
+
+*Dashboard on desktop — portfolio, popular chains, assets and recent activity.*
+
+<img src="docs/images/web-wallet-dashboard-mobile.png" alt="Dashboard of the Bawa web wallet on mobile" width="390">
+
+*Dashboard on mobile — a fresh test wallet, same zero balances.*
+
+![Receive screen of the Bawa web wallet on desktop](docs/images/web-wallet-receive-desktop.png)
+
+*Receive on desktop — Bitcoin QR card for a fresh test address.*
+
+<img src="docs/images/web-wallet-receive-mobile.png" alt="Receive screen of the Bawa web wallet on mobile" width="390">
+
+*Receive on mobile — the QR card, amount and full address.*
 
 ## Quickstart
 
@@ -46,7 +68,7 @@ Install Node **22** (`22.23.4` verified) and Python **3.12+**. For the Android s
 Clone this branch, install the generator dependencies, and return to the repo root:
 
 ```sh
-git clone --branch panel-rebuild/adopt-proper https://github.com/Pr3eve6ti2o/bawa.git
+git clone --branch panel-rebuild/token-gaps https://github.com/Pr3eve6ti2o/bawa.git
 cd bawa
 cd tools/hdwallet-gen && npm ci
 cd ../..
@@ -171,7 +193,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) when you contribute.
 
 ## Help
 
-Report bugs through the repository’s GitHub Issues.
+Report bugs through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues). Use the bug report template there, and never include a mnemonic, private key or other recovery material.
 
 ## Licence
 
@@ -208,6 +230,25 @@ no-scroll Send/Receive flow, scan icon, and this documentation) is
 complete and merged into `panel-rebuild/token-gaps` (merge commit
 `6147b74`). Full record, gates and branch state:
 [docs/UI-UX-ROUND2-PROGRAMME.md](docs/UI-UX-ROUND2-PROGRAMME.md).
+
+No code from the programme was merged into `adopt-proper` or `main`.
+The durable preview (GitHub Pages) still serves the saved
+adopt-proper-based build; to preview the programme, check out
+`panel-rebuild/token-gaps` and run the web starter locally.
+
+## Reverify + Professional Polish programme (2026-11-23)
+
+The five-lane Reverify + Professional Polish programme (reverify
+checklist of every owner order from 2026-11-22 through 2026-11-23,
+real wallet screenshots in the README, professional polish of the
+README and docs, architecture/duplicates/dead-code pass, skills gap)
+is complete and merged into `panel-rebuild/token-gaps` (fast-forward
+to `ccb8195`). It fixed
+three genuinely missed items in place: the 40 px Receive fix
+restored to the token-gaps tree, a "Continue to your send" button
+added to the import flow, and the item-14 chain list recorded. Full
+record, gates and branch state:
+[docs/REVERIFY-PROGRAMME.md](docs/REVERIFY-PROGRAMME.md).
 
 No code from the programme was merged into `adopt-proper` or `main`.
 The durable preview (GitHub Pages) still serves the saved

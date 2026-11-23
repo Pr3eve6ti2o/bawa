@@ -683,8 +683,12 @@ Still open after the programme: E2E-03/06 need a stable-network run;
 non-zero DOGE watch-row render unproven; 1919 settled widths not
 captured; TON Issue 5 (first-send state init) and Issue 6 (`/track`
 message hash) in `DEVNET-ISSUES.md`; devnet exception E1 expires
-2027-02-20; the mobile Receive 40 px question awaits the owner's pick;
-the item-14 cannot-add chain list is not recorded in the repo.
+2027-02-20; the mobile Receive 40 px question was decided 2026-11-23
+~14:17 IST (owner: keep the fix — do not re-ask; the fix itself was
+restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); the item-14 cannot-add chain
+list is now recorded in `docs/UI-UX-FIXES-PROGRAMME.md` (reverify lane
+1, item R-16).
 
 ## 11. UI/UX Round 2 programme — 10 items, merged into token-gaps (2026-11-23)
 
@@ -756,7 +760,70 @@ Still open after the programme: the E2E harness versus `base:
 device (items 1 and 9); the Receive tagline removed in item 8; the
 token contract tail truncated on one-line rows; review and sign steps
 not CDP-verified; CoinGecko 429s on the shared VM IP; the word grid at
-1024 px is tight; the import path has no "Continue to your send"
-button; external wallet apps not tested for deep links; the mobile
-Receive 40 px question still awaits the owner's pick; devnet exception
+1024 px is tight; the import path now has a "Continue to your send"
+button on the restored screen (reverify lane 1, 2026-11-23, see
+`docs/REVERIFY-CHECKLIST.md` item R-15); external wallet apps not
+tested for deep links; the mobile Receive 40 px question was decided
+2026-11-23 ~14:17 IST (owner: keep the fix — do not re-ask; the fix
+itself was restored to the token-gaps tree by reverify lane 1, see
+`docs/REVERIFY-CHECKLIST.md` item R-14); devnet exception
 E1 expires 2027-02-20; TON Issues 5 and 6 in `DEVNET-ISSUES.md`.
+
+## 12. Reverify + Professional Polish programme — 5 lanes, merged into token-gaps (2026-11-23)
+
+Owner order 2026-11-23 ~18:14 IST. Branch
+`panel-rebuild/reverify-pro` from token-gaps `b089c28`; fast-forwarded
+into `panel-rebuild/token-gaps` to `ccb8195` on 2026-11-23. Doc-only
+updates pushed the same day to `main` (`e64679e`),
+`panel-rebuild/adopt-proper` (`d0aa6ba`),
+`panel-rebuild/desktop-layout-v2` (`df6e54d`),
+`panel-rebuild/devnet-temp` (`bd4bdd4`) and
+`panel-rebuild/token-discovery` (`81994e8`). Full record: `docs/REVERIFY-PROGRAMME.md`;
+checklist: `docs/REVERIFY-CHECKLIST.md`. Hands-on Muse, 0 Sol calls.
+
+- **Vitest baseline corrected.** The Round 2 record says 89 files /
+  1697 passed / 5 skipped on tip `b089c28`. Four independent
+  first-hand runs on that tip (merge lane plus lanes 1, 3 and 4)
+  measure 90 files / 1718 passed / 5 skipped. The Round 2 figure
+  does not reproduce; its cause was not established. The merged
+  reverify tree measures 1722 passed / 5 skipped — baseline 1718
+  plus Lane 1's 4 new tests, exactly. The Round 2 record itself was
+  left as written; the correction lives here and in the programme
+  record.
+- **Lane 3 discrepancies, recorded not resolved.** (1) SOL/LTC/DOGE
+  history: `chains.ts` records history verified,
+  `registry/capabilities.json` records it NOT_SUPPORTED for all 18
+  additional chains — which source is right needs re-verification.
+  (2) Vitest count, see above. (3) ADR-0007's 2026-11-20 amendment
+  says 12 unique CoinGecko ids for the original 13 chains; the
+  current `prices.ts` map yields 10 for those 13. The 2026-11-23
+  amendment states the current verified map (15 unique for 22); the
+  old amendment was left as written.
+- **Reference-repo link still missing.** The owner never named the
+  repo or attached a link for the README showcase. No layout from it
+  was used or invented.
+- **Hygiene scan (merge lane, `repo-hygiene-scan` skill, tools run
+  first-hand).** Madge: no circular dependency. Ts-prune/knip:
+  nothing deleted — the only genuinely unreferenced export is
+  `registerLookupHandler` (designed extension point, kept), and the
+  unused files are all false positives. Knip lists 8 unused
+  dependencies (7 `@radix-ui/*` plus `react-hook-form`, orphaned by
+  Lane 4's deletions); `package.json` cleanup is a separate change.
+  Jscpd: 78 production-production clone groups; largest are the
+  btc/ltc adapters, prices/token-prices, asset-list/dashboard and
+  three BTC pairs in `send.ts`. Consolidation candidates for a
+  future lane.
+- **`send.ts` / `core.ts` split and `wallet-refresh.ts` re-wire stay
+  open** (Lane 4, with evidence in its report): the split touches
+  the secret-handling path, and the re-wire would change refresh
+  behaviour for 18 chains, devnet mode, caching and the
+  stale/refreshing flags. Neither is polish work.
+- **Unwired modules stay:** `engine/destination.ts`,
+  `wallet/adapters/confirmation.ts`, `wallet/evm-typed-data.ts`,
+  `wallet/secretHandoff.ts` — wire them, or delete them by explicit
+  decision.
+- **Merge decisions.** The Lane 2 / Lane 3 README conflict was
+  resolved by keeping Lane 2's canonical Screenshots section; Lane
+  3's follow-up commit was skipped because its content was already
+  in the tree from that resolution. Nothing from any lane was
+  dropped.

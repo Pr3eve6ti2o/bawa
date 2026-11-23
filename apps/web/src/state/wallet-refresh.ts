@@ -13,7 +13,7 @@
 //   the failure is visible instead of swallowed by an empty catch.
 // - Last-good retention: when an adapter read fails after a previous
 //   success, the previous value (balances) / transactions (history)
-//   and its lastOkAt are kept, and the status becomes error/unavailable
+//   and its fetchedAtMs are kept, and the status becomes error/unavailable
 //   with the new reason. A failure is never presented as zero/empty.
 // - Retry: P1's apps/web/src/wallet/retry.ts (withRetry +
 //   classifyRetryableError). retryThrowing / retryResult below are thin
@@ -28,6 +28,7 @@
 //   second fetch. A refresh for different addresses starts fresh, and
 //   the per-chain request counters drop the old fetch's late answers.
 import type { ChainId } from '@bawa/contracts';
+import { ensureAdapters } from './ensure-adapters';
 import type {
   AdapterBalance,
   AdapterResult,
@@ -46,7 +47,7 @@ export interface BalanceState {
   /** Short machine-readable reason for unavailable/error (e.g. no-adapter). */
   reason?: string;
   /** Epoch ms of the last successful adapter read, if any. */
-  lastOkAt?: number;
+  fetchedAtMs?: number;
 }
 
 export type HistoryStatus = 'loading' | 'loaded' | 'empty' | 'unavailable' | 'error';
@@ -56,7 +57,7 @@ export interface HistoryState {
   txs: AdapterTx[];
   reason?: string;
   /** Epoch ms of the last successful adapter read, if any. */
-  lastOkAt?: number;
+  fetchedAtMs?: number;
 }
 
 export type RefreshOperation = 'refresh-balances' | 'refresh-history';
@@ -79,27 +80,6 @@ export interface RefreshReport {
 }
 
 const CHAINS = ['btc', 'eth', 'trx', 'ton'] as const;
-
-// Lazy adapter loading: the adapter chunk (viem + adapters, ~3 MB) must not
-// load before first paint. First caller imports it and registers the
-// adapters once; concurrent callers share the promise. A rejected import
-// clears the cache so a later call retries. Exported for the send screen,
-// which also reads adapters but loads after the wallet context.
-let adaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
-
-export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
-  if (adaptersPromise) return adaptersPromise;
-  const promise = import('../wallet/adapters').then((adapters) => {
-    adapters.registerAllAdapters();
-    return adapters;
-  });
-  adaptersPromise = promise;
-  void promise.catch(() => {
-    if (adaptersPromise === promise) adaptersPromise = null;
-  });
-  return promise;
-}
-
 
 /** Map a raw error message to a sanitised code (no addresses, URLs or payloads). */
 function sanitiseReason(message: string): string {
@@ -302,11 +282,11 @@ export function createRefresh(deps: RefreshDeps): {
         if (result.status === 'ok') {
           setBalance(
             result.data.valueBaseUnits === '0'
-              ? { status: 'zero', value: '0', lastOkAt: now }
+              ? { status: 'zero', value: '0', fetchedAtMs: now }
               : {
                   status: 'available',
                   value: result.data.valueBaseUnits,
-                  lastOkAt: now,
+                  fetchedAtMs: now,
                 },
           );
         } else {
@@ -314,7 +294,7 @@ export function createRefresh(deps: RefreshDeps): {
           // failure is a status + reason, never a zero.
           const kept =
             previous.value !== undefined
-              ? { value: previous.value, lastOkAt: previous.lastOkAt }
+              ? { value: previous.value, fetchedAtMs: previous.fetchedAtMs }
               : {};
           setBalance({
             status: result.status,
@@ -389,15 +369,15 @@ export function createRefresh(deps: RefreshDeps): {
         if (result.status === 'ok') {
           setHistory(
             result.data.length === 0
-              ? { status: 'empty', txs: [], lastOkAt: now }
-              : { status: 'loaded', txs: result.data, lastOkAt: now },
+              ? { status: 'empty', txs: [], fetchedAtMs: now }
+              : { status: 'loaded', txs: result.data, fetchedAtMs: now },
           );
         } else {
           // Keep the last good transactions (if any) with their
           // timestamp; the failure is a status + reason, never empty.
           const kept =
             previous.txs.length > 0
-              ? { txs: previous.txs, lastOkAt: previous.lastOkAt }
+              ? { txs: previous.txs, fetchedAtMs: previous.fetchedAtMs }
               : { txs: [] as AdapterTx[] };
           setHistory({
             status: result.status,

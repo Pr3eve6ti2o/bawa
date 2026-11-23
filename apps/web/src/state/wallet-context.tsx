@@ -2,6 +2,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from 'react';
+import { isRecord } from '../wallet/guards';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { availableFor, canRotateReceiveAddress, SUPPORTED_CHAINS } from '../wallet/chains';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
@@ -48,43 +49,11 @@ function loadVaultCore(): Promise<typeof import('../wallet/core')> {
 }
 
 
-let adaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
-
-// Lazy adapter loading: the adapter chunk (viem + adapters, ~3 MB) must not
-// load before first paint. First caller imports it and registers the
-// adapters once; concurrent callers share the promise. A rejected import
-// clears the cache so a later call retries. Exported for the send screen,
-// which also reads adapters but loads after the wallet context.
-export function ensureAdapters(): Promise<typeof import('../wallet/adapters')> {
-  if (adaptersPromise) return adaptersPromise;
-  const promise = import('../wallet/adapters').then((adapters) => {
-    adapters.registerAllAdapters();
-    return adapters;
-  });
-  adaptersPromise = promise;
-  void promise.catch(() => {
-    if (adaptersPromise === promise) adaptersPromise = null;
-  });
-  return promise;
-}
-
-let devnetAdaptersPromise: Promise<typeof import('../wallet/adapters')> | null = null;
-
-// TEMPORARY devnet mode: the devnet adapter registry (Sepolia, Nile,
-// testnet4, TON testnet) loads lazily like the mainnet one and never
-// replaces it. Exported for the send screen's devnet broadcast path.
-export function ensureDevnetAdapters(): Promise<typeof import('../wallet/adapters')> {
-  if (devnetAdaptersPromise) return devnetAdaptersPromise;
-  const promise = import('../wallet/adapters').then((adapters) => {
-    adapters.registerDevnetAdapters();
-    return adapters;
-  });
-  devnetAdaptersPromise = promise;
-  void promise.catch(() => {
-    if (devnetAdaptersPromise === promise) devnetAdaptersPromise = null;
-  });
-  return promise;
-}
+// Adapter lazy-loading lives in ./ensure-adapters (single shared
+// cache); re-exported here so the send screen keeps importing
+// it from the wallet context.
+import { ensureAdapters, ensureDevnetAdapters } from './ensure-adapters';
+export { ensureAdapters, ensureDevnetAdapters };
 
 
 // Token gaps, item 6 + item 8: the boot hydration effect used to
@@ -277,8 +246,6 @@ export interface WalletContextValue extends WalletState {
 }
 
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 function readStored(): Record<string, unknown> {
   try {

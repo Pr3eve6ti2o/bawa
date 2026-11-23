@@ -25,13 +25,13 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ownValue } from './guards';
 import Decimal from 'decimal.js';
 import type { ChainId } from '../engine/boundary';
 import { CHAIN_DECIMALS } from './chain-amount-format';
 import { fiatMinorUnits, formatFiatUSD, sumFiatUSD } from './money';
 import type { BalanceState } from './balance-state';
 
-export const PRICE_PROVIDER_NAME = 'CoinGecko';
 export const PRICE_PROVIDER_BASE_URL = 'https://api.coingecko.com/api/v3';
 
 export const PRICE_IDS: Record<ChainId, string> = {
@@ -300,19 +300,6 @@ export function parsePriceResponse(
     }
   };
 
-  // Inherited fields and unreadable getters/properties count as absent.
-  const ownValue = (
-    object: Record<string, unknown>,
-    key: string,
-  ): unknown => {
-    try {
-      return Object.prototype.hasOwnProperty.call(object, key)
-        ? object[key]
-        : undefined;
-    } catch {
-      return undefined;
-    }
-  };
 
   const root = isPlainObject(payload) ? payload : null;
 

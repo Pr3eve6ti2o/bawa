@@ -3448,7 +3448,7 @@ Those entries appear later in this register. All other rows, including M-01–M-
 
 **Clearance condition:** Met by the independent fixture-oracle procedure and recorded evidence. Reviewer: T09 lane, on the first-hand run above. Merge acceptance by the fan-out coordinator remains the programme’s acceptance gate.
 
-**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5274); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/tools/hdwallet-gen/test/smoke.test.js).
+**Gate/source links:** Doc 3 counterpart: OI-096 (ANDROID-GUIDE.md, L5274); re-checked register: M24 K19 and M06 R01; [negative-test source](https://github.com/Pr3eve6ti2o/bawa/blob/56396a20/test/smoke.test.js).
 
 ### M-02 — Bad-checksum inputs bypass the private-key guard; a typo can trigger a multi-gigabyte allocation
 

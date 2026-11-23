@@ -675,9 +675,15 @@ export function ReceiveScreen() {
             </Link>
           </div>
         )}
-        <p role="status" className="mt-3 text-center text-sm text-ink">
-          {copyStatus}
-        </p>
+        {/* P8 (desktop-layout-v2 follow-up, kept per owner decision
+            2026-11-23): the status line renders only when a copy/share
+            action has something to report — an always-rendered empty
+            <p> leaves ~40 px of dead space under the buttons. */}
+        {copyStatus !== '' && (
+          <p role="status" className="mt-3 text-center text-sm text-ink">
+            {copyStatus}
+          </p>
+        )}
       </Card>
 
       <p className="text-sm text-ink">

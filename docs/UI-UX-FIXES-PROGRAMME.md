@@ -97,10 +97,33 @@ serve nothing.
 - Devnet exception E1 expires 2027-02-20 — renew or remove devnet by
   then (removal checklist in `docs/DECISIONS.md` §9).
 - Mobile Receive screen 40 px shorter than the saved mobile build —
-  owner decision pending (keep or revert).
-- Item 14: the chains that could not be added and why are not recorded
-  in the repo; the coordinator's lane report is the source to confirm
-  against.
+  DECIDED 2026-11-23 ~14:17 IST: the owner tapped "Keep the 40 px
+  fix". The P8 dead-space removal stays; do not re-ask. (Reverify
+  lane 1, 2026-11-23: the fix itself had been lost from the token-gaps
+  tree by the Receive rework — restored in `receive.tsx`, see
+  `docs/REVERIFY-CHECKLIST.md` item R-14.)
+- Item 14 — chains added and why the rest were not (recorded by
+  reverify lane 1, 2026-11-23; this closes the "not recorded in the
+  repo" gap). Trust Wallet Core 4.9.3 lists 168 chains; the wallet
+  enables 22. The 9 added by this programme, each with two
+  independent keyless endpoints verified live (see
+  `apps/web/src/wallet/chains.ts`):
+  Scroll 534352 (scroll-rpc.publicnode.com, rpc.scroll.io), Mantle
+  5000 (mantle-rpc.publicnode.com, rpc.mantle.xyz), Metis 1088
+  (metis-rpc.publicnode.com, andromeda.metis.io), opBNB 204
+  (opbnb-rpc.publicnode.com, opbnb-mainnet-rpc.bnbchain.org), Aurora
+  1313161554 (mainnet.aurora.dev, 1rpc.io/aurora), Fantom 250
+  (rpc.fantom.network, rpc2.fantom.network), Linea 59144
+  (linea-rpc.publicnode.com, rpc.linea.build), Celo 42220
+  (celo-rpc.publicnode.com, forno.celo.org), Gnosis 100
+  (gnosis-rpc.publicnode.com, rpc.gnosischain.com). A chain was added
+  only on that bar — two keyless endpoints, both answering live. The
+  remaining Core chains were not added because they failed it: a
+  single keyless endpoint, no keyless endpoint, a 403/401, or a dead
+  provider (per the 2026-11-23 ~09:29 completion record). No
+  per-chain enumeration of all 146 remaining chains was preserved in
+  the repo, and none is invented here; re-auditing the full Core list
+  is a separate job if the owner wants more chains.
 - Out of scope, unchanged: M-39 (GUI TON withdrawal), broadcast
   authorisation (mainnet broadcast still disabled), Android Gradle
   build (no SDK/JDK on gray-pinee).

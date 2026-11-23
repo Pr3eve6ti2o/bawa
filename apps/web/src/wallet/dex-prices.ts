@@ -37,6 +37,7 @@
  * chains stay "Price unavailable" unless CoinGecko lists them.
  */
 import type { ChainId } from '../engine/boundary';
+import { isRecord, ownValue } from './guards';
 import {
   PRICE_FETCH_TIMEOUT_MS,
   isFreshQuote,
@@ -83,17 +84,7 @@ export interface TonPriceRequest {
 
 type PriceMap = Record<string, PriceEntry>;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
-function ownValue(object: Record<string, unknown>, key: string): unknown {
-  try {
-    return Object.prototype.hasOwnProperty.call(object, key) ? object[key] : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * Same token address: EVM hex compares case-insensitively (checksummed

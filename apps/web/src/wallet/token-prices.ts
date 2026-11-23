@@ -16,6 +16,7 @@
  * source (see asset-rows / asset-detail), never a hardcoded provider.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ownValue } from './guards';
 import {
   PRICE_ATTRIBUTION_TEXT,
   PRICE_FETCH_TIMEOUT_MS,
@@ -105,13 +106,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   }
 }
 
-function ownValue(object: Record<string, unknown>, key: string): unknown {
-  try {
-    return Object.prototype.hasOwnProperty.call(object, key) ? object[key] : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 function parseToken(
   root: Record<string, unknown> | null,

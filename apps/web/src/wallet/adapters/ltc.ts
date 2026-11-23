@@ -23,6 +23,7 @@ import {
   type FetchTransport,
   type TxInput,
 } from './types';
+import { isRecord } from '../guards';
 import { withRetry } from '../retry';
 
 const NETWORK_ID =
@@ -53,9 +54,6 @@ export interface LtcAdapterOverrides {
   transport?: FetchTransport;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isLtcAddress(address: string): boolean {
   if (address.length < 26) return false;

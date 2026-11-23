@@ -128,7 +128,7 @@ ever run on any network, and broadcast stays disabled.
 
 <!-- BEGIN GENERATED: capabilities from apps/web/src/wallet/chains.ts.
      Regenerate when chains.ts changes; the CI drift check fails otherwise.
-     Generated 2026-11-22 from chains.ts at 6092dce. -->
+     Generated 2026-11-23 from chains.ts at 24523d17239b16ff400786350de9587b67dfd2e1. -->
 
 | Chain | derive | restore | receive | balance | history | fee-quote | unsigned-plan | local-sign | post-sign-verify | simulate |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -136,21 +136,30 @@ ever run on any network, and broadcast stays disabled.
 | Ethereum (ETH) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
 | TRON (TRX) | verified | verified | verified | verified | verified | verified | verified | verified | verified | candidate |
 | TON | verified | verified | verified | verified | verified | blocked | verified | verified | blocked | candidate |
-| Solana (SOL) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| BNB Smart Chain (BNB) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Polygon (POL) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Arbitrum One (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| OP Mainnet (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Base (ETH) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Avalanche C-Chain (AVAX) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Litecoin (LTC) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
-| Dogecoin (DOGE) | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | blocked | candidate |
+| Solana (SOL) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| BNB Smart Chain (BNB) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Polygon (POL) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Arbitrum One (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| OP Mainnet (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Base (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Avalanche C-Chain (AVAX) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Litecoin (LTC) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Dogecoin (DOGE) | verified | verified | verified | verified | verified | blocked | blocked | blocked | blocked | candidate |
+| Gnosis (XDAI) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Celo (CELO) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Linea (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Mantle (MNT) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Scroll (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| opBNB (BNB) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Metis (METIS) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Aurora (ETH) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
+| Fantom (FTM) | verified | verified | verified | verified | blocked | blocked | blocked | blocked | blocked | candidate |
 
 TON `fee-quote` is blocked: a TON fee depends on the unsigned message,
 which is Phase 4 work — no fee number is ever invented. TON
 `post-sign-verify` is blocked: the signed BOC is not re-parsed (no BOC
 parser vendored); verification is no-error + 32-byte hash + BOC magic
-only. `simulate` is candidate on all thirteen chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. The nine extended chains (Solana, BNB Smart Chain, Polygon, Arbitrum One, OP Mainnet, Base, Avalanche C-Chain, Litecoin, Dogecoin) are live listed chains with derive, restore and receive verified, but balance, history, fee-quote, unsigned-plan, local-sign and post-sign-verify are blocked — no adapter or send builder exists for them yet, and no capability is ever faked. Listing a chain never implies it can do an operation; a chain is
+only. `simulate` is candidate on all twenty-two chains: declared for item 9, owned by the send lane in `send.ts`; no simulation runs yet, and simulation is a pre-check, never confirmation. The eighteen additional chains are live listed chains with create, derive, restore, receive and balance verified. History is verified for Solana, Litecoin and Dogecoin only; history, fee-quote, unsigned-plan, local-sign and post-sign-verify are blocked for the other fifteen — no adapter or send builder exists for them yet, and no capability is ever faked. Listing a chain never implies it can do an operation; a chain is
 available for an operation only when `availableFor(capability)` in
 `apps/web/src/wallet/chains.ts` returns it.
 

@@ -724,6 +724,81 @@ describe.sequential('ImportWalletScreen recovery phrase (Phase 1.3)', () => {
     }
   }, 30_000);
 
+  it('offers to continue to a pending send link after restoring', async () => {
+    // Reverify lane 1 (UI/UX round 2, item 2): the wallet was imported
+    // from a shared payment link — the restored screen must offer to
+    // continue to Send with that payment filled in, like the
+    // create-wallet ready screen does, not drop the link. The
+    // create flow had this; the import flow never got it.
+    sessionStorage.setItem(
+      'bawa-pending-send-link',
+      'chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5',
+    );
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      await restorePhrase(div, VALID_MNEMONIC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const password = div.querySelector<HTMLInputElement>(
+        '#import-vault-password',
+      );
+      const confirm = div.querySelector<HTMLInputElement>(
+        '#import-vault-password-confirm',
+      );
+      expect(password).not.toBeNull();
+      expect(confirm).not.toBeNull();
+      await act(async () => {
+        setInputValue(password!, TEST_PASSWORD);
+        setInputValue(confirm!, TEST_PASSWORD);
+      });
+      await clickButton(div, 'Save to vault');
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Wallet restored'),
+      );
+      const link = div.querySelector(
+        'a[href="/send?chain=eth&to=0x742d35Cc6634C0532925a3b844Bc454e4438f44e&amount=0.5"]',
+      );
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toContain('Continue to your send');
+    } finally {
+      sessionStorage.removeItem('bawa-pending-send-link');
+      await cleanup();
+    }
+  }, 30_000);
+
+  it('shows no continue-to-send link after restoring without a pending send link', async () => {
+    sessionStorage.removeItem('bawa-pending-send-link');
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await openPhraseMode(div);
+      await restorePhrase(div, VALID_MNEMONIC);
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Check the restored addresses'),
+      );
+      const password = div.querySelector<HTMLInputElement>(
+        '#import-vault-password',
+      );
+      const confirm = div.querySelector<HTMLInputElement>(
+        '#import-vault-password-confirm',
+      );
+      expect(password).not.toBeNull();
+      expect(confirm).not.toBeNull();
+      await act(async () => {
+        setInputValue(password!, TEST_PASSWORD);
+        setInputValue(confirm!, TEST_PASSWORD);
+      });
+      await clickButton(div, 'Save to vault');
+      await waitFor(div, () =>
+        (div.textContent ?? '').includes('Wallet restored'),
+      );
+      expect(div.textContent).not.toContain('Continue to your send');
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
 });
 
 describe('expandUniquePrefix', () => {

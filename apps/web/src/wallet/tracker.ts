@@ -8,6 +8,7 @@
  * account address plus lt plus hash, so TON lookup needs the address.
  */
 import type { ChainId } from '../engine/boundary';
+import { isRecord } from './guards';
 import { getAdapterForMode } from './adapters/index';
 import { base64ToHex } from './adapters/ton';
 import { fetchJson } from './adapters/types';
@@ -37,9 +38,6 @@ export type TrackerLookupResult =
   | { status: 'unsupported'; reason: string }
   | { status: 'error'; reason: string };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function messageOf(error: unknown): string {
   if (error instanceof Error) return error.message;

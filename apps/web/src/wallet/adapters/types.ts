@@ -9,7 +9,6 @@ import { BawaError, WalletErrorCodes } from '../errors';
  * BROADCAST_DISABLED_MESSAGE) until separately authorised.
  */
 
-export type AdapterStatus = 'ok' | 'unavailable' | 'error';
 
 export type AdapterResult<T> =
   | { status: 'ok'; data: T; source: string; fetchedAt: number }

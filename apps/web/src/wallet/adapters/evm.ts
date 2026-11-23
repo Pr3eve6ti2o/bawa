@@ -17,6 +17,7 @@ import {
   isAddress,
   type PublicClient,
 } from 'viem';
+import { isRecord } from '../guards';
 import type { ChainId } from '../../engine/boundary';
 import {
   assertNetworkId,
@@ -76,9 +77,6 @@ export interface EvmAdapterOverrides {
   broadcast?: (signedTx: unknown) => Promise<BroadcastResult>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function createEvmAdapter(
   config: EvmAdapterConfig,

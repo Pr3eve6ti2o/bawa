@@ -1,7 +1,7 @@
 ---
 title: Chain Registry & Asset Metadata
-description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's thirteen chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
-last-updated: 2026-11-20
+description: Interpret Wallet Core's registry.json and Trust Wallet Assets for Bawa's chains; keep coin, network, derivation, address and asset identities separate; prepare chain and asset metadata changes.
+last-updated: 2026-11-23
 ---
 
 # Chain Registry & Asset Metadata
@@ -19,7 +19,7 @@ Reference.
 ## Contents
 
 - [Trust Wallet Core registry](#trust-wallet-core-registry)
-- [Bawa's thirteen chains in the registry](#bawas-thirteen-chains-in-the-registry)
+- [Bawa's four original chains in the registry](#bawas-four-original-chains-in-the-registry)
 - [Bawa's own chain support](#bawas-own-chain-support)
 - [Testnet and the registry](#testnet-and-the-registry)
 - [Cosmos Chain Registry](#cosmos-chain-registry)
@@ -44,6 +44,8 @@ The Trust Wallet Core registry is mainnet metadata: it holds 168 entries and zer
 For payment tracking, use the [canonical payment-request record and reconciliation guidance](../07-payment-tracking/README.md). Upstream metadata does not replace that record or its reconciliation rules.
 
 ## Trust Wallet Core registry
+
+The field inventory in this section was verified against the four original Bawa entries (Bitcoin, Ethereum, TRON, TON) on 2026-11-08; the eighteen additional chains are covered in [Bawa's own chain support](#bawas-own-chain-support) below.
 
 This is a selected subset of fields in `registry.json`, not a complete inventory:
 
@@ -112,9 +114,9 @@ Pin for both sources: tag `4.9.3`, commit `7a21615fad32edd8dc0b040d845de3973cde2
 
 Verification recorded on 8 November 2026, on muse-vm, for repository snapshot e3b65fb832db287fdc8d54794980dd0b3456cc12. This page cites Wallet Core 4.9.2. Its registry was fetched live, and the 4.9.2 field reference returned HTTP 200. The four Bawa registry entries were byte-identical at 4.8.4, 4.9.2 and the then-current master. The equality check applies only to those four entries at that date, not to the whole registry or future master contents.
 
-### Prospective nine-chain pins (Core 4.9.3)
+### Nine-chain pins (Core 4.9.3)
 
-The following mainnet metadata pins were verified against [Wallet Core 4.9.3 `registry.json`](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json) and the `registry/capabilities.json` catalog. All nine rows are **prospective** metadata, not implemented Bawa `CHAINS` entries; they do not change the capability snapshot below. This 4.9.3 check is separate from the existing four-chain 4.9.2 pin.
+The following mainnet metadata pins were verified against [Wallet Core 4.9.3 `registry.json`](https://raw.githubusercontent.com/trustwallet/wallet-core/4.9.3/registry.json) and the `registry/capabilities.json` catalog. The nine rows were **prospective** metadata when verified; the nine chains are now implemented Bawa `CHAINS` entries (create, derive, restore, receive and balance verified — see [Bawa's own chain support](#bawas-own-chain-support)). This 4.9.3 check is separate from the existing four-chain 4.9.2 pin.
 
 | Registry id | `coinId` | `slip44` | EVM `chainId` | Derivation path | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -132,9 +134,9 @@ The following mainnet metadata pins were verified against [Wallet Core 4.9.3 `re
 
 Keep `coinId`, optional `slip44`, EVM `chainId` and the literal derivation path separate. Every EVM chain in this table derives on `60'`, regardless of `coinId` or `slip44`. SLIP-44 row `137` is Rootstock and row `10` is Blackcoin, so a chain ID must never be read as a coin type.
 
-## Bawa's thirteen chains in the registry
+## Bawa's four original chains in the registry
 
-The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy).
+The table gives Core's `registry.json` values at tag `4.9.2`, commit `17e3cd4df5d53f061ade3bbdc07d196f5ed5a8e3`, fetched 2026-11-08. These are the registry's values, not Bawa's derivation policy. For Bawa's pinned selections at repo commit `e3b65fb832db287fdc8d54794980dd0b3456cc12`, use docs/02's [Derivation and network policy](../02-chains/README.md#derivation-and-network-policy). The table covers the four original chains only; the eighteen additional chains are listed with their derivation paths in [Bawa's own chain support](#bawas-own-chain-support) below, and the nine newer EVM chains have no registry-pin table in this chapter yet — their entries live in `registry/capabilities.json`.
 
 | Registry field | Bitcoin | Ethereum | Tron | TON (`id: "ton"`) |
 | --- | --- | --- | --- | --- |
@@ -199,17 +201,17 @@ verify-signature.
 ```mermaid
 flowchart TB
     accTitle: Bawa chain support overview
-    accDescr: adopt-proper supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus nine derive-only additions, with create, derive, restore and receive verified and the remaining six operations unsupported. The 13-chain registry was merged into adopt-proper from panel-rebuild/multichain-create; it is not a separate branch.
+    accDescr: token-gaps supports BTC, ETH and TRX with all ten operations verified, plus TON with fee-quote and verify-signature documented but untested, plus eighteen additional chains with create, derive, restore, receive and balance verified and the remaining five operations unsupported (history verified for SOL, LTC and DOGE only, per chains.ts). The 13-chain registry was merged into adopt-proper from panel-rebuild/multichain-create; the 9 newer EVM chains were added afterwards on panel-rebuild/token-gaps. It is not a separate branch.
 
     S["Sources of truth<br/>registry/capabilities.json: chainSupport<br/>apps/web/src/wallet/chains.ts:<br/>ChainId, pathFor, per-chain capabilities with evidence"]
 
-    A["adopt-proper<br/>13 chains in chainSupport"]
+    A["token-gaps<br/>22 chains in chainSupport"]
 
     F["Fully verified: BTC / ETH / TRX<br/>All 10 operations: IMPLEMENTED_AND_VERIFIED"]
 
     T["Partially verified: TON<br/>DOCUMENTED_NOT_TESTED: fee-quote, verify-signature<br/>IMPLEMENTED_AND_VERIFIED: other 8 operations"]
 
-    D["Derive-only: 9 added chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge)<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive<br/>NOT_SUPPORTED: balance, history, fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
+    D["Extended: 18 additional chains<br/>SOL, BSC, Polygon (matic), Arbitrum (arb),<br/>OP Mainnet (op), Base, Avalanche C-Chain (avax),<br/>Litecoin (ltc), Dogecoin (doge), Gnosis, Celo,<br/>Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom<br/>IMPLEMENTED_AND_VERIFIED: create, derive, restore, receive, balance<br/>History verified for SOL, LTC, DOGE only<br/>NOT_SUPPORTED: history (other 15), fee-quote,<br/>plan-transfer, local-sign, verify-signature"]
 
     S --> A
     A --> F
@@ -219,34 +221,42 @@ flowchart TB
 
 Derivation paths below are Bawa's pinned `pathFor` values
 (`apps/web/src/wallet/chains.ts`; `a` = account, `i` = index). TON and SOL
-are single-address: their paths ignore account and index. The six EVM chains
-(BSC, Polygon, Arbitrum, OP, Base, Avalanche) all use coin type 60, the same
-path shape as ETH — they are distinct chains that share a derivation scheme,
-not the same chain.
+are single-address: their paths ignore account and index. The fifteen EVM chains beyond ETH (BSC, Polygon, Arbitrum, OP, Base, Avalanche, Gnosis, Celo, Linea, Mantle, Scroll, opBNB, Metis, Aurora, Fantom) all use coin type 60, the same path shape as ETH — they are distinct chains that share a derivation scheme, not the same chain.
 
-| Chain | Derivation path | adopt-proper (13 chains in chainSupport) |
+| Chain | Derivation path | token-gaps (22 chains in chainSupport) |
 | --- | --- | --- | --- |
 | Bitcoin (btc) | `m/84'/0'/a'/0/i` | Fully verified (10/10) |
 | Ethereum (eth) | `m/44'/60'/a'/0/i` | Fully verified (10/10) |
 | TRON (trx) | `m/44'/195'/a'/0/i` | Fully verified (10/10) |
 | TON (ton) | `m/44'/607'/0'` (one address) | Partial: fee-quote, verify-signature `DOCUMENTED_NOT_TESTED`; other 8 verified |
-| Solana (sol) | `m/44'/501'/0'` (one address) | Derive-only |
-| BNB Smart Chain (bsc) | `m/44'/60'/a'/0/i` | Derive-only |
-| Polygon (matic) | `m/44'/60'/a'/0/i` | Derive-only |
-| Arbitrum One (arb) | `m/44'/60'/a'/0/i` | Derive-only |
-| OP Mainnet (op) | `m/44'/60'/a'/0/i` | Derive-only |
-| Base (base) | `m/44'/60'/a'/0/i` | Derive-only |
-| Avalanche C-Chain (avax) | `m/44'/60'/a'/0/i` | Derive-only |
-| Litecoin (ltc) | `m/84'/2'/a'/0/i` | Derive-only |
-| Dogecoin (doge) | `m/44'/3'/a'/0/i` | Derive-only |
+| Solana (sol) | `m/44'/501'/0'` (one address) | Extended (5/10) |
+| BNB Smart Chain (bsc) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Polygon (matic) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Arbitrum One (arb) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| OP Mainnet (op) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Base (base) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Avalanche C-Chain (avax) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Litecoin (ltc) | `m/84'/2'/a'/0/i` | Extended (5/10) |
+| Dogecoin (doge) | `m/44'/3'/a'/0/i` | Extended (5/10) |
+| Gnosis (gnosis) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Celo (celo) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Linea (linea) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Mantle (mantle) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Scroll (scroll) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| opBNB (opbnb) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Metis (metis) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Aurora (aurora) | `m/44'/60'/a'/0/i` | Extended (5/10) |
+| Fantom (fantom) | `m/44'/60'/a'/0/i` | Extended (5/10) |
 
 - **Fully verified** = all 10 operations `IMPLEMENTED_AND_VERIFIED`.
-- **Derive-only** = create, derive, restore, receive
-  `IMPLEMENTED_AND_VERIFIED`; balance, history, fee-quote, plan-transfer,
-  local-sign, verify-signature `NOT_SUPPORTED`. A derive-only chain has no
-  balance, history or signing support in the repo — do not present it as a
+- **Extended (5/10)** = create, derive, restore, receive, balance
+  `IMPLEMENTED_AND_VERIFIED`; history, fee-quote, plan-transfer,
+  local-sign, verify-signature `NOT_SUPPORTED`. An extended chain has no
+  history or signing support in the repo — do not present it as a
   working wallet chain.
 - No broadcast exists for any chain in the repo.
+
+Note (2026-11-23): `apps/web/src/wallet/chains.ts` records history verified for SOL, LTC and DOGE, but `registry/capabilities.json` still records history `NOT_SUPPORTED` for all eighteen additional chains. The two sources disagree; re-verification is open.
 
 ## Testnet and the registry
 
@@ -431,7 +441,7 @@ Set QR error correction explicitly to `M` (~15%); do not rely on an encoder defa
 
 ## Preparing registry and asset metadata
 
-Before adding a chain, confirm the four Bawa chains' derivation and network policy in docs/02's "Derivation and network policy" section (Bitcoin, Ethereum, TRON, TON).
+Before adding a chain, confirm the Bawa chains' derivation and network policy in docs/02's "Derivation and network policy" section (Bitcoin, Ethereum, TRON, TON).
 
 This checklist covers metadata preparation only; it is not a complete contribution procedure. Do not rely on Bawa for the exact JSON schemas, complete rules for required and optional fields, asset directory layout, validation commands and outputs, submission steps, or engine integration and testing requirements. This document does not reproduce the Assets contribution guide. Engine integration requirements are also undocumented; their home is `docs/11`.
 
