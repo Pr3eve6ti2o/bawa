@@ -180,7 +180,19 @@ blacklisted by it (error 430); BlueWallet's rate-freshness rule is
 
 ## Preview
 
-<!-- PREVIEW-PLACEHOLDER -->
+- Fresh preview (hash-verified by the coordinator just now, both
+  roots 200 at `/bawa/`): primary
+  https://fktri-2a04-4e41-8-9c4--bbb8-9c4.run.pinggy-free.link/bawa/
+  — alt
+  https://bdtev-2a04-4e41-8-9c4--bbb8-9c4.free.pinggy.net/bawa/
+  (use the alt — the `.run.pinggy-free.link` domain resolves
+  IPv6-only and the owner's DNS cannot resolve it). Live until
+  ~15:45 IST (free tunnel, ~60 min from mint). Served JS
+  `index-BjMt1q_R.js` sha256
+  `d9a65a40b9c1974c21121f085b8a077504df2cf35e09ce46d31549dd80665ca7`
+  — matches the dist build exactly. Served from gray-pinee :4261
+  (static server with SPA fallback) via a sandbox socat bridge,
+  tunnel minted from the sandbox through the proxy forwarder.
 
 ## Still open (owner decisions)
 
