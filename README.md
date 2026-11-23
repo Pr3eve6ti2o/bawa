@@ -188,3 +188,18 @@ No code from the programme was merged into `adopt-proper` or `main`.
 The durable preview (GitHub Pages) still serves the saved
 adopt-proper-based build; to preview the programme, check out
 `panel-rebuild/token-gaps` and run the web starter locally.
+
+## UI/UX Round 2 programme (2026-11-23)
+
+The 10-item UI/UX Round 2 programme (QR card with auto-select,
+shared-link deep-link fix, watch-wallet search, Baloo 2 font,
+plain-English copy rewrite, devnet prices, mobile layout pass,
+no-scroll Send/Receive flow, scan icon, and this documentation) is
+complete on `panel-rebuild/ui-ux-round2` and merges into
+`panel-rebuild/token-gaps`. The merge commit is recorded in the
+programme record: [docs/UI-UX-ROUND2-PROGRAMME.md](docs/UI-UX-ROUND2-PROGRAMME.md).
+
+No code from the programme was merged into `adopt-proper` or `main`.
+The durable preview (GitHub Pages) still serves the saved
+adopt-proper-based build; to preview the programme, check out
+`panel-rebuild/token-gaps` and run the web starter locally.
