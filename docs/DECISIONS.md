@@ -40,8 +40,7 @@ the item-14 cannot-add chain list is not recorded in the repo.
 ~15:28 IST) is complete and merged into `panel-rebuild/token-gaps`.**
 Branch `panel-rebuild/ui-ux-round2` (`5da29a8`, branched from token-gaps
 `231ecbf`) was merged into token-gaps by Lane E (hands-on Muse, 0 Sol
-calls). The merge commit is recorded in
-`docs/UI-UX-ROUND2-PROGRAMME.md`. Merge destination per the owner's
+calls) as merge commit `6147b74`. Merge destination per the owner's
 standing decision: further work continues on top of token-gaps. No code
 merged into `panel-rebuild/adopt-proper` or `main`.
 
