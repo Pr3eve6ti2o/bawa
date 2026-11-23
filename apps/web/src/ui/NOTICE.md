@@ -7,3 +7,9 @@ Copied: `packages/ui/src/*` — 65 components, `hooks/use-mobile.ts`, `lib/utils
 Change made: `@repo/ui/...` import paths rewritten to relative paths. No behaviour changed.
 
 Not copied: the demo app, mock data, and any engine, derivation, signing or RPC code (none exists upstream).
+
+Removed 2026-11-23 (Lane 4, reverify-pro): 12 vendored files nothing in
+the app imported (import-graph evidence, zero non-test importers) —
+components/avatar, checklist-card, form, popover, progress, radio-group,
+select, separator, sheet, table, toggle, and hooks/use-mobile. They are
+still upstream; re-copy from token-ui if a screen needs one.

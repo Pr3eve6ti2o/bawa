@@ -19,6 +19,7 @@
  */
 
 import type { ChainId } from '../engine/boundary';
+import { isRecord } from './guards';
 import type {
   BroadcastResult,
   FetchTransport,
@@ -141,9 +142,6 @@ export function devnetExplorerTxUrl(
   return `${DEVNET_CHAIN_CONFIGS[chain].explorerTxUrl}${txHash}`;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Base64 (TonCenter tx hashes) to lowercase hex, without Buffer. */
 function base64ToHex(base64: string): string {

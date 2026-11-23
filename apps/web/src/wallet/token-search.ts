@@ -12,6 +12,7 @@
 // resolveTokenByTickerOrName in tokens.ts. The Add Token dialog tries
 // the local registry first, then this remote search.
 import type { ChainId } from './chains';
+import { isRecord } from './guards';
 
 export interface TokenSearchCandidate {
   chain: ChainId;
@@ -53,9 +54,6 @@ const CHAIN_FOR_PLATFORM: Partial<Record<string, ChainId>> = {
 /** At most this many search hits get a detail fetch (bounds the calls). */
 const MAX_DETAIL_FETCHES = 3;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export async function searchTokensByNameOrTicker(
   query: string,

@@ -22,6 +22,7 @@
  * Read-only throughout. No signing, no broadcast, no funds moved.
  */
 import { hexToBytes, isAddress } from 'viem';
+import { isRecord } from '../guards';
 import { CHAINS, resolveRpcEndpoints } from '../chains';
 import type { ChainId } from '../../engine/boundary';
 import { PRICE_PROVIDER_BASE_URL } from '../prices';
@@ -91,9 +92,6 @@ export type MetadataResult =
   | { ok: true; metadata: TokenMetadata }
   | { ok: false; error: string };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Builds a minimal JSON-RPC client for an EVM chain from its pinned
  * RPC. Plain fetch on the repo's httpFetchTransport (10 s timeout),

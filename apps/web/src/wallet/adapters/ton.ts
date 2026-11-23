@@ -18,6 +18,7 @@ import {
   type TonWalletVersion,
   type TxInput,
 } from './types';
+import { isRecord } from '../guards';
 import { BawaError, WalletErrorCodes } from '../errors';
 import { withRetry } from '../retry';
 
@@ -75,9 +76,6 @@ const sleep = (delayMs: number): Promise<void> =>
     setTimeout(resolve, delayMs);
   });
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isTonAddress(address: string, acceptTestnet = false): boolean {
   if (address.length !== 48) return false;

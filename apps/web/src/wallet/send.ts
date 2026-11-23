@@ -212,13 +212,6 @@ export type SendFailure = {
   signingErrorCode?: number;
 };
 
-/** 'submitted' is unreachable while broadcast stays disabled. */
-export type SendProgressStage =
-  | 'building'
-  | 'simulating'
-  | 'signing'
-  | 'signed'
-  | 'submitted';
 
 export function signingFailure(
   reason: string,

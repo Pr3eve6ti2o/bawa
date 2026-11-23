@@ -31,6 +31,7 @@ import {
   type FetchTransport,
   type TxInput,
 } from './types';
+import { isRecord } from '../guards';
 import { withRetry } from '../retry';
 
 const NETWORK_ID = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
@@ -52,9 +53,6 @@ export interface SolanaAdapterOverrides {
   transport?: FetchTransport;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';

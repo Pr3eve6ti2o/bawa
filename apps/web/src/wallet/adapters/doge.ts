@@ -32,6 +32,7 @@ import {
   type FetchTransport,
   type TxInput,
 } from './types';
+import { isRecord } from '../guards';
 import { withRetry } from '../retry';
 
 const NETWORK_ID =
@@ -63,9 +64,6 @@ export function sochainConfirmedToKoinu(confirmed: string): string | null {
   return combined === '' ? '0' : combined;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /**
  * Parse one SoChain v3 /transactions page. Entries carry hash,

@@ -1,4 +1,5 @@
 import { hexToBytes, sha256 } from 'viem';
+import { isRecord } from '../guards';
 import {
   BROADCAST_DISABLED_MESSAGE,
   endpointHost,
@@ -55,9 +56,6 @@ function readWithRetry(
   return withRetry(() => transport.request(url), { operation });
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isTronAddress(address: string): boolean {
   if (address.length !== 34 || !address.startsWith('T')) return false;

@@ -4,7 +4,7 @@
 // updated with the split to assert the NEW behaviour:
 //
 // - A per-chain adapter failure KEEPS the last good value (balances) /
-//   transactions (history) with its lastOkAt, and reports the failure
+//   transactions (history) with its fetchedAtMs, and reports the failure
 //   in the RefreshReport. A failure is never presented as zero/empty.
 // - A second refresh for the same addresses while one is in flight
 //   joins the in-flight fetch (one adapter call, not two).
@@ -167,8 +167,8 @@ describe('wallet refresh — post-split behaviour (item 28)', () => {
       status: 'available',
       value: '5',
     });
-    const lastOkAt = balances.get('eth')?.lastOkAt;
-    expect(typeof lastOkAt).toBe('number');
+    const fetchedAtMs = balances.get('eth')?.fetchedAtMs;
+    expect(typeof fetchedAtMs).toBe('number');
 
     // The adapter now fails. The good value and its timestamp are
     // kept; the failure is a status + reason + a report entry, never
@@ -180,7 +180,7 @@ describe('wallet refresh — post-split behaviour (item 28)', () => {
     expect(balances.get('eth')?.status).toBe('error');
     expect(balances.get('eth')?.reason).toBe('boom');
     expect(balances.get('eth')?.value).toBe('5');
-    expect(balances.get('eth')?.lastOkAt).toBe(lastOkAt);
+    expect(balances.get('eth')?.fetchedAtMs).toBe(fetchedAtMs);
     expect(report.failures).toHaveLength(1);
     expect(report.failures[0]).toEqual({
       operation: 'refresh-balances',

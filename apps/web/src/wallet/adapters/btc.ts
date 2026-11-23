@@ -17,6 +17,7 @@ import {
   type FetchTransport,
   type TxInput,
 } from './types';
+import { isRecord } from '../guards';
 import { withRetry } from '../retry';
 
 const NETWORK_ID = 'bip122:000000000019d6689c085ae165831e93';
@@ -56,9 +57,6 @@ export interface BtcAdapterOverrides {
 }
 
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isBtcAddress(address: string, acceptTestnet = false): boolean {
   if (address.length < 26) return false;

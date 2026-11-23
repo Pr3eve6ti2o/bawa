@@ -11,6 +11,7 @@
  * identity and the CoinGecko id used to price the row.
  */
 import { getAddress, hexToBytes, isAddress, sha256 } from 'viem';
+import { isRecord } from './guards';
 import type { ChainId } from '../engine/boundary';
 import { SUPPORTED_CHAINS } from './chains';
 
@@ -604,9 +605,6 @@ function defaultStore(): TokenStore | null {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Default (nothing stored): all 22 chains enabled — the default 20-token list is the enabled set. */
 export function readEnabledChains(store?: TokenStore): ChainId[] {
