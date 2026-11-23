@@ -1,42 +1,31 @@
 # captcha/
 
-Challenge-solving reference code plus a working runner that completes (or
-bypasses) the captcha challenge on any website that asks for one. The
-TronScan Approval-tab check (audit pointer P22) is the worked example. The vendored files are third-party
-code, copied verbatim with their licences and credits below. They are
-reference material and a runnable experiment — not Bawa code, and not a claim
-that the check is solved.
+A captcha challenge-solving toolkit for any website that asks for a captcha:
+reference code plus a working runner that completes (or bypasses) the
+challenge and returns the page to a usable state. Point it at any page that
+shows a captcha — the target is set with `CAPTCHA_URL`, not hard-coded.
 
-## Status (verified first-hand, 2026-11-17)
+The vendored files are third-party code, copied verbatim with their licences
+and credits below. They are reference material and a runnable experiment —
+not Bawa code, and not a claim that any particular site's challenge is solved.
 
-The runner works as code: it launches headless Chromium, installs the trawl
-capture hook, loads `https://tronscan.org/#/tokenapproval`, and runs the
-challenge loop. It does **not** clear Cloudflare from this network.
+## Running it
 
-Live runs (patchright 1.64.3, headless shell, proxy egress), both with the
-same result:
+```sh
+cd captcha
+npm install
+npm run check
+# Env: CAPTCHA_URL, CAPTCHA_PROXY (empty = direct egress), CAPTCHA_TIMEOUT_MS
+```
 
-- 2026-11-17 09:26–09:28 UTC, 90 s challenge budget: block page, Ray ID
-  `a5bdb1e51c6176d0`, egress IP `104.29.197.209`; solver loop ran its keyboard
-  fallback 28 times, then timed out.
-- 2026-11-17 09:41–09:42 UTC, 30 s challenge budget, from the final
-  repo-layout runner: block page again, Ray ID `a5bdc791385669dc`, egress IP
-  `104.29.194.190`; 10 keyboard attempts, then timed out.
+Set `CAPTCHA_URL` to any page that shows a captcha. The default is the
+TronScan Approval tab (`https://tronscan.org/#/tokenapproval`), the worked
+example in the section below.
 
-Both runs: no `cf_clearance` cookie, no Approval-tab UI. The two different
-egress IPs getting the same flat block page means it is not one bad IP — the
-datacenter egress class is blocked. Evidence: the latest run's
-`run-captcha-check/tronscan-result.json` and
-`run-captcha-check/tronscan-result.png` (kept under their original names as the record of the 2026-11-17 TronScan run).
-
-What would change the outcome: a different egress IP (Cloudflare's decision
-is IP + fingerprint based; the trawl docs note non-interactive solving wants
-a residential IP and a non-automation fingerprint) or a human solving the
-challenge in a real browser. The solvers only help when Cloudflare serves an
-interactive Turnstile challenge; they cannot bypass a flat IP block page.
-
-P22 stays blocked from here. Its live options remain: retry on
-`tronscan.io`, or leave the rendered-UI finding UNVERIFIABLE.
+The runner is read-only: it never connects a wallet, never clicks
+Cancel/Revoke, and never signs or sends a transaction. It writes
+`run-captcha-check/captcha-result.json` +
+`run-captcha-check/captcha-result.png`.
 
 ## How it can work
 
@@ -61,6 +50,42 @@ Two approaches, from the two Android apps:
    session. These files are Android-only and cannot run here; they are kept
    as the reference implementation of the technique.
 
+## Status and limits
+
+The solvers only help when the site serves an interactive Turnstile
+challenge. They cannot bypass a flat IP block page: when Cloudflare decides
+on IP + fingerprint alone, no solver loop gets a challenge to solve. What
+changes that outcome is a different egress IP (the trawl docs note
+non-interactive solving wants a residential IP and a non-automation
+fingerprint) or a human solving the challenge in a real browser.
+
+## Worked example: TronScan Approval-tab check (audit pointer P22)
+
+The runner was first run against the TronScan Approval tab
+(`https://tronscan.org/#/tokenapproval`). It works as code: it launches
+headless Chromium, installs the trawl capture hook, loads the page and runs
+the challenge loop. It does **not** clear Cloudflare from this network.
+
+Live runs (patchright 1.64.3, headless shell, proxy egress), both with the
+same result (verified first-hand, 2026-11-17):
+
+- 2026-11-17 09:26–09:28 UTC, 90 s challenge budget: block page, Ray ID
+  `a5bdb1e51c6176d0`, egress IP `104.29.197.209`; solver loop ran its keyboard
+  fallback 28 times, then timed out.
+- 2026-11-17 09:41–09:42 UTC, 30 s challenge budget, from the final
+  repo-layout runner: block page again, Ray ID `a5bdc791385669dc`, egress IP
+  `104.29.194.190`; 10 keyboard attempts, then timed out.
+
+Both runs: no `cf_clearance` cookie, no Approval-tab UI. The two different
+egress IPs getting the same flat block page means it is not one bad IP — the
+datacenter egress class is blocked. Evidence: the run's
+`run-captcha-check/tronscan-result.json` and
+`run-captcha-check/tronscan-result.png` (kept under their original names as
+the record of the 2026-11-17 TronScan run).
+
+P22 stays blocked from here. Its live options remain: retry on
+`tronscan.io`, or leave the rendered-UI finding UNVERIFIABLE.
+
 ## Contents
 
 - `vendors/trawl/` — Cloudflare/Turnstile solvers from trawl (`dev` branch).
@@ -79,7 +104,7 @@ Two approaches, from the two Android apps:
   BrowserFragment, CustomWebChromeClient, `webTab/`), `ui/component/widget/`
   (NestedWebView), `util/CookieUtils.kt`.
 - `run-captcha-check/` — the general runner (`test-captcha.ts`, `package.json`)
-  and the evidence from the 2026-11-17 TronScan live run.
+  and the evidence from the 2026-11-17 TronScan worked example.
 - `licenses/` — full licence texts for the vendored code.
 
 ## Credits
@@ -99,20 +124,6 @@ All three are copyleft licences. The vendored files keep their original
 licence headers; the licence texts are reproduced in `licenses/`. Bawa itself
 is MIT-licensed; this folder is third-party copyleft code kept separate
 under its own licences, included on the owner's explicit instruction.
-
-## Running the check
-
-```sh
-cd captcha
-npm install
-npm run check
-# Env: CAPTCHA_URL, CAPTCHA_PROXY (empty = direct egress), CAPTCHA_TIMEOUT_MS
-```
-
-The check is read-only: it never connects a wallet, never clicks
-Cancel/Revoke, and never signs or sends a transaction. It writes
-`run-captcha-check/captcha-result.json` +
-`run-captcha-check/captcha-result.png`.
 
 ## Notes and limits
 
