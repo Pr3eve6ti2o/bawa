@@ -135,6 +135,19 @@ export function convertBits(
   return result;
 }
 
+/** Bytes as URL-safe base64 with no padding (TON friendly addresses). */
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return globalThis
+    .btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/u, '');
+}
+
 // CRC16-XMODEM (poly 0x1021, init 0x0000, MSB-first, no lookup table),
 // the checksum of TON user-friendly addresses (TEP-0002).
 export function crc16Xmodem(data: Uint8Array): number {

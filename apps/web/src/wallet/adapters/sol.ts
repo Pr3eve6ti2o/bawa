@@ -22,6 +22,7 @@ import {
   httpFetchTransport,
   resolveEndpoints,
   toAdapterError,
+  unavailableResult,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -244,11 +245,6 @@ export function createSolanaAdapter(
     };
   };
 
-  const unavailable = <T,>(reason: string): AdapterResult<T> => ({
-    status: 'unavailable',
-    reason,
-  });
-
   const getHistory = async (
     address: string,
     limit = 25,
@@ -314,12 +310,12 @@ export function createSolanaAdapter(
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> =>
-    unavailable('Fee-quote is not connected for Solana yet.');
+    unavailableResult('Fee-quote is not connected for Solana yet.');
 
   const getTxInputs = async (
     _address: string,
   ): Promise<AdapterResult<TxInput>> =>
-    unavailable('Transaction inputs are not connected for Solana yet.');
+    unavailableResult('Transaction inputs are not connected for Solana yet.');
 
   const broadcast = createDisabledBroadcast();
 

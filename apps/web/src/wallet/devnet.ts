@@ -19,6 +19,7 @@ import {
   BECH32_CONSTANT,
   BECH32M_CONSTANT,
   bech32Polymod,
+  bytesToBase64Url,
   convertBits,
   crc16Xmodem,
   decodeBase58,
@@ -224,18 +225,6 @@ function decodeTonFriendly(
   return bytes.length === 36 ? bytes : null;
 }
 
-function encodeTonFriendly(bytes: Uint8Array): string {
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return globalThis
-    .btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/u, '');
-}
-
 function tonTagAndWorkchain(bytes: Uint8Array): {
   tag: number;
   workchain: number;
@@ -275,7 +264,7 @@ export function toTonTestnetUqAddress(mainnetAddress: string): string {
   const checksum = crc16Xmodem(bytes.subarray(0, 34));
   bytes[34] = checksum >>> 8;
   bytes[35] = checksum & 0xff;
-  return encodeTonFriendly(bytes);
+  return bytesToBase64Url(bytes);
 }
 
 /** True for testnet-flagged TON addresses (0Q non-bounceable, kQ bounceable). */

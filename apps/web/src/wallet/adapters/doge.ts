@@ -24,6 +24,7 @@ import {
   assertNetworkId,
   httpFetchTransport,
   toAdapterError,
+  unavailableResult,
   type AdapterBalance,
   type AdapterResult,
   type AdapterTx,
@@ -304,11 +305,6 @@ export function createDogeAdapter(
     );
   };
 
-  const unavailable = <T,>(reason: string): AdapterResult<T> => ({
-    status: 'unavailable',
-    reason,
-  });
-
   const getHistory = async (
     address: string,
     limit = 25,
@@ -372,12 +368,12 @@ export function createDogeAdapter(
   };
 
   const estimateFee = async (): Promise<AdapterResult<FeeEstimate>> =>
-    unavailable('Fee-quote is not connected for Dogecoin yet.');
+    unavailableResult('Fee-quote is not connected for Dogecoin yet.');
 
   const getTxInputs = async (
     _address: string,
   ): Promise<AdapterResult<TxInput>> =>
-    unavailable('Transaction inputs are not connected for Dogecoin yet.');
+    unavailableResult('Transaction inputs are not connected for Dogecoin yet.');
 
   const broadcast = createDisabledBroadcast();
 

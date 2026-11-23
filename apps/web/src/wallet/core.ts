@@ -1,4 +1,4 @@
-import { crc16Xmodem } from '../engine/address-codecs';
+import { bytesToBase64Url, crc16Xmodem } from '../engine/address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN, loadCore } from '../engine/boundary';
 import type { ChainId } from '../engine/boundary';
 import { pathFor } from './chains';
@@ -104,16 +104,7 @@ function toTonUqAddress(address: string): string {
   bytes[34] = checksum >>> 8;
   bytes[35] = checksum & 0xff;
 
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return globalThis
-    .btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/u, '');
+  return bytesToBase64Url(bytes);
 }
 
 function checkedAddress(

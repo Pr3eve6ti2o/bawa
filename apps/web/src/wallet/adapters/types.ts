@@ -244,6 +244,11 @@ export function toAdapterError(
   return { status: 'error', reason: messageOf(error) };
 }
 
+/** Unavailable result for a not-connected adapter capability (DOGE/SOL fee-quote and tx-input stubs). */
+export function unavailableResult<T>(reason: string): AdapterResult<T> {
+  return { status: 'unavailable', reason };
+}
+
 /**
  * RPC failover (UI/UX fixes, item 19): tries each endpoint in order
  * for one read and returns the first success with the endpoint that
