@@ -86,6 +86,12 @@ chains have at least one fallback; Gnosis and Mantle are CoinGecko-only
 provider terms above: what it is and how the wallet uses it, in short,
 then Free / Paid.
 
+**Amendment 2026-11-24 (FIX-ALL Lane B):** coverage is now 22 of 22 —
+CoinLore covers Gnosis (id 32417), Mantle (121595) and Fantom (148191),
+so no chain is CoinGecko-only. CoinLore covers 19 chains; the three it
+misses (TON, Polygon, Litecoin) are covered by TonAPI, DexScreener and
+Coinbase respectively.
+
 **CoinLore — FIRST fallback.** A free public crypto price API
 (`https://api.coinlore.net`). The wallet makes one batched
 `/api/ticker/?id=...` call for every mapped chain. It goes first because

@@ -611,22 +611,23 @@ function PriceSourcesCard() {
             every chain.
           </li>
           <li>
-            <span className="font-medium">CoinLore</span> — next for 16
+            <span className="font-medium">CoinLore</span> — next for 19
             chains.
           </li>
           <li>
             <span className="font-medium">DexScreener</span> — next for
-            12 chains, from the on-chain price of the wrapped coin.
+            13 chains, from the on-chain price of the wrapped coin.
           </li>
           <li>
-            <span className="font-medium">TonAPI</span> for TON and{' '}
-            <span className="font-medium">Coinbase</span> for Litecoin —
-            the two chains CoinLore cannot cover.
+            <span className="font-medium">TonAPI</span> for TON,{' '}
+            <span className="font-medium">Coinbase</span> for Litecoin and{' '}
+            <span className="font-medium">DexScreener</span> for Polygon —
+            the three chains CoinLore cannot cover.
           </li>
         </ol>
         <p className="text-sm text-muted-foreground">
-          Gnosis and Mantle have no second source. Each asset row also
-          names the source that priced it.
+          Every chain has a second source — no chain is CoinGecko-alone.
+          Each asset row also names the source that priced it.
         </p>
         <p className="text-sm text-muted-foreground" role="status">
           {liveLine}

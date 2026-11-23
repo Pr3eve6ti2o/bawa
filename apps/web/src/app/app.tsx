@@ -238,7 +238,8 @@ function AppLayout() {
   return (
     <div className="min-h-dvh bg-paper sm:py-6 desktop:py-0">
       {/* Desktop shell is full-bleed at desktop: (980px): below desktop: the app is a centred
-          430px phone frame, but at desktop: the frame used to cap at 1440px, so          on a 1919px viewport the content column sat in the left ~1230px
+          430px phone frame, but at desktop: the frame used to cap at 1440px, so
+          on a 1919px viewport the content column sat in the left ~1230px
           with dead paper on the right. The content column itself still
           caps for readability (see <main>); it just grows with the
           window now. At 1440px and below nothing changes: the cap never

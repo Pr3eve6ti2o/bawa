@@ -243,11 +243,22 @@ export const NATIVE_WRAPPED_TOKENS: Partial<
   },
 };
 
-/** Coinbase product id per chain (LTC only — the one chain CoinLore misses). */
+/** Coinbase product id per chain (LTC only — TonAPI covers TON and DexScreener covers Polygon, the other two chains CoinLore misses). */
 const COINBASE_PRODUCT_IDS: Partial<Record<ChainId, string>> = {
   ltc: 'LTC-USD',
 };
 
+/**
+ * The price sources the wallet tries, in order, for one chain
+ * (Lane F, FIX-ALL, 2026-11-24). CoinGecko is always first; CoinLore
+ * second where it has the chain (19 chains); DexScreener third where a
+ * wrapped contract is verified (13 chains); TonAPI for TON, Coinbase
+ * for LTC, and DexScreener for Polygon — the three chains CoinLore
+ * cannot cover. Every chain has a verified second source (FIX-ALL
+ * Lane B added CoinLore for Gnosis, Mantle and Fantom) — none is
+ * CoinGecko-alone. The Networks screen's Prices card states the same
+ * order in words; keep the two in step when the maps change.
+ */
 export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
   const sources: PriceSource[] = ['CoinGecko'];
   if (COINLORE_NATIVE_IDS[chain] !== undefined) sources.push('CoinLore');
@@ -257,7 +268,9 @@ export function priceFallbackSourcesFor(chain: ChainId): PriceSource[] {
   if (chain === 'ton') sources.push('TonAPI');
   if (COINBASE_PRODUCT_IDS[chain] !== undefined) sources.push('Coinbase');
   return sources;
-}export function parseCoinLoreResponse(
+}
+
+export function parseCoinLoreResponse(
   payload: unknown,
   chains: readonly ChainId[],
   nowMs: number,

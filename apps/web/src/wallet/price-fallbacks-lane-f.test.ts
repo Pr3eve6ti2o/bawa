@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SUPPORTED_CHAINS } from './chains';
 import { priceFallbackSourcesFor } from './price-fallbacks';
 
 describe('priceFallbackSourcesFor (Lane F, FIX-ALL)', () => {
@@ -11,6 +12,7 @@ describe('priceFallbackSourcesFor (Lane F, FIX-ALL)', () => {
     expect(priceFallbackSourcesFor('btc')).toEqual(['CoinGecko', 'CoinLore']);
     expect(priceFallbackSourcesFor('fantom')).toEqual([
       'CoinGecko',
+      'CoinLore',
       'DexScreener',
     ]);
   });
@@ -20,8 +22,16 @@ describe('priceFallbackSourcesFor (Lane F, FIX-ALL)', () => {
     expect(priceFallbackSourcesFor('ltc')).toEqual(['CoinGecko', 'Coinbase']);
   });
 
-  it('leaves Gnosis and Mantle on CoinGecko alone — no verified fallback', () => {
-    expect(priceFallbackSourcesFor('gnosis')).toEqual(['CoinGecko']);
-    expect(priceFallbackSourcesFor('mantle')).toEqual(['CoinGecko']);
+  it('gives Gnosis and Mantle CoinLore as their second source (Lane B)', () => {
+    expect(priceFallbackSourcesFor('gnosis')).toEqual(['CoinGecko', 'CoinLore']);
+    expect(priceFallbackSourcesFor('mantle')).toEqual(['CoinGecko', 'CoinLore', 'DexScreener']);
+  });
+
+  it('every chain has a verified second source — none is CoinGecko-alone', () => {
+    for (const chain of SUPPORTED_CHAINS) {
+      const sources = priceFallbackSourcesFor(chain);
+      expect(sources[0]).toBe('CoinGecko');
+      expect(sources.length).toBeGreaterThanOrEqual(2);
+    }
   });
 });

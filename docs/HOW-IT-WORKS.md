@@ -218,14 +218,15 @@ Everything here is plain language, one screen, no jargon.
   worked, not just the label.
 - **History** — under each chain, the source the wallet reads past
   transactions from, or "no working source — history unavailable for
-  this chain" where none is wired. Six chains have no working history
-  source (BNB Chain, Gnosis, Linea, opBNB, Metis, Fantom); their
+  this chain" where none is wired. Five chains have no working history
+  source (BNB Chain, Gnosis, opBNB, Metis, Fantom); their
   history stays unavailable, never faked.
 - **Prices** — the order the wallet tries for prices: CoinGecko first
-  for every chain, then CoinLore (16 chains), then DexScreener (12
+  for every chain, then CoinLore (19 chains), then DexScreener (13
   chains, from the on-chain price of the wrapped coin), then TonAPI for
-  TON and Coinbase for Litecoin. Gnosis and Mantle have no second
-  source. The card also counts, from the prices already on this device,
+  TON, Coinbase for Litecoin and DexScreener for Polygon — the three
+  chains CoinLore cannot cover. Every chain has a second source.
+  The card also counts, from the prices already on this device,
   which source is pricing each chain right now; each asset row names the
   source that priced it.
 - **Reset all to defaults** — puts every chain back to the addresses the
@@ -277,7 +278,8 @@ locally; balances come from public read-only endpoints.
 | Addresses on 22 chains | As "22 addresses" above | The addresses every flow starts from |
 | Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:1012` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:1093` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:88` (`registerAllAdapters`), `apps/web/src/state/wallet-context.tsx:873` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
 | Networks — connections, prices, history | `apps/web/src/screens/network-selection.tsx` (`RpcEndpointManager`, `PriceSourcesCard`), `apps/web/src/wallet/chains.ts` (`makePrimaryEndpoint`, `isCustomRpcOriginUsable`, `SUGGESTED_CUSTOM_RPCS`), `apps/web/src/wallet/rpc-probe.ts` (`probeRpcEndpoint`), `apps/web/src/wallet/price-fallbacks.ts` (`priceFallbackSourcesFor`), `apps/web/src/state/wallet-context.tsx` (`BalanceState.source`) | One screen to see and switch RPCs, check them live, and see price and history sources; every switch refreshes balances at once |
-| Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:52` (CoinGecko base), `prices.ts:104` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:108` (`PriceSource`), `prices.ts:409` (`PRICE_CACHE_KEY`), `prices.ts:648` (`fetchPrices`), `prices.ts:1142` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:49`, `apps/web/src/wallet/token-prices.ts:167` (fallback order), `token-prices.ts:404` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one || Receive — address + QR | `apps/web/src/screens/receive.tsx` | Address + QR card for any chain |
+| Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:52` (CoinGecko base), `prices.ts:104` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:108` (`PriceSource`), `prices.ts:409` (`PRICE_CACHE_KEY`), `prices.ts:648` (`fetchPrices`), `prices.ts:1142` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:49`, `apps/web/src/wallet/token-prices.ts:167` (fallback order), `token-prices.ts:404` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
+| Receive — address + QR | `apps/web/src/screens/receive.tsx` | Address + QR card for any chain |
 | Track — by transaction hash | `apps/web/src/screens/track-transaction.tsx`, `apps/web/src/wallet/tracker.ts:82` (`parseBtcTx`), `tracker.ts:151` (`parseEthTx`), `tracker.ts:208` (`parseTrxTx`), `tracker.ts:271` (`parseTonTxEntry`) | Transaction lookup and confirmation status per chain |
 | Add Token — by contract address | `apps/web/src/screens/add-token.tsx`, `apps/web/src/wallet/tokens.ts:599` (`CUSTOM_TOKENS_KEY`) | Any token by contract address; real name, symbol, balance |
 | Send — build + sign offline | `apps/web/src/screens/send.tsx`, `apps/web/src/wallet/send.ts`, `apps/web/src/wallet/signing-intent.ts` (`createTransactionIntent`) | Offline signing; nothing leaves the device unsigned |

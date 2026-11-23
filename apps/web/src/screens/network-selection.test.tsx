@@ -554,7 +554,7 @@ describe('NetworkSelectionScreen — Lane F, FIX-ALL', () => {
       expect(mounted.div.textContent).toContain('TonAPI');
       expect(mounted.div.textContent).toContain('Coinbase');
       expect(mounted.div.textContent).toContain(
-        'Gnosis and Mantle have no second source.',
+        'Every chain has a second source — no chain is CoinGecko-alone.',
       );
       expect(mounted.div.textContent).toContain('No prices fetched yet');
     } finally {

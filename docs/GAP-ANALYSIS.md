@@ -223,8 +223,8 @@ on all 16 EVM chains):
   (`status: 'ok'`, `result: 'success'`, block, confirmations, value,
   from/to/fee, timestamp — the exact shape `parseEthTx` reads).
 
-History verified is now 16 chains: btc, eth, trx, ton, sol, matic,
-arb, op, base, avax, ltc, doge, celo, mantle, scroll, aurora. The
+History verified is now 17 chains: btc, eth, trx, ton, sol, matic,
+arb, op, base, avax, ltc, doge, celo, linea, mantle, scroll, aurora. The
 `/track` hash lookup (`wallet/tracker.ts`) now covers eight
 Blockscout v2 chains — eth, op, scroll, celo, aurora, matic, base,
 arb (same v2 shape, parameterised `parseEthTx`); avax/mantle lookup

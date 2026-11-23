@@ -30,7 +30,7 @@ describe('RPC make-primary (Lane F, FIX-ALL)', () => {
     addCustomRpcEndpoint('eth', 'https://rpc.flashbots.net', storage);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
       'https://rpc.flashbots.net',
     ]);
     // promoteBackupEndpoint only swaps the first two, so it could
@@ -41,7 +41,7 @@ describe('RPC make-primary (Lane F, FIX-ALL)', () => {
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://rpc.flashbots.net',
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
   });
 
@@ -59,7 +59,7 @@ describe('RPC make-primary (Lane F, FIX-ALL)', () => {
     ).toBe(true);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
   });
 
@@ -75,13 +75,13 @@ describe('RPC make-primary (Lane F, FIX-ALL)', () => {
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
       'https://rpc.flashbots.net',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     expect(storage.getItem(RPC_OVERRIDES_KEY)).not.toBeNull();
     removeRpcEndpoint('eth', 'https://rpc.flashbots.net', storage);
     expect(resolveRpcEndpoints('eth', storage)).toEqual([
       'https://ethereum-rpc.publicnode.com',
-      'https://1rpc.io/eth',
+      'https://eth.drpc.org',
     ]);
     expect(storage.getItem(RPC_OVERRIDES_KEY)).toBeNull();
   });
@@ -92,7 +92,10 @@ describe('custom RPC allowlist (Lane F, FIX-ALL)', () => {
     expect(
       isCustomRpcOriginUsable('https://ethereum-rpc.publicnode.com'),
     ).toBe(true);
-    expect(isCustomRpcOriginUsable('https://1rpc.io/eth')).toBe(true);
+    expect(isCustomRpcOriginUsable('https://eth.drpc.org')).toBe(true);
+    // 1RPC is gone (FIX-ALL Lane A, 2026-11-24): both 1RPC backups
+    // returned -32001 usage-limit and were replaced by dRPC.
+    expect(isCustomRpcOriginUsable('https://1rpc.io/eth')).toBe(false);
     for (const suggestion of SUGGESTED_CUSTOM_RPCS) {
       expect(isCustomRpcOriginUsable(suggestion.url)).toBe(true);
     }

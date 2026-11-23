@@ -131,9 +131,6 @@ export function createTronAdapter(
   // retried) and the TronScan fallback below owns balance/history.
   // Verified live 2026-11-24: Trongrid /wallet/getaccount 429d the
   // same minute PublicNode returned the same balance, 20032755932541.
-  const resolveBaseUrls = (): string[] =>
-    resolveEndpoints(overrides.baseUrls, [baseUrl]);
-  const readJsonFrom = createMempoolReader(transport, resolveBaseUrls);
   // TronScan fallback (Fix-All Lane A): mainnet only, different API
   // shape from Trongrid, so it lives outside the base-URL sweep — the
   // same split the TON adapter uses for TonAPI.
@@ -267,11 +264,6 @@ export function createTronAdapter(
     };
   };
 
-  // Chain-identity check result, cached per instance: TRON has no on-chain
-  // chain-id, so identity rests on the pinned endpoint responding
-  // with a well-formed block. The endpoint URL is fixed at
-  // construction and never changes, so one check per instance is enough.
-  let identityChecked = false;
 
   const requireNetwork = async (): Promise<AdapterResult<never> | null> => {
     if (identityChecked) return null;

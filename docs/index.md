@@ -133,15 +133,15 @@ bawa/
     devnet issues log, performance and security-findings records, and
     the dated 2026-11-18 research reports.
   apps/
-    web/            (304 files) The wallet web app: React 19 + TypeScript
+    web/            (302 files) The wallet web app: React 19 + TypeScript
                     + Vite + vitest. Entry `src/main.tsx`; `src/app`
-                    (routing, shell), `src/screens` (56 files, one
-                    screen per route), `src/state` (wallet context and
-                    refresh), `src/wallet` (86 files: chains, vault,
+                    (routing, shell), `src/screens` (58 files, one
+                    screen per route), `src/state` (wallet context; the refresh lives
+                    in wallet-context), `src/wallet` (85 files: chains, vault,
                     adapters, send, prices, tokens), `src/engine`
-                    (address codecs, boundary, destination validation,
+                    (address codecs, boundary,
                     confirmation policy), `src/ui` (components, styles),
-                    `src/assets` (chain/token icons), `e2e/` (13
+                    `src/assets` (chain/token icons), `e2e/` (14
                     Playwright specs, plus helpers and manifest),
                     `scripts/` (wasm copy,
                     palette audit, chains generation).
