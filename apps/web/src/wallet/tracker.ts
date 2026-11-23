@@ -295,10 +295,14 @@ async function lookupTon(hash: string, address: string | undefined, devnet = fal
 
     const entries: unknown[] = raw.result;
     for (const entry of entries) {
-      if (
-        !isRecord(entry) || !isRecord(entry.transaction_id) ||
-        trackerTonHex(entry.transaction_id.hash) !== target
-      ) continue;
+      if (!isRecord(entry) || !isRecord(entry.transaction_id)) continue;
+      const txHash = trackerTonHex(entry.transaction_id.hash);
+      // The external message hash (what the send result screen displays)
+      // arrives as the base64 in_msg.hash of the same transaction.
+      const messageHash = isRecord(entry.in_msg)
+        ? trackerTonHex(entry.in_msg.hash)
+        : null;
+      if (txHash !== target && messageHash !== target) continue;
       const data = parseTonTxEntry(entry, devnet);
       return data ? { status: 'ok', data } : { status: 'not-found' };
     }
@@ -378,10 +382,14 @@ export async function lookupTransaction(
     }
   }
   if (chain === 'ton') {
-    if (!/^[0-9a-f]{64}$/i.test(hash) && !/^[A-Za-z0-9+/]{43}=$/.test(hash)) {
+    // The send result screen shows the hash with a 0x prefix; a user
+    // pasting it verbatim must not fail format validation (Issue 6).
+    const normalized =
+      hash.startsWith('0x') || hash.startsWith('0X') ? hash.slice(2) : hash;
+    if (!/^[0-9a-f]{64}$/i.test(normalized) && !/^[A-Za-z0-9+/]{43}=$/.test(normalized)) {
       return { status: 'error', reason: 'Invalid TON transaction hash format.' };
     }
-    return lookupTon(hash, opts?.address, devnet);
+    return lookupTon(normalized, opts?.address, devnet);
   }
 
   try {
