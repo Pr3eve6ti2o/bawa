@@ -138,7 +138,7 @@ What each part means, in the wallet's own terms:
   account-0 paths: per-account derivation rotates them — Solana to a
   fresh address per account, TON to a second address — while the phrase
   stays the same (`deriveAddressesAt`, `core.ts:369`; `pathFor`,
-  `chains.ts:888`).
+  `chains.ts:883`).
 - **Vault** — the phrase is stored in `bawa-vault` as an envelope
   (`version`, `kdf`, `saltB64`, `ivB64`, `ciphertextB64`) encrypted with
   AES-GCM-256 under a key derived by PBKDF2 with 600,000 iterations
@@ -208,25 +208,25 @@ locally; balances come from public read-only endpoints.
 | Registry | `registry/capabilities.json`, `registry/engines.json`, `registry/profiles.json`, `registry/ui.json` | Machine-readable registries the builder reads |
 | Builder | `scripts/build-wallet.mjs`, `tools/bawa_cli.py` | One prompt in, a real project out |
 | Example web wallet | `apps/web/`, `apps/web/package.json` | The working proof of the guide |
-| Wallet Core 4.9.3 | `apps/web/package.json:35` (`@trustwallet/wallet-core: 4.9.3`), `apps/web/src/engine/boundary.ts:95` (`loadCore`) | WASM core: mnemonic, derivation, address checks |
-| Dashboard — 22 chains, 43 rows | `apps/web/src/screens/dashboard.tsx`, `apps/web/src/wallet/chains.ts:675` (`SUPPORTED_CHAINS`, 22 entries), `apps/web/src/wallet/tokens.ts:32` (`DEFAULT_TOKENS`, 21 entries) | 22 native assets + 21 default tokens |
-| 24-word phrase | `apps/web/src/wallet/core.ts:138` (`createWallet`), `core.ts:154` (`HDWallet.createWithEntropy`, 32 bytes) | 24-word BIP-39 phrase from secure entropy |
-| HDWallet.createWithMnemonic | `apps/web/src/wallet/core.ts:246` (`deriveAddresses`), `apps/web/src/engine/boundary.ts:693` (`deriveAddresses`) | Opens the one HD wallet from the phrase |
-| 22 addresses | `apps/web/src/wallet/core.ts:239` (`deriveAddresses`), `core.ts:256` (`getAddressForCoin`), `core.ts:24-47` (`DEFAULT_PATHS`), `core.ts:369` (`deriveAddressesAt`, per-account SOL/TON), `apps/web/src/wallet/chains.ts:336` (`CHAINS`), `chains.ts:888` (`pathFor`) | One address per chain from one phrase; SOL/TON rotate per account |
+| Wallet Core 4.9.3 | `apps/web/package.json:35` (`@trustwallet/wallet-core: 4.9.3`), `apps/web/src/engine/boundary.ts:113` (`loadCore`) | WASM core: mnemonic, derivation, address checks |
+| Dashboard — 22 chains, 43 rows | `apps/web/src/screens/dashboard.tsx`, `apps/web/src/wallet/chains.ts:814` (`SUPPORTED_CHAINS`, 22 entries), `apps/web/src/wallet/tokens.ts:32` (`DEFAULT_TOKENS`, 21 entries) | 22 native assets + 21 default tokens |
+| 24-word phrase | `apps/web/src/wallet/core.ts:151` (`createWallet`), `core.ts:167` (`HDWallet.createWithEntropy`, 32 bytes) | 24-word BIP-39 phrase from secure entropy |
+| HDWallet.createWithMnemonic | `apps/web/src/wallet/core.ts:254` (`deriveAddresses`), `apps/web/src/engine/boundary.ts:746` (`deriveAddresses`) | Opens the one HD wallet from the phrase |
+| 22 addresses | `apps/web/src/wallet/core.ts:254` (`deriveAddresses`), `core.ts:271` (`getAddressForCoin`), `core.ts:40-63` (`DEFAULT_PATHS`), `core.ts:369` (`deriveAddressesAt`, per-account SOL/TON), `apps/web/src/wallet/chains.ts:419` (`CHAINS`), `chains.ts:883` (`pathFor`) | One address per chain from one phrase; SOL/TON rotate per account |
 | Vault — bawa-vault | `apps/web/src/wallet/vault.ts:79` (`VAULT_STORAGE_KEY`), `vault.ts:80` (`bawa-vault-backup`), `vault.ts:82` (`bawa-vault-key`), `vault.ts:739` (`bawa-vault-accounts:v1`) | Encrypted on-device vault; localStorage keys |
-| PBKDF2 600,000 → AES-GCM-256 | `apps/web/src/wallet/vault.ts:84` (`PBKDF2_ITERATIONS = 600_000`), `vault.ts:85` (`SHA-256`), `vault.ts:88` (`AES-GCM`), `vault.ts:96-109` (`VaultEnvelope`) | Key derivation and envelope fields |
-| 16 EVM chains — one shared address | `apps/web/src/wallet/core.ts:24-47` (`DEFAULT_PATHS`: all 16 EVM chains `m/44'/60'/0'/0/0`) | One address across all EVM chains |
-| BTC · TRX · TON · SOL · LTC · DOGE | `apps/web/src/wallet/core.ts:24-47` (`DEFAULT_PATHS`), `apps/web/src/wallet/chains.ts:336-375` (`pathFor` per chain; TON V4 R2, workchain 0) | Per-chain derivation paths |
-| Watch-only — xpubs only, no secret | `apps/web/src/engine/boundary.ts:553` (`validateWatchOnlyImport`), `apps/web/src/state/wallet-context.tsx:75` (`bawa-watch-only-xpubs`) | Public extended keys only; mainnet-only |
+| PBKDF2 600,000 → AES-GCM-256 | `apps/web/src/wallet/vault.ts:84` (`PBKDF2_ITERATIONS = 600_000`), `vault.ts:85` (`SHA-256`), `vault.ts:88` (`AES-GCM`), `vault.ts:97-109` (`VaultEnvelope`) | Key derivation and envelope fields |
+| 16 EVM chains — one shared address | `apps/web/src/wallet/core.ts:40-63` (`DEFAULT_PATHS`: all 16 EVM chains `m/44'/60'/0'/0/0`) | One address across all EVM chains |
+| BTC · TRX · TON · SOL · LTC · DOGE | `apps/web/src/wallet/core.ts:40-63` (`DEFAULT_PATHS`), `apps/web/src/wallet/chains.ts:883-885` (`pathFor` per chain; TON V4 R2, workchain 0) | Per-chain derivation paths |
+| Watch-only — xpubs only, no secret | `apps/web/src/engine/boundary.ts:609` (`validateWatchOnlyImport`), `apps/web/src/state/wallet-context.tsx:76` (`bawa-watch-only-xpubs`) | Public extended keys only; mainnet-only |
 | Addresses on 22 chains | As "22 addresses" above | The addresses every flow starts from |
-| Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:821` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:902` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:44` (`registerAllAdapters`), `apps/web/src/state/wallet-refresh.ts` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
-| Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:35` (CoinGecko base), `prices.ts:87` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:91` (`PriceSource`), `prices.ts:392` (`PRICE_CACHE_KEY`), `prices.ts:597` (`fetchPrices`), `prices.ts:966` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:48`, `apps/web/src/wallet/token-prices.ts:165-166` (fallback order), `token-prices.ts:347` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
+| Balances — public RPCs, up to 3 per chain | `apps/web/src/wallet/chains.ts:966` (`MAX_RPC_ENDPOINTS_PER_CHAIN = 3`), `chains.ts:1047` (`resolveRpcEndpoints`), `apps/web/src/wallet/adapters/index.ts:88` (`registerAllAdapters`), `apps/web/src/state/wallet-refresh.ts:194` (`refreshBalances`) | Balance refresh across enabled chains; failures show as unavailable |
+| Prices — CoinGecko, CoinLore, Coinbase, DexScreener, TonAPI | `apps/web/src/wallet/prices.ts:49` (CoinGecko base), `prices.ts:101` (`MAX_QUOTE_AGE_MS`, 10 minutes), `prices.ts:105` (`PriceSource`), `prices.ts:406` (`PRICE_CACHE_KEY`), `prices.ts:645` (`fetchPrices`), `prices.ts:1014` (`usePrices`), `apps/web/src/wallet/price-fallbacks.ts` (`applyPriceFallbacks`, CoinLore + Coinbase native fallbacks), `apps/web/src/wallet/dex-prices.ts:49`, `apps/web/src/wallet/token-prices.ts:165-166` (fallback order), `token-prices.ts:347` (`useTokenPrices`) | Live prices; honest "unavailable" when no source has one |
 | Receive — address + QR | `apps/web/src/screens/receive.tsx` | Address + QR card for any chain |
-| Track — by transaction hash | `apps/web/src/screens/track-transaction.tsx`, `apps/web/src/wallet/tracker.ts:56` (`parseBtcTx`), `tracker.ts:119` (`parseEthTx`), `tracker.ts:162` (`parseTrxTx`), `tracker.ts:225` (`parseTonTxEntry`) | Transaction lookup and confirmation status per chain |
+| Track — by transaction hash | `apps/web/src/screens/track-transaction.tsx`, `apps/web/src/wallet/tracker.ts:82` (`parseBtcTx`), `tracker.ts:151` (`parseEthTx`), `tracker.ts:208` (`parseTrxTx`), `tracker.ts:271` (`parseTonTxEntry`) | Transaction lookup and confirmation status per chain |
 | Add Token — by contract address | `apps/web/src/screens/add-token.tsx`, `apps/web/src/wallet/tokens.ts:599` (`CUSTOM_TOKENS_KEY`) | Any token by contract address; real name, symbol, balance |
 | Send — build + sign offline | `apps/web/src/screens/send.tsx`, `apps/web/src/wallet/send.ts`, `apps/web/src/wallet/signing-intent.ts` (`createTransactionIntent`) | Offline signing; nothing leaves the device unsigned |
-| Broadcast allowed? | `apps/web/src/wallet/send.ts:1019` (`isBroadcastAllowedFor`) | The guard: mainnet broadcast is not allowed |
-| Blocked — broadcast disabled | `apps/web/src/wallet/send.ts:1051` (status `disabled`, `BROADCAST_DISABLED_MESSAGE`) | Send stops here on mainnet |
+| Broadcast allowed? | `apps/web/src/wallet/send.ts:1021` (`isBroadcastAllowedFor`) | The guard: mainnet broadcast is not allowed |
+| Blocked — broadcast disabled | `apps/web/src/wallet/send.ts:1053` (status `disabled`, `BROADCAST_DISABLED_MESSAGE`) | Send stops here on mainnet |
 | Devnet mode (prose) | `apps/web/src/wallet/devnet.ts:30` (`DEVNET_ENABLED_KEY`), `apps/web/src/wallet/devnet-endpoints.ts`, `apps/web/src/screens/devnet-setting.tsx` | Temporary test-only switch to test networks; devnet-only broadcast |
 
 Supporting pieces named above: shared types in
