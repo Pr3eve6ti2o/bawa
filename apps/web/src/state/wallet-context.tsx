@@ -5,6 +5,7 @@ import {
 import { isRecord } from '../wallet/guards';
 import type { ChainId, DerivedAddress, UiState, WatchOnlyWallet } from '@bawa/contracts';
 import { availableFor, canRotateReceiveAddress, SUPPORTED_CHAINS } from '../wallet/chains';
+import { watchOnlyFamilyChains } from '../wallet/watch-only-families';
 import type { AdapterResult, AdapterTx } from '../wallet/adapters/types';
 import { messageOf } from '../wallet/adapters/types';
 import {
@@ -205,6 +206,19 @@ interface WalletState {
 export interface WalletContextValue extends WalletState {
   selectedChain: ChainId;
   addXpub(chain: ChainId, xpub: string, label: string): Promise<void>;
+  /**
+   * Lane B (Finish the Product): add a plain public address watch-only.
+   * The address fans out to every chain in its family (all sixteen EVM
+   * chains for a 0x address; the chain itself for SOL/TRX/BTC/LTC/DOGE/
+   * TON). Chains that already have a watch-only entry are skipped, never
+   * overwritten — an existing extended-key entry keeps deriving its five
+   * addresses. Returns which chains were added and which were skipped.
+   */
+  addWatchOnlyAddress(
+    chain: ChainId,
+    address: string,
+    label: string,
+  ): Promise<{ added: ChainId[]; skipped: ChainId[] }>;
   removeXpub(chain: ChainId): void;
   refreshChain(chain: ChainId): Promise<void>;
   setSelectedChain(chain: ChainId): void;
@@ -1093,6 +1107,59 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
   }, [putWallet, refreshBalances, refreshHistory]);
 
+  // Lane B (Finish the Product): add a plain public address watch-only,
+  // fanned out to every chain in its family. One 0x address is the same
+  // address on all sixteen EVM chains, so importing it watches all of
+  // them; every other address family is a single chain. The stored value
+  // is the address itself (derivedCount 1): refreshChain derives it via
+  // the address branch of engine/boundary.ts deriveAddress, and the
+  // balance/history/token refreshes then read it like any other
+  // watch-only address — no per-chain special-casing downstream.
+  // A chain that already has a watch-only entry is skipped, never
+  // overwritten: replacing an extended-key entry with a single address
+  // would silently drop its five derived addresses.
+  const addWatchOnlyAddress = useCallback(async (chain: ChainId, address: string, label: string) => {
+    const epoch = lifetime.current;
+    const publicAddress = address.trim();
+    const { validateWatchOnlyImport } = await import('../engine/boundary');
+    const validation = await validateWatchOnlyImport(chain, publicAddress);
+    if (!validation.ok) throw new Error(validation.message);
+    if (validation.kind !== 'address') {
+      throw new Error('Expected a public address for this import.');
+    }
+    if (epoch !== lifetime.current) return { added: [], skipped: [] };
+    const trimmedLabel = label.trim();
+    if (trimmedLabel.length > LABEL_MAX_LENGTH) {
+      throw new Error(`Label must be at most ${LABEL_MAX_LENGTH} characters.`);
+    }
+    const family = watchOnlyFamilyChains(chain);
+    const added: ChainId[] = [];
+    const skipped: ChainId[] = [];
+    for (const familyChain of family) {
+      if (current.current.xpubs[familyChain] !== null) {
+        skipped.push(familyChain);
+        continue;
+      }
+      ++additions.current[familyChain];
+      changed.current[familyChain] = true;
+      const wallet: WatchOnlyWallet = {
+        chain: familyChain,
+        xpub: publicAddress,
+        label: trimmedLabel,
+        derivedCount: 1,
+      };
+      // putWallet awaits refreshChain, which derives the address; the
+      // awaits are sequential so a late family member cannot overwrite
+      // an earlier one's state.
+      await putWallet(familyChain, wallet);
+      added.push(familyChain);
+    }
+    if (added.length > 0) {
+      void refreshBalances().finally(() => { void refreshHistory(); }).catch(() => {});
+    }
+    return { added, skipped };
+  }, [putWallet, refreshBalances, refreshHistory]);
+
   const removeXpub = useCallback((chain: ChainId) => {
     ++additions.current[chain];
     changed.current[chain] = true;
@@ -1655,7 +1722,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [hydrated, refreshBalances, refreshHistory]);
 
   const value = useMemo<WalletContextValue>(() => ({
-    ...state, selectedChain, setSelectedChain, addXpub, removeXpub, refreshChain,
+    ...state, selectedChain, setSelectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain,
     setVaultAccount, selectVaultAccount, createVaultAccounts,
     refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation,
     exportAccountExtendedPublicKey,
@@ -1663,7 +1730,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     refreshTokenBalances, setChainEnabled, addCustomToken,
     lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled,
     devnetEnabled, setDevnetEnabled,
-  }), [state, selectedChain, addXpub, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
+  }), [state, selectedChain, addXpub, addWatchOnlyAddress, removeXpub, refreshChain, setVaultAccount, selectVaultAccount, createVaultAccounts, refreshReceiveAddresses, nextReceiveAddress, resetReceiveRotation, exportAccountExtendedPublicKey, refreshVaultAccounts, refreshBalances, refreshHistory, refreshTokenBalances, setChainEnabled, addCustomToken, lockVault, unlockVault, autoLockEnabled, autoLockMinutes, setAutoLockMinutes, setAutoLockEnabled, devnetEnabled, setDevnetEnabled]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

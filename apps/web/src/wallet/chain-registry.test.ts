@@ -119,7 +119,7 @@ describe('chain registry — token discovery', () => {
     }
   });
 
-  it('keeps fee-quote and send blocked for the 9 new chains, and history blocked except sol, ltc, doge and op', () => {
+  it('keeps fee-quote and send blocked for the 9 new chains, and history blocked except sol, ltc, doge, op, avax, matic, arb and base', () => {
     for (const chain of ['sol', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'ltc', 'doge'] as const) {
       const caps = capabilitiesFor(chain);
       for (const capability of ['fee-quote', 'unsigned-plan', 'local-sign', 'post-sign-verify'] as const) {
@@ -128,11 +128,23 @@ describe('chain registry — token discovery', () => {
       }
       // Lane C, item 16 (2026-11-23): history is verified for sol/ltc/
       // doge (adapters + live mainnet cross-check 2026-11-23, second
-      // source). Lane D, gap 1 (2026-11-23): history is verified for
-      // op too (keyless host probed live 2026-11-23) and stays blocked
-      // for the other four token-discovery EVM chains — no keyless
-      // public history indexer answers for them.
-      if (chain === 'sol' || chain === 'ltc' || chain === 'doge' || chain === 'op') {
+      // source). Lane B (Finish the Product, 2026-11-23): op and avax
+      // join them — Optimism via explorer.optimism.io, Avalanche via
+      // Routescan, both probed live returning real transactions; matic,
+      // arb and base join them the same day — their Blockscout hosts
+      // answer a headless-Chromium fetch (curl is 403 Cloudflare).
+      // History stays blocked for bsc: no working keyless public
+      // history indexer exists for it.
+      if (
+        chain === 'sol' ||
+        chain === 'ltc' ||
+        chain === 'doge' ||
+        chain === 'op' ||
+        chain === 'avax' ||
+        chain === 'matic' ||
+        chain === 'arb' ||
+        chain === 'base'
+      ) {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else {

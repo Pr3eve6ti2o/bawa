@@ -11,7 +11,7 @@ import {
 } from '../../scripts/wasm-integrity.mjs';
 
 const EXPECTED_CONNECT_SRC =
-  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://1rpc.io https://rpc.fantom.network https://rpc2.fantom.network https://celo.blockscout.com https://explorer.optimism.io https://scrollscan.com https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com";
+  "connect-src 'self' https://mempool.space https://ethereum-rpc.publicnode.com https://eth.blockscout.com https://explorer.optimism.io https://scrollscan.com https://celo.blockscout.com https://explorer.aurora.dev https://api.routescan.io https://polygon.blockscout.com https://base.blockscout.com https://arbitrum.blockscout.com https://api.trongrid.io https://toncenter.com https://api.coingecko.com https://api.dexscreener.com https://api.coinlore.net https://api.exchange.coinbase.com https://bsc-rpc.publicnode.com https://polygon-bor-rpc.publicnode.com https://arbitrum-rpc.publicnode.com https://optimism-rpc.publicnode.com https://base-rpc.publicnode.com https://avalanche-rpc.publicnode.com https://solana-rpc.publicnode.com https://public.rpc.solanavibestation.com https://litecoinspace.org https://sochain.com https://api.blockcypher.com https://blockstream.info https://bsc-dataseed.binance.org https://mainnet.optimism.io https://api.avax.network https://tonapi.io https://gnosis-rpc.publicnode.com https://rpc.gnosischain.com https://celo-rpc.publicnode.com https://forno.celo.org https://linea-rpc.publicnode.com https://rpc.linea.build https://mantle-rpc.publicnode.com https://rpc.mantle.xyz https://scroll-rpc.publicnode.com https://rpc.scroll.io https://opbnb-rpc.publicnode.com https://opbnb-mainnet-rpc.bnbchain.org https://metis-rpc.publicnode.com https://andromeda.metis.io https://mainnet.aurora.dev https://1rpc.io https://rpc.fantom.network https://rpc2.fantom.network https://ethereum-sepolia-rpc.publicnode.com https://eth-sepolia.blockscout.com https://nile.trongrid.io https://api.nileex.io https://testnet.toncenter.com";
 
 describe('T47 security headers', () => {
   it('CSP allows same-origin scripts plus WASM compilation only', () => {
@@ -30,7 +30,7 @@ describe('T47 security headers', () => {
     expect(CONTENT_SECURITY_POLICY).not.toContain('*');
   });
 
-  it('CSP blocks plugins, base hijack and framing; connect-src allows only the forty-six pinned provider origins plus the five TEMPORARY devnet origins', () => {
+  it('CSP blocks plugins, base hijack and framing; connect-src allows only the fifty-one pinned provider origins plus the five TEMPORARY devnet origins', () => {
     expect(CONTENT_SECURITY_POLICY).toContain("object-src 'none'");
     expect(CONTENT_SECURITY_POLICY).toContain("base-uri 'self'");
     expect(CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
@@ -41,7 +41,7 @@ describe('T47 security headers', () => {
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith('connect-src '));
     expect(connectSrc).toBe(EXPECTED_CONNECT_SRC);
-    // Exactly fifty-one https: origins in the whole policy, all of them in
+    // Exactly fifty-six https: origins in the whole policy, all of them in
     // connect-src: mempool.space (BTC), ethereum-rpc.publicnode.com (ETH RPC)
     // + eth.blockscout.com (ETH history), api.trongrid.io (TRX),
     // toncenter.com (TON), api.coingecko.com (CoinGecko price feed) +
@@ -60,19 +60,29 @@ describe('T47 security headers', () => {
     // (1rpc.io, blockstream.info,
     // bsc-dataseed.binance.org, mainnet.optimism.io, api.avax.network,
     // tonapi.io) and the eighteen item-14 chain endpoints (nine chains ×
-    // primary + backup). Plus the three gap-1 history origins (Lane D,
-    // 2026-11-23): celo.blockscout.com, explorer.optimism.io,
-    // scrollscan.com. Plus the five TEMPORARY devnet origins (Lane D,
+    // primary + backup). Plus the eight Lane B history hosts (Finish the
+    // Product, 2026-11-23): explorer.optimism.io, scrollscan.com,
+    // celo.blockscout.com, explorer.aurora.dev, api.routescan.io,
+    // polygon.blockscout.com, base.blockscout.com, arbitrum.blockscout.com.
+    // Plus the five TEMPORARY devnet origins (Lane D,
     // 2026-11-22: without them every devnet fetch is refused by the
     // browser — the devnet endpoints are separate origins from mainnet).
     // Devnet is TEMPORARY: the removal checklist in docs/DECISIONS.md
-    // reverts this test and security-headers.ts to the forty-six mainnet
+    // reverts this test and security-headers.ts to the forty-nine mainnet
     // origins.
     const httpsOrigins = CONTENT_SECURITY_POLICY.match(/https:\/\/[^\s;]+/g) ?? [];
     expect(httpsOrigins).toEqual([
       'https://mempool.space',
       'https://ethereum-rpc.publicnode.com',
       'https://eth.blockscout.com',
+      'https://explorer.optimism.io',
+      'https://scrollscan.com',
+      'https://celo.blockscout.com',
+      'https://explorer.aurora.dev',
+      'https://api.routescan.io',
+      'https://polygon.blockscout.com',
+      'https://base.blockscout.com',
+      'https://arbitrum.blockscout.com',
       'https://api.trongrid.io',
       'https://toncenter.com',
       'https://api.coingecko.com',
@@ -113,9 +123,6 @@ describe('T47 security headers', () => {
       'https://1rpc.io',
       'https://rpc.fantom.network',
       'https://rpc2.fantom.network',
-      'https://celo.blockscout.com',
-      'https://explorer.optimism.io',
-      'https://scrollscan.com',
       'https://ethereum-sepolia-rpc.publicnode.com',
       'https://eth-sepolia.blockscout.com',
       'https://nile.trongrid.io',
@@ -147,9 +154,20 @@ describe('T47 security headers', () => {
     // hosts (Celo Blockscout, Optimism explorer, Scrollscan).
     origins.add('https://tonapi.io');
     origins.add('https://eth.blockscout.com');
-    origins.add('https://celo.blockscout.com');
-    origins.add('https://explorer.optimism.io');
-    origins.add('https://scrollscan.com');
+    // Lane B (Finish the Product, 2026-11-23): the drift guard used to
+    // collect RPC endpoints only, so the nine wired history hosts were
+    // live in the registry but missing from connect-src — the browser
+    // refused every history fetch (CSP) while the unit tests stayed
+    // green. History base URLs and explorer bases (the /track v2
+    // lookup fetches the explorer base) are fetch origins too.
+    for (const chain of Object.values(CHAINS)) {
+      if (chain.historyBaseUrl !== undefined) {
+        origins.add(new URL(chain.historyBaseUrl).origin);
+      }
+      if (chain.historyExplorerBase !== undefined) {
+        origins.add(new URL(chain.historyExplorerBase).origin);
+      }
+    }
     for (const origin of [...origins].sort()) {
       expect(
         CONTENT_SECURITY_POLICY,

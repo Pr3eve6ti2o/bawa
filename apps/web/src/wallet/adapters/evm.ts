@@ -4,10 +4,10 @@
  * One factory for the six EVM chains that share the eth.ts pattern:
  * a viem public client on the chain's pinned RPC, chain-id checked on
  * every call, native balance via getBalance, nonce tx inputs, and a
- * 21000-gas native-transfer fee estimate. History is Blockscout-shaped
- * only when a history endpoint is configured (Ethereum, Celo, Optimism
- * and Scroll — the three non-ETH chains whose hosts answer the
- * Blockscout `?module=account&action=txlist` shape, probed live
+ * 21000-gas native-transfer fee estimate. History reads the
+ * Etherscan-compatible txlist API whenever a history endpoint is
+ * configured — Ethereum, Optimism, Scroll, Celo and Aurora via
+ * Blockscout instances, Avalanche and Mantle via Routescan (Lane B,
  * 2026-11-23); the other EVM chains report history unavailable — never
  * faked. Broadcast stays disabled.
  */
@@ -142,7 +142,13 @@ export function createEvmAdapter(
   const historyBaseUrl = overrides.historyBaseUrl ?? config.historyBaseUrl;
   const historyExplorerBase =
     overrides.historyExplorerBase ?? config.historyExplorerBase;
-  const historySource = config.historySource ?? 'blockscout';
+  // The history source label names the indexer that answered: an
+  // explicit config label wins (Lane D: optimism-explorer, scrollscan);
+  // otherwise derive it from the URL — Routescan for Avalanche/Mantle,
+  // Blockscout instances for the rest (Lane B).
+  const historySource =
+    config.historySource ??
+    (historyBaseUrl?.includes('routescan') ? 'routescan' : 'blockscout');
   const transport = overrides.transport ?? httpFetchTransport;
   const readJson = (url: string, operation: string): Promise<unknown> =>
     withRetry(() => transport.request(url), { operation });

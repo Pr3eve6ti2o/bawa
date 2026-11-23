@@ -94,33 +94,36 @@ type ImportInputConfig = {
 };
 
 const inputConfigByChain: Record<ChainId, ImportInputConfig> = {
-  btc: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  eth: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  trx: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  // Lane B (Finish the Product): every chain accepts a plain public
+  // address as well as its extended key. An address fans out to every
+  // chain in its family (one 0x address covers all 16 EVM chains).
+  btc: { label: 'Bitcoin address or account public key (xpub / zpub)', placeholder: 'bc1… or xpub…' },
+  eth: { label: 'Ethereum address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  trx: { label: 'TRON address (T…) or account public key (xpub)', placeholder: 'T… or xpub…' },
   ton: { label: 'TON public address', placeholder: 'UQ… or 0:…' },
   sol: { label: 'Solana public address', placeholder: 'GjJy…' },
-  bsc: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  matic: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  arb: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  op: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  base: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  avax: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  gnosis: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  celo: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  linea: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  mantle: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  scroll: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  opbnb: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  metis: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  aurora: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
-  fantom: { label: 'Account public key (xpub)', placeholder: 'xpub…' },
+  bsc: { label: 'BNB Smart Chain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  matic: { label: 'Polygon address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  arb: { label: 'Arbitrum One address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  op: { label: 'OP Mainnet address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  base: { label: 'Base address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  avax: { label: 'Avalanche C-Chain address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  gnosis: { label: 'Gnosis address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  celo: { label: 'Celo address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  linea: { label: 'Linea address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  mantle: { label: 'Mantle address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  scroll: { label: 'Scroll address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  opbnb: { label: 'opBNB address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  metis: { label: 'Metis address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  aurora: { label: 'Aurora address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
+  fantom: { label: 'Fantom address (0x…) or account public key (xpub)', placeholder: '0x… or xpub…' },
   // Lane A: both LTC serialisations are accepted (Ltub, what this
   // wallet exports, and zpub, what Trust Wallet lists as Litecoin's
   // segwit xpub) — same key.
   ltc: { label: 'Account public key (Ltub or zpub)', placeholder: 'Ltub… or zpub…' },
   // Lane C: both DOGE serialisations are accepted (dpub, what Trust
   // Wallet Core emits, and dgub, what bip_utils emits) — same key.
-  doge: { label: 'Account public key (dpub or dgub)', placeholder: 'dpub… or dgub…' },
+  doge: { label: 'Dogecoin address or account public key (dpub or dgub)', placeholder: 'D… or dpub…' },
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -176,6 +179,7 @@ export function ImportWalletScreen() {
   const {
     xpubs,
     addXpub,
+    addWatchOnlyAddress,
     refreshVaultAccounts,
     resetReceiveRotation = () => {},
     vaultAddresses,
@@ -194,6 +198,9 @@ export function ImportWalletScreen() {
   const [xpub, setXpub] = useState('');
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Lane B: the result of the last successful watch-only add — how many
+  // chains an address fanned out to, and how many were already watched.
+  const [notice, setNotice] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
   // Mode A (recovery phrase) state.
@@ -375,20 +382,42 @@ export function ImportWalletScreen() {
       // Clear again inside the failure block (already cleared above by
       // the T41 step): the rejection path must clear before reporting.
       setXpub('');
-      setError(`${validation.message || (chain === 'ton' ? 'Invalid TON address.' : 'Invalid extended public key.')} The input was cleared; never paste a mnemonic, seed or private key here.`);
+      setError(`${validation.message || 'Invalid public key or address.'} The input was cleared; never paste a mnemonic, seed or private key here.`);
       return;
     }
 
     setError(null);
+    setNotice(null);
     setIsAdding(true);
     try {
       const validation = await validateWatchOnlyImport(chain, publicKey);
       if (!validation.ok) {
         // Secret-free error: never echo the rejected input back.
-        setError(`Invalid ${chain === 'ton' ? 'TON address' : 'extended public key'}. The input was cleared; never paste a mnemonic, seed or private key here.`);
+        setError(`Invalid public key or address. The input was cleared; never paste a mnemonic, seed or private key here.`);
         return;
       }
-      await addXpub(chain, publicKey, label.trim());
+      // Lane B: a plain address fans out to every chain in its family
+      // (one 0x address covers all 16 EVM chains); an extended key
+      // watches one chain, as before.
+      if (validation.kind === 'address') {
+        const { added, skipped } = await addWatchOnlyAddress(chain, publicKey, label.trim());
+        if (added.length === 0) {
+          setNotice(
+            skipped.length === 1
+              ? 'That address is already watched on this chain. Nothing changed.'
+              : `That address is already watched on all ${skipped.length} chains in its family. Nothing changed.`,
+          );
+        } else {
+          setNotice(
+            `Watching this address on ${added.length} ${added.length === 1 ? 'chain' : 'chains'}` +
+              (skipped.length > 0
+                ? ` (${skipped.length} ${skipped.length === 1 ? 'chain' : 'chains'} already watched — kept as they were).`
+                : '.'),
+          );
+        }
+      } else {
+        await addXpub(chain, publicKey, label.trim());
+      }
       toast.success('Watch-only wallet added.');
       setLabel('');
     } catch {
@@ -715,12 +744,15 @@ export function ImportWalletScreen() {
         <>
              <Alert>
      <AlertDescription>
-       Watch-only accounts cannot sign transactions. Import one chain at a time.
+       Watch-only accounts cannot sign transactions. A public address
+       watches every chain it belongs to — one 0x address covers all 16
+       EVM chains. An extended public key watches one chain.
      </AlertDescription>
    </Alert>
    <p id="watch-only-notice" className="text-sm leading-relaxed text-muted-foreground">
-            Only extended PUBLIC keys or TON public addresses are accepted. Private extended keys (xprv/zprv)
-            are rejected. Import the account-level key (depth 3, account 0) for the selected chain.
+            Only extended PUBLIC keys or public addresses are accepted. Private extended keys (xprv/zprv)
+            are rejected. Import the account-level key (depth 3, account 0) for the selected chain,
+            or paste a public address — an address watches every chain it belongs to.
             Never paste a mnemonic, seed or private key here.
             An extended public key lets its holder track this account&apos;s
             derivable addresses, balances and transaction history. Imported
@@ -756,6 +788,7 @@ export function ImportWalletScreen() {
                 onChange={(event) => {
                   setXpub(event.target.value);
                   setError(null);
+                  setNotice(null);
                 }}
                 autoComplete="off" autoCapitalize="none" spellCheck={false}
                 placeholder={inputConfigByChain[chain].placeholder} required disabled={isAdding}
@@ -787,6 +820,11 @@ export function ImportWalletScreen() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            {notice && (
+              <p role="status" className="text-sm leading-relaxed">
+                {notice}
+              </p>
+            )}
             <Button type="submit" disabled={isAdding}>
               {isAdding ? 'Adding…' : 'Add'}
             </Button>
@@ -798,18 +836,32 @@ export function ImportWalletScreen() {
               <p className="text-sm text-muted-foreground">No wallets imported yet.</p>
             ) : (
               <ul className="space-y-2">
-                {imported.map((wallet) => (
-                  <li key={`${wallet.chain}:${wallet.xpub}`} className="space-y-2 rounded-xl border bg-card p-4 text-foreground">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary">{wallet.chain.toUpperCase()}</Badge>
-                      {' '}
-                      <span>{wallet.label || 'Unlabelled wallet'}</span>
-                    </div>
-                    <code className="block break-all text-sm">
-                      {`${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`}
-                    </code>
-                  </li>
-                ))}
+                {(() => {
+                  // Lane B: one address import fans out to a whole family
+                  // (16 rows for one 0x address). Group by the stored
+                  // value so one import is one row with all its chain
+                  // badges, instead of sixteen near-identical rows.
+                  const groups = new Map<string, WatchOnlyWallet[]>();
+                  for (const wallet of imported) {
+                    const list = groups.get(wallet.xpub) ?? [];
+                    list.push(wallet);
+                    groups.set(wallet.xpub, list);
+                  }
+                  return [...groups.entries()].map(([value, wallets]) => (
+                    <li key={value} className="space-y-2 rounded-xl border bg-card p-4 text-foreground">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {wallets.map((wallet) => (
+                          <Badge key={wallet.chain} variant="secondary">{wallet.chain.toUpperCase()}</Badge>
+                        ))}
+                        {' '}
+                        <span>{wallets[0]?.label || 'Unlabelled wallet'}</span>
+                      </div>
+                      <code className="block break-all text-sm">
+                        {`${value.slice(0, 12)}…${value.slice(-8)}`}
+                      </code>
+                    </li>
+                  ));
+                })()}
               </ul>
             )}
           </section>

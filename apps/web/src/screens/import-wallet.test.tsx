@@ -860,3 +860,181 @@ describe('expandUniquePrefix', () => {
     expect(expandUniquePrefix(input)).toBe(expected);
   });
 });
+
+// Watch-only address fan-out screen tests (Finish the Product, Lane B,
+// 2026-11-23). One 0x address must watch all 16 EVM chains: the screen
+// reports the fan-out and lists the import once, with all its chain
+// badges. (Appended to this file: setInputValue, waitForImportScreen
+// and testGlobal come from the module scope above; the mount/click
+// helpers are scoped to this describe, mirroring the TON describe.)
+describe.sequential('ImportWalletScreen watch-only address fan-out (Lane B)', () => {
+  // BIP-39 test-vector EVM address (wallet/core.test.ts).
+  const EVM_ADDRESS = '0x9858EfFD232B4033E47d90003D41EC34EcaEda94';
+
+  async function mountImportScreen() {
+    window.localStorage.clear();
+    const previousUrl = window.location.href;
+    const previousState = window.history.state;
+    const previousActEnvironment = testGlobal.IS_REACT_ACT_ENVIRONMENT;
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    testGlobal.IS_REACT_ACT_ENVIRONMENT = true;
+    window.history.pushState({}, '', '/import-wallet');
+    await act(async () => {
+      root.render(<App />);
+    });
+    await waitForImportScreen(div);
+    return {
+      div,
+      cleanup: async () => {
+        try {
+          await act(async () => {
+            root.unmount();
+          });
+        } finally {
+          div.remove();
+          window.history.replaceState(previousState, '', previousUrl);
+          if (previousActEnvironment === undefined) {
+            delete testGlobal.IS_REACT_ACT_ENVIRONMENT;
+          } else {
+            testGlobal.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment;
+          }
+        }
+      },
+    };
+  }
+
+  async function clickButton(div: HTMLDivElement, text: string) {
+    const button = [...div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    expect(button).not.toBeUndefined();
+    await act(async () => {
+      button!.click();
+    });
+  }
+
+  async function clickTabTrigger(div: HTMLDivElement, text: string) {
+    const trigger = [...div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    expect(trigger).not.toBeUndefined();
+    await act(async () => {
+      trigger!.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true, button: 0 }),
+      );
+      trigger!.click();
+    });
+  }
+
+  async function selectChain(div: HTMLDivElement, name: string) {
+    const search = div.querySelector<HTMLInputElement>(
+      '#watch-only-chain-search',
+    );
+    expect(search).not.toBeNull();
+    await act(async () => {
+      search!.focus();
+      search!.click();
+    });
+    await act(async () => {
+      for (let i = 0; i < 20 && !div.querySelector('[role="listbox"]'); i++) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    });
+    const options = [...div.querySelectorAll('[role="option"]')];
+    const option = options.find((candidate) =>
+      candidate.textContent?.includes(name),
+    );
+    expect(option, `watch-only picker offers ${name}`).not.toBeUndefined();
+    await act(async () => {
+      (option as HTMLElement).click();
+    });
+  }
+
+  it('labels the ETH field as address-or-xpub', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      await selectChain(div, 'Ethereum');
+      expect(
+        div.querySelector('label[for="wallet-xpub"]')?.textContent?.trim(),
+      ).toBe('Ethereum address (0x…) or account public key (xpub)');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('fans one EVM address out to 16 chains and reports it', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      await selectChain(div, 'Ethereum');
+      const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, EVM_ADDRESS);
+      });
+      await clickButton(div, 'Add');
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(div.textContent).toContain('Watching this address on 16 chains.');
+      // One grouped row: the truncated address once, with the family badges.
+      expect(div.textContent).toContain('0x9858EfFD23');
+      expect(div.textContent).toContain('EcaEda94');
+      for (const badge of ['ETH', 'BSC', 'MATIC', 'ARB', 'FANTOM']) {
+        expect(div.textContent).toContain(badge);
+      }
+      // The full address never appears in the DOM.
+      expect(div.textContent).not.toContain(EVM_ADDRESS);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('says nothing changed when the same address is added twice', async () => {
+    const { div, cleanup } = await mountImportScreen();
+    try {
+      await clickTabTrigger(div, 'Watch-only');
+      await selectChain(div, 'Ethereum');
+      const input = div.querySelector<HTMLInputElement>('#wallet-xpub');
+      expect(input).not.toBeNull();
+      await act(async () => {
+        setInputValue(input!, EVM_ADDRESS);
+      });
+      await clickButton(div, 'Add');
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 40 && !div.textContent?.includes('Watching this address on 16 chains');
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      await act(async () => {
+        setInputValue(input!, EVM_ADDRESS);
+      });
+      await clickButton(div, 'Add');
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 40 && !div.textContent?.includes('already watched');
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(div.textContent).toContain('already watched on all 16 chains');
+    } finally {
+      await cleanup();
+    }
+  });
+});

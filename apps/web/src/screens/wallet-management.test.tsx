@@ -4,10 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { MemoryRouter } from 'react-router';
 import { WalletManagementScreen } from './wallet-management';
-import { useWallet } from '../state/wallet-context';
+import { ensureAdapters, useWallet } from '../state/wallet-context';
 
 vi.mock('../state/wallet-context', () => ({
   useWallet: vi.fn(),
+  ensureAdapters: vi.fn(),
 }));
 
 const testGlobal = globalThis as typeof globalThis & {
@@ -397,6 +398,104 @@ describe('wallet management — accounts list and bulk creation', () => {
         mounted.div.querySelector('a[href="/create-wallet"]'),
       ).not.toBeNull();
       expect(mounted.div.querySelector('#vault-account')).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});
+
+describe('wallet management — watch-only balances (Lane B)', () => {
+  // Lane B (Finish the Product, 2026-11-23): balances[chain] is
+  // vault-shadowed — refreshBalances reads the vault address first —
+  // so a watch-only balance never reaches the asset rows while a vault
+  // exists. The Wallets screen is where a watch-only account lives as
+  // an entity, so its row shows its own balance, fetched for the
+  // watched address. Vitalik's address holds 5.799564 ETH (live
+  // mainnet value 2026-11-23; the test uses the recorded figure).
+  const VITALIK = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+  const VITALIK_WEI = '5799564000000000000';
+
+  async function flush(): Promise<void> {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+  }
+
+  function setWatchOnlyEth(
+    getBalance: ReturnType<typeof vi.fn>,
+  ): void {
+    vi.mocked(ensureAdapters).mockResolvedValue({
+      getAdapter: () => ({ getBalance }),
+    } as unknown as Awaited<ReturnType<typeof ensureAdapters>>);
+    vi.mocked(useWallet).mockReturnValue({
+      xpubs: {
+        btc: null,
+        eth: {
+          chain: 'eth',
+          xpub: VITALIK,
+          label: 'Vitalik',
+          derivedCount: 1,
+        },
+        trx: null,
+        ton: null,
+        sol: null,
+      },
+      addresses: { eth: [{ address: VITALIK }] },
+      removeXpub: vi.fn(),
+      vaultAccount: { account: 0, index: 0 },
+      setVaultAccount: vi.fn(async () => {}),
+      vaultAddresses: TEST_ADDRESSES,
+      vaultAccounts: [0],
+      vaultPassphraseNeeded: false,
+      createVaultAccounts: vi.fn(async () => []),
+      selectVaultAccount: vi.fn(async () => {}),
+    } as unknown as ReturnType<typeof useWallet>);
+  }
+
+  function findButton(div: HTMLElement, text: string): HTMLButtonElement {
+    const found = [...div.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent === text,
+    );
+    if (!found) throw new Error(`no button with text ${text}`);
+    return found as HTMLButtonElement;
+  }
+
+  it('shows the watched address balance on its row', async () => {
+    const getBalance = vi.fn(async () => ({
+      status: 'ok',
+      data: { valueBaseUnits: VITALIK_WEI },
+    }));
+    setWatchOnlyEth(getBalance);
+    const mounted = await mountScreen();
+    try {
+      await flush();
+      expect(getBalance).toHaveBeenCalledWith(VITALIK);
+      expect(mounted.div.textContent).toContain('5.799564 ETH');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('shows an honest failure with a retry that refetches', async () => {
+    const getBalance = vi.fn()
+      .mockResolvedValueOnce({ status: 'error', reason: 'rate-limited' })
+      .mockResolvedValue({
+        status: 'ok',
+        data: { valueBaseUnits: VITALIK_WEI },
+      });
+    setWatchOnlyEth(getBalance);
+    const mounted = await mountScreen();
+    try {
+      await flush();
+      expect(mounted.div.textContent).toContain('Could not load balance');
+      expect(getBalance).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        findButton(mounted.div, 'Retry balance').click();
+      });
+      await flush();
+      expect(getBalance).toHaveBeenCalledTimes(2);
+      expect(mounted.div.textContent).toContain('5.799564 ETH');
     } finally {
       await mounted.cleanup();
     }

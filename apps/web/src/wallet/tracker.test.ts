@@ -430,3 +430,87 @@ describe('tracker devnet (temporary devnet mode)', () => {
     expect(getHistory).toHaveBeenCalledWith(address, 10);
   });
 });
+
+// Lane B (Finish the Product, 2026-11-23): the /track hash lookup now
+// covers the four newly-wired Blockscout chains (Optimism, Scroll, Celo,
+// Aurora) with their own host, network id and explorer. Avalanche and
+// Mantle stay unsupported for lookup — their history runs on Routescan,
+// whose tx-info shape differs from Blockscout v2.
+// (Appended to wallet/tracker.test.ts.)
+describe('tracker — Blockscout v2 chains (Lane B)', () => {
+  const queue: unknown[] = [];
+
+  beforeEach(() => {
+    queue.length = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => queue.shift(),
+    })));
+  });
+
+  it('parses an Optimism transaction with its own chain, network and explorer', () => {
+    expect(
+      parseEthTx(ETH_TX, false, {
+        chain: 'op',
+        networkId: 'eip155:10',
+        explorerBase: 'https://explorer.optimism.io',
+      }),
+    ).toMatchObject({
+      chain: 'op',
+      networkId: 'eip155:10',
+      status: 'confirmed',
+      explorerUrl: `https://explorer.optimism.io/tx/${ETH_TX.hash}`,
+      source: 'blockscout',
+    });
+  });
+
+  it('keeps the ETH parse exactly as before when no options are passed', () => {
+    expect(parseEthTx(ETH_TX)).toMatchObject({
+      chain: 'eth',
+      networkId: 'eip155:1',
+      explorerUrl: `https://eth.blockscout.com/tx/${ETH_TX.hash}`,
+    });
+  });
+
+  it.each([
+    { chain: 'op' as const, host: 'explorer.optimism.io', networkId: 'eip155:10' },
+    { chain: 'scroll' as const, host: 'scrollscan.com', networkId: 'eip155:534352' },
+    { chain: 'celo' as const, host: 'celo.blockscout.com', networkId: 'eip155:42220' },
+    { chain: 'aurora' as const, host: 'explorer.aurora.dev', networkId: 'eip155:1313161554' },
+    { chain: 'matic' as const, host: 'polygon.blockscout.com', networkId: 'eip155:137' },
+    { chain: 'base' as const, host: 'base.blockscout.com', networkId: 'eip155:8453' },
+    { chain: 'arb' as const, host: 'arbitrum.blockscout.com', networkId: 'eip155:42161' },
+  ])('looks up a $chain transaction from its own Blockscout host', async ({ chain, host, networkId }) => {
+    queue.push(ETH_TX);
+    const result = await lookupTransaction(chain, ETH_TX.hash);
+    expect(result).toMatchObject({
+      status: 'ok',
+      data: { chain, networkId, status: 'confirmed' },
+    });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain(
+      `${host}/api/v2/transactions/${ETH_TX.hash}`,
+    );
+  });
+
+  it('rejects a malformed hash for a Blockscout chain', async () => {
+    expect(await lookupTransaction('op', 'not-a-hash')).toMatchObject({
+      status: 'error',
+    });
+  });
+
+  it('reports lookup unsupported for Avalanche and Mantle (Routescan shape)', async () => {
+    expect(await lookupTransaction('avax', ETH_TX.hash)).toMatchObject({
+      status: 'unsupported',
+    });
+    expect(await lookupTransaction('mantle', ETH_TX.hash)).toMatchObject({
+      status: 'unsupported',
+    });
+  });
+
+  it('reports lookup mainnet-only for the new chains in devnet mode', async () => {
+    expect(
+      await lookupTransaction('op', ETH_TX.hash, { devnet: true }),
+    ).toMatchObject({ status: 'unsupported' });
+  });
+});

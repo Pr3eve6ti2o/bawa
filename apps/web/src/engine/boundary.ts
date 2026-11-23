@@ -5,7 +5,13 @@
 // wallet/send.ts until their signer migration moves them onto facade operations.
 // No new raw-core consumers.
 import { initWasm } from '@trustwallet/wallet-core';
+import { getAddress, isAddress } from 'viem';
 import type { TonAddressValidation } from '@bawa/contracts';
+import {
+  isEvmChain,
+  watchOnlyValueKind,
+  type WatchOnlyValueKind,
+} from '../wallet/watch-only-families';
 
 import { crc16Xmodem } from './address-codecs';
 import { COIN_TYPE_KEY_FOR_CHAIN } from './coin-type-keys';
@@ -556,16 +562,54 @@ export function validateSolanaAddress(
   return { ok: true };
 }
 
-// Watch-only import validation for any chain: TON validates a public
-// address, btc/eth/trx validate an extended public key — and the key
-// must be the account-level key (depth 3, account 0; R02-F01), so a
-// depth-0/1/2 key cannot be imported and silently derive addresses
-// from the wrong level. validateAccountKey returns the exact
+// Watch-only import validation for any chain: TON and SOL validate a
+// public address; every other chain validates an extended public key —
+// and the key must be the account-level key (depth 3, account 0;
+// R02-F01), so a depth-0/1/2 key cannot be imported and silently derive
+// addresses from the wrong level. validateAccountKey returns the exact
 // not-account-key message for that case.
+//
+// Lane B (Finish the Product, 2026-11-23): a plain public address is
+// accepted too. The returned `kind` tells the caller which it is, so an
+// address can fan out to every chain in its family (one EVM address is
+// the same address on all sixteen EVM chains) while an xpub keeps the
+// one-chain behaviour.
+export type WatchOnlyImportValidation =
+  | { ok: true; kind: WatchOnlyValueKind }
+  | { ok: false; reason: string; message: string };
+
+// Checksum validation for a plain watch-only address. EVM uses viem's
+// isAddress (EIP-55 checksum for mixed-case input; the same check the
+// EVM adapter uses). TRX/BTC/LTC/DOGE use Wallet Core's per-coin
+// validate (base58check / bech32 checksum and prefix for that coin).
+async function validateWatchOnlyAddress(
+  chain: Exclude<ChainId, 'sol' | 'ton'>,
+  value: string,
+): Promise<{ ok: true } | { ok: false; reason: string; message: string }> {
+  if (isEvmChain(chain)) {
+    return isAddress(value)
+      ? { ok: true }
+      : {
+          ok: false,
+          reason: 'invalid-address',
+          message: 'Invalid Ethereum address.',
+        };
+  }
+  const core = await loadCore();
+  const coin = coinTypeForChain(core, chain);
+  return core.CoinTypeExt.validate(coin, value)
+    ? { ok: true }
+    : {
+        ok: false,
+        reason: 'invalid-address',
+        message: `Invalid ${chain.toUpperCase()} address.`,
+      };
+}
+
 export async function validateWatchOnlyImport(
   chain: ChainId,
   value: string,
-): Promise<{ ok: true } | { ok: false; reason: string; message: string }> {
+): Promise<WatchOnlyImportValidation> {
   if (chain === 'sol' || chain === 'ton') {
     const validation = (chain === 'sol' ? validateSolanaAddress : validateTonAddress)(value);
     if (!validation.ok) {
@@ -575,9 +619,17 @@ export async function validateWatchOnlyImport(
         message: validation.message,
       };
     }
-    return { ok: true };
+    return { ok: true, kind: 'address' };
   }
-  return validateAccountKey(value, chain);
+  const trimmed = value.trim();
+  if (watchOnlyValueKind(chain, trimmed) === 'address') {
+    const validation = await validateWatchOnlyAddress(chain, trimmed);
+    if (!validation.ok) return validation;
+    return { ok: true, kind: 'address' };
+  }
+  const keyValidation = await validateAccountKey(trimmed, chain);
+  if (!keyValidation.ok) return keyValidation;
+  return { ok: true, kind: 'xpub' };
 }
 
 // The coin-type key table lives in ./coin-type-keys (Lane J, perf):
@@ -643,6 +695,29 @@ export async function deriveAddress(
   }
 
   const key = xpub.trim();
+
+  // Lane B: a watch-only entry holding a plain address (not an xpub) is
+  // that address itself, at index 0 only — like SOL/TON. The value was
+  // checksum-validated at import; it is re-validated here so a hand-edited
+  // stored value cannot yield an unchecked address.
+  if (watchOnlyValueKind(chain, key) === 'address') {
+    if (index !== 0) {
+      throw new Error('index out of range');
+    }
+    if (isEvmChain(chain)) {
+      if (!isAddress(key)) {
+        throw new Error('Invalid Ethereum address.');
+      }
+      return getAddress(key);
+    }
+    const addressCore = await loadCore();
+    const addressCoin = coinTypeForChain(addressCore, chain);
+    if (!addressCore.CoinTypeExt.validate(addressCoin, key)) {
+      throw new Error(`Invalid ${chain.toUpperCase()} address.`);
+    }
+    return key;
+  }
+
   const validation = await validateAccountKey(key, chain);
   if (validation.ok === false) {
     throw new Error(validation.message);
@@ -677,9 +752,14 @@ export async function deriveAddresses(
     throw new Error('count out of range');
   }
 
-  // TON and SOL watch-only imports hold one address; callers must use derivedCount 1.
-  // The count is still range-checked above so a bad count fails the same way.
-  if (chain === 'sol' || chain === 'ton') {
+  // TON, SOL and plain-address entries each have one address; callers
+  // must use derivedCount 1. The count is still range-checked above so
+  // a bad count fails the same way.
+  if (
+    chain === 'sol' ||
+    chain === 'ton' ||
+    watchOnlyValueKind(chain, xpub) === 'address'
+  ) {
     return [await deriveAddress(chain, xpub, 0)];
   }
 

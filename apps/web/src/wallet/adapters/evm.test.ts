@@ -266,3 +266,70 @@ describe('evm adapter — RPC failover (UI/UX fixes, item 19)', () => {
     if (result.status === 'ok') expect(result.data.source).toBe('publicnode');
   });
 });
+
+// Lane B (Finish the Product, 2026-11-23): Routescan history for
+// Avalanche/Mantle must report its own source label, not 'blockscout',
+// and parse the same Etherscan-compatible txlist shape.
+// (Appended to wallet/adapters/evm.test.ts.)
+describe('evm adapter — history source labels (Lane B)', () => {
+  it('reads Routescan history and reports source routescan', async () => {
+    mockFetchJson([
+      {
+        hash: '0xabc',
+        from: ADDRESS,
+        to: '0x000000000000000000000000000000000000dEaD',
+        value: '1000',
+        timeStamp: '1700000000',
+        txreceipt_status: '1',
+        isError: '0',
+      },
+    ]);
+    const adapter = createEvmAdapter(
+      {
+        ...BSC,
+        chain: 'avax',
+        networkId: 'eip155:43114',
+        evmChainId: 43114,
+        chainName: 'Avalanche C-Chain',
+        nativeSymbol: 'AVAX',
+        historyBaseUrl:
+          'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api',
+      },
+      { client: mockClient({ getChainId: vi.fn(async () => 43114) }) },
+    );
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('routescan');
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        hash: '0xabc',
+        direction: 'out',
+        amountBaseUnits: '1000',
+      });
+    }
+  });
+
+  it('reports source blockscout for a Blockscout history endpoint', async () => {
+    mockFetchJson([
+      {
+        hash: '0xabc',
+        from: ADDRESS,
+        to: '0x000000000000000000000000000000000000dEaD',
+        value: '1000',
+        timeStamp: '1700000000',
+        txreceipt_status: '1',
+        isError: '0',
+      },
+    ]);
+    const adapter = createEvmAdapter(
+      { ...BSC, historyBaseUrl: 'https://eth.blockscout.com/api', historyExplorerBase: 'https://eth.blockscout.com' },
+      { client: mockClient() },
+    );
+    const result = await adapter.getHistory(ADDRESS);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.source).toBe('blockscout');
+    }
+  });
+});

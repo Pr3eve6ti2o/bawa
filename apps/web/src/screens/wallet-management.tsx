@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { useWallet } from "../state/wallet-context";
-import { accountPathFor, type ChainId } from "../wallet/chains";
+import { ensureAdapters, useWallet } from "../state/wallet-context";
+import { accountPathFor, chainConfig, type ChainId } from "../wallet/chains";
+import {
+  CHAIN_DECIMALS,
+  formatNativeWithSymbol,
+} from "../wallet/chain-amount-format";
 import { accountName, MAX_CREATE_AT_ONCE } from "../wallet/vault";
 import { ChainLogo } from "./token-logo";
 import { Badge } from "../ui/components/badge";
@@ -76,9 +80,92 @@ const exportChains: ReadonlyArray<{ id: ChainId; name: string }> = [
   { id: "fantom", name: "Fantom" },
 ];
 
+// Lane B (Finish the Product, 2026-11-23): the balance of a watched
+// address, on its own row. balances[chain] is vault-shadowed —
+// refreshBalances reads the vault address first — so a watch-only
+// balance never reaches the asset rows while a vault exists. This row
+// fetches the watched address directly (same adapter, same retry shape
+// as the refresh path) so the screen's "can show their balances"
+// sentence is true. Fetch-on-mount only: revisiting the screen
+// re-fetches, matching the app's refresh-on-demand model.
+function WatchOnlyBalance({
+  chain,
+  address,
+}: {
+  chain: ChainId;
+  address: string;
+}) {
+  const [balance, setBalance] = useState<
+    'loading' | { value: string } | 'error' | 'unavailable'
+  >('loading');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setBalance('loading');
+    void (async () => {
+      try {
+        const adapters = await ensureAdapters();
+        const adapter = adapters.getAdapter(chain);
+        if (!adapter) {
+          if (!cancelled) setBalance('unavailable');
+          return;
+        }
+        const result = await adapter.getBalance(address);
+        if (cancelled) return;
+        setBalance(
+          result.status === 'ok'
+            ? { value: result.data.valueBaseUnits }
+            : 'error',
+        );
+      } catch {
+        if (!cancelled) setBalance('error');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [chain, address, attempt]);
+  if (balance === 'loading') {
+    return <p className="text-sm text-muted-foreground">Loading balance…</p>;
+  }
+  if (balance === 'unavailable') {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Balance unavailable for this chain.
+      </p>
+    );
+  }
+  if (balance === 'error') {
+    return (
+      <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <span>Could not load balance.</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setAttempt((count) => count + 1)}
+        >
+          Retry balance
+        </Button>
+      </p>
+    );
+  }
+  return (
+    <p className="text-sm font-medium">
+      Balance:{' '}
+      {formatNativeWithSymbol(
+        balance.value,
+        CHAIN_DECIMALS[chain],
+        chainConfig(chain).symbol,
+      )}
+    </p>
+  );
+}
+
 export function WalletManagementScreen() {
   const {
     xpubs,
+    addresses: addressesRaw,
     removeXpub,
     vaultAccount,
     setVaultAccount,
@@ -89,6 +176,9 @@ export function WalletManagementScreen() {
     selectVaultAccount,
     exportAccountExtendedPublicKey,
   } = useWallet();
+  // Older mocked contexts may not provide the new fields; default them
+  // so the screen still renders.
+  const addresses = addressesRaw ?? {};
   const hasWallets = watchChains.some(({ id }) => Boolean(xpubs[id]));
   // Older mocked contexts may not provide the new fields; default them
   // so the screen still renders.
@@ -550,6 +640,13 @@ export function WalletManagementScreen() {
             const wallet = xpubs[id];
             if (!wallet) return null;
             const shortXpub = `${wallet.xpub.slice(0, 12)}…${wallet.xpub.slice(-8)}`;
+            // The watched address is the first derived address for the
+            // entry (for an address entry that IS the address; for an
+            // xpub entry its first derived address) — the same address
+            // the refresh path reads. Older mocked contexts may not
+            // provide addresses; fall back to the stored value.
+            const watchedAddress =
+              addresses[id]?.[0]?.address ?? wallet.xpub;
 
             return (
               <li key={id}>
@@ -576,6 +673,9 @@ export function WalletManagementScreen() {
                   <CardContent>
                     <span className="sr-only">{id === "ton" ? "TON public address: " : "Extended public key: "}</span>
                     <code className="break-all text-sm">{shortXpub}</code>
+                    <div className="mt-2">
+                      <WatchOnlyBalance chain={id} address={watchedAddress} />
+                    </div>
                   </CardContent>
                 </Card>
               </li>

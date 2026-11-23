@@ -60,6 +60,16 @@ export interface ChainConfig {
   rpcEndpoints: string[];
   /** EVM chain ID, or null for non-EVM chains. */
   evmChainId: number | null;
+  /**
+   * Keyless public history indexer (Etherscan-compatible txlist API),
+   * or undefined when no working one is wired. Set only for chains
+   * whose endpoint was probed live returning real transactions
+   * (Lane B, 2026-11-23): the adapter reads history from here, and
+   * the history capability is verified only with this set.
+   */
+  historyBaseUrl?: string;
+  /** Explorer base for history transaction links, or undefined when none. */
+  historyExplorerBase?: string;
   capabilities: Capabilities;
 }
 
@@ -217,9 +227,26 @@ function capabilitiesForExtendedChain(chain: ChainId): Capabilities {
  * whose keyless history hosts were probed live 2026-11-23 (single
  * source — the host itself, with the address filter proven on a second
  * address; see EVM_HISTORY_SOURCES in adapters/index.ts). The other
- * twelve non-ETH EVM chains stay blocked: no keyless public history
- * indexer answers for them (owner decision: Etherscan API key or
- * another indexer).
+ * six non-ETH EVM chains stay blocked (bsc, gnosis, linea, opbnb,
+ * metis, fantom): no keyless public history indexer answers for
+ * them (owner decision: Etherscan API key or another indexer).
+ * (Merge: Lane B verified the other six the same day — see below.)
+ *
+ * cross-check 2026-11-23 (second source) for history.
+ *
+ * Lane B (Finish the Product, 2026-11-23): six more EVM chains are
+ * verified the same way — their keyless public history indexers were
+ * probed live on 2026-11-23 returning real transactions for a funded
+ * address (0xd8dA...6045): Optimism via explorer.optimism.io,
+ * Scroll via scrollscan.com, Celo via celo.blockscout.com, Aurora via
+ * explorer.aurora.dev, Avalanche and Mantle via Routescan's
+ * Etherscan-compatible API. The six still blocked — bsc, gnosis,
+ * linea, opbnb, metis, fantom — have no working keyless indexer
+ * (owner decision: Etherscan API key or another indexer). Their
+ * history stays blocked, never faked. (Merge: matic, arb and base
+ * were listed here as blocked, but were verified the same day via
+ * a headless-Chromium fetch — see HISTORY_EVIDENCE_2026_11_23_BROWSER below.)
+ * indexer). Their history stays blocked, never faked.
  */
 const HISTORY_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter, Blockscout-shaped history) + '
@@ -231,6 +258,19 @@ const BALANCE_EVIDENCE_2026_11_23 =
   'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
   + 'live mainnet cross-check 2026-11-23 (two independent RPC endpoints agree '
   + 'on chain id and balance) for balance.';
+
+const HISTORY_EVIDENCE_2026_11_23 =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
+  + 'live mainnet cross-check 2026-11-23 (keyless public indexer returns real transactions for a funded address) for history.';
+
+// Lane B, same day: the three Cloudflare-blocked Blockscout hosts
+// (polygon/base/arbitrum) answer HTTP 403 to plain curl but return
+// real transactions to a headless-Chromium fetch — the block is
+// curl-fingerprint bot detection, not a missing indexer. Evidence is
+// the browser fetch, not curl.
+const HISTORY_EVIDENCE_2026_11_23_BROWSER =
+  'Verified by apps/web/src/wallet/adapters/evm.test.ts (generic EVM adapter) + '
+  + 'live mainnet cross-check 2026-11-23 in headless Chromium (keyless public indexer returns real transactions for a funded address; plain curl is 403 Cloudflare, the browser fetch answers) for history.';
 
 function capabilitiesForBalanceChain(
   chain: ChainId,
@@ -399,6 +439,11 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
       assertAccountIndex(account, index);
       return `m/44'/60'/${account}'/0/${index}`;
     },
+    // Lane B: the tracker's Blockscout v2 lookup reads these (shared
+    // with the four newly-wired Blockscout chains). The adapter itself
+    // keeps its hardcoded URL in wallet/adapters/eth.ts.
+    historyBaseUrl: 'https://eth.blockscout.com/api',
+    historyExplorerBase: 'https://eth.blockscout.com',
     capabilities: capabilitiesForAdapterChain('eth', true),
   },
   trx: {
@@ -472,7 +517,17 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://polygon-bor-rpc.publicnode.com'],
     evmChainId: 137,
-    capabilities: capabilitiesForBalanceChain('matic'),
+    // Lane B: polygon.blockscout.com answers HTTP 200 with real txs
+    // to a browser fetch (curl gets 403 Cloudflare) — probed live
+    // 2026-11-23 in headless Chromium.
+    historyBaseUrl: 'https://polygon.blockscout.com/api',
+    historyExplorerBase: 'https://polygon.blockscout.com',
+    capabilities: capabilitiesForBalanceChain(
+      'matic',
+      undefined,
+      true,
+      HISTORY_EVIDENCE_2026_11_23_BROWSER,
+    ),
   },
   arb: {
     id: 'arb',
@@ -488,7 +543,17 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://arbitrum-rpc.publicnode.com'],
     evmChainId: 42161,
-    capabilities: capabilitiesForBalanceChain('arb'),
+    // Lane B: arbitrum.blockscout.com answers HTTP 200 with real txs
+    // to a browser fetch (curl gets 403 Cloudflare) — probed live
+    // 2026-11-23 in headless Chromium.
+    historyBaseUrl: 'https://arbitrum.blockscout.com/api',
+    historyExplorerBase: 'https://arbitrum.blockscout.com',
+    capabilities: capabilitiesForBalanceChain(
+      'arb',
+      undefined,
+      true,
+      HISTORY_EVIDENCE_2026_11_23_BROWSER,
+    ),
   },
   op: {
     id: 'op',
@@ -504,6 +569,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
     evmChainId: 10,
+    // Lane B: probed live 2026-11-23 — txlist returns real transactions.
+    historyBaseUrl: 'https://explorer.optimism.io/api',
+    historyExplorerBase: 'https://explorer.optimism.io',
     capabilities: capabilitiesForBalanceChain('op', undefined, true, HISTORY_EVIDENCE_2026_11_23),
   },
   base: {
@@ -520,7 +588,17 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://base-rpc.publicnode.com'],
     evmChainId: 8453,
-    capabilities: capabilitiesForBalanceChain('base'),
+    // Lane B: base.blockscout.com answers HTTP 200 with real txs to a
+    // browser fetch (curl gets 403 Cloudflare) — probed live
+    // 2026-11-23 in headless Chromium.
+    historyBaseUrl: 'https://base.blockscout.com/api',
+    historyExplorerBase: 'https://base.blockscout.com',
+    capabilities: capabilitiesForBalanceChain(
+      'base',
+      undefined,
+      true,
+      HISTORY_EVIDENCE_2026_11_23_BROWSER,
+    ),
   },
   avax: {
     id: 'avax',
@@ -536,7 +614,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     },
     rpcEndpoints: ['https://avalanche-rpc.publicnode.com', 'https://api.avax.network/ext/bc/C/rpc'],
     evmChainId: 43114,
-    capabilities: capabilitiesForBalanceChain('avax'),
+    // Lane B: probed live 2026-11-23 — Routescan txlist returns real transactions.
+    historyBaseUrl: 'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api',
+    capabilities: capabilitiesForBalanceChain('avax', undefined, true, HISTORY_EVIDENCE_2026_11_23),
   },
   ltc: {
     id: 'ltc',
@@ -602,6 +682,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://celo-rpc.publicnode.com',
       'https://forno.celo.org'],
     evmChainId: 42220,
+    // Lane B: probed live 2026-11-23 — txlist returns real transactions.
+    historyBaseUrl: 'https://celo.blockscout.com/api',
+    historyExplorerBase: 'https://celo.blockscout.com',
     capabilities: capabilitiesForBalanceChain('celo', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   linea: {
@@ -636,7 +719,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://mantle-rpc.publicnode.com',
       'https://rpc.mantle.xyz'],
     evmChainId: 5000,
-    capabilities: capabilitiesForBalanceChain('mantle', BALANCE_EVIDENCE_2026_11_23),
+    // Lane B: probed live 2026-11-23 — Routescan txlist returns real transactions.
+    historyBaseUrl: 'https://api.routescan.io/v2/network/mainnet/evm/5000/etherscan/api',
+    capabilities: capabilitiesForBalanceChain('mantle', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   scroll: {
     id: 'scroll',
@@ -653,6 +738,9 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://scroll-rpc.publicnode.com',
       'https://rpc.scroll.io'],
     evmChainId: 534352,
+    // Lane B: probed live 2026-11-23 — txlist returns real transactions.
+    historyBaseUrl: 'https://scrollscan.com/api',
+    historyExplorerBase: 'https://scrollscan.com',
     capabilities: capabilitiesForBalanceChain('scroll', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   opbnb: {
@@ -704,7 +792,10 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     rpcEndpoints: ['https://mainnet.aurora.dev',
       'https://1rpc.io/aurora'],
     evmChainId: 1313161554,
-    capabilities: capabilitiesForBalanceChain('aurora', BALANCE_EVIDENCE_2026_11_23),
+    // Lane B: probed live 2026-11-23 — txlist returns real transactions.
+    historyBaseUrl: 'https://explorer.aurora.dev/api',
+    historyExplorerBase: 'https://explorer.aurora.dev',
+    capabilities: capabilitiesForBalanceChain('aurora', BALANCE_EVIDENCE_2026_11_23, true, HISTORY_EVIDENCE_2026_11_23),
   },
   fantom: {
     id: 'fantom',

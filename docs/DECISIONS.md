@@ -1153,3 +1153,91 @@ created.
   BOTH — hand-crafted SVG in the README + richer Mermaid in docs —
   added as Lane K. Not this lane's work; recorded for the
   coordinator.
+
+
+## §17 — Finish-the-product programme, Lane B — watch-only multi-chain, HD all-chains, real-time tracking (2026-11-23)
+
+Hands-on Muse, 0 Sol calls. Worktree `bawa-finish-b-worktree`, detached
+from token-gaps `e290654`; commit SHA in the lane report.
+
+- **Watch-only fans out by address family (mainnet only).** One plain
+  address import now watches every chain the address belongs to:
+  an EVM address (`0x…`) watches all 16 EVM chains; BTC, LTC, DOGE,
+  TRX and SOL addresses watch their own chain. An existing watch-only
+  entry is never overwritten — an xpub entry keeps its 5 derived
+  addresses. Implementation: `wallet/watch-only-families.ts` (pure
+  shape routing), `engine/boundary.ts` (`validateWatchOnlyImport`
+  returns `kind: 'address' | 'xpub'`; `deriveAddress`/`deriveAddresses`
+  return the plain address at index 0 only),
+  `state/wallet-context.tsx` (`addWatchOnlyAddress`, skips already
+  watched chains), `screens/import-wallet.tsx` (per-chain "address or
+  xpub" labels, grouped import list by stored value). **Vault-shadowing
+  finding (same day, CDP):** `balances[chain]` is a single per-chain
+  slot and `refreshBalances` reads the vault address first, so a
+  watch-only balance never reaches the asset rows while a vault
+  exists — the fan-out stored the address on 16 chains but the user
+  saw only the vault's zeros. Fixed in place: the Wallets screen now
+  shows each watch-only row's own balance (`WatchOnlyBalance` in
+  `screens/wallet-management.tsx`, fetched for the watched address
+  via `ensureAdapters`, with an honest failure + "Retry balance";
+  unit-tested with Vitalik's 5.799564 ETH). History stays
+  vault-shadowed the same way on the Transactions screen — a
+  watch-only address's history is still reachable per-address via
+  /track "Recent activity for an address".
+- **History wired for 9 more EVM chains (gap 1: 7 → 16 verified).**
+  Optimism, Scroll, Celo, Aurora via their Blockscout hosts;
+  Avalanche and Mantle via Routescan's Etherscan-compatible API;
+  Polygon, Base and Arbitrum via their Blockscout hosts — these
+  three answer 403 Cloudflare to curl but HTTP 200 with real
+  transactions to a headless-Chromium fetch, and their Blockscout v2
+  tx-by-hash endpoints verified the same way. All probed live
+  2026-11-23 with Vitalik's address
+  (`0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`, nonzero balance on
+  all 16 EVM chains). `/track` hash lookup extended to seven
+  Blockscout v2 chains (`wallet/tracker.ts`, parameterised
+  `parseEthTx`); Avalanche/Mantle lookup stays unsupported
+  (Routescan tx-info shape differs from Blockscout v2). **CSP catch:**
+  the wiring was dead in the browser until `connect-src` pinned the
+  nine history hosts (56 origins: 51 mainnet + 5 temporary devnet);
+  the drift-guard test now collects `historyBaseUrl` and
+  `historyExplorerBase` origins too (it collected RPC endpoints
+  only). Six chains remain blocked with no working keyless indexer
+  (bsc, gnosis, linea, opbnb, metis, fantom) — owner decision §1 in
+  GAP-ANALYSIS.md (Etherscan key or another indexer).
+- **Live ground truth for the CDP demo (all verified 2026-11-23):**
+  Vitalik EVM address (all 16 chains); SOL
+  `4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM` (0.00236821 SOL);
+  TRX `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5` (19,276,582.84 TRX,
+  richest-accounts list); BTC `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`
+  (57.7198 BTC); LTC `MLos7u44mMq1ufgPJZTatEfPm3Kgxj5Nt9`
+  (0.0533665 LTC, 857 txs); DOGE `DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke`
+  (27,164,003,668.40 DOGE). Two recalled candidate addresses proved
+  wrong and were dropped: a Binance EVM address (42 hex chars, nodes
+  want 40) and the Litecoin/Dogecoin foundation addresses from memory
+  (both invalid; the correct DOGE whale address ends `…vGLR3mr7L`).
+  DOGE's in-app sources are both degraded today (SoChain keyless
+  quota exhausted, BlockCypher 429) — the live DOGE figure above is
+  from dogechain.info, not the wallet's own path.
+- **Final live verdict (same day, CDP, Wallets screen).** Every
+  family above was imported watch-only and its balance read in the
+  app: EVM 16/16 live (Vitalik, each matching the RPC ground truth
+  to 6 decimals), BTC 57.71980119, SOL 0.00236821, LTC 0.0533665,
+  TON 0 (toncenter confirms 0). TRX and DOGE show an honest failure
+  with "Retry balance": TRX 429s from Trongrid on the shared egress
+  IP (the `/v1/accounts/` fetch and `getnowblock` both rate-limited
+  under the app's request volume; a single direct probe returns
+  19,283,710.80 TRX), DOGE has no working in-app source that day.
+  History in-app still flaps with the same rate limits — the
+  Transactions screen showed 9 chains "unavailable" on the final
+  run and the ETH `/track` lookup that succeeded earlier in the day
+  failed on re-run, while the OP lookup of the same hash returned
+  the correct "Transaction not found", proving the OP wiring
+  reaches its indexer. The wiring is proven; the flapping is the
+  keyless indexers' rate limits on a shared IP, and only a keyed
+  indexer (owner decision §1 in GAP-ANALYSIS.md) fixes it durably.
+- **SOL multi-address untouched.** The SOL derivation question is
+  Lane A's open owner decision; this lane did not change SOL
+  derivation (would move existing users' addresses).
+- **Gates:** tsc 0, build 0, vitest 1775 passed / 5 skipped / 0
+  failed (baseline 1738/5/0), lint 0, npm audit 0 vulnerabilities,
+  `generate-chains.mjs --check` OK, root `npm test` 0.

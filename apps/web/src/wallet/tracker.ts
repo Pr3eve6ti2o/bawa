@@ -8,11 +8,37 @@
  * account address plus lt plus hash, so TON lookup needs the address.
  */
 import type { ChainId } from '../engine/boundary';
+import { chainConfig } from './chains';
 import { isRecord } from './guards';
 import { getAdapterForMode } from './adapters/index';
 import { base64ToHex } from './adapters/ton';
 import { fetchJson } from './adapters/types';
 import type { AdapterResult, AdapterTx, TxStatus } from './adapters/types';
+
+// Lane B (Finish the Product, 2026-11-23): the EVM chains whose hash
+// lookup shares ETH's Blockscout v2 shape — same response, different
+// host, network id and explorer. The first four were probed by curl;
+// polygon/base/arbitrum were probed in headless Chromium (their
+// txlist + v2 endpoints return real transactions to a browser fetch;
+// curl gets 403 Cloudflare). Avalanche and Mantle history runs on
+// Routescan's Etherscan-compatible API, whose tx-info shape differs, so
+// their hash lookup stays unsupported (history itself works).
+const BLOCKSCOUT_V2_CHAINS = [
+  'eth',
+  'op',
+  'scroll',
+  'celo',
+  'aurora',
+  'matic',
+  'base',
+  'arb',
+] as const;
+
+function isBlockscoutV2Chain(
+  chain: ChainId,
+): chain is (typeof BLOCKSCOUT_V2_CHAINS)[number] {
+  return (BLOCKSCOUT_V2_CHAINS as readonly string[]).includes(chain);
+}
 
 export interface TrackedTx {
   hash: string;
@@ -116,7 +142,17 @@ export function parseBtcTx(raw: unknown, tipHeight: number | null, devnet = fals
   };
 }
 
-export function parseEthTx(raw: unknown, devnet = false): TrackedTx | null {
+export interface ParseEthTxOpts {
+  chain?: ChainId;
+  networkId?: string;
+  explorerBase?: string;
+}
+
+export function parseEthTx(
+  raw: unknown,
+  devnet = false,
+  opts?: ParseEthTxOpts,
+): TrackedTx | null {
   if (!isRecord(raw)) return null;
 
   const hash = stringOrNull(raw.hash);
@@ -136,10 +172,22 @@ export function parseEthTx(raw: unknown, devnet = false): TrackedTx | null {
     ? 'failed'
     : blockNumber === null ? 'pending' : 'confirmed';
 
+  // Lane B: the Blockscout v2 shape is shared by ETH, Optimism, Scroll,
+  // Celo and Aurora; the chain, network id and explorer come from the
+  // caller (defaults keep the ETH behaviour exactly).
+  const chain = opts?.chain ?? 'eth';
+  const networkId =
+    opts?.networkId ?? (devnet ? 'eip155:11155111' : 'eip155:1');
+  const explorerBase =
+    opts?.explorerBase ??
+    (devnet
+      ? 'https://sepolia.etherscan.io'
+      : 'https://eth.blockscout.com');
+
   return {
     hash,
-    chain: 'eth',
-    networkId: devnet ? 'eip155:11155111' : 'eip155:1',
+    chain,
+    networkId,
     status,
     statusLabel: raw.status,
     confirmations: isNonNegativeInteger(raw.confirmations)
@@ -151,9 +199,7 @@ export function parseEthTx(raw: unknown, devnet = false): TrackedTx | null {
     amountBaseUnits: value,
     feeBaseUnits: isRecord(raw.fee) ? stringOrNull(raw.fee.value) : null,
     timestamp: Number.isFinite(parsedTime) ? parsedTime : null,
-    explorerUrl: devnet
-      ? `https://sepolia.etherscan.io/tx/${hash}`
-      : `https://eth.blockscout.com/tx/${hash}`,
+    explorerUrl: `${explorerBase}/tx/${hash}`,
     source: 'blockscout',
     fetchedAt: Date.now(),
   };
@@ -341,7 +387,12 @@ export async function lookupTransaction(
   if (registered) {
     return registered(hash, opts ?? {});
   }
-  if (chain !== 'btc' && chain !== 'eth' && chain !== 'trx' && chain !== 'ton') {
+  if (
+    chain !== 'btc' &&
+    chain !== 'trx' &&
+    chain !== 'ton' &&
+    !isBlockscoutV2Chain(chain)
+  ) {
     return {
       status: 'unsupported',
       reason: 'Transaction lookup is not supported for this chain yet.',
@@ -355,10 +406,16 @@ export async function lookupTransaction(
     return { status: 'error', reason: 'Invalid Bitcoin transaction hash format.' };
   }
   if (
-    chain === 'eth' &&
+    isBlockscoutV2Chain(chain) &&
     (hash.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(hash))
   ) {
-    return { status: 'error', reason: 'Invalid Ethereum transaction hash format.' };
+    return {
+      status: 'error',
+      reason:
+        chain === 'eth'
+          ? 'Invalid Ethereum transaction hash format.'
+          : 'Invalid transaction hash format.',
+    };
   }
   if (chain === 'trx') {
     if (!/^[0-9a-f]{64}$/i.test(hash)) {
@@ -408,15 +465,35 @@ export async function lookupTransaction(
       }
       data = parseBtcTx(raw, tipHeight, devnet);
     } else {
+      // Lane B: the Blockscout v2 lookup is shared by ETH, Optimism,
+      // Scroll, Celo and Aurora — the host, network id and explorer come
+      // from the registry entry (ETH's own entry carries its Blockscout
+      // URLs too). Lookup is mainnet-only for the four new chains: no
+      // devnet indexer is configured for them.
+      if (devnet && chain !== 'eth') {
+        return {
+          status: 'unsupported',
+          reason:
+            'Transaction lookup for this chain is only available on mainnet.',
+        };
+      }
+      const config = chainConfig(chain);
+      const explorerBase = devnet
+        ? 'https://sepolia.etherscan.io'
+        : (config.historyExplorerBase ?? 'https://eth.blockscout.com');
       const raw: unknown = await fetchJson(
         devnet
           ? `https://eth-sepolia.blockscout.com/api/v2/transactions/${hash}`
-          : `https://eth.blockscout.com/api/v2/transactions/${hash}`,
+          : `${explorerBase}/api/v2/transactions/${hash}`,
       );
       if (isRecord(raw) && raw.message === 'Not found') {
         return { status: 'not-found' };
       }
-      data = parseEthTx(raw, devnet);
+      data = parseEthTx(raw, devnet, {
+        chain,
+        networkId: devnet ? 'eip155:11155111' : config.networkId,
+        explorerBase,
+      });
     }
 
     return data === null

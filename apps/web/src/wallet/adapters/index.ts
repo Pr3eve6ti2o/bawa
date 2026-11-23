@@ -113,8 +113,8 @@ export function registerAllAdapters(): void {
   }
   // EVM natives from the registry: the RPC is pinned once, in chains.ts,
   // and the adapter config is derived from it — never duplicated here.
-  // History: only celo/op/scroll have a wired keyless source
-  // (EVM_HISTORY_SOURCES above); the other twelve stay unavailable.
+  // The history endpoint is pinned the same way (Lane B): only chains
+  // whose keyless indexer was probed live carry one.
   for (const chain of ['bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis', 'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora', 'fantom'] as const) {
     if (adapters.has(chain)) continue;
     const config = CHAINS[chain];
@@ -131,6 +131,8 @@ export function registerAllAdapters(): void {
           chainName: config.displayName,
           nativeSymbol: config.symbol,
           source: 'publicnode',
+          historyBaseUrl: config.historyBaseUrl,
+          historyExplorerBase: config.historyExplorerBase,
           ...(history !== undefined ? history : {}),
         },
         { rpcUrls: () => resolveRpcEndpoints(chain) },

@@ -44,7 +44,7 @@ on them:
 
 | Gap | What is missing | Status |
 |---|---|---|
-| 1 | EVM history for 15 of 16 EVM chains | Fixed here (Lane D: 3 of 15 wired; 12 remain — see §1) |
+| 1 | EVM history for 6 of 16 EVM chains (9 of 15 non-ETH wired 2026-11-23, Lane B) | Fixed here (Lane D: 3 of 15 wired; Lane B: 9 of 15 wired; 6 remain — see §1) |
 | 2 | Multi-phrase vaults (one phrase per vault today) | Decision needed |
 | 3 | Devnet adapters for 9 chains, 6 logo-only ERC-20s | Fixed here (Lane D: mainnet half; see §3) |
 | 4 | E2E harness against the `/bawa/` build | Fixed here (harness) + found bug (E2E-02 devnet-derivation race, see §4) |
@@ -195,6 +195,103 @@ bsc/avalanche/linea/mantle/opbnb/metis/aurora/fantom 404 ("default
 backend"). The remaining decision is unchanged: an Etherscan-family
 keyed API (owner approval, key never in browser code) or accept
 those twelve as balance-only.
+
+**Status after Lane B (Finish the Product, 2026-11-23).** Nine chains
+wired, each probed live from the build VM with a real funded address
+(Vitalik `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`, nonzero balance
+on all 16 EVM chains):
+
+- Optimism — `https://explorer.optimism.io/api`; Scroll —
+  `https://scrollscan.com/api`; Celo —
+  `https://celo.blockscout.com/api`; Aurora —
+  `https://explorer.aurora.dev/api` (all Blockscout `txlist` shape,
+  HTTP 200 with real transactions).
+- Avalanche — Routescan
+  `api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api`;
+  Mantle — Routescan
+  `api.routescan.io/v2/network/mainnet/evm/5000/etherscan/api`
+  (Etherscan-compatible `txlist`, HTTP 200 with real transactions;
+  no explorer base — Routescan's tx-URL format is unverified, so the
+  history rows link nowhere yet).
+- Polygon — `https://polygon.blockscout.com/api`; Base —
+  `https://base.blockscout.com/api`; Arbitrum —
+  `https://arbitrum.blockscout.com/api`. These three answer HTTP 403
+  Cloudflare to plain curl but HTTP 200 with real transactions to a
+  headless-Chromium fetch — the block is curl-fingerprint bot
+  detection, not a missing indexer. Probed live in the browser, and
+  their Blockscout v2 tx-by-hash endpoints verified the same way
+  (`status: 'ok'`, `result: 'success'`, block, confirmations, value,
+  from/to/fee, timestamp — the exact shape `parseEthTx` reads).
+
+History verified is now 16 chains: btc, eth, trx, ton, sol, matic,
+arb, op, base, avax, ltc, doge, celo, mantle, scroll, aurora. The
+`/track` hash lookup (`wallet/tracker.ts`) now covers eight
+Blockscout v2 chains — eth, op, scroll, celo, aurora, matic, base,
+arb (same v2 shape, parameterised `parseEthTx`); avax/mantle lookup
+stays unsupported — Routescan's tx-info shape differs from
+Blockscout v2.
+
+**CSP catch (same day, found in CDP).** The wiring above was dead in
+the browser at first: `connect-src` listed no history host except
+`eth.blockscout.com`, so every new history fetch was refused by CSP
+and the chains showed "history unavailable". Fixed in place:
+`app/security-headers.ts` now pins all nine history hosts (56
+origins total: 51 mainnet + 5 temporary devnet), and the drift-guard
+test in `security-headers.test.ts` now collects `historyBaseUrl` and
+`historyExplorerBase` origins from the registry too — it previously
+collected RPC endpoints only, which is why the unit tests stayed
+green while the browser refused the fetches.
+
+Still blocked (6 chains, no working keyless indexer — owner decision
+in "Decisions needed" §1 still stands): bsc, gnosis, linea, opbnb,
+metis, fantom. Evidence 2026-11-23: gnosis Blockscout redirects to
+gnosisscan.io (403); bsc/linea/opbnb/metis/fantom Blockscout hosts
+404 "default backend"; Routescan's Etherscan API answers "chain not
+supported" for 56, 137, 42161, 10, 8453, 100, 59144, 534352, 204,
+1088, 1313161554 and 250; explorer.linea.build and
+explorer.fantom.network serve HTML with no v1 API; explorer.mantle.xyz
+502 (Mantle history itself runs on Routescan, so this only affects
+its explorer links).
+
+**In-app live verdict (same day, CDP, after the CSP fix).** The
+wiring above is real — every history host was probed live with HTTP
+200 and real transactions — but in the app the Transactions screen
+still showed 9 chains "history unavailable" on the final journey
+run (Ethereum, TRON, Polygon, Arbitrum One, OP Mainnet, Base,
+Dogecoin, Celo, Scroll). The cause is rate limiting on the shared
+egress IP, not the wiring: Blockscout v1 txlist returned "Too many
+requests" for OP, Scroll and ETH at various times that day; the
+`/track` ETH lookup that had succeeded earlier in the day
+(block 20,000,000, 6,478,825 confirmations) failed on the re-run
+with "network busy or unreachable", while the OP lookup of the same
+hash reached the indexer and returned the correct "Transaction not
+found". TRON history likewise 429s from Trongrid under the app's
+request volume, and DOGE's two sources were both degraded (SoChain
+daily quota exhausted, BlockCypher 429 + CORS-blocked in the
+browser). The set of "unavailable" chains varies run to run with
+the rate limits. What this means: history works when the indexer
+answers, and the app reports the failure honestly with a Retry —
+but on a shared, rate-limited egress IP it will often show
+unavailable, and a keyed indexer (owner decision §1) is the only
+durable fix for the six blocked chains and the flapping ones alike.
+
+**Watch-only balances, live in-app (same day, CDP, Wallets
+screen).** One EVM address (`0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`,
+Vitalik) shows its balance on all 16 EVM chains (ETH 5.799564, BSC
+0.170081, POL 592.719867, ARB 0.159411, OP 0.181079, Base 3.128853,
+AVAX 0.324952, XDAI 8.709546, CELO 1.843432, Linea 0.006803, MNT
+0.275199, Scroll 0.070942, opBNB 0.000492, METIS 0.523904, Aurora
+0.001957, FTM 3.124177 — each matching the registry-RPC ground
+truth to 6 decimals). BTC `1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa`
+57.71980119 BTC, SOL `4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM`
+0.00236821 SOL, LTC `MLos7u44mMq1ufgPJZTatEfPm3Kgxj5Nt9`
+0.0533665 LTC, TON `UQAzWZa6nM5mJev91wGc7VCSfBoIsYRqKJpV78N8Add9-RKY`
+0 TON (toncenter confirms 0). TRX and DOGE show an honest failure
+with "Retry balance" in-app: TRX `TU3kjFuhtEo42tsCBtfYUAZxoqQ4yuSLQ5`
+429s from Trongrid (source proven directly: 19,283,710.80 TRX at
+probe time); DOGE `DEgDVFa2DoW1533dxeDVdTxQFhMzs1pMke` has no working
+in-app source that day (ground truth via dogechain.info:
+27,164,003,668.40 DOGE).
 
 ## 2. Multi-phrase vaults
 
@@ -1177,9 +1274,12 @@ Live endpoint checks, same day, from the build machine:
 ## Decisions needed from the owner
 
 1. **EVM history: Etherscan key, or another indexer?** The in-code
-   record already frames it this way. Keyless paths cover Ethereum
-   only; a key covers all 16 EVM chains. A key needs the owner's
-   approval and a safe place to live.
+   record already frames it this way. Keyless paths now cover 10 of
+   16 EVM chains (eth, op, scroll, celo, aurora, avax, mantle, matic,
+   base, arb — wired 2026-11-23 by Lane B of Finish the Product,
+   probed live); a key covers the remaining 6 (bsc, gnosis, linea,
+   opbnb, metis, fantom). A key needs the owner's approval
+   and a safe place to live.
 2. **E1 renewal or removal by 2027-02-20.** Renew the devnet
    exception or run the removal checklist in `docs/DECISIONS.md`.
 3. **Faucet captchas in the owner's browser.** Wallet-A devnet

@@ -280,3 +280,105 @@ describe('wallet context — adapter-backed balances and history', () => {
     }
   });
 });
+
+describe('wallet context — watch-only address fan-out (Lane B)', () => {
+  // BIP-39 test-vector EVM address (wallet/core.test.ts). One 0x address
+  // is the same address on all sixteen EVM chains, so importing it must
+  // create a watch entry on every one of them.
+  const EVM_ADDRESS = '0x9858EfFD232B4033E47d90003D41EC34EcaEda94';
+  const ETH_XPUB =
+    'xpub6BsRBaXawwf5vGydzpBSDXrQJ5rZKrZQGPTWkXRTWXz1KZ11D8TixEwX3uBWHwZE1DzQJuyLT9hgZcp4bFKfYNCx5cYCYBQqP5jbxcVQumc';
+  const EVM_CHAINS = [
+    'eth', 'bsc', 'matic', 'arb', 'op', 'base', 'avax', 'gnosis',
+    'celo', 'linea', 'mantle', 'scroll', 'opbnb', 'metis', 'aurora',
+    'fantom',
+  ] as const;
+
+  it('fans one EVM address out to all sixteen EVM chains', async () => {
+    const mounted = await mountProvider();
+    try {
+      const result = await act(async () =>
+        latest?.addWatchOnlyAddress('eth', EVM_ADDRESS, ''),
+      );
+      expect(result?.added).toEqual([...EVM_CHAINS]);
+      expect(result?.skipped).toEqual([]);
+      for (const chain of EVM_CHAINS) {
+        const entry = latest?.xpubs[chain];
+        expect(entry).not.toBeNull();
+        expect(entry?.xpub).toBe(EVM_ADDRESS);
+        expect(entry?.derivedCount).toBe(1);
+      }
+      // The derived address is the address itself, at index 0.
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 100 &&
+          latest?.addresses.eth[0]?.address !== EVM_ADDRESS;
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(latest?.addresses.eth[0]?.address).toBe(EVM_ADDRESS);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('loads the fanned-out ETH balance through the normal refresh', async () => {
+    const mounted = await mountProvider();
+    try {
+      registerAdapter(stubAdapter('eth', okBalance('123'), okTxs([])));
+      await act(async () => {
+        await latest?.addWatchOnlyAddress('eth', EVM_ADDRESS, '');
+      });
+      await act(async () => {
+        for (
+          let i = 0;
+          i < 100 && latest?.balances.eth.status !== 'available';
+          i++
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+      });
+      expect(latest?.balances.eth.status).toBe('available');
+      expect(latest?.balances.eth.value).toBe('123');
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('skips chains that already have a watch-only entry, never overwriting them', async () => {
+    const mounted = await mountProvider();
+    try {
+      // Import the same address once: all sixteen chains are taken.
+      await act(async () => {
+        await latest?.addWatchOnlyAddress('eth', EVM_ADDRESS, '');
+      });
+      // A second import of the same address adds nothing and skips all.
+      const result = await act(async () =>
+        latest?.addWatchOnlyAddress('bsc', EVM_ADDRESS, ''),
+      );
+      expect(result?.added).toEqual([]);
+      expect(result?.skipped).toEqual([...EVM_CHAINS]);
+      expect(latest?.xpubs.eth?.xpub).toBe(EVM_ADDRESS);
+      expect(latest?.xpubs.eth?.derivedCount).toBe(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('rejects an extended key through the address path', async () => {
+    const mounted = await mountProvider();
+    try {
+      await expect(
+        act(async () => {
+          await latest?.addWatchOnlyAddress('eth', ETH_XPUB, '');
+        }),
+      ).rejects.toThrow('Expected a public address');
+      expect(latest?.xpubs.eth).toBeNull();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+});

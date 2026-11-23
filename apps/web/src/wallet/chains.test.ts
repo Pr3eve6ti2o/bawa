@@ -260,7 +260,7 @@ describe('chains registry', () => {
     ]);
   });
 
-  it('lists all twenty-two chains for balance, ten chains for history, and three for fee-quote', () => {
+  it('lists all twenty-two chains for balance, sixteen chains for history, and three for fee-quote', () => {
     // Token discovery (2026-11-22): balance adapters now exist for all
     // 22 chains, so availableFor('balance') is the full registry.
     // UI/UX fixes item 14 (2026-11-23): the nine new EVM chains use
@@ -291,25 +291,71 @@ describe('chains registry', () => {
     ]);
     // Lane C, item 16 (2026-11-23): ltc/doge/sol history is verified —
     // adapters + live mainnet cross-check 2026-11-23 (second source).
-    // Lane D, gap 1 (2026-11-23): celo/op/scroll history is verified —
-    // keyless history hosts probed live 2026-11-23 (single source, the
-    // host itself). The other twelve non-ETH EVM chains stay blocked:
-    // no keyless public history indexer answers for them (owner
-    // decision: keyed indexer).
+    // Lane B (Finish the Product, 2026-11-23): nine EVM chains are
+    // verified — Optimism, Scroll, Celo, Aurora (Blockscout
+    // instances), Avalanche, Mantle (Routescan), and Polygon, Base,
+    // Arbitrum via a headless-Chromium fetch (plain curl gets 403
+    // Cloudflare). The six remaining EVM chains stay blocked: bsc,
+    // gnosis, linea, opbnb, metis, fantom — no working keyless public
+    // history indexer exists for them (owner decision: Etherscan API
+    // key or another indexer).
     expect(availableFor('history')).toEqual([
       'btc',
       'eth',
       'trx',
       'ton',
       'sol',
+      'matic',
+      'arb',
       'op',
+      'base',
+      'avax',
       'ltc',
       'doge',
       'celo',
+      'mantle',
       'scroll',
+      'aurora',
     ]);
     // TON fee-quote stays blocked: it needs the unsigned message (Phase 4).
     expect(availableFor('fee-quote')).toEqual(['btc', 'eth', 'trx']);
+  });
+
+  it('pins a keyless history indexer only for the nine live-probed EVM chains (Lane B)', () => {
+    // The adapter reads history from the pinned URL, so a chain with a
+    // verified history capability must carry its endpoint here, and a
+    // blocked chain must not carry one — a stale URL would fetch history
+    // the registry says does not exist.
+    expect(CHAINS.op.historyBaseUrl).toBe('https://explorer.optimism.io/api');
+    expect(CHAINS.op.historyExplorerBase).toBe('https://explorer.optimism.io');
+    expect(CHAINS.scroll.historyBaseUrl).toBe('https://scrollscan.com/api');
+    expect(CHAINS.celo.historyBaseUrl).toBe('https://celo.blockscout.com/api');
+    expect(CHAINS.aurora.historyBaseUrl).toBe('https://explorer.aurora.dev/api');
+    expect(CHAINS.avax.historyBaseUrl).toBe(
+      'https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api',
+    );
+    expect(CHAINS.mantle.historyBaseUrl).toBe(
+      'https://api.routescan.io/v2/network/mainnet/evm/5000/etherscan/api',
+    );
+    // Lane B, same day: polygon/base/arbitrum Blockscout answer HTTP
+    // 200 with real transactions to a browser fetch (curl gets 403
+    // Cloudflare) — probed live in headless Chromium.
+    expect(CHAINS.matic.historyBaseUrl).toBe('https://polygon.blockscout.com/api');
+    expect(CHAINS.matic.historyExplorerBase).toBe('https://polygon.blockscout.com');
+    expect(CHAINS.base.historyBaseUrl).toBe('https://base.blockscout.com/api');
+    expect(CHAINS.base.historyExplorerBase).toBe('https://base.blockscout.com');
+    expect(CHAINS.arb.historyBaseUrl).toBe('https://arbitrum.blockscout.com/api');
+    expect(CHAINS.arb.historyExplorerBase).toBe('https://arbitrum.blockscout.com');
+    for (const chain of [
+      'bsc',
+      'gnosis',
+      'linea',
+      'opbnb',
+      'metis',
+      'fantom',
+    ] as const) {
+      expect(CHAINS[chain].historyBaseUrl).toBeUndefined();
+    }
   });
 
   it('lists the four adapter chains for unsigned-plan and local-sign (Phase 4), and three for post-sign-verify', () => {
@@ -372,11 +418,23 @@ describe('chains registry', () => {
       }
       // Lane C, item 16 (2026-11-23): history is verified for sol/ltc/
       // doge (adapters + live mainnet cross-check 2026-11-23, second
-      // source). Lane D, gap 1 (2026-11-23): history is verified for op
-      // too (keyless host probed live 2026-11-23) and stays blocked for
-      // the other four token-discovery EVM chains — no keyless public
-      // history indexer answers for them.
-      if (chain === 'sol' || chain === 'ltc' || chain === 'doge') {
+      // source). Lane B (Finish the Product, 2026-11-23): op and avax
+      // join them — Optimism via explorer.optimism.io, Avalanche via
+      // Routescan, both probed live returning real transactions; matic,
+      // arb and base join them the same day — their Blockscout hosts
+      // answer a headless-Chromium fetch (curl is 403 Cloudflare).
+      // History stays blocked for bsc — no working keyless public
+      // history indexer exists for it.
+      if (
+        chain === 'sol' ||
+        chain === 'ltc' ||
+        chain === 'doge' ||
+        chain === 'op' ||
+        chain === 'avax' ||
+        chain === 'matic' ||
+        chain === 'arb' ||
+        chain === 'base'
+      ) {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else if (chain === 'op') {
@@ -416,10 +474,17 @@ describe('chains registry', () => {
         expect(caps[capability].status).toBe('blocked');
         expect(caps[capability].evidence).toContain('never faked');
       }
-      // Lane D, gap 1 (2026-11-23): history is verified for celo and
-      // scroll (keyless hosts probed live 2026-11-23) and stays blocked
-      // for the other seven item-14 chains.
-      if (chain === 'celo' || chain === 'scroll') {
+      // Lane B (Finish the Product, 2026-11-23): celo, mantle, scroll
+      // and aurora history is verified — Celo/Scroll/Aurora via
+      // Blockscout instances, Mantle via Routescan, all probed live
+      // returning real transactions. Gnosis, Linea, opBNB, Metis and
+      // Fantom stay blocked: no working keyless indexer.
+      if (
+        chain === 'celo' ||
+        chain === 'mantle' ||
+        chain === 'scroll' ||
+        chain === 'aurora'
+      ) {
         expect(caps.history.status).toBe('verified');
         expect(caps.history.evidence).toContain('live mainnet cross-check 2026-11-23');
       } else {
@@ -544,7 +609,20 @@ describe('chains registry', () => {
     expect(() => assertSupported('ltc', 'history')).not.toThrow();
     expect(() => assertSupported('sol', 'history')).not.toThrow();
     expect(() => assertSupported('doge', 'history')).not.toThrow();
+    // Lane B: the nine newly-wired EVM history chains (six live-probed
+    // by curl, three more by a headless-Chromium fetch — curl is 403
+    // Cloudflare on those three, the browser answers).
+    expect(() => assertSupported('op', 'history')).not.toThrow();
+    expect(() => assertSupported('avax', 'history')).not.toThrow();
+    expect(() => assertSupported('celo', 'history')).not.toThrow();
+    expect(() => assertSupported('mantle', 'history')).not.toThrow();
+    expect(() => assertSupported('scroll', 'history')).not.toThrow();
+    expect(() => assertSupported('aurora', 'history')).not.toThrow();
+    expect(() => assertSupported('matic', 'history')).not.toThrow();
+    expect(() => assertSupported('arb', 'history')).not.toThrow();
+    expect(() => assertSupported('base', 'history')).not.toThrow();
     expect(() => assertSupported('bsc', 'history')).toThrow(/cannot do history/);
+    expect(() => assertSupported('fantom', 'history')).toThrow(/cannot do history/);
     expect(() => assertSupported('sol', 'derive')).not.toThrow();
   });
 

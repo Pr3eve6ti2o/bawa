@@ -75,7 +75,10 @@ type ExpectedTonAddressValidation =
     };
 
 type ExpectedWatchOnlyImportValidation =
-  | { ok: true }
+  // Lane B (Finish the Product, 2026-11-23): a successful import reports
+  // whether the value was a plain address (fans out to its family) or an
+  // extended key (one chain).
+  | { ok: true; kind: 'address' | 'xpub' }
   | { ok: false; reason: string; message: string };
 
 type WatchOnlyImportValidation = Awaited<
