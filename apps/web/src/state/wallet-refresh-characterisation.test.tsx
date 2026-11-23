@@ -15,8 +15,9 @@
 // through the WalletProvider (createVault + unlockVault, reports read
 // from refreshReports in context state). The merged context does NOT
 // wire wallet-refresh.ts (Lane A: the module covers 4 chains while the
-// tree is 13, and its BalanceState/HistoryState shapes differ from the
-// context's), has no refreshReports and no unlockVault — so the provider
+// registry is 21, and its HistoryState shape differs from the context's
+// — BalanceState is shared since the Lane 2 unification), has no
+// refreshReports and no unlockVault — so the provider
 // path cannot run them. The behaviour asserted here lives in
 // wallet-refresh.ts (createRefresh), so the tests now drive that module
 // directly with a local RefreshDeps harness: same assertions, no vault,
