@@ -3,7 +3,7 @@
 **Owner order:** 2026-11-23 ~20:34 IST. Coordinator: hands-on Muse, 0 Sol calls,
 0 AgentRouter calls, 0 runner invocations. Branch `panel-rebuild/finish-product`,
 from `token-gaps` `e290654`, rebased onto `d47d282` (marketing-fix merge) before
-the merge lane started. Merged into `token-gaps` as [SHA TBD — see Pushes].
+the merge lane started. Merged into `token-gaps` as `8191b2c` (see Pushes).
 No code merged into `adopt-proper` or `main`.
 
 **Method:** cherry-pick each lane's single verified commit onto
@@ -196,12 +196,54 @@ Screenshots viewed at `/home/boxd/workspace/bawa-finish-f-shots/`
 
 ## Preview
 
-[TBD — fresh Pinggy tunnel, hash-verified, both URLs.]
+Fresh Pinggy tunnel (static serve of the root-base `build:e2e` dist from
+gray-pinee, port 8080, `serve-dir.cjs` pattern — not vite preview). Served
+JS hash verified identical to dist (`assets/index-C2_z_7NS.js`,
+sha256 `1acb00cd11a39bbc943a2d8a03cf3721e0f90768c79ee422c5fe4107f20ee840`)
+via curl on the tunnel itself, both URLs 200:
+
+- https://hgknn-185-209-179-229.run.pinggy-free.link
+- https://teahs-185-209-179-229.free.pinggy.net (alt)
+
+Tunnel expires 60 minutes after minting (minted 2026-11-23 18:13 UTC, expires ~19:13 UTC); the
+durable link remains GitHub Pages (which still serves the saved
+`67c48e2` build, not token-gaps — C-11).
 
 ## Pushes
 
-[TBD — finish-product push + ls-remote, token-gaps merge + push + ls-remote,
-doc-only pushes, marketing-fix branch deletion.]
+- Lane G (FIX-ALL programme, 2026-11-24) updated this section to the final
+  SHAs. The record as pushed to the five branches below listed `bdb8fa8`
+  and left the final SHAs unfilled; both `finish-product` and `token-gaps`
+  now stand at `8191b2c` (verified by fresh `ls-remote`). A document cannot
+  contain its own commit hash — the SHAs below are the pushes as made, and
+  this update's own commit gets a new hash, which is normal.
+- `panel-rebuild/finish-product`: `d47d282..8191b2c`, pushed via PAT
+  protocol, fresh `ls-remote` read-back `8191b2c1fc00881d115c75c0a60dc738480c446e`.
+  (Tip was `bdb8fa8` when the doc-only pushes below were made; final commit
+  `8191b2c` is the Lane F docs record itself.)
+- `panel-rebuild/token-gaps`: fast-forward merge of finish-product
+  (`d47d282..8191b2c`, no merge commit — token-gaps was an ancestor),
+  pushed via PAT protocol, fresh `ls-remote` read-back `8191b2c` on both
+  branches.
+- Doc-only pushes (programme record + DECISIONS §§15–18 + checklist + gap
+  analysis, verified docs-only by `git diff --stat` on each branch, fresh
+  `ls-remote` read-back):
+  - `main` → `6af3daf8aff61efc05f10e41175d3868c217a307`
+  - `panel-rebuild/desktop-layout-v2` → `3c1a6dfe8a973481f9400869b7e88355f138d7a9`
+  - `panel-rebuild/devnet-temp` → `db221c4049b017877c1dae15b7da30f3c63fe6b7`
+  - `panel-rebuild/token-discovery` → `84142e2333671cb933dea81dc158fc898cee1679`
+  - `panel-rebuild/ui-ux-fixes` → `d4ea91d1ca2d3fdc0fd501710999aad6ad737d2c`
+  (`adopt-proper` not pushed, per the brief; `gh-pages` untouched.)
+- Branch deletion: `panel-rebuild/marketing-fix` (`a8018fd`) DELETED from
+  the remote — first-hand re-checked as a verified ancestor of token-gaps
+  with 0 unique commits (`git merge-base --is-ancestor` + `rev-list
+  --count … ^token-gaps` = 0, against the remote tip `bdb8fa8`), then
+  deleted via PAT protocol; fresh `ls-remote` confirms the ref is gone
+  (9 branches remain).
+- README-on-GitHub check: both SVGs load 200 via raw URLs on
+  `panel-rebuild/token-gaps` (architecture.svg 9255 B, explainer.svg
+  7604 B); README embeds them at lines 8 and 10; the GitHub blob page
+  returns 200.
 
 ## Remaining risks and owner decisions
 
