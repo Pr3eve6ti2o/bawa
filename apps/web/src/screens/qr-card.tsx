@@ -116,7 +116,7 @@ export function QrCard({ qrValue, amountText, address, token, chain }: QrCardPro
   return (
     <div
       data-testid="qr-card"
-      className="flex flex-col items-center gap-3 rounded-bawa-sm border-2 border-ink bg-paper p-4"
+      className="flex flex-col items-center gap-1.5 rounded-bawa-sm border-2 border-ink bg-paper p-3"
     >
       {/* Paper card is the QR surround: ink modules on paper, same as
           the bare QR had — no second border inside the card. */}
@@ -139,7 +139,7 @@ export function QrCard({ qrValue, amountText, address, token, chain }: QrCardPro
       <p className="text-center font-display text-2xl text-ink">
         {amountText ?? 'Any amount'}
       </p>
-      <p className="w-full break-all text-center font-mono text-sm text-ink">
+      <p className="w-full break-all text-center font-mono text-xs text-ink">
         {address}
       </p>
       <p className="flex items-center gap-2">

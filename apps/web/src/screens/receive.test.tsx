@@ -430,11 +430,26 @@ describe('receive screen', () => {
       await clickButton(mounted.div, 'USD Coin');
       const mainBefore = mounted.div.querySelector('svg title')?.textContent;
       expect(mainBefore).toBe(VAULT_ETH);
+      // Lane 7: the heading names the shown template, the small QRs
+      // are 64 px, and the unavailable payment template says why
+      // instead of sitting there as a dead box.
+      expect(mounted.div.textContent).toContain('QR type: Address');
       const linkQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show share link QR',
       );
       expect(linkQr).not.toBeUndefined();
+      expect(linkQr?.querySelector('svg')?.getAttribute('width')).toBe('64');
+      const paymentQr = [...mounted.div.querySelectorAll('button')].find(
+        (button) =>
+          button.getAttribute('aria-label') === 'Show payment request QR',
+      );
+      expect(paymentQr).not.toBeUndefined();
+      expect((paymentQr as HTMLButtonElement).disabled).toBe(true);
+      expect(paymentQr?.textContent).toContain('Needs amount');
+      expect(mounted.div.textContent).toContain(
+        'Payment request needs an amount',
+      );
       await act(async () => {
         linkQr?.click();
       });
@@ -443,11 +458,78 @@ describe('receive screen', () => {
       const mainAfter = mounted.div.querySelector('svg title')?.textContent;
       expect(mainAfter).not.toBe(mainBefore);
       expect(mainAfter).toContain('chain=eth');
+      expect(mounted.div.textContent).toContain('QR type: Share link');
       const addressQr = [...mounted.div.querySelectorAll('button')].find(
         (button) =>
           button.getAttribute('aria-label') === 'Show address QR',
       );
       expect(addressQr).not.toBeUndefined();
+      expect(addressQr?.querySelector('svg')?.getAttribute('width')).toBe(
+        '64',
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it('enables the payment-request template once a token amount is typed', async () => {
+    // Lane 7: for a token the payment request needs an amount — with
+    // none typed the template is disabled with the reason. Typing an
+    // amount makes it the main QR (it is the default when available);
+    // tapping away to Address and back proves the tap-to-swap path.
+    setWallet();
+    const mounted = await mountScreen();
+    try {
+      await clickButton(mounted.div, 'Ethereum');
+      await clickButton(mounted.div, 'USD Coin');
+      const findSmall = (label: string) =>
+        [...mounted.div.querySelectorAll('button')].find(
+          (button) => button.getAttribute('aria-label') === label,
+        );
+      const paymentQr = findSmall('Show payment request QR');
+      expect(paymentQr).not.toBeUndefined();
+      expect((paymentQr as HTMLButtonElement).disabled).toBe(true);
+      const amountInput = mounted.div.querySelector(
+        '#receive-amount',
+      ) as HTMLInputElement;
+      expect(amountInput).not.toBeNull();
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        )?.set;
+        setter?.call(amountInput, '25');
+        amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      // The amount makes the payment request the main QR, so it leaves
+      // the small row; the hint goes away with it.
+      expect(findSmall('Show payment request QR')).toBeUndefined();
+      expect(mounted.div.textContent).not.toContain(
+        'Payment request needs an amount',
+      );
+      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      const paymentTitle = mounted.div.querySelector('svg title');
+      expect(paymentTitle?.textContent).toBe(
+        'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
+      );
+      // Tap away to Address, then back to Payment request.
+      const addressQr = findSmall('Show address QR');
+      expect(addressQr).not.toBeUndefined();
+      await act(async () => {
+        addressQr?.click();
+      });
+      expect(mounted.div.textContent).toContain('QR type: Address');
+      const paymentQrAgain = findSmall('Show payment request QR');
+      expect(paymentQrAgain).not.toBeUndefined();
+      expect((paymentQrAgain as HTMLButtonElement).disabled).toBe(false);
+      await act(async () => {
+        paymentQrAgain?.click();
+      });
+      expect(mounted.div.textContent).toContain('QR type: Payment request');
+      const title = mounted.div.querySelector('svg title');
+      expect(title?.textContent).toBe(
+        'ethereum:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48@1/transfer?address=0x27Ef5cDBe01777D62438AfFeb695e33fC2335979&uint256=25000000',
+      );
     } finally {
       await mounted.cleanup();
     }
