@@ -118,6 +118,8 @@ accepted
 
 Amendment (2026-11-20): the live price feed now covers all 13 chains in the chain registry (apps/web/src/wallet/prices.ts), using 12 unique CoinGecko ids — Base shares Ethereum's id (ethereum). The 4-native-asset scope stated above is the scope at the time this ADR was written, not the current coverage. No other part of this record changes.
 
+Amendment (2026-11-23): the live price feed now covers all 22 chains in the chain registry (apps/web/src/wallet/prices.ts), using 15 unique CoinGecko ids — Base, Arbitrum One, OP Mainnet, Linea, Scroll and Aurora share Ethereum's id (ethereum), and opBNB shares BNB Smart Chain's id (binancecoin). No other part of this record changes.
+
 ## Consequences
 
 - `apps/web/src/wallet/prices.ts` is the feed: one batched CoinGecko call per

@@ -733,7 +733,7 @@ Use primary sources only:
 - [CometBFT documentation home](https://docs.cosmos.network/cometbft/latest/docs/README).
 - [TON Jettons standard overview](https://docs.ton.org/contracts/standard/tokens/jettons/overview).
 - Solana documentation from version-controlled source files in `solana-foundation/solana-com`, not rendered pages:
-  - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getgenesishash.mdx).
-  - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getslot.mdx).
-  - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/content/docs/rpc/http/getsignaturestatuses.mdx).
+  - [`getGenesisHash`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getgenesishash.mdx).
+  - [`getSlot`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getslot.mdx).
+  - [`getSignatureStatuses`](https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/docs/en/rpc/http/getsignaturestatuses.mdx).
 - Trust Wallet: [documentation home](https://developer.trustwallet.com/) and [Wallet Core repository](https://github.com/trustwallet/wallet-core).

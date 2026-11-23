@@ -1,6 +1,6 @@
 # Bawa
 
-[![CI build status for panel-rebuild/adopt-proper](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Fadopt-proper)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Fadopt-proper)
+[![CI build status for panel-rebuild/token-gaps](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml/badge.svg?branch=panel-rebuild%2Ftoken-gaps)](https://github.com/Pr3eve6ti2o/bawa/actions/workflows/ci.yml?query=branch%3Apanel-rebuild%2Ftoken-gaps)
 [![MIT licence](https://img.shields.io/github/license/Pr3eve6ti2o/bawa)](LICENSE)
 
 Bawa is an open-source reference for HD-wallet workflows and an AI Wallet Builder. If you write wallet code or use an AI coding agent, give the agent one plain request; it uses this repo to produce a real, buildable project.
@@ -68,7 +68,7 @@ Install Node **22** (`22.23.4` verified) and Python **3.12+**. For the Android s
 Clone this branch, install the generator dependencies, and return to the repo root:
 
 ```sh
-git clone --branch panel-rebuild/adopt-proper https://github.com/Pr3eve6ti2o/bawa.git
+git clone --branch panel-rebuild/token-gaps https://github.com/Pr3eve6ti2o/bawa.git
 cd bawa
 cd tools/hdwallet-gen && npm ci
 cd ../..
@@ -193,7 +193,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) when you contribute.
 
 ## Help
 
-Report bugs through the repository’s GitHub Issues.
+Report bugs through [GitHub Issues](https://github.com/Pr3eve6ti2o/bawa/issues). Use the bug report template there, and never include a mnemonic, private key or other recovery material.
 
 ## Licence
 
