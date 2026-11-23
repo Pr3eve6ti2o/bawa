@@ -243,3 +243,64 @@ Decisions and findings recorded here:
   `docs/index.md` (kept reverify-pro's two entries plus the
   gap-analysis entry). Lane A's and Lane C's header fixes composed
   (both headers now use `accountName(vaultAccount.account)`).
+## 14. Marketing Fix + Found-Bugs programme — 8 lanes, merged into token-gaps (2026-11-23)
+
+Owner order 2026-11-23 ~19:14 IST, from two phone screenshots (mobile `$0.00
+(Partial)`; desktop `Ethereum history unavailable` + Retry): the screenshots look
+bad, the Retry button should not be there, the mobile balance should not say
+Partial. Hands-on Muse, 0 Sol calls. Branch `panel-rebuild/marketing-fix` from
+`71326e1`, rebased onto `e290654` after the deep-audit programme merged into
+token-gaps first; merged into token-gaps (merge SHA recorded in
+`docs/MARKETING-FIX-PROGRAMME.md`).
+
+- **Lane 1 (first-impression defects).** Reproduced both screenshots on
+  baseline first (burst ~230 requests, 36 failed). Partial: shared refresh
+  limiter, cap 4 concurrent calls; all-loaded-zero returns the zero state —
+  clean `$0.00` + quiet note. Retry: history Retry only when the wallet/chain
+  has activity; a fresh wallet shows "No activity yet". Indexer gap recorded
+  (keyed/paid indexer or owner-hosted Blockscout is an owner decision).
+  Residual: one Retry remains — the Dogecoin row (sochain 429s every attempt,
+  BlockCypher CORS-blocked).
+- **Lane 2 (found bugs).** 8 unused deps removed (knip 0). jscpd 78 groups /
+  1,332 lines → 15 / 183 (63 consolidated, 1,149 lines removed). send.ts/core.ts
+  split DONE (`wallet/signing-intent.ts`). wallet-refresh re-wire PROVED
+  infeasible without behaviour change (6 reasons in the lane report) — decision
+  needed: redesign, keep as tested-but-unused, or delete. D-02 DONE: /lock
+  double `<main>` fixed; "Lock now" button added to AutoLockSetting.
+- **Lane 3 (marketing view).** Welcome wallet-first (Create card next to
+  Import), one 22-chain Create card, factual hero tagline, Send step 1 matches
+  its banner. `docs/VALUE-PROPOSITION.md` — every claim verified against code.
+- **Lane 4 (README rewrite).** 256 → 180 lines, mined MetaMask / Trust Wallet /
+  BlueWallet / RainbowKit / shadcn-ui READMEs; 4 screenshots re-shot clean on
+  the fixed build. Reference-repo link never arrived — nothing invented.
+- **Lane 5 (Mermaid diagram).** `docs/HOW-IT-WORKS.md`: two 8-node Mermaid
+  flowcharts (how it starts / what it does), render-validated, all 49 cited
+  paths exist. Trade-off stated: GitHub mobile app shows Mermaid as raw code.
+- **Lane 6 (branch cleanup).** Recorded in `docs/MARKETING-FIX-PROGRAMME.md`
+  after the merge.
+- **Lane 7 (QR templates, owner correction).** The owner was right: templates
+  were not visible as asked (Receive opened on the network picker; alternates
+  40 px, below the fold, unlabelled; Payment request a disabled grey box;
+  shown template unnamed). Fixed in place: 64 px small QRs + heading naming
+  the shown template, amount inside the card, Payment-unavailable explained,
+  selected template clamped to one with a value. CDP proof: template row ends
+  above the tab bar at 390 px in all cases; tap-to-swap proven by payloads;
+  share/download sends the selected template's card.
+- **Lane 8 (reverify properly, browser-first).** Checklist rebuilt from scratch
+  and re-verified by using the app in CDP. Corrected counts (42 rows): done 6,
+  partial 7, missed 2, not verifiable in CDP 23, in progress 4. Five wrong old
+  verdicts flagged (W-1..W-5) with the method flaw named in the checklist doc.
+  D-01 (980 px breakpoint) is an owner decision: port it, merge
+  desktop-layout-v2's breakpoint, or accept the mobile layout at 980 px.
+- **Rebase.** Two conflicts, both resolved by the coordinator: `receive.tsx`
+  (heading + templates first, action row right after — the templates own the
+  above-fold slot); `wallet/core.test.ts` (split import per Lane 2).
+- **Deviation found in merge verification (owner decision needed):** the main
+  QR renders at 136 px, not the 192 px spec — deep-audit Lane A reduced it
+  from 192 to 136 to get the actions above the fold. Restoring 192 px would
+  put the template row at ~762 px (still above the fold by 8 px) but push the
+  action row further below it.
+- **Gates (rebased tree):** tsc 0, build pass, vitest 1,748 passed / 5 skipped
+  (90 files), lint 25 errors all pre-existing in `apps/web/scripts/*.mjs`,
+  npm audit 0, root `npm test` 0. E2E not run on this tree (deep-audit ran
+  23/24 on its own tree; this tree covered by vitest + CDP).
