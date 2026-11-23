@@ -394,6 +394,26 @@ export type TokenPricesState = {
  * so user-added tokens join the batch; the hook refetches when the set
  * of requested ids changes.
  */
+/**
+ * Item 11/12: same blanking bug as the native feed — a failed refresh
+ * must not wipe token prices that are already on screen. Keep the last
+ * good quote for a token when the new fetch ends in error.
+ */
+function mergePreservingFreshTokenQuotes(
+  next: TokenPricesState['entries'],
+  previous: TokenPricesState['entries'],
+): TokenPricesState['entries'] {
+  const merged = { ...next };
+  for (const key of Object.keys(merged)) {
+    const current = merged[key];
+    const prev = previous[key];
+    if (current?.status === 'error' && prev?.status === 'fresh') {
+      merged[key] = prev;
+    }
+  }
+  return merged;
+}
+
 export function useTokenPrices(
   tokens: readonly TokenRecord[],
   options?: { sleep?: (ms: number) => Promise<void>; devnet?: boolean },
@@ -461,7 +481,13 @@ export function useTokenPrices(
       lastFetchedAtMs: null,
     };
     if (typeof globalThis.fetch !== 'function') {
-      setState(networkError);
+      setState((previous) => ({
+        ...networkError,
+        entries: mergePreservingFreshTokenQuotes(
+          networkEntries,
+          previous.entries,
+        ),
+      }));
       return;
     }
     const wait =
@@ -512,7 +538,11 @@ export function useTokenPrices(
             await wait(delayMs);
             continue;
           }
-          setState({ status: 'ready', entries, lastFetchedAtMs: Date.now() });
+          setState((previous) => ({
+            status: 'ready',
+            entries: mergePreservingFreshTokenQuotes(entries, previous.entries),
+            lastFetchedAtMs: Date.now(),
+          }));
           if (values.some((entry) => entry.status === 'fresh')) {
             try {
               saveCachedTokenPrices(entries, Date.now(), tokensRef.current);
@@ -524,7 +554,13 @@ export function useTokenPrices(
         }
       } catch {
         if (mounted.current) {
-          setState(networkError);
+          setState((previous) => ({
+            ...networkError,
+            entries: mergePreservingFreshTokenQuotes(
+              networkEntries,
+              previous.entries,
+            ),
+          }));
         }
       } finally {
         inFlight.current = false;

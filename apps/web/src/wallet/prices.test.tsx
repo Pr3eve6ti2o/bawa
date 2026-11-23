@@ -1005,6 +1005,8 @@ describe('usePrices', () => {
   });
 
   it('reports network errors when fetch throws', async () => {
+    // No previous quotes: the refresh must settle with network errors.
+    localStorage.removeItem(PRICE_CACHE_KEY);
     const stub = vi.fn(async () => { throw new Error('down'); });
     vi.stubGlobal('fetch', stub);
     const { cleanup } = await mount();
@@ -1041,6 +1043,8 @@ describe('usePrices', () => {
   });
 
   it('reports network errors when fetch is unavailable', async () => {
+    // No previous quotes: the refresh must settle with network errors.
+    localStorage.removeItem(PRICE_CACHE_KEY);
     vi.stubGlobal('fetch', undefined);
     delete (globalThis as Record<string, unknown>).fetch;
     const { cleanup } = await mount();
@@ -1197,6 +1201,55 @@ describe('usePrices', () => {
         30_000,
         30_000,
       ]);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(PRICE_CACHE_KEY);
+      }
+    }
+  });
+
+  it('keeps the last good quotes when a refresh ends rate-limited', async () => {
+    // Item 11/12: a 429 after a good load used to blank every price on
+    // screen ("Price error" on all rows). The settled quotes stay until
+    // a newer fetch replaces them.
+    localStorage.removeItem(PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshPayload();
+      const expected = parsePriceResponse(payload, NOW_MS);
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          headers: { get: () => null },
+        })
+        .mockResolvedValue({
+          ok: false,
+          status: 429,
+          headers: { get: () => '30' },
+        });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+      expect(fetchStub).toHaveBeenCalledTimes(4);
     } finally {
       try {
         await cleanup?.();

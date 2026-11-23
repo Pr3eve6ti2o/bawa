@@ -1,5 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRoot } from 'react-dom/client';
+import { act } from 'react-dom/test-utils';
 import { PRICE_IDS } from './prices';
+import { TOKEN_PRICE_CACHE_KEY, useTokenPrices } from './token-prices';
 import {
   TOKEN_PRICE_IDS,
   fetchTokenPrices,
@@ -270,5 +274,101 @@ describe('token price cache', () => {
 
   it('returns null for an empty store', () => {
     expect(loadCachedTokenPrices(NOW_MS, TOKEN_KEYS, makeStore() as never)).toBeNull();
+  });
+});
+
+describe('useTokenPrices', () => {
+  let originalFetch: typeof globalThis.fetch;
+  let latest: ReturnType<typeof useTokenPrices> | null = null;
+
+  function ProbeWithSleep({
+    sleep,
+  }: {
+    sleep: (ms: number) => Promise<void>;
+  }) {
+    latest = useTokenPrices(DEFAULT_TOKENS, { sleep });
+    return null;
+  }
+
+  async function mountWithSleep(sleep: (ms: number) => Promise<void>) {
+    const { createElement } = await import('react');
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+
+    await act(async () => {
+      root.render(createElement(ProbeWithSleep, { sleep }));
+    });
+
+    return {
+      div,
+      root,
+      cleanup: async () => {
+        await act(async () => {
+          root.unmount();
+        });
+        div.remove();
+      },
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalFetch = globalThis.fetch;
+    latest = null;
+    vi.spyOn(Date, 'now').mockReturnValue(NOW_MS);
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the last good token quotes when a refresh ends rate-limited', async () => {
+    // Item 11/12, token feed: same blanking bug as the native feed — a
+    // 429 after a good load wiped every token price to "Price error".
+    localStorage.removeItem(TOKEN_PRICE_CACHE_KEY);
+    let cleanup: (() => void | Promise<void>) | undefined;
+
+    try {
+      const payload = freshTokenPayload();
+      const expected = parseTokenPriceResponse(payload, tokenIds(), NOW_MS, DEFAULT_TOKENS);
+      const sleep = vi.fn((_ms: number) => Promise.resolve());
+      const fetchStub = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          headers: { get: () => null },
+        })
+        .mockResolvedValue({
+          ok: false,
+          status: 429,
+          headers: { get: () => '30' },
+        });
+      vi.stubGlobal('fetch', fetchStub);
+
+      ({ cleanup } = await mountWithSleep(sleep));
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+
+      await act(async () => {
+        latest!.refresh();
+      });
+      expect(latest!.state.status).toBe('ready');
+      expect(latest!.state.entries).toEqual(expected);
+      expect(fetchStub).toHaveBeenCalledTimes(4);
+    } finally {
+      try {
+        await cleanup?.();
+      } finally {
+        localStorage.removeItem(TOKEN_PRICE_CACHE_KEY);
+      }
+    }
   });
 });

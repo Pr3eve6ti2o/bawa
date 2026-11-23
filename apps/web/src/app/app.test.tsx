@@ -210,4 +210,22 @@ describe.sequential('App', () => {
       window.localStorage.removeItem('bawa-devnet-enabled');
     }
   });
+
+  it('sizes the shell with dynamic viewport units so mobile sections do not jump', async () => {
+    // Item 1: min-h-screen/h-screen are 100vh — the LARGE viewport, so on
+    // a phone the shell and sidebar jump by the URL-bar height every time
+    // it shows or hides mid-scroll. dvh tracks the visible viewport.
+    await withRenderedApp('/', (div) => {
+      const frame = Array.from(div.querySelectorAll('div')).find((el) =>
+        el.className.includes('lg:flex-row'),
+      );
+      expect(frame?.className).toContain('min-h-dvh');
+      expect(frame?.className).not.toContain('min-h-screen');
+      const stickyWrapper = div.querySelector('aside')
+        ?.children[0] as Element | undefined;
+      expect(stickyWrapper?.className).toContain('h-dvh');
+      expect(stickyWrapper?.className).not.toContain('h-screen');
+      expect(div.querySelector('.min-h-screen, .h-screen')).toBeNull();
+    });
+  });
 });
