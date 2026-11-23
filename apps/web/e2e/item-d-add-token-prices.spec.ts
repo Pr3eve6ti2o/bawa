@@ -138,10 +138,10 @@ test('Item D — EVM unlisted ANTS on BSC gets a live DexScreener price', async 
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-ants-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-ants-1919.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/itemD/itemD-ants-390.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-ants-390.png' });
 });
 
 test('Item D — SPL unlisted DISC on Solana gets a live DexScreener price', async ({
@@ -167,7 +167,7 @@ test('Item D — SPL unlisted DISC on Solana gets a live DexScreener price', asy
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-disc-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-disc-1919.png' });
 });
 
 test('Item D — EVM listed SHIB on Ethereum still prices via CoinGecko', async ({
@@ -204,7 +204,7 @@ test('Item D — EVM listed SHIB on Ethereum still prices via CoinGecko', async 
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-shib-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-shib-1919.png' });
 });
 
 test('Item D — EVM unpriced aGnoGHO on Gnosis shows Price unavailable', async ({
@@ -230,10 +230,10 @@ test('Item D — EVM unpriced aGnoGHO on Gnosis shows Price unavailable', async 
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-agnogho-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-agnogho-1919.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/itemD/itemD-agnogho-390.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-agnogho-390.png' });
 });
 
 test('Item D — Jetton unlisted MY on TON gets a live TonAPI price', async ({
@@ -259,10 +259,10 @@ test('Item D — Jetton unlisted MY on TON gets a live TonAPI price', async ({
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-my-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-my-1919.png' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/itemD/itemD-my-390.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-my-390.png' });
 });
 
 test('Item D — Jetton listed NOT on TON resolves its CoinGecko id', async ({
@@ -297,5 +297,5 @@ test('Item D — Jetton listed NOT on TON resolves its CoinGecko id', async ({
     timeout: 120_000,
   });
 
-  await page.screenshot({ path: 'test-results/itemD/itemD-not-1919.png' });
+  await page.screenshot({ path: 'test-results/item-d/item-d-not-1919.png' });
 });

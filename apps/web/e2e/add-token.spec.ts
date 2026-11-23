@@ -7,7 +7,7 @@ async function openAddToken(page: Page): Promise<void> {
   // The Assets page re-renders while its 43 rows settle, which can
   // detach the button between resolve and click; retry the open with
   // a freshly resolved locator until the dialog is visible (same
-  // helper as the item13 / itemD specs — the single click this file
+  // helper as the item13 / item-d specs — the single click this file
   // used before flaked on the re-render).
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
