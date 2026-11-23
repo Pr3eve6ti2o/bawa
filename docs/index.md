@@ -99,6 +99,7 @@ Numbered labels (Doc 01, Doc 02, and so on) follow the guide sequence in docs/01
 - [Handoff](archive/handoff-2026-11-10.md) — `DOCUMENTED_NOT_TESTED`: handover record and unresolved work.
 - [Launch checklist](launch-checklist.md) — `DOCUMENTED_NOT_TESTED`: pre-B-1 checklist.
 - [Release procedure](release-procedure.md) — `DOCUMENTED_NOT_TESTED`: tagged baseline + rollback (full ceremony deferred).
+- [Gap analysis](GAP-ANALYSIS.md) — `DOCUMENTED_NOT_TESTED`: what the wallet still lacks, which public repositories solve each gap (stars and licences checked live 2026-11-23), and where the fix belongs in the guide (Lane E, Deep Audit + Devnet E2E programme, 2026-11-23; gaps 21+ added by the coordinator from Lane B findings).
 
 ## Open items
 
